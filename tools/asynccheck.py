@@ -28,6 +28,7 @@ the cost of the review that would otherwise find it is a day.
     python3 tools/asynccheck.py            # report; exit 1 on anything not in the ledger
     python3 tools/asynccheck.py --accept   # record the current state as read
 """
+import json
 import os
 import re
 import sys
@@ -43,13 +44,50 @@ LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
 # tomorrow enters this check without anyone remembering a list. The shared libraries are excluded -
 # they have their own tests and no per-workspace globals of the panels' kind.
 _LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$')
-def _page_files(app):
-    with open(os.path.join(ROOT, 'apps', app, 'sidepanel.html'), encoding='utf-8') as src:
+
+
+def _scripts_of(app, page):
+    with open(os.path.join(ROOT, 'apps', app, page), encoding='utf-8') as src:
         html = src.read()
     return [f'apps/{app}/{m}' for m in re.findall(r'<script\s+src="([^"]+\.js)"></script>', html)
             if not _LIB.search(m)]
-PAGES = {'crm': _page_files('crm'), 'analytics': _page_files('analytics')}
-FILES = [f for fs in PAGES.values() for f in fs]
+
+
+def _manifest_scopes(app):
+    """The scopes no page declares: the service worker, and each content-script world.
+
+    They were outside this check entirely - `sidepanel.html` was the whole of its subject, which is
+    **9 of the 32 shipped scripts**, while the comment said only that the shared libraries were
+    excluded. Measured by a review. A background script and a content script have globals and awaits
+    like anything else, and the one place a stale write there would show is a console nobody watches.
+    """
+    out = {}
+    with open(os.path.join(ROOT, 'apps', app, 'manifest.json'), encoding='utf-8') as fh:
+        data = json.load(fh)
+    sw = (data.get('background') or {}).get('service_worker')
+    if sw:
+        out[f'{app}:background'] = [f'apps/{app}/{sw}']
+    for n, cs in enumerate(data.get('content_scripts') or [], 1):
+        js = [f'apps/{app}/{j}' for j in (cs.get('js') or []) if j.endswith('.js')]
+        if js:
+            out[f'{app}:content[{n}]'] = js
+    return out
+
+
+def _pages():
+    out = {}
+    for app in ('crm', 'analytics'):
+        for page in sorted(os.listdir(os.path.join(ROOT, 'apps', app))):
+            if page.endswith('.html'):
+                files = _scripts_of(app, page)
+                if files:
+                    out[f'{app}:{page}'] = files
+        out.update(_manifest_scopes(app))
+    return out
+
+
+PAGES = _pages()
+FILES = sorted({f for fs in PAGES.values() for f in fs})
 
 # A check that can stop the function before the write lands.
 GUARD = re.compile(r'op\.current\(\)|\bcurrent\(\)|sameWs\(|gen !== wsGen|gen === wsGen'
@@ -82,6 +120,15 @@ def globals_of(src):
 def functions(src):
     """Top-level function declarations, with the line they start on.
 
+    **Declarations only, and that is a limit rather than a definition of the subject.** An
+    `async (…) => {…}` body is invisible here, and one of them matters: the `chrome.storage.onChanged`
+    handler in both panels rewrites the working-folder handle after an await. Widening the pattern to
+    arrows was tried and reverted in the same hour: an arrow has no closing brace in column zero, so
+    the body slice ran on into the declarations below it and the tool reported `hasPerm()` writing
+    caches it never mentions - the over-capture this docstring already warns about, made by the person
+    reading the warning. It needs a parser, and a parser is a dependency this repository does not have.
+    Said here rather than left as a silence; the sites it cannot see are listed in the ledger's header.
+
     A declaration that closes on its own line ends there. Without this the search for the next `}` in
     column zero runs straight past it and the function is credited with everything that follows -
     `ensurePerm` is one line long, and it was being reported as writing ten globals it never mentions.
@@ -90,14 +137,15 @@ def functions(src):
     for m in re.finditer(r'(?m)^(?:async\s+)?function\s+(\w+)\s*\(', src):
         line_end = src.find('\n', m.start())
         first = src[m.start():line_end if line_end > 0 else len(src)]
+        name = m.group(1)
         if '{' in first and first.rstrip().endswith('}'):
-            yield m.group(1), first, src[:m.start()].count('\n') + 1
+            yield name, first, src[:m.start()].count('\n') + 1
             continue
         start = src.index('{', m.start())
         end = src.find('\n}', start)
         if end < 0:
             continue
-        yield m.group(1), src[m.start():end], src[:m.start()].count('\n') + 1
+        yield name, src[m.start():end], src[:m.start()].count('\n') + 1
 
 
 def writes_in(code):
@@ -152,7 +200,11 @@ def findings(rel):
                     continue
                 if from_await or (seen_await and not since_guard):
                     out.append((rel, fname, name, at + i, code.strip()[:70]))
-            if GUARD.search(code):
+            # A line that *declares* the guard is not a line that passes it. `const current = () =>
+            # gen === wsGen` matched GUARD twice over and set the sticky flag for everything below,
+            # which is how an unguarded publication in `rebuildModules` stayed invisible: the flag had
+            # been set by the declaration two lines above it. Found by a review.
+            if GUARD.search(code) and not re.search(r'\b(?:const|let|var)\s+(?:current|sameWs)\s*=', code):
                 since_guard = True
             if re.search(r'\bawait\b', code):
                 seen_await = True

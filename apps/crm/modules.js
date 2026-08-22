@@ -89,7 +89,16 @@ async function rebuildModules(op = beginWorkspaceOp()) {
   if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
   const mine = ++moduleLoad;
   const current = () => mine === moduleLoad && op.current();
-  setStatus('Loading modules…', 'busy'); const _cfg = await opReadCfg(op); if (_cfg) bound = _cfg; await cacheBinding(bound);
+  setStatus('Loading modules…', 'busy');
+  // The guarantee, not the accident. This was one line - read, then publish - and it was safe only
+  // because `op.read` throws when the workspace has moved, so `_cfg` came back null and the write was
+  // skipped. Its four siblings all ask, and so does `rebuildTree`; this one relied on a property of a
+  // helper two files away. Found by a review, which also showed the checker could not see it: an
+  // `await` earlier on the same line does not reset the sticky «a guard has been passed» flag.
+  const _cfg = await opReadCfg(op);
+  if (!op.current()) return;
+  if (_cfg) bound = _cfg;
+  await cacheBinding(bound);
   if (!current()) return;
   const names = [];
   for await (const p of walk(op.root)) { if (!current()) return; if (isModuleFile(p)) names.push(p); }

@@ -1,6 +1,29 @@
 # Derived by tools/asynccheck.py - do not edit by hand; run it with --accept.
 # Each line is a global written after an await with no check between the two.
 # Being here means somebody read it and decided it is safe. It may only shrink.
+# The 24 lines added on 22 August 2026 are the options pages, the backgrounds and the content
+# scripts, which this check had never read - `sidepanel.html` was its whole subject, 9 of the 32
+# shipped scripts. They were read before being recorded: none is the defect this tool is for, since
+# that defect is «the *workspace* changed under an operation» and none of those scopes has one. What
+# they have is one load overtaking another, which the options pages answer with `markOwn`/`dirty`.
+# Recorded rather than exempted, so a *new* one there is still a finding.
+#
+# The three in `rebuildTree` are cache invalidations after the permission await: dropping a cache in
+# the workspace you have left costs a rebuild, and the publication two lines below is guarded.
+#
+# What it cannot see is in the docstring: an arrow-function body, including the onChanged handler
+# where both panels rewrite the folder handle after an await.
+apps/analytics/options.js	loadAi	aiForget
+apps/analytics/options.js	loadAi	aiLockStored
+apps/analytics/options.js	loadAi	aiStored
+apps/analytics/options.js	loadAi	prevEngine
+apps/analytics/options.js	loadLay	drawMax
+apps/analytics/options.js	loadRx	rxCur
+apps/analytics/options.js	loadRx	rxLoadFailed
+apps/analytics/options.js	loseLock	aiPassChanging
+apps/analytics/options.js	loseLock	dirty
+apps/analytics/options.js	saveAi	aiPassChanging
+apps/analytics/options.js	saveAi	dirty
 apps/analytics/sidepanel.js	addSampleWorkspace	rootGranted
 apps/analytics/sidepanel.js	addSampleWorkspace	sampleBusy
 apps/analytics/sidepanel.js	addWorkspace	dir
@@ -28,6 +51,19 @@ apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
 apps/crm/modules.js	openModule	currentPath
 apps/crm/modules.js	pullModules	index
+apps/crm/options.js	loadAi	aiForget
+apps/crm/options.js	loadAi	aiLockStored
+apps/crm/options.js	loadAi	aiStored
+apps/crm/options.js	loadAi	prevEngine
+apps/crm/options.js	loadLay	drawMax
+apps/crm/options.js	loadRx	rxCur
+apps/crm/options.js	loadRx	rxLoadFailed
+apps/crm/options.js	loadTabs	tabAccessCur
+apps/crm/options.js	loadTabs	tabHiddenCur
+apps/crm/options.js	loadTabs	tabNoPullCur
+apps/crm/options.js	loadTabs	tabOrderCur
+apps/crm/options.js	loseLock	aiPassChanging
+apps/crm/options.js	loseLock	dirty
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
 apps/crm/sidepanel.js	crmFrameId	_crmFrame
@@ -47,6 +83,9 @@ apps/crm/sidepanel.js	pickRoot	root
 apps/crm/sidepanel.js	pickRoot	rootGranted
 apps/crm/sidepanel.js	pullAll	currentPath
 apps/crm/sidepanel.js	pullFailures	failIndex
+apps/crm/sidepanel.js	rebuildTree	aiConnCache
+apps/crm/sidepanel.js	rebuildTree	graphCache
+apps/crm/sidepanel.js	rebuildTree	moduleFilesCache
 apps/crm/sidepanel.js	reconcileFunctions	failedRemovals
 apps/crm/sidepanel.js	reconcileFunctions	pendingAfterPull
 apps/crm/sidepanel.js	reconcileFunctions	reconcileAgain
