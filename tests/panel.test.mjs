@@ -9063,3 +9063,50 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A toggle this codebase already releases in a `finally` must be released in a `finally` wherever it
+// is raised.
+//
+// `setPullBusy(true)` greys out the workspace selector, both Pull buttons and the export, and says a
+// pull is running. Raised and not released, the panel is inert for the rest of the session with no
+// message and nothing to press - the same shape as the assistant wedge fixed earlier today, on a
+// control that blocks more.
+//
+// Planted: `pullOne`'s `finally` removed. Node suite fail 0, every checker zero. Nothing said a word.
+//
+// The rule is derived from the file rather than from a list of flag names: if any site in it releases
+// a toggle inside a `finally`, that toggle is one whose release cannot be left to the happy path, and
+// every raise of it is held to the same standard. A toggle nobody releases that way - `setEnabled`,
+// a filter - is not in scope and needs no exemption, because the file never claimed it was.
+{
+  const PANELS = ['apps/analytics/sidepanel.js', 'apps/crm/sidepanel.js'];
+
+  test('a flag raised in a function is released whatever happens in it', () => {
+    const bad = [];
+    let pairs = 0;
+    for (const rel of PANELS) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      // Toggles the file itself treats as needing release: released inside a `finally` at least once.
+      const guarded = new Set();
+      for (const m of src.matchAll(/finally\s*\{[^}]*?\b(\w+)\(false\)/g)) guarded.add(m[1]);
+      for (const name of guarded) {
+        for (const m of src.matchAll(new RegExp(`\\b${name}\\(true`, 'g'))) {
+          // The function this raise sits in: back to the nearest declaration, forward to its close.
+          const at = src.lastIndexOf('\nasync function ', m.index) + 1 || src.lastIndexOf('\nfunction ', m.index) + 1;
+          const body = src.slice(at, src.indexOf('\n}', m.index));
+          const fn = (body.match(/^(?:async )?function (\w+)/) || [, '?'])[1];
+          if (fn === 'setPullBusy' || fn === 'setBusy') continue;      // the setter itself
+          pairs++;
+          const fin = body.search(/finally\s*\{/);
+          if (fin < 0 || !new RegExp(`${name}\\(false`).test(body.slice(fin))) {
+            bad.push(`${rel} ${fn}() raises ${name}(true) and does not release it in a finally`);
+          }
+        }
+      }
+    }
+    assert.ok(pairs >= 3, `only ${pairs} guarded raises found - the derivation broke`);
+    assert.deepEqual(bad, [],
+      `a raise with no matching release leaves the panel inert with nothing to press:\n  ` + bad.join('\n  '));
+  });
+}
