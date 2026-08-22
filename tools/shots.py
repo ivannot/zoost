@@ -24,6 +24,7 @@ import socket
 import urllib.request
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -418,8 +419,15 @@ def render(shot):
             encoding="utf-8")
         page = stage / "graphview.html"
         html = page.read_text(encoding="utf-8")
-        first = "<script src=" + ('"highlight.js"></script>' if app == "crm" else '"graphview.js"></script>')
-        assert first in html, key + ": the page does not load the script this expects"
+        # The stub goes in front of the *first* script the page loads, whichever that is. It used to
+        # name one per product - `highlight.js` for the CRM, `graphview.js` for Analytics - which was
+        # true of the day it was written and stopped being true the day the CRM graph window stopped
+        # loading a highlighter it had nothing left to highlight. The assertion did its job and
+        # refused to render rather than producing a picture of a window with no data; a harness that
+        # derives the anchor cannot be wrong about it in the first place.
+        m = re.search(r'<script src="[^"]+"></script>', html)
+        assert m, key + ": the page loads no script at all"
+        first = m.group(0)
         page.write_text(html.replace(first, '<script src="data.js"></script>\n  ' + first, 1),
                         encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
