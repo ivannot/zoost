@@ -79,7 +79,18 @@ CLOSED = {
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),
-    ("siblings", "diagrams"): ("tools/twincheck.py", "planted 2026-08-19"),
+    # NOT closed by `twincheck` alone, and this was recorded as closed for three days on that basis.
+    # `twincheck` compares the two products: it catches a change made on one side and not the other,
+    # and it is blind by construction to a defect that is *identical in both*. Four counters in both
+    # diagram windows ignored the folded set while two consulted it - one of a set changed, the
+    # others left behind, in both twins at once - and the cell said «ok».
+    #
+    # The lesson for the grid itself: a cell is closed by a check that would catch the class **on
+    # that surface**, not by a check that happens to read that surface. Anything closed on a
+    # comparison between two things is only closed for what differs between them.
+    ("siblings", "diagrams"): ("tests/panel.test.mjs: nothing counts a box the reader folded away "
+                              "(twincheck reads this surface too, and cannot see a defect both twins share)",
+                              "planted 2026-08-23"),
     ("workspace", "crm-panel"): ("tests/panel.test.mjs derives every *Data/*Index", "planted 2026-08-22"),
     ("owner", "crm-panel"):   ("tests/panel.test.mjs derives every pull that reaches Zoho", "planted 2026-08-22"),
     ("siblings", "crm-panel"): ("tests/panel.test.mjs derives every «press Pull» empty state", "planted 2026-08-22"),
@@ -109,7 +120,6 @@ CLOSED = {
     ("claim", "crm-export"):   ("ditto - the contents line is built from the chapters written", "planted 2026-08-22"),
     ("silent", "diagrams"):    ("tests/panel.test.mjs: a settings key written twice is merged; the window applies a kind-less default", "planted 2026-08-22"),
     ("silent", "options"):     ("ditto - the same check reads both pages", "planted 2026-08-22"),
-    ("siblings", "diagrams"):  ("tests/panel.test.mjs: nothing counts a box the reader folded away", "planted 2026-08-23"),
 }
 
 
