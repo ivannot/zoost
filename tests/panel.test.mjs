@@ -9499,3 +9499,45 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(panel[1], sv[1], 'the bridge stamps one version and the panel compares another');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A page may only write the settings it can show. What it does not show, it carries.
+//
+// The Settings page edits nine of the twelve sections the panel's export dialog has - `actions`,
+// `addresses` and `failures` have no box there - and it does not carry `sv`, the stamp saying which
+// build wrote the preference. Its two preset buttons replaced the whole object, so all four went.
+//
+// Then `loadScope` in the panel found `sv` missing, read the preference as one written before the
+// source-code default changed, and set `code` back to false. So: tick **Deluge source code**, press
+// **Everything**, press **Save export defaults**, see «Export defaults saved» - and the next export
+// dialog opens with the source code unticked. Measured by running the sequence, not read.
+//
+// Derived: the page's key set must be a subset of the panel's, and a preset must merge rather than
+// replace, so a tenth section added to the panel tomorrow survives a save here.
+{
+  const opts = read('apps/crm/options.js');
+  const panel = read('apps/crm/sidepanel.js');
+  const keysOf = (src) => {
+    const m = src.match(/const SCOPE_KEYS = \[([^\]]+)\]/);
+    assert.ok(m, 'SCOPE_KEYS is gone - renamed, or no longer a literal');
+    return m[1].split(',').map((s) => s.trim().replace(/^'|'$/g, ''));
+  };
+
+  test('the settings page never writes an export section the panel does not have', () => {
+    const here = keysOf(opts), there = keysOf(panel);
+    const unknown = here.filter((k) => !there.includes(k));
+    assert.deepEqual(unknown, [], `the settings page writes ${unknown} which the panel does not read`);
+    assert.ok(there.length >= here.length, 'the panel now knows fewer sections than the page writes');
+  });
+
+  test('a preset keeps what the page cannot show', () => {
+    for (const btn of ['scFull', 'scSafe']) {
+      const line = opts.split('\n').find((l) => l.includes(`$('${btn}').onclick`));
+      assert.ok(line, `id=${btn} is gone from the settings page`);
+      assert.match(line, /Object\.assign\(\{\}, scope, SCOPE_(FULL|SAFE)\)/,
+        `id=${btn} replaces the stored scope instead of merging into it, so the three sections this ` +
+        `page has no box for - and \`sv\`, which decides whether the source-code default is re-applied - ` +
+        `are dropped by pressing a preset`);
+    }
+  });
+}

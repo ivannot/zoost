@@ -426,8 +426,19 @@ async function loadScope() {
   scopeToUI();
 }
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
-$('scFull').onclick = () => { scope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
-$('scSafe').onclick = () => { scope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
+// Merged over what is stored, never a replacement. This page knows nine of the twelve sections the
+// panel's export dialog has - `actions`, `addresses` and `failures` have no box here - and it also
+// does not carry `sv`, the stamp that says which build wrote the preference.
+//
+// Replacing the object wholesale dropped all four. Then the panel's `loadScope` found `sv` missing,
+// took the preference for one written before the source-code default changed, and **set `code` back
+// to false** - so pressing «Everything», with the source-code box ticked, and saving, turned the
+// source code off. Measured by running the sequence. The three unexpressed choices reverted to their
+// defaults at the same time, with nothing said about any of it.
+//
+// A page may only write the settings it can show. What it does not show, it carries.
+$('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); };
+$('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); };
 $('saveScope').onclick = async () => { scopeFromUI(); markOwn('exportScope'); dirty.delete('exportScope'); conflictBox('exportScope', false); await chrome.storage.local.set({ exportScope: scope }); await stamp(); toast('Export defaults saved.'); };
 
 // ---------- diagram layout ----------
