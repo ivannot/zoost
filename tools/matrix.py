@@ -92,6 +92,8 @@ CLOSED = {
     ("silent", "crm-panel"):   ("ditto - the same check reads both products", "planted 2026-08-22"),
     ("workspace", "an-panel"): ("tests/panel.test.mjs: the selection and the nav chain are forgotten where the workspace changes", "planted 2026-08-22"),
     ("fastpath", "an-panel"):  ("tests/panel.test.mjs: sqlBodyOf has one caller, the one that dates it", "planted 2026-08-22"),
+    ("claim", "an-panel"):     ("tests/panel.test.mjs: every control the assistant is told about exists - limit stated in the check", "planted 2026-08-22"),
+    ("claim", "crm-panel"):    ("ditto - the same check reads both products", "planted 2026-08-22"),
 }
 
 

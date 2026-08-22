@@ -9256,3 +9256,63 @@ for (const app of ['crm', 'analytics']) {
       `not read it: ${[...new Set(callers)].join(', ')}`);
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The assistant is told what this product's controls are called, and it repeats it to the reader.
+//
+// `product-help.js` is what the assistant knows about Zoost itself. It is prose, so nothing held it
+// to the product - and prose that outlived its code is the class this cell is about. A control
+// renamed in the panel keeps its old name here, and the assistant sends somebody to press a button
+// that is not there. That somebody is, by this file's own description, not a developer: they will
+// look for it.
+//
+// **The subject is the bulleted control list, not the prose.** Lines of the form `- "Name": what it
+// does` are a list of controls by construction. Trying to hold every quoted phrase produced a
+// different set of false positives at each tightening - «is replaced by», «never ran», a sentence
+// quoted as an example of a *wrong* reading - which is the tool telling you the subject is wrong.
+//
+// Escapes are decoded first: `'↺ All'` is eight characters in a script and «↺ All» on screen. That
+// is the hole that made `featurecheck` report `View ↗` as missing this morning, met again in a
+// different tool the same day.
+{
+  const decode = (s) => s.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+
+  for (const app of ['analytics', 'crm']) {
+    test(`${app}: every control the assistant is told about exists`, () => {
+      const help = read(`apps/${app}/product-help.js`);
+      let have = '';
+      for (const f of readdirSync(`${ROOT}/apps/${app}`)) {
+        if (!/\.(js|html)$/.test(f) || f === 'product-help.js') continue;
+        have += decode(read(`apps/${app}/${f}`)) + ' ';
+      }
+      have = have.toLowerCase();
+      // Every name quoted on a bullet line. Requiring the colon straight after the closing quote
+      // caught 7 of the 12: several read `- "Pull" in the detail pane:`, and one line names two.
+      const listed = [];
+      for (const line of help.split('\n')) {
+        if (!/^\s*-\s*"/.test(line)) continue;
+        for (const m of line.matchAll(/"([^"\n]{2,40})"/g)) listed.push(m[1]);
+      }
+      assert.ok(listed.length >= 12, `only ${listed.length} controls listed - the derivation broke`);
+      const bad = listed.filter((name) => {
+        // A mark carries its name in `aria-label`, so «Health ♥» describes a control called «Health»:
+        // the words have to be there, the glyph does not.
+        const words = name.toLowerCase().split(/[^a-z0-9+.]+/i).filter((w) => w.length > 1);
+        return words.length && !words.every((w) => have.includes(w));
+      });
+      assert.deepEqual(bad, [],
+        `${app}: the assistant is told to name controls the product does not have: ${bad.join(', ')}`);
+      // **The limit, stated rather than left to be found.** This compares words against the whole of
+      // the shipped files, so it catches a control that was removed or whose words vanished - and it
+      // does *not* catch a rename to a different label whose words happen to occur elsewhere. That is
+      // not hypothetical: «Schema ↗» named a button that is called «ER diagram», and passed here
+      // because the word «schema» appears in `graphview.html` as a kind. It was found by reading and
+      // corrected by hand.
+      //
+      // Comparing against control names only - aria-label, title, button text - was tried and is
+      // worse: it turns every phrase the prose quotes for another reason into a finding. Four
+      // tightenings, four different sets of false positives, which is a subject telling you it is
+      // the wrong one. Where a check cannot be made exact, this repository says so in the check.
+    });
+  }
+}

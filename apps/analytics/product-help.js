@@ -50,7 +50,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Pull" in the detail pane: re-reads that one view from Zoho Analytics.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho Analytics.
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
-- "Schema ↗": opens the ER diagram in its own window - tables as boxes, the links between them as
+- "ER diagram": opens it in its own window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
   "Fit" frames the whole drawing in the window, and a window resize does it on its own - unless
   the reader has panned or zoomed, in which case the view they chose is kept and "Fit" hands it
@@ -78,7 +78,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   own. It is generated, never fetched - nothing is requested from the platform - and the workspace bar
   says so. Everything that would talk to the platform is disabled for it. It is an ordinary folder
   otherwise, deleted like any other, and the button is absent once one exists.
-  The same action is on the "Not on a Zoho tab" screen, as "+ Sample workspace": a sample owes the
+  The same action is on the "Not on a Zoho Analytics tab" screen, as "+ Sample workspace": a sample owes the
   platform nothing, so it opens and reads without a tab and without an account.
   Once one exists that button reads "Open sample workspace" and opens it: that overlay covers the
   workspace list too, so hiding it there would leave the sample unreachable.
