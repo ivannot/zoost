@@ -735,7 +735,7 @@ async function delWorkspace() {
   if (!w || !root) return;
   if (!confirm(`Delete the folder «${w.folder}» and everything in it?\n\nThis removes the local mirror only - nothing in Zoho Analytics is touched. You can pull it again at any time.`)) return;
   try {
-    if (!(await ensurePerm(root))) return;
+    if (!(await ensurePerm(root))) { status(MSG.folder, 'warn'); return; }
     const base = await appRoot(false);
     if (!base) { status('Could not open the workspace folder.', 'warn'); return; }
     await base.removeEntry(w.folder, { recursive: true });   // delete inside analytics/, never at the root
@@ -3384,7 +3384,7 @@ async function addSampleWorkspace() {
   // **Grant first, then decide.** A click is the only context in which the permission can be
   // re-requested, and until it is granted the panel cannot see what is in the folder - so deciding
   // before this line means deciding on a list that is empty for a reason unrelated to the question.
-  if (!(await ensurePerm(root))) return;
+  if (!(await ensurePerm(root))) { status(MSG.folder, 'warn'); return; }
   if (!rootGranted) { rootGranted = true; await refreshWorkspaces(); }
   const have = (wsList || []).find((w) => w.cfg && w.cfg.sample);
   if (have) { $('ws').value = have.id; $('offoverlay').classList.remove('show'); return selectWorkspace(have); }

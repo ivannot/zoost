@@ -9156,3 +9156,44 @@ for (const app of ['crm', 'analytics']) {
       `a control that goes grey with no reason is a dead end the reader cannot act on:\n  ` + bad.join('\n  '));
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A bail on a refused folder permission says so.
+//
+// The browser can drop the permission on a stored handle at any time, and it asks again from a user
+// gesture. If the reader dismisses that prompt, or it fails, the function returns - and a return
+// with nothing said is indistinguishable from a working feature. Press 🗑 on a workspace, confirm the
+// «delete the folder and everything in it» dialog, dismiss the browser prompt, and nothing happens
+// and nothing is said: a failed delete and a bug look identical from there.
+//
+// Fourteen sites in the two panels say `MSG.folder` or its equivalent; eight returned silently. The
+// majority is the pattern and the eight are the drift.
+//
+// Derived from the guard's shape, not from a list of functions: whichever bail follows a refused
+// `ensurePerm` is in scope, in either product.
+{
+  const FILES = ['apps/analytics/sidepanel.js', 'apps/crm/sidepanel.js', 'apps/crm/modules.js',
+                 'apps/crm/automation.js', 'apps/crm/connections.js', 'apps/crm/health.js'];
+
+  test('a refused folder permission is never a silent return', () => {
+    const bad = [];
+    let seen = 0;
+    for (const rel of FILES) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/if \(!\(await ensurePerm\([^)]*\)\)\)\s*(\{[^}]*\}|[^\n]*)/g)) {
+        seen++;
+        // Saying it in the view is saying it: the health audit writes its refusal into `#healthbody`
+        // rather than into the status line, because that is where the reader is looking when they
+        // pressed ♥. What is not saying it is an empty return - or an `innerHTML = ''`, which clears.
+        const speaks = /\bstatus\(|\bsetStatus\(|\bop\.say\(|throw /.test(m[1])
+          || /innerHTML\s*=\s*[^;]*['"`][^'"`]{4,}/.test(m[1]);
+        if (speaks) continue;
+        bad.push(`${rel}:${src.slice(0, m.index).split('\n').length}`);
+      }
+    }
+    assert.ok(seen >= 10, `only ${seen} permission guards found - the derivation broke`);
+    assert.deepEqual(bad, [],
+      `these return without a word when the browser refuses the folder, which is indistinguishable ` +
+      `from the feature working:\n  ` + bad.join('\n  '));
+  });
+}

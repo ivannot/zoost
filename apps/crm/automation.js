@@ -291,7 +291,7 @@ async function pullConnections() {
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // see pullSchedules above for why, and why it is released in a finally
-    if (!(await ensurePerm(op.root))) return;
+    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch - refusing.', 'warn'); return; }
@@ -395,7 +395,7 @@ async function pullActions() {
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // see pullSchedules above for why, and why it is released in a finally
-    if (!(await ensurePerm(op.root))) return;
+    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.wrongTab, 'warn'); return; }

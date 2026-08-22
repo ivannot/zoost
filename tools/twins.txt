@@ -2,7 +2,7 @@
 # Every function name both products define, with a hash of each side's body. A one-sided
 # change is a fix that landed on one twin and not the other, which is what this catches.
 # name	crm	analytics	state
-addSampleWorkspace	64dbd30b7eaa	208ada340936	divergent
+addSampleWorkspace	354dce527925	da2e4f395fc9	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
 aiBuildSeed	45bbc7413151	83e246f75221	divergent
 aiCall	1b3b8118b614	8952517e2a80	divergent
@@ -168,7 +168,7 @@ parseArrangement	6ad270723301	6ad270723301	identical
 pass	56e18c27fc90	4bb92032e77b	divergent
 passKind	684df355a097	bdf6d02817df	divergent
 pdfTitle	93b3d0697faa	d692e674db7f	divergent
-pickRoot	1896dce1f5b5	3f6e88e32e8d	divergent
+pickRoot	f7f5b59cd421	3f6e88e32e8d	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
 pullAll	97e829488969	4905ea8927dc	divergent

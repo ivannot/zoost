@@ -3839,7 +3839,11 @@ async function pickRoot() {
   if (workspaceChangeRefuse()) return;
   try {
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'zoost-root' });
-    if (!(await ensurePerm(h))) return;
+    // Not MSG.folder: that one says «needs re-granting - click ↻ Refresh», and here nothing was ever
+    // granted - the reader has just picked a folder for the first time and dismissed the prompt.
+    // Naming a remedy that does not apply is the defect one door along from saying nothing. The
+    // Analytics twin has always said this sentence.
+    if (!(await ensurePerm(h))) { setStatus('Permission to the folder was not granted.', 'bad'); return; }
     // Blast radius: granting readwrite covers everything below this folder, permanently.
     let foreign = 0, seen = 0;
     for await (const e of h.values()) {
@@ -3923,7 +3927,7 @@ async function addSampleWorkspace() {
   // **Grant first, then decide.** A click is the only context in which the permission can be
   // re-requested, and until it is granted the panel cannot see what is in the folder - so deciding
   // before this line means deciding on a list that is empty for a reason unrelated to the question.
-  if (!(await ensurePerm(root))) return;
+  if (!(await ensurePerm(root))) { setStatus(MSG.folder, 'warn'); return; }
   if (!rootGranted) { rootGranted = true; await loadWorkspaces(); }
   const have = (wsList || []).find((w) => w.binding && w.binding.sample);
   if (have) { $('ws').value = have.id; $('offoverlay').classList.remove('show'); return activate(have, true); }
@@ -3975,7 +3979,7 @@ async function writeSampleWorkspace() {
 async function addWorkspaceForTab() {
   if (workspaceChangeRefuse()) return;
   if (!root) { await pickRoot(); return; }
-  if (!(await ensurePerm(root))) return;
+  if (!(await ensurePerm(root))) { setStatus(MSG.folder, 'warn'); return; }
   const ctx = lastCtx && lastCtx.org ? lastCtx : await getContext();
   if (!ctx || !ctx.org) { setStatus('Open a Zoho CRM tab first - the workspace is created for the org you are signed in to.', 'warn'); return; }
   try {
@@ -4373,7 +4377,7 @@ $('wsdel').onclick = async () => {
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;
   if (!confirm(`Delete the folder \u00ab${w.name}\u00bb and everything in it?\n\nThis removes the local mirror only - nothing in Zoho CRM is touched. You can pull it again at any time.`)) return;
   try {
-    if (!(await ensurePerm(root))) return;
+    if (!(await ensurePerm(root))) { setStatus(MSG.folder, 'warn'); return; }
       const base = await appRoot(false);
       if (!base) { setStatus('Could not open the workspace folder.', 'warn'); return; }
       await base.removeEntry(w.name, { recursive: true });   // delete inside crm/, never at the root
