@@ -356,7 +356,20 @@ def store_matches_manifest(findings: list, notes: list) -> None:
 ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of'
                       r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
                       r'|\bread-only\b|\bsola lettura\b', re.I)
-OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md']
+# Outward prose: what somebody outside this repository reads and is entitled to hold us to.
+#
+# `docs/boundaries.md` is in it and the rest of `docs/` is not, and the line is not arbitrary. The
+# other notes are working notes for whoever changes the code; this one states what the product
+# **cannot do** - «no write, no AI call and no filesystem operation is authorised by it» - and is
+# cited by name in commit messages as the authority for that. Two of its claims were false when this
+# was written: `hook.js` was described as 48 lines and is 112, and a forged notice does authorise a
+# write and a deletion, though not what is written or removed. Nothing read them, because nothing
+# read this file.
+#
+# The other notes carry 70 to 90 absolutes each and would flood the ledger, which is the cost the
+# all-or-nothing `--accept` makes real. This one carries 19.
+OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md',
+           'docs/boundaries.md']
 # A dashboard field, fenced or not. The numbering is the file's own, the same one `storecopy.SECTION`
 # reads - this matches the heading and stops at the next one, so a section with no fence (the data
 # disclosures: a table and a blockquote) is still outward prose. Anything not under a numbered

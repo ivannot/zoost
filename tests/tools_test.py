@@ -3225,11 +3225,25 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
         self.assertRegex(listener, r"d\.source !== 'DELUGE_IDE_HOOK'", 'the bridge accepts any shape')
         self.assertRegex(listener, r'\\d\{1,20\}', 'the bridge forwards an id it has not looked at')
 
+    # Injections into our own site are a different question from injections into Zoho's page, and the
+    # rule was only ever about the second. `zoost.it/report` is filled by an injected function that
+    # sets a textarea's value and dispatches an `input` event - deliberately, so the reader sees the
+    # whole report in the page before anything is sent - and the check called that a driven page for
+    # as long as it could see it, which was never.
+    OURS = ('zoost.it',)
+
     def test_nothing_injected_into_the_page_drives_it(self):
         """«Never click-and-hope» as an assertion. `chrome.scripting.executeScript` is the one call
         that can put code inside Zoho's page, and the rule is that what goes in either *reads* or is
         one of our own two files. A `func:` that clicks or dispatches an event would be the synthetic
         driving this project removed in 1.1.0, arriving through a different door.
+
+        **A `func:` passed by name is resolved to its declaration.** It used to read the call text
+        only, and two of the three injection sites in this tree are `func: put` - four lines above,
+        setting a value and dispatching an event. So the gate `docs/boundaries.md` cites by name as
+        *the* enforcement of «nothing injected drives the page» was inspecting an identifier and
+        finding no verbs in it. Reported by a scan of the boundaries; the claim in that file was false
+        of the shipped code and is corrected there too.
         """
         for f in sorted((ROOT / 'apps').rglob('*.js')):
             src = f.read_text(encoding='utf-8')
@@ -3238,11 +3252,27 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
                 if 'files:' in call:
                     self.assertRegex(call, r"files:\s*\['(hook|content-bridge)\.js'\]",
                                      f'{f.name}: injects a file that is not one of ours')
-                if 'func:' in call:
-                    for verb in ('.click(', 'dispatchEvent', '.submit(', '.value ='):
-                        self.assertNotIn(verb, call,
-                                         f'{f.name}: injected code drives the page ({verb}) - the rule '
-                                         'is read, or reach it by URL')
+                # `[,}]` alone missed `func: drive ` at the end of the captured call text - the
+                # last argument has nothing after it. Proven by planting exactly that.
+                fn = re.search(r'func:\s*([A-Za-z_$][\w$]*)\s*(?:[,}]|$)', call)
+                body = call
+                if fn:
+                    d = re.search(r'(?m)^\s*(?:const|let|var|function)\s+' + fn.group(1) + r'\b[\s\S]{0,600}',
+                                  src)
+                    self.assertTrue(d, f'{f.name}: injects func: {fn.group(1)}, which is declared nowhere '
+                                       'in this file - the gate cannot read what it cannot find')
+                    body = d.group(0)
+                if 'func:' not in call:
+                    continue
+                # Where it is aimed. An injection into one of our own pages may fill a form; one into
+                # Zoho's page may not touch the DOM at all.
+                window = src[max(0, m.start() - 1200):m.end()]
+                if any(host in window for host in self.OURS):
+                    continue
+                for verb in ('.click(', 'dispatchEvent', '.submit(', '.value ='):
+                    self.assertNotIn(verb, body,
+                                     f'{f.name}: injected code drives the page ({verb}) - the rule '
+                                     'is read, or reach it by URL')
 
 
 class APartialListNeverLooksLikeACensus(unittest.TestCase):

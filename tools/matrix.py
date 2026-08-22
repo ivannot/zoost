@@ -94,6 +94,7 @@ CLOSED = {
     ("fastpath", "an-panel"):  ("tests/panel.test.mjs: sqlBodyOf has one caller, the one that dates it", "planted 2026-08-22"),
     ("claim", "an-panel"):     ("tests/panel.test.mjs: every control the assistant is told about exists - limit stated in the check", "planted 2026-08-22"),
     ("claim", "crm-panel"):    ("ditto - the same check reads both products", "planted 2026-08-22"),
+    ("claim", "bridges"):      ("tools/auditcheck.py now reads docs/boundaries.md as outward prose", "planted 2026-08-22"),
 }
 
 

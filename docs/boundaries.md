@@ -22,8 +22,8 @@ in the code is one nobody can review.
                     ┌────────────────┐  ┌────────────────────┐
                     │    hook.js     │  │  content-bridge.js │
                     │   MAIN world   │  │   ISOLATED world   │
-                    │  48 lines, no  │  │  every endpoint,   │
-                    │  authority     │  │  CSRF, pagination  │
+                    │  no authority  │  │  every endpoint,   │
+                    │  of its own    │  │  CSRF, pagination  │
                     └───────┬────────┘  └─────────┬──────────┘
              window.postMessage│                  │ chrome.runtime messaging
                                └────────┬─────────┘
@@ -55,9 +55,21 @@ in the code is one nobody can review.
 
 `hook.js` sees the editor save a function and posts `{ source, type, id }` to `location.origin`. The
 bridge accepts it only if the sender is this window, the two strings are exact, and the id is digits;
-it then asks the panel to **re-read that function from Zoho**. So the worst a forged message can do is
-ask for a re-read of something that exists. Nothing downstream takes the payload as content, and no
-write, no AI call and no filesystem operation is authorised by it.
+it then asks the panel to **re-read that function from Zoho**.
+
+What that re-read may do, said precisely, because the sentence here used to be «no write, no AI call
+and no filesystem operation is authorised by it» and the first and third are not true. A `created` or
+`deleted` notice - and a `saved` one naming an id the index does not have - starts
+`reconcileFunctions()`, which asks Zoho for the list, **writes `functions/index.json`** and removes
+the files of anything Zoho no longer has. So a forged message can cause writes and deletions.
+
+What it cannot do is decide *what* is written or removed: the authority for every one of those is
+Zoho's own answer, read in the same round, and refused outright when that answer came back cut short.
+Nothing downstream takes the payload as content - the id is a hint about where to look, never a
+statement about what is there - and no AI call is reachable from it at all.
+
+That is the guarantee worth having, and it is narrower than the absolute it replaces. An absolute
+invites a literal check, and this one did not survive it.
 
 This is the shape to keep for anything added here: **a message from the page world may only ever
 cause the extension to go and look for itself.**
@@ -84,8 +96,15 @@ the one Analytics' own diagram screen makes. What is asserted is what Zoost send
 keeps: a browser extension cannot establish the second, and this note does not pretend it can.
 Handing a second endpoint to the same helper fails the suite.
 
-The same test asserts that nothing injected into the page drives it: an injected file must be one of
-our two, and an injected function must not click, dispatch an event or set a value. That is the "never
+The same test asserts that nothing injected into **Zoho's** page drives it: an injected file must be
+one of our two, and an injected function must not click, dispatch an event or set a value - and a
+`func:` passed by name is resolved to its declaration before that is asked, because two of the three
+injection sites in this tree are `func: put` and the check used to read the identifier rather than
+the body.
+
+The exception is deliberate and is ours: `zoost.it/report` is filled by an injected function that
+sets a textarea's value and dispatches an `input` event, so the reader sees the whole report in the
+page before anything is sent. The rule was always about somebody else's DOM; it says so now. That is the "never
 click-and-hope" rule, as an assertion.
 
 ## Secrets
