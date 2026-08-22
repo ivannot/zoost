@@ -603,7 +603,12 @@ async function refreshWorkspaces() {
     // in storage, so `updateSampleButtons()` hides «+ Sample» for good - while the empty state two
     // lines down is telling the reader to press it. It survives a reload, because the stale id is
     // restored from storage on start.
-    noteSampleWs(null);
+    // Only when the folder was actually read. `listWorkspaces()` returns an empty array *both* when
+    // there are no workspaces and when the enumeration failed - a lapsed permission, a folder that
+    // moved - and forgetting the sample on the second is the regression this line caused the day it
+    // was added: the remembered id exists precisely because an unreadable folder cannot tell a
+    // sample apart from no sample, which is what its own comment says, from four reports.
+    if (rootGranted) noteSampleWs(null);
     dir = null; bound = null; forgetDirs(); render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
@@ -1058,6 +1063,15 @@ function endBusyElsewhere() { busy = false; updateButtons(); }
 function refuseIncompleteSnapshot() {
   views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; pullFailed = [];
   sqlCache = null; sqlUnread = 0; sqlDiskUnread.clear();
+  // The same state `loadFromDisk` sets when it finds the marker on disk, and it was set there only:
+  // three catch blocks reach this function, and after them the empty list fell through to «Nothing
+  // pulled yet. Press Pull all» while the status line one row above said the pull had been
+  // interrupted mid-write. Two surfaces, two explanations, and the list's was the false one.
+  //
+  // Wiring one of four call sites is the defect this repository asks about in its own second
+  // question - «who else owns this flag?» - applied to a flag I had just added.
+  pullInterrupted = true;
+  diskUnreadable = null;   // it is not an unreadable file; naming one would send the reader to fix it
   render();
 }
 
@@ -2831,10 +2845,21 @@ async function aiSend() {
     status('', '');
   } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); status('AI error', 'warn'); }
   finally {
-    // The button and the flag belong to this send, whichever way it ended. What must *not* happen
-    // here is a redraw of a conversation that is no longer on screen, so the render stays guarded.
-    aiBusy = false;
-    const send = $('aisend'); if (send) send.disabled = false;
+    // `gen === aiGen`, not unconditionally. The first version of this released whatever it found,
+    // and that is a different defect rather than a fix: press **Clear** during a send and
+    // `clearConversationState()` bumps `aiGen`, clears the flag and enables Send - so the next
+    // question starts a second `aiSend`, and when the *first* one finally returns its `finally`
+    // releases the second one's flag. A third click then runs two agent loops into one conversation.
+    //
+    // The rule the fix was written for is «the flag is owned by the function that sets it», and
+    // ownership is the generation: if `aiGen` has moved, somebody else has already taken the flag
+    // and cleared it, and this send must not touch it. If it has not moved, this send owns it and
+    // releases it however it ended - including when the workspace changed under it, which is the
+    // wedge the fix was for.
+    if (gen === aiGen) {
+      aiBusy = false;
+      const send = $('aisend'); if (send) send.disabled = false;
+    }
   }
   if (!current()) return;
   aiRenderMessages();

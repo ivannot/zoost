@@ -741,10 +741,21 @@ async function aiSend() {
     setStatus('', '');
   } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); setStatus('AI error', 'warn'); }
   finally {
-    // The button and the flag belong to this send, whichever way it ended. What must *not* happen
-    // here is a redraw of a conversation that is no longer on screen, so the render stays guarded.
-    aiBusy = false;
-    const send = $('aisend'); if (send) send.disabled = false;
+    // `gen === aiGen`, not unconditionally. The first version of this released whatever it found,
+    // and that is a different defect rather than a fix: press **Clear** during a send and
+    // `clearConversationState()` bumps `aiGen`, clears the flag and enables Send - so the next
+    // question starts a second `aiSend`, and when the *first* one finally returns its `finally`
+    // releases the second one's flag. A third click then runs two agent loops into one conversation.
+    //
+    // The rule the fix was written for is «the flag is owned by the function that sets it», and
+    // ownership is the generation: if `aiGen` has moved, somebody else has already taken the flag
+    // and cleared it, and this send must not touch it. If it has not moved, this send owns it and
+    // releases it however it ended - including when the workspace changed under it, which is the
+    // wedge the fix was for.
+    if (gen === aiGen) {
+      aiBusy = false;
+      const send = $('aisend'); if (send) send.disabled = false;
+    }
   }
   if (!current()) return;
   aiRenderMessages();

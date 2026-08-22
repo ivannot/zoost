@@ -75,7 +75,9 @@ SAFE BY DESIGN
 
 Zoost reads from the Zoho CRM instance you are already signed in to and writes to a local folder you choose. It has no server of its own: no analytics, no telemetry, no tracking, no remotely hosted code. Two things leave your machine, and only when you make them.
 
-The first is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including Deluge source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
+The first is a problem report: if something breaks you can press Report this problem, read the whole report in the page, cut anything you want out of it, and send it - it becomes a public issue. Nothing is sent unless you press Send.
+
+The second is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including Deluge source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
 
 Zoost calls no endpoint that creates, edits or deletes anything in Zoho CRM. It reads metadata and function source only, through the session you are already signed in to, using the same internal interfaces the Zoho CRM web app uses - those are not documented by Zoho and can change, in which case a feature stops and says so rather than guessing. It does not read, download or export your Zoho CRM records - no contacts, no deals, no customer data.
 
@@ -198,8 +200,9 @@ The one disclosure to make, and to word carefully:
 
 > If the user configures the optional AI assistant, the parts of the org needed to answer their
 > question - function names and source, module and field names, workflow and schedule definitions -
-> are sent from their browser directly to the AI provider they chose. Nothing is sent to the
-> developer. With no AI provider configured, nothing leaves the machine.
+> are sent from their browser directly to the AI provider they chose. The only other thing that
+> leaves is a problem report the user writes, reads in full and sends by pressing Send; it becomes a
+> public issue. With no AI provider configured and no report sent, nothing leaves the machine.
 
 Certify: not sold to third parties, not used for purposes unrelated to the single purpose, not used
 for creditworthiness or lending.

@@ -4041,11 +4041,20 @@ function dropWorkspaceState() {
   // workspace missed every one of its functions, and the module names resolved against the previous
   // org's index - so a module the new workspace has and the old one did not vanished from the chips
   // and from both reports, silently, as an absence.
-  // The functions list itself. Written only by `rebuildTree()`, which runs only while the Functions
-  // tab is on screen - so on any other tab these two described the *previous* workspace for as long
-  // as the reader stayed there, and everything that consults them by id (`syncOneNow`,
-  // `distrustEverything`, the prune) was answering about that one.
+  // Every list a tab draws from. Each is written only by its own `rebuild*`, and `activate()` runs
+  // only the one for the tab that happens to be on screen - so on any other tab they described the
+  // *previous* workspace for as long as the reader stayed there, and everything that consults them
+  // by id (`syncOneNow`, `distrustEverything`, the prune, `updateMissingButton`, `revealFromPreview`)
+  // was answering about that one.
+  //
+  // The first version of this cleared two of the seven, which is the defect it was fixing, one
+  // instance at a time: `treeData` and `index` were the pair the report named, and the other five
+  // have exactly the same shape. `downloadMissingWf` is the one that acts on it rather than drawing
+  // it - it writes `workflows/<id>.json` for ids belonging to the org you left, into the folder of
+  // the one you are in.
   treeData = []; index = new Map();
+  moduleData = []; workflowData = []; wfIndex = new Map(); scheduleData = [];
+  actionData = []; connectionData = [];
   return had;
 }
 /** Everything held in memory that was read out of a file in the working folder.
@@ -4250,7 +4259,7 @@ async function loadWorkspaces() {
     // refreshes the remembered sample id «including to null». Delete the sample when it is the only
     // workspace and the id stays in storage, so the button that offers to write one is hidden for
     // good - while the empty state is telling the reader to press it.
-    noteSampleWs(null);
+    if (rootGranted) noteSampleWs(null);   // only when the folder was read - see the Analytics twin
     renderBlocked(); await refreshContext(); return;
   }
   // The list is real now, so the remembered answer is refreshed from it - including to null,

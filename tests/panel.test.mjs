@@ -2057,7 +2057,15 @@ test("the CRM's per-org caches are dropped there too, not only in the Functions 
   // happen to be on Functions. Switch workspace from the Workflows tab and the assistant answered
   // from the previous org's functions and schema, with no sign of it anywhere.
   const cleared = clearedBy(crmPanel(), 'dropWorkspaceState');
-  for (const c of ['graphCache', 'moduleFilesCache', 'aiConnCache', 'treeData', 'index']) {
+  // Derived, not listed. The first version of this named `treeData` and `index` - the pair a report
+  // happened to name - and five more lists of exactly the same shape went on describing the previous
+  // workspace: one instance of a class fixed, and the class reported closed. Every module-level
+  // `*Data` / `*Index` a tab draws from is required here, so the seventh one added tomorrow is
+  // covered without anyone remembering.
+  const decl = read('apps/crm/sidepanel.js') + read('apps/crm/automation.js') + read('apps/crm/connections.js');
+  const lists = [...decl.matchAll(/(?:^let |,\s*)(\w+(?:Data|Index))\s*=/gm)].map((m) => m[1]);
+  assert.ok(new Set(lists).size >= 6, `only ${new Set(lists).size} per-tab lists found - the derivation broke`);
+  for (const c of new Set([...lists, 'graphCache', 'moduleFilesCache', 'aiConnCache', 'treeData', 'index'])) {
     assert.ok(cleared.has(c), `id=${c} survives a change of workspace`);
   }
 });
