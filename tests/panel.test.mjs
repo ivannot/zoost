@@ -6517,12 +6517,56 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
 
-  test('one save at a time per function, and one more after the last notice', () => {
-    const q = fn('function syncOne(id)');
-    assert.ok(/syncing\.has\(key\)/.test(q), 'two notices for one function still run together');
-    assert.ok(/syncAgain\.add\(key\)/.test(q), 'a notice arriving during a read is dropped');
-    assert.ok(/syncAgain\.delete\(key\)\) syncOne\(key\)/.test(q), 'the trailing read never happens');
-    assert.ok(q.indexOf('syncing.set(key, p)') > 0, 'nothing records the read in flight');
+  // Run, not read. These four were assertions about the text of syncOne(), and they went red the day
+  // the trailing read moved one function along - a true statement about where a line sits, which is
+  // not what any of them was about. What follows drives the real queue with a stub in place of the
+  // read, and would survive that move.
+  const queue = () => {
+    const ctx = { setTimeout, clearTimeout, Promise, String, Map, Set, Array, Object, console,
+                  order: [], live: 0, peak: 0, resolvers: [] };
+    ctx.syncOneNow = (key) => new Promise((res) => {
+      ctx.order.push(key); ctx.live++; ctx.peak = Math.max(ctx.peak, ctx.live);
+      ctx.resolvers.push({ key, res: () => { ctx.live--; res(); } });
+    });
+    ctx.Math = Math;
+    vm.createContext(ctx);
+    for (const n of ['syncing', 'SYNC_MAX', 'syncBusy']) vm.runInContext(sliceConst('apps/crm/sidepanel.js', n), ctx);
+    for (const n of ['syncOne', 'syncPump']) vm.runInContext(sliceFn('apps/crm/sidepanel.js', n), ctx);
+    return ctx;
+  };
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  test('two notices for one function are one read and one more after it', async () => {
+    const c = queue();
+    vm.runInContext("syncOne('7')", c);
+    await settle();
+    vm.runInContext("syncOne('7')", c);
+    vm.runInContext("syncOne('7')", c);
+    await settle();
+    assert.deepEqual(c.order, ['7'], 'a second notice started a second read - the older source can win');
+    c.resolvers.shift().res();
+    await settle(); await settle();
+    assert.deepEqual(c.order, ['7', '7'], 'the notices that arrived during the read were dropped');
+  });
+
+  test('a burst of notices runs four at a time, and loses none', async () => {
+    const c = queue();
+    for (let i = 0; i < 50; i++) vm.runInContext(`syncOne('${i}')`, c);
+    await settle();
+    assert.equal(c.peak, 4, `${c.peak} reads in flight at once - a burst is unbounded`);
+    // Drain, four at a time, until nothing is left.
+    for (let guard = 0; guard < 200 && c.resolvers.length; guard++) { c.resolvers.shift().res(); await settle(); }
+    assert.equal(c.order.length, 50, 'a queued notice was dropped rather than deferred');
+    assert.equal(new Set(c.order).size, 50, 'an id was read twice, or one never was');
+  });
+
+  test('a read that throws does not keep its slot for the rest of the session', async () => {
+    const c = queue();
+    c.syncOneNow = () => Promise.reject(new Error('Zoho said no'));
+    vm.runInContext("syncOne('1')", c);
+    await settle(); await settle();
+    assert.equal(vm.runInContext('syncBusy', c), 0, 'a rejected read leaves a slot occupied for ever');
+    assert.equal(vm.runInContext('syncing.size', c), 0, 'the id stays marked in flight after a failure');
   });
 
   test('a change during a reconciliation is answered by one more round', () => {

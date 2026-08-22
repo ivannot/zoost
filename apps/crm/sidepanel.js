@@ -3608,16 +3608,41 @@ async function pruneFunction(id) {
 //
 // A queue per id with a trailing round: while one is in flight the id is marked, and the mark is
 // answered by exactly one more read after it finishes. Never dropped, never parallel.
-const syncing = new Map(), syncAgain = new Set();
+//
+// And a bounded number of ids at once. The queue above is per id, so N notices for N different
+// functions started N reads and N writes in parallel - one authenticated request each. A deploy that
+// saves thirty functions is an ordinary way to reach that, and the page's MAIN world is not ours, so
+// a script there can post the notice our hook posts as many times as it likes: the bridge holds the
+// id to twenty digits, which bounds its shape and not how many arrive. Four at a time does the same
+// total work without a burst nobody asked for, and nothing is dropped - dropping would break the
+// honest bulk case, which is the one worth protecting.
+const syncing = new Map(), syncAgain = new Set(), syncQueue = [];
+const SYNC_MAX = 4;
+let syncBusy = 0;
 function syncOne(id) {
   const key = String(id);
   if (syncing.has(key)) { syncAgain.add(key); return syncing.get(key); }
-  const p = syncOneNow(key).finally(() => {
-    syncing.delete(key);
-    if (syncAgain.delete(key)) syncOne(key);
-  });
+  let done;
+  const p = new Promise((res) => { done = res; });
   syncing.set(key, p);
+  syncQueue.push({ key, done });
+  syncPump();
   return p;
+}
+function syncPump() {
+  while (syncBusy < SYNC_MAX && syncQueue.length) {
+    const { key, done } = syncQueue.shift();
+    syncBusy++;
+    // The read's own failure is reported by syncOneNow; here it must not stop the pump, or one
+    // rejected read would leave a slot occupied for the rest of the session.
+    Promise.resolve().then(() => syncOneNow(key)).catch(() => {}).then(() => {
+      syncBusy--;
+      syncing.delete(key);
+      done();
+      if (syncAgain.delete(key)) syncOne(key);
+      syncPump();
+    });
+  }
 }
 
 async function syncOneNow(id) {
