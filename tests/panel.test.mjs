@@ -6767,8 +6767,20 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       if (!/per_page=200/.test(bridge[i])) continue;
       const near = bridge.slice(i, i + 14).join('\n');
       const bound = near.match(/MAX_PAGES(_WIDE)?\b/);
-      if (!bound) continue;
+      // `if (!bound) continue` was here, and it is the whole difference between «the ceilings that
+      // exist are the right ones» and «there is a ceiling». A walk with no bound at all was skipped
+      // in silence - planted, 200 a page, no ceiling, nothing said when it stops, and the suite
+      // passed. A loop that can run for ever is the case this bound exists for.
+      assert.ok(bound, `a 200-a-page walk near line ${i + 1} has no page ceiling at all: it walks ` +
+                       `until Zoho stops answering, and says nothing when it gives up`);
       assert.equal(bound[0], 'MAX_PAGES_WIDE', `a 200-a-page walk near line ${i + 1} uses the narrow bound`);
+      // And hitting the ceiling is reported, *on the line that hits it*. Looking for `capped`
+      // anywhere in the fourteen was satisfied by the `let capped = false` above - so removing the
+      // report from the ceiling itself passed. The partial list this repository refuses to prune
+      // against is exactly the one that stops here and says «this is everything».
+      const ceiling = near.split('\n').find((l) => /MAX_PAGES(_WIDE)?\b/.test(l));
+      assert.ok(/capped/.test(ceiling),
+                `a 200-a-page walk near line ${i + 1} stops at its ceiling in silence: ${ceiling.trim().slice(0, 80)}`);
     }
   });
 }

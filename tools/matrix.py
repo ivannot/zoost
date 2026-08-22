@@ -97,6 +97,7 @@ CLOSED = {
     ("claim", "bridges"):      ("tools/auditcheck.py now reads docs/boundaries.md as outward prose", "planted 2026-08-22"),
     ("siblings", "bridges"):   ("tests/tools_test.py: every injected host is a permitted host", "planted 2026-08-22"),
     ("silent", "bridges"):     ("tests/panel.test.mjs: every xRead flag starts false, is set, and is sent on", "planted 2026-08-22"),
+    ("partial", "bridges"):    ("tests/panel.test.mjs: every paged walk has a ceiling and reports hitting it", "planted 2026-08-22"),
 }
 
 
