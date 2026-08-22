@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:610349cdaeddf363 -->
+<!-- translated-from: site/docs-crm.html sha256:f5ec64cd608f888e -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -186,6 +186,10 @@
   <p>Layout e related list arrivano con <b>Pull all</b> o con <b>Pull</b> in modalità Modules. Se la matrice
     dei layout o il catalogo delle relazioni sembra vuoto, quel workspace è stato scaricato con una versione
     più vecchia - rifai il pull.</p>
+  <p>Un modulo che ha layout riceve un selettore <b class="ui">Layout:</b> sopra la tabella dei campi -
+    <b>All fields (flat)</b> oppure un layout per volta, con quelli nascosti segnalati - e
+    <b class="ui">View ↗</b> accanto apre quel layout in Zoho. Zoost ti mostra cosa contiene il layout;
+    Zoho e' il posto dove si cambia.</p>
 
   <figure class="shot">
     <img src="/img/crm-workflows.webp?v=a9a8aa4153" width="1760" height="1100" loading="lazy" decoding="async"
@@ -520,7 +524,12 @@ git commit -m "baseline"</code></pre>
     <b>field update</b>, un <b>task</b>, un <b>webhook</b>. Zoost rispecchia quei quattro in un elenco
     solo, sotto <b class="ui">Actions</b>, con un filtro <b class="ui">Kind</b>, perché rispondono a
     una domanda sola: cosa succede quando la regola scatta e quali regole fanno scattare questo.</p>
-  <p>Quello che rende l'elenco utile è un dato che ognuno di questi oggetti porta con sé: se Zoho lo
+    <p>Una regola porta anche quello che ha fatto davvero. <b class="ui">Show executions (last 30 days)</b>,
+    nel dettaglio della regola, chiede a Zoho quante volte e' partita in quella finestra e mostra la
+    risposta sotto al pulsante. E' una misura e non un giudizio: una regola che non e' mai partita puo'
+    essere giusta e in attesa, e una che e' partita moltissimo puo' non servire a niente. Zoho tiene
+    trenta giorni, quindi la finestra e' quella - non una scelta nostra.</p>
+<p>Quello che rende l'elenco utile è un dato che ognuno di questi oggetti porta con sé: se Zoho lo
     considera <b>in uso</b>. In un'org vera circa la metà non lo è - misurato su una: 85 notifiche su
     200, 50 field update su 97, 27 task su 56. Sono <b>candidati</b>, esattamente come una funzione
     orfana: Zoho risponde per le regole che conosce, e qualcosa fatto scattare da altrove sarebbe
@@ -829,6 +838,13 @@ git commit -m "baseline"</code></pre>
     da <b class="ui">⚙ Settings → Data centre</b>, dove sta il default.</p>
   <p>Il fondo del pannello resta raggiungibile sotto quella schermata: Settings, Help e About restano
     a un clic mentre il resto è fermo.</p>
+  <p><b>Le impostazioni aperte in due finestre.</b> La pagina delle impostazioni e' una scheda come
+    le altre, quindi puo' essere aperta due volte - o restare aperta mentre il pannello scrive la
+    stessa impostazione. Se una sezione cambia altrove mentre la stai modificando, quella sezione lo
+    dice e offre <b class="ui">Take theirs</b>, che ricarica quello che e' stato salvato, e
+    <b class="ui">Keep mine</b>, che tiene quello che hai scritto perche' tu possa salvarci sopra di
+    proposito. Nulla viene deciso al posto tuo e nulla viene sovrascritto alle tue spalle.</p>
+
   <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>

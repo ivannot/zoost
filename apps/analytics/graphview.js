@@ -2040,9 +2040,15 @@ function erInitControls() {
   erParamsToUI(); erUpdateControlVis();
 }
 function erSaveParams() { try { chrome.storage.local.set({ erParams: { modules: erEmph === 'modules' ? erP : null, current: erP, mode: erEmph } }); } catch (_) {} }
+// What this window calls the boxes. The state is 'modules' because that is the key the saved layout
+// parameters are written under - `erParams.modules`, on disk in every user's browser - and renaming a
+// stored key is a migration, not a label change. What the reader sees is a table, because Zoho
+// Analytics has tables and views and no modules at all: this window said «Emphasis: modules» from the
+// day it was copied from the CRM twin, in the one product where that word means nothing.
+const EMPH_WORD = { modules: 'tables', relations: 'relations' };
 $('erEmph').onclick = () => {
   erEmph = erEmph === 'relations' ? 'modules' : 'relations';
-  $('erEmph').textContent = 'Emphasis: ' + erEmph;
+  $('erEmph').textContent = 'Emphasis: ' + EMPH_WORD[erEmph];
   $('erEmph').classList.toggle('on', erEmph === 'relations');
   $('erAll').disabled = erEmph === 'relations';
   erP = Object.assign({}, ER_PRESET[erEmph]);   // each mode has its own sensible starting point

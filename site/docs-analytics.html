@@ -254,6 +254,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       sliders. There is no single right value across graphs, so the trade-off is yours to make. The
       starting values live in <b class="ui">⚙ Settings</b>, and the two are the same setting seen from two
       places.</li>
+    <li><b class="ui">Fields: key</b> draws each table with the columns that carry the relations - the
+      keys - and nothing else; <b class="ui">Fields: all</b> draws every column. Key is the readable
+      choice on anything larger than a handful of tables, and it is the one to set before printing.</li>
+    <li><b class="ui">Emphasis: relations</b> pushes the table boxes into the background and brings the
+      relation names forward; <b class="ui">Emphasis: tables</b> puts it back. Which of the two you
+      want depends on the question - what is joined to what, or what each table holds.</li>
     <li>In <b>Explorer</b>, the tab on the edge of the list - <b class="ui">◂ Hide the list</b> - folds it
       away so the detail gets the whole window; <b class="ui">▸ Show the list</b> brings it back.
       <b>Drag the same edge</b> to make the list wider or narrower instead. Per window, not remembered,
@@ -506,6 +512,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     is on, and otherwise on <b class="ui">⚙ Settings → Data centre</b>, where the default lives.</p>
   <p>The footer stays reachable under that screen, so Settings, Help and About are one click away
     while the rest is idle.</p>
+  <p><b>Settings open in two windows.</b> The settings page is an ordinary tab, so it can be open
+    twice - or open here while the panel writes the same setting. If a section changes elsewhere while
+    you are editing it, that section says so and offers <b class="ui">Take theirs</b>, which reloads
+    what was saved, and <b class="ui">Keep mine</b>, which keeps what you typed so you can save over
+    it deliberately. Nothing is decided for you and nothing is overwritten behind your back.</p>
+
 <table data-labelled data-cols="2">
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>

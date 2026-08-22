@@ -42,6 +42,15 @@ EXPECTED_ABSENT = {
     'Show all': 'ditto',
     'Save': 'ditto',
     'Reset to preset': 'ditto',
+    'Restore built-in defaults': 'the reset inside the layout block, same family as Reset to preset',
+    # The saved-pattern editor is described as a whole on both guides - what a saved pattern is, where
+    # the list lives, that emptying it stays empty. Its own two buttons are the editor explaining
+    # itself, and quoting them would make the paragraph longer without making it clearer.
+    'Add pattern': 'a control inside the saved-patterns editor, which the guides describe as a whole',
+    'Save patterns': 'ditto',
+    # The folder picker. Every quick start on the site opens with choosing a folder; it is described
+    # as the action it is rather than quoted as a button, because it is the one step nobody misses.
+    'Choose folder…': 'the folder picker, described as the first step of every quick start',
 }
 
 # Labels written differently in prose than on the button — the same thing, said in a sentence rather
@@ -50,11 +59,66 @@ ALIAS = {
     '+ Workspace': 'workspace',
     'Pull all': 'pull all',
     'Name: display': 'name: display',
+    # The two ends of the diagram's depth control. Their names are on the buttons for a screen reader;
+    # both guides describe the thing itself as «depth», which is what a reader looks for.
+    'One hop less': 'depth',
+    'One hop more': 'depth',
+    # The toggle names the state it will move to, so the guide describes the pair and the panel shows
+    # whichever half is currently offered.
+    'Emphasis: modules': 'emphasis: ',
+    'Emphasis: tables': 'emphasis: ',
 }
 
 
+def surfaces(app: str):
+    """Every shipped file of a product that can define a control, with its text.
+
+    This file read `apps/<app>/sidepanel.html` and nothing else. The panel is not the product: the
+    settings page and the diagram window are two more documents the guides describe, and a control
+    is a control wherever it is written. Measured when this was widened: 78 buttons in the two side
+    panels, **161** across the six pages and the scripts that build markup - so more than half of the
+    subject was outside the file the check opened, and its «0 findings» said nothing about them.
+
+    Scripts are in, because a control built by `innerHTML` is a control. They are read as text, which
+    is the honest limit and is stated here: a button assembled by `createElement` and given its label
+    by a variable cannot be seen by any amount of regex, and this check does not claim to.
+    """
+    out = []
+    for name in ('sidepanel.html', 'options.html', 'graphview.html'):
+        p = ROOT / f'apps/{app}/{name}'
+        if p.exists():
+            out.append((f'apps/{app}/{name}', p.read_text(encoding='utf-8')))
+    for p in sorted((ROOT / f'apps/{app}').glob('*.js')):
+        # A label written in a script is JavaScript source, so `View \u2197` is six characters here
+        # and one arrow on screen. Left as it was, the check compared the escape against the site and
+        # reported a control that is named there - a finding about the tool wearing the clothes of a
+        # finding about the product, which is the worst kind.
+        text = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)),
+                      p.read_text(encoding='utf-8'))
+        out.append((p.relative_to(ROOT).as_posix(), text))
+    return out
+
+
+BUTTON = re.compile(r'<button([^>]*)>(.*?)</button>', re.S)
+
+
+def _named(attrs: str, inner: str):
+    """(raw, name) for one button, or None with the reason it needs no name."""
+    if 'display:none' in attrs:
+        return None, 'hidden'
+    aria = re.search(r'aria-label="([^"]+)"', attrs)
+    text = ' '.join(re.sub(r'<[^>]*>', '', inner).split())
+    raw = aria.group(1) if aria else text
+    t = raw.strip('↗↻✕⚙♥ ')
+    if not t or t.startswith('&#') or len(t) < 3:
+        return None, 'a bare glyph with no name of its own: nothing to look up'
+    if '${' in t:
+        return None, 'named at run time, from data - no fixed name to look up'
+    return raw, t
+
+
 def labels(app: str):
-    """Every control's *name* in a panel — what it is called, not what it draws.
+    """Every control's *name* in a product — what it is called, not what it draws.
 
     Reading the visible text alone was enough while every control was a word. Then three of them
     became marks, and the check went quiet on `Pull all`, `Pull` and `Schema` — coverage shrinking
@@ -63,19 +127,34 @@ def labels(app: str):
     looking at pixels; the visible text is the fallback. A control with neither is unnamed and is
     reported as such, because a button nobody can name is a button nobody can look up.
     """
-    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
     out = {}
-    for m in re.finditer(r'<button([^>]*)>(.*?)</button>', html, re.S):
-        attrs, inner = m.group(1), m.group(2)
-        if 'display:none' in attrs:
-            continue
-        aria = re.search(r'aria-label="([^"]+)"', attrs)
-        text = ' '.join(re.sub(r'<[^>]*>', '', inner).split())
-        raw = aria.group(1) if aria else text
-        t = (aria.group(1) if aria else text).strip('↗↻✕⚙♥ ')
-        if not t or t.startswith('&#') or len(t) < 3:
-            continue          # a bare glyph with no name of its own: nothing to look up
-        out[raw] = t
+    for _, text in surfaces(app):
+        for m in BUTTON.finditer(text):
+            raw, t = _named(m.group(1), m.group(2))
+            if raw is not None:
+                out[raw] = t
+    return out
+
+
+def unread(app: str):
+    """Every `<button` the careful pass cannot account for — a finding about this tool.
+
+    The crude pass is deliberately dumber: every occurrence of the five characters `<button` in the
+    product's shipped files. Each must be the start of a button `labels()` read, or of one it skipped
+    for a reason it can state. One that is neither is a control nobody looked at, and a checker that
+    reports zero over a surface it never opened is the defect this file has now had twice - once when
+    three controls became marks, once when it turned out to be reading one page of six.
+
+    The same mechanism as `tools/htmlcheck.py` and `tools/csscheck.py`, compared by position.
+    """
+    out = []
+    for where, text in surfaces(app):
+        seen = {m.start() for m in BUTTON.finditer(text)}
+        for m in re.finditer(r'<button', text):
+            if m.start() not in seen:
+                line = text.count('\n', 0, m.start()) + 1
+                out.append(f'{where}:{line} - a control this check never read '
+                           f'(no </button>, or built across a boundary a regex cannot cross)')
     return out
 
 
@@ -159,8 +238,11 @@ def main() -> int:
             if ALIAS.get(label, label).lower() not in site:
                 findings.append(f'{app}: the filter/sort choice “{label}” exists in the panel and is '
                                 f'named nowhere on the site')
-        print(f'  {app}: {len(found)} controls and {len(opts)} filter choices checked '
-              f'against {len(pages)} pages')
+        blind = unread(app)
+        findings[:0] = [f'{app}: {b}' for b in blind]
+        print(f'  {app}: {len(found)} named controls across {len(surfaces(app))} shipped files '
+              f'and {len(opts)} filter choices, checked against {len(pages)} pages'
+              + (f' - {len(blind)} NOT LOOKED AT' if blind else ', none left unread'))
 
     guides_depict_marks(findings)
 
