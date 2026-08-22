@@ -57,6 +57,12 @@ table.ftbl{width:100%;border-collapse:collapse;font:12.5px ui-monospace,monospac
 .hxn{font:11px ui-monospace,monospace;padding:1px 8px;border-radius:10px}
 .hxn.warn{background:#fdf0d5;color:#8a5a12}.hxn.bad{background:#fbe0e0;color:#b42318}.hxn.ok{background:#d9f3e6;color:#177a4a}
 .hxd{font-size:11.5px;color:var(--muted);margin:0 0 6px}
+/* Three paragraphs in this report carry class="note" - the withheld sender addresses, the freshness
+   of the failures reading - and the class was defined nowhere, so the lines meant to stand out
+   rendered as ordinary body text. The same defect as .k / .card / .note / b.ui on the site, and
+   csscheck cannot see it: this stylesheet is a template literal inside a .js file, which is also why
+   no backtick may appear in this comment. */
+.note{color:#8a5a00;background:#fff8e6;border:1px solid #e5c76b;border-radius:6px;padding:8px 10px;font-size:13px;margin:8px 0}
 .hxrow{padding:3px 8px;border:1px solid var(--line);border-radius:6px;margin:2px 0;font:12px ui-monospace,monospace}
 .hxrow .hxm{color:var(--muted);font-size:11px}
 .hxnone{font-size:11.5px;color:#177a4a;margin:0}
