@@ -60,43 +60,134 @@ def sheets():
     return out
 
 
-def rules():
-    """(world, selector) -> {declarations -> [where]}, counting only rules at the top level.
+def _blank_noise(css, strings=True):
+    """Comments - and, for the structural pass, string bodies - replaced by spaces, offsets intact.
+
+    Removing them would be simpler and would move every position after the cut, which is exactly what
+    the coverage audit below compares. A `}` inside `content: "}"` or a `{` inside a `url(...)` is
+    text, not structure, and reading it as structure is how a scanner loses the rest of a file.
+
+    Two passes, because the first version had one and got it wrong in both directions. Slicing a
+    selector out of the *raw* text put a comment written above a rule into the selector - which is how
+    `[hidden]` arrived carrying the four-line note that explains it. And blanking strings before
+    comparing declarations would make `content: "a"` and `content: "b"` equal, which is a divergence
+    reported as agreement. So: comments always, strings only where braces are being counted.
+    """
+    out, i, n = [], 0, len(css)
+    while i < n:
+        c = css[i]
+        if c == "/" and i + 1 < n and css[i + 1] == "*":
+            j = css.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append("".join(" " if ch != "\n" else "\n" for ch in css[i:j]))
+            i = j
+            continue
+        if strings and c in "\"'":
+            j = i + 1
+            while j < n and css[j] != c:
+                j += 2 if css[j] == "\\" else 1
+            j = min(j + 1, n)
+            out.append(c + " " * (j - i - 2) + (c if j <= n else ""))
+            i = j
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)[:len(css)].ljust(len(css))
+
+
+def scan(css):
+    """Every top-level rule, as (selector, body, offset-of-its-brace), plus the spans skipped.
+
+    Written as a scanner rather than a line reader, and the two defects that cost say why. A rule
+    whose body ran onto a second line was **dropped entirely** - the reader required the line to end
+    in `}` and threw away the selector it had accumulated when it did not. And two rules on one line,
+    `a{x}b{y}`, were read as one: `a` took `x}b{y` as its declarations and `b` was never seen at all.
+    Measured on the tree at the time: 1329 rules read of 1497 written.
 
     Inside `@media` a selector is *supposed* to appear again with different declarations - that is
-    what a breakpoint is - so the depth is tracked and only the outermost rules are read. Without
-    that, `header nav` looked like five contradictory definitions when it is one plus four
-    breakpoints.
+    what a breakpoint is - so at-rule blocks are skipped whole. They are returned as spans rather
+    than silently jumped, because the audit below has to be able to account for every brace in the
+    file, and «inside an at-rule» is an answer where «unread» is not.
     """
+    text = _blank_noise(css)                  # braces: comments and strings are not structure
+    clean = _blank_noise(css, strings=False)  # what a selector or a body actually says
+    rules_out, spans = [], []
+    i, n, depth, sel_start = 0, len(text), 0, 0
+    while i < n:
+        c = text[i]
+        if c == "{":
+            sel = " ".join(clean[sel_start:i].split())
+            if sel.startswith("@") or not sel:
+                j, d = i, 0
+                while j < n:
+                    if text[j] == "{":
+                        d += 1
+                    elif text[j] == "}":
+                        d -= 1
+                        if d == 0:
+                            break
+                    j += 1
+                spans.append((i, min(j + 1, n)))
+                i = min(j + 1, n)
+                sel_start = i
+                continue
+            j, d = i, 0
+            while j < n:
+                if text[j] == "{":
+                    d += 1
+                elif text[j] == "}":
+                    d -= 1
+                    if d == 0:
+                        break
+                j += 1
+            body = clean[i + 1:min(j, n)]
+            rules_out.append((sel, body, i))
+            # A nested block inside a rule body - CSS nesting, or a stray - is part of this rule, not
+            # a rule of its own, and the audit must not read its brace as unaccounted for.
+            if "{" in body:
+                spans.append((i + 1, min(j, n)))
+            i = min(j + 1, n)
+            sel_start = i
+            continue
+        if c == "}":
+            sel_start = i + 1
+        i += 1
+    return rules_out, spans
+
+
+def unread(css):
+    """The braces the careful scan cannot account for - a finding about this tool, not about the CSS.
+
+    The crude pass is deliberately dumber than `scan()`: every `{` in the file, comments and strings
+    blanked, and nothing else. Each one has to fall on a rule the careful pass read or inside a span
+    it consciously skipped. One that does not is a rule nobody looked at, and a count of duplicates
+    taken under an unstated blind spot is the number that gets quoted as evidence.
+
+    The same mechanism as `tools/htmlcheck.py`, and for the same reason: this checker reported zero
+    over 168 rules it never read, and nothing said so - including the headline, which counted the
+    rules it *had* read and looked complete.
+    """
+    text = _blank_noise(css)
+    rules_out, spans = scan(css)
+    known = {off for _, _, off in rules_out}
+    out = []
+    for i, c in enumerate(text):
+        if c != "{" or i in known:
+            continue
+        if any(a <= i < b for a, b in spans):
+            continue
+        out.append(i)
+    return out
+
+
+def rules():
+    """(world, selector) -> {declarations -> [where]}, counting only rules at the top level."""
     found = {}
     for world, where, css in sheets():
-        css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
-        depth, pending = 0, ""
-        for line in css.splitlines():
-            s = line.strip()
-            if not s:
+        for sel, body, _ in scan(css)[0]:
+            if sel.startswith(("from", "to", "%")):
                 continue
-            opens, closes = s.count("{"), s.count("}")
-            at_top = depth == 0
-            depth += opens - closes
-            if not at_top or s.startswith("@"):
-                pending = ""
-                continue
-            # A selector list written over several lines: the first lines have no brace at all, and
-            # reading only the last of them turned `a,\n b,\n c{...}` into a definition of `c` -
-            # which then looked like a second definition of the `c` that follows. Accumulate instead.
-            if "{" not in s:
-                pending += s
-                continue
-            if not s.rstrip().endswith("}"):
-                pending = ""
-                continue
-            s, pending = pending + s, ""
-            sel, body = s.split("{", 1)
-            sel = " ".join(sel.split())
-            if not sel or sel.startswith(("from", "to", "%")) or "}" in sel:
-                continue
-            found.setdefault((world, sel), {}).setdefault(body.strip().rstrip("}"), []).append(where)
+            found.setdefault((world, sel), {}).setdefault(body.strip(), []).append(where)
     return found
 
 
@@ -153,7 +244,8 @@ def main() -> int:
     for sel in sorted(live):
         now = live[sel]
         if sel not in known:
-            kind = "means different things in" if sel in div else f"is defined in {len(now)} places:"
+            kind = ("means different things in" if sel in div
+                    else f"is written {len(dup[sel])} times in")
             findings.append(f"«{sel}» {kind} {', '.join(sorted(now))}")
             continue
         was = {w for w in known[sel].split(",") if w}
@@ -167,10 +259,24 @@ def main() -> int:
     for sel in sorted(set(known) - set(live)):
         findings.append(f"«{sel}» is in the ledger and no longer repeated - remove the line")
 
+    # What the tool did not read, before what it found. A finding count taken under an unstated blind
+    # spot is the number that gets quoted as evidence, so this line goes first and names places.
+    blind = []
+    read = 0
+    for _, where, css in sheets():
+        read += len(scan(css)[0])
+        for off in unread(css):
+            line = css.count("\n", 0, off) + 1
+            blind.append(f"{where}:{line} - a rule this check never read")
+
     worlds = len({w for w, _, _ in sheets()})
-    print(f"csscheck: {len(rules())} rules across {len(sheets())} stylesheets in {worlds} documents, "
-          f"{len(dup)} repeated and {len(div)} divergent, {len(known)} of them recorded")
-    for f in findings:
+    print(f"csscheck: {read} rule(s) read across {len(sheets())} stylesheets in {worlds} documents"
+          + (f", {len(blind)} NOT LOOKED AT" if blind else ", none left unread")
+          + f"; {len(dup)} repeated and {len(div)} divergent, {len(known)} of them recorded")
+    for b in blind:
+        print("  " + b)
+    findings = blind + findings
+    for f in findings[len(blind):]:
         print("  " + f)
     print()
     print(f"{len(findings)} finding(s). A selector belongs to one stylesheet; the ledger holds the "

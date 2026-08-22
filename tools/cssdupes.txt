@@ -13,6 +13,7 @@ analytics:.erbox	apps/analytics/graphview.html
 analytics:.wrap	apps/analytics/graphview.html,apps/analytics/options.html
 analytics:[hidden]	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
 analytics:body	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:button	apps/analytics/options.html,apps/analytics/sidepanel.html
 analytics:button.primary	apps/analytics/options.html,apps/analytics/sidepanel.html
 analytics:header	apps/analytics/graphview.html,apps/analytics/options.html
 analytics:header h1	apps/analytics/graphview.html,apps/analytics/options.html
@@ -29,11 +30,13 @@ crm:.ftbl	apps/crm/graphview.html,apps/crm/sidepanel.html
 crm:.ftbl td	apps/crm/graphview.html,apps/crm/sidepanel.html
 crm:.ftbl td.mono	apps/crm/graphview.html,apps/crm/sidepanel.html
 crm:.ftbl th	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.ftbl tr:hover	apps/crm/graphview.html,apps/crm/sidepanel.html
 crm:.tabrow	apps/crm/graphview.html,apps/crm/options.html
 crm:.tabs	apps/crm/graphview.html,apps/crm/options.html
 crm:.wrap	apps/crm/graphview.html,apps/crm/options.html
 crm:[hidden]	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
 crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
+crm:button	apps/crm/options.html,apps/crm/sidepanel.html
 crm:button.primary	apps/crm/options.html,apps/crm/sidepanel.html
 crm:header	apps/crm/graphview.html,apps/crm/options.html
 crm:header h1	apps/crm/graphview.html,apps/crm/options.html

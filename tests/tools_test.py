@@ -4038,5 +4038,74 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
         self.assertIn('auditcheck', wf.split('jobs:')[0], 'the omission is not explained')
 
 
+class CssScannerReadsEveryRule(unittest.TestCase):
+    """The checker read 1318 of the 1487 rules in this tree and printed «0 findings».
+
+    Two shapes were invisible, and one of them was worse than invisible. A rule whose body ran onto a
+    second line was dropped whole - the reader required a line to end in `}` and threw away the
+    selector it had accumulated when it did not. And two rules on one line, `a{x}b{y}`, were read as
+    one: `a` took `x}b{y` as its declarations, so its body was wrong *and* `b` was never seen.
+
+    The remedy is the one this repository already built for `htmlcheck`: a second, cruder pass over
+    the same subject, compared by position. Every `{` in the file has to fall on a rule the careful
+    scan read or inside a span it consciously skipped; one that does not is a finding about the tool,
+    printed above any finding about the CSS.
+    """
+
+    def setUp(self):
+        import importlib
+        self.c = importlib.import_module('csscheck')
+
+    def test_a_rule_whose_body_spans_lines_is_read(self):
+        rules, _ = self.c.scan('.a{\n  color: red;\n  margin: 0;\n}\n.b{color:blue}\n')
+        self.assertEqual([r[0] for r in rules], ['.a', '.b'])
+        self.assertIn('margin: 0', rules[0][1])
+
+    def test_two_rules_on_one_line_are_two_rules(self):
+        rules, _ = self.c.scan('.a{color:red} .b{color:blue}\n')
+        self.assertEqual([(r[0], r[1]) for r in rules], [('.a', 'color:red'), ('.b', 'color:blue')],
+                         'the second rule is invisible and the first one carries it')
+
+    def test_a_comment_above_a_rule_is_not_part_of_its_selector(self):
+        # `[hidden]` arrived carrying the four-line note that explains it, and so became a selector
+        # nothing else could ever match.
+        rules, _ = self.c.scan('/* why this exists\n   over two lines */\n[hidden]{display:none}\n')
+        self.assertEqual(rules[0][0], '[hidden]')
+
+    def test_a_string_in_a_declaration_survives_the_comparison(self):
+        # Blanking strings before comparing bodies would make these two agree, which is a divergence
+        # reported as agreement - the opposite of the tool's job.
+        a, _ = self.c.scan('.x{content:"a"}')
+        b, _ = self.c.scan('.x{content:"b"}')
+        self.assertNotEqual(a[0][1], b[0][1])
+
+    def test_a_brace_inside_a_string_is_not_structure(self):
+        rules, _ = self.c.scan('.x{content:"}"}\n.y{color:red}\n')
+        self.assertEqual([r[0] for r in rules], ['.x', '.y'],
+                         'a closing brace in a string ended the rule and lost the rest of the file')
+
+    def test_an_at_rule_block_is_skipped_and_accounted_for(self):
+        css = '@media (max-width:600px){.a{color:red}}\n.b{color:blue}\n'
+        rules, _ = self.c.scan(css)
+        self.assertEqual([r[0] for r in rules], ['.b'], 'a breakpoint reads as a second definition')
+        self.assertEqual(self.c.unread(css), [], 'the braces inside the at-rule are unaccounted for')
+
+    def test_the_coverage_audit_speaks_when_the_careful_pass_goes_blind(self):
+        # A checker that says nothing about what it skipped is the defect being fixed, so the audit
+        # itself gets both proofs: silent on the tree, and loud the moment the careful pass narrows.
+        css = '.a{\n  color: red;\n}\n.b{color:blue} .c{color:green}\n'
+        self.assertEqual(self.c.unread(css), [], 'the shipped scanner cannot account for its own file')
+        real = self.c.scan
+        try:
+            self.c.scan = lambda text: ([], [])          # a pass that reads nothing at all
+            self.assertEqual(len(self.c.unread(css)), 3, 'a scan that reads nothing is reported as complete')
+        finally:
+            self.c.scan = real
+
+    def test_the_tree_has_no_unread_rule(self):
+        for _, where, css in self.c.sheets():
+            self.assertEqual(self.c.unread(css), [], f'{where}: a rule this check never reads')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
