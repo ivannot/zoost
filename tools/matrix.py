@@ -101,6 +101,7 @@ CLOSED = {
     ("await", "bridges"):      ("tools/asynccheck.py now reads inside the IIFE; 787 of 789 functions", "planted 2026-08-22"),
     ("blindspot", "bridges"):  ("ditto - the coverage is printed and held by tests/tools_test.py", "planted 2026-08-22"),
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
+    ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
 }
 
 

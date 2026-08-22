@@ -9407,3 +9407,41 @@ for (const app of ['crm', 'analytics']) {
     });
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// An injection guard is a version, not a boolean.
+//
+// `hook.js` records why, from the day it cost one: «a page already running the previous build carries
+// the previous number, and an equal number means nothing to do - so leaving it alone leaves the old
+// one in place in every open tab. That is what it did once, and it cost an evening of fixes that
+// could not take effect.»
+//
+// Both content bridges kept `if (window.__zoostBridge) return;`, and they are the half that fetches.
+// When the extension is updated under an open tab the old script is orphaned - its `chrome.runtime`
+// is gone, which the bridge itself reports - and the panel's documented recovery is to re-inject.
+// Against a boolean that re-injection returns at the first line and leaves the dead copy in place
+// until the reader reloads the tab.
+//
+// Derived from the guard's shape: whatever a shipped script parks on `window.__zoost*` to decide
+// whether it has already run must be compared against a version.
+{
+  test('a script re-injected into a page it already ran in can replace itself', () => {
+    const bad = [];
+    let seen = 0;
+    for (const app of ['crm', 'analytics']) {
+      for (const f of readdirSync(`${ROOT}/apps/${app}`)) {
+        if (!f.endsWith('.js')) continue;
+        const src = read(`apps/${app}/${f}`).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        for (const m of src.matchAll(/if \(window\.(__zoost\w+)([^)]*)\)\s*\{?\s*return/g)) {
+          seen++;
+          // `=== SOMETHING` is a version comparison; a bare truthiness test is the boolean.
+          if (!/===\s*\w+/.test(m[2])) bad.push(`apps/${app}/${f}: window.${m[1]} is a boolean`);
+        }
+      }
+    }
+    assert.ok(seen >= 3, `only ${seen} injection guards found - the derivation broke`);
+    assert.deepEqual(bad, [],
+      `an update orphans the copy already in the page, and re-injecting - which is how this product ` +
+      `recovers - returns at the first line and leaves it there:\n  ` + bad.join('\n  '));
+  });
+}

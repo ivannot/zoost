@@ -26,8 +26,21 @@
  *    it, exactly as the CRM panel takes the org from the tab it is looking at.
  */
 (function () {
-  if (window.__zoostAnalyticsBridge) { return; }
-  window.__zoostAnalyticsBridge = true;
+  // A version, not a boolean, for the reason `hook.js` already records: «a page already running the
+  // previous build carries the previous number, and an equal number means nothing to do - so leaving
+  // it alone leaves the old one in place in every open tab. That is what it did once, and it cost an
+  // evening of fixes that could not take effect.» The hook learnt it; this half, which is the one
+  // that actually fetches, kept the boolean.
+  //
+  // What it costs is nothing, and what it buys is the documented recovery: when the extension is
+  // updated under an open tab the old script is orphaned - its `chrome.runtime` is gone, which is
+  // what the notice below reports - and the panel's answer is to re-inject. Against a boolean that
+  // re-injection returned at the first line and left the dead copy in place until the reader
+  // reloaded the tab. Two listeners cannot result: an orphaned context cannot answer, and a live one
+  // of a different build cannot exist without an update having orphaned it.
+  const BRIDGE_V = 1;
+  if (window.__zoostAnalyticsBridge === BRIDGE_V) { return; }
+  window.__zoostAnalyticsBridge = BRIDGE_V;
 
   const BASE = location.origin;
   // The manifest already decides where this script runs; recognising a *different* set here
