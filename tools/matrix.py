@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("fastpath", "worker"):    ("tests/worker.test.mjs: every surface stating a Store version consults staleReading", "planted 2026-08-23"),
     ("siblings", "options"):   ("tests/panel.test.mjs: a preset keeps what the page cannot show", "planted 2026-08-22"),
     ("claim", "crm-ai"):       ("tests/panel.test.mjs: the passphrase field is emptied on both branches", "planted 2026-08-22"),
     ("siblings", "crm-export"): ("tests/panel.test.mjs: both reports read every action field the panel shows", "planted 2026-08-22"),

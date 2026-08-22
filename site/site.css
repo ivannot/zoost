@@ -607,3 +607,7 @@ pre.ask code{display:block;font:12.5px/1.65 var(--mono);color:var(--ink);backgro
 /* The card names the product, then says in full what it is. Both forms are the manifest's own - `name` and `short_name` - and putting them adjacent is how the site states the convention without a note about naming: seen once, every later "Zoost CRM" is legible. */
 /* --sel is an accent for fills and borders; read as text on the card it is 3.09:1 against the 4.5 AA asks. Same hue, lightened until it can be read. */
 /* The first column used to be a bare figure, so nowrap was free; it now names the thing as well ("120 Deluge functions"), and the middle column is the file count that adds up to the total in the heading above the table. The prose column gets what is left. */
+/* The mark beside a Store version nobody has checked lately. Not a colour and not an icon: a
+   footnote star with the reason in its title, because the number is old rather than wrong and this
+   site hands over the fact instead of grading it. */
+.vitem .stale{color:var(--muted);cursor:help;font-weight:600}

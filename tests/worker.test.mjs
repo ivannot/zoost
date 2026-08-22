@@ -816,3 +816,65 @@ test('the site and the Worker agree on which version is newer', () => {
   assert.equal(newer('1.9', '1.9.1'), false, 'a missing component is read as greater than zero');
   assert.equal(newer('1.10.0', '1.9.0'), true, 'the parts are compared as strings');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A reading nobody has checked lately is marked wherever it is shown.
+//
+// The Store version comes from a KV entry a scheduled run refreshes. If that run stops - a revoked
+// key, a disabled schedule, a quota - KV keeps the last good answer, `cws` stays `ok`, and the badge
+// goes on stating «On the Web Store 1.46.0» as a live fact, indefinitely, with nothing saying so.
+//
+// `staleReading()` exists for exactly this and was consulted in **one** place: the ahead box on
+// /emergency, one page. The footer badge carries the same reading onto every page and never asked.
+// Same data, one consumer guards it and the other did not.
+//
+// Derived: every place that renders `storeAsOf`'s reading must consult `staleReading`, so a third
+// consumer written tomorrow cannot quietly skip it.
+test('every surface that shows the Store reading says when it is old', () => {
+  const src = read('site/site.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  // Derived from what is **rendered**, not from who reads `storeAsOf`. The first version of this
+  // check listed the readers of that field, which made the badge invisible the moment it stopped
+  // asking for it - the very defect below, one layer up. What cannot be missed is the version
+  // reaching the page: every `esc(v.store)` is a surface stating a Store version to somebody.
+  const emits = [...src.matchAll(/esc\(v\.store\)/g)].map((m) => m.index);
+  assert.ok(emits.length >= 3, `only ${emits.length} place(s) emit the Store version - derivation broke`);
+
+  // Innermost enclosing function, by brace matching rather than by a window of characters.
+  const fns = [];
+  for (const m of src.matchAll(/function\s*\w*\s*\([^)]*\)\s*\{/g)) {
+    let d = 0, i = m.index + m[0].length - 1;
+    for (; i < src.length; i++) {
+      if (src[i] === '{') d++;
+      else if (src[i] === '}' && --d === 0) break;
+    }
+    fns.push({ a: m.index, b: i, body: src.slice(m.index, i) });
+  }
+  // The whole enclosing chain, because the age may be stated once beside several figures - the
+  // /emergency box prints two versions and says how old the reading is below both. What is dropped
+  // is any function that encloses *every* surface: the file's own wrapper would otherwise cover the
+  // lot and the check would report zero for ever, which is the shape this repository keeps meeting.
+  const encl = (at) => fns.filter((f) => f.a <= at && at <= f.b && !emits.every((e) => f.a <= e && e <= f.b));
+
+  // It may ask in person, or hand the value to something that asks. One call deep, no further:
+  // past that a name is a name again, which is what this repository refuses to trust.
+  const guarded = (chain) => chain.some((f) => {
+    if (/staleReading\(/.test(f.body)) return true;
+    for (const c of f.body.matchAll(/(\w+)\s*\(/g)) {
+      const callee = fns.find((g) => new RegExp(`function\\s+${c[1]}\\s*\\(`).test(src.slice(g.a, g.a + 60)));
+      if (callee && /staleReading\(/.test(callee.body) && new RegExp(`${c[1]}\\s*\\([^()]*AsOf`).test(f.body)) return true;
+    }
+    return false;
+  });
+  const blind = emits.filter((at) => !guarded(encl(at)));
+  assert.equal(blind.length, 0,
+    `${blind.length} surface(s) state a Store version without asking whether anything has looked ` +
+    `lately - if the scheduled refresh stops, KV keeps the last good answer and they read as live for ever`);
+
+  // And the mark carries its reason, in both languages: a bare star is a decoration.
+  for (const lang of ['en', 'it']) {
+    const at = src.indexOf(`${lang}: {`);
+    assert.match(src.slice(at, src.indexOf('\n    }', at)), /storeStale:/, `id=${lang} has no wording for a stale reading`);
+  }
+  assert.match(src, /title="' \+ esc\(t\('storeStale'\)\)/, 'the mark carries no reason');
+});

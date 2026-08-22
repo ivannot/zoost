@@ -199,7 +199,7 @@
           '<div class="vrow">' +
             '<div class="vprod">' + esc(name) + '</div>' +
             '<div class="vfacts">' +
-              '<span class="vitem"><b>' + t('store') + '</b> ' + store(v) + '</span>' +
+              '<span class="vitem"><b>' + t('store') + '</b> ' + store(v, d.storeAsOf) + '</span>' +
               review +
               '<span class="vitem"><b>' + t('release') + '</b> ' + tag + ahead + '</span>' +
               '<span class="vitem"><b>' + t('dev') + '</b> ' + dev(app, v) + '</span>' +
@@ -219,9 +219,22 @@
   // Linked only when there is a version, which is the same thing as the listing serving content:
   // the number comes from scraping that page. So the link cannot lead somewhere empty - while
   // Zoost Analytics is in review the figure reads "unknown" and stays plain text.
-  function store(v) {
+  function store(v, asOf) {
     if (!v.store) return '<i>' + t('unknown') + '</i>';
-    return v.url ? '<a href="' + v.url + '">' + esc(v.store) + '</a>' : esc(v.store);
+    var n = v.url ? '<a href="' + v.url + '">' + esc(v.store) + '</a>' : esc(v.store);
+    // A number nobody has checked lately is marked as such. `staleReading` was written for this and
+    // was consulted in one place - the ahead box on /emergency - while the badge that carries the
+    // same reading onto **every page** stated it as a live fact. If the scheduled run that refreshes
+    // it stops - a revoked key, a disabled schedule, a quota - KV keeps the last good answer, `cws`
+    // stays `ok`, and «On the Web Store 1.46.0» would go on being true-looking indefinitely.
+    //
+    // Marked rather than hidden: the reading is not wrong, it is old, and this site's rule is to
+    // hand over the fact and let the reader decide. The title carries the sentence /emergency
+    // already uses, so the two say the same thing about the same number.
+    if (asOf && staleReading(asOf, Date.now())) {
+      n += ' <span class="stale" title="' + esc(t('storeStale')) + '">*</span>';
+    }
+    return n;
   }
 
   // The in-development number links to what is *in* it. A compare view against the latest release
