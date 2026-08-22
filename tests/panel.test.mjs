@@ -6898,10 +6898,27 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = panel.slice(panel.indexOf('async function pullModules'), panel.indexOf('\n}', panel.indexOf('async function pullModules')));
 
-  test('the bridge says whether the layouts were read, not just what they were', () => {
-    assert.ok(/let layoutsRead = false;/.test(bridge), 'nothing distinguishes «none» from «not read»');
-    assert.ok(/layoutsRead = true;/.test(bridge), 'the flag is never set, so every module looks unread');
-    assert.ok(/layouts_read: layoutsRead/.test(bridge), 'the panel is never told');
+  test('every read the bridge reports on starts as «not read»', () => {
+    // Derived from the name, not from a list of two. `xRead` is the flag that separates «Zoho
+    // answered, and it is none» from «nobody asked, or the call failed» - the distinction this whole
+    // product is built on, and the one that decides whether a prune may delete. Declared `true` and
+    // it collapses in the direction that loses files: a refused call reads as «none».
+    //
+    // Planted a third flag of exactly that shape, declared true before the call it describes: the
+    // node suite passed. The check named `layoutsRead` and `relatedRead` by hand, which is the shape
+    // of every hole this grid has turned up so far.
+    const flags = [...new Set([...bridge.matchAll(/\b(\w+Read)\b/g)].map((m) => m[1]))];
+    assert.ok(flags.length >= 2, `only ${flags.length} read-verdict flags found - the derivation broke`);
+    for (const f of flags) {
+      assert.ok(new RegExp(`let ${f} = false;`).test(bridge),
+                `id=${f} does not start as «not read», so a call that never happened reports as «none»`);
+      assert.ok(new RegExp(`\\b${f} = true`).test(bridge),
+                `id=${f} is never set, so everything looks unread`);
+      // And the panel is told: a verdict the bridge keeps to itself is one nobody can act on.
+      const wire = f.replace(/Read$/, '').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() + '_read';
+      assert.ok(new RegExp(`${wire}:\\s*${f}`).test(bridge),
+                `id=${f} is decided and never sent to the panel as ${wire}`);
+    }
   });
 
   test('a layout file is removed only for a module that answered with none', () => {
