@@ -4399,5 +4399,52 @@ class TheTwoHostListsAgree(unittest.TestCase):
                              f'permission, so it will load and recognise nothing')
 
 
+class AsyncCheckReadsWhatItOpens(unittest.TestCase):
+    """The ledger holds 79 sites and the tool read none of the two files that fetch from Zoho.
+
+    Both `content-bridge.js` are wrapped in an IIFE, so every function in them is indented by two,
+    and the finder was anchored at column zero: **0 of 32 and 0 of 19**, over 42 `await`s. The
+    headline said «20 files» and the ledger's header said in writing that the content scripts «were
+    read before being recorded». They were opened. `tests/slice.mjs` learnt this on this exact file.
+
+    The crude denominator is every `function` declaration at any indentation; the careful pass reads
+    the file's own top level, which is column zero normally and the IIFE's body where there is one.
+    The difference is the functions nested inside another, whose state is local - and that number is
+    printed rather than left as a silence.
+    """
+
+    def setUp(self):
+        import importlib
+        self.a = importlib.import_module('asynccheck')
+
+    def test_it_reads_the_two_files_that_reach_zoho(self):
+        for rel in ('apps/crm/content-bridge.js', 'apps/analytics/content-bridge.js'):
+            src = (ROOT / rel).read_text(encoding='utf-8')
+            self.assertTrue(self.a._iife(src), f'{rel} is no longer an IIFE - the reader assumes one')
+            n = len(list(self.a.functions(src)))
+            self.assertGreater(n, 10, f'{rel}: the checker reads {n} functions in a file that has dozens')
+            self.assertGreater(len(self.a.globals_of(src)), 5,
+                               f'{rel}: the checker sees no shared state in a file that has plenty')
+
+    def test_the_wrapper_is_detected_from_the_first_statement(self):
+        # The loose version matched any line beginning with «(» and called `sidepanel.js` wrapped,
+        # then looked for functions at indentation two and found none - 79 sites down to 30, with
+        # nothing on screen saying so.
+        self.assertFalse(self.a._iife((ROOT / 'apps/crm/sidepanel.js').read_text(encoding='utf-8')))
+        self.assertTrue(self.a._iife('/* c */\n(function () {\n  function f() {}\n})();'))
+        self.assertFalse(self.a._iife('// c\nlet x = 1;\n(function () {})();'))
+
+    def test_almost_every_declared_function_is_read(self):
+        read = crude = 0
+        for rel in self.a.FILES:
+            src = (ROOT / rel).read_text(encoding='utf-8')
+            read += len(list(self.a.functions(src)))
+            crude += len(re.findall(r'(?m)^[ \t]*(?:async\s+)?function\s+\w+\s*\(', src))
+        self.assertGreater(crude, 700, 'the crude sweep found almost nothing - it is not sweeping')
+        self.assertLessEqual(crude - read, 5,
+                             f'{crude - read} declared functions go unread; only the ones nested inside '
+                             f'another are meant to, and there are two of those')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

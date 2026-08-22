@@ -98,6 +98,8 @@ CLOSED = {
     ("siblings", "bridges"):   ("tests/tools_test.py: every injected host is a permitted host", "planted 2026-08-22"),
     ("silent", "bridges"):     ("tests/panel.test.mjs: every xRead flag starts false, is set, and is sent on", "planted 2026-08-22"),
     ("partial", "bridges"):    ("tests/panel.test.mjs: every paged walk has a ceiling and reports hitting it", "planted 2026-08-22"),
+    ("await", "bridges"):      ("tools/asynccheck.py now reads inside the IIFE; 787 of 789 functions", "planted 2026-08-22"),
+    ("blindspot", "bridges"):  ("ditto - the coverage is printed and held by tests/tools_test.py", "planted 2026-08-22"),
 }
 
 

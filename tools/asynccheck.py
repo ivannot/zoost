@@ -101,6 +101,24 @@ WRITE = re.compile(r'(?:(?<![.\w])(\w+)\s*(?:\[[^\]]*\])?(?:\.\w+)*\s*=(?![=>])'
                    r'|Object\.assign\((\w+))')
 
 
+def _iife(src):
+    """True when the whole file is wrapped in an immediately-invoked function.
+
+    The **first statement**, not any line that happens to begin with `(`. The loose version matched a
+    continuation line in the middle of `sidepanel.js`, decided the file was wrapped, looked for
+    functions at indentation two and found **none** - taking the tool from 79 sites to 30 while
+    reporting nothing wrong. A detector has to be measured on every file it will meet, which is what
+    the sweep in `tests/tools_test.py` now does.
+    """
+    code = re.sub(r'/\*[\s\S]*?\*/', '', src)
+    for line in code.split('\n'):
+        t = line.strip()
+        if not t or t.startswith('//'):
+            continue
+        return bool(re.match(r'\(\s*(?:async\s+)?(?:function\b|\()', t))
+    return False
+
+
 def globals_of(src):
     """Module-level declarations - the state a function can reach from anywhere.
 
@@ -108,8 +126,20 @@ def globals_of(src):
     a const binding cannot be *reassigned*, and `failedRemovals` is a const Set whose `.add()`,
     `.delete()` and `.clear()` are writes to shared state like any other. Reported by an audit as a
     measured false negative, which is the only kind worth acting on."""
+    # The IIFE's own top level counts too. Both content bridges wrap everything in one, so their
+    # state is declared at indentation two and this found **none of it** - which, with `functions()`
+    # reading nothing there either, is why «20 files» meant 18. A declaration one level inside an
+    # IIFE is shared by every function in that file, which is exactly what this is about.
+    #
+    # Only where the file *is* an IIFE. Allowing two spaces everywhere read every `const x = await …`
+    # inside a function body of the ordinary files as module state - 636 findings, all of them
+    # nonsense, which is a widening that had to be measured rather than reasoned about.
+    #
+    # The limit that remains, stated: inside an IIFE a declaration nested deeper than its body is a
+    # local and this would still call it a global. Two spaces is what both bridges use.
+    depth = 2 if _iife(src) else 0
     names = set()
-    for m in re.finditer(r'(?m)^(?:let|const)\s+([^;\n]+)', src):
+    for m in re.finditer(r'(?m)^[ \t]{0,%d}(?:let|const)\s+([^;\n]+)' % depth, src):
         for part in m.group(1).split(','):
             n = part.strip().split('=')[0].strip()
             if re.fullmatch(r'\w+', n):
@@ -134,18 +164,50 @@ def functions(src):
     `ensurePerm` is one line long, and it was being reported as writing ten globals it never mentions.
     The same over-capture had just been found in `tests/slice.mjs`; a helper that reads code by
     scanning for a closing brace makes this mistake once per author."""
-    for m in re.finditer(r'(?m)^(?:async\s+)?function\s+(\w+)\s*\(', src):
-        line_end = src.find('\n', m.start())
-        first = src[m.start():line_end if line_end > 0 else len(src)]
-        name = m.group(1)
+    # At the declaration's own indentation, not at column zero. Both `content-bridge.js` files wrap
+    # everything in an IIFE, so every function in them is indented by two - and this yielded **nothing
+    # at all** for either: 0 of 32 and 0 of 19, over 42 awaits, in the two files that do the
+    # authenticated fetching. The headline said «20 files» and the ledger's header said the content
+    # scripts «were read before being recorded». They were opened. `tests/slice.mjs` learnt exactly
+    # this, on this exact file, and this tool did not.
+    # The file's own top level, which is column zero normally and the IIFE's body where there is one -
+    # the same notion `globals_of` uses, and for the same reason. «Any indentation» was the first
+    # attempt and it scanned *nested* functions too, whose locals then collided by name with the
+    # module state: 171 findings, none of them real. A widening has to be measured.
+    wrapped = _iife(src)
+    top = r'^[ \t]{2}' if wrapped else r'^'
+    for m in re.finditer(r'(?m)' + top + r'((?:async\s+)?)function\s+(\w+)\s*\(', src):
+        pad = '  ' if wrapped else ''
+        name = m.group(2)
+        at = m.start() + len(pad)
+        line_end = src.find('\n', at)
+        first = src[at:line_end if line_end > 0 else len(src)]
+        # A trailing comment does not stop a declaration closing on its own line. `aiOpenSettings`
+        # is `function aiOpenSettings() { openSettings('#ai'); }   // …` and was read as an open
+        # function running to the next brace at its indentation. `sliceConst` recorded this trap.
+        first = re.sub(r'//.*$', '', first)
         if '{' in first and first.rstrip().endswith('}'):
-            yield name, first, src[:m.start()].count('\n') + 1
+            yield name, first, src[:at].count('\n') + 1
             continue
-        start = src.index('{', m.start())
-        end = src.find('\n}', start)
+        start = src.index('{', at)
+        end = src.find('\n' + pad + '}', start)
         if end < 0:
             continue
-        yield name, src[m.start():end], src[:m.start()].count('\n') + 1
+        yield name, src[at:end], src[:at].count('\n') + 1
+    return
+    for m in re.finditer(r'(?m)^([ \t]*)(?:async\s+)?function\s+(\w+)\s*\(', src):
+        pad, name = m.group(1), m.group(2)
+        at = m.start() + len(pad)
+        line_end = src.find('\n', at)
+        first = src[at:line_end if line_end > 0 else len(src)]
+        if '{' in first and first.rstrip().endswith('}'):
+            yield name, first, src[:at].count('\n') + 1
+            continue
+        start = src.index('{', at)
+        end = src.find('\n' + pad + '}', start)
+        if end < 0:
+            continue
+        yield name, src[at:end], src[:at].count('\n') + 1
 
 
 def writes_in(code):
@@ -228,8 +290,10 @@ def read_ledger():
 def main():
     accept = '--accept' in sys.argv
     found = []
+    read = 0
     for rel in FILES:
         found.extend(findings(rel))
+        read += len(list(functions(open(os.path.join(ROOT, rel), encoding='utf-8').read())))
     keys = {f'{rel}\t{fn}\t{name}' for rel, fn, name, _, _ in found}
     known = read_ledger()
 
@@ -252,7 +316,22 @@ def main():
     for k in gone:
         print(f'  ledger line no longer matches anything: {k.replace(chr(9), " · ")}')
     n = len(new) + len(gone)
-    print(f'\n{n} finding(s). {len(keys)} global write(s) after an await, {len(known)} recorded as read.')
+    # The denominator, which this tool printed for nobody: how much of its own subject it read. It
+    # said «20 files» and read 0 of the 32 functions in one content bridge and 0 of the 19 in the
+    # other - the two files that do the authenticated fetching - because both are wrapped in an IIFE
+    # and this looked for declarations at column zero. `tests/slice.mjs` learnt that on this exact
+    # file. The rule CLAUDE.md states for anything that inspects a tree: print the count of things
+    # inspected, and derive the denominator by a cruder method than the check itself.
+    crude = sum(len(re.findall(r'(?m)^[ \t]*(?:async\s+)?function\s+\w+\s*\(',
+                               open(os.path.join(ROOT, rel), encoding='utf-8').read()))
+                for rel in FILES)
+    # The two it does not read are `setFolded` in each graph window: declared inside another
+    # function, so its state is a local and not the shared state this tool is about. Said here
+    # because a gap of two that nobody can account for reads the same as a gap of two that somebody
+    # can, and only one of them is a limit rather than a hole.
+    print(f'\n{n} finding(s). {read} function(s) read of {crude} declared '
+          f'({crude - read} nested inside another, whose state is local); '
+          f'{len(keys)} global write(s) after an await, {len(known)} recorded as read.')
     return 1 if n else 0
 
 

@@ -3,7 +3,11 @@
 # Being here means somebody read it and decided it is safe. It may only shrink.
 # The 24 lines added on 22 August 2026 are the options pages, the backgrounds and the content
 # scripts, which this check had never read - `sidepanel.html` was its whole subject, 9 of the 32
-# shipped scripts. They were read before being recorded: none is the defect this tool is for, since
+# shipped scripts. The content scripts were *opened* and not read: both are wrapped in an IIFE, so
+# every function in them is indented by two, and this tool looked at column zero - 0 of 32 and 0 of
+# 19, over 42 awaits, in the two files that do the authenticated fetching. Corrected 22 August 2026,
+# and the headline now prints how much of its own subject it read. What follows was true of the
+# scopes it *did* read: none is the defect this tool is for, since
 # that defect is «the *workspace* changed under an operation» and none of those scopes has one. What
 # they have is one load overtaking another, which the options pages answer with `markOwn`/`dirty`.
 # Recorded rather than exempted, so a *new* one there is still a finding.
