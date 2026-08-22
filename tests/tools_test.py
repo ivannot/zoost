@@ -4368,5 +4368,36 @@ class StoreCopySeesEverySection(unittest.TestCase):
                              f'compares them against the dashboard and nothing says when they drift')
 
 
+class TheTwoHostListsAgree(unittest.TestCase):
+    """Where a content script is injected, and where the extension may reach, are two lists.
+
+    `content_scripts[].matches` decides where the bridge runs. `host_permissions` decides where it may
+    fetch - and in Analytics the bridge derives its own «am I on Analytics» verdict from the second:
+
+        const IS_ANALYTICS = (chrome.runtime.getManifest().host_permissions || [])
+          .filter((h) => h.startsWith('https://analytics.'))
+          .some((h) => h.replace(/\/\*$/, '') === BASE);
+
+    So a data centre added to `matches` and not to `host_permissions` injects a script that recognises
+    nothing: every command returns false and the panel says «No answer from the Zoho Analytics page» -
+    a sentence naming a cause nobody could reach from it. The two lists agree today and nothing held
+    them there; planted, and the battery stayed green.
+
+    One direction only, and the reason is the asymmetry itself: `host_permissions` legitimately holds
+    hosts no content script runs on - `zoost.it`, the two AI providers - while a `matches` entry with
+    no permission behind it is always wrong.
+    """
+
+    def test_every_injected_host_is_a_permitted_host(self):
+        for mf in sorted(ROOT.glob('apps/*/manifest.json')):
+            m = json.loads(mf.read_text(encoding='utf-8'))
+            allowed = set(m.get('host_permissions', []))
+            injected = {h for c in m.get('content_scripts', []) for h in c.get('matches', [])}
+            self.assertTrue(injected, f'{mf.parent.name}: no content script matches at all')
+            self.assertEqual(sorted(injected - allowed), [],
+                             f'{mf.parent.name}: the bridge is injected where the extension has no host '
+                             f'permission, so it will load and recognise nothing')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
