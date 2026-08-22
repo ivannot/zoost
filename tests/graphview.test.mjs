@@ -146,8 +146,15 @@ for (const app of ['crm', 'analytics']) {
     // Named precisely, because the first version of this line read "erParams within 80 characters of
     // drawMax" and failed on the correct code: the two keys sit side by side in one set() call, which
     // is the point. What must hold is that the erParams object carries nothing but the layout values.
-    assert.ok(/erParams: \{ current: lay \}/.test(oj),
-      'the erParams object carries something besides the layout values');
+    // The intent, not the shape. This read `erParams: { current: lay }` literally and went red the
+    // day that write became a merge - which is what stops the settings page erasing `kind` and
+    // `mode`, and is more correct rather than less. What must hold is that the ceiling is its own
+    // top-level key and is not parked inside the layout object.
+    const set = oj.slice(oj.indexOf('storage.local.set({', oj.indexOf('saveLay')));
+    assert.match(set.slice(0, 200), /erDrawMax: drawMax/, 'the ceiling is not written as its own key');
+    const inParams = set.slice(set.indexOf('erParams:'), set.indexOf('erDrawMax:'));
+    assert.ok(!/drawMax/i.test(inParams),
+      'the ceiling is parked inside erParams, where a slider drag would drop it');
     assert.ok(/erDrawMax: drawMax/.test(oj), 'the ceiling is not stored under a key of its own');
     // and the field is bounded, because a number input accepts whatever is typed into it
     assert.ok(/id="pDrawMax"[^>]*min="\d+"[^>]*max="\d+"/.test(oh),

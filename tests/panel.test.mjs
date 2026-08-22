@@ -9620,3 +9620,96 @@ for (const app of ['crm', 'analytics']) {
     assert.match(md, /matchAll\(\/\(\?:\^\|\\n\)## /, 'the chapters are not derived from the headings');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A settings key written by two files is merged by both, and a setting nobody can apply is a control
+// that lies.
+//
+// The CRM settings page saved `erParams: { current: lay }` and the diagram window required
+// `st.erParams.kind === DATA.kind`. That page writes no kind, so **every value saved there was read
+// and thrown away on every open** - box spacing, spread, label gap, label size. «Diagram defaults
+// saved.» on screen and nothing changed, for as long as both lines have existed. The Analytics twin
+// has no such guard and has always worked.
+//
+// The replacement was the other half: `set()` overwrote the whole object, so `kind` and `mode` -
+// written by the window when the reader tunes a graph inside it - were erased by visiting that page.
+// The same shape as the export-scope preset earlier today: a page may only write the settings it can
+// show, and it carries the rest.
+//
+// Derived: any storage key written by more than one shipped file must be merged by every writer.
+{
+  test('a settings key written in two places is merged, not replaced', () => {
+    const bad = [];
+    const writers = new Map();
+    for (const app of ['crm', 'analytics']) {
+      for (const f of readdirSync(`${ROOT}/apps/${app}`)) {
+        if (!f.endsWith('.js')) continue;
+        const src = read(`apps/${app}/${f}`).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        // Walked, not matched. A regex for `set({ key: { … } })` stopped seeing the writers the
+        // moment they were rewritten as `set({ key: Object.assign(…) })` - so the check would have
+        // gone quiet on the very shape it exists to require. The denominator guard below is what
+        // said so; without it this would have passed over an empty set.
+        for (const m of src.matchAll(/storage\.local\.set\(\s*\{/g)) {
+          let i = m.index + m[0].length - 1, depth = 0, end = i;
+          for (; end < src.length; end++) {
+            const c = src[end];
+            if ('{(['.includes(c)) depth++;
+            else if ('})]'.includes(c)) { depth--; if (!depth) break; }
+          }
+          const arg = src.slice(i + 1, end);
+          let d = 0, start = 0;
+          for (let k = 0; k <= arg.length; k++) {
+            const c = arg[k];
+            if ('{(['.includes(c)) d++;
+            else if ('})]'.includes(c)) d--;
+            if (k === arg.length || (c === ',' && d === 0)) {
+              const part = arg.slice(start, k); start = k + 1;
+              const kv = part.match(/^\s*(\w+)\s*:([\s\S]*)$/);
+              if (!kv) continue;
+              const key = `${app}/${kv[1]}`;
+              if (!writers.has(key)) writers.set(key, []);
+              writers.get(key).push({ file: `apps/${app}/${f}`, body: kv[2] });
+            }
+          }
+        }
+      }
+    }
+    let shared = 0;
+    for (const [key, ws] of writers) {
+      if (ws.length < 2) continue;                 // one writer owns it outright
+      shared++;
+      for (const w of ws) {
+        if (!/\{/.test(w.body)) continue;          // a scalar has nothing to carry
+        // An array is written whole by definition - `rxShortcuts` is the saved-pattern list, and
+        // «save the list» means replace it. My first version called that a finding, on the strength
+        // of a shorthand `{ name, pattern: … }` making its field set look smaller than the other
+        // writer's: a rule invented by a regex rather than by the code.
+        if (/^\s*(?:\[|[\w.]+\.map\()/.test(w.body)) continue;
+        // Only where the writers put *different* fields in. `rxShortcuts` is the whole saved-pattern
+        // list and both writers write all of it: replacing is what «save the list» means, and calling
+        // that a finding would be the check inventing a rule the code never had. `erParams` is the
+        // other shape - the settings page writes `current`, the window writes `kind` and `mode`, and
+        // neither knows the other's fields.
+        const fieldsOf = (b) => new Set([...b.matchAll(/(?:\{|,)\s*(\w+)\s*:/g)].map((x) => x[1]));
+        const mine = fieldsOf(w.body);
+        const all = new Set(ws.flatMap((o) => [...fieldsOf(o.body)]));
+        if (mine.size === all.size) continue;      // every writer writes the whole shape
+        if (!/Object\.assign\(/.test(w.body)) {
+          bad.push(`${w.file} replaces ${key.split('/')[1]}, which another file also writes`);
+        }
+      }
+    }
+    assert.ok(shared >= 1, `no storage key has two writers - the derivation broke`);
+    assert.deepEqual(bad, [], `each writer keeps only what it knows about:\n  ` + bad.join('\n  '));
+  });
+
+  test('the diagram window applies a default that names no graph kind', () => {
+    const fn = read('apps/crm/graphview.js');
+    const at = fn.indexOf('const ep = st && st.erParams');
+    assert.ok(at > 0, 'the erParams read is gone - renamed, or restructured');
+    const near = fn.slice(at, at + 400);
+    assert.match(near, /ep\.kind === undefined \|\| ep\.kind === DATA\.kind/,
+      'the window requires a recorded kind again, and the settings page writes none - so everything ' +
+      'saved there is read and discarded, silently, on every open');
+  });
+}

@@ -383,7 +383,10 @@ $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = 
 $('saveLay').onclick = async () => {
   markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false);
   markOwn('erDrawMax'); dirty.delete('erDrawMax'); conflictBox('erDrawMax', false);
-  try { await chrome.storage.local.set({ erParams: { current: lay }, erDrawMax: drawMax }); toast('Diagram defaults saved.'); }
+  // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
+  // writes it when the reader changes Emphasis in there. Replacing the object threw it away.
+  const prev = (await chrome.storage.local.get('erParams')).erParams || {};
+  try { await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax }); toast('Diagram defaults saved.'); }
   catch (e) { toast(MSG.saveFailed + e.message, true); }
 };
 async function loadLay() {

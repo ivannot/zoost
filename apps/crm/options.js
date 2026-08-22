@@ -470,7 +470,13 @@ $('pDrawMax').addEventListener('input', () => {
 });
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
 $('saveLay').onclick = async () => { markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false); markOwn('erDrawMax'); dirty.delete('erDrawMax'); conflictBox('erDrawMax', false);
-  await chrome.storage.local.set({ erParams: { current: lay }, erDrawMax: drawMax });
+  // Merged, never replaced. This page edits the sliders; `kind` and `mode` belong to the diagram
+  // window, which writes them when the reader tunes a graph inside it. Replacing the object erased
+  // both - so tuning a spread in the window and then visiting this page for anything at all threw
+  // that tuning away. The same shape as the export-scope preset: a page may only write the settings
+  // it can show, and it carries the rest.
+  const prev = (await chrome.storage.local.get('erParams')).erParams || {};
+  await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax });
   await stamp(); toast('Diagram defaults saved.'); };
 async function loadLay() {
   try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}

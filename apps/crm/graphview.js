@@ -180,7 +180,15 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
       const st = await chrome.storage.local.get('erParams');
-      if (st && st.erParams && st.erParams.current && st.erParams.kind === DATA.kind) erP = Object.assign({}, erP, erKnownParams(st.erParams.current));
+      // A recorded `kind` must match; **no** recorded kind is a default written by the settings page
+      // and applies to any graph. It used to require the match either way, and that page writes no
+      // kind - so every value saved there was read and thrown away, silently, on every open. Box
+      // spacing, spread, label gap, label size: «Diagram defaults saved.» and nothing changed. The
+      // Analytics twin has no such guard and has always worked.
+      const ep = st && st.erParams;
+      if (ep && ep.current && (ep.kind === undefined || ep.kind === DATA.kind)) {
+        erP = Object.assign({}, erP, erKnownParams(ep.current));
+      }
       const dm = await chrome.storage.local.get('erDrawMax');
       if (Number.isFinite(dm.erDrawMax) && dm.erDrawMax > 0) drawMax = dm.erDrawMax;
     } catch (_) {}
@@ -2355,7 +2363,15 @@ function erInitControls() {
 }
 // Keyed by kind: a spread tuned on an ER diagram of 87 modules is the wrong starting point for a
 // call graph, and restoring it there was how the boxes came out a screen apart.
-function erSaveParams() { try { chrome.storage.local.set({ erParams: { current: erP, mode: erEmph, kind: DATA.kind } }); } catch (_) {} }
+// Merged: the settings page writes `current` into this same key and knows nothing about `kind` or
+// `mode`, and each replacing the other is how a value saved in one place disappeared by visiting the
+// other. Same fix in the Analytics twin.
+async function erSaveParams() {
+  try {
+    const prev = (await chrome.storage.local.get('erParams')).erParams || {};
+    await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: erP, mode: erEmph, kind: DATA.kind }) });
+  } catch (_) {}
+}
 // «Emphasis» switches between boxes-with-contents and labels-with-arcs. The internal values stay
 // `modules` / `relations` because the presets and the layout branch are keyed on them; only the word
 // on the button follows what is being drawn.

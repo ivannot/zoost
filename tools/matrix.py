@@ -107,6 +107,8 @@ CLOSED = {
     ("claim", "crm-ai"):       ("tests/panel.test.mjs: the passphrase field is emptied on both branches", "planted 2026-08-22"),
     ("siblings", "crm-export"): ("tests/panel.test.mjs: both reports read every action field the panel shows", "planted 2026-08-22"),
     ("claim", "crm-export"):   ("ditto - the contents line is built from the chapters written", "planted 2026-08-22"),
+    ("silent", "diagrams"):    ("tests/panel.test.mjs: a settings key written twice is merged; the window applies a kind-less default", "planted 2026-08-22"),
+    ("silent", "options"):     ("ditto - the same check reads both pages", "planted 2026-08-22"),
 }
 
 

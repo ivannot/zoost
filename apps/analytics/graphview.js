@@ -2039,7 +2039,15 @@ function erInitControls() {
   }, true);
   erParamsToUI(); erUpdateControlVis();
 }
-function erSaveParams() { try { chrome.storage.local.set({ erParams: { modules: erEmph === 'modules' ? erP : null, current: erP, mode: erEmph } }); } catch (_) {} }
+// Merged: the settings page writes `current` into this same key, and replacing the object threw away
+// whatever it had put there. `modules` is written and read by nobody - kept only because a stored key
+// nothing consumes is a separate question from this one, and removing it is a migration.
+async function erSaveParams() {
+  try {
+    const prev = (await chrome.storage.local.get('erParams')).erParams || {};
+    await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: erP, mode: erEmph }) });
+  } catch (_) {}
+}
 // What this window calls the boxes. The state is 'modules' because that is the key the saved layout
 // parameters are written under - `erParams.modules`, on disk in every user's browser - and renaming a
 // stored key is a migration, not a label change. What the reader sees is a table, because Zoho
