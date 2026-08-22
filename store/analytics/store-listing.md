@@ -79,7 +79,7 @@ WHAT IT DOES NOT DO
 
 HOW IT WORKS
 
-Everything happens in your browser, using the Zoho session you are already signed into. There is no server, no account and no telemetry. The mirror is written to a folder you pick with the browser's own folder picker. The only thing that ever leaves your machine is what you send to an AI provider, if you choose to configure one - and never the rows in your tables, because Zoost does not read them.
+Everything happens in your browser, using the Zoho session you are already signed into. There is no server, no account and no telemetry. The mirror is written to a folder you pick with the browser's own folder picker. Two things can leave your machine, both only when you make them: what you send to an AI provider, if you choose to configure one, and a problem report you have read in full and pressed Send on. Never the rows in your tables, because Zoost does not read them.
 
 DOCUMENTATION AND PRIVACY
 
@@ -178,9 +178,10 @@ The one disclosure to make, and to word carefully:
 
 > If the user configures the optional AI assistant, the parts of the workspace needed to answer their
 > question - view and column names, relations, and the SQL of query tables - are sent from their
-> browser directly to the AI provider they chose. Nothing is sent to the developer, and the rows
-> inside tables are never sent, because the extension does not read them. With no AI provider
-> configured, nothing leaves the machine.
+> browser directly to the AI provider they chose. The rows inside tables are never sent, because the
+> extension does not read them. The only other thing that leaves is a problem report the user writes,
+> reads in full and sends by pressing Send; it becomes a public issue. With no AI provider configured
+> and no report sent, nothing leaves the machine.
 
 Certify: not sold to third parties, not used for purposes unrelated to the single purpose, not used
 for creditworthiness or lending.

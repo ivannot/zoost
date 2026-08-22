@@ -73,9 +73,9 @@ WHAT IT DOES
 
 SAFE BY DESIGN
 
-Zoost reads from the Zoho CRM instance you are already signed in to and writes to a local folder you choose. It has no server of its own: no analytics, no telemetry, no tracking, no remotely hosted code, and nothing is ever sent to the developer.
+Zoost reads from the Zoho CRM instance you are already signed in to and writes to a local folder you choose. It has no server of its own: no analytics, no telemetry, no tracking, no remotely hosted code. Two things leave your machine, and only when you make them.
 
-The one exception is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including Deluge source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
+The first is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including Deluge source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
 
 Zoost calls no endpoint that creates, edits or deletes anything in Zoho CRM. It reads metadata and function source only, through the session you are already signed in to, using the same internal interfaces the Zoho CRM web app uses - those are not documented by Zoho and can change, in which case a feature stops and says so rather than guessing. It does not read, download or export your Zoho CRM records - no contacts, no deals, no customer data.
 

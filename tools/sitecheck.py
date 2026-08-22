@@ -243,12 +243,37 @@ def hosts_declared(findings: list) -> None:
     Derived from the manifests, so a host added tomorrow is checked without anyone remembering, and a
     host removed stops being required. The unit is the family (`crm.zoho`, `one.zoho`) rather than each
     data centre, because the page names them that way and listing twenty domains would be worse prose.
+
+    **Inside section 5, and both languages.** The first version searched the whole file, and the whole
+    file is a poor place to look for a permission disclosure: `zoost.it` is in the canonical link, the
+    og:url and a mailto on every page, so `host_permissions` reaching `zoost.it/*` - which is how the
+    report form is filled in - satisfied this check while §5 named it nowhere and closed with «no
+    access to any site other than those listed above». The same failure the paragraph above records,
+    one door along: the page contained the string and the section a reader starts from did not. And
+    the Italian page was not read at all, in a check about a legal disclosure that exists in two
+    languages.
     """
-    policy = (SITE / 'privacy.html')
+    for rel in ('privacy.html', 'it/privacy.html'):
+        _hosts_in_policy(SITE / rel, f'site/{rel}', findings)
+
+
+def _section(text: str, n: int) -> str:
+    """One numbered section of the privacy policy, `<h2>N.` to the next `<h2>`."""
+    m = re.search(rf'<h2[^>]*>\s*{n}\.', text)
+    if not m:
+        return ''
+    end = text.find('<h2', m.end())
+    return text[m.start():end if end > 0 else len(text)]
+
+
+def _hosts_in_policy(policy, rel: str, findings: list) -> None:
     if not policy.exists():
-        findings.append('site/privacy.html: missing — nothing declares where the extensions may reach')
+        findings.append(f'{rel}: missing — nothing declares where the extensions may reach')
         return
-    text = policy.read_text(encoding='utf-8')
+    text = _section(policy.read_text(encoding='utf-8'), 5)
+    if not text:
+        findings.append(f'{rel}: no section 5 — the permission list is where the hosts are declared')
+        return
     for mf in sorted(ROOT.glob('apps/*/manifest.json')):
         app = mf.parent.name
         data = json.loads(mf.read_text(encoding='utf-8'))
@@ -260,7 +285,7 @@ def hosts_declared(findings: list) -> None:
         for fam in sorted(families):
             if fam not in text:
                 findings.append(f'apps/{app}/manifest.json: host_permissions reach {fam}.* and '
-                                f'site/privacy.html never names it')
+                                f'{rel} \u00a75 never names it')
 
     # The other page that enumerates hosts is the homepage's «If you have to approve it» table, and
     # it was checked by nothing - so it listed `one.zoho.*` as if both products asked for it (only

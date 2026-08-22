@@ -388,9 +388,16 @@ class HostsAreDeclared(unittest.TestCase):
     """
 
     def run_on(self, hosts, policy_text):
+        # Wrapped in a section 5 and written in both languages, because that is where the check now
+        # looks: the whole file was a poor place to search for a permission disclosure - `zoost.it`
+        # is in the canonical link, the og:url and a mailto on every page, so a manifest reaching
+        # `zoost.it/*` satisfied the old check while §5 named it nowhere and closed with «no access
+        # to any site other than those listed above».
         d = pathlib.Path(tempfile.mkdtemp())
-        (d / 'site').mkdir(); (d / 'apps' / 'crm').mkdir(parents=True)
-        (d / 'site' / 'privacy.html').write_text(policy_text, encoding='utf-8')
+        (d / 'site' / 'it').mkdir(parents=True); (d / 'apps' / 'crm').mkdir(parents=True)
+        page = f'<h2>4. Elsewhere</h2><p>zoost.it one.zoho.com</p><h2>5. Permissions</h2><p>{policy_text}</p><h2>6. End</h2>'
+        (d / 'site' / 'privacy.html').write_text(page, encoding='utf-8')
+        (d / 'site' / 'it' / 'privacy.html').write_text(page, encoding='utf-8')
         (d / 'apps' / 'crm' / 'manifest.json').write_text(
             json.dumps({'host_permissions': hosts}), encoding='utf-8')
         oldr, olds = sitecheck.ROOT, sitecheck.SITE
@@ -403,14 +410,21 @@ class HostsAreDeclared(unittest.TestCase):
             sitecheck.ROOT, sitecheck.SITE = oldr, olds
 
     def test_an_undeclared_host_family_is_reported(self):
+        # One per language: the disclosure exists in two and the check reads both.
         f = self.run_on(['https://crm.zoho.com/*', 'https://one.zoho.com/*'], 'we reach crm.zoho.*')
-        self.assertEqual(len(f), 1, f)
+        self.assertEqual(len(f), 2, f)
         self.assertIn('one.zoho', f[0])
+
+    def test_a_host_named_outside_section_five_does_not_count(self):
+        # The defect this widening was written for. The fixture's §4 mentions the host; §5 does not.
+        f = self.run_on(['https://zoost.it/*'], 'we reach crm.zoho.*')
+        self.assertEqual(len(f), 2, f)
+        self.assertIn('zoost.it', f[0])
 
     def test_a_different_tld_is_a_different_family(self):
         # crm.zohocloud.ca is not covered by "crm.zoho.*", which is exactly how it went unnoticed.
         f = self.run_on(['https://crm.zohocloud.ca/*'], 'we reach crm.zoho.*')
-        self.assertEqual(len(f), 1, f)
+        self.assertEqual(len(f), 2, f)
 
     def test_all_declared_is_silent(self):
         self.assertEqual(self.run_on(['https://crm.zoho.com/*'], 'we reach crm.zoho.* only'), [])
