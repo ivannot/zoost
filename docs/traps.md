@@ -330,6 +330,26 @@ These all failed **silently**, with no console error. They are the expensive kin
   Its `links` reference nodes and columns **by array index**; those indices mean nothing outside the
   response and are resolved to view ids and column names before travelling any further.
 
+  **Re-measured on 22 August 2026, because «nothing else exposes it» was a conclusion with its
+  measurement months behind it.** Two questions were asked separately.
+
+  *What the page itself does*: with the Network panel filtered to Fetch/XHR and cleared, opening a
+  workspace's Relationships / ER view issues **exactly one request**, and it is this POST. Zoho
+  Analytics has no GET of its own for the relations - so the bridge is not choosing the heavier call,
+  it is using the only one there is.
+
+  *What the documented API offers*: v2 has `metadata-api/get-table-metadata` (GET), whose per-column
+  fields include **`pkTableName` and `pkColumnName`** - the only documented place a foreign-key target
+  could appear, empty in Zoho's own example. `get-view-dependents` and `get-column-dependents` (both
+  GET) answer «what depends on this», with no join or key detail. v1 has `REMOVELOOKUP` (POST) and no
+  matching read. **All of v2 is OAuth**: a client id, a secret and a refresh token, scope
+  `ZohoAnalytics.metadata.read`.
+
+  So the alternative is not «a GET instead of a POST», it is «a credential instead of the session you
+  are already in» - which is the thing this product is built not to ask for, and it would be a worse
+  trade for a claim that is already stated precisely. The POST stays, and this paragraph carries the
+  date of the measurement rather than the memory of one.
+
 **A read that fails and a file that is not there arrive as the same fact, and the empty state then
 names the wrong cause.** Reported on Analytics: a workspace with every file on disk was announced as
 «Nothing pulled yet», which sends the reader to press Pull all on a workspace that has already been
