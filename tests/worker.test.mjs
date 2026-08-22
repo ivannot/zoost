@@ -776,3 +776,43 @@ test('every control on the report page says it can be clicked', () => {
     }
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// One question, two implementations, and they disagreed.
+//
+// «Is this release newer than what the Store serves» is asked in two places: `newer()` in `site.js`,
+// which decides whether the footer badge says «awaiting review», and `cmpVer()` in `_worker.js`,
+// which orders the git tags. `newer()` looped over three components and read a missing one as
+// `undefined` - and `undefined > n` is false - so **1.9.1 was not newer than 1.9**. `cmpVer` reads a
+// missing component as 0 and walks to the longer of the two.
+//
+// Reachable rather than theoretical: the second argument is the version Google reports, and
+// `IS_VERSION` here and in `tools/storestatus.py` deliberately accepts two to four components,
+// because this repository already knows Google can answer with something other than three. On the
+// day it does, the badge goes quiet about a release that is genuinely ahead - «unknown, never
+// wrong» broken in the direction of saying nothing.
+//
+// Run against each other on real values, not compared as text: two implementations of one question
+// are held together by their answers or by nothing.
+test('the site and the Worker agree on which version is newer', () => {
+  const site = read('site/site.js');
+  const worker = read('site/_worker.js');
+  const newer = new Function(`${site.match(/function newer\([\s\S]*?\n  \}/)[0]}; return newer;`)();
+  const cmpVer = new Function(`${worker.match(/function cmpVer\([\s\S]*?\n\}/)[0]}; return cmpVer;`)();
+  const isNewer = (a, b) => cmpVer(a, b) < 0;
+
+  const CASES = [
+    ['1.9.1', '1.9'], ['1.9', '1.9.1'], ['1.10.0', '1.9.0'], ['1.9.0', '1.10.0'],
+    ['1.46.0', '1.46'], ['1.46', '1.46.0'], ['1.9.0.1', '1.9.0'], ['1.9.0', '1.9.0.1'],
+    ['2.0', '1.9.9'], ['1.0.0', '1.0.0'], ['1.0.0', '1.0.1'], ['10.0.0', '9.99.99'],
+  ];
+  const differ = CASES.filter(([a, b]) => newer(a, b) !== isNewer(a, b))
+                      .map(([a, b]) => `${a} vs ${b}: site says ${newer(a, b)}, worker says ${isNewer(a, b)}`);
+  assert.deepEqual(differ, [],
+    `the badge and the tag ordering answer one question differently:\n  ` + differ.join('\n  '));
+
+  // And each is right on its own, so «they agree» cannot be satisfied by both being wrong.
+  assert.equal(newer('1.9.1', '1.9'), true, 'a third component is not read at all');
+  assert.equal(newer('1.9', '1.9.1'), false, 'a missing component is read as greater than zero');
+  assert.equal(newer('1.10.0', '1.9.0'), true, 'the parts are compared as strings');
+});

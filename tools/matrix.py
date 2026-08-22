@@ -120,6 +120,7 @@ CLOSED = {
     ("claim", "crm-export"):   ("ditto - the contents line is built from the chapters written", "planted 2026-08-22"),
     ("silent", "diagrams"):    ("tests/panel.test.mjs: a settings key written twice is merged; the window applies a kind-less default", "planted 2026-08-22"),
     ("silent", "options"):     ("ditto - the same check reads both pages", "planted 2026-08-22"),
+    ("siblings", "site"):      ("tests/worker.test.mjs: the site and the Worker agree on which version is newer", "planted 2026-08-23"),
 }
 
 

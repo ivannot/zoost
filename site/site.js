@@ -361,11 +361,25 @@
     return 'notSubmitted';
   }
   function verOf(tag) { var m = /-v(\d+\.\d+\.\d+)$/.exec(tag || ''); return m ? m[1] : null; }
+  // The same comparison the Worker makes, and it was not. This looped `i < 3` and read a missing
+  // component as `undefined`, where `undefined > n` is false - so `1.9.1` was **not** newer than
+  // `1.9`. The Worker's `cmpVer` reads a missing component as 0 and walks to the longer of the two.
+  //
+  // Reachable rather than theoretical: `b` is the version Google reports, and `IS_VERSION` in both
+  // `_worker.js` and `tools/storestatus.py` deliberately accepts **two to four** components, because
+  // this repository already knows Google can answer with something other than three. On the day it
+  // does, the badge goes quiet about a release that is genuinely ahead - «unknown, never wrong»
+  // broken in the direction of saying nothing, which is the harder one to notice.
+  //
+  // `tests/worker.test.mjs` runs both against the same inputs, so they cannot drift apart again.
   function newer(a, b) {
     if (!a) return false;
     if (!b) return true;                       // released, and nothing published to compare against
     var pa = a.split('.').map(Number), pb = b.split('.').map(Number);
-    for (var i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] > pb[i];
+    for (var i = 0; i < Math.max(pa.length, pb.length); i++) {
+      var x = pa[i] || 0, y = pb[i] || 0;
+      if (x !== y) return x > y;
+    }
     return false;
   }
 
