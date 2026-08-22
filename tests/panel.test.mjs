@@ -2357,7 +2357,8 @@ test('every element the diagram window reaches for is in its own markup', () => 
   for (const app of ['crm', 'analytics']) {
     const js = gsrc(app), html = read(`apps/${app}/graphview.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
-    const used = new Set([...js.matchAll(/\$\('([^']+)'\)/g), ...js.matchAll(/getElementById\('([^']+)'\)/g)]
+    const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const used = new Set([...code.matchAll(/\$\('([^']+)'\)/g), ...code.matchAll(/getElementById\('([^']+)'\)/g)]
       .map((m) => m[1]));
     const missing = [...used].filter((id) => !have.has(id) && !RUNTIME.has(id)).sort();
     assert.deepEqual(missing, [], `${app}: graphview.js reaches for ids that no longer exist`);
@@ -2383,7 +2384,11 @@ test('every element the side panel reaches for is in its own markup', () => {
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
-    const used = new Set([...js.matchAll(/\$\('([^']+)'\)/g), ...js.matchAll(/getElementById\('([^']+)'\)/g)]
+    // Comments stripped. A comment of mine quoting `$('id').title` while explaining why two titles
+    // are written out rather than looped was read as a reach for an element called «id» - the third
+    // time today a check has been fooled by prose. A test about code reads code.
+    const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const used = new Set([...code.matchAll(/\$\('([^']+)'\)/g), ...code.matchAll(/getElementById\('([^']+)'\)/g)]
       .map((m) => m[1]));
     const missing = [...used].filter((id) => !have.has(id) && !RUNTIME.has(id)).sort();
     assert.deepEqual(missing, [], `${app}: sidepanel.js reaches for ids that no longer exist`);
@@ -9108,5 +9113,46 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(pairs >= 3, `only ${pairs} guarded raises found - the derivation broke`);
     assert.deepEqual(bad, [],
       `a raise with no matching release leaves the panel inert with nothing to press:\n  ` + bad.join('\n  '));
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A control that goes grey says why, or it is a dead end with no reason attached.
+//
+// The Analytics detail strip disables SQL, Relations and Lineage when they cannot say anything about
+// the selected view. Going grey silently is what «SQL» did until this morning: two different facts -
+// «this view is not a query table» and «its SQL could not be read» - under one dead control, so the
+// reader never reached any of the careful sentences behind it. The fix gave all three a title.
+//
+// Planted: `tab_rel`'s title removed - one of a set changed, the others left. Node suite fail 0,
+// every checker zero.
+//
+// Derived from the code rather than from a list of tab ids: whichever control the panel disables must
+// be given a title in the same function. Both panels, so a fourth tab on either side is covered.
+{
+  const PANELS = ['apps/analytics/sidepanel.js', 'apps/crm/sidepanel.js', 'apps/crm/modules.js'];
+
+  test('every control the panel greys out is told why', () => {
+    const bad = [];
+    let seen = 0;
+    for (const rel of PANELS) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/\$\('(\w+)'\)\.disabled\s*=\s*([^\n;]+);/g)) {
+        // A control disabled by a plain flag is a mode, not a refusal: `.disabled = busy` says «wait»,
+        // and waiting explains itself. What needs a reason is a control switched off by a *verdict*
+        // about the item on screen - a test, a comparison, a count.
+        if (!/[!=<>]|\?|\.length|\.kind/.test(m[2])) continue;
+        seen++;
+        const at = Math.max(src.lastIndexOf('\nasync function ', m.index), src.lastIndexOf('\nfunction ', m.index)) + 1;
+        const body = src.slice(at, src.indexOf('\n}', m.index));
+        const fn = (body.match(/^(?:async )?function (\w+)/) || [, '?'])[1];
+        if (!new RegExp(`\\$\\('${m[1]}'\\)\\.title`).test(body)) {
+          bad.push(`${rel} ${fn}() greys out #${m[1]} and never says why`);
+        }
+      }
+    }
+    assert.ok(seen >= 3, `only ${seen} verdict-driven disables found - the derivation broke`);
+    assert.deepEqual(bad, [],
+      `a control that goes grey with no reason is a dead end the reader cannot act on:\n  ` + bad.join('\n  '));
   });
 }

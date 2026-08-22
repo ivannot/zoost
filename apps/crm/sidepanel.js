@@ -4178,6 +4178,12 @@ function updateWsButtons() {
   // beside each other behaving differently.
   renderGoDc();                      // the list it offers is the workspaces, so it moves with them
   $('wsrename').disabled = pullBusy || !dir || !wsList.length;
+  // Why it is grey, as the Analytics twin says it: a control that goes off with nothing on it is a
+  // dead end the reader cannot act on.
+  $('wsdel').title = !$('wsdel').disabled ? 'Remove this workspace from the folder'
+    : `Cannot remove a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
+  $('wsrename').title = !$('wsrename').disabled ? 'Give this workspace a name of your own'
+    : `Cannot name a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
   $('wsdel').disabled = pullBusy || !dir || !wsList.length;
   const needsGrant = !!root && !rootGranted;
   rt.classList.toggle('needgrant', needsGrant);

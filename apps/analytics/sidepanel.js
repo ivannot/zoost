@@ -1011,7 +1011,29 @@ function updateButtons() {
   updateSampleButtons();
   $('wsadd').disabled = pullBusy || busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = pullBusy || busy || !dir || !wsList.length;
-  $('wsrename').disabled = pullBusy || busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
+  $('wsrename').disabled = pullBusy || busy || !dir || !wsList.length;
+  // Why each is grey, in the order the states block each other - the same order `emptyReason()`
+  // walks, because a control and the empty state under it must not name different blockers. `Pull`
+  // has said this since it was written; these three went grey with nothing on them, which is a dead
+  // end the reader cannot act on. The strip of detail tabs learnt the same thing this morning.
+  // The reasons, once. Six controls in this function are switched off by the same two facts, and
+  // writing them out per control is how a message drifts from its twin - the duplicate-message check
+  // caught exactly that here, on the pair I had just written.
+  const BUSY = 'the panel is busy';
+  const UNREAD = 'nothing has been read from this workspace yet - press Pull all';
+  const wsWhy = pullBusy ? 'a pull is running'
+    : busy ? 'the panel is busy'
+      : !root ? 'no working folder yet - press the folder button'
+        : !rootGranted ? 'folder access is not granted - press Grant access'
+          : null;
+  $('wsadd').title = !$('wsadd').disabled ? 'Create a workspace for the one in the active tab'
+    : `Cannot create a workspace: ${wsWhy || 'the active tab is not on a Zoho Analytics workspace'}`;
+  // Written out rather than looped: the check that holds this rule reads `$('id').title`, and a loop
+  // over the ids hides it from the one thing that keeps it true. Two buttons, two lines.
+  $('wsdel').title = !$('wsdel').disabled ? 'Remove this workspace from the folder'
+    : `Cannot remove a workspace: ${wsWhy || 'none is selected'}`;
+  $('wsrename').title = !$('wsrename').disabled ? 'Give this workspace a name of your own'
+    : `Cannot name a workspace: ${wsWhy || 'none is selected'}`;
   $('pull').disabled = busy || !dir || !guardOk();
   // Absent, not disabled, when there is nothing to retry - the CRM's equivalent does the same.
   // A greyed button still says "there is something here you cannot have", which is misleading
@@ -1021,12 +1043,25 @@ function updateButtons() {
   rb.textContent = `Retry ${pullFailed.length} failed`;
   rb.disabled = busy || !dir || !guardOk();
   $('refresh').disabled = busy || (!dir && !(root && !rootGranted));
+  $('refresh').title = !$('refresh').disabled ? 'Read every file in this workspace again'
+    : busy ? 'Cannot refresh: the panel is busy'
+      : 'Cannot refresh: no workspace is open, and the folder access is not waiting to be granted';
   const loaded = views.length > 0;
   $('export').disabled = busy || !loaded;
+  $('export').title = !$('export').disabled ? 'Export this workspace as a self-contained file'
+    : `Cannot export: ${busy ? BUSY : UNREAD}`;
   $('exportmd').disabled = busy || !loaded;
+  $('exportmd').title = !$('exportmd').disabled ? 'Export this workspace as context for an AI tool'
+    : `Cannot export: ${busy ? BUSY : UNREAD}`;
   $('graph').disabled = busy || !Object.keys(schema).length;
+  $('graph').title = !$('graph').disabled ? 'Open the ER diagram in its own window'
+    : `Cannot draw: ${busy ? BUSY : 'no table structure has been read yet - press Pull all'}`;
   $('health').disabled = busy || !loaded;
+  $('health').title = !$('health').disabled ? 'What nothing depends on, and what is unused'
+    : `Cannot audit: ${busy ? BUSY : UNREAD}`;
   $('askai').disabled = busy || !loaded;
+  $('askai').title = !$('askai').disabled ? 'Ask about this workspace'
+    : `Cannot ask: ${busy ? BUSY : UNREAD}`;
   // Back to the button's own title, never to nothing. This wrote '' on every state refresh, which
   // was survivable while the button said "Pull all" and is not now that it is a mark: the tooltip is
   // where the name lives. A control that loses its name on the first repaint has no name.
