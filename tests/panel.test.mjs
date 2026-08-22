@@ -9228,3 +9228,31 @@ for (const app of ['crm', 'analytics']) {
     });
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// The raw reader has one caller: the function that decides whether its answer is still true.
+//
+// `sqlBodyOf(id, op)` returns `sqls[id].sql` when that is a string, which it is for anything read
+// this session or straight after a pull. `sqlReadState` wraps it with the precedence that matters -
+// «an explicit failed pull wins over an older indexed body: serving the old SQL as current would
+// turn a visible coverage gap into a plausible but stale answer» - and every surface asks the wrapper
+// except the one that shows the text. So a query whose SQL failed *this time* had its previous body
+// painted, highlighted, with the copy button on, under a tab whose own title read «not read: HTTP
+// 429». Six surfaces telling the truth and the seventh serving yesterday's.
+//
+// Derived: `sqlBodyOf` is reachable from `sqlReadState` and from nowhere else.
+{
+  test('analytics: nothing reads the SQL body without asking whether it is still true', () => {
+    const src = read('apps/analytics/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const callers = [];
+    for (const m of src.matchAll(/\bsqlBodyOf\(/g)) {
+      const at = Math.max(src.lastIndexOf('\nasync function ', m.index), src.lastIndexOf('\nfunction ', m.index)) + 1;
+      const fn = (src.slice(at).match(/^(?:async )?function (\w+)/) || [, '?'])[1];
+      if (fn !== 'sqlBodyOf') callers.push(fn);
+    }
+    assert.ok(callers.length >= 1, 'sqlBodyOf() is never called - renamed, or the derivation broke');
+    assert.deepEqual([...new Set(callers)], ['sqlReadState'],
+      `these read the stored SQL body directly and will show it as current after a pull that could ` +
+      `not read it: ${[...new Set(callers)].join(', ')}`);
+  });
+}

@@ -2181,7 +2181,18 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
     return;
   }
   if (detailTab === 'sql') {
-    const sql = await sqlBodyOf(v.id, op);
+    // `sqlReadState`, not `sqlBodyOf`. The raw reader answers from `sqls[id].sql`, which is a string
+    // for anything read this session or straight after a pull - so a query whose SQL failed *this
+    // time* still had a body in memory, and this pane painted it, highlighted, with the copy button
+    // on. Meanwhile the tab's own title said «not read: HTTP 429», the search said so, both exports
+    // said so and the assistant refused to conclude anything. Six surfaces telling the truth and the
+    // one showing the text serving yesterday's, with nothing marking it as old.
+    //
+    // `sqlReadState` is where that precedence already lives: «an explicit failed pull wins over an
+    // older indexed body - serving the old SQL as current would turn a visible coverage gap into a
+    // plausible but stale answer». It was written and then not asked here.
+    const st = await sqlReadState(v.id, op);
+    const sql = st.kind === 'read' ? st.body : null;
     if (!detailCurrent(mine, op)) return false;
     // Only where there is code to take: this is the one tab of the four that shows any.
     $('codecopy').style.display = (sql && sql.trim()) ? '' : 'none';
@@ -2192,7 +2203,7 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
       // The reason, not a reason: `sqlState` knows whether the pull failed (and what Zoho said),
       // whether the file refused to open, or whether the mirror never had it. A single «could not be
       // read» over all three sends the reader to fix the wrong thing.
-      : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL was not read.' : 'No SQL text.'}</b> ${esc(sql == null ? sqlState(v.id).error || SQL_UNREADABLE : sqlText(sql))}</div>`) + '</div>';
+      : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL was not read.' : 'No SQL text.'}</b> ${esc(sql == null ? st.error || SQL_UNREADABLE : sqlText(sql))}</div>`) + '</div>';
     paintFindMarks(body.querySelector('pre.sql'), findMarkRe());
     return;
   }
