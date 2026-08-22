@@ -34,8 +34,8 @@ askScope	c56407b46772	6df03b6040cd	divergent
 beginWorkspaceOp	dbcd581f4fb3	1ebef045c187	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	09ed677fdedf	4d67279b5a1a	divergent
-buildExportMarkdown	d679928747b6	e7cc032e283d	divergent
+buildExportHtml	267af74d1754	4d67279b5a1a	divergent
+buildExportMarkdown	5cf455a4ec97	e7cc032e283d	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildReport	3de3b69b14b5	3de3b69b14b5	identical

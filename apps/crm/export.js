@@ -358,15 +358,19 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       const users = (actUsers && actUsers.get(a.kind + ':' + String(a.id))) || [];
       const detail = a.kind === 'email_notifications'
         ? [a.template ? 'template: ' + esc(a.template.name || a.template.id) : '',
-           a.from_type ? 'from: ' + (scope.addresses && a.from_address ? esc(a.from_address) : esc(a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
+           a.from_type ? 'from: ' + (scope.addresses && (a.from_name || a.from_address) ? esc([a.from_name, a.from_address].filter(Boolean).join(' ')) : esc(a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
            a.recipient_count != null ? esc(String(a.recipient_count)) + ' recipient(s)' : ''].filter(Boolean).join(' \u00b7 ')
-        : a.kind === 'field_updates' ? (a.field ? esc(a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
+        : a.kind === 'field_updates' ? (a.field ? esc(a.field_label || a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
             + ' \u2190 ' + (actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : esc(String(a.value))) : '')
         : a.kind === 'webhooks' ? [esc(a.method || ''), esc(a.url || '')].filter(Boolean).join(' ')
         : a.kind === 'tasks' && actKept(a) ? esc(KEPT_DETAIL)
         : a.kind === 'tasks' && actThin(a) ? esc(MISS_DETAIL)
+        // Same six fields as the Markdown and as the panel - see the note there. `mapVal` is shared
+        // so the two reports cannot come to read a task differently.
+        : (a.mappings || []).length
+          ? a.mappings.map((m) => esc(String(m.field || '').replace(/_/g, ' ')) + ': ' + esc(mapVal(m))).join(' \u00b7 ')
         : a.notify === true ? 'notifies' : '';
-      return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(a.module || '') + '</td>'
+      return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(actProv(a)) + '</td>'
         + '<td class="num">' + users.length + '</td><td>' + users.map((w) => esc(w.name || w.id)).join(', ') + '</td><td>' + detail + '</td></tr>';
     });
   const actHtml = acts.length
@@ -503,6 +507,26 @@ async function loadExportData(op = beginWorkspaceOp()) {
   }));
   return { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers };
 }
+/** A task mapping's value, as the panel reads it: `{name}` for a person or a picklist entry, the
+ *  bare value otherwise. Written once because the two reports and the panel must not disagree about
+ *  what a task does - which is the whole reason these fields are in the report at all. */
+/** The module column, with what the panel also shows beside an action: who last changed it and
+ *  whether Zoho has it locked. Both were on screen and in neither report - and «Modified by» is
+ *  printed for a *function* in the same file, so the omission was inconsistent inside one report. */
+function actProv(a) {
+  const bits = [a.module_label || a.module || ''];
+  if (a.modified_by || a.modified_time) {
+    bits.push('modified' + (a.modified_by ? ' by ' + a.modified_by : '')
+              + (a.modified_time ? ' ' + String(a.modified_time).slice(0, 16) : ''));
+  }
+  if (a.locked === true) bits.push('locked in Zoho');
+  return bits.filter(Boolean).join(' \u00b7 ');
+}
+function mapVal(m) {
+  const v = m && m.value;
+  if (v && typeof v === 'object') return String(v.name || v.id || '');
+  return String(v == null ? '' : v);
+}
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
@@ -540,7 +564,14 @@ function buildExportMarkdown(d, scope) {
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho: ${freshnessLine()}\n\n`;
-  md += `- Contents: ${SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing'}\n\n`;
+  // What is in this file, not what was ticked. The line listed the scope, and the scope includes
+  // `health` - which this report has no chapter for at all. So a reader, and the assistant this file
+  // is written for, were told the export covers an audit that is not in it. «Nothing in a report
+  // should be invented there» is the rule, and a contents list is the first thing that can break it.
+  //
+  // Placed after the body is built, so it can only ever name chapters that were emitted.
+  const CONTENTS = '- Contents: (filled in below)\n\n';
+  md += CONTENTS;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
   fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
@@ -654,14 +685,20 @@ function buildExportMarkdown(d, scope) {
       const users = (d.actUsers && d.actUsers.get(a.kind + ':' + String(a.id))) || [];
       const detail = a.kind === 'email_notifications'
         ? [a.template ? 'template ' + (a.template.name || a.template.id) : '',
-           a.from_type ? 'from ' + ((scope.addresses && a.from_address) || (a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
+           a.from_type ? 'from ' + ((scope.addresses && [a.from_name, a.from_address].filter(Boolean).join(' ')) || (a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
            a.recipient_count != null ? a.recipient_count + ' recipient(s)' : ''].filter(Boolean).join(' - ')
-        : a.kind === 'field_updates' ? (a.field ? `${a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}` : '')
+        : a.kind === 'field_updates' ? (a.field ? `${a.field_label || a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}` : '')
         : a.kind === 'webhooks' ? [a.method || '', a.url || ''].filter(Boolean).join(' ')
         : a.kind === 'tasks' && actKept(a) ? KEPT_DETAIL
         : a.kind === 'tasks' && actThin(a) ? MISS_DETAIL
+        // What the task actually says. The panel renders every `mappings` row - subject, due date,
+        // status, priority, owner, reminder - and both reports fell through every arm to «notifies»
+        // or to nothing, so a task's Detail cell was **empty** while six fields were on screen. The
+        // rule this breaks is the project's own: anything shown about an item belongs in the reports
+        // too, or the report is a quietly lesser copy and the reader cannot know what is missing.
+        : (a.mappings || []).length ? a.mappings.map((m) => `${String(m.field || '').replace(/_/g, ' ')}: ${mapVal(m)}`).join(' \u00b7 ')
         : a.notify === true ? 'notifies' : '';
-      md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(a.module || '')} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
+      md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(actProv(a))} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
     });
     md += '\n';
   }
@@ -692,6 +729,10 @@ function buildExportMarkdown(d, scope) {
     }
   }
   md += `\n---\n\n## About this file\n\nGenerated by **${PRODUCT_NAME}**${PRODUCT_URL ? ` (${PRODUCT_URL})` : ''}, created by ${PRODUCT_AUTHOR}.\n\n${LEGAL_DISCLAIMER}\n`;
+  // Derived from the chapters that were actually written. See the note beside CONTENTS.
+  const chapters = [...md.matchAll(/(?:^|\n)## ([^\n(]+)/g)].map((m) => m[1].trim())
+    .filter((h) => h !== 'Index' && !/^About this file/.test(h));
+  md = md.replace(CONTENTS, `- Contents: ${[...new Set(chapters)].join(', ') || 'nothing'}\n\n`);
   return md;
 }
 async function exportMarkdown() {

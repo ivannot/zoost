@@ -9575,3 +9575,48 @@ for (const app of ['crm', 'analytics']) {
     });
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Anything the panel shows about an item belongs in the reports, and a contents list names what is
+// in the file.
+//
+// Two halves of one class. The panel's action detail renders every `mappings` row - a task's
+// subject, due date, status, priority, owner and reminder - and both exports fell through every arm
+// to «notifies» or to nothing, so a **task's Detail cell was empty** while six fields were on
+// screen. The reader of the report cannot know what they are missing, which is the one thing the
+// export rule says must never happen.
+//
+// And the Markdown's `- Contents:` line listed the export *scope*, which includes `health` - a
+// chapter that file has never had. So the assistant this report is written for was told it covers an
+// audit that is not in it.
+//
+// Derived: every `a.<field>` the panel's action detail reads must be read by both reports, and the
+// contents line is built from the chapters actually emitted.
+{
+  const exportSrc = read('apps/crm/export.js');
+
+  test('both reports read every action field the panel shows', () => {
+    const auto = read('apps/crm/automation.js');
+    // Not `async`: it is a plain declaration, and asserting the slice was found is what turned that
+    // into a red mark instead of an empty set quietly passing.
+    const at = auto.indexOf('function openAction(');
+    assert.ok(at > 0, 'openAction() is gone - renamed, or no longer a declaration');
+    const panelFields = new Set([...auto.slice(at, auto.indexOf('\n}', at)).matchAll(/\ba\.(\w+)/g)].map((m) => m[1]));
+    assert.ok(panelFields.size >= 8, `only ${panelFields.size} action fields found in the panel - the derivation broke`);
+    const inReports = new Set([...exportSrc.matchAll(/\ba\.(\w+)/g)].map((m) => m[1]));
+    // What the panel computes for itself rather than reads off the row is not a field.
+    const own = new Set(['path', 'associated', 'detail_read', 'detail_kept', 'sv']);
+    const missing = [...panelFields].filter((f) => !inReports.has(f) && !own.has(f)).sort();
+    assert.deepEqual(missing, [],
+      `the panel shows these about an action and neither report carries them, so the report is a ` +
+      `quietly lesser copy: ${missing.join(', ')}`);
+  });
+
+  test('the Markdown contents list names the chapters it has', () => {
+    const md = exportSrc.slice(exportSrc.indexOf('function buildExportMarkdown'));
+    assert.ok(!/Contents: \$\{SCOPE_KEYS/.test(md),
+              'the contents line is built from what was ticked again, not from what was written');
+    assert.match(md, /md\.replace\(CONTENTS/, 'nothing fills the contents line in from the chapters');
+    assert.match(md, /matchAll\(\/\(\?:\^\|\\n\)## /, 'the chapters are not derived from the headings');
+  });
+}
