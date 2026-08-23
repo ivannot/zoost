@@ -507,7 +507,15 @@ def sentences(path: Path) -> list:
         if m:
             s = m.group(1)
         s = html.unescape(re.sub(r'<[^>]+>', ' ', s))
-    return [' '.join(x.split()) for x in re.split(r'(?<=[.!?])\s+', ' '.join(s.split()))]
+    # A markdown table row is its own statement, and gluing the rows together is how a true half
+    # excuses a false one: `README.md` names both products in one table, and with the two rows run
+    # into a single «sentence» the corrected analytics row satisfied the guard for the stale CRM one
+    # above it. Measured by restoring the stale row - nothing was reported. Split first, then
+    # sentence-split what is left.
+    rows = [r for r in s.split('\n') if r.lstrip().startswith('|')]
+    rest = '\n'.join(r for r in s.split('\n') if not r.lstrip().startswith('|'))
+    out = [' '.join(x.split()) for x in re.split(r'(?<=[.!?])\s+', ' '.join(rest.split()))]
+    return out + [' '.join(r.split()) for r in rows]
 
 
 def absolutes() -> tuple:
@@ -687,7 +695,10 @@ UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancor
                          r'|being republished|back on the [^.]*shortly|has nothing to give you'
                          r'|sta tornando online|stanno tornando online|di nuovo sul [^.]*a breve'
                          r'|non ha niente da darti', re.I)
-PUBLISHED = re.compile(r'on the (Chrome )?Web Store|sul Chrome Web Store', re.I)
+# Markdown puts brackets where prose puts nothing: `on the [Chrome Web Store](url)` did not match
+# `on the (Chrome )?Web Store`, so the two README rows were outside this the whole time - the
+# widening that brought the file into the subject bought nothing until the pattern could read it.
+PUBLISHED = re.compile(r'on the \[?(Chrome )?Web Store|sul \[?Chrome Web Store', re.I)
 PRODUCT = {'crm': re.compile(r'Zoho CRM|Zoost CRM', re.I), 'analytics': re.compile(r'Zoho Analytics|Zoost Analytics', re.I)}
 
 
@@ -709,17 +720,33 @@ def published_state_is_stated(findings: list, notes: list) -> None:
         return
 
     state = {a: bool(live.get(a, {}).get('store')) for a in PRODUCT}
-    for f in sorted(SITE.rglob('*.html')):
-        rel = f.relative_to(SITE).as_posix()
+    # Two widenings, both from sentences that were live-false while this printed «and every page
+    # says so».
+    #
+    # **The subject is not always a product name.** «Both are on the Chrome Web Store» - and its
+    # Italian twin - sat on the same page as two cards that said the opposite, and no product name
+    # appears in it, so the per-product loop below skipped it entirely. A plural subject speaks about
+    # every product, so it is checked against every product.
+    #
+    # **And the site is not the only surface.** `README.md` and `llms.txt` both said «on the Chrome
+    # Web Store» throughout the withdrawal - `llms.txt` being the file written for an assistant to
+    # read, which is the reader most likely to repeat it. `absolutes()` in this same tool already
+    # reads them; this check globbed `site/**.html` and nothing else, so one tool held two different
+    # ideas of what outward prose is.
+    plural = re.compile(r'\b(both|all three|entrambi|tutti e due|le due|tutte e due)\b', re.I)
+    pages = sorted(SITE.rglob('*.html')) + [ROOT / 'README.md', SITE / 'llms.txt']
+    for f in pages:
+        rel = f.relative_to(ROOT).as_posix()
         for line in sentences(f):
+            speaks_of_all = bool(plural.search(line))
             for app, name in PRODUCT.items():
-                if not name.search(line):
+                if not name.search(line) and not speaks_of_all:
                     continue
                 if state[app] and UNPUBLISHED.search(line):
-                    findings.append(f'site/{rel}: says Zoost {app} is in review; the listing serves '
+                    findings.append(f'{rel}: says Zoost {app} is in review; the listing serves '
                                     f'{live[app]["store"]} — "{line[:96]}"')
                 if not state[app] and PUBLISHED.search(line) and not UNPUBLISHED.search(line):
-                    findings.append(f'site/{rel}: says Zoost {app} is on the Store; the listing '
+                    findings.append(f'{rel}: says Zoost {app} is on the Store; the listing '
                                     f'serves nothing — "{line[:96]}"')
     notes.append('  ' + ', '.join(f'Zoost {a} {"published" if v else "not published"}' for a, v in state.items())
                  + ' — and every page says so')

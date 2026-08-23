@@ -1,6 +1,10 @@
 # Derived by tools/langcheck.py - do not edit by hand; run it with --accept.
 # Every line here is Italian that is *meant* to be: a quotation of the Italian site,
 # or a string those pages are built from. It should shrink; growth is printed.
+# The plural subjects in `auditcheck.py` are a quotation of what the Italian pages say - the check
+# has to recognise «tutti e due» to hold that page to the truth, so the words are the subject and
+# not prose. Added 23 August 2026, with the widening that reads a sentence whose subject is not a
+# product name.
 60c557ea95b387da  docs/layout.md: point at the product you are looking at. Italian inflects it for gender, so «Questa ti disegna la
 4acf4995d319b4a8  docs/naming.md: a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
 a56ceb20b3fafe35  docs/naming.md: viene spedito» against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio
@@ -34,6 +38,7 @@ afb8397dc20b1735  tests/tools_test.py: 'devono essere allineate a sinistra',
 b8afae2985f4d224  tools/auditcheck.py: r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
 dd128dd07336eaf7  tools/auditcheck.py: UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat'
 7c777cfccf826fc6  tools/auditcheck.py: r'|non ha niente da darti', re.I)
+fad16e5b95ecebe9  tools/auditcheck.py: plural = re.compile(r'\b(both|all three|entrambi|tutti e due|le due|tutte e due)\b', re.I)
 5b807b2eb99100a9  tools/langcheck.py: 'della', 'delle', 'dello', 'degli', 'questo', 'questa', 'queste', 'questi', 'quello', 'quella',
 8c60a9097a6fa9ac  tools/langcheck.py: 'perché', 'perche', 'viene', 'vengono', 'quando', 'quindi', 'invece', 'senza', 'sempre',
 e2148af1f3f54292  tools/langcheck.py: 'ogni', 'tutti', 'tutte', 'tutto', 'nella', 'nelle', 'dalla', 'dalle', 'sulla', 'sulle',
