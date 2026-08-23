@@ -123,6 +123,7 @@ CLOSED = {
     ("await", "diagrams"):    ("tools/asynccheck.py now separates the awaits it entered from the ones it did not, per file; tests/tools_test.py plants one of each", "planted 2026-08-23"),
     ("await", "crm-ai"):      ("tests/keyvault.test.mjs: two changes to the session cache cannot erase each other", "planted 2026-08-23"),
     ("await", "worker"):      ("tests/worker.test.mjs: a cached payload cannot change shape behind its own cache key", "planted 2026-08-23"),
+    ("owner", "worker"):      ("tests/worker.test.mjs: a complete answer is held for the full time even when nothing is published", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

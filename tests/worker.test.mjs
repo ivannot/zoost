@@ -248,10 +248,15 @@ test('a partial answer is not cached for as long as a complete one', () => {
   // One fetch to raw.githubusercontent failed and both submission dates read "unknown" — for an hour
   // after the source had come back, because the failure was cached with the same TTL as a good
   // answer. Caching exists so a blip is invisible; caching the blip is the opposite.
+  //
+  // What is left here is the *shape*: two TTLs, one decision, one header reading it. The decision
+  // itself is asserted by running the endpoint - see «a complete answer is held for the full time»
+  // below. This used to pin the expression `[...].every((v) => v != null)`, which is a photograph of
+  // a belief: it agreed with every version of that line including the wrong one, and the wrong one
+  // was live. A regex over the source can only confirm the belief is still spelled the same way.
   const src = read('site/_worker.js');
   assert.match(src, /const TTL_PARTIAL = 60;/, 'the short TTL is gone');
-  assert.match(src, /const complete = \[[^\]]+\]\.every\(\(v\) => v != null\);/,
-    'nothing decides whether the answer is complete');
+  assert.match(src, /const complete = /, 'nothing decides whether the answer is complete');
   assert.match(src, /const ttl = complete \? TTL : TTL_PARTIAL;/, 'the TTL no longer depends on it');
   assert.match(src, /max-age=\$\{ttl\}/, 'the header still hard-codes one TTL');
 });
@@ -1171,4 +1176,82 @@ test('a cached payload cannot change shape behind its own cache key', () => {
     'is served the old shape from the edge for as long as the entry lives - and the key ignores the ' +
     'query string, so nothing outside can bust it. Bump the marker in site/_worker.js and the ' +
     'digest here, together.');
+});
+
+// ---------------------------------------------------------------------------------------------
+// «Not published» is an answer, and it must not be cached like an outage.
+//
+// The endpoint holds a complete reading for ten minutes and a partial one for sixty seconds, so an
+// outage expires with the outage. Which of the two it is was decided by `[crmStore, ..., anStore,
+// ...].every((v) => v != null)` - by whether every *value* is present rather than by whether every
+// *source* answered. A product with nothing published has `store: null`, and that is a fact Google
+// gave us.
+//
+// Live when this was written: `cws` was `ok`, `storeAsOf` was twenty minutes old, both products
+// showed `store: null` with a submission in review - a complete, correct answer, cached for sixty
+// seconds. Ten times the upstream cost of every footer on the site, for as long as the listings stay
+// unpublished, over nothing being wrong.
+//
+// It is this repository's own rule, already held for the *wording* two tests above and not applied
+// to the decision: a 404 is «there are none» and anything else is «I could not find out».
+function versionsTtl(reading) {
+  const ctx = load([
+    sliceConst('site/_worker.js', 'REPO'), sliceConst('site/_worker.js', 'EXT_ID'),
+    sliceConst('site/_worker.js', 'UA'), sliceConst('site/_worker.js', 'IS_VERSION'),
+    sliceConst('site/_worker.js', 'TTL'), sliceConst('site/_worker.js', 'TTL_PARTIAL'),
+    sliceConst('site/_worker.js', 'timeout'), sliceConst('site/_worker.js', 'listing'),
+    sliceConst('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'CACHE_KEY'),
+    sliceConst('site/_worker.js', 'isNewer'), sliceFn('site/_worker.js', 'cmpVer'),
+    sliceFn('site/_worker.js', 'pickLatestTag'), sliceFn('site/_worker.js', 'tagsFeed'),
+    sliceFn('site/_worker.js', 'latestTag'), sliceFn('site/_worker.js', 'repoVersion'),
+    sliceFn('site/_worker.js', 'lastChanged'), sliceFn('site/_worker.js', 'storeStatus'),
+    sliceFn('site/_worker.js', 'versions'),
+  ], {
+    AbortSignal: { timeout: () => null }, Request, Response, URL, Promise, isNaN, JSON, Date,
+    caches: { default: { match: async () => null, put: async () => {} } },
+    fetch: async () => ({
+      ok: true, status: 200,
+      // The tag comes out of the entry's link, never its title - a Release can be renamed.
+      text: async () => '<feed><entry><link href="https://github.com/x/y/releases/tag/crm-v1.46.0"/></entry>'
+                      + '<entry><link href="https://github.com/x/y/releases/tag/analytics-v1.29.0"/></entry></feed>',
+      json: async () => ({ version: '1.46.0' }),
+    }),
+  });
+  const env = {
+    CF_VERSION: { timestamp: '2026-08-23T09:58:44Z' },
+    STATUS: { get: async () => reading },   // `{ type: 'json' }`, so the object itself
+  };
+  return ctx.versions({ url: 'https://zoost.it/api/versions' }, env, { waitUntil: () => {} })
+    .then((r) => ({ ttl: Number(/max-age=(\d+)/.exec(r.headers.get('cache-control'))[1]),
+                    body: r.json() }));
+}
+
+test('a complete answer is held for the full time even when nothing is published', async () => {
+  const long = Number(sliceConst('site/_worker.js', 'TTL').match(/=\s*(\d+)/)[1]);
+  const short = Number(sliceConst('site/_worker.js', 'TTL_PARTIAL').match(/=\s*(\d+)/)[1]);
+  assert.ok(long > short, 'the two TTLs are the same - this test proves nothing');
+
+  const published = {
+    crm: { published: { version: '1.46.0', state: 'PUBLISHED' } },
+    analytics: { published: { version: '1.29.0', state: 'PUBLISHED' } },
+    cws: 'ok', asOf: '2026-08-23T14:51:43Z',
+  };
+  assert.equal((await versionsTtl(published)).ttl, long, 'a fully published reading is not held long');
+
+  // The live state when this was written: asked, answered, and nothing published on either side.
+  const inReview = {
+    crm: { submitted: { version: '1.46.0', state: 'PENDING_REVIEW' } },
+    analytics: { submitted: { version: '1.29.0', state: 'PENDING_REVIEW' } },
+    cws: 'ok', asOf: '2026-08-23T14:51:43Z',
+  };
+  const got = await versionsTtl(inReview);
+  assert.equal(got.ttl, long,
+    `a reading where Google answered and neither product is published is complete, and it is being ` +
+    `held for ${got.ttl}s instead of ${long}s - every footer on the site pays ${long / got.ttl}x the ` +
+    `upstream cost for as long as the listings stay unpublished`);
+
+  // And the other half: a reading nobody could take must still expire with the outage.
+  assert.equal((await versionsTtl({ crm: null, analytics: null, cws: 'unreadable', asOf: null })).ttl, short,
+    'a reading that failed is held as long as a good one, so an outage outlives itself');
+  assert.equal((await versionsTtl(null)).ttl, short, 'an empty store reads as a complete answer');
 });

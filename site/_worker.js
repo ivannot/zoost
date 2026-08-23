@@ -335,7 +335,17 @@ async function versions(request, env, ctx) {
    * instead of dating the site by something else. */
   const updated = (env.CF_VERSION && env.CF_VERSION.timestamp) || null;
 
-  const complete = [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, updated].every((v) => v != null);
+  // Complete means **every source answered**, not «every value is present». Those came apart the day
+  // both listings were unpublished for a resubmission: `cws` said `ok`, the reading was twenty
+  // minutes old and correct, and both `store` fields were null - because Google has no published
+  // version to report, which is a fact and not an outage. Judged by the values, that read as partial
+  // and the endpoint every footer on the site calls dropped to the sixty-second TTL for as long as
+  // the listings stayed down: ten times the upstream cost, over nothing being wrong.
+  //
+  // It is this file's own rule, held two tests over for the *wording* and never applied to the
+  // decision - a 404 is «there are none» and anything else is «I could not find out». `cwsWhy` is
+  // exactly that signal for the Store half, so it is what gets asked.
+  const complete = cwsWhy === 'ok' && [crmRepo, crmTag, anRepo, anTag, updated].every((v) => v != null);
   const ttl = complete ? TTL : TTL_PARTIAL;
 
   const res = new Response(JSON.stringify({
