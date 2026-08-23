@@ -12584,68 +12584,107 @@ test('the diagram walks a graph that loops, and comes back', () => {
 // afterwards. The caches are read back by name off `noteWrite`'s own body rather than listed here,
 // so a cache added to it tomorrow is covered; a cache cleared somewhere else entirely is not, and
 // another case already refuses that.
-test('crm: a write the browser refuses forgets nothing', async () => {
-  // Cut by hand rather than with `sliceConst`: `noteWrite` is a multi-line arrow whose statements
-  // end in `;`, and that lifter stops at the first one closing a line - it returned two thirds of
-  // the body and the evaluation died on «Unexpected end of input». The lifter's own stated limit,
-  // met head-on; the closing `\n};` at column zero is the fact this file relies on everywhere.
-  const panelSrc = read('apps/crm/sidepanel.js');
-  const at = panelSrc.indexOf('const noteWrite');
-  assert.ok(at > 0, 'noteWrite is gone - the derivation broke');
-  const noteSrc = panelSrc.slice(at, panelSrc.indexOf('\n};', at) + 3);
-  // Deduplicated: a cache appears in as many branches as drop it, and a message naming
-  // `aiConnCache` three times reads as three caches.
-  const CACHES = [...new Set([...noteSrc.matchAll(/(\w+) = null/g)].map((m) => m[1]))];
-  assert.ok(CACHES.length >= 5, `noteWrite drops ${CACHES.length} cache(s) - the derivation broke`);
-
-  const build = (writable) => {
-    const ctx = {
-      Set, Object, Array, String, Error, Promise, console,
-      WS_MOVED: 'moved',
-      isModuleFile: (rel) => rel.startsWith('modules/'),
-      _dirtyMeta: new Set(), _dirtySource: new Set(),
-      dirFor: async () => ({
-        getFileHandle: async () => ({ createWritable: writable }),
-        getDirectoryHandle: async () => ({ removeEntry: async () => { throw new Error('refused'); } }),
-      }),
-    };
-    // The root is a real enough handle: `removeFileAt` walks it directory by directory, so a bare
-    // object throws «not a function» and the case would pass on the wrong error.
-    ctx.dir = { name: 'root',
-                getDirectoryHandle: async () => ({
-                  removeEntry: async () => { throw new Error('the browser refused the removal'); } }) };
-    for (const c of CACHES) ctx[c] = 'kept';
-    vm.createContext(ctx);
-    vm.runInContext([noteSrc,
-                     sliceFn('apps/crm/sidepanel.js', 'writeFileAt'),
-                     sliceFn('apps/crm/sidepanel.js', 'removeFileAt')].join('\n'), ctx);
-    return ctx;
+test('a write the browser refuses forgets nothing, in either product', async () => {
+  // Every product that has one, found by having one. Both panels write through the same shape - a
+  // `noteWrite` table and a `writeFileAt` that calls it after the bytes are down - and a case named
+  // after one of them would have left the other exactly where this one found it.
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name)
+    .filter((a) => /\b(?:const|function) noteWrite\b/.test(read(`apps/${a}/sidepanel.js`)));
+  assert.ok(apps.length >= 2, `${apps.length} product(s) have a noteWrite - the derivation broke`);
+  // One is an arrow constant and the other a declaration, which is a twin difference the ledger
+  // already records - so the lift asks the source which it is instead of assuming either.
+  const noteOf = (rel) => {
+    const src = read(rel);
+    const at = src.indexOf('const noteWrite');
+    return at > 0 ? src.slice(at, src.indexOf('\n};', at) + 3) : sliceFn(rel, 'noteWrite');
   };
-  const held = (ctx) => CACHES.filter((c) => ctx[c] === 'kept');
 
-  // The browser refuses the write. Nothing was written, so nothing may be forgotten.
-  const bad = build(async () => { throw new Error('the browser refused the write'); });
-  await assert.rejects(() => vm.runInContext("writeFileAt(dir, 'functions/a/b.dg', 'x')", bad),
-    /refused/, 'a refused write no longer reaches the caller');
-  assert.deepEqual(held(bad), CACHES,
-    `a write that never happened cleared ${CACHES.filter((c) => bad[c] !== 'kept')} - the panel will `
-    + 'rebuild from a file that did not change, and the mark that said so is gone');
-  assert.equal(bad._dirtySource.size + bad._dirtyMeta.size, 0,
-    'a refused write left a dirty mark, so the summary cache believes a source moved');
+  for (const app of apps) {
+    // Cut by hand rather than with `sliceConst`: `noteWrite` is a multi-line arrow whose statements
+    // end in `;`, and that lifter stops at the first one closing a line - it returned two thirds of
+    // the body and the evaluation died on «Unexpected end of input». The lifter's own stated limit,
+    // met head-on; the closing `\n};` at column zero is the fact this file relies on everywhere.
+    const rel = `apps/${app}/sidepanel.js`;
+    const noteSrc = noteOf(rel);
+    // Deduplicated: a cache appears in as many branches as drop it, and a message naming
+    // `aiConnCache` three times reads as three caches.
+    const CACHES = [...new Set([...noteSrc.matchAll(/(\w+) = null/g)].map((m) => m[1]))];
+    assert.ok(CACHES.length >= 1, `id=${app}: noteWrite drops ${CACHES.length} cache(s) - the derivation broke`);
 
-  // The same handle, working. Now the marks must go, or the panel answers from a stale cache.
+    const build = (writable) => {
+      const ctx = {
+        Set, Object, Array, String, Error, Promise, Map, console,
+        WS_MOVED: 'moved',
+        isModuleFile: (r) => r.startsWith('modules/'),
+        _dirtyMeta: new Set(), _dirtySource: new Set(),
+        sqlDiskUnread: new Set(), sqlUnread: 0,
+        dirFor: async () => ({ getFileHandle: async () => ({ createWritable: writable }) }),
+      };
+      // The root is a real enough handle: `removeFileAt` walks it directory by directory, so a bare
+      // object throws «not a function» and the case would pass on the wrong error.
+      ctx.dir = { name: 'root',
+                  getDirectoryHandle: async () => ({
+                    removeEntry: async () => { throw new Error('the browser refused the removal'); } }) };
+      for (const c of CACHES) ctx[c] = 'kept';
+      vm.createContext(ctx);
+      vm.runInContext([noteSrc, sliceFn(rel, 'writeFileAt'), sliceFn(rel, 'removeFileAt')].join('\n'), ctx);
+      return ctx;
+    };
+    const held = (ctx) => CACHES.filter((c) => ctx[c] === 'kept');
+    // A path the product's own table reacts to, taken **from the table**. Driving
+    // `functions/a/b.dg` at both was the first version, and Analytics has no such path - so its
+    // `noteWrite` returned at the top, cleared nothing either way, and the case passed on both
+    // orders. A fixture that cannot reach the branch is the same failure as a stub that cannot
+    // refuse, one level up.
+    const startsWith = /startsWith\('([^']+)'\)/.exec(noteSrc);
+    const endsWith = /endsWith\('([^']+)'\)/.exec(noteSrc);
+    assert.ok(startsWith, `id=${app}: noteWrite branches on no path prefix - the derivation broke`);
+    const path = startsWith[1] + 'x' + (endsWith ? endsWith[1] : '');
+    const drops = build(async () => ({ write: async () => {}, close: async () => {} }));
+    await vm.runInContext(`writeFileAt(dir, '${path}', 'x')`, drops);
+    assert.notDeepEqual(held(drops), CACHES,
+      `id=${app}: a written «${path}» dropped nothing, so this case is driving a path the table `
+      + 'does not react to and would pass whatever the order');
+
+    // The browser refuses the write. Nothing was written, so nothing may be forgotten.
+    const bad = build(async () => { throw new Error('the browser refused the write'); });
+    await assert.rejects(() => vm.runInContext(`writeFileAt(dir, '${path}', 'x')`, bad),
+      /refused/, `id=${app}: a refused write no longer reaches the caller`);
+    assert.deepEqual(held(bad), CACHES,
+      `id=${app}: a write that never happened cleared ${CACHES.filter((c) => bad[c] !== 'kept')} - the `
+      + 'panel will rebuild from a file that did not change, and the mark that said so is gone');
+    assert.equal(bad._dirtySource.size + bad._dirtyMeta.size, 0,
+      `id=${app}: a refused write left a dirty mark, so the summary cache believes a source moved`);
+
+    // A removal the browser refuses: same rule, the other writer.
+    const rm = build(async () => ({ write: async () => {}, close: async () => {} }));
+    await assert.rejects(() => vm.runInContext(`removeFileAt(dir, '${path}')`, rm),
+      /refused/, `id=${app}: a refused removal no longer reaches the caller`);
+    assert.deepEqual(held(rm), CACHES,
+      `id=${app}: a removal that never happened cleared a cache, so the panel forgets a file that is still there`);
+  }
+
+  // …and the working case, on the product whose table is the larger of the two: a written `.dg`
+  // drops the source, the graph and the connection map, and leaves a dirty mark behind it. Asserted
+  // where the branch exists rather than in the loop, because the two tables are not the same table.
   let closed = false;
-  const ok = build(async () => ({ write: async () => {}, close: async () => { closed = true; } }));
-  await vm.runInContext("writeFileAt(dir, 'functions/a/b.dg', 'x')", ok);
+  const ctx = {
+    Set, Object, Array, String, Error, Promise, console, WS_MOVED: 'moved',
+    isModuleFile: (r) => r.startsWith('modules/'),
+    _dirtyMeta: new Set(), _dirtySource: new Set(),
+    dir: { name: 'root' },
+    dirFor: async () => ({ getFileHandle: async () => ({ createWritable:
+      async () => ({ write: async () => {}, close: async () => { closed = true; } }) }) }),
+  };
+  const note = noteOf('apps/crm/sidepanel.js');
+  for (const c of [...new Set([...note.matchAll(/(\w+) = null/g)].map((m) => m[1]))]) ctx[c] = 'kept';
+  vm.createContext(ctx);
+  vm.runInContext([note, sliceFn('apps/crm/sidepanel.js', 'writeFileAt')].join('\n'), ctx);
+  await vm.runInContext("writeFileAt(dir, 'functions/a/b.dg', 'x')", ctx);
   assert.equal(closed, true, 'the writable was never closed, so the bytes are not on disk');
-  assert.deepEqual(held(ok).sort(), CACHES.filter((c) => !['codeCache', 'graphCache', 'aiConnCache'].includes(c)).sort(),
-    'a written .dg no longer drops the source, the graph and the connection map');
-  assert.equal(ok._dirtySource.has('functions/a/b.dg'), true, 'a written source left no dirty mark');
-
-  // And a removal the browser refuses: same rule, the other writer.
-  const rm = build(async () => ({ write: async () => {}, close: async () => {} }));
-  await assert.rejects(() => vm.runInContext("removeFileAt(dir, 'modules/x.json')", rm),
-    /refused/, 'a refused removal no longer reaches the caller');
-  assert.deepEqual(held(rm), CACHES,
-    'a removal that never happened cleared a cache, so the panel forgets a file that is still there');
+  for (const c of ['codeCache', 'graphCache', 'aiConnCache']) {
+    assert.equal(ctx[c], null, `a written .dg no longer drops ${c}`);
+  }
+  assert.equal(ctx._dirtySource.has('functions/a/b.dg'), true, 'a written source left no dirty mark');
 });
