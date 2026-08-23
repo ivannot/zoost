@@ -948,3 +948,58 @@ test('every absence the Worker can report has a sentence of its own on the page'
     assert.notEqual(a, b, `id=${lang}: the two absences say the same thing`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The cost written in the comment is the cost the endpoint pays.
+//
+// «a miss costs N upstream requests» is the whole argument for the ten-minute TTL, and it was a
+// number typed beside the code rather than read off it. It had drifted the other way from the usual
+// one: the comment said 6 and the endpoint made 6, but `tagsFeed` had been split from the question
+// asked of it precisely so both products' tags come out of one document - a discipline written down
+// in that function's own comment, applied to `/api/ahead`, and never carried to the endpoint every
+// page's footer calls. Two fetches of the same URL, on all the traffic.
+//
+// So the number is *measured*, and the measurement is compared against the sentence. Neither can
+// move without the other now, which is the only way a claim about cost stays true.
+function versionsRun() {
+  const urls = [];
+  const ctx = load([
+    sliceConst('site/_worker.js', 'REPO'), sliceConst('site/_worker.js', 'EXT_ID'),
+    sliceConst('site/_worker.js', 'UA'), sliceConst('site/_worker.js', 'IS_VERSION'),
+    sliceConst('site/_worker.js', 'TTL'), sliceConst('site/_worker.js', 'TTL_PARTIAL'),
+    sliceConst('site/_worker.js', 'timeout'), sliceConst('site/_worker.js', 'listing'),
+    sliceConst('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'CACHE_KEY'),
+    sliceConst('site/_worker.js', 'isNewer'), sliceFn('site/_worker.js', 'cmpVer'),
+    sliceFn('site/_worker.js', 'pickLatestTag'), sliceFn('site/_worker.js', 'tagsFeed'),
+    sliceFn('site/_worker.js', 'latestTag'), sliceFn('site/_worker.js', 'repoVersion'),
+    sliceFn('site/_worker.js', 'lastChanged'), sliceFn('site/_worker.js', 'storeStatus'),
+    sliceFn('site/_worker.js', 'versions'),
+  ], {
+    AbortSignal: { timeout: () => null }, Request, Response, URL, Promise, isNaN,
+    caches: { default: { match: async () => null, put: async () => {} } },
+    fetch: async (u) => {
+      urls.push(String(u));
+      return { ok: true, status: 200, text: async () => '<feed></feed>', json: async () => ({ version: '1.0.0' }) };
+    },
+  });
+  return ctx.versions({ url: 'https://zoost.it/api/versions' }, { STATUS: null }, { waitUntil: () => {} })
+    .then(() => urls);
+}
+
+test('a cache miss costs what the comment says it costs', async () => {
+  const urls = await versionsRun();
+  const said = /a miss costs \*\*(\d+) upstream requests\*\*/.exec(read('site/_worker.js'));
+  assert.ok(said, 'the sentence that justifies the TTL is gone - it is the argument, not decoration');
+  assert.equal(urls.length, Number(said[1]),
+    `the comment says ${said[1]} upstream request(s) and the endpoint makes ${urls.length}: ` +
+    urls.join(', '));
+});
+
+test('no document is fetched twice for two questions', async () => {
+  // The specific shape of the drift, kept as its own case because it is the one that recurs: a
+  // helper split out so it can be asked twice, then called twice anyway one endpoint over.
+  const urls = await versionsRun();
+  const twice = [...new Set(urls.filter((u, i) => urls.indexOf(u) !== i))];
+  assert.deepEqual(twice, [],
+    `fetched more than once in a single miss, for questions one copy could answer: ${twice.join(', ')}`);
+});

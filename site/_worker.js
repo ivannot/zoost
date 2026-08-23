@@ -39,7 +39,7 @@ const EXT_ID = {
 };
 // Ten minutes, not an hour. The badge is a live status - what the Store is serving, what it has in
 // the queue - and an hour of it was the difference between submitting and seeing it. Measured rather
-// than guessed: a miss costs **6 upstream requests** (4 GitHub Atom feeds, 2 raw manifests), and
+// than guessed: a miss costs **5 upstream requests** (3 GitHub Atom feeds, 2 raw manifests), and
 // «per PoP» is the term that matters, since Cloudflare caches per data centre and the total is that
 // times however many are warm. It was 9 while this asked Google directly - two fetchStatus calls and
 // a token mint - and those went away with the credential.
@@ -255,6 +255,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
 const CACHE_KEY = '/api/versions?v=21';  // bumped: the payload gained storeAsOf when the credential left
+// (v=21 stands: what the endpoint fetches changed, the payload it answers with did not.)
 
 // Turning on `assets.not_found_handling` took this endpoint away without touching a line of it:
 // with a 404 page configured, a request that matches no asset stops reaching the Worker, and
@@ -273,14 +274,21 @@ async function versions(request, env, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [store, crmRepo, crmTag, anRepo, anTag, docsUpd, docsAnUpd] =
+  // The feed is fetched **once** and asked two things. It used to be `latestTag('crm')` and
+  // `latestTag('analytics')`, each fetching the same `tags.atom` - the discipline `tagsFeed` was
+  // split out for, written down in its own comment, and applied to `/api/ahead` while this endpoint,
+  // the one every page's footer calls, went on paying for the document twice. One of a pair changed
+  // and the other left behind, in the copy that carries all the traffic.
+  const [store, crmRepo, anRepo, xml, docsUpd, docsAnUpd] =
     await Promise.all([
       settled(storeStatus(env)),
-      settled(repoVersion('crm')), settled(latestTag('crm')),
-      settled(repoVersion('analytics')), settled(latestTag('analytics')),
+      settled(repoVersion('crm')), settled(repoVersion('analytics')),
+      settled(tagsFeed()),
       settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
+  const crmTag = xml ? pickLatestTag(xml, 'crm') : null;
+  const anTag = xml ? pickLatestTag(xml, 'analytics') : null;
   const s = store || { crm: null, analytics: null, cws: 'unreadable', asOf: null };
   const crmCws = s.crm, anCws = s.analytics;
   const crmStore = crmCws && crmCws.published ? crmCws.published.version : null;
