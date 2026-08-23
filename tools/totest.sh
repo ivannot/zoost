@@ -157,14 +157,31 @@ fi
 # and the first version of this copied the extensions by hand and left the images to an rsync that
 # was not going to run, so they would have gone missing without a word on exactly the destination the
 # fallback exists for. Found by running the suite on a machine with no rsync at all.
+# **Per product, and that is what makes `--delete` safe here.** The paragraph above is right that a
+# run which rendered nothing leaves the mirror alone - `[ -d dist/store ]` sees to that - and it was
+# applied one level too high. `shots.py` writes a product's folder only when *all five* of its shots
+# came back (`if not all(k in rendered ...): continue`), so a run where one product's shots failed,
+# or a named subset, leaves `dist/store` holding one product. Syncing the whole folder with
+# `--delete` then removed the other product's five images from the mirror - measured: ten pngs on the
+# destination, five in a source holding one product, five left afterwards.
+#
+# That is the listing's own set, on the machine with the dashboard open, deleted by a battery run.
+# The same reasoning the whole-folder guard was written from - «the last rendered set is the one that
+# was uploaded, and an empty folder would say nothing to upload about a listing that has images on
+# it» - one level down, where the products are actually distinct.
 IMGS=''
 if [ -d dist/store ]; then
-  if [ "$COPIED" != '(everything)' ] && out=$(rsync $RSYNC_FLAGS dist/store/ "$DEST/store/" 2>/dev/null); then
-    COPIED="$COPIED$out"
-  else
-    rm -rf "$DEST/store"
-    cp -R dist/store "$DEST/"
-  fi
+  mkdir -p "$DEST/store" 2>/dev/null || true
+  for app_dir in dist/store/*/; do
+    [ -d "$app_dir" ] || continue
+    app_name=$(basename "$app_dir")
+    if [ "$COPIED" != '(everything)' ] && out=$(rsync $RSYNC_FLAGS "$app_dir" "$DEST/store/$app_name/" 2>/dev/null); then
+      COPIED="$COPIED$out"
+    else
+      rm -rf "$DEST/store/$app_name"
+      cp -R "$app_dir" "$DEST/store/$app_name"
+    fi
+  done
   IMGS=$(find "$DEST/store" -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
 fi
 

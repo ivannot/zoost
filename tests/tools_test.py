@@ -4751,5 +4751,66 @@ class ShotsSaysTheSameThingOnBothPaths(unittest.TestCase):
                       'verdict above can only ever say «cannot tell»')
 
 
+class OneProductRenderedDoesNotDeleteTheOther(unittest.TestCase):
+    """A `dist/store` holding one product must not empty the other one on the mirror.
+
+    `totest.sh` mirrors the screenshots with `--delete`, which is right - the destination is a copy
+    and has to match. It synced the whole `dist/store/` in one call, and `shots.py` writes a
+    product's folder only when **all five** of its shots came back, so a run where one product's
+    shots failed - or a named subset, or a fresh checkout where `dist/` is git-ignored and empty -
+    leaves that folder holding one product. Measured before the fix: ten pngs on the destination,
+    five in the source, five left afterwards. The images deleted are the ones on the other product's
+    live listing, on the machine with the dashboard open, by a run of the battery.
+
+    The whole-folder case was already reasoned about and guarded - «a run that has not rendered any
+    leaves whatever is over there alone» - one level above where the products are distinct. Same
+    reasoning, applied per product now.
+
+    This measures rsync rather than the script, deliberately: the script always runs against the
+    real repository, and making `dist/store` partial to test it would mean deleting a set that
+    cannot be recovered from git. The flags are read out of the script, never retyped.
+    """
+
+    def flags(self):
+        line = next(l for l in (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8').splitlines()
+                    if l.startswith('RSYNC_FLAGS='))
+        return line.split('"')[1].replace('$COMPARE', '--checksum').split()
+
+    def test_the_delete_is_scoped_to_the_product_being_copied(self):
+        if not shutil.which('rsync'):
+            self.skipTest('no rsync here - what this asserts about is what rsync --delete removes')
+        with tempfile.TemporaryDirectory() as t:
+            d = pathlib.Path(t)
+            (d / 'src' / 'crm').mkdir(parents=True)
+            for app in ('crm', 'analytics'):
+                (d / 'dst' / app).mkdir(parents=True)
+            for n in range(1, 6):
+                (d / 'src' / 'crm' / f'{n}.png').write_text('new', encoding='utf-8')
+                for app in ('crm', 'analytics'):
+                    (d / 'dst' / app / f'{n}.png').write_text('old', encoding='utf-8')
+            # What the script does now: one call per product folder that exists.
+            subprocess.run(['rsync', *self.flags(), str(d / 'src' / 'crm') + '/',
+                            str(d / 'dst' / 'crm') + '/'], capture_output=True, check=True)
+            left = sorted(p.relative_to(d / 'dst').as_posix() for p in (d / 'dst').rglob('*.png'))
+            self.assertEqual(len(left), 10,
+                             f'copying one product removed the other one\'s images: {left}')
+            self.assertEqual((d / 'dst' / 'crm' / '1.png').read_text(encoding='utf-8'), 'new',
+                             'and it did not even copy the product it was given')
+
+    def test_the_script_copies_one_product_at_a_time(self):
+        # Derived: the destination path handed to rsync must name a product, or the call is the
+        # whole-folder one again. Read as a shape rather than as a string, so a rename does not
+        # quietly retire the check.
+        sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+        calls = re.findall(r'rsync \$RSYNC_FLAGS ([^\n]+)', sh)
+        store = [c for c in calls if 'store' in c]
+        self.assertTrue(store, 'nothing mirrors the screenshots at all any more')
+        for c in store:
+            self.assertNotRegex(c, r'dist/store/\s',
+                                f'the whole screenshot folder is synced in one --delete call: {c}')
+            self.assertIn('$DEST/store/$', c,
+                          f'the destination does not name a product, so --delete reaches both: {c}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
