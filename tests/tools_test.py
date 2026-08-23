@@ -1674,11 +1674,12 @@ class ImagesAreRenderedOnlyWhenSomethingMoved(unittest.TestCase):
         self.assertNotEqual(a, b, 'two shots of the same app would share a digest')
 
     def test_the_renderers_are_in_the_hash(self):
-        src = (ROOT / 'tools/siteimg.py').read_text(encoding='utf-8')
-        i = src.index('def source_digest')
-        body = src[i:src.index('\ndef ', i + 10)]
+        # Read off the set the tool computes, not out of the text of `source_digest`. It used to
+        # search that function's body for two file names - a photograph of the spelling, which said
+        # nothing about what was hashed and went red the day the list became a derivation.
+        names = {f.name for f in self.siteimg.renderers()}
         for f in ('shots.py', 'fsshim.js'):
-            self.assertIn(f, body,
+            self.assertIn(f, names,
                           f'{f} decides how a shot is drawn and is not in the digest, so changing it '
                           f'would leave every image looking current')
 
@@ -6669,6 +6670,65 @@ class TheSettingsShotIsOfAProductInUse(unittest.TestCase):
                 'normally carry')
             self.assertIn(key, "rootDir",
                           f'{app}: the page asks idbHandle for «{key}» and this check assumed rootDir')
+
+
+class WhatDecidesAPictureIsWhatIsHashed(unittest.TestCase):
+    """The staleness digest and the encoder are two halves of one answer, joined by a list.
+
+    `source_digest()` decides whether a published image is still a picture of the product, and
+    `imgcheck` reports on nothing else. What it hashed was the app's shipped files, the fixture, the
+    click script, and **three renderer files written out by name**. `siteimg.py` was not one of them,
+    and it is where the width, the WebP quality and the `cwebp` command line live.
+
+    Measured: quality 80 to 70 - which changes the bytes of all 28 published images - and `imgcheck`
+    answered «0 findings». Every picture would have stayed at the old encoding until something
+    unrelated moved, with nothing saying so. The lesson was already in that function's own docstring,
+    «the command that drives it was the one input that could move without any image being
+    re-rendered», applied to one file and not to the one it was written in.
+
+    The set is derived now - the two modules that drive a render, and every `tools/<file>` either of
+    them names - so a helper added tomorrow is covered the moment something reads it. This holds the
+    derivation to two things a list cannot promise: that it contains the drivers themselves, and that
+    it does not contain the tool's own output, which would re-render everything on every run.
+
+    **The limits, stated.** It reads the set the tool computes, not the pictures: it proves what is
+    watched, not that a watched change is noticed - the run that follows a change does that, and the
+    plant behind this case is what showed the gap. A renderer file reached some way other than a
+    `"tools" / "name"` path is invisible to the derivation, which is why the count is asserted.
+    """
+
+    def test_the_renderers_hash_themselves(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import siteimg
+        finally:
+            sys.path.pop(0)
+        names = {f.name for f in siteimg.renderers()}
+        self.assertGreaterEqual(
+            len(names), 4,
+            f'the render set is {sorted(names)} - too small to be the whole of what draws a picture, '
+            'so the derivation has stopped finding things')
+
+        # The drivers themselves: the file that encodes, and the file that stubs the page.
+        for mod in ('siteimg.py', 'shots.py'):
+            self.assertIn(
+                mod, names,
+                f'{mod} decides what a picture looks like and is not hashed, so changing it leaves '
+                'every published image stale with imgcheck reporting none')
+
+        # And never the ledger: a digest that included its own output would move on every run.
+        self.assertNotIn(
+            siteimg.LEDGER.name, names,
+            'the digest includes the file it writes, so every run invalidates every image and the '
+            'tool re-renders the whole set for ever')
+
+        # The set is what the digest actually reads, not a second list beside it.
+        body = (ROOT / 'tools' / 'siteimg.py').read_text(encoding='utf-8')
+        at = body.index('def source_digest')
+        self.assertIn(
+            'renderers()', body[at:body.index('\n\n\n', at)],
+            'source_digest no longer reads the derived set, so this check is watching a helper '
+            'nothing uses')
 
 
 if __name__ == '__main__':

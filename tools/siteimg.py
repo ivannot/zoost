@@ -54,6 +54,33 @@ WIDTH = 1760      # 2x the 880px the content column reaches at its widest
 QUALITY = 80
 
 
+def renderers() -> list:
+    """Every file that decides what a picture looks like, derived rather than listed.
+
+    It used to be three names written out here, and the list was one short: `siteimg.py` itself holds
+    the width, the WebP quality and the `cwebp` command line, and was in nothing. Measured - quality
+    80 to 70, which changes the bytes of all 28 published images, and `imgcheck` answered «0
+    findings». The lesson two paragraphs up («the command that drives it was the one input that could
+    move without any image being re-rendered») had been applied to one file and not to the one it was
+    written in.
+
+    So: the two modules that drive a render, and every `tools/<file>` either of them names. A helper
+    added tomorrow is covered the moment something reads it, which is the property a list of three
+    could not have.
+    """
+    out = {pathlib.Path(__file__).resolve(), ROOT / "tools" / "shots.py"}
+    for mod in list(out):
+        for name in re.findall(r'"tools"\s*/\s*"([\w.-]+)"', mod.read_text(encoding="utf-8")):
+            f = ROOT / "tools" / name
+            if f.is_file():
+                out.add(f.resolve())
+    # Not the ledger: it is this tool's own output, and a digest that included it would change on
+    # every run and re-render everything for ever. Excluded by being what LEDGER points at rather
+    # than by name, so moving or renaming it cannot bring it back in.
+    out.discard(LEDGER.resolve())
+    return sorted(out)
+
+
 def source_digest(app: str, script: str) -> str:
     """What this image is a picture of: the app's shipped files, the fixture it was rendered
     against, and the click script that drove it. Any of the three moving means the picture may no
@@ -87,7 +114,7 @@ def source_digest(app: str, script: str) -> str:
     # they are rendered from the workspace `+ Sample` delivers, which that file writes at render time
     # from the shipped generator. The generator itself is an app file and already hashed above; the
     # command that drives it was the one input that could move without any image being re-rendered.
-    for f in (ROOT / "tools" / "shots.py", ROOT / "tools" / "fsshim.js", ROOT / "tools" / "fixtures.mjs"):
+    for f in renderers():
         h.update(f.read_bytes())
     h.update(script.encode())
     return h.hexdigest()[:16]
