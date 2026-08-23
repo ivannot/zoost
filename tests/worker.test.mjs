@@ -7,9 +7,10 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load, read } from './slice.mjs';
+import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
 import { readdirSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
+import { execSync } from 'node:child_process';
 
 // Globbed, never listed: a page added tomorrow is covered without anyone remembering it.
 const listPages = () => ['', 'it/'].flatMap((d) =>
@@ -1045,6 +1046,52 @@ test('every fetch the site makes says so when it fails', () => {
         `a failed request, which is the one thing this site promises not to do`);
       assert.ok(/innerHTML|textContent|\bt\(/.test(body),
         `${rel}:${line}: the failure path runs but puts nothing on the page`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Anything computed on both sides of the wire is computed the same way, and it is proven on both.
+//
+// `verOf` - the tag-to-version extraction - exists in `site/site.js` and in `site/_worker.js`. It
+// is character-identical today, and the only thing holding it there was that nobody had touched
+// either. The tests exercised the site's copy and never compared it with the Worker's, which could
+// not even be lifted: it was a multi-line `const` arrow, and `slice.mjs` cuts one at the first
+// semicolon that ends a line. So the copy nothing could run was the copy nothing checked.
+//
+// `newer`/`cmpVer` is the same pair one function over and they *had* drifted - `1.9.1` was not
+// newer than `1.9` on the site and was in the Worker - which is what this generalises from.
+//
+// Derived: every name defined at the top level of both files, compared on behaviour rather than on
+// text, since one may be an arrow and the other a declaration. The inputs are every tag this
+// repository actually has, plus the shapes a caller can pass. Limit: it finds names, so a pair that
+// computes one answer under two names is invisible - there is no such pair today.
+test('what the site and the Worker both compute, they compute alike', () => {
+  const top = (rel) => {
+    const src = read(rel);
+    const out = new Set();
+    // Up to two spaces: `site.js` is wrapped in an IIFE, so *its* top level is indented, and
+    // anchoring at column zero found nothing there at all - the same trap `asynccheck` records
+    // about this exact shape, met again by somebody who had just read it.
+    for (const m of src.matchAll(/^ {0,2}(?:export\s+)?function\s+(\w+)\s*\(/gm)) out.add(m[1]);
+    for (const m of src.matchAll(/^ {0,2}const\s+(\w+)\s*=\s*(?:\([^)]*\)|\w+)\s*=>/gm)) out.add(m[1]);
+    return out;
+  };
+  const shared = [...top('site/site.js')].filter((n) => top('site/_worker.js').has(n));
+  assert.ok(shared.length >= 1, 'no shared name found at all - the derivation broke');
+
+  // Real values: every tag in the repository, so the cases are what the code will actually meet.
+  const tags = execSync('git tag', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
+  assert.ok(tags.length >= 3, `only ${tags.length} tag(s) - the input set is not real`);
+  const inputs = [...tags, null, undefined, '', 'v1.0.0', 'crm-v1.9', 'crm-v1.9.0.1', 'nonsense'];
+
+  for (const name of shared) {
+    const a = load([sliceFn('site/site.js', name)])[name];
+    const b = load([sliceFn('site/_worker.js', name)])[name];
+    for (const i of inputs) {
+      assert.equal(a(i), b(i),
+        `id=${name}: the site and the Worker disagree on ${JSON.stringify(i)} - ` +
+        `${JSON.stringify(a(i))} against ${JSON.stringify(b(i))}`);
     }
   }
 });

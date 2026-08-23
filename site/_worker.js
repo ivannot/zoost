@@ -72,10 +72,14 @@ function cmpVer(a, b) {
   return 0;
 }
 const isNewer = (a, b) => cmpVer(a, b) < 0;   // spelt out: `cmpVer(a, b) < 0` reads backwards
-const verOf = (tag) => {
+// A declaration and not a `const` arrow, for the reason `cmpVer` gives four lines up: `slice.mjs`
+// cuts a multi-line arrow at the first semicolon that ends a line, which here is its first
+// statement - so this could not be lifted at all, and the copy of it in `site.js` was the only one
+// any test ever ran. The two are character-identical today and nothing held them there.
+function verOf(tag) {
   const m = /-v(\d+\.\d+\.\d+)$/.exec(tag || '');
   return m ? m[1] : null;
-};
+}
 
 // Newest git tag **per product**, read from GitHub's Atom feed rather than its JSON API.
 //
