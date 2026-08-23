@@ -36,6 +36,19 @@ def release_row(app: str, version: str) -> str:
     sys.exit(f'the Release body for {app}-v{version} carries no ledger row - read it by hand')
 
 
+def shots_sources(app: str):
+    """The per-shot source digests beside the images - what they are a picture of.
+
+    Read from the stamp `shots.py` writes next to the set rather than recomputed, so this records
+    the state the *rendered* files belong to and not the tree as it is at the moment of recording.
+    """
+    stamp = ROOT / 'dist' / 'store' / '.stamps' / f'{app}.json'
+    try:
+        return json.loads(stamp.read_text(encoding='utf-8'))
+    except Exception:                                   # noqa: BLE001 - absent is a fact, not a crash
+        return None
+
+
 def shots_ledger(app: str, version: str) -> str:
     folder = ROOT / 'dist' / 'store' / app
     pngs = sorted(folder.glob('*.png'), key=lambda f: int(f.stem))
@@ -52,6 +65,14 @@ def shots_ledger(app: str, version: str) -> str:
                           'nothing here can observe it, so it is recorded by running '
                           '`python3 tools/submitted.py <app>` after submitting.'),
         'version': version, 'digest': digest,
+        # What the pictures are *of*, which is the value the verdict is taken from. The byte digest
+        # above stays as a record of the exact files uploaded, and is no longer asked whether
+        # anything changed: a capture is not bit-exact - the panel does asynchronous work on a time
+        # budget - so two renders of one commit differ by a few dozen bytes and the comparison said
+        # «upload all five again» over pictures nobody could tell apart. `siteimg.py` had measured
+        # exactly that and written it down; this tool, one directory over, was doing the thing that
+        # docstring forbids.
+        'sources': shots_sources(app),
         'files': [f.name for f in pngs], 'folder': f'dist/store/{app}/',
     }, indent=2) + '\n', encoding='utf-8')
     return f'  screenshots: {len(pngs)} file(s), digest {digest}, recorded for {version}'

@@ -4666,5 +4666,90 @@ class AsyncCheckReadsWhatShips(unittest.TestCase):
         self.assertRegex(out.stdout, r'\d+ await\(s\) read', 'it does not say how many it did read')
 
 
+class ShotsSaysTheSameThingOnBothPaths(unittest.TestCase):
+    """Whether the images match the listing does not depend on the path taken, nor on their bytes.
+
+    Two defects, one sentence. `shots.py` skips rendering when the sources have not moved, and on
+    that path printed «unchanged, the five published images are still what this renders» while the
+    render path printed the comparison against `store/<app>/screenshots.json` - what the listing
+    carries. Different questions; «published» made the first read as the second. Both appeared in
+    one minute over identical bytes, and which you saw depended on whether the folder was warm.
+
+    And the comparison itself was of the produced **bytes**. A capture is not bit-exact - measured
+    over four runs of an unchanged tree: 27de, 37cf, 37cf, 92d5 - so it said «upload all five
+    again» at random. `siteimg.py` had measured the same thing and written it down; the tool one
+    directory over was doing what that docstring forbids. The verdict is taken from the source
+    digests now, which is what the pictures are *of*.
+    """
+
+    def _run(self, recorded_sources, stamp_now):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('shots_under_test', ROOT / 'tools' / 'shots.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as t:
+            d = pathlib.Path(t)
+            (d / 'dist' / 'store' / 'crm').mkdir(parents=True)
+            for n in (1, 2):
+                # Deliberately different bytes on every call, because the bytes must not decide.
+                (d / 'dist' / 'store' / 'crm' / f'{n}.png').write_bytes(os.urandom(32))
+            if stamp_now is not None:
+                (d / 'dist' / 'store' / '.stamps').mkdir(parents=True)
+                (d / 'dist' / 'store' / '.stamps' / 'crm.json').write_text(
+                    json.dumps(stamp_now), encoding='utf-8')
+            (d / 'store' / 'crm').mkdir(parents=True)
+            rec = {'version': '9.9.9', 'digest': 'deadbeefdeadbeef'}
+            if recorded_sources is not None:
+                rec['sources'] = recorded_sources
+            (d / 'store' / 'crm' / 'screenshots.json').write_text(json.dumps(rec), encoding='utf-8')
+            mod.ROOT = d
+            return mod.against_listing('crm', ['a', 'b'])
+
+    def test_the_bytes_do_not_decide(self):
+        # Same sources on both sides, different bytes every time this runs. The old criterion would
+        # have said CHANGED here, for ever, over pictures nobody could tell apart.
+        out = self._run({'a': 'x', 'b': 'y'}, {'a': 'x', 'b': 'y'})
+        self.assertIn('unchanged', out, out)
+
+    def test_and_it_still_says_so_when_the_product_moved(self):
+        # The other half: a verdict that always says «unchanged» is not reassuring, it is broken.
+        out = self._run({'a': 'x', 'b': 'y'}, {'a': 'x', 'b': 'MOVED'})
+        self.assertIn('CHANGED', out, out)
+
+    def test_a_record_with_no_sources_says_it_cannot_tell(self):
+        # Every listing recorded before this existed. «Cannot tell» is the honest answer and the one
+        # this project prefers to a guess - and it says what will make it answerable.
+        out = self._run(None, {'a': 'x'})
+        self.assertIn('cannot tell', out, out)
+        self.assertIn('submitted.py', out, 'it says nothing about how to make it answerable')
+
+    def test_the_skip_path_prints_the_same_sentence_as_the_render_path(self):
+        # Derived from the source, because running both paths means rendering ten images. The two
+        # conclusions must come from the one function, so taking the fast path cannot change the
+        # answer - which is exactly what it did.
+        src = (ROOT / 'tools' / 'shots.py').read_text(encoding='utf-8')
+        calls = len(re.findall(r'against_listing\(', src))
+        self.assertGreaterEqual(calls, 3, f'only {calls} mention(s) - one path does not print it')
+        skip = re.search(r'if not force and current\(app, keys\):(.*?)want = \[', src, re.S)
+        self.assertIsNotNone(skip, 'the skip branch has moved - this check no longer reads it')
+        self.assertIn('against_listing', skip.group(1),
+                      'the fast path concludes about an app without saying whether the images on '
+                      'disk are the ones the listing carries')
+        # In a `say(`/`print(`, not anywhere: the comment above `against_listing` quotes the old
+        # sentence as the evidence for why it went, which is how this repository records a defect.
+        # The first version of this forbade the string outright and fired on that quotation - a
+        # check whose subject is «the file» when what it means is «what the file says».
+        printed = re.findall(r'(?:say|print)\([^\n]*published images are still what this renders', src)
+        self.assertEqual(printed, [],
+                         'the sentence that meant «the files in dist/» by «published» is printed again')
+
+    def test_what_records_an_upload_writes_the_sources_too(self):
+        # The pair: a verdict read from `sources` is worthless if nothing ever writes it.
+        src = (ROOT / 'tools' / 'submitted.py').read_text(encoding='utf-8')
+        self.assertIn("'sources'", src,
+                      'submitted.py records a listing without what the pictures are of, so the '
+                      'verdict above can only ever say «cannot tell»')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -870,13 +870,7 @@ def publish_store_set(rendered: dict) -> None:
         f = stamp_file(app); f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps({k: source_digest(app, dict(ALL)[k][-1]) for k in keys},
                                 indent=2) + "\n", encoding="utf-8")
-        ledger = ROOT / "store" / app / "screenshots.json"
-        was = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
-        state = ("unchanged since the set uploaded for " + was.get("version", "?")
-                 if was.get("digest") == digest else
-                 "CHANGED since " + was.get("version", "the last upload")
-                 + " - upload all five again, in this order")
-        print(f"  {app}: dist/store/{app}/1..{len(keys)}.png  [{digest}] {state}")
+        print(against_listing(app, keys))
         # Recording that they *were* uploaded belongs to `tools/submitted.py`, with the ledger
         # row: they are the two facts a submission leaves behind and neither can be observed from
         # here, so one command asks for both instead of two asking for one each.
@@ -902,6 +896,60 @@ def current(app: str, keys) -> bool:
     return all(by_key.get(k) == source_digest(app, dict(ALL)[k][-1]) for k in keys)
 
 
+def against_listing(app: str, keys) -> str:
+    """The one sentence a reader of this tool is here for: do the files on disk match the listing?
+
+    It used to be printed **only after a render**, and the fast path printed something else - «the
+    five published images are still what this renders» - which answers a different question and
+    reads as this one. Both were true in the same minute: a run over an empty folder said «CHANGED
+    since 1.46.0 - upload all five again» and the next run, over the identical bytes, said
+    «unchanged». Whichever you saw depended on whether the folder happened to be warm.
+
+    «Published» was the word doing the damage: on the skip path it meant «the files in dist/», and
+    every reader takes it to mean «the ones on the Store». So the comparison against
+    `store/<app>/screenshots.json` - which is what the listing carries - is computed from the files
+    on disk and printed on **both** paths, because it does not depend on having just rendered them.
+    """
+    import hashlib
+    folder = ROOT / "dist" / "store" / app
+    files = [folder / f"{n}.png" for n in range(1, len(keys) + 1)]
+    if not all(p.exists() for p in files):
+        return f"  {app}: dist/store/{app}/ is not there - nothing to compare against the listing"
+    h = hashlib.sha256()
+    for p_ in files:
+        h.update(p_.read_bytes())
+    digest = h.hexdigest()[:16]
+    ledger = ROOT / "store" / app / "screenshots.json"
+    was = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
+    # The verdict comes from what the pictures are *of*, never from their bytes. A capture is not
+    # bit-exact - the panel does asynchronous work and the shot happens on a time budget - so two
+    # renders of one commit differ by a few dozen bytes out of three hundred thousand, with nothing
+    # visible between them. Measured here over four runs of an unchanged tree: 27de, 37cf, 37cf,
+    # 92d5. Deciding on that told the author to re-upload five identical-looking images at random,
+    # which is how a signal teaches its reader to ignore it. `siteimg.py` had measured the same
+    # non-determinism and says in its own docstring that comparing produced bytes «would therefore
+    # re-publish for ever»; this tool, one directory over, was doing exactly that.
+    #
+    # The byte digest stays, printed, because it identifies the exact files - it is just not asked
+    # whether anything changed.
+    try:
+        now = json.loads(stamp_file(app).read_text(encoding="utf-8"))
+    except Exception:                                    # noqa: BLE001 - absent is a fact, not a crash
+        now = None
+    recorded = was.get("sources")
+    if recorded is None:
+        state = ("recorded for " + was.get("version", "?") + " before the sources were - "
+                 "cannot tell if these are the same pictures; tools/submitted.py records it next time")
+    elif now is None:
+        state = "no render stamp beside these files - run tools/shots.py --force"
+    elif recorded == now:
+        state = "unchanged since the set uploaded for " + was.get("version", "?")
+    else:
+        state = ("CHANGED since " + was.get("version", "the last upload")
+                 + " - upload all five again, in this order")
+    return f"  {app}: dist/store/{app}/1..{len(keys)}.png  [{digest}] {state}"
+
+
 def say(*a, **k):
     """Print where the run has got to, immediately - see the note in the loop below for why `flush`
     is the load-bearing half of this."""
@@ -924,7 +972,10 @@ def main():
         want = [k for keys in STORE.values() for k in keys]
         for app, keys in STORE.items():
             if not force and current(app, keys):
-                say(f"  {app}: unchanged, the five published images are still what this renders")
+                # What was skipped, said as a skip - and then the same sentence the render path
+                # prints, about the same question, so taking the fast path cannot change the answer.
+                say(f"  {app}: sources unmoved since these were rendered, so nothing to re-render")
+                say(against_listing(app, keys))
                 want = [k for k in want if k not in keys]
     rendered = {}
     if want and not pathlib.Path(chrome()).exists():
