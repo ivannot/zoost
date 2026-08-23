@@ -11675,3 +11675,92 @@ test('the panel, the bridge and the hook share one vocabulary, not two lists', (
   assert.ok(words >= 10, `only ${words} command(s) compared across the bridges - the derivation broke`);
   assert.equal(hooks, 1, `${hooks} product(s) with a hook were compared - the derivation broke`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The contents and the document are one list, and they were built twice.
+//
+// `buildExportHtml` writes a `<nav class="toc">` by hand and then writes the chapters by hand, each
+// with its own condition. Both halves were correct on their own and the composition was not:
+//
+//   contents: Functions | Modules | Workflows | Schedules | Relations | Actions | … | Health
+//   document: Functions | Modules | Relations | Workflows | Schedules | Actions | … | Health
+//
+// Relations is third in the document - `SCOPE_KEYS`' own order - and fifth in the contents, so from
+// there on every entry pointed past the chapter above it. And with an org that has nothing in it,
+// the document carried **Relations** and **Failures** chapters the contents never mentioned: the
+// document emits Relations whether or not there is anything in it (deliberately - «the heading stays
+// rather than disappearing», the same as Functions and Modules) while the contents asked for a
+// non-empty list, and the Failures chapter appears as soon as a reading was taken while the contents
+// asked for something to have failed.
+//
+// The Markdown twin has none of this, and that is the finding rather than a detail: its contents
+// line is **derived** from the headings it just wrote - `md.matchAll(/^## …/)`, with a comment saying
+// it is placed after the body so it can only name chapters that were emitted. One report derives,
+// the other restates. Where a repository has both, the restating one is where the drift is.
+//
+// So: build the report and read both lists back off it. On real values, not from the source - which
+// is the only way a *condition* is comparable at all.
+//
+// **The limits, stated.** It exercises the CRM report, because it is the only one that builds a
+// contents index - and that is checked below rather than believed, so a second product growing one
+// cannot end up covered by nothing. It says nothing about the contents of a chapter, nor about the
+// two tables the contents carry, and the fixtures are one of everything and none of anything.
+test('crm: the export contents name the chapters the export has, in the order it has them', () => {
+  const globals = {
+    SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
+    envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k, firedBy: () => [],
+    actProv: () => '', actWhen: () => '',
+    actStale: () => false, actKept: () => false, actThin: () => false,
+    _mdCell: (x) => String(x == null ? '' : x),
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '', sanitize: (x) => String(x || ''),
+    escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+    esc: (x) => String(x == null ? '' : x), hl: (x) => String(x || ''), first: (x) => String(x || ''),
+    params: () => '', fnAnchor: (x) => `fn-${x}`, modAnchor: (x) => `mod-${x}`,
+    wfAnchor: (x) => `wf-${x}`, schAnchor: (x) => `sch-${x}`, connAnchor: (x) => `conn-${x}`,
+    FAIL_CAPPED: 'capped.',
+    MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
+           hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
+  };
+  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+
+  // Everything ticked in both runs: this is about the composition, not about the scope - a chapter
+  // left out by the reader is left out of both halves by construction, and the interesting case is
+  // the one where the two halves disagree about a chapter neither reader nor scope removed.
+  const ALL = {};
+  for (const k of ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules',
+                   'actions', 'addresses', 'connections', 'failures', 'health']) ALL[k] = true;
+  const mods = [{ api_name: 'Contacts', display_name: 'Contacts',
+                  related_lists: [{ api_name: 'Notes', module: 'Notes' }] }];
+  const empty = { at: '2026-08-23T10:00:00Z', usage: { success: 9, failure: 0 }, runs: [], failures: [] };
+  const some = { at: '2026-08-23T10:00:00Z', usage: { success: 9, failure: 1 }, runs: [],
+                 failures: [{ name: 'f', count: 1, reason: 'r' }] };
+  const runs = [
+    ['nothing in the org', () => buildExportHtml([], [], { nodes: {}, counts: {} }, {}, [], [], [], empty, [], new Map(), ALL)],
+    ['one of everything', () => buildExportHtml([], mods, { nodes: {}, counts: {} }, {},
+      [{ id: '1', name: 'W', module: 'Contacts', actions: [] }], [{ id: '1', name: 'S' }],
+      [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], some,
+      [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), ALL)],
+  ];
+
+  // The claim above, made good rather than asserted: this exercises one product because only one
+  // builds a contents index. A second one that started to would otherwise be covered by nothing and
+  // nobody would know, which is the shape this whole grid is about.
+  const withToc = shippedScripts().filter((rel) => read(rel).includes('class="toch"'));
+  assert.deepEqual(withToc, ['apps/crm/export.js'],
+    `these scripts write a contents index and this check reads one of them: ${withToc}`);
+
+  for (const [what, build] of runs) {
+    const html = build();
+    const main = html.slice(html.indexOf('<main>'));
+    const navEnd = main.indexOf('</nav>');
+    assert.ok(navEnd > 0, `id=${what}: the report has no contents index - the derivation broke`);
+    const contents = [...main.slice(0, navEnd).matchAll(/<h3 class="toch">([^<(]+)/g)].map((m) => m[1].trim());
+    const chapters = [...main.slice(navEnd).matchAll(/<h2 id="[^"]+">([^<]+)<\/h2>/g)].map((m) => m[1].trim());
+    assert.ok(chapters.length >= 3, `id=${what}: only ${chapters.length} chapter(s) read - the derivation broke`);
+    assert.deepEqual(contents, chapters,
+      `id=${what}: the contents and the document disagree.\n    contents: ${contents.join(' | ')}\n    document: ${chapters.join(' | ')}`);
+  }
+});

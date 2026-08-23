@@ -107,6 +107,7 @@ CLOSED = {
     # re-derived tomorrow. Everything else in those three rows is open.
     ("compose", "diagrams"):  ("tests/panel.test.mjs: diagram defaults saved in Settings are applied by either graph", "planted 2026-08-23"),
     ("copy", "crm-panel"):    ("tests/panel.test.mjs: a constant declared in two scripts of one product is not two lists", "planted 2026-08-23"),
+    ("compose", "crm-export"):("tests/panel.test.mjs: the export contents name the chapters the export has, in the order it has them", "planted 2026-08-23"),
     ("compose", "bridges"):  ("tests/panel.test.mjs: the panel, the bridge and the hook share one vocabulary, not two lists", "planted 2026-08-23"),
     ("copy", "store"):       ("tests/tools_test.py: every permission is justified and every justification is asked for", "planted 2026-08-23"),
     ("copy", "site"):         ("tests/tools_test.py: the site names every assistant tool, and every tab where its siblings are", "planted 2026-08-23"),
