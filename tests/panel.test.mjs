@@ -11598,3 +11598,80 @@ test('a constant declared in two scripts of one product is not two lists', () =>
   assert.ok(pairs >= 4, `only ${pairs} duplicated constant(s) compared - the derivation broke`);
   assert.deepEqual(bad, [], `a list is written out twice and the copies have drifted:\n  ${bad.join('\n  ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The words spoken across a world boundary are one vocabulary, not two lists that resemble each other.
+//
+// Three programs make live sync work, and no two of them share a scope. `hook.js` runs in the page's
+// MAIN world and posts `{source: 'DELUGE_IDE_HOOK', …}`; `content-bridge.js` runs in the isolated
+// world and drops anything whose `source` is not that exact string; the panel speaks to the bridge in
+// `cmd` names. Each end is correct on its own, and each end was **asserted** on its own - the check
+// that guards the page channel reads the bridge's literal and never the hook's. So the two could be
+// made to disagree by one edit in either file: measured, by renaming the hook's tag to
+// `ZOOST_IDE_HOOK`. Every notice a save, a deletion or a creation produces is then dropped in
+// silence, live sync stops existing, and 874 Node cases, 377 Python cases and every checker stayed
+// green - the only red was the screenshots noticing that a file under `apps/` had moved.
+//
+// That is the composition defect in its plainest form: two correct halves and nothing that reads
+// them together. So this reads them together, and derives both sides rather than restating either.
+//
+// **The limits, stated.** It takes the literals out of the raw source, because a check about a
+// *string* has to read the string - the scanner blanks them - and it keeps only matches on a line
+// the scanner leaves some code on, so a whole-line comment cannot contribute a word. A `cmd:`
+// written in a trailing comment on a code line would still count, which is the narrow gap left. It
+// says nothing about *what* a handler does with a command, and the products that have no hook are
+// skipped for the hook half rather than named - Analytics has none, and derives out of it.
+test('the panel, the bridge and the hook share one vocabulary, not two lists', () => {
+  const litsIn = (src, re) => {
+    const scan = blankNonCode(src), out = new Set();
+    for (const m of src.matchAll(re)) {
+      const from = src.lastIndexOf('\n', m.index) + 1;
+      const to = src.indexOf('\n', m.index);
+      if (scan.slice(from, to < 0 ? scan.length : to).trim() === '') continue;   // a comment line
+      out.add(m[1]);
+    }
+    return out;
+  };
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name);
+  let words = 0, hooks = 0;
+  for (const app of apps) {
+    const own = shippedScripts().filter((f) => f.startsWith(`apps/${app}/`));
+    const bridgeRel = `apps/${app}/content-bridge.js`;
+    if (!own.includes(bridgeRel)) continue;
+    const bridge = read(bridgeRel);
+    const panel = own.filter((f) => f !== bridgeRel).map(read).join('\n');
+
+    // What the panel asks for, against what the bridge answers.
+    const asked = litsIn(panel, /\bcmd:\s*'([\w-]+)'/g);
+    const answered = litsIn(bridge, /\bcmd\s*===\s*'([\w-]+)'/g);
+    words += asked.size;
+    assert.deepEqual([...asked].filter((c) => !answered.has(c)).sort(), [],
+      `id=${app}: the panel sends these commands and the bridge answers none of them, so the call `
+      + `hangs or fails at a boundary neither file mentions: `
+      + `${[...asked].filter((c) => !answered.has(c))}`);
+    assert.deepEqual([...answered].filter((c) => !asked.has(c)).sort(), [],
+      `id=${app}: the bridge answers these commands and nothing sends them - dead code in the one `
+      + `file that runs inside somebody else's page: ${[...answered].filter((c) => !asked.has(c))}`);
+
+    // The page channel's tag, both ends, compared with each other.
+    const hookRel = `apps/${app}/hook.js`;
+    if (!own.includes(hookRel)) continue;
+    hooks++;
+    const posted = [...litsIn(read(hookRel), /\bsource:\s*'([\w-]+)'/g)];
+    // Inside the page listener and nowhere else: `source` is also a field on a function Zoho
+    // returns, and the first version of this read `f.source !== 'extension'` two hundred lines
+    // above as a second tag and said «the derivation broke». It was right to say so.
+    const at = bridge.indexOf("addEventListener('message'");
+    assert.ok(at > 0, `id=${app}: the bridge has no page-message listener - the derivation broke`);
+    const listener = bridge.slice(at, bridge.indexOf('\n  });', at));
+    const expected = [...litsIn(listener, /\.source\s*!==\s*'([\w-]+)'/g)];
+    assert.equal(posted.length, 1, `id=${app}: the hook posts ${posted.length} source tag(s) - the derivation broke`);
+    assert.equal(expected.length, 1, `id=${app}: the bridge expects ${expected.length} source tag(s) - the derivation broke`);
+    assert.equal(posted[0], expected[0],
+      `id=${app}: the hook posts «${posted[0]}» and the bridge drops anything that is not `
+      + `«${expected[0]}», so every save, deletion and creation is discarded in silence`);
+  }
+  assert.ok(words >= 10, `only ${words} command(s) compared across the bridges - the derivation broke`);
+  assert.equal(hooks, 1, `${hooks} product(s) with a hook were compared - the derivation broke`);
+});
