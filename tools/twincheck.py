@@ -55,6 +55,22 @@ ROOT = Path(__file__).resolve().parent.parent
 # that must hold across all of them — that a file names its own product and no other — and it globs
 # rather than holding a list, so a file added tomorrow is covered without anyone remembering.
 PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
+# **And the other two pages each product ships.** The sentence above says «this compares the two side
+# panels, and only those», which was true and read as the whole subject: 80 shared ids were compared
+# and **122 were not** - 48 on `options.html`, 74 on `graphview.html`. Proven by giving the shared
+# `#v-er` a different class *and* an inline style on the Analytics side only: twincheck 0 findings,
+# and htmlcheck, namecheck, featurecheck, csscheck and callcheck 0 as well. The same drift on
+# `#pfoot` in `sidepanel.html` is two findings.
+#
+# Only the property that means the same thing on differently-shaped pages: a shared id must not
+# differ in tag, class or inline style. Their CSS and their behaviour genuinely diverge - the panels
+# are one design and these two are not - so comparing those would be a flood, and a flood is a check
+# nobody reads. The pairs are globbed rather than listed: a fourth page added to both is compared
+# without anybody remembering.
+OTHER_PAGES = sorted(
+    (f.name, f, ROOT / 'apps/analytics' / f.name)
+    for f in (ROOT / 'apps/crm').glob('*.html')
+    if f.name != 'sidepanel.html' and (ROOT / 'apps/analytics' / f.name).exists())
 # The CRM panel is composed of two classic scripts since the split - one shared scope on the page -
 # so «the panel's code» is their concatenation, or every AI function reads as removed on one side.
 # Derived from each page's own <script> tags - the HTML is the authority on what composes a panel -
@@ -468,6 +484,23 @@ def main():
                 only.append(f'  {eid:16s} in {a}, absent from {b}')
     print('\n'.join(only) if only else '  none')
     findings += len(only)
+
+    print('\n== the other pages each product ships: shared ids that differ ==')
+    other = []
+    for name, fa, fb in OTHER_PAGES:
+        pa, pb = id_attrs(fa.read_text(encoding='utf-8')), id_attrs(fb.read_text(encoding='utf-8'))
+        ca = {canon(e): v for e, v in pa.items()}
+        cb = {canon(e): v for e, v in pb.items()}
+        shared = sorted(set(ca) & set(cb))
+        for eid in shared:
+            for field in ('tag', 'class', 'style'):
+                if ca[eid][field] != cb[eid][field]:
+                    if not every and (product_only( 'crm', ca[eid]['raw']) or product_only('analytics', cb[eid]['raw'])):
+                        continue
+                    other.append(f'  {name} {eid:16s} {field:6s} crm={ca[eid][field]!r}  analytics={cb[eid][field]!r}')
+        print(f'  {name}: {len(shared)} shared id(s) compared')
+    print('\n'.join(other) if other else '  none')
+    findings += len(other)
 
     print('\n== shared elements whose tag, class or inline style differs ==')
     diffs = []

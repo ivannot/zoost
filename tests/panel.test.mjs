@@ -10058,22 +10058,26 @@ test('every surface that states «no caller» says what it was measured over', (
   // sentence beside the total; asserting on it too turned a five-site rule into a twenty-site
   // sweep, which is how a criterion stops being one.
   const readers = [];
+  let sites = 0;
   for (const rel of ['apps/crm/graphview.js', 'apps/crm/health.js', 'apps/crm/export.js',
                      'apps/crm/sidepanel.js', 'apps/crm/ai.js']) {
-    // Blanked, not stripped: removing comments shifts every position after the first, and this
-    // named line 154 for a site on 162 - the same reporting bug fixed in another case an hour
-    // earlier, by the same author, in the next check they wrote.
-    const src = read(rel)
-      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
-      .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+    // The scanner rather than two regexes: removing comments shifts every position after the first,
+    // and this named line 154 for a site on 162 before it blanked instead. `blankNonCode` also reads
+    // regex literals, which those two did not - a hole that cost 68 lines of `export.js`.
+    const src = blankNonCode(read(rel));
     for (const m of src.matchAll(/counts\.dead_suspects/g)) {
+      sites++;
       const near = src.slice(Math.max(0, m.index - 900), m.index + 900);
       if (!/notInMirror|inOrg|mirrorNote/.test(near)) {
         readers.push(`${rel}:${src.slice(0, m.index).split('\n').length}`);
       }
     }
   }
-  assert.ok(readers.length + 2 >= 2, 'the derivation found no reader at all');
+  // **`readers.length + 2 >= 2` is `length >= 0`.** It was written to guard the derivation and could
+  // not fail: `readers` is the *findings* list, so an empty subject and a clean tree looked the same.
+  // Renaming the field this is about left the whole suite green over a check reading nothing.
+  // The count of what was matched is what a derivation guard has to be about.
+  assert.ok(sites >= 2, `the derivation found ${sites} site(s) reading the aggregate - it reads nothing`);
   assert.deepEqual(readers, [],
     `these state «no caller» without saying it was measured over the mirror rather than the org: ` +
     readers.join(', '));

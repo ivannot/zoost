@@ -6080,5 +6080,65 @@ class TheCodeScannerReadsRegexLiterals(unittest.TestCase):
                          'the scanner stopped removing comments, and the checks above would not know')
 
 
+class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
+    """«This compares the two side panels» was true, and read as the whole subject.
+
+    Both products ship three pages. Two of them - `options.html` and `graphview.html` - were compared
+    by nothing: 122 shared ids, against the 80 on the panel that were. Proven by giving the shared
+    `#v-er` a different class *and* an inline style on the Analytics side only - twincheck 0
+    findings, and htmlcheck, namecheck, featurecheck, csscheck and callcheck 0 as well. The same
+    drift on `#pfoot` in `sidepanel.html` is two findings.
+
+    Derived from the filenames, so a fourth page added to both products is compared without anybody
+    remembering, and the run prints how many shared ids it read on each - which it did not before,
+    and `tools/coverage.py` already named it as one of two checkers stating no work unit at all.
+
+    **The limit, stated:** only tag, class and inline style. The CSS and the behaviour of these two
+    pages genuinely diverge - the panels are one design and these are not - so comparing those would
+    be a flood, and a flood is a check nobody reads.
+    """
+
+    def pairs(self):
+        crm = {f.name for f in (ROOT / 'apps' / 'crm').glob('*.html')}
+        an = {f.name for f in (ROOT / 'apps' / 'analytics').glob('*.html')}
+        return sorted(crm & an)
+
+    def run_it(self):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'twincheck.py')],
+                              cwd=ROOT, capture_output=True, text=True)
+
+    def test_every_shared_page_is_opened(self):
+        out = self.run_it().stdout
+        for name in self.pairs():
+            if name == 'sidepanel.html':
+                self.assertIn('shared elements whose tag, class or inline style differs', out,
+                              'the panel comparison is gone')
+                continue
+            self.assertRegex(out, rf'{re.escape(name)}: \d+ shared id\(s\) compared',
+                             f'{name} ships in both products and the run says nothing about it')
+
+    def test_it_says_how_much_it_read(self):
+        # A count of what was inspected, which this tool printed for nobody: «0 undeclared
+        # difference(s)» over two unopened pages reads exactly like «0» over three opened ones.
+        out = self.run_it().stdout
+        read = [int(m) for m in re.findall(r': (\d+) shared id\(s\) compared', out)]
+        self.assertGreaterEqual(len(read), 2, f'only {len(read)} page(s) report a work unit:\n{out}')
+        self.assertGreater(sum(read), 50, 'the pages are opened and almost nothing in them is read')
+
+    def test_a_drift_on_one_of_those_pages_is_a_finding(self):
+        # Run it, on the real file: the plant that went through every checker before this.
+        page = ROOT / 'apps' / 'analytics' / 'graphview.html'
+        keep = page.read_text(encoding='utf-8')
+        try:
+            page.write_text(keep.replace('<div class="view" id="v-er">',
+                                         '<div class="view planted" id="v-er" style="outline:1px solid red">', 1),
+                            encoding='utf-8')
+            out = self.run_it()
+        finally:
+            page.write_text(keep, encoding='utf-8')
+        self.assertNotEqual(out.returncode, 0, f'a drift on graphview.html passes:\n{out.stdout[-500:]}')
+        self.assertIn('v-er', out.stdout, out.stdout[-500:])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

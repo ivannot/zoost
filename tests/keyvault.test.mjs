@@ -233,10 +233,29 @@ test('turning it off with the wrong passphrase keeps the key too', async () => {
 });
 
 test('a leftover ciphertext with protection off is what the handler refuses to save', () => {
+  // **The condition, and what it does.** This asserted the `if (...)` line was still in the file and
+  // nothing else: emptying its body - the refusal, the message, the `return` - left the whole suite
+  // green while the handler silently wrote «no protection» over a key nobody can read. A guard
+  // survives any mutation that leaves the spelling alone, which is what an expression check is.
+  //
+  // The handler is DOM-bound and not sliceable whole, which is the honest reason the shape was used.
+  // What *is* sliceable is the decision: the condition must be there, and the block under it must
+  // refuse - say why, say nothing was saved, and stop before the write.
   for (const app of ['crm', 'analytics']) {
     const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.js'), 'utf8');
-    assert.match(src, /if \(!wantLock && \(cfg\.anthropic\.apiKeyEnc \|\| cfg\.openai\.apiKeyEnc\)\) \{/,
+    const at = src.search(/if \(!wantLock && \(cfg\.anthropic\.apiKeyEnc \|\| cfg\.openai\.apiKeyEnc\)\) \{/);
+    assert.ok(at >= 0,
       `${app}/options.js no longer refuses to write "no protection" over a key nobody can read`);
+    const body = src.slice(at, src.indexOf('\n  }', at));
+    assert.match(body, /lockBad\(/, `${app}: the refusal says nothing about why`);
+    assert.match(body, /toast\(/, `${app}: the reader is not told that nothing was saved`);
+    assert.match(body, /\breturn\b/,
+      `${app}: the block does not stop, so the write below it happens anyway - and the message says ` +
+      `the opposite of what the handler then does`);
+    // And it stops *before* the write, not after it.
+    const write = src.indexOf('saveKeys(', at);
+    assert.ok(write < 0 || src.indexOf('return', at) < write,
+      `${app}: the refusal is written after the save it is supposed to prevent`);
   }
 });
 
