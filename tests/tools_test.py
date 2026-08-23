@@ -6246,6 +6246,66 @@ class ExamplesUseTheSampleWorkspaceNames(unittest.TestCase):
                          'reader cannot tell an invented name from one that came from somewhere '
                          f'real: {strangers}')
 
+class EveryTabIsNamedWhereItsSiblingsAre(unittest.TestCase):
+    """A list of the panel's tabs is a list of the panel's tabs, wherever it is written.
+
+    The CRM ships six: `functions, modules, workflows, schedules, actions, connections`, declared in
+    `apps/crm/tabs.js`. **Actions** - a tab, a Pull-all runner, its own folder on disk, an export
+    scope key, a node kind in the graph and an assistant tool - was named in six places and missing
+    from fifteen, including `README.md`'s «Mode segments», both guides' «the mode segments switch
+    what the tree lists», the quick start's Pull all, and the graph captions on three pages.
+
+    This is the trap `CLAUDE.md` calls out by name: a part is listed in as many places as it has
+    siblings, and adding it to one of them is not adding it. `featurecheck` cannot see it - it asks
+    whether a control is named *somewhere* on the site, and Actions has a section of its own.
+
+    Derived from the registry: **a passage that names four or more tabs in a row must name them
+    all.** Four, not two, because a sentence about two tabs is a sentence about two tabs; an
+    enumeration is what this is about.
+
+    **The limits, stated.** It reads the tab *labels* as words, so a passage that refers to a tab by
+    another name is invisible; and it looks inside one paragraph or list item at a time, so an
+    enumeration split across two of them reads as two short ones. Both would need the passage
+    rewritten to be caught, and neither is silent about itself.
+    """
+
+    def tabs(self):
+        src = (ROOT / 'apps' / 'crm' / 'tabs.js').read_text(encoding='utf-8')
+        labels = re.findall(r"label: '([^']+)'", src)
+        self.assertGreaterEqual(len(labels), 5, 'the tab registry was not read - the derivation broke')
+        return labels
+
+    def surfaces(self):
+        out = [ROOT / 'README.md']
+        for d in (ROOT / 'site', ROOT / 'site' / 'it'):
+            out += [f for f in sorted(d.glob('*.html')) if 'analytics' not in f.name]
+        return out
+
+    def test_no_passage_names_most_of_the_tabs_and_stops(self):
+        labels = self.tabs()
+        found, short = 0, []
+        for f in self.surfaces():
+            text = f.read_text(encoding='utf-8')
+            # One paragraph, list item or alt text at a time - and for markdown, one **line**,
+            # because it carries none of those tags and was therefore read as a single chunk that
+            # names every tab somewhere. `README.md`'s «Mode segments» line was outside this check
+            # entirely until the plant went green.
+            parts = (text.split('\n') if f.suffix == '.md'
+                     else re.split(r'</(?:p|li|h\d)>|">', text))
+            for chunk in parts:
+                plain = re.sub(r'<[^>]+>', ' ', chunk)
+                named = [l for l in labels if re.search(rf'\b{re.escape(l)}\b', plain)]
+                if len(named) < 4:
+                    continue
+                found += 1
+                missing = [l for l in labels if l not in named]
+                if missing:
+                    short.append(f'{f.relative_to(ROOT)}: names {len(named)} of {len(labels)} tabs, '
+                                 f'missing {missing} - "{" ".join(plain.split())[:90]}"')
+        self.assertGreater(found, 3, f'only {found} enumeration(s) found - the derivation broke')
+        self.assertEqual(short, [], 'these enumerate the panel\'s tabs and leave one out:\n  '
+                                    + '\n  '.join(short))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
