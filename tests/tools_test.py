@@ -5318,5 +5318,53 @@ class TheExportedReportsContentIsLedgered(unittest.TestCase):
                       'recorded wholesale')
 
 
+class ExaminedIsNotClosed(unittest.TestCase):
+    """A cell somebody measured and found clean is recorded, and still counted as open.
+
+    Five cells were examined in one day and found to have no defect - every flag in the assistant
+    owned by its generation, every absolute on the options page true of the code, both store
+    listings carrying the same claims. None of that was written anywhere the grid could see, so the
+    next session would have re-derived all five from nothing.
+
+    Recording them as *closed* would have been worse: the grid would then claim a check that does
+    not exist, which is the one thing it is built to refuse. So there is a third state, it prints as
+    `~`, and it is inside the open count - an unchecked cell is unchecked however carefully it was
+    read.
+    """
+
+    def matrix(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('matrix_ut', ROOT / 'tools' / 'matrix.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_examined_cells_are_still_open(self):
+        m = self.matrix()
+        self.assertTrue(m.EXAMINED, 'nothing is recorded as examined - the state is unused')
+        for cell in m.EXAMINED:
+            self.assertNotIn(cell, m.CLOSED,
+                             f'{cell} is recorded both as examined and as closed - «somebody looked» '
+                             f'must never be able to pass for «a plant is caught»')
+            self.assertNotIn(cell, m.NA, f'{cell} is examined and declared not-applicable')
+
+    def test_each_says_what_was_measured_and_when(self):
+        # A note that says «checked, fine» is the opinion this grid exists to replace. What is worth
+        # keeping is what was measured, so the next reader can disagree with it.
+        m = self.matrix()
+        for cell, value in m.EXAMINED.items():
+            self.assertEqual(len(value), 2, f'{cell}: expected (what was measured, when)')
+            what, when = value
+            self.assertGreater(len(what), 60, f'{cell}: «{what}» does not say what was measured')
+            self.assertRegex(when, r'^\d{4}-\d{2}-\d{2}$', f'{cell}: no date on the examination')
+
+    def test_the_open_list_hands_over_what_was_already_found(self):
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'matrix.py'), '--open'],
+                             cwd=ROOT, capture_output=True, text=True).stdout
+        self.assertIn('LOOKED AT', out,
+                      'the open list does not say which cells were already measured, so the next '
+                      'session re-derives them from nothing')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

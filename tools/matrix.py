@@ -70,6 +70,38 @@ NA = {
     ("siblings", "worker"): "one file, no twin",
 }
 
+# Examined and no defect found: (class, surface) -> (what was measured, when).
+#
+# **Not closed.** A cell is closed by a plant that was seen to fail; this is the honest third state -
+# somebody looked, measured, and found nothing to write a check from. It stays in the open count,
+# because an unchecked cell is unchecked however carefully it was read.
+#
+# It exists because the alternative is worse in both directions. Without it, five cells examined in
+# one day look identical to five nobody has opened, and the next session re-derives them; with it
+# recorded as *closed*, the grid would claim a check that does not exist - which is the one thing
+# this file is built to refuse. What it saves is the re-derivation; what it must never do is stand
+# in for a plant.
+EXAMINED = {
+    ("owner", "diagrams"): ("every module-level `let` assigned 3+ times and reset once - curFocus, "
+                            "erTx, erTy, ids - is view state, not a flag anybody holds; the "
+                            "beforeprint/afterprint pair closes itself", "2026-08-23"),
+    ("owner", "crm-ai"): ("every flag is owned by its generation - aiBusy released only when aiGen "
+                          "has not moved, aiSeedWarned and the conversation cleared together - in "
+                          "both products", "2026-08-23"),
+    ("workspace", "crm-ai"): ("every consumer of the seed figures rebuilds before reading; "
+                              "aiBuildSeed guards its three global writes; the focus path is "
+                              "cleared on a switch", "2026-08-23"),
+    ("siblings", "store"): ("both listings carry the same ten sections and nine payload blocks, the "
+                            "same claims, disclosures that differ only where the products do, and a "
+                            "whatsnew note for every tag since each adopted the convention",
+                            "2026-08-23"),
+    ("claim", "options"): ("every absolute on the page checked against the code: the passphrase is "
+                           "never stored (what session holds is the decrypted key, and privacy.html "
+                           "says so), «nothing on disk is deleted» holds, and «until a workspace has "
+                           "been pulled, every tab is offered» is what the empty access map does",
+                           "2026-08-23"),
+}
+
 # Closed: (class, surface) -> (what catches it, where the plant is recorded).
 # **Only a plant seen to fail first closes a cell.** An opinion that something is probably covered is
 # an open cell with a comment attached, which is the thing this grid exists to stop.
@@ -166,8 +198,14 @@ def cells():
 def main() -> int:
     all_cells = list(cells())
     open_cells = [c for c in all_cells if (c[0], c[2]) not in CLOSED]
+    # An open cell somebody has already measured says so, with what they measured. Without this the
+    # next session re-derives it from nothing, which is the waste this state exists to stop.
     if "--open" in sys.argv:
         for ck, cd, sk, sd in open_cells:
+            if (ck, sk) in EXAMINED:
+                what, when = EXAMINED[(ck, sk)]
+                print(f"{ck:10s} x {sk:12s} {cd}\n{'':12s}   LOOKED AT {when}: {what}")
+                continue
             print(f"{ck:10s} x {sk:11s}  {cd}")
         return 0
 
@@ -191,9 +229,10 @@ def main() -> int:
     for ck, _ in CLASSES:
         row = f"  {ck:12s}"
         for sk, _ in SURFACES:
-            row += f"{('  -' if (ck, sk) in NA else ' ok' if (ck, sk) in CLOSED else '  .'):>11s}"
+            row += f"{('  -' if (ck, sk) in NA else ' ok' if (ck, sk) in CLOSED else '  ~' if (ck, sk) in EXAMINED else '  .'):>11s}"
         print(row)
     print()
+    print("  ~  = looked at and measured; nothing found to write a check from. Still open.")
     print("  ok = a plant was made, nothing caught it, a check was written, the plant is caught now")
     print("   . = open: this is where a scan still finds things, and how many times is this number")
     print("   - = cannot occur here, with the reason in NA")
