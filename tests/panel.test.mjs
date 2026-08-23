@@ -10242,3 +10242,62 @@ test('the assistant is told about every tool it is given', () => {
     assert.ok(line.includes('? `You have'), `id=${rel}: the sentence is a plain string, so the names never expand`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// When the assistant says «none», it says what «none» was measured over.
+//
+// Every tool answers over `g.nodes` - the functions in the mirror - and the model states the answer
+// about the org. A function that never downloaded is not a node, so it calls nothing, and
+// «(no callers)» is the sentence a deletion follows. Partial data authorising a destructive act,
+// with the assistant as the voice and the user holding the knife.
+//
+// The diagram and the health audit were taught this two cells ago, from the same `counts.inOrg` /
+// `counts.notInMirror` the graph already carries. The assistant - the surface that answers in words
+// and is therefore believed - was left out: one fact carried to two of its three consumers.
+test('the assistant hedges an absence, and does not hedge a fact', async () => {
+  const build = (notInMirror, inOrg) => {
+    const NODES = {
+      'standalone.lonely': { id: '1', name: 'lonely', namespace: 'standalone', api_name: 'lonely',
+        display_name: 'Lonely', file: 'f.dg', calls: [], called_by: [], unresolved: [], ambiguous: [],
+        associated_place: [], connections: [], modules: [], stats: null },
+      'standalone.known': { id: '2', name: 'known', namespace: 'standalone', api_name: 'known',
+        display_name: 'Known', file: 'g.dg', calls: [], called_by: ['standalone.lonely'],
+        unresolved: [], ambiguous: [], associated_place: [], connections: [], modules: [], stats: null },
+    };
+    const ctx = {
+      console, String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error, isNaN,
+      ensureGraph: async () => ({ nodes: NODES,
+        counts: { nodes: 2, edges: 1, dead_suspects: 1, unresolved: 0, ambiguous: 0, inOrg, notInMirror } }),
+      beginWorkspaceOp: () => ({ current: () => true, read: async () => { throw new Error('no file'); } }),
+      loadModuleFiles: async () => ({}), aiLoadConnections: async () => [],
+      aiLoadActions: async () => ({ list: [], users: new Map(), addresses: false }),
+      actionKindLabel: () => '', actKept: () => true, actStale: () => false, actThin: () => false,
+      isFnAction: () => false, wfScheduled: () => false, webhookForModel: (u) => String(u || ''),
+      workflowData: [], wfIndex: new Map(), failuresIndex: async () => ({ all: [], capped: false, at: null }),
+      MSG: { noFn: 'No such function: ' },
+    };
+    vm.createContext(ctx);
+    const piece = (n) => { try { return sliceFn('apps/crm/ai.js', n); } catch { return sliceConst('apps/crm/ai.js', n); } };
+    vm.runInContext(['const aiSeedOmitted = []; let aiSeedSize = 0;',
+      ...['aiCap', 'aiModuleText', 'fnSource', 'aiExecTool'].map(piece)].join('\n'), ctx);
+    return (t, i) => vm.runInContext('aiExecTool', ctx)(t, i);
+  };
+
+  // Some of the org did not download: an absence must not read as a fact about Zoho.
+  const gappy = build(3, 5);
+  const none = await gappy('who_calls', { name: 'standalone.lonely' });
+  assert.match(none, /no callers/, `who_calls stopped answering: ${none}`);
+  assert.match(none, /did not download|could not be established/,
+    `«no callers» is stated flat over a mirror missing three functions: ${none}`);
+
+  // A *positive* answer is a fact about what is here and must not be hedged - a caveat on every
+  // answer is a caveat nobody reads, which is the failure a silent one shares.
+  const some = await gappy('who_calls', { name: 'standalone.known' });
+  assert.match(some, /standalone\.lonely/, `the caller went missing: ${some}`);
+  assert.ok(!/did not download/.test(some), `a list of callers is hedged as though it were an absence: ${some}`);
+
+  // And a complete mirror says nothing extra: the hedge is conditional, not decoration.
+  const whole = build(0, 2);
+  const clean = await whole('who_calls', { name: 'standalone.lonely' });
+  assert.equal(clean.trim(), '(no callers)', `a complete mirror still hedges: ${clean}`);
+});

@@ -446,6 +446,21 @@ async function fnSource(n, op) {
 }
 async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   const g = await ensureGraph(op); const nodes = g.nodes; input = input || {};
+  // **Every answer below is over the mirror, and the model states it about the org.** A function
+  // that never downloaded - the ones the pull records in `failures/` - is not a node here, so it
+  // calls nothing: «(no callers)» is the sentence a deletion follows, and it can be produced by an
+  // absence in our copy rather than by an absence in Zoho. The diagram and the health audit were
+  // taught to say this two cells ago; the assistant, which is the surface that answers in words and
+  // is believed, was not - the same fact carried to two of its three consumers.
+  //
+  // `null` is «could not be established», and says so rather than reading as «nothing missing».
+  const short = g.counts ? g.counts.notInMirror : undefined;
+  const overMirror = short === null || short === undefined
+    ? ' (answered over the functions in this mirror; how many the org has could not be established)'
+    : short > 0
+      ? ` (answered over ${g.counts.nodes} of the org's ${g.counts.inOrg} functions - ${short} did `
+        + 'not download, so an absence here is not an absence in Zoho)'
+      : '';
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
   if (name === 'list_functions') {
     const flt = (input.filter || '').toLowerCase();
@@ -468,11 +483,13 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
         + unmeasured.map((r) => r.id).join(', ')
       : '';
     if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.${gap}`;
-    return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
+    return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.${overMirror}\n`
       + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n') + gap;
   }
   if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
-  if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }
+  // The caveat rides the *negative* answer only: a list of callers is a fact about what is here and
+  // needs no hedge, while «none» is a claim about the org that this cannot make on its own.
+  if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)' + overMirror) : MSG.noFn + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
   if (name === 'search_code') {
     const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)';
@@ -488,7 +505,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     }
     const caveat = unread ? ` ${unread} function(s) could not be read; absence is not exhaustive.` : '';
     return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.' + caveat, 60)
-                       : `(no matches in ${Object.keys(nodes).length - unread} function(s))${caveat}`;
+                       : `(no matches in ${Object.keys(nodes).length - unread} function(s))${caveat}${overMirror}`;
   }
   if (name === 'get_module') { const mods = (await loadModuleFiles(op)) || {}; const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
