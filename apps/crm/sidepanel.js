@@ -240,6 +240,7 @@ const MSG = {
   mismatchRefused: 'The active tab is a different org from this workspace - nothing here reads Zoho until they match.',
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
+  rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
   wrongTab: 'Active Zoho tab does not match this workspace.',
   lastModified: 'Last modified',
   sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
@@ -3502,7 +3503,7 @@ async function buildGraphFor(kind, token) {
  *  together - which is exactly what a creation sends, POST then PUT - start two reconciliations that
  *  both write the index.
  */
-let reconciling = null, reconcileAgain = false, pendingAfterPull = false;
+let reconciling = null, reconcileAgain = false, pendingAfterPull = false, pendingRootReload = false;
 
 // Ending a pull is one act, not five. A notice that arrived while a pull was running is left for
 // the pull to consume - and only `pullAll` consumed it, so a change during a modules, workflows,
@@ -3511,6 +3512,12 @@ let reconciling = null, reconcileAgain = false, pendingAfterPull = false;
 function endPull() {
   pullActive = false;
   if (pendingAfterPull) { pendingAfterPull = false; reconcileFunctions(); }
+  if (pendingRootReload) { pendingRootReload = false; loadWorkspaces(); }
+  // A working folder changed in the Settings tab while this pull was writing. The panel refuses to
+  // switch workspace during a pull when *it* is asked - the list greys out and it says «Pull in
+  // progress» - and that guard was on the panel's own controls only, so the same change made one
+  // tab over walked straight past it. Deferred here, like the live-sync notice above, rather than
+  // refused: the folder has already changed in storage and this panel cannot un-change it.
 }
 function reconcileFunctions() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
@@ -5099,7 +5106,12 @@ try {
     await loadScope();
     aiEngineChrome();
     const prevRoot = root; root = await window.idbHandle.get('rootDir');
-    if (root !== prevRoot || !dir) await loadWorkspaces(); else updateWsButtons();
+    if (root === prevRoot && dir) { updateWsButtons(); return; }
+    if (pullActive) { pendingRootReload = true; setStatus(MSG.rootLater, 'warn'); return; }
+    // Not while a pull is writing. Rebuilding the list sets `dir`, and every `op.write` still in
+    // flight then throws WS_MOVED - which is *silent* by design, since a pull's status is guarded
+    // by `current()`. So the pull would stop half-way and say nothing, from a click in another tab.
+    await loadWorkspaces();
   });
   // Belt and braces: the options page lives in another tab, so re-read on focus as well.
   window.addEventListener('focus', () => { aiEngineChrome(); });

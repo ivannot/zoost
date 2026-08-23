@@ -10538,3 +10538,44 @@ test('the options page refuses to save over settings it could not read', () => {
       `id=${app}: a failed read renders an empty form with no word, and Save then writes it back`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// A change made in another tab meets the same guard as a click in this one.
+//
+// The panel refuses to switch workspace while a pull is writing - the list greys out and it says
+// «Pull in progress». That guard sat on the panel's own controls. The Settings tab can change the
+// working folder, and the `settingsStamp` handler rebuilt the workspace list on the spot: `dir`
+// moves, every `op.write` still in flight throws WS_MOVED, and WS_MOVED is **silent** by design
+// because a pull's status is guarded by `current()`. So a click one tab over stopped a pull
+// half-way through writing a mirror and said nothing.
+//
+// Deferred rather than refused, like the live-sync notice beside it: the folder has already changed
+// in storage and this panel cannot un-change it, so it moves when the pull ends and says so.
+test('a working folder changed in Settings waits for the pull to finish', () => {
+  const src = read('apps/crm/sidepanel.js')
+    .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+    .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+
+  // Derived: every call that rebuilds the workspace list from inside the storage listener.
+  const at = src.indexOf('chrome.storage.onChanged.addListener');
+  assert.ok(at > 0, 'the panel no longer listens for changes made outside it');
+  const listener = src.slice(at, src.indexOf('\n});', at));
+  const rebuilds = [...listener.matchAll(/\bloadWorkspaces\(\)/g)];
+  assert.ok(rebuilds.length >= 1, 'nothing in the listener rebuilds the list - the derivation broke');
+  for (const r of rebuilds) {
+    const before = listener.slice(0, r.index);
+    assert.match(before.slice(-400), /pullActive/,
+      'the list is rebuilt from a change made in another tab without asking whether a pull is ' +
+      'writing - the pull then dies silently, mid-mirror');
+  }
+
+  // And the deferral is honoured: a flag set and never consumed is worse than no flag.
+  assert.match(src, /pendingRootReload = true/, 'nothing records the deferred change');
+  const end = /function endPull\(\)[\s\S]*?\n\}/.exec(src);
+  assert.ok(end, 'endPull has gone - the one place deferred work is consumed');
+  assert.match(end[0], /pendingRootReload/,
+    'the deferred folder change is never acted on, so the panel stays on a folder nobody chose');
+
+  // The reader is told, rather than the panel silently staying put.
+  assert.match(src, /rootLater:/, 'the deferral is invisible - the panel simply does not move');
+});
