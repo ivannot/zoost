@@ -79,7 +79,7 @@ d1819efbf65734a3  apps/analytics/options.html: Zoost does not run, validate or d
 5e10e1ec5ba2617c  apps/crm/graphview.js: Nothing in that file is on this diagram - it was saved from a different graph, or everything in it has since been renamed.
 ba89dffc50f0a566  apps/crm/graphview.js: moved \u00b7 nothing is covered
 693b11999c36b84e  apps/crm/options.html: A tab you turn off is absent , not greyed out - the panel is 400px wide and a control that does nothing is just noise.
-11755cb4ce6567bc  apps/crm/options.html: Functions - inventory, namespaces, cross-references Deluge source code - the full body of every function the most sensitive part Module schema - fields, types, lookups, picklists Layout detail - sections and per-layout fields Relations - related-list API names and Deluge calls Workflows - triggers, criteria, actions Schedules Connections - the org's connection catalogue and which functions use each Health - orphans, unresolved calls, broken automations Everything Share-safe Save defaults Saved search patterns Named regular expressions, offered by the ▾ menu beside the panel's search box when the full-text search is on.
+eb8da5bb7998b9df  apps/crm/options.html: Functions - inventory, namespaces, cross-references Deluge source code - the full body of every function the most sensitive part Module schema - fields, types, lookups, picklists Layout detail - sections and per-layout fields Relations - related-list API names and Deluge calls Workflows - triggers, criteria, actions Schedules Actions - notifications, field updates, tasks and webhooks, and which rules fire each Sender addresses - the address each notification goes out as.
 1932a2c8788ebbeb  apps/crm/options.html: It is the starting point for Go to Zoho CRM on the screen shown when there is no Zoho CRM tab - that screen carries a picklist of every data centre, because after signing out of one org which one you want next is a choice, not something to deduce from the one you happen to have open.
 4b7da9657ba874ae  apps/crm/options.html: Nothing is deleted by hiding a tab: Pull all still mirrors that type, and it still appears in exports and in what the AI can see - unless you also clear its pull box, which is the separate question of whether Zoost should ask Zoho for that type at all.
 287f572d6f10644c  apps/crm/options.html: On your own laptop that buys little and costs a passphrase every time the browser restarts; on a shared or managed machine it buys a lot.
@@ -95,6 +95,7 @@ c08e8d31fb48ac36  apps/crm/options.html: The two starters - an email address, an
 d00255137af5ab13  apps/crm/options.html: Turning a tab off clears it for you, because most tabs are turned off for an area the account cannot read and pulling it then only produces an error.
 96bcb404f3b02ca7  apps/crm/options.html: Whatever is left out is named as left out, in the index itself, so an absence in it is never presented as an absence in the org.
 a40cbd5714247c74  apps/crm/options.html: When an org does not fit, the order is decided rather than arbitrary: the function list is never dropped - it is the vocabulary everything else refers to - and module and connection names go first, because the assistant can still fetch those by name with its tools.
+5c99cf901bb6a3b8  apps/crm/options.html: Your organisation's own or a user's, never a customer's - and off, it says how many were withheld Connections - the org's connection catalogue and which functions use each Failures - which functions are failing, why, and how often never the input of a failed run Health - orphans, unresolved calls, broken automations Everything Share-safe Save defaults Saved search patterns Named regular expressions, offered by the ▾ menu beside the panel's search box when the full-text search is on.
 7e2698301eb9ab8f  apps/crm/sidepanel.html: Everything Share-safe Functions - inventory, namespaces, cross-references Deluge source code - the full body of every function the most sensitive part Module schema - fields, types, lookups, picklists Layout detail - sections and per-layout fields Relations - related-list API names and Deluge calls Workflows - triggers, criteria, actions Schedules Actions - notifications, field updates, tasks and webhooks, and which rules fire each Sender addresses - the address each notification goes out as.
 a4c921a2bc6effdc  apps/crm/sidepanel.html: To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.
 6b8d12391a73b9c0  apps/crm/sidepanel.html: Unlock Send Not on a Zoho CRM tab This workspace talks to Zoho only from a Zoho CRM tab.
@@ -283,9 +284,9 @@ d526906a4512534d  site/docs-crm.html: All of it comes from what is already on yo
 5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
 687f4dbbe3ee516c  site/docs-crm.html: Both come from the rule already on your disk, so nothing is fetched to answer "which workflows do not fire straight away".
 0e562dea3e096437  site/docs-crm.html: Changing a filter lays the diagram out again, and the boxes you moved keep their places while only the new ones are placed for you - the hint line says how many of each.
+d13cf25ca3a83c59  site/docs-crm.html: Chapter 10: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
 bd185851083e23ae  site/docs-crm.html: Chapter 5: in: code turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.
-1631422a9c9bb1e3  site/docs-crm.html: Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.
-695566f1704feaf3  site/docs-crm.html: Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
+a7c560aa804df643  site/docs-crm.html: Chapter 9: the catalogue, and which functions use each connection - so one that nothing uses is visible.
 c0a970763287a425  site/docs-crm.html: Code you have commented out does not count as a call, so a function whose only mention is a disabled line is named here rather than left looking alive.
 64e4d4d0509f3e83  site/docs-crm.html: Comments and text in quotes are set aside first, so a call you have commented out is not an arrow - and the function it named can then be reported by the health audit as one nothing calls.
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
@@ -615,9 +616,9 @@ a7b2d1b38291e6ef  site/it/docs-analytics.html: ↺ All rimette tutto e None speg
 1cc263a2156cea9f  site/it/docs-crm.html: A quel punto non è stato mandato niente: il testo ce l'hai davanti, e Send as a public issue lo premi tu o no.
 1b499e5458f56031  site/it/docs-crm.html: Accanto al tasto c'è una tendina con tutti i data centre.
 36fe59321b393b34  site/it/docs-crm.html: Anche l'albero prende la tastiera: cliccalo una volta, poi ↑ e ↓ camminano fra le funzioni che sono a schermo - quelle che la ricerca e il filtro per tipo hanno lasciato, mai dentro un gruppo chiuso - e ne aprono una come farebbe un clic; Home e End vanno ai due estremi.
+caae116ac8dc8732  site/it/docs-crm.html: Capitolo 10: candidati da guardare, mai un verdetto - e la nota sulla copertura sta sopra l'elenco, non in fondo.
 835e01d5b54ab96c  site/it/docs-crm.html: Capitolo 5: in: code trasforma la casella in una ricerca dentro il sorgente di ogni funzione - qui quattro corrispondenze in due file, con la riga in cui stanno.
-79d8d731383d15e3  site/it/docs-crm.html: Capitolo 8: il catalogo, e quali funzioni usano ogni connessione - così quella che non usa nessuno si vede.
-ebaffdb8bbdccac0  site/it/docs-crm.html: Capitolo 9: candidati da guardare, mai un verdetto - e la nota sulla copertura sta sopra l'elenco, non in fondo.
+7d900478a5ad7a85  site/it/docs-crm.html: Capitolo 9: il catalogo, e quali funzioni usano ogni connessione - così quella che non usa nessuno si vede.
 cc458a7d5cde6744  site/it/docs-crm.html: Chiedigli «come esporto questo?», «cosa succede se premo Health?» oppure «può cambiare qualcosa dentro Zoho CRM?» e risponde dal pannello, senza mandarti da nessuna parte.
 885f1eba51027648  site/it/docs-crm.html: Cifrarla con un segreto tenuto lì accanto sembrerebbe protezione e non ne offrirebbe nessuna.
 508eeb9f3218d23a  site/it/docs-crm.html: Clicca Refresh outdated nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.
@@ -1111,10 +1112,8 @@ cea95bbc5a16019e  store/analytics/store-listing.md: - What nothing depends on.
 89e048c5b9e26259  store/analytics/store-listing.md: All of them with type, folder, owner, column count and dates, filtered by type and searched by name, folder or column name.
 bfc95cca0b3471b7  store/analytics/store-listing.md: Ask Zoho Analytics its own dependency question for every view, and see which ones nothing in the workspace reads.
 0ea2238017366035  store/analytics/store-listing.md: Counts and lists, with no thresholds and no score, and every figure stating what it does not cover.
-1010544da3188b72  store/analytics/store-listing.md: It also carries the graph data from the side panel to the diagram window, a separate extension page that cannot be handed the object directly.
 6781d5af73efa7e7  store/analytics/store-listing.md: It cannot know which one in advance, and the set is exactly the regions Zoho runs, no wider.
 5c5b129a766dea0f  store/analytics/store-listing.md: It is generated, never fetched, everything that would talk to the platform is disabled for it, and it is deleted like any other workspace.
-16f36006d0d031c7  store/analytics/store-listing.md: It is memory-only and cleared when the browser closes.
 2f345006d01d1963  store/analytics/store-listing.md: It reads only what the signed-in user can already see in the Zoho Analytics interface, using their existing session, and never modifies anything in Zoho Analytics and never reads the data rows inside tables.
 5cd92fd3cbe3e465  store/analytics/store-listing.md: It will not tell you the shape of the whole thing, it will not tell you what changed last month, and it will not tell you which of those hundreds of views nothing reads any more.
 f2859386a348434f  store/analytics/store-listing.md: Never the rows in your tables, because Zoost does not read them.
@@ -1144,7 +1143,7 @@ c2a0e232d21020b1  store/analytics/store-listing.md: WHO IT'S FOR Zoho Analytics 
 55ae705c6c20f951  store/analytics/store-listing.md: Zoost gives a Zoho Analytics user a local view of the workspace they have built, one it only ever reads from and never writes to: it mirrors the workspace's structure - views, tables, columns, relations, the SQL of query tables and the dependencies between them - into plain files on the user's own disk, and presents that mirror as a navigable catalogue, an ER diagram, an audit and a shareable report.
 09fc78125f088070  store/analytics/store-listing.md: Zoost mirrors a Zoho Analytics workspace into plain local files, then draws you the map that Zoho Analytics never shows you.
 8b80f186695321f5  store/analytics/store-listing.md: chrome.storage.local holds the user's own settings, on their machine only: the AI provider, model name and API key, the agent's tool-step limit, the diagram layout defaults, the fallback Zoho data centre, the saved search patterns (named regular expressions the search box offers), and the sample workspace's id, so the panel can offer to open it before it may read the folder.
-9b81c03cf4fa533b  store/analytics/store-listing.md: chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked.
+810aa8f855d89f97  store/analytics/store-listing.md: chrome.storage.session holds two things, both memory-only and cleared when the browser closes: the decrypted API key, while passphrase protection is unlocked; and the diagram data on its way to the diagram window, a separate extension page, removed the moment that window reads it.
 1b4e05ad32f5d73a  store/crm/store-listing.md: "Zoho", "Zoho CRM" and "Deluge" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
 ddf674b812c4b6c2  store/crm/store-listing.md: - Every part knows when it was last read.
 cb78a0169fe8a79f  store/crm/store-listing.md: - Search across every function at once.
@@ -1154,6 +1153,7 @@ cb78a0169fe8a79f  store/crm/store-listing.md: - Search across every function at 
 4ac5f11707a8b336  store/crm/store-listing.md: About half of them are attached to nothing in a real org; that is a candidate to review, never a verdict.
 984130bf96ae4bf9  store/crm/store-listing.md: An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change.
 f14a4391f41349dd  store/crm/store-listing.md: Anthropic and OpenAI, needed only by the optional AI assistant, and only after the user enters their own API key.
+8b2b7623a189d701  store/crm/store-listing.md: Both memory-only, cleared when the browser closes.
 8ede6a7dfaed4aeb  store/crm/store-listing.md: Candidates to review - never automatic deletions.
 9aedc25c181c20d9  store/crm/store-listing.md: Each workspace is bound to its org, host and instance, so a production workspace can never be synced against a sandbox by mistake.
 8b7f7cb413bcf45d  store/crm/store-listing.md: Every check states what it does and does not analyse.
@@ -1191,9 +1191,7 @@ f9c6fd904203ccc4  store/crm/store-listing.md: With Anthropic it runs as an agent
 7c979389495f0d12  store/crm/store-listing.md: With no AI provider configured and no report sent, nothing leaves the machine.
 2003dcb0b590ca82  store/crm/store-listing.md: Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM records, and does nothing on any other website.
 cae0029df9149604  store/crm/store-listing.md: Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
-4d70e60b3c09cde1  store/crm/store-listing.md: chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked: memory-only, cleared when the browser closes.
 f147959cb516f910  store/crm/store-listing.md: scripting is used to inject two small scripts into Zoho CRM tabs only, and nowhere else.
-b83f268434a562c4  store/crm/store-listing.md: storage persists the user's own settings between sessions, in chrome.storage.local only.
 6ab948a4c1655303  store/crm/store-listing.md: zoost.it, for one action only: when the user sends a problem report, the extension writes the text into the report page it has just opened.
 af5f0b1d91deaa8e  store/crm/store-listing.md: | Authentication information | No | The API key the user enters stays on their own machine - in `chrome.storage.local`, encrypted with a passphrase if they choose that - and is sent only to the provider they chose |
 14574df69a632dda  store/crm/store-listing.md: | Website content | **Yes** - see below | Only when the user configures the AI assistant |

@@ -6307,5 +6307,51 @@ class EveryTabIsNamedWhereItsSiblingsAre(unittest.TestCase):
                                     + '\n  '.join(short))
 
 
+class FigureCaptionsNameTheirOwnChapter(unittest.TestCase):
+    """«Chapter 8» under «9. Connections», and so on to the end of the guide.
+
+    Both `docs-crm` guides carried a figure caption naming the chapter *before* the one it sits in,
+    for every figure from §9 onward - six in each language. It dates from the insertion of «9.
+    Connections», which pushed every heading below it up by one and left the captions where they
+    were: the enumeration trap, with the list being the guide's own numbering.
+
+    Nothing was checking, and the failure is quiet by construction - a reader who follows «Chapter 9»
+    from a picture of the health audit lands on the connections, decides they misread, and carries
+    on.
+
+    Derived from the document: a caption's number is whatever the nearest `<h2>` above it says. That
+    is the definition of «its own chapter», and it needs no list.
+
+    **The limit, stated:** it reads `<h2>` headings that open with a number and captions that say
+    «Chapter N» or «Capitolo N». A figure introduced with a different word, or under a heading that
+    numbers itself differently, is invisible here rather than wrong.
+    """
+
+    GUIDES = ['site/docs-crm.html', 'site/it/docs-crm.html',
+              'site/docs-analytics.html', 'site/it/docs-analytics.html']
+
+    def pairs(self, rel):
+        s = (ROOT / rel).read_text(encoding='utf-8')
+        heads = [(m.start(), m.group(1)) for m in re.finditer(r'<h2 id="[^"]*">\s*([\w.]+)\.', s)]
+        out = []
+        for m in re.finditer(r'(?:Chapter|Capitolo) ([\w.]+)', s):
+            above = [n for pos, n in heads if pos < m.start()]
+            if above:
+                out.append((m.group(1), above[-1]))
+        return out
+
+    def test_there_are_captions_to_check(self):
+        total = sum(len(self.pairs(rel)) for rel in self.GUIDES)
+        self.assertGreater(total, 8, f'only {total} numbered caption(s) found - the derivation broke')
+
+    def test_each_caption_names_the_chapter_it_sits_in(self):
+        wrong = []
+        for rel in self.GUIDES:
+            for said, actual in self.pairs(rel):
+                if said != actual:
+                    wrong.append(f'{rel}: a caption says chapter {said} and sits in chapter {actual}')
+        self.assertEqual(wrong, [], 'these send a reader to the wrong chapter:\n  ' + '\n  '.join(wrong))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
