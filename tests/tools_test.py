@@ -5210,5 +5210,55 @@ class DriftFromTheSubmittedListingIsSaid(unittest.TestCase):
                              'different fact from «nobody has submitted yet»')
 
 
+class TheProbeSaysHowMuchItDrove(unittest.TestCase):
+    """«Both panels navigate as documented» was printed after four scripted scenarios.
+
+    The probe drives a panel in a real browser and is the only thing here that does - «a correct
+    helper called from the wrong place still passes» is why it exists, and every case in it is a
+    defect that happened. What it is not is coverage: measured, it clicks **10 of the 89** clickable
+    controls in the CRM panel and **7 of 79** in Analytics, and ended with a sentence about the
+    guides that reads as a statement about the whole product.
+
+    The rule this repository applies to anything that inspects a tree - print what was inspected and
+    derive the denominator by a cruder method - had reached `htmlcheck`, `asynccheck`,
+    `featurecheck`, `csscheck` and `samplecheck`, and not the one tool that runs the product.
+
+    The denominator over-counts on purpose: a control the probe reaches by a selector rather than by
+    id reads as undriven. For a number whose job is to stop a sentence sounding complete, too low is
+    the safe direction, and it is said here rather than left to be found.
+    """
+
+    def probe(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('probe_ut', ROOT / 'tools' / 'probe.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_it_counts_what_it_drove_against_what_there_is(self):
+        cov = self.probe().coverage()
+        self.assertGreaterEqual(len(cov), 2, f'only {len(cov)} app(s) measured - the derivation broke')
+        for app, drove, total in cov:
+            self.assertGreater(total, 20, f'{app}: only {total} controls found - the crude count broke')
+            self.assertGreater(drove, 0, f'{app}: the probe is credited with driving nothing')
+            self.assertLessEqual(drove, total, f'{app}: drove more than exists')
+
+    def test_the_run_prints_it_and_claims_nothing_wider(self):
+        src = (ROOT / 'tools' / 'probe.py').read_text(encoding='utf-8')
+        printed = [l for l in src.splitlines() if 'print(' in l and 'probe:' in l]
+        self.assertTrue(printed, 'the run no longer says anything at the end')
+        # Refused where it is **printed**, not where it is written: the note above `coverage()`
+        # quotes the old sentence as the evidence for why it went, which is how this repository
+        # records a defect. Forbidding the string outright has now fired on that kind of quotation
+        # three times in one day - here, in the ledger check and in the pdfTitle one - so the rule
+        # is worth stating as a class: a check about what a tool *says* reads its output lines.
+        said = [l for l in src.splitlines() if 'print(' in l]
+        self.assertEqual([l for l in said if 'navigate as documented' in l], [],
+                         'the run claims the panels navigate as documented, which four scripted '
+                         'scenarios cannot establish')
+        self.assertIn('of the {total} clickable controls', src.replace('f"', '"'),
+                      'the run does not print how much of the panel it drove')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

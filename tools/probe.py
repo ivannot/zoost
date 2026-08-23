@@ -937,6 +937,33 @@ PULL_CRM = r"""
 """
 
 
+def coverage():
+    """How many of each panel's controls these scripts actually click.
+
+    The run used to end «both panels navigate as documented» - a sentence about the guides, printed
+    after four scripted scenarios, with nothing saying how much of the panel they touch. Measured
+    when this was written: **10 of 89** clickable controls in the CRM and **7 of 79** in Analytics.
+    Every one of the four is worth having and none of them is coverage, and a reader had no way to
+    tell the two apart.
+
+    The denominator is cruder than the check, which is the rule this repository states for anything
+    that inspects a tree: a control is a `<button id=...>` in the panel's markup or an element given
+    an `onclick` by a script. That over-counts - a button the probe reaches by a selector rather than
+    by id reads as undriven - and over-counting is the safe direction for a number whose job is to
+    stop a sentence from sounding complete.
+    """
+    import re
+    out = []
+    clicked = set(re.findall(r"\$\('([^']+)'\)\s*\.click\(\)", pathlib.Path(__file__).read_text(encoding="utf-8")))
+    for app in sorted(d.name for d in (ROOT / "apps").iterdir() if (d / "sidepanel.html").exists()):
+        html = (ROOT / "apps" / app / "sidepanel.html").read_text(encoding="utf-8")
+        js = "".join(f.read_text(encoding="utf-8") for f in (ROOT / "apps" / app).glob("*.js"))
+        ids = set(re.findall(r'<button[^>]*\bid="([^"]+)"', html))
+        ids |= set(re.findall(r"\$\('([^']+)'\)\.onclick\s*=", js))
+        out.append((app, len(ids & clicked), len(ids)))
+    return out
+
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -953,7 +980,10 @@ def main() -> int:
             print(f"  {key:18s} ok", flush=True)
     finally:
         shots._browser_stop()
-    print("probe: both panels navigate as documented.", flush=True)
+    for app, drove, total in coverage():
+        print(f"  {app}: drove {drove} of the {total} clickable controls in the panel; "
+              f"the rest are not exercised here.", flush=True)
+    print("probe: the scripted paths above ran without throwing.", flush=True)
     return 0
 
 
