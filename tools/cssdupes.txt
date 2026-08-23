@@ -1,6 +1,7 @@
 # Selectors written in more than one place, as they stand today. Derived by
 # tools/csscheck.py --accept; the check refuses anything not in here.
-# **This file may only shrink.** Every line is a rule waiting to be moved into the sheet
+# **This file should shrink, and a run that grows it says so.** Every line is a rule
+# waiting to be moved into the sheet
 # that should own it - and moving one is a job with a screenshot after it, because these
 # rules win by order inside their own page and lose that when they move.
 # selector	where

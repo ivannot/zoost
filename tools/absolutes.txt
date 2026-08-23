@@ -1,3 +1,8 @@
+# Derived by tools/auditcheck.py --accept - do not edit by hand.
+# Every line is an absolute claim in prose a reader can reach, recorded as read once.
+# Being here means somebody read it and decided it is true; a *new* one is a finding,
+# because an absolute invites a literal check and this project has had to walk two back.
+# hash  where it is and what it says
 7a32d6f23c1b3b7b  README.md: **Health / audit** (candidates to review - never automatic deletions) - Three tabs - **Functions** (orphans, unresolved calls, ambiguous calls), **Wiring** (broken automations, missing module references) and **Size & calls** (longest functions, most outbound calls) - each with an explicit coverage note stating exactly what is and isn't analyzed.
 4bf05c2e1c376147  README.md: **How it works.** The system prompt carries a compact **index of the whole org** (every function signature, modules, automations, and the connections with their usage counts) plus the function you're currently viewing.
 28acb604bf71a4e9  README.md: **Or press `+ Sample` and skip all of it.** It writes a workspace of invented data into the working folder - a couple of hundred functions with real call chains, modules with lookups, workflows, schedules and connections - so you can open the tree, the graph, the audit and the exports before pointing Zoost at anything of your own.

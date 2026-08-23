@@ -507,7 +507,24 @@ def absolutes_reviewed(findings: list, notes: list, accept: bool) -> None:
     now, quiet = absolutes()
     findings.extend(quiet)      # before the branch: a file that was not read must not be accepted either
     if accept:
-        BASELINE.write_text('\n'.join(f'{k}  {v}' for k, v in sorted(now.items(), key=lambda kv: kv[1])) + '\n',
+        # A header, and whatever a person wrote under it. This file carried 1,142 lines and **no
+        # header at all** - nothing saying where it came from, what being in it means, or that
+        # editing it by hand is pointless because the next `--accept` rewrites it. The other ledgers
+        # here all say those things; this one, the largest, said none of them. And `keep_comments`,
+        # written for exactly this in `asynccheck`, had reached three of the five writers.
+        own = [
+            '# Derived by tools/auditcheck.py --accept - do not edit by hand.',
+            '# Every line is an absolute claim in prose a reader can reach, recorded as read once.',
+            '# Being here means somebody read it and decided it is true; a *new* one is a finding,',
+            '# because an absolute invites a literal check and this project has had to walk two back.',
+            '# hash  where it is and what it says',
+        ]
+        # `tools/` is on sys.path - this file lives in it - and the import is local because the
+        # baseline is the only thing here that needs it.
+        from ledger import keep_comments
+        kept = keep_comments(BASELINE, own)
+        BASELINE.write_text('\n'.join(own + kept
+                                      + [f'{k}  {v}' for k, v in sorted(now.items(), key=lambda kv: kv[1])]) + '\n',
                             encoding='utf-8')
         notes.append(f'{len(now)} absolute claims recorded as read in {BASELINE.relative_to(ROOT)}')
         return
@@ -515,7 +532,8 @@ def absolutes_reviewed(findings: list, notes: list, accept: bool) -> None:
         findings.append(f'{BASELINE.relative_to(ROOT)}: no baseline — run with --accept once, after '
                         f'reading what it records')
         return
-    was = {line.split('  ', 1)[0] for line in BASELINE.read_text(encoding='utf-8').splitlines() if line.strip()}
+    was = {line.split('  ', 1)[0] for line in BASELINE.read_text(encoding='utf-8').splitlines()
+           if line.strip() and not line.lstrip().startswith('#')}
     added = [now[k] for k in now if k not in was]
     if added:
         findings.append(f'{len(added)} absolute claim(s) not yet read. Read each, change what overstates, '

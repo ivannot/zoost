@@ -1,6 +1,6 @@
 # Derived by tools/langcheck.py - do not edit by hand; run it with --accept.
 # Every line here is Italian that is *meant* to be: a quotation of the Italian site,
-# or a string those pages are built from. The ledger may only shrink.
+# or a string those pages are built from. It should shrink; growth is printed.
 60c557ea95b387da  docs/layout.md: point at the product you are looking at. Italian inflects it for gender, so «Questa ti disegna la
 4acf4995d319b4a8  docs/naming.md: a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
 a56ceb20b3fafe35  docs/naming.md: viene spedito» against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio

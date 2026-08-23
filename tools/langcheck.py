@@ -37,7 +37,7 @@ import re
 import subprocess
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ledger import delta as ledger_delta, count as ledger_count  # noqa: E402
+from ledger import delta as ledger_delta, count as ledger_count, keep_comments  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LEDGER_REL = 'tools/notenglish.txt'
@@ -122,9 +122,12 @@ def main() -> int:
     found = scan()
     ledger = read_ledger()
     if accept:
-        rows = ['# Derived by tools/langcheck.py - do not edit by hand; run it with --accept.',
-                '# Every line here is Italian that is *meant* to be: a quotation of the Italian site,',
-                '# or a string those pages are built from. It should shrink; growth is printed.']
+        # Whatever a person wrote in here, kept: `--accept` regenerates the file whole, so a reason
+        # noted beside a line was one run away from being deleted without a word.
+        own = ['# Derived by tools/langcheck.py - do not edit by hand; run it with --accept.',
+               '# Every line here is Italian that is *meant* to be: a quotation of the Italian site,',
+               '# or a string those pages are built from. It should shrink; growth is printed.']
+        rows = own + keep_comments(LEDGER, own)
         for rel, _, line in found:
             rows.append(f'{key(rel, line)}  {rel}: {line[:150]}')
         _before = ledger_count(LEDGER)

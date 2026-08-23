@@ -480,11 +480,14 @@ def main() -> int:
                 '# it buys is that anything *new* is a finding on the day it is written, which is',
                 '# the reading nobody was doing. It should shrink; when it grows, the run says so.']
         before = ledger_count(CONTENT_LEDGER)
-        for f in content:
-            expr = f.partition('content ${')[2].rpartition('}')[0]
-            rows.append(f'apps/crm/export.js\t{expr}')
+        # A set, and sorted. It was «today's findings, then everything already known», which records
+        # a row twice whenever an expression is *rewritten*: the old spelling stays in `known`, the
+        # new one arrives in the findings, and both go in. `sanitize(whose)` was in here three times
+        # for a line that exists twice. Sorted so a diff of this file is a diff of what changed.
+        entries = {f'apps/crm/export.js\t{f.partition("content ${")[2].rpartition("}")[0]}' for f in content}
+        entries |= known
         kept = ledger_keep(CONTENT_LEDGER, rows)
-        CONTENT_LEDGER.write_text('\n'.join(rows + kept + sorted(known)) + '\n', encoding='utf-8')
+        CONTENT_LEDGER.write_text('\n'.join(rows + kept + sorted(entries)) + '\n', encoding='utf-8')
         print(ledger_delta(f'htmlcheck: {CONTENT_LEDGER.relative_to(ROOT)}', before,
                            ledger_count(CONTENT_LEDGER)))
     else:
@@ -501,7 +504,10 @@ def main() -> int:
             attr, _, expr = rest.partition('="${')
             rows.append(f'{key(rel, attr, expr.rsplit("}\" is not", 1)[0])}  {f}')
         _before = ledger_count(LEDGER)
-        LEDGER.write_text('\n'.join(rows) + '\n', encoding='utf-8')
+        # Its sibling above keeps them and this one did not - the same tool, two ledgers, the fix
+        # applied to one. `keep_comments` exists because `asyncglobals.txt` came within a run of
+        # losing nineteen hand-written lines, and it had reached three writers of five.
+        LEDGER.write_text('\n'.join(rows + ledger_keep(LEDGER, rows)) + '\n', encoding='utf-8')
         print(ledger_delta(f'htmlcheck: {LEDGER.relative_to(ROOT)}', _before, ledger_count(LEDGER)))
         return 0
     # Before anything about the code: what this tool did not look at. A gap here is a defect in the

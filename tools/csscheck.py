@@ -25,7 +25,7 @@ import pathlib
 import re
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ledger import delta as ledger_delta, count as ledger_count  # noqa: E402
+from ledger import delta as ledger_delta, count as ledger_count, keep_comments  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LEDGER = ROOT / "tools" / "cssdupes.txt"
@@ -225,15 +225,22 @@ def main() -> int:
         rows = sorted({**{s: ",".join(w) for s, w in dup.items()},
                        **{s: ",".join(sorted({x for ws in v.values() for x in ws})) for s, v in div.items()}}.items())
         _before = ledger_count(LEDGER)
-        LEDGER.write_text(
-            "# Selectors written in more than one place, as they stand today. Derived by\n"
-            "# tools/csscheck.py --accept; the check refuses anything not in here.\n"
-            "# **This file should shrink, and a run that grows it says so.** Every line is a rule\n"
-            "# waiting to be moved into the sheet\n"
-            "# that should own it - and moving one is a job with a screenshot after it, because these\n"
-            "# rules win by order inside their own page and lose that when they move.\n"
-            "# selector\twhere\n"
-            + "".join(f"{s}\t{w}\n" for s, w in rows), encoding="utf-8")
+        # The header this tool writes, and everything a *person* wrote, which is not the same thing.
+        # `--accept` regenerates the file whole, so a reason noted beside a line was one run away from
+        # being deleted without a word - the defect `keep_comments` was written for in `asynccheck`,
+        # still live here and in `langcheck` because the fix reached three of the five ledgers.
+        own = [
+            "# Selectors written in more than one place, as they stand today. Derived by",
+            "# tools/csscheck.py --accept; the check refuses anything not in here.",
+            "# **This file should shrink, and a run that grows it says so.** Every line is a rule",
+            "# waiting to be moved into the sheet",
+            "# that should own it - and moving one is a job with a screenshot after it, because these",
+            "# rules win by order inside their own page and lose that when they move.",
+            "# selector\twhere",
+        ]
+        kept = keep_comments(LEDGER, own)
+        LEDGER.write_text("".join(f"{line}\n" for line in own + kept)
+                          + "".join(f"{s}\t{w}\n" for s, w in rows), encoding="utf-8")
         print(ledger_delta(f"csscheck: {LEDGER.relative_to(ROOT)}", _before, ledger_count(LEDGER)))
         return 0
 

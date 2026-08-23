@@ -5586,5 +5586,68 @@ class AsyncCheckSaysWhatItDoesNotRead(unittest.TestCase):
         self.assertEqual(unseen, before[1], 'an await the tool does enter was reported as unread')
 
 
+class EveryLedgerKeepsWhatAPersonWrote(unittest.TestCase):
+    """A ledger invites an explanation and must not throw it away.
+
+    Every one of these files says some version of «being here means somebody read it and decided it
+    is safe», which is an invitation to write down *why*. `--accept` then regenerates the file whole:
+    the tool writes its own header and the entries, and anything else is gone without a word.
+
+    `keep_comments` was written for exactly this, after `tools/asyncglobals.txt` came within one run
+    of losing nineteen hand-written lines. It reached three of the five writers. Measured by putting
+    a comment into `cssdupes.txt` and `notenglish.txt` and running `--accept`: both deleted it, and
+    the battery stayed green. `absolutes.txt` was worse - 1,142 lines and **no header at all**, so
+    nothing said where it came from or that editing it by hand is pointless.
+
+    Derived: every `tools/*.txt` here is a ledger, the tool that owns it is read out of its own first
+    lines, and each is driven for real - a comment planted, `--accept` run, the file restored. A
+    ledger added tomorrow is covered without anybody remembering.
+
+    **The limit, stated:** a ledger whose header does not name its tool cannot be driven and is
+    reported as such rather than skipped, because «no owner» is the finding, not an exemption.
+    """
+
+    LEDGERS = sorted((ROOT / 'tools').glob('*.txt'))
+
+    def test_there_are_ledgers_to_check(self):
+        self.assertGreaterEqual(len(self.LEDGERS), 5,
+                                'no ledgers found in tools/ - the derivation broke')
+
+    def test_each_names_the_tool_that_writes_it(self):
+        for led in self.LEDGERS:
+            head = '\n'.join(led.read_text(encoding='utf-8').split('\n')[:8])
+            self.assertRegex(head, r'tools/\w+\.py',
+                             f'{led.name}: nothing in it says which tool derives it, so a reader '
+                             f'cannot tell an edit by hand is about to be overwritten')
+
+    def test_a_comment_a_person_wrote_survives_accept(self):
+        for led in self.LEDGERS:
+            keep = led.read_text(encoding='utf-8')
+            head = '\n'.join(keep.split('\n')[:8])
+            m = re.search(r'tools/(\w+)\.py', head)
+            self.assertIsNotNone(m, f'{led.name}: no owning tool named')
+            tool = ROOT / 'tools' / f'{m.group(1)}.py'
+            self.assertTrue(tool.exists(), f'{led.name} names {tool.name}, which is not here')
+
+            mark = '# PLANTED by tests/tools_test.py: a reason a person wrote.'
+            try:
+                lines = keep.split('\n')
+                lines.insert(1, mark)
+                led.write_text('\n'.join(lines), encoding='utf-8')
+                # `--offline` for the one that would otherwise reach the network; harmless elsewhere,
+                # since an unknown flag is refused and the assertion below then names the tool.
+                args = [sys.executable, str(tool), '--accept']
+                if tool.name == 'auditcheck.py':
+                    args.insert(2, '--offline')
+                r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
+                after = led.read_text(encoding='utf-8')
+            finally:
+                led.write_text(keep, encoding='utf-8')
+            self.assertIn(mark, after,
+                          f'{led.name}: {tool.name} --accept deleted a line a person wrote, without '
+                          f'saying so. The file asks to be explained and then throws the explanation '
+                          f'away.\n{r.stdout[-400:]}{r.stderr[-400:]}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
