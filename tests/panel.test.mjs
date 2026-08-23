@@ -11199,3 +11199,94 @@ test('crm: diagram defaults saved in Settings are applied by either graph', asyn
   assert.equal(applies('schema'), true, 'a schema diagram discards the saved defaults');
   assert.equal(applies('calls'), true, 'a wiring diagram discards the saved defaults');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A dot that refreshes an area does not paint over what the pull said.
+//
+// `refreshSchedules` wrote «N schedules.» in green after `pullSchedules`, unconditionally - and that
+// pull never throws: a partial list from Zoho, a role that refuses, no Zoho tab, an environment
+// mismatch and a folder permission denied are early returns, each setting its own line and coming
+// back to be painted over. The count was the length of the list *already in memory*, since the new
+// one is installed only on success, so a failure read as «refreshed, 12 schedules». And `setStatus`
+// calls `showEmergency(false)`, so the green line also closed the «Report this problem» banner the
+// failure had just raised.
+//
+// Its three siblings - Connections, Actions, and a module resync - let the pull own the message.
+// Derived from the file rather than named: any dot handler that awaits a `pull*` and then sets a
+// status is doing this, and the limit is stated - it reads the handler's own body, so a message set
+// by something the handler calls is invisible here.
+test('crm: an area dot lets its pull say what happened', () => {
+  const src = blankNonCode(read('apps/crm/automation.js'))
+    + blankNonCode(read('apps/crm/connections.js'))
+    + blankNonCode(read('apps/crm/modules.js'));
+  const bad = [];
+  let handlers = 0;
+  for (const m of src.matchAll(/^async function (refresh\w+|resync\w+)\([^\n]*\{/gm)) {
+    const body = src.slice(m.index, src.indexOf('\n}', m.index));
+    if (!/await pull\w+\(|await sync\w+\(/.test(body)) continue;
+    handlers++;
+    // What comes after the pull, in this handler: **any** status set there cannot know whether the
+    // pull worked, because the pull's failure paths return rather than throw. Not «any green one» -
+    // the first version of this looked for `'ok'` and could never match, because it reads the text
+    // with string literals blanked and `'ok'` is one. A check that cannot see its own subject is the
+    // thing this file is full of notes about; it went green on the plant, which is how it was found.
+    const after = body.slice(body.search(/await (pull|sync)\w+\(/));
+    if (/setStatus\(/.test(after)) bad.push(m[1]);
+  }
+  assert.ok(handlers >= 3, `only ${handlers} area dot(s) found - the derivation broke`);
+  assert.deepEqual(bad, [],
+    `these paint a green line over whatever their pull just said, including a refusal: ${bad.join(', ')}`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// The report says what its «no caller» was measured over.
+//
+// The call graph is built from the `.dg` files on disk, so a function that never downloaded is not
+// a node and anything it alone called comes out under «no caller». `loadGraph` computes
+// `counts.notInMirror` precisely for this. Three consumers state it - the health view, the
+// assistant, the diagram window - and the HTML report did not, though its coverage block is a fixed
+// string sitting directly above the orphan list, which is where somebody decides a function is safe
+// to delete. It is also the one surface written for a reader who cannot go back and ask the panel.
+test('crm: the exported report states how much of the org its graph covers', () => {
+  const globals = {
+    SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
+    envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k,
+    actStale: () => false, actKept: () => false, actThin: () => false,
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    MSG: { hRankedOver: () => '', hOrphan: 'Orphan candidates', hUnresolved: 'u', hAmbiguous: 'a',
+           hBroken: 'b', hMissingRefs: 'm', hBiggest: 'Biggest', hChattiest: 'Chattiest', hBiggestDesc: 'd' },
+    // The escapers the builder reaches for, stubbed to the identity: what is asserted below is the
+    // sentence, and `htmlcheck` is what holds the escaping.
+    escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+    esc: (x) => String(x == null ? '' : x), fnAnchor: (x) => `fn-${x}`, modAnchor: (x) => `mod-${x}`,
+    wfAnchor: (x) => `wf-${x}`, schAnchor: (x) => `sch-${x}`, connAnchor: (x) => `conn-${x}`,
+    hl: (x) => String(x || ''), first: (x) => String(x || ''), params: () => '',
+    EXPORT_CSS: '', sanitize: (x) => String(x || ''), KOFI_URL: '', SPONSOR_URL: '',
+  };
+  const build = (counts) => {
+    const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+    const node = { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha',
+                   calls: [], called_by: [], dead_suspect: true };
+    return buildExportHtml([{ api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', node }],
+                           [], { nodes: { 'ns.alpha': node }, counts }, {}, [], [], [],
+                           { at: null, usage: null, failures: [] }, [], new Map(),
+                           { functions: true, health: true });
+  };
+
+  const short = build({ nodes: 1, inOrg: 6, notInMirror: 5 });
+  assert.match(short, /5 could not be downloaded/,
+    'the report lists orphan candidates without saying five of the org never reached the mirror');
+  assert.match(short, /Orphan candidates/, 'the health chapter is not there at all - this proves nothing');
+
+  const unknown = build({ nodes: 1, inOrg: null, notInMirror: null });
+  assert.match(unknown, /could not be established/,
+    'an unmeasurable share of the org reads as a complete one');
+
+  // And the other half: with the whole org in the mirror it says nothing, because there is nothing
+  // to say and a caveat on every report is a caveat nobody reads.
+  const whole = build({ nodes: 6, inOrg: 6, notInMirror: 0 });
+  assert.doesNotMatch(whole, /could not be downloaded|could not be established/,
+    'a complete mirror is hedged about anyway');
+});

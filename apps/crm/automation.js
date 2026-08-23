@@ -70,9 +70,17 @@ function renderSchedules() {
 async function refreshSchedules() {
   return runPullAction(async () => {
     if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    setStatus('Refreshing schedules…', 'busy');
+    setStatus('Refreshing schedules\u2026', 'busy');
+    // The pull owns the message, like its three siblings. This wrote «N schedules.» in green
+    // afterwards, unconditionally - and `pullSchedules` never throws: a partial list from Zoho, a
+    // role that refuses, no Zoho tab, an environment mismatch, a folder permission denied are six
+    // early returns, each of which sets its own line and comes back here to be painted over. The
+    // count was the length of the list *already in memory*, since the new one is only installed on
+    // success, so it read as «refreshed, 12 schedules» over a refresh that did not happen.
+    //
+    // And `setStatus` calls `showEmergency(false)`, so the green line also closed the «Report this
+    // problem» banner that the failure had just raised.
     await pullSchedules();
-    setStatus(`${scheduleData.length} schedules.`, 'ok');
   });
 }
 async function openSchedule(e) {

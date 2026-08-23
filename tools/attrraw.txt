@@ -8,7 +8,7 @@
 218d6dfd58005ebf  apps/analytics/sidepanel.js:2816: class="${m.role}" is not attribute-escaped
 3bf63fee64be6cea  apps/analytics/sidepanel.js:3035: href="${x.id}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:775: class="${m.role}" is not attribute-escaped
-2780b78f9b3eac45  apps/crm/automation.js:220: class="${stCls}" is not attribute-escaped
+2780b78f9b3eac45  apps/crm/automation.js:228: class="${stCls}" is not attribute-escaped
 a1753a7e13b0ab15  apps/crm/export.js:110: href="${fnAnchor(api)}" is not attribute-escaped
 88bb09f1b1fe606a  apps/crm/export.js:145: href="${wfAnchor(w.id)}" is not attribute-escaped
 7fcb4cad2f6275fe  apps/crm/export.js:146: href="${schAnchor(sc.id)}" is not attribute-escaped
@@ -22,9 +22,9 @@ d61ee0b22eedce02  apps/crm/export.js:152: href="${connAnchor(c.name)}" is not at
 7fcb4cad2f6275fe  apps/crm/export.js:313: href="${schAnchor(sc.id)}" is not attribute-escaped
 7817998a1c0a8201  apps/crm/export.js:319: href="${fnAnchor(n.api_name)}" is not attribute-escaped
 14a72bbea2ea53b6  apps/crm/export.js:333: class="${count ? (bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
-43eae51bbdfcc8ce  apps/crm/export.js:339: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
-bef76920dac33787  apps/crm/export.js:350: href="${fnAnchor(f.api_name)}" is not attribute-escaped
-d4a7415c6238ee04  apps/crm/export.js:360: href="${modAnchor(m.api_name)}" is not attribute-escaped
+43eae51bbdfcc8ce  apps/crm/export.js:349: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
+bef76920dac33787  apps/crm/export.js:360: href="${fnAnchor(f.api_name)}" is not attribute-escaped
+d4a7415c6238ee04  apps/crm/export.js:370: href="${modAnchor(m.api_name)}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:399: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:407: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 5859e8f4ffb251d8  apps/crm/graphview.js:1770: class="${lk}" is not attribute-escaped

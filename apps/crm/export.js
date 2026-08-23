@@ -340,7 +340,17 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   mods.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (t.module && (t.module.api_name || t.module)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!hModSet.has(t)) hFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const hSec = (title, count, desc, rows, bad) => `<div class="hxsec"><h3>${esc(title)} <span class="hxn ${count ? (bad ? 'bad' : 'warn') : 'ok'}">${count}</span></h3>${desc ? `<p class="hxd">${desc}</p>` : ''}${count ? rows : '<p class="hxnone">None</p>'}</div>`;
   const healthHtml =
-    `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
+    // What the panel, the assistant and the diagram window all say and this did not: the graph is
+    // built from the `.dg` files on disk, so a function that never downloaded is not a node, and
+    // anything it alone called comes out under «no caller». Three of four consumers stated it; the
+    // report - the document written for somebody who cannot go back and ask the panel, and whose
+    // orphan list is where a reader decides a function is safe to delete - did not.
+    (g && g.counts && g.counts.notInMirror === null
+      ? `<div class="hxcov"><b>Read from your mirror.</b> How many of your functions are in it could not be established, so treat \u00abno caller\u00bb as covering only what is here.</div>`
+      : g && g.counts && g.counts.notInMirror > 0
+      ? `<div class="hxcov"><b>Read from your mirror:</b> ${esc(g.counts.nodes)} of ${esc(g.counts.inOrg)} functions. ${esc(g.counts.notInMirror)} could not be downloaded, and a function called only from one of those is counted here as having no caller.</div>`
+      : '')
+    + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
     + hSec(MSG.hOrphan, hOrph.length, 'No caller in code, not REST, no associated_place.', hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
     + hSec(MSG.hUnresolved, hUnres.length, 'Calls a function that does not resolve in this workspace.', hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
     + hSec(MSG.hAmbiguous, hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))

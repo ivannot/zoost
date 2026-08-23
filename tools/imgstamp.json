@@ -37,79 +37,79 @@
   },
   "crm-actions": {
     "app": "crm",
-    "from": "95cf9e45e8c130b7"
+    "from": "d1ee910c85e98bcb"
   },
   "crm-ai": {
     "app": "crm",
-    "from": "41380a3f69dbdec7"
+    "from": "126a0fe5963010f9"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "9630988ac73bfa00"
+    "from": "5ff44b33a8214a3e"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "0552b524781727fd"
+    "from": "746628b773cb833c"
   },
   "crm-er": {
     "app": "crm",
-    "from": "7dd572752795d86e"
+    "from": "3547f57eb917388c"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "fb6c91a74301e152"
+    "from": "8614a66a1653e6ae"
   },
   "crm-export": {
     "app": "crm",
-    "from": "9846b0ec53e5b7d6"
+    "from": "074301026db28f62"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "97ca68be3847dd3d"
+    "from": "e22a3542f97dcdfa"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "4313be5504c5b4f5"
+    "from": "31f16f275dd53f21"
   },
   "crm-health": {
     "app": "crm",
-    "from": "a0f6612589474b16"
+    "from": "7da8cddeb7432c0a"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "59e1dd2524edc76b"
+    "from": "5e4f25eda5b88828"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "5873f24c40305821"
+    "from": "f00e2f8c75136e08"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "ccf14c15c046370d"
+    "from": "fb2122eaba3db601"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "3c9b5980f0386819"
+    "from": "5e57912387c369b2"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "4012076bbb4f3c81"
+    "from": "54485f57c7844690"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "a4f7ae264a6d69db"
+    "from": "fb761556353927e6"
   },
   "crm-search": {
     "app": "crm",
-    "from": "bcfb75a7b760da86"
+    "from": "e94d83bc46978c3b"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "e25501edb03a0040"
+    "from": "58faa402da4746bb"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "2d7abc9498ca5c15"
+    "from": "79907e5ccd3307cc"
   },
   "og": {
     "from": "546a51d336920dde"
