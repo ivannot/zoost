@@ -8326,6 +8326,10 @@ test('analytics: every declared tool runs on the minimum input its schema declar
     assert.ok(typeof out === 'string' && out.length, `${t.name} answered nothing`);
     assert.ok(!/View not found: undefined/.test(out),
               `${t.name} resolves a view it was never given - the tool is unreachable`);
+    // The plainer half, added when the CRM twin of this test was written: a renamed or removed
+    // dispatch falls through to «Unknown tool», which is a non-empty string and passed the two
+    // assertions above. The shape `search_sql` had, one product over.
+    assert.ok(!/^Unknown tool/.test(out), `${t.name} is declared and never dispatched`);
   }
 
   // "Returned a string" is not enough: the first registry-derived version of this test accepted
@@ -10083,4 +10087,86 @@ test('a printed diagram is not named after placeholders', () => {
     assert.match(fn[0], /filter\(Boolean\)|\?\s*'-'/,
       `id=${app}: it no longer drops the parts it does not know`);
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Every tool the CRM assistant declares actually runs.
+//
+// The Analytics release notes say this in as many words: «`search_sql` and `search_columns` had
+// never run once: asked anything, they answered "View not found". Both work now, and **every
+// declared tool is exercised by a test so this cannot happen silently again.**» The test that makes
+// that true was written for Analytics and never carried across: measured on the CRM, **nine of its
+// eleven tools were exercised by nothing**, and the two that were are named in passing by other
+// cases rather than run.
+//
+// So a tool of the CRM's could be as dead as `search_sql` was and every checker would report zero -
+// which is what this cell is: a surface no check reads. Registry-derived like its twin, so a tool
+// added tomorrow is covered without anyone remembering.
+test('crm: every declared tool runs on the minimum input its schema declares', async () => {
+  const NODES = {
+    'standalone.log': { id: '9000', name: 'log', namespace: 'standalone', api_name: 'log',
+      display_name: 'Log', file: 'functions/standalone/log.dg', calls: [], called_by: [],
+      unresolved: [], ambiguous: [], associated_place: [], connections: [], modules: [],
+      stats: { lines: 3, codeLines: 2, chars: 40, apiCalls: 1, invokeurl: 1, crm: 0, zoho: 0, sendmail: 0 } },
+    'standalone.caller': { id: '9001', name: 'caller', namespace: 'standalone', api_name: 'caller',
+      display_name: 'Caller', file: 'functions/standalone/caller.dg', calls: ['standalone.log'],
+      called_by: [], unresolved: [], ambiguous: [], associated_place: [], connections: [],
+      modules: [], stats: null },
+  };
+  NODES['standalone.log'].called_by = ['standalone.caller'];
+
+  const ctx = {
+    console, String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error, isNaN,
+    ensureGraph: async () => ({ nodes: NODES, counts: { nodes: 2, edges: 1, dead_suspects: 1, unresolved: 0, ambiguous: 0, inOrg: 3, notInMirror: 1 } }),
+    beginWorkspaceOp: () => ({ current: () => true, read: async () => { throw new Error('no file'); } }),
+    loadModuleFiles: async () => [{ api_name: 'Contacts', module_name: 'Contacts', fields: [] }],
+    aiLoadConnections: async () => [{ name: 'conn1', status: 'active', uses: [] }],
+    aiLoadActions: async () => ({ list: [{ id: 'a1', name: 'Notify', kind: 'notification', module: 'Contacts', rules: [] }], users: new Map(), addresses: false }),
+    actionKindLabel: () => 'notification', actKept: () => true, actStale: () => false, actThin: () => false,
+    isFnAction: () => false, wfScheduled: () => false,
+    webhookForModel: (u) => String(u || ''),
+    workflowData: [{ id: 'w1', name: 'Rule', module: 'Contacts', active: true, actions: [] }],
+    wfIndex: new Map([['w1', { id: 'w1', name: 'Rule' }]]),
+    failuresIndex: async () => ({ all: [], capped: false, at: null }),
+    MSG: { noFn: 'No such function: ', noMod: 'No such module: ', noConn: 'No such connection: ',
+           noWf: 'No such workflow: ' },
+  };
+  vm.createContext(ctx);
+  const piece = (n) => { try { return sliceFn('apps/crm/ai.js', n); } catch { return sliceConst('apps/crm/ai.js', n); } };
+  vm.runInContext([
+    'const aiSeedOmitted = []; let aiSeedSize = 0;',
+    ...['aiCap', 'aiModuleText', 'fnSource', 'aiExecTool'].map(piece),
+  ].join('\n'), ctx);
+
+  const tctx = {}; vm.createContext(tctx);
+  vm.runInContext(sliceConst('apps/crm/ai.js', 'AI_TOOLS') + '; this.__t = AI_TOOLS;', tctx);
+  const tools = tctx.__t;
+  assert.ok(tools.length >= 8, `only ${tools.length} tools parsed from the registry`);
+
+  const failures = [];
+  for (const t of tools) {
+    const props = (t.input_schema && t.input_schema.properties) || {};
+    const input = {};
+    if (props.name) input.name = 'standalone.log';
+    if (props.query) input.query = 'invokeurl';
+    if (props.filter) input.filter = '';
+    let out;
+    try { out = await vm.runInContext('aiExecTool', ctx)(t.name, input); }
+    catch (e) { failures.push(`${t.name} threw: ${e.message}`); continue; }
+    if (typeof out !== 'string' || !out.length) { failures.push(`${t.name} answered nothing`); continue; }
+    // «It answered something» is not the criterion, and the first version of this used it: a
+    // renamed dispatch fell through to `return 'Unknown tool: ' + name`, which is a non-empty
+    // string, and the check passed on the very shape it exists for. The battery went red only
+    // because `twincheck` saw one product's copy move - an accident of editing one side, not a
+    // check that understands the defect.
+    if (/^Unknown tool/.test(out)) { failures.push(`${t.name} is declared and never dispatched`); continue; }
+    // And it must not deny input it was given: `search_sql` reached no handler and answered «View
+    // not found» about a view that existed. «It must name the input back» was tried and is wrong -
+    // `who_calls` answers with the *callers*, and `get_callees` with «(no callees)», both correct.
+    //
+    // The limit, stated rather than left to be found: a handler that is reached and answers the
+    // wrong thing is not caught here. What is caught is a tool that is declared and never runs,
+    // which is the one that shipped.
+  }
+  assert.deepEqual(failures, [], failures.join('; '));
 });
