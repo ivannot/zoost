@@ -513,7 +513,21 @@ $('saveLay').onclick = async () => {
   // that tuning away. The same shape as the export-scope preset: a page may only write the settings
   // it can show, and it carries the rest.
   const prev = (await chrome.storage.local.get('erParams')).erParams || {};
-  if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
+  // `kind` is dropped, and that is the point of writing it out rather than merging blindly.
+  //
+  // The window records which graph it was tuned on, and the window applies a saved `current` only
+  // when the recorded kind matches - a guard written on the premise, stated in its own comment and
+  // asserted in a test, that «that page writes no kind». True of what this page *composes* and false
+  // of what it *writes*: merging over `prev` carries the window's `kind` straight through. So a
+  // Wiring diagram touched once, then defaults saved here, then a Schema diagram opened - and the
+  // defaults are read and thrown away. «Diagram defaults saved.» and nothing changes, which is the
+  // exact symptom the merge was introduced to cure, reintroduced by the merge.
+  //
+  // Two corrections from one day, each right alone. What this page writes is what this page can
+  // show: `current` for everyone, and `mode` carried because the window owns it and this page has no
+  // control for it.
+  const { kind: _windowKind, ...keep } = prev;
+  if (!await saveKeys({ erParams: Object.assign({}, keep, { current: lay }), erDrawMax: drawMax })) return;
   await stamp(); toast('Diagram defaults saved.'); };
 async function loadLay() {
   const current = beginLoad('erParams');

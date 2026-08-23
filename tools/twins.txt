@@ -93,7 +93,7 @@ erPaint	be54da6d2d7f	be54da6d2d7f	identical
 erParamsToUI	4fcd92a95216	4fcd92a95216	identical
 erPick	1abe2d6a2c51	1abe2d6a2c51	identical
 erPickCard	6e172af64b88	02e5c971b706	divergent
-erPinnedNow	a1aa575af755	a1aa575af755	identical
+erPinnedNow	25cc3096d8fd	25cc3096d8fd	identical
 erReach	f5456fd28a60	f5456fd28a60	identical
 erRender	ca365eb7051e	cd799080aed2	divergent
 erResize	772c4f787802	772c4f787802	identical

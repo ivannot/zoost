@@ -11152,3 +11152,50 @@ test('crm: a tab with no Zoho CRM frame is not injected into', async () => {
   assert.deepEqual(blindOne.injected, [],
     'the frame list failed and it injected into a Zoho One document anyway');
 });
+
+// ---------------------------------------------------------------------------------------------
+// Diagram defaults saved in Settings apply to both graphs.
+//
+// The window records which graph it was tuned on, and applies a saved `current` only when the
+// recorded kind matches - a guard written on the premise, stated in its comment and asserted by a
+// regex in another test, that «that page writes no kind». True of what the page *composes* and false
+// of what it *writes*: the merge that stops the page erasing the window's `mode` carries the
+// window's `kind` through with it.
+//
+// So: open a Wiring diagram, touch one slider, save defaults in Settings, open a Schema diagram -
+// and the defaults are read and discarded. «Diagram defaults saved.» and nothing changes, which is
+// the exact symptom the merge was introduced to cure. Two corrections from one day, each right
+// alone, composing into the defect either one was written to prevent - and the test that guards it
+// asserts the expression rather than the behaviour, so it passes on both.
+test('crm: diagram defaults saved in Settings are applied by either graph', async () => {
+  // What the settings page writes, run rather than read.
+  let stored = { erParams: { current: { margin: 36 }, mode: 'modules', kind: 'calls' } };
+  const ctx = {
+    Object, Promise, Number, Math, Array, String, JSON, console,
+    lay: { margin: 60, spread: 42, gap: 8, fs: 10, sub: true }, drawMax: 800,
+    saveKeys: async (o) => { Object.assign(stored, JSON.parse(JSON.stringify(o))); return true; },
+    stamp: async () => {}, toast: () => {},
+    chrome: { storage: { local: { get: async () => JSON.parse(JSON.stringify(stored)) } } },
+  };
+  vm.createContext(ctx);
+  const src = read('apps/crm/options.js');
+  const at = src.indexOf("$('saveLay').onclick");
+  const body = src.slice(src.indexOf('{', at), src.indexOf('\n  await stamp();', at));
+  vm.runInContext(`(async () => ${body} })()`, ctx);
+  await new Promise((r) => setTimeout(r, 5));
+
+  assert.equal(stored.erParams.current.margin, 60, 'the page did not save what it shows');
+  assert.equal(stored.erParams.mode, 'modules',
+    'the page erased the emphasis, which belongs to the window and which it cannot show');
+  assert.equal('kind' in stored.erParams, false,
+    'the settings page wrote which graph these defaults belong to, so the other graph reads them ' +
+    'and throws them away - «Diagram defaults saved.» and nothing changes');
+
+  // And the window's own guard, on what was just written: both kinds must apply it.
+  const applies = (kind) => {
+    const ep = stored.erParams;
+    return !!(ep && ep.current && (ep.kind === undefined || ep.kind === kind));
+  };
+  assert.equal(applies('schema'), true, 'a schema diagram discards the saved defaults');
+  assert.equal(applies('calls'), true, 'a wiring diagram discards the saved defaults');
+});

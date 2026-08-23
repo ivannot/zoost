@@ -1310,3 +1310,58 @@ for (const app of ['crm', 'analytics']) {
       `nothing to press: ${missing.join(', ')}`);
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A box the reader placed is where the reader placed it, after the next relayout.
+//
+// `erLayout` restores every held position and collects those ids into a `Set`, then hands that Set
+// to `erPinnedNow`, which did `Object.keys` on it. `Object.keys` of a Set is `[]`, so nothing was
+// ever pinned: the collision pass pushed apart every box the reader had moved, at the next chip
+// click, slider move, `Restore built-in defaults`, change of depth, or load of a saved arrangement.
+// The window said «N kept where you put them» while it moved them, because that count is taken on a
+// different line and stayed true-looking.
+//
+// The three pinning tests above pass and always did: they call `collideBoxes` directly with a real
+// Set, which is the shape the shipped wiring never delivered. So the unit was right, the wiring was
+// not, and nothing ran the two together. This does.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a relayout leaves the boxes the reader placed where they are`, () => {
+    const ids = ['a', 'b'];
+    const state = {
+      erIds: ids.slice(), nodesA: ids.slice(), edgesA: [['a', 'b']],
+      N: Object.fromEntries(ids.map((i) => [i, { id: i }])),
+      // Two boxes closer than the margin: without a pin the collision pass has work to do.
+      erPos: { a: { x: 100, y: 100, w: 80, h: 40 }, b: { x: 120, y: 110, w: 80, h: 40 } },
+      erHeld: { a: { x: 100, y: 100 }, b: { x: 120, y: 110 } },
+      erArranged: true, erLastKept: 0, erPinOnly: null,
+      erP: { margin: 36 }, erCut: new Map(),
+    };
+    const ctx = vm.createContext({
+      ...state, Set, Map, Object, Math, Array, Infinity, isFinite, console,
+      erFitToArcs: () => {}, edgesAmong: () => [], erSideCounts: () => ({}), erSideOf: () => 0,
+      erCandidate: () => true, erFieldsFor: () => [1], linkedUnderFilter: () => new Set(ids),
+      DATA: { kind: 'schema' }, erEmph: 'modules', curFocus: null, erConcentric: () => false,
+    });
+    vm.runInContext(['erPinnedNow', 'collideBoxes'].map((f) => gfn(app, f)).join('\n\n'), ctx);
+    vm.runInContext('collideBoxes(erIds, erP.margin, erPinnedNow(new Set(erIds)))', ctx);
+
+    assert.deepEqual(ctx.erPos.a, { x: 100, y: 100, w: 80, h: 40 },
+      `id=${app}: a box the reader placed was moved by the collision pass - the arrangement is undone ` +
+      `by the next filter click, while the window says it was kept`);
+    assert.deepEqual(ctx.erPos.b, { x: 120, y: 110, w: 80, h: 40 },
+      `id=${app}: the second placed box was moved`);
+  });
+
+  test(`${app}: with nothing pinned the collision pass still does its work`, () => {
+    // The other half: a pin that pins everything is not tidiness, it is a layout that never runs.
+    const ids = ['a', 'b'];
+    const ctx = vm.createContext({
+      erIds: ids.slice(), erPos: { a: { x: 100, y: 100, w: 80, h: 40 }, b: { x: 120, y: 110, w: 80, h: 40 } },
+      erPinOnly: null, Set, Map, Object, Math, Array, console,
+    });
+    vm.runInContext(['erPinnedNow', 'collideBoxes'].map((f) => gfn(app, f)).join('\n\n'), ctx);
+    vm.runInContext('collideBoxes(erIds, 36, erPinnedNow(new Set()))', ctx);
+    const moved = ctx.erPos.a.x !== 100 || ctx.erPos.a.y !== 100 || ctx.erPos.b.x !== 120 || ctx.erPos.b.y !== 110;
+    assert.ok(moved, `id=${app}: two overlapping boxes were left overlapping with nothing pinned`);
+  });
+}

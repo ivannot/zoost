@@ -700,8 +700,27 @@ function erCovers(id) {
 
 function erConcentric() { return !!(curFocus && egoSet); }
 
-function erPinnedNow(held) {
-  return new Set(erPinOnly ? Object.keys(held).filter((id) => erPinOnly.has(id)) : Object.keys(held));
+/** The boxes the collision pass may not move: what the reader put where it is.
+ *
+ * **It takes the ids, and it was being handed a `Set` while doing `Object.keys` on it.** `Object.keys`
+ * of a Set is `[]`, so this answered «nothing is pinned» on every call, on both products, and the
+ * collision pass pushed apart every box the reader had placed - at the next chip click, the next
+ * slider move, `Restore built-in defaults`, a change of depth, or the loading of a saved arrangement.
+ * The window said «N kept where you put them» while it moved them, because that count is taken on a
+ * different line.
+ *
+ * `erPinOnly` was dead with it: written when an arrangement is loaded, cleared when a box is touched
+ * by hand, and read **only here**, through a filter that never had anything to filter. The whole of
+ * «on loading a saved arrangement only the boxes the reader actually moved are pinned» - a decision
+ * `docs/diagrams.md` describes - had no effect at all.
+ *
+ * Ids in, ids out, and the parameter says so. Written to take `erHeld`, an object of positions, and
+ * called with a Set of the ids just restored from it: two shapes, one name, and the one operation
+ * that is silent about the difference.
+ */
+function erPinnedNow(ids) {
+  const all = [...ids];
+  return new Set(erPinOnly ? all.filter((id) => erPinOnly.has(id)) : all);
 }
 
 function erArrWorkspace() {
