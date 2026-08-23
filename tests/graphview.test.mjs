@@ -1258,3 +1258,55 @@ for (const app of ['crm', 'analytics']) {
     assert.deepEqual([...r.hidden()], ['b'], 'the fold grew, or shrank, when the drawing was laid out again');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// What printing changes, printing puts back.
+//
+// The diagram window changes three pieces of its own state to print: a stylesheet that sizes the
+// page, the document title (which is the PDF's filename), and a flag that makes the arrows reach
+// the boxes. Each is raised in a `beforeprint` handler and lowered in an `afterprint` one - a pair
+// split across two events, which is a shape the flag check in `tests/panel.test.mjs` cannot see at
+// all: it looks for a raise and a release inside one function.
+//
+// Left raised, the window stays in print state with nothing to press. Planted by dropping
+// `erPrintFull = false`: something did go red - «the marks are two per arc» - which is the right
+// colour for the wrong reason and sends the reader to the arrows rather than to the printing.
+//
+// **The limit, stated:** it reads assignments to *module* state in those handlers, so a change made
+// through a function call is invisible here. And the declaration pattern allows a trailing comment -
+// without that, `erPrintFull` itself was invisible, along with thirteen others in this file.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: everything printing changes is put back afterwards`, () => {
+    const src = read(`apps/${app}/graphview.js`);
+    const globals = new Set();
+    for (const m of src.matchAll(/^(?:let|var)\s+(.+?);[ \t]*(?:\/\/.*)?$/gm)) {
+      for (const part of m[1].split(',')) {
+        const n = part.trim().split('=')[0].trim();
+        if (/^[A-Za-z_$][\w$]*$/.test(n)) globals.add(n);
+      }
+    }
+    assert.ok(globals.size > 30, `only ${globals.size} module globals read - the derivation broke`);
+
+    const bodies = (ev) => {
+      const out = [];
+      for (const m of src.matchAll(new RegExp(`addEventListener\\('${ev}',`, 'g'))) {
+        let i = src.indexOf('{', m.index), depth = 0;
+        for (let j = i; j < src.length; j++) {
+          if (src[j] === '{') depth++;
+          else if (src[j] === '}' && !--depth) { out.push(src.slice(i, j)); break; }
+        }
+      }
+      return out;
+    };
+    const touched = (ev) => new Set(bodies(ev)
+      .flatMap((b) => [...b.matchAll(/(?<![\w$.])(\w+)\s*=[^=]/g)].map((m) => m[1]))
+      .filter((n) => globals.has(n)));
+
+    const raised = touched('beforeprint');
+    assert.ok(raised.size >= 2, `only ${raised.size} piece(s) of state changed to print - the derivation broke`);
+    const missing = [...raised].filter((n) => !touched('afterprint').has(n));
+    assert.deepEqual(missing, [],
+      `printing changes these and never puts them back, so the window stays in print state with ` +
+      `nothing to press: ${missing.join(', ')}`);
+  });
+}

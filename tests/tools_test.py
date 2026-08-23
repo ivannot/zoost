@@ -5065,12 +5065,29 @@ class TheGridSaysHowFarAlongItIs(unittest.TestCase):
         return subprocess.run([sys.executable, str(ROOT / 'tools' / 'matrix.py')],
                               cwd=ROOT, capture_output=True, text=True).stdout
 
-    def test_it_hands_over_the_next_subject(self):
+    def open_cells(self):
         out = self.report()
+        m = re.search(r'\*\*(\d+) left\.\*\*', out)
+        self.assertIsNotNone(m, f'the report no longer says how much is left:\n{out}')
+        return int(m.group(1)), out
+
+    def test_it_hands_over_the_next_subject(self):
         # **Both forms.** The counter has been dropped twice: once moved into the body as a bare
         # remainder, once left off entirely on a commit that recorded a cell as examined rather than
         # closed. Each time `git log --oneline` stopped showing progress. A tool that hands over only
         # the closing form invites the second of those again.
+        #
+        # And with nothing left it must offer **neither**, which is the case that arrived the day the
+        # grid was finished: `len(CLOSED) + 1` was «Cell 88 of 87», a subject that is read and copied,
+        # carrying the one number a reader of the log uses to tell progress from drift. It nearly went
+        # into the last commit of the grid.
+        left, out = self.open_cells()
+        if not left:
+            self.assertNotRegex(out, r'Cell \d+ of \d+',
+                                f'a subject is offered for a cell that does not exist:\n{out}')
+            self.assertIn('there is no next subject', out,
+                          f'the report goes quiet instead of saying the grid is finished:\n{out}')
+            return
         self.assertRegex(out, r'Cell \d+ of \d+, examined:',
                          f'no subject is offered for a commit that examines a cell:\n{out}')
         m = re.search(r'Cell (\d+) of (\d+): <what broke>', out)
@@ -5082,11 +5099,16 @@ class TheGridSaysHowFarAlongItIs(unittest.TestCase):
     def test_the_numbers_are_derived_from_the_grid(self):
         # Not a second opinion: the same two values the report's own headline states. A subject that
         # could disagree with the grid it comes from would be worse than none.
-        out = self.report()
+        left, out = self.open_cells()
         head = re.search(r'(\d+) real\.', out)
         closed = re.search(r'(\d+) closed by a plant', out)
+        self.assertTrue(head and closed, out)
+        self.assertEqual(int(head.group(1)) - int(closed.group(1)), left,
+                         'the headline does not add up: closed plus left is not the grid')
+        if not left:
+            return
         nxt = re.search(r'Cell (\d+) of (\d+):', out)
-        self.assertTrue(head and closed and nxt, out)
+        self.assertTrue(nxt, out)
         self.assertEqual(int(nxt.group(2)), int(head.group(1)),
                          'the subject names a different total from the grid')
         self.assertEqual(int(nxt.group(1)), int(closed.group(1)) + 1,
@@ -5351,8 +5373,12 @@ class ExaminedIsNotClosed(unittest.TestCase):
         return mod
 
     def test_examined_cells_are_still_open(self):
+        # Empty is the finished state, not a broken one: every cell that was merely looked at has
+        # since been closed by a plant, which is what EXAMINED exists to make possible rather than to
+        # replace. It was asserted non-empty while the grid still had open cells, and that assertion
+        # went red the day the last one was promoted - the check outliving the state it was written
+        # in. What has to hold either way is the separation below.
         m = self.matrix()
-        self.assertTrue(m.EXAMINED, 'nothing is recorded as examined - the state is unused')
         for cell in m.EXAMINED:
             self.assertNotIn(cell, m.CLOSED,
                              f'{cell} is recorded both as examined and as closed - «somebody looked» '
@@ -5370,6 +5396,11 @@ class ExaminedIsNotClosed(unittest.TestCase):
             self.assertRegex(when, r'^\d{4}-\d{2}-\d{2}$', f'{cell}: no date on the examination')
 
     def test_the_open_list_hands_over_what_was_already_found(self):
+        # Only while there is something open to hand over. With none, the list is empty and saying
+        # «LOOKED AT» about nothing would be the assertion, not the report, being wrong.
+        m = self.matrix()
+        if not m.EXAMINED:
+            return
         out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'matrix.py'), '--open'],
                              cwd=ROOT, capture_output=True, text=True).stdout
         self.assertIn('LOOKED AT', out,
@@ -5472,7 +5503,11 @@ class ExportReadsNothingLate(unittest.TestCase):
         spec.loader.exec_module(ac)
         src = (ROOT / 'apps' / 'crm' / 'sidepanel.js').read_text(encoding='utf-8')
         names = set()
-        for m in re.finditer(r'^(?:let|var)\s+(.+?);\s*$', src, re.M):
+        # A trailing comment is part of the line, and `;\s*$` does not allow one. Measured when a
+        # later check needed the same list: `sidepanel.js` has **8** such declarations and
+        # `graphview.js` **14**, `erCut` and `erPrintFull` among them - names that were invisible to
+        # every derivation built on this pattern, including this one, on the day it was written.
+        for m in re.finditer(r'^(?:let|var)\s+(.+?);[ \t]*(?://.*)?$', src, re.M):
             for part in m.group(1).split(','):
                 n = part.strip().split('=')[0].strip()
                 if re.fullmatch(r'[A-Za-z_$][\w$]*', n):

@@ -82,9 +82,6 @@ NA = {
 # this file is built to refuse. What it saves is the re-derivation; what it must never do is stand
 # in for a plant.
 EXAMINED = {
-    ("owner", "diagrams"): ("every module-level `let` assigned 3+ times and reset once - curFocus, "
-                            "erTx, erTy, ids - is view state, not a flag anybody holds; the "
-                            "beforeprint/afterprint pair closes itself", "2026-08-23"),
 }
 
 # Closed: (class, surface) -> (what catches it, where the plant is recorded).
@@ -111,6 +108,7 @@ CLOSED = {
     ("claim", "diagrams"):    ("tools/auditcheck.py now reads the MSG tables - what the product says, not what its markup holds", "planted 2026-08-23"),
     ("owner", "crm-ai"):      ("tests/panel.test.mjs: a flag raised in a function is released whatever happens in it - every shipped script, either spelling", "planted 2026-08-23"),
     ("fastpath", "diagrams"): ("tests/graphview.test.mjs: a box folded away is still away after the drawing is laid out again", "planted 2026-08-23"),
+    ("owner", "diagrams"):    ("tests/graphview.test.mjs: everything printing changes is put back afterwards", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),
@@ -233,10 +231,19 @@ def main() -> int:
     #
     # A cell that is examined does not advance the numerator, and the subject says so rather than
     # borrowing the number of the cell that will be closed next.
-    print(f"\n  next commit subject, if it CLOSES a cell:")
-    print(f"    Cell {len(CLOSED) + 1} of {len(all_cells)}: <what broke>")
-    print(f"  next commit subject, if it only EXAMINES one:")
-    print(f"    Cell {len(CLOSED) + 1} of {len(all_cells)}, examined: <what was measured>")
+    #
+    # And when there is nothing left, it says so instead of offering «Cell 88 of 87». An out-of-range
+    # subject is not a rounding error: this line is *read and copied*, and the number in it is the one
+    # thing a reader of the log uses to tell progress from drift. It nearly went into the last commit
+    # of the grid.
+    if len(CLOSED) >= len(all_cells):
+        print(f"\n  every cell is closed by a plant that was seen to fail first.")
+        print(f"  there is no next subject. A new class or surface is what makes one.")
+    else:
+        print(f"\n  next commit subject, if it CLOSES a cell:")
+        print(f"    Cell {len(CLOSED) + 1} of {len(all_cells)}: <what broke>")
+        print(f"  next commit subject, if it only EXAMINES one:")
+        print(f"    Cell {len(CLOSED) + 1} of {len(all_cells)}, examined: <what was measured>")
     print()
     head = "class \\ surface"
     print(f"  {head:12s}" + "".join(f"{s[0][:9]:>11s}" for s in SURFACES))
