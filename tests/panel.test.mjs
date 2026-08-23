@@ -11825,3 +11825,120 @@ test('analytics: the export contents name the chapters in the order the document
   assert.deepEqual(contents, chapters,
     `the contents and the document disagree.\n    contents: ${contents.join(' | ')}\n    document: ${chapters.join(' | ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The export was tested with its escapers replaced by the identity, in every case that ran it.
+//
+// `buildExportHtml` is 78 `esc(...)` call sites over a document a reader opens from `file://` - no
+// content-security policy, an inline `<script>` of its own, and names that came out of somebody's
+// org. Every behaviour test of it hands the slice a globals bag with `escHtml`, `escA` and `esc` as
+// `(x) => String(x)`. So the whole of the escaping was switched off in exactly the place it was
+// being exercised, and no case could tell an escaped report from an unescaped one.
+//
+// Measured rather than argued: replacing `const esc = escHtml` with `const esc = String` in the
+// shipped file leaves **877 Node cases green**, both Python suites green and every checker at zero.
+// The only red is the twin ledger noticing that a function body moved.
+//
+// That is `fake` at its purest - a stub kinder than the thing it stands for - and the kindness is
+// invisible because it lives in the *fixture*, which nobody reads as code under test. `htmlcheck`
+// does not cover this ground and says so: its stated limit is that it reads attributes and not
+// element content, and its reason names the panel, with the export written out as not being under
+// it. So the static checker is right to be silent and the behaviour tests were the cover - with the
+// escapers taken out.
+//
+// This one runs the report with the **shipped** escapers, lifted from `sidepanel.js` where the page
+// defines them, against a workspace whose names are hostile. It asserts the properties rather than
+// the spelling: no tag the org's own text opened, no attribute broken out of, and - for Markdown -
+// no cell that can end its row and no fence that can end its block.
+//
+// **The limits, stated.** It exercises the CRM report with one hostile string in the places a name
+// reaches; a field this builder learns to print tomorrow is not covered by it, which is why the
+// count of call sites is asserted - a builder that stopped escaping wholesale is caught, a single
+// new unescaped interpolation is not. `hl()` (the Deluge highlighter) is the product's own and is
+// tested where it lives.
+test('crm: the reports escape what came out of the org, with the escapers the page ships', async () => {
+  const real = load([
+    sliceConst('apps/crm/sidepanel.js', 'escHtml'),
+    sliceConst('apps/crm/sidepanel.js', 'escA'),
+    sliceConst('apps/crm/sidepanel.js', 'sanitize'),
+    sliceFn('apps/crm/modules.js', '_pick'),
+  ], {});
+  assert.equal(real.escHtml('<b>&'), '&lt;b&gt;&amp;', 'escHtml was not lifted - the derivation broke');
+  assert.equal(real.escA('"\''), '&quot;&#39;', 'escA was not lifted - the derivation broke');
+  // `sanitize` is what the anchors are built through, so a stub of it is a second way to make the
+  // fixture kind - and the first version of this case did exactly that and reported a defect that
+  // was its own. It is the shipped one here, and the anchor helpers are the builder's own.
+  assert.equal(real.sanitize('a<b>"'), 'a_b__', 'sanitize was not lifted - the derivation broke');
+
+  // The count that says this is about the builder and not about one string.
+  const sites = (read('apps/crm/export.js').match(/\besc\(/g) || []).length;
+  assert.ok(sites >= 50, `only ${sites} escaped interpolation(s) in the export - the derivation broke`);
+
+  // A pipe is in here because Markdown's cell separator is the same class of defect as HTML's
+  // angle bracket, and a name carrying one silently adds a column to somebody's table.
+  const NASTY = '<script>alert(1)</script>"\'&|x';
+  const globals = {
+    SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
+    envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k, firedBy: () => [],
+    actProv: () => '', actWhen: () => '',
+    actStale: () => false, actKept: () => false, actThin: () => false,
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '',
+    // The shipped ones, which is the whole point of this case.
+    sanitize: real.sanitize, escHtml: real.escHtml, escA: real.escA, esc: real.escHtml,
+    _pick: real._pick,
+    hl: (x) => real.escHtml(x), first: (x) => real.escHtml(x), params: () => '',
+    FAIL_CAPPED: 'capped.',
+    MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
+           hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
+  };
+  const mods = [{ api_name: NASTY, display_name: NASTY, related_lists: [],
+                  fields: [{ api_name: NASTY, label: NASTY, data_type: 'text' },
+                           { api_name: 'plain', label: 'Plain', data_type: 'text' }] }];
+  const fails = { at: '2026-08-23T10:00:00Z', usage: { success: 1, failure: 1 }, runs: [],
+                  failures: [{ name: NASTY, count: 1, reason: NASTY }] };
+  const scope = {};
+  for (const k of ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules',
+                   'actions', 'addresses', 'connections', 'failures', 'health']) scope[k] = true;
+
+  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const html = buildExportHtml([], mods, { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
+  assert.ok(html.includes('&lt;script&gt;'),
+    'the hostile name never reached the report - the fixture is not exercising what it claims to');
+  // Everything after the page's own inline script is the document, and nothing in it may open a tag
+  // the org's text wrote. The builder's own `<script>` is the last thing on the page.
+  const doc = html.slice(0, html.lastIndexOf('<script>'));
+  assert.equal(doc.includes('<script'), false, 'a name out of the org opened a tag in the report');
+  // Exact rather than clever: the hostile string may appear in the document only in the form the
+  // escapers produce. A first attempt asserted that its *payload* was absent after stripping
+  // entities, which is not a property of anything - `&lt;script&gt;alert(1)&lt;/script&gt;` is
+  // correctly escaped and still contains `alert(1)`, so it reported a defect that was its own.
+  assert.equal(doc.split(NASTY).length - 1, 0,
+    'a name out of the org is in the report exactly as it was written');
+  assert.equal(doc.includes('&quot;') || doc.includes('&#39;'), true,
+    'no attribute in the report escaped a quote, so escA was not reached at all');
+
+  // `_mdCell` is the Markdown escaper and it is the shipped one, for the same reason as above:
+  // a hand-written copy of its rule in the fixture is a stub of the thing under test.
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown'),
+                                       sliceFn('apps/crm/export.js', '_mdCell')], globals);
+  const md = buildExportMarkdown({ fns: [], mods, g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [],
+                                   conns: [], fails, acts: [], actUsers: new Map() }, scope);
+  assert.ok(md.includes('alert(1)'), 'the hostile name never reached the Markdown report');
+  // Every row of a table has the columns its header declares. An unescaped pipe in a name adds one,
+  // and the row after it reads as being about a different thing entirely.
+  const width = (line) => line.replace(/\\\|/g, '').split('|').length;
+  let head = 0, rows = 0;
+  for (const line of md.split('\n')) {
+    if (!line.trimStart().startsWith('|')) { head = 0; continue; }
+    if (!head) { head = width(line); continue; }
+    if (/^\|[\s|:-]*\|$/.test(line.trim())) continue;     // the separator row
+    rows++;
+    assert.equal(width(line), head,
+      `a name out of the org changed a table's shape: ${head} column(s) in the header and ` +
+      `${width(line)} in «${line.slice(0, 70)}»`);
+  }
+  assert.ok(rows >= 2, `only ${rows} table row(s) read in the Markdown report - the derivation broke`);
+});
