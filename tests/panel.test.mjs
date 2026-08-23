@@ -12476,3 +12476,84 @@ test('crm: the model stream is assembled by index, across whatever chunks arrive
   await assert.rejects(() => refused({ apiKey: 'k', model: 'm' }, [], 's', [], () => {}),
     /429[\s\S]*slow down/, 'a refused request no longer carries the status and what was said');
 });
+
+// ---------------------------------------------------------------------------------------------
+// Every diagram this project has ever drawn was a graph with no cycle in it.
+//
+// The three graph fixtures - what `shots.py` renders every published diagram screenshot from, and
+// what `probe.py` drives the ER window with - come out of the sample generator. Measured: the call
+// graph is 144 nodes and 127 edges, and it is **acyclic**, with no self-call and no reference to a
+// node outside it. A Deluge org with two functions that call each other is ordinary; the stand-in
+// for one has never had a loop in it.
+//
+// What that hides is not cosmetic. `computeMaxDepth` walks outwards with `while (fr.length)` and no
+// other bound: what stops it is the visited set. Take that away and on a DAG it still terminates,
+// because the frontier empties by itself - so the fixture cannot tell the difference, the battery
+// stays green, and on a real org the diagram window loops for ever. Planted exactly that: green but
+// for the twin ledger noticing that a pair of identical bodies had both moved.
+//
+// `bfsEgo` was never driven at all - it appears in this file twice, both times as `bfsEgo() {}`,
+// a stub standing in for the thing under test in cases about something else.
+//
+// So: the two walks, on a graph that loops. Mutual recursion, a self-call, and a chain hanging off
+// it so depth still means something.
+//
+// **The limits, stated.** Termination is asserted by the case finishing. Planted, the depth walk
+// without its guard did not hang: it grew its frontier until node threw «Invalid array length», so
+// the message names the runtime rather than the defect. Left that way rather than instrumented from
+// a test - a red case pointing here is enough to find it, and the alternative is a test reaching
+// inside shipped code to count its own iterations. The ego walk's guard fails properly, with the
+// distance it got wrong. It drives the shared `graphlogic.js`, byte-identical across the two
+// products and held so by another case, so one run covers both.
+test('the diagram walks a graph that loops, and comes back', () => {
+  //   a <-> b   (mutual recursion)      c -> c (a self-call)      b -> c -> d -> e (a chain)
+  const N = {
+    a: { calls: ['b'], called_by: ['b'] },
+    b: { calls: ['a', 'c'], called_by: ['a'] },
+    c: { calls: ['c', 'd'], called_by: ['b', 'c'] },
+    d: { calls: ['e'], called_by: ['c'] },
+    e: { calls: [], called_by: ['d'] },
+  };
+  const ctx = {
+    N, Set, Object, Array, Math, console,
+    curFocus: 'a', egoDepth: 2, scopeAll: false,
+    egoLevel: null, egoSet: null, maxEgoDepth: 1,
+  };
+  vm.createContext(ctx);
+  vm.runInContext([sliceFn('apps/crm/graphlogic.js', 'bfsEgo'),
+                   sliceFn('apps/crm/graphlogic.js', 'computeMaxDepth')].join('\n'), ctx);
+
+  vm.runInContext('bfsEgo()', ctx);
+  assert.deepEqual([...ctx.egoSet].sort(), ['a', 'b', 'c'],
+    'the ego set at depth 2 around «a» is wrong on a graph with a cycle in it');
+  // Through JSON, for the reason the stream case records: an object built inside a vm context has
+  // that realm's prototype and `deepStrictEqual` refuses two structures that print identically.
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.egoLevel)), { a: 0, b: 1, c: 2 },
+    'a node reached round a cycle was given the wrong distance, so the depth chips lie');
+
+  // The whole reachable set, and the distance to the furthest of it. `e` is four steps from `a`
+  // going forwards; nothing here may count the loop as extra distance.
+  ctx.egoDepth = 99;
+  vm.runInContext('bfsEgo()', ctx);
+  assert.deepEqual([...ctx.egoSet].sort(), ['a', 'b', 'c', 'd', 'e'],
+    'the walk did not reach everything the focus is connected to');
+  vm.runInContext('computeMaxDepth()', ctx);
+  assert.equal(ctx.maxEgoDepth, 4,
+    `the furthest node came out at ${ctx.maxEgoDepth} steps - a cycle is being counted as distance`);
+
+  // A focus that is itself the self-call, so the very first neighbour is the node being walked.
+  ctx.curFocus = 'c'; ctx.egoDepth = 1;
+  vm.runInContext('bfsEgo()', ctx);
+  assert.deepEqual([...ctx.egoSet].sort(), ['b', 'c', 'd'],
+    'a function that calls itself put its own name in its neighbours, or lost them');
+  assert.equal(ctx.egoLevel.c, 0, 'the focus was given a distance from itself');
+
+  // And the fixture that stands for a real org: this is the state it is in, recorded so that the
+  // day it grows a loop, this line is what says the cover moved rather than the check breaking.
+  const fx = JSON.parse(read('fixtures/graph-crm-calls.json'));
+  const ids = new Set(Object.keys(fx.nodes));
+  const dangling = Object.values(fx.nodes)
+    .flatMap((n) => (n.calls || []).filter((c) => !ids.has(c)));
+  assert.deepEqual(dangling, [],
+    'the fixture now has an edge to a node it does not contain - real, and worth a case of its own');
+});
