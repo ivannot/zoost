@@ -12133,3 +12133,72 @@ test('a number the settings page offers is the number the panel uses', () => {
     'no control reads its own bounds any more - that is the shape with no copy in it, and this ' +
     'check counts them so losing the last one is visible');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A scope key with no box is a thing the reader cannot untick, and the loop that draws them says
+// nothing about it.
+//
+// `SCOPE_KEYS` is the list of what an export may contain, and the export dialog draws one checkbox
+// per key with `SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) … })`. That `if (e)` is
+// there because the settings page and the panel share the loop and do not share every control - and
+// it is also what makes a missing box invisible: the key stays at whatever the preset says, for
+// ever, and the reader is never offered the choice. Four hand-written copies of one list, in two
+// languages: the array, the ids in the panel's markup, the ids in the settings page's markup, and
+// the `scope.<key>` reads in the builders.
+//
+// Measured, by renaming `id="sc_lineage"` to `sc_lineages` in the Analytics dialog: the battery
+// green but for the screenshots noticing a file under `apps/` had moved. Lineage would then be in
+// every export whether or not anybody wanted it, with no control anywhere.
+//
+// Derived per product: the array is read from whichever shipped script declares it, the boxes off
+// every page of that product that draws any, and the reads off the scripts. A page that draws
+// **some** `sc_` boxes must draw them all - which is how the CRM settings page is included without
+// being named, and how the Analytics settings page, which offers no export defaults at all, is left
+// out without an exception being written for it.
+//
+// **The limits, stated.** It is about the controls and nothing else: it says whether a scope can be
+// unticked, not whether unticking it changes what comes out - that is the chapter check two cells
+// above. An assertion that «every key is read by some builder» was written here and **taken out**,
+// because it passed by coincidence: `.dashboards` matched `deps[v.id].dashboards.length`, which is a
+// lineage record and has nothing to do with an export scope. Scoping it to the names a scope object
+// is held under would have made it a list of variable names, which is the thing this grid refuses;
+// a weak assertion that can pass for the wrong reason is worse than an absent one, so it is absent
+// and said.
+test('every export scope has a box to untick it, and every box is a scope', () => {
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name);
+  let boxes = 0, pages = 0;
+  for (const app of apps) {
+    const own = shippedScripts().filter((f) => f.startsWith(`apps/${app}/`));
+    // The panel's copy, not the settings page's: the previous cell holds those two together, and
+    // reading the page's here would make this check pass by comparing a copy with itself.
+    const panel = own.filter((f) => !f.endsWith('/options.js'));
+    let keys = null, from = null;
+    for (const rel of panel) {
+      const m = /const SCOPE_KEYS = \[([^\]]*)\]/.exec(read(rel));
+      if (!m) continue;
+      assert.equal(keys, null, `apps/${app}: SCOPE_KEYS is declared in ${from} and in ${rel}`);
+      keys = [...m[1].matchAll(/'(\w+)'/g)].map((x) => x[1]);
+      from = rel;
+    }
+    assert.ok(keys && keys.length >= 5, `apps/${app}: SCOPE_KEYS was not found in the panel - the derivation broke`);
+
+    for (const rel of readdirSync(join(ROOT, 'apps', app)).filter((n) => n.endsWith('.html'))) {
+      const drawn = [...read(`apps/${app}/${rel}`).matchAll(/id="sc_(\w+)"/g)].map((m) => m[1]);
+      if (!drawn.length) continue;                   // a page that offers no export scope at all
+      pages++;
+      boxes += drawn.length;
+      const missing = keys.filter((k) => !drawn.includes(k));
+      assert.deepEqual(missing, [],
+        `apps/${app}/${rel} draws ${drawn.filter((d) => keys.includes(d)).length} of ${keys.length} `
+        + `export scopes, so these cannot be `
+        + `unticked anywhere and stay at whatever the preset says: ${missing}`);
+      const unknown = drawn.filter((d) => !keys.includes(d));
+      assert.deepEqual(unknown, [],
+        `apps/${app}/${rel} draws boxes for these and they are in no scope, so ticking them does `
+        + `nothing at all: ${unknown}`);
+    }
+  }
+  assert.ok(pages >= 2, `only ${pages} page(s) draw an export scope - the derivation broke`);
+  assert.ok(boxes >= 12, `only ${boxes} box(es) compared - the derivation broke`);
+});
