@@ -378,19 +378,38 @@ def main():
     # line-bound, so reading them means a second traversal with different rules, and a widening this
     # file has twice made wrong (636 findings, then 171) is not one to make in passing. What is
     # refused is the *silence*, which cost nothing to fix.
-    yields = {'await': 0, '.then(': 0}
+    # This block was here twice, character for character, the second overwriting the first. Nothing
+    # noticed, because the two answers were equal - which is what a duplicated computation looks like
+    # right up until one copy is edited.
+    #
+    # And the number it printed was not what its sentence said. «942 await(s) read» counted every
+    # `await` token in the subject *files*; the tool reads function *declarations*, so an `await`
+    # inside an async IIFE or an `onclick = async () => {}` was counted as read and never looked at.
+    # Measured: 960 in the files, 837 inside a scope this tool enters - so 123 were being reported as
+    # read by nobody. `apps/*/graphview.js` is the whole of the diagram surface and 10 of its 12
+    # awaits are in those two shapes, which is why «0 findings» there meant nothing at all.
+    #
+    # The rule is the one CLAUDE.md states and this tool already follows for functions: print what
+    # was inspected, and derive the denominator by a cruder method than the check itself. A token
+    # count is the cruder method. It is printed, not raised as a finding, for the reason the
+    # docstring gives - widening to arrow bodies needs a parser, and this file has twice made that
+    # widening wrong. What is refused is the silence.
+    seen = unseen = thens = 0
+    worst = {}
     for rel in FILES:
         src_ = open(os.path.join(ROOT, rel), encoding='utf-8').read()
-        yields['await'] += len(re.findall(r'\bawait\s', src_))
-        yields['.then('] += len(re.findall(r'\.then\s*\(', src_))
-
-    yields = {'await': 0, '.then(': 0}
-    for rel in FILES:
-        src_ = open(os.path.join(ROOT, rel), encoding='utf-8').read()
-        yields['await'] += len(re.findall(r'\bawait\s', src_))
-        yields['.then('] += len(re.findall(r'\.then\s*\(', src_))
-    print(f'asynccheck: {len(FILES)} file(s); {yields["await"]} await(s) read, '
-          f'{yields[".then("]} .then() callback(s) NOT read - the same class, the other spelling.')
+        thens += len(re.findall(r'\.then\s*\(', src_))
+        total = len(re.findall(r'\bawait\s', src_))
+        inside = sum(len(re.findall(r'\bawait\s', body)) for _, body, _ in functions(src_))
+        seen += inside
+        unseen += max(0, total - inside)
+        if total - inside > 0:
+            worst[rel] = total - inside
+    print(f'asynccheck: {len(FILES)} file(s); {seen} await(s) inside a scope this reads, '
+          f'{unseen} NOT read - an async IIFE or an `= async () => {{}}` is not a declaration. '
+          f'{thens} .then() callback(s) NOT read - the same class, the other spelling.')
+    for rel, k in sorted(worst.items(), key=lambda kv: -kv[1])[:5]:
+        print(f'    unread: {rel}  {k} await(s) outside any declaration')
 
     print(f'\n{n} finding(s). {read} function(s) read of {crude} declared '
           f'({crude - read} nested inside another, whose state is local); '

@@ -120,6 +120,7 @@ CLOSED = {
     ("await", "crm-export"):  ("tests/tools_test.py: the export reads no panel state after an await", "planted 2026-08-23"),
     ("owner", "options"):     ("tests/panel.test.mjs: a refused save keeps the edits and says so", "planted 2026-08-23"),
     ("workspace", "crm-ai"):  ("tests/panel.test.mjs: every reader of the seed facts rebuilds the seed first", "planted 2026-08-23"),
+    ("await", "diagrams"):    ("tools/asynccheck.py now separates the awaits it entered from the ones it did not, per file; tests/tools_test.py plants one of each", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

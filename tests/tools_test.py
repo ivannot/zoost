@@ -4664,7 +4664,12 @@ class AsyncCheckReadsWhatShips(unittest.TestCase):
                              cwd=ROOT, capture_output=True, text=True)
         self.assertRegex(out.stdout, r'\d+ \.then\(\) callback\(s\) NOT read',
                          'the run does not say how many yield sites it skipped')
-        self.assertRegex(out.stdout, r'\d+ await\(s\) read', 'it does not say how many it did read')
+        # «N await(s) read» was that sentence until it was measured: it counted every `await` token
+        # in the subject files, and the tool reads declarations - so one inside an async IIFE or an
+        # `= async () => {}` was counted as read and never entered. The wording has to distinguish
+        # the two, which is what the class beside this one plants both halves of.
+        self.assertRegex(out.stdout, r'\d+ await\(s\) inside a scope this reads, \d+ NOT read',
+                         'it does not separate the awaits it entered from the ones merely present')
 
 
 class ShotsSaysTheSameThingOnBothPaths(unittest.TestCase):
@@ -5485,6 +5490,76 @@ class ExportReadsNothingLate(unittest.TestCase):
         late = self.late_reads(planted)
         self.assertTrue(any(g == 'bound' for _, _, g in late),
                         'the plant was not seen - most likely the template literal is being blanked whole')
+
+
+class AsyncCheckSaysWhatItDoesNotRead(unittest.TestCase):
+    """The await count in the headline is the awaits it *entered*, not the ones in the file.
+
+    It printed «942 await(s) read» and counted every `await` token in its subject files. The tool
+    reads function *declarations*, so an `await` inside an async IIFE, or inside
+    `$('save').onclick = async () => {...}`, was counted as read and never looked at. Measured: 960
+    in the files, 837 inside a scope it enters.
+
+    That is the class this repository already met in `htmlcheck` - a headline counting what was
+    opened and saying nothing about what was examined inside - in the tool built to answer it. The
+    surface it cost most was the diagram window: 10 of `graphview.js`'s 12 awaits are in those two
+    shapes, so «0 findings» there was a statement about two lines.
+
+    Printed rather than raised, because widening to arrow bodies needs a parser this repository does
+    not have and this file has twice made that widening wrong. What is refused is the silence.
+    """
+
+    def run_it(self, *args):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'asynccheck.py'), *args],
+                              cwd=ROOT, capture_output=True, text=True)
+
+    def numbers(self, out):
+        m = re.search(r'(\d+) await\(s\) inside a scope this reads, (\d+) NOT read', out)
+        self.assertIsNotNone(m, f'the headline no longer says how much of its subject it entered:\n{out}')
+        return int(m.group(1)), int(m.group(2))
+
+    def test_the_headline_separates_entered_from_present(self):
+        out = self.run_it().stdout
+        seen, unseen = self.numbers(out)
+        self.assertGreater(seen, 500, 'the tool reads almost nothing - the derivation broke')
+        self.assertGreater(unseen, 0,
+                           'nothing is reported unread, which was the false claim this replaced - '
+                           'if the arrow bodies really are covered now, this test should be deleted '
+                           'and the docstring with it')
+        self.assertIn('unread:', out, 'the unread awaits are counted and their files not named, so '
+                                      'nobody can tell whether the gap matters')
+
+    def test_an_await_outside_a_declaration_is_counted_as_unread(self):
+        # Run it, on a real file. The plant goes inside an arrow-assigned handler - the shape the
+        # tool cannot enter - and the *unread* number must move while the read number does not.
+        f = ROOT / 'apps' / 'crm' / 'options.js'
+        keep = f.read_text(encoding='utf-8')
+        before = self.numbers(self.run_it().stdout)
+        try:
+            f.write_text(keep.replace("$('saveScope').onclick = async () => {",
+                                      "$('saveScope').onclick = async () => { await 0;", 1),
+                         encoding='utf-8')
+            seen, unseen = self.numbers(self.run_it().stdout)
+        finally:
+            f.write_text(keep, encoding='utf-8')
+        self.assertEqual(seen, before[0], 'an await the tool cannot enter was counted as entered')
+        self.assertEqual(unseen, before[1] + 1, 'an await outside every declaration was not counted at all')
+
+    def test_an_await_inside_a_declaration_is_counted_as_read(self):
+        # The other half, and the one that makes the first mean something: a gate that counts
+        # everything as unread would pass the test above and be useless.
+        f = ROOT / 'apps' / 'crm' / 'options.js'
+        keep = f.read_text(encoding='utf-8')
+        before = self.numbers(self.run_it().stdout)
+        try:
+            f.write_text(keep.replace('async function saveKeys(obj) {',
+                                      'async function saveKeys(obj) { await 0;', 1),
+                         encoding='utf-8')
+            seen, unseen = self.numbers(self.run_it().stdout)
+        finally:
+            f.write_text(keep, encoding='utf-8')
+        self.assertEqual(seen, before[0] + 1, 'an await inside a declaration was not counted as read')
+        self.assertEqual(unseen, before[1], 'an await the tool does enter was reported as unread')
 
 
 if __name__ == '__main__':
