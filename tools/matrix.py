@@ -88,10 +88,6 @@ EXAMINED = {
     ("owner", "crm-ai"): ("every flag is owned by its generation - aiBusy released only when aiGen "
                           "has not moved, aiSeedWarned and the conversation cleared together - in "
                           "both products", "2026-08-23"),
-    ("siblings", "store"): ("both listings carry the same ten sections and nine payload blocks, the "
-                            "same claims, disclosures that differ only where the products do, and a "
-                            "whatsnew note for every tag since each adopted the convention",
-                            "2026-08-23"),
     ("fastpath", "diagrams"): ("driven, not read: after a fold the window says erHiddenSet=1, "
                               "erVisibleIds=17; force the slow path and the same questions answer 0 "
                               "and 18 with erCut still at 1 - the fold is remembered and stops "
@@ -129,6 +125,7 @@ CLOSED = {
     ("owner", "crm-export"): ("tests/panel.test.mjs: asking for the export scope twice never abandons the first question", "planted 2026-08-23"),
     ("fastpath", "options"): ("tests/panel.test.mjs: a stored diagram setting outside a slider is saved as what is shown", "planted 2026-08-23"),
     ("await", "tools"):       ("tests/tools_test.py: the probe says how many of its waits are bets; the ceiling moves only deliberately, in either direction", "planted 2026-08-23"),
+    ("siblings", "store"):    ("tests/tools_test.py: both listings have the same numbered sections, and each number means the same field", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

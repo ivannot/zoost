@@ -5723,5 +5723,68 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
                          'nothing about what the probe actually does')
 
 
+class BothListingsHaveTheSameShape(unittest.TestCase):
+    """Two listings, one submission process: a section in one is a section in the other.
+
+    The store copy is enumerated in ten numbered sections and both products are published from that
+    file. A section present in one and absent from the other is either a field that will be pasted
+    from nothing, or a permission one product asks for and never justifies - and Google reviews the
+    two together.
+
+    Nothing compared them. Measured by deleting §8 from the CRM listing: `sitecheck` printed «6 of 9
+    numbered sections measured» directly under «7 of 10» for Analytics and called neither a finding,
+    and the only red came from five `dashcheck` fixture tests **crashing** - an error, not a
+    statement, whose message says nothing about two listings disagreeing. A defect noticed as a
+    stack trace in an unrelated builder is a defect nobody will diagnose.
+
+    Derived from the headings, so a section added tomorrow is compared without anybody remembering.
+
+    **The limits, stated.** It compares the numbered headings and the *titles* they carry, not the
+    prose under them - two products legitimately say different things there, which is what
+    `storecopy` and `dashcheck` are for. And an unnumbered heading (the notes at the end) is out of
+    scope, because it is not a dashboard field.
+    """
+
+    def sections(self, app):
+        text = (ROOT / 'store' / app / 'store-listing.md').read_text(encoding='utf-8')
+        out = {}
+        for m in re.finditer(r'^## (\d+)\. (.+?)\s*$', text, re.M):
+            out[int(m.group(1))] = m.group(2)
+        return out
+
+    def apps(self):
+        return sorted(p.name for p in (ROOT / 'store').iterdir()
+                      if (p / 'store-listing.md').exists() and p.name != 'x')
+
+    def test_there_are_two_listings_to_compare(self):
+        self.assertGreaterEqual(len(self.apps()), 2,
+                                'fewer than two listings found - the derivation broke')
+
+    def test_the_same_numbered_sections_exist_in_both(self):
+        got = {app: self.sections(app) for app in self.apps()}
+        for app, secs in got.items():
+            self.assertGreaterEqual(len(secs), 8, f'{app}: only {len(secs)} numbered section(s) read')
+        every = set().union(*got.values())
+        for app, secs in got.items():
+            missing = sorted(every - set(secs))
+            self.assertEqual(missing, [],
+                             f'{app}/store-listing.md has no section {missing} and the other listing '
+                             f'does - either a dashboard field that would be pasted from nothing, or '
+                             f'a permission asked for and never justified. Google reviews them together.')
+
+    def test_a_section_number_means_the_same_thing_in_both(self):
+        # The numbers are how a person finds the field in the dashboard, so §7 naming one thing here
+        # and another there is worse than a gap: it reads as correct and is pasted into the wrong box.
+        got = {app: self.sections(app) for app in self.apps()}
+        first, *rest = self.apps()
+        for app in rest:
+            for n, title in got[first].items():
+                if n not in got[app]:
+                    continue
+                self.assertEqual(got[app][n], title,
+                                 f'§{n} is «{title}» in {first} and «{got[app][n]}» in {app} - the '
+                                 f'number is how the field is found in the dashboard')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
