@@ -10579,3 +10579,68 @@ test('a working folder changed in Settings waits for the pull to finish', () => 
   // The reader is told, rather than the panel silently staying put.
   assert.match(src, /rootLater:/, 'the deferral is invisible - the panel simply does not move');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A load that was overtaken does not publish.
+//
+// Every section of the options page is re-read whenever the panel writes its key, so two changes
+// arriving close together run two loaders at once - and the older one, finishing last, puts the
+// older answer into the module state the form is built from. Save then writes that back over the
+// newer one: a lost update on the reader's own settings, from nothing they did.
+//
+// `tools/asyncglobals.txt` recorded twenty-four of these writes as read, with the note that «the
+// options pages answer with markOwn/dirty». Measured, they do not: `markOwn` says «this change was
+// mine, ignore the echo» and `dirty` says «I have unsaved edits». Neither orders two reads of one
+// key. The panel's idiom is a token and the loaders carry one now - the ledger shrank by eighteen.
+test('an overtaken loader on the options page publishes nothing', async () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+
+    // Run it: two loads of the same key, the first answering last, and the newer value must stand.
+    let resolveOld;
+    const answers = [new Promise((r) => { resolveOld = r; }), Promise.resolve({ rxShortcuts: [{ name: 'new', pattern: 'n' }] })];
+    let call = 0;
+    const ctx = {
+      Array, String, Object, Number, Math, Promise, JSON, console,
+      chrome: { storage: { local: { get: () => answers[call++] } } },
+      renderRx: () => {},
+      rxCur: null, rxLoadFailed: false,
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'), sliceFn(rel, 'loadRx')].join('\n'), ctx);
+
+    const first = vm.runInContext('loadRx()', ctx);     // starts, will answer last
+    const second = vm.runInContext('loadRx()', ctx);    // starts and answers now
+    await second;
+    resolveOld({ rxShortcuts: [{ name: 'old', pattern: 'o' }] });
+    await first;
+
+    assert.equal(ctx.rxCur.length, 1, `id=${app}: the loader published nothing at all`);
+    assert.equal(ctx.rxCur[0].name, 'new',
+      `id=${app}: the older read finished last and overwrote the newer answer - the form is built ` +
+      `from it and Save writes it back over the newer list`);
+  }
+});
+
+test('every loader on the options page carries an ordering token', () => {
+  // Derived, so a fifth loader added tomorrow is a finding: any function whose name starts `load`
+  // and awaits storage must take a token and consult it. The limit is stated - it reads `beginLoad`
+  // by name, so a loader ordering itself some other way would be reported wrongly, and there is
+  // none today.
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const src = read(rel)
+      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+      .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+    const bare = [];
+    for (const m of src.matchAll(/^async function (load\w+)\(\)[^\n]*\{/gm)) {
+      const body = src.slice(m.index, src.indexOf('\n}', m.index));
+      if (!/await chrome\.storage/.test(body)) continue;
+      if (!/beginLoad\(/.test(body) || !/current\(\)/.test(body)) bare.push(`${app}:${m[1]}`);
+    }
+    assert.deepEqual(bare, [],
+      `these read storage and publish without asking whether a newer read has finished: ${bare.join(', ')}`);
+  }
+});

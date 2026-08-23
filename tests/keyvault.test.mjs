@@ -686,12 +686,14 @@ function runLoadAi(app, stored) {
   });
   // Everything loadAi needs, lifted whole. If one of these is renamed the slice throws rather than
   // quietly proving less.
-  const pieces = ['aiForget', 'aiStored', 'aiLockStored', 'aiPassChanging', 'prevEngine'];
+  const pieces = ['aiForget', 'aiStored', 'aiLockStored', 'aiPassChanging', 'prevEngine', '_loadSeq'];
   for (const name of pieces) {
     const m = src.match(new RegExp(`^(?:const|let)\\s+${name}\\s*=[^\\n]*$`, 'm'));
     if (m) vm.runInContext(m[0], ctx);
   }
-  for (const fn of ['wireForget', 'engineIncomplete', 'markEngineOptions', 'aiNeedCurrent',
+  // `beginLoad` is lifted with the rest: loadAi asks it whether a newer read has overtaken this one
+  // before it publishes, so without it the function throws and every case below proves nothing.
+  for (const fn of ['beginLoad', 'wireForget', 'engineIncomplete', 'markEngineOptions', 'aiNeedCurrent',
                     'syncLockRow', 'markEngine', 'showForget', 'loadAi']) {
     const i = src.indexOf(`function ${fn}(`);
     if (i < 0) throw new Error(`${app}/options.js: ${fn}() not found — renamed or removed. Fix the test or restore the cover.`);

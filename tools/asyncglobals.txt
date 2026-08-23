@@ -18,13 +18,6 @@
 #
 # What it cannot see is in the docstring: an arrow-function body, including the onChanged handler
 # where both panels rewrite the folder handle after an await.
-apps/analytics/options.js	loadAi	aiForget
-apps/analytics/options.js	loadAi	aiLockStored
-apps/analytics/options.js	loadAi	aiStored
-apps/analytics/options.js	loadAi	prevEngine
-apps/analytics/options.js	loadLay	drawMax
-apps/analytics/options.js	loadRx	rxCur
-apps/analytics/options.js	loadRx	rxLoadFailed
 apps/analytics/options.js	loseLock	aiPassChanging
 apps/analytics/options.js	loseLock	dirty
 apps/analytics/options.js	saveAi	aiPassChanging
@@ -56,17 +49,6 @@ apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
 apps/crm/modules.js	openModule	currentPath
 apps/crm/modules.js	pullModules	index
-apps/crm/options.js	loadAi	aiForget
-apps/crm/options.js	loadAi	aiLockStored
-apps/crm/options.js	loadAi	aiStored
-apps/crm/options.js	loadAi	prevEngine
-apps/crm/options.js	loadLay	drawMax
-apps/crm/options.js	loadRx	rxCur
-apps/crm/options.js	loadRx	rxLoadFailed
-apps/crm/options.js	loadTabs	tabAccessCur
-apps/crm/options.js	loadTabs	tabHiddenCur
-apps/crm/options.js	loadTabs	tabNoPullCur
-apps/crm/options.js	loadTabs	tabOrderCur
 apps/crm/options.js	loseLock	aiPassChanging
 apps/crm/options.js	loseLock	dirty
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted

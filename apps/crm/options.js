@@ -285,12 +285,14 @@ async function loadAi() {
   // Reading for *display* keeps its fallback - an empty form renders and nothing is lost. What it
   // must not do is stay quiet: Save writes the form back whole, so a reader who cannot tell «nothing
   // is stored yet» from «I could not read what is stored» saves the empty one over their key.
+  const current = beginLoad('aicfg');
   let c = {};
   try { c = (await chrome.storage.local.get('aicfg')).aicfg || {}; }
   catch (_) {
     toast('Could not read your saved AI settings - what is shown below is not what is stored. '
       + 'Reload this page before saving, or Save will overwrite it.', true);
   }
+  if (!current()) return;   // an older read must not fill the form
   const cfg = {
     active: c.active || 'anthropic',
     anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
@@ -447,7 +449,9 @@ function scopeFromUI() {
   scopeToUI();
 }
 async function loadScope() {
-  try { const r = await chrome.storage.local.get('exportScope'); if (r.exportScope) scope = Object.assign({}, SCOPE_FULL, r.exportScope); } catch (_) {}
+  const current = beginLoad('exportScope');
+  try { const r = await chrome.storage.local.get('exportScope'); if (current() && r.exportScope) scope = Object.assign({}, SCOPE_FULL, r.exportScope); } catch (_) {}
+  if (!current()) return;
   scopeToUI();
 }
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
@@ -504,11 +508,12 @@ $('saveLay').onclick = async () => { markOwn('erParams'); dirty.delete('erParams
   await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax });
   await stamp(); toast('Diagram defaults saved.'); };
 async function loadLay() {
-  try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
+  const current = beginLoad('erParams');
+  try { const r = await chrome.storage.local.get('erParams'); if (current() && r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
   try {
     const r = await chrome.storage.local.get('erDrawMax');
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
-    if (Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
+    if (current() && Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
   } catch (_) {}
   layToUI();
 }
@@ -601,8 +606,10 @@ function move(id, d) {
   renderTabs();
 }
 async function loadTabs() {
+  const current = beginLoad('tabPrefs');
   try {
     const st = await chrome.storage.local.get(['tabPrefs', 'tabAccessView']);
+    if (!current()) return;
     const p = st && st.tabPrefs;
     if (p && Array.isArray(p.order) && Array.isArray(p.hidden)) {
       const known = p.order.filter((id) => TAB_IDS.includes(id));
@@ -647,8 +654,14 @@ async function loadDc() {
     .filter((h) => h.startsWith('https://crm.'))
     .map((h) => h.slice('https://crm.'.length).replace(/\/.*$/, '')))].sort();
   $('zohoDc').innerHTML = dcs.map((d) => `<option value="${escA(d)}">${escA(d)}</option>`).join('');
+  // The select is published too, and two reads of one key race here as they do anywhere else:
+  // the older one finishing last leaves the form showing a data centre that is not the stored
+  // one. It writes to the DOM rather than to a module global, which is why `asynccheck` never
+  // recorded it - the class is about *publishing*, not about where.
+  const current = beginLoad('zohoDc');
   let want = DC_DEFAULT;
   try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) want = r.zohoDc; } catch (_) {}
+  if (!current()) return;
   $('zohoDc').value = dcs.includes(want) ? want : dcs[0];
 }
 $('zohoDc').onchange = async () => {
@@ -717,14 +730,31 @@ function renderRx() {
     row.querySelector('.rxdel').onclick = () => { rxCur.splice(i, 1); renderRx(); markDirty('rxShortcuts'); };
   });
 }
+// **A load that was overtaken must not publish.** Every section on this page is re-read whenever the
+// panel writes its key, so two changes arriving close together run two loaders at once - and the
+// older one, finishing last, puts the older answer into the module state the form is built from.
+// Save then writes that back over the newer one: a lost update on the reader's own settings, from
+// nothing they did.
+//
+// The ledger records these writes as read and notes that «the options pages answer with
+// markOwn/dirty». Measured, they do not: `markOwn` says «this change was mine, ignore the echo» and
+// `dirty` says «I have unsaved edits», and neither of them orders two reads of the same key. The
+// panel's idiom is a token, and this is it.
+const _loadSeq = {};
+function beginLoad(key) {
+  const mine = (_loadSeq[key] = (_loadSeq[key] || 0) + 1);
+  return () => mine === _loadSeq[key];
+}
 async function loadRx() {
+  const current = beginLoad('rxShortcuts');
   try {
     const st = await chrome.storage.local.get('rxShortcuts');
+    if (!current()) return;
     rxCur = Array.isArray(st.rxShortcuts)
       ? st.rxShortcuts.map((x) => ({ name: String((x && x.name) || ''), pattern: String((x && x.pattern) || '') }))
       : [];
     rxLoadFailed = false;
-  } catch (_) { rxCur = []; rxLoadFailed = true; }
+  } catch (_) { if (!current()) return; rxCur = []; rxLoadFailed = true; }
   renderRx();
 }
 $('rxAdd').onclick = () => { rxCur.push({ name: '', pattern: '' }); renderRx(); markDirty('rxShortcuts'); };
