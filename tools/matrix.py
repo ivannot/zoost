@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("silent", "tools"):       ("tests/tools_test.py: the sync stamp is written only when the copy happened", "planted 2026-08-23"),
     ("partial", "tools"):      ("tests/tools_test.py: the screenshot mirror deletes inside one product, never across", "planted 2026-08-23"),
     ("fastpath", "tools"):     ("tests/tools_test.py: the screenshot verdict is one sentence, taken from sources not bytes", "planted 2026-08-23"),
     ("fastpath", "site"):      ("tests/worker.test.mjs: what site and Worker both compute is compared on real tags", "planted 2026-08-23"),

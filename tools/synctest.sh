@@ -40,5 +40,36 @@ if [ -f "$STAMP" ] \
   exit 0
 fi
 
-bash tools/totest.sh >/dev/null 2>&1 || true
-printf '%s' "$HEAD_NOW" > "$STAMP"
+# **The stamp records that the copy happened, so it is written only when it did.** This was
+# `... || true` followed by an unconditional write: a failed copy - the share unreachable, the sync
+# client on the host stopped, the disk full - advanced the stamp anyway, so every later call saw
+# «nothing to do» and the mirror was never written again. One failure and this hook was over, with
+# the folder Chrome loads from frozen at whatever it last received. Which is the exact defect this
+# file was written to fix, in the file that fixes it.
+#
+# It is the third instance here of one class - a dirty mark cleared over a write that never
+# happened: `updateMetaIndex` in the panel, the report endpoint's KV counter in the Worker, this.
+# Wherever a mark says «done», the thing it speaks for has to have returned before it is set.
+#
+# **The signal is what it says, not what it returns.** `--auto` exits 0 whatever happens, by design:
+# it is called from `tests/run.sh` under `set -e`, and a cloud drive that is not running must never
+# fail the battery. So the exit code cannot tell the two apart - which the first version of this fix
+# used, and it was measured letting a blocked destination through as a success.
+#
+# What `--auto` does distinguish is silence. A machine that never asked for a mirror writes nothing
+# at all; a destination configured and gone, or there and unwritable, says one line on stderr. Both
+# of the second kind are «should have been written and was not», and both come back on their own,
+# which is exactly when a stamp must not be advanced.
+ERR=$(bash tools/totest.sh --auto 2>&1 >/dev/null)
+if [ -z "$ERR" ]; then
+  printf '%s' "$HEAD_NOW" > "$STAMP"
+  rm -f "$STAMP.failed"
+else
+  # Said, but not once per tool call: this hook fires after every one of them, and a wall of the
+  # same line is a wall nobody reads - the failure mode a silent hook and a shouting one share.
+  # Once per commit is enough to be noticed and rare enough to stay legible.
+  if [ "$(cat "$STAMP.failed" 2>/dev/null)" != "$HEAD_NOW" ]; then
+    echo "synctest: the mirror was not written - the extension on the other machine is at whatever it last received. $ERR" >&2
+    printf '%s' "$HEAD_NOW" > "$STAMP.failed"
+  fi
+fi

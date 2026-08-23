@@ -4812,5 +4812,83 @@ class OneProductRenderedDoesNotDeleteTheOther(unittest.TestCase):
                           f'the destination does not name a product, so --delete reaches both: {c}')
 
 
+class TheSyncStampMeansTheCopyHappened(unittest.TestCase):
+    """A mark that says «done» is set only after the thing it speaks for returned.
+
+    `synctest.sh` skips its work when nothing under `apps/` is newer than a stamp, which is what
+    makes it cheap enough to run after every tool call. It ran the copy as `... || true` and then
+    wrote the stamp unconditionally - so a failure (the share unreachable, the sync client on the
+    host stopped, the disk full) advanced the stamp anyway and every later call saw «nothing to do».
+    One failure ended the hook, silently, leaving the folder Chrome loads from at whatever it last
+    received: the exact defect this file was written to fix, in the file that fixes it.
+
+    Third instance of one class in this repository - `updateMetaIndex` clearing a dirty mark over a
+    refused write, the report endpoint's KV counter, this - which is why it is held by a check and
+    not by a paragraph.
+
+    Measured by making the copy fail: `totest.sh` is called through `PATH`, so a stub named `bash`
+    would reach too far; the destination is pointed at a path that cannot be written instead, which
+    is the failure this actually protects against.
+    """
+
+    def _run(self, dest, home):
+        env = {**os.environ, 'ZOOST_TEST_DIR': dest, 'HOME': home}
+        return subprocess.run(['bash', str(ROOT / 'tools' / 'synctest.sh')],
+                              cwd=ROOT, capture_output=True, text=True, env=env)
+
+    def test_a_failed_copy_leaves_no_stamp_and_says_so(self):
+        stamp = ROOT / '.git' / 'zoost-lastsync'
+        failed = ROOT / '.git' / 'zoost-lastsync.failed'
+        keep = stamp.read_bytes() if stamp.exists() else None
+        keep_f = failed.read_bytes() if failed.exists() else None
+        try:
+            stamp.unlink(missing_ok=True)
+            failed.unlink(missing_ok=True)
+            with tempfile.TemporaryDirectory() as t:
+                # A file where the folder should be: the parent exists, so the script gets past its
+                # «is it mounted» check and fails on the write, which is the real-world shape.
+                blocked = pathlib.Path(t) / 'mirror'
+                blocked.write_text('not a directory', encoding='utf-8')
+                out = self._run(str(blocked), t)
+            self.assertFalse(stamp.exists(),
+                             'the stamp was written over a copy that failed, so nothing will try '
+                             'again and the mirror stays behind for ever')
+            self.assertIn('the mirror was not written', out.stderr,
+                          f'it failed and said nothing: {out.stderr!r}')
+        finally:
+            stamp.unlink(missing_ok=True)
+            failed.unlink(missing_ok=True)
+            if keep is not None:
+                stamp.write_bytes(keep)
+            if keep_f is not None:
+                failed.write_bytes(keep_f)
+
+    def test_it_does_not_repeat_itself_once_per_tool_call(self):
+        # The other half of saying it: this hook fires after every tool call, and the same line a
+        # hundred times is a wall nobody reads - which fails the same way silence does.
+        stamp = ROOT / '.git' / 'zoost-lastsync'
+        failed = ROOT / '.git' / 'zoost-lastsync.failed'
+        keep = stamp.read_bytes() if stamp.exists() else None
+        keep_f = failed.read_bytes() if failed.exists() else None
+        try:
+            stamp.unlink(missing_ok=True)
+            failed.unlink(missing_ok=True)
+            with tempfile.TemporaryDirectory() as t:
+                blocked = pathlib.Path(t) / 'mirror'
+                blocked.write_text('not a directory', encoding='utf-8')
+                first = self._run(str(blocked), t)
+                second = self._run(str(blocked), t)
+            self.assertIn('the mirror was not written', first.stderr)
+            self.assertEqual(second.stderr.strip(), '',
+                             f'it says the same thing on every tool call: {second.stderr!r}')
+        finally:
+            stamp.unlink(missing_ok=True)
+            failed.unlink(missing_ok=True)
+            if keep is not None:
+                stamp.write_bytes(keep)
+            if keep_f is not None:
+                failed.write_bytes(keep_f)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
