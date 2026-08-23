@@ -1064,23 +1064,63 @@ async function activeZohoTabId() {
   if (ZOHO_HOST_RE.test(a.url || '')) return a.id;
   return (await tabHasCrmFrame(a.id)) ? a.id : null;                   // wrapper-agnostic detection
 }
+/** The frame that is Zoho CRM, or `null` when this tab has none.
+ *
+ * **`null` and not `0`, which is the whole finding.** `ZOHO_HOST_RE` accepts `one.zoho.*` so the
+ * panel can tell which Zoho One org a tab belongs to - and on a Zoho One page with no CRM iframe
+ * (the launcher, Mail, the home) the search below found nothing and fell back to frame 0, the Zoho
+ * One document itself. `ensureBridge` then injected `hook.js`, which replaces `fetch` and
+ * `XMLHttpRequest` in that page's MAIN world, and the content bridge beside it.
+ *
+ * Three things wrong with that, and the third is the one that matters. `one.zoho.*` is in
+ * `host_permissions` but declares no content script, so the injection is permitted and undeclared.
+ * The bridge refuses every command from a non-CRM origin, so it never answers, so `ensureBridge`
+ * caught the failure and **re-injected every five seconds** for as long as that tab stayed active.
+ * And `site/privacy.html` says of those hosts, in as many words, «which it does not read».
+ *
+ * A tab with no CRM frame has nothing for the bridge to talk to. It is refused rather than guessed
+ * at. The one case that still answers 0 is the honest one: the enumeration itself failed, and the
+ * tab's own top frame is CRM.
+ */
 let _crmFrame = { tabId: null, frameId: 0, ts: 0 };
 async function crmFrameId(tabId) {
   const now = Date.now();
   if (_crmFrame.tabId === tabId && now - _crmFrame.ts < 6000) return _crmFrame.frameId;
-  let fid = 0;
+  let fid = null;
   try {
     const res = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, func: () => ({ href: location.href, top: window === window.top }) });
-    const crm = (res || []).map((r) => ({ frameId: r.frameId, ...(r.result || {}) })).filter((x) => /^https:\/\/crm(sandbox)?\.zoho/.test(x.href || ''));
+    const seen = (res || []).map((r) => ({ frameId: r.frameId, ...(r.result || {}) }));
+    const crm = seen.filter((x) => /^https:\/\/crm(sandbox)?\.zoho/.test(x.href || ''));
     if (crm.length) { const top = crm.find((x) => x.top); fid = (top || crm[0]).frameId; }
-  } catch (_) {}
+  } catch (_) {
+    // The enumeration is the thing that failed, not the tab. A CRM tab's own document is frame 0,
+    // and that is the only case where guessing it is not a guess.
+    try {
+      const t = await chrome.tabs.get(tabId);
+      if (/^https:\/\/crm(sandbox)?\.zoho/.test((t && t.url) || '')) fid = 0;
+    } catch (_) {}
+  }
   _crmFrame = { tabId, frameId: fid, ts: now };
   return fid;
 }
+/** Speak to the bridge, and put it there if it is not.
+ *
+ * **Asking and injecting are different acts and only one of them is dangerous.** The first version of
+ * this fix refused both when no CRM frame was found, and that broke the case it was not about: with
+ * the frame list unavailable, the panel stopped *asking* too, so the context bar went from naming the
+ * org to «Zoho tab (not ready)» - visible in thirteen of the site's screenshots, which is how it was
+ * caught. Asking costs nothing and is refused by the bridge itself when the origin is not CRM;
+ * injecting is what puts our code into somebody else's page.
+ *
+ * So: ask wherever there is a frame to ask, and inject only where a CRM document actually is.
+ */
 async function ensureBridge(tabId) {
   const fid = await crmFrameId(tabId);
-  try { await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, { frameId: fid }); return true; }
+  const to = fid === null ? {} : { frameId: fid };
+  try { await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, to); return true; }
   catch {
+    // No CRM frame in this tab: nothing here is ours to inject into. See `crmFrameId`.
+    if (fid === null) return false;
     try {
       await chrome.scripting.executeScript({ target: { tabId, frameIds: [fid] }, world: 'MAIN', files: ['hook.js'] });
       await chrome.scripting.executeScript({ target: { tabId, frameIds: [fid] }, files: ['content-bridge.js'] });
@@ -1098,13 +1138,17 @@ async function toBridge(msg) {
   if (msg && msg.cmd !== 'context' && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
   const id = await zohoTabId(); if (!id) throw new Error(MSG.noTab);
   await ensureBridge(id); const fid = await crmFrameId(id);
+  // `null` is «this tab has no Zoho CRM frame», and it is now a possible answer: ask the tab rather
+  // than name a frame that is not there. The bridge refuses a non-CRM origin by itself, so the worst
+  // this can do is go unanswered - which is the same as any other tab that is not ready.
+  const at = fid === null ? {} : { frameId: fid };
   // The identity travels with the command and is checked *in the page that will run it*. Everything
   // above this line is a check against `lastCtx`, which is a five-second poll's memory of which org
   // the tab was showing - and between reading it and reaching the tab there are three awaits. So the
   // last word belongs to the only party that cannot be out of date about which org it is.
   const expected = (msg && msg.cmd !== 'context' && bound)
     ? { org: bound.org, origin: bound.base, instance: bound.instance } : null;
-  return chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg, { frameId: fid });
+  return chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg, at);
 }
 async function getContext() { try { const r = await toBridge({ cmd: 'context' }); return r?.ok ? r : null; } catch { return null; } }
 async function waitTabComplete(id, timeout = 9000) {
@@ -1141,8 +1185,13 @@ async function refreshContext() {
   if (!current()) return;
   const cfid = await crmFrameId(activeId);
   if (!current()) return;
+  // A Zoho One tab with no CRM frame in it has nothing to read, and asking would mean naming a frame
+  // that is not there. Same answer as a tab that did not reply - no context - and it **falls through**
+  // rather than returning: the line below is what puts «Zoho tab (not ready)» on screen, and a return
+  // here would leave the previous tab's identity showing. Which is the silent exit this repository
+  // refuses, one line from being written by the fix for a different one.
   try {
-    const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, { frameId: cfid });
+    const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, cfid === null ? {} : { frameId: cfid });
     if (!current()) return;
     lastCtx = r?.ok ? r : null;
   } catch (_) { if (!current()) return; lastCtx = null; }

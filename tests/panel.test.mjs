@@ -11074,3 +11074,81 @@ test('the diagram sliders mean the same thing in Settings and in the window', ()
     }
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The panel injects into a Zoho CRM frame, or into nothing.
+//
+// `ZOHO_HOST_RE` accepts `one.zoho.*` so the panel can tell which Zoho One org a tab belongs to.
+// The frame search then looked for a CRM document among that tab's frames and, finding none, fell
+// back to **frame 0** - the Zoho One page itself - into which `ensureBridge` injected `hook.js`,
+// which replaces `fetch` and `XMLHttpRequest` in that page's MAIN world.
+//
+// Three things wrong, and the third is the one that decides it. `one.zoho.*` is in
+// `host_permissions` but declares no content script, so the injection was permitted and undeclared.
+// The bridge refuses every command from a non-CRM origin, so it never answered, so the failure path
+// re-injected **every five seconds** for as long as that tab stayed active. And `site/privacy.html`
+// says of those hosts, in as many words, «which it does not read».
+//
+// Run rather than read: a regex over the source would have agreed with the version that guessed.
+test('crm: a tab with no Zoho CRM frame is not injected into', async () => {
+  const frames = (hrefs) => hrefs.map((href, i) => ({ frameId: i, result: { href, top: i === 0 } }));
+  const run = async (hrefs, tabUrl, { enumerate = true } = {}) => {
+    const calls = [], asked = [];
+    const ctx = {
+      Date, Promise, Error, console, RegExp,
+      MSG: { noTab: 'no tab' }, sleep: async () => {},
+      chrome: {
+        tabs: {
+          get: async () => ({ url: tabUrl }),
+          sendMessage: async (_id, _msg, to) => { asked.push(to); throw new Error('nobody answered'); },
+        },
+        scripting: {
+          executeScript: async (o) => {
+            if (o.func) {
+              if (!enumerate) throw new Error('cannot enumerate');
+              return frames(hrefs);
+            }
+            calls.push(o.files[0]);
+            return [];
+          },
+        },
+      },
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
+                     sliceFn('apps/crm/sidepanel.js', 'ensureBridge')].join('\n'), ctx);
+    // A fresh tab id per case: the six-second memo would otherwise answer for the previous one.
+    const id = calls.length + Math.floor(Math.random() * 1e6) + hrefs.join('').length;
+    const ok = await vm.runInContext(`ensureBridge(${id})`, ctx);
+    return { ok, injected: calls, asked };
+  };
+
+  const one = await run(['https://one.zoho.com/home', 'https://mail.zoho.com/x'], 'https://one.zoho.com/home');
+  assert.deepEqual(one.injected, [],
+    `a Zoho One tab with no CRM frame was injected into: ${one.injected.join(', ')} - and privacy.html ` +
+    `says of that host «which it does not read»`);
+  assert.equal(one.ok, false, 'it reported success over a tab it cannot speak to');
+  // **And it still asks.** Asking and injecting are different acts, and the first version of this
+  // fix refused both: with no CRM frame the panel stopped asking too, so the context bar went from
+  // naming the org to «Zoho tab (not ready)» - in thirteen of the site's screenshots, which is how
+  // it was caught. Asking costs nothing and the bridge refuses a non-CRM origin by itself.
+  assert.equal(one.asked.length, 1, 'the panel stopped asking the tab who it is');
+  // Keys rather than deepEqual: the object is built inside the vm realm, so its prototype is not
+  // this one's and a structural compare fails on two empty objects.
+  assert.deepEqual(Object.keys(one.asked[0]), [],
+                   'it named a frame that is not there rather than asking the tab');
+
+  // The ordinary case still works, because a guard that refuses everything is not safety.
+  const crm = await run(['https://one.zoho.com/home', 'https://crm.zoho.eu/crm/tab'], 'https://one.zoho.com/home');
+  assert.deepEqual(crm.injected, ['hook.js', 'content-bridge.js'],
+    'a tab that does have a CRM frame was not reached');
+
+  // And the one guess that is not a guess: the enumeration itself failed on a CRM tab.
+  const blind = await run([], 'https://crm.zoho.eu/crm/tab', { enumerate: false });
+  assert.deepEqual(blind.injected, ['hook.js', 'content-bridge.js'],
+    'a CRM tab whose frames could not be listed is refused, though its own document is the target');
+  const blindOne = await run([], 'https://one.zoho.com/home', { enumerate: false });
+  assert.deepEqual(blindOne.injected, [],
+    'the frame list failed and it injected into a Zoho One document anyway');
+});

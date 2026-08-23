@@ -59,7 +59,7 @@ dropWorkspaceState	9970afd3e184	167539fa76e8	divergent
 egoStat	7389bc350b28	7389bc350b28	identical
 emptyReason	f7a750117acd	c6461ab20713	divergent
 engineIncomplete	54560440576d	54560440576d	identical
-ensureBridge	712bc0fdc4d2	e7f9159cd83c	divergent
+ensureBridge	a35079849aae	e7f9159cd83c	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
 entitiesPresent	59df72b07997	59df72b07997	identical
 erApply	e2898a2b70d1	e2898a2b70d1	identical
@@ -180,7 +180,7 @@ readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	1e5e6bf82019	6a4b34ab0325	divergent
+refreshContext	a6185d0cf57a	6a4b34ab0325	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	65b6796a1174	479e5c41dd33	divergent
 rememberActive	b905c9b77414	b905c9b77414	identical
@@ -223,7 +223,7 @@ switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
-toBridge	7a1cb1ea6311	93b7beed0330	divergent
+toBridge	692c8692eeff	93b7beed0330	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	8780db5203e0	e7a00b84968a	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical
