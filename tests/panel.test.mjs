@@ -12557,3 +12557,95 @@ test('the diagram walks a graph that loops, and comes back', () => {
   assert.deepEqual(dangling, [],
     'the fixture now has an edge to a node it does not contain - real, and worth a case of its own');
 });
+
+// ---------------------------------------------------------------------------------------------
+// «Marks cleared only on a successful write» was held by a regex, and a regex cannot see an order.
+//
+// The summary cache has a recorded history of three defects and one rule: **invalidation derives
+// from the event, never from the memory of whoever caused it** - `noteWrite(rel)` maps what was
+// written to what must be forgotten, and it runs *after* the bytes are down, so a refused write
+// forgets nothing and the panel keeps an answer that is still true.
+//
+// Nothing exercised that. The cases about it read the source - `assert.ok(/noteWrite\(rel\)/.test(…),
+// 'a write leaves no mark')` - which is what this project calls a photograph of a belief: it confirms
+// the call is still spelled the same way and says nothing about where it sits. Measured by moving
+// `noteWrite(rel)` **above** the write: 878 Node cases green, both Python suites green, every checker
+// at zero, and the only red the twin ledger noticing a body had moved. A write refused by the browser
+// would then clear the caches anyway, and the panel would rebuild from a file that never changed -
+// or, worse, from the one that did not get written.
+//
+// It is invisible for the reason this cell is about: the stand-in for the file system cannot refuse.
+// `tools/fsshim.js` grants every permission and accepts every write, so the branch where a write
+// fails has never run anywhere - not in the probe, not in a screenshot, not in a case.
+//
+// So this drives it: a handle that throws where a real one throws, and one that does not.
+//
+// **The limits, stated.** It drives the two writers and the marks they clear, not what is rebuilt
+// afterwards. The caches are read back by name off `noteWrite`'s own body rather than listed here,
+// so a cache added to it tomorrow is covered; a cache cleared somewhere else entirely is not, and
+// another case already refuses that.
+test('crm: a write the browser refuses forgets nothing', async () => {
+  // Cut by hand rather than with `sliceConst`: `noteWrite` is a multi-line arrow whose statements
+  // end in `;`, and that lifter stops at the first one closing a line - it returned two thirds of
+  // the body and the evaluation died on «Unexpected end of input». The lifter's own stated limit,
+  // met head-on; the closing `\n};` at column zero is the fact this file relies on everywhere.
+  const panelSrc = read('apps/crm/sidepanel.js');
+  const at = panelSrc.indexOf('const noteWrite');
+  assert.ok(at > 0, 'noteWrite is gone - the derivation broke');
+  const noteSrc = panelSrc.slice(at, panelSrc.indexOf('\n};', at) + 3);
+  // Deduplicated: a cache appears in as many branches as drop it, and a message naming
+  // `aiConnCache` three times reads as three caches.
+  const CACHES = [...new Set([...noteSrc.matchAll(/(\w+) = null/g)].map((m) => m[1]))];
+  assert.ok(CACHES.length >= 5, `noteWrite drops ${CACHES.length} cache(s) - the derivation broke`);
+
+  const build = (writable) => {
+    const ctx = {
+      Set, Object, Array, String, Error, Promise, console,
+      WS_MOVED: 'moved',
+      isModuleFile: (rel) => rel.startsWith('modules/'),
+      _dirtyMeta: new Set(), _dirtySource: new Set(),
+      dirFor: async () => ({
+        getFileHandle: async () => ({ createWritable: writable }),
+        getDirectoryHandle: async () => ({ removeEntry: async () => { throw new Error('refused'); } }),
+      }),
+    };
+    // The root is a real enough handle: `removeFileAt` walks it directory by directory, so a bare
+    // object throws «not a function» and the case would pass on the wrong error.
+    ctx.dir = { name: 'root',
+                getDirectoryHandle: async () => ({
+                  removeEntry: async () => { throw new Error('the browser refused the removal'); } }) };
+    for (const c of CACHES) ctx[c] = 'kept';
+    vm.createContext(ctx);
+    vm.runInContext([noteSrc,
+                     sliceFn('apps/crm/sidepanel.js', 'writeFileAt'),
+                     sliceFn('apps/crm/sidepanel.js', 'removeFileAt')].join('\n'), ctx);
+    return ctx;
+  };
+  const held = (ctx) => CACHES.filter((c) => ctx[c] === 'kept');
+
+  // The browser refuses the write. Nothing was written, so nothing may be forgotten.
+  const bad = build(async () => { throw new Error('the browser refused the write'); });
+  await assert.rejects(() => vm.runInContext("writeFileAt(dir, 'functions/a/b.dg', 'x')", bad),
+    /refused/, 'a refused write no longer reaches the caller');
+  assert.deepEqual(held(bad), CACHES,
+    `a write that never happened cleared ${CACHES.filter((c) => bad[c] !== 'kept')} - the panel will `
+    + 'rebuild from a file that did not change, and the mark that said so is gone');
+  assert.equal(bad._dirtySource.size + bad._dirtyMeta.size, 0,
+    'a refused write left a dirty mark, so the summary cache believes a source moved');
+
+  // The same handle, working. Now the marks must go, or the panel answers from a stale cache.
+  let closed = false;
+  const ok = build(async () => ({ write: async () => {}, close: async () => { closed = true; } }));
+  await vm.runInContext("writeFileAt(dir, 'functions/a/b.dg', 'x')", ok);
+  assert.equal(closed, true, 'the writable was never closed, so the bytes are not on disk');
+  assert.deepEqual(held(ok).sort(), CACHES.filter((c) => !['codeCache', 'graphCache', 'aiConnCache'].includes(c)).sort(),
+    'a written .dg no longer drops the source, the graph and the connection map');
+  assert.equal(ok._dirtySource.has('functions/a/b.dg'), true, 'a written source left no dirty mark');
+
+  // And a removal the browser refuses: same rule, the other writer.
+  const rm = build(async () => ({ write: async () => {}, close: async () => {} }));
+  await assert.rejects(() => vm.runInContext("removeFileAt(dir, 'modules/x.json')", rm),
+    /refused/, 'a refused removal no longer reaches the caller');
+  assert.deepEqual(held(rm), CACHES,
+    'a removal that never happened cleared a cache, so the panel forgets a file that is still there');
+});
