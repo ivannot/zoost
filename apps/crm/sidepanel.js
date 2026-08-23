@@ -283,6 +283,15 @@ const MSG = {
   hBroken: 'Broken automations',
   hMissingRefs: 'Missing module references',
   hBiggestDesc: 'By line count, longest first. Length is verbosity, not complexity - a long function is worth a look, not necessarily a problem.',
+  // What a ranking of sizes was measured over. Both rankings, and the Markdown's size table, are
+  // built by filtering on `n.stats` - which exists only for a function whose source is in the mirror.
+  // A function the pull could not download simply was not there, so «the 15 biggest» was a ranking
+  // over an unstated subset and could not say so at any size. The same sentence this project already
+  // puts on the full-text search («searched 47/50 - absence is not exhaustive»), which had never been
+  // carried to the one view whose whole subject is counting.
+  hRankedOver: (ranked, all) => (ranked === all
+    ? `Measured over all ${all} function(s) here.`
+    : `Measured over ${ranked} of ${all} function(s): ${all - ranked} have no source in the mirror, so they cannot appear here at any size.`),
 };
 // A comparator over one field, with the `|| ''` the sites all carried: `.sort(byField('name'))`.
 const byField = (k) => (a, b) => (a[k] || '').localeCompare(b[k] || '');

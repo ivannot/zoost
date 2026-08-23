@@ -8725,6 +8725,8 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     actStale: () => false, actKept: () => false, actThin: () => false,
     _mdCell: (x) => String(x == null ? '' : x),
     PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    // The size chapter says what it could measure, and the sentence comes from MSG.
+    MSG: { hRankedOver: liftRankedOver() },
   };
   const data = () => ({
     fns: [
@@ -10789,5 +10791,94 @@ test('every reader of the seed facts rebuilds the seed first', () => {
     assert.deepEqual(bare, [],
       `id=${app}: these report facts about the index the model was sent without rebuilding it, so ` +
       `after a change of workspace they describe the org the reader left: ${bare.join('; ')}`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A ranking of sizes says what it was ranked over.
+//
+// «The 15 biggest functions» and «the chattiest» are built by filtering on `n.stats`, which exists
+// only for a function whose source is in the mirror. A function the pull could not download was
+// simply not there - so the ranking was over an unstated subset and could not say so at any size,
+// in the panel's health view, in the HTML report and in the Markdown one. The Markdown was worse:
+// the whole chapter appeared only when something was measurable, so a workspace whose sources were
+// never downloaded got a report with no size chapter at all, which reads as «this org's functions
+// have no size» rather than «none of them could be measured».
+//
+// It is the sentence this project already puts on the full-text search - «searched 47/50 - absence
+// is not exhaustive» - never carried to the one view whose whole subject is counting. Both twins
+// agreed, so `twincheck` could not see it.
+//
+// Run, not read: the report is built from a set where one function has stats and one does not, and
+// both numbers have to appear in the output.
+function liftRankedOver() {
+  const src = read('apps/crm/sidepanel.js');
+  // Three lines: the arrow, and the two branches. Sliced by brace-free counting of the parenthesis
+  // the arrow opens, so a reworded sentence still lifts and a restructured one fails loudly here
+  // rather than silently proving nothing.
+  const at = src.indexOf('  hRankedOver: (ranked, all) => (');
+  assert.ok(at > 0, 'MSG.hRankedOver is gone - the sentence this test is about no longer exists');
+  const open = src.indexOf('=> (', at) + 3;
+  let depth = 0, end = open;
+  for (; end < src.length; end++) {
+    if (src[end] === '(') depth++;
+    else if (src[end] === ')') { depth--; if (!depth) break; }
+  }
+  const body = `(ranked, all) => ${src.slice(open, end + 1)}`;
+  return vm.runInNewContext(`(${body})`, {});
+}
+
+test('a size ranking states how many functions it could measure', () => {
+  const globals = {
+    SCOPE_DEFAULT: { functions: true, modules: true, workflows: true, schedules: true, connections: true,
+                     actions: true, failures: true, health: true, code: true },
+    SCOPE_KEYS: ['functions', 'modules', 'code'],
+    bound: { instance: 'yourinstance', org: '1234567890', label: 'Acme', base: 'https://crm.zoho.eu' },
+    envOf: () => 'eu', freshnessLine: () => 'just now',
+    byField: (f) => (a, b) => String(a[f]).localeCompare(String(b[f])),
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k,
+    actStale: () => false, actKept: () => false, actThin: () => false,
+    _mdCell: (x) => String(x == null ? '' : x),
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    // The real sentence, lifted out of MSG rather than restated - a test that writes its own copy
+    // of the wording is testing its own copy.
+    MSG: { hRankedOver: liftRankedOver() },
+  };
+  const fns = [
+    { api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', rest: false, code: 'info "a";',
+      downloaded: true, associated_place: null, connections: [],
+      stats: { lines: 1, codeLines: 1, chars: 9, apiCalls: 0 },
+      node: { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha', calls: [], called_by: [],
+              stats: { lines: 1, codeLines: 1, chars: 9, apiCalls: 0 } } },
+    { api_name: 'beta', display_name: 'Beta', namespace: 'ns', rest: false, code: '',
+      downloaded: false, associated_place: null, connections: [], stats: null },
+  ];
+  const data = { fns, mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [], conns: [],
+                 fails: { at: null, usage: null, failures: [] }, acts: [], actUsers: new Map() };
+
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const md = buildExportMarkdown(data, { functions: true, code: true });
+  assert.match(md, /## Size and outbound calls/,
+    'the size chapter vanishes when a function cannot be measured, so «not measured» reads as «no size»');
+  assert.match(md, /Measured over 1 of 2 function\(s\)/,
+    `the Markdown ranks over a subset without saying so:\n${md.slice(md.indexOf('## Size'), md.indexOf('## Size') + 300)}`);
+
+  // And the same sentence, from the same place, in the health view's own description.
+  const health = read('apps/crm/health.js');
+  const withStats = /const withStats = nodes\.filter\(\(n\) => n\.stats && n\.stats\.lines\);/.test(health);
+  assert.ok(withStats, 'the health view no longer filters on stats - this test is measuring nothing');
+  // Derived twice: which lists are built out of `withStats`, and then which sections show those.
+  // «Every section on the size tab» was the first criterion and it over-captured - «Most run» sits
+  // there and is a reading of Zoho's runtime, not of the mirror, and it states its own moment
+  // already. What must carry the sentence is a list that was *filtered by whether a source exists*.
+  const ranked = [...health.matchAll(/const (\w+) = withStats[\s.]/g)].map((m) => m[1]);
+  assert.ok(ranked.length >= 2, `only ${ranked.length} ranking(s) built from withStats - the derivation broke`);
+  for (const name of ranked) {
+    const sec = new RegExp(`\\{ id: '(\\w+)'[\\s\\S]{0,500}?items: ${name} \\}`).exec(health);
+    assert.ok(sec, `the list ${name} is built and shown by no section`);
+    assert.match(sec[0], /MSG\.hRankedOver\(withStats\.length, nodes\.length\)/,
+      `id=${sec[1]}: a ranking built only from functions with a readable source does not say so, ` +
+      `while the report does - the same number, two answers`);
   }
 });

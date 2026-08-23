@@ -125,6 +125,7 @@ CLOSED = {
     ("await", "worker"):      ("tests/worker.test.mjs: a cached payload cannot change shape behind its own cache key", "planted 2026-08-23"),
     ("owner", "worker"):      ("tests/worker.test.mjs: a complete answer is held for the full time even when nothing is published", "planted 2026-08-23"),
     ("owner", "tools"):       ("tests/tools_test.py: every ledger keeps what a person wrote, driven per ledger", "planted 2026-08-23"),
+    ("fastpath", "crm-export"): ("tests/panel.test.mjs: a size ranking states how many functions it could measure", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

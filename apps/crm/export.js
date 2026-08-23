@@ -346,8 +346,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + hSec(MSG.hAmbiguous, hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
     + hSec(MSG.hBroken, hBroken.length, 'A workflow/schedule references a function not in this workspace.', hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
     + hSec(MSG.hMissingRefs, hFK.length, 'A lookup points to a module not in this workspace.', hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
-    + hSec(MSG.hBiggest, hBig.length, MSG.hBiggestDesc, hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
-    + hSec(MSG.hChattiest, hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.', hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
+    + hSec(MSG.hBiggest, hBig.length, MSG.hBiggestDesc + ' ' + esc(MSG.hRankedOver(hStat.length, hNodes.length)), hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
+    + hSec(MSG.hChattiest, hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. ' + esc(MSG.hRankedOver(hStat.length, hNodes.length)), hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
     ;
   const healthTotal = hOrph.length + hUnres.length + hAmbig.length + hBroken.length + hFK.length;
 
@@ -701,8 +701,13 @@ function buildExportMarkdown(d, scope) {
     });
   });
   const mdStat = fnList.filter((n) => n.stats && n.stats.lines);
-  if (mdStat.length) {
-    md += '---\n\n## Size and outbound calls\n\nPlain counts, no threshold and no verdict: length is verbosity, not complexity, and each outbound call is work Zoho meters. Calls are counted outside comments and string literals. Interpretation is the reader\'s.\n\n';
+  // The chapter exists whenever there are functions, and says what it could measure. It used to
+  // appear only when something was measurable, so a workspace whose sources were never downloaded
+  // got a report with no size chapter at all - indistinguishable from an org whose functions are all
+  // empty, and the reader cannot know which.
+  if (fnList.length) {
+    md += '---\n\n## Size and outbound calls\n\nPlain counts, no threshold and no verdict: length is verbosity, not complexity, and each outbound call is work Zoho meters. Calls are counted outside comments and string literals. Interpretation is the reader\'s.\n\n'
+      + MSG.hRankedOver(mdStat.length, fnList.length) + '\n\n';
     md += '| Function | Lines | Code lines | KB | invokeurl | zoho.crm | Other Zoho | sendmail | Total calls |\n|---|---|---|---|---|---|---|---|---|\n';
     mdStat.slice().sort((a, b) => b.stats.lines - a.stats.lines).forEach((n) => {
       const s = n.stats;

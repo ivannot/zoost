@@ -113,8 +113,11 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const groups = [
     { id: 'mostrun', tab: 'size', title: 'Most run, measured', desc: runsDesc, bad: false, items: mostRun },
     { id: 'failing', tab: 'functions', title: 'Failing in Zoho', desc: failDesc, bad: true, items: failing },
-    { id: 'biggest', tab: 'size', title: MSG.hBiggest, desc: MSG.hBiggestDesc, bad: false, items: biggest },
-    { id: 'chattiest', tab: 'size', title: MSG.hChattiest, desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
+    { id: 'biggest', tab: 'size', title: MSG.hBiggest,
+      desc: MSG.hBiggestDesc + ' ' + MSG.hRankedOver(withStats.length, nodes.length), bad: false, items: biggest },
+    { id: 'chattiest', tab: 'size', title: MSG.hChattiest,
+      desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates. '
+        + MSG.hRankedOver(withStats.length, nodes.length), bad: false, items: chattiest },
     { id: 'orphan', tab: 'functions', title: MSG.hOrphan, desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
     { id: 'unresolved', tab: 'functions', title: MSG.hUnresolved, desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
     { id: 'ambiguous', tab: 'functions', title: MSG.hAmbiguous, desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
