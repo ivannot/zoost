@@ -1,0 +1,421 @@
+# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.
+# Content interpolations in the exported report - the one document this project
+# writes that has an inline script and no CSP, so markup there is code. Being here
+# means it was present on the day this ledger was created, out of a file an
+# outside review had read once end to end - **not** that somebody read that line.
+# `cssdupes.txt` began the same way, with 86 repetitions recorded wholesale. What
+# it buys is that anything *new* is a finding on the day it is written, which is
+# the reading nobody was doing. It should shrink; when it grows, the run says so.
+apps/crm/export.js	tabLabel(t.id)
+apps/crm/export.js	areaAsOf(t.id)
+apps/crm/export.js	behind
+apps/crm/export.js	scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${
+apps/crm/export.js	f.modulesUnknown
+apps/crm/export.js	f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href
+apps/crm/export.js	f.stats.lines
+apps/crm/export.js	f.stats.codeLines
+apps/crm/export.js	f.stats.apiCalls || 'none'
+apps/crm/export.js	f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} z
+apps/crm/export.js	f.stats.invokeurl
+apps/crm/export.js	f.stats.crm
+apps/crm/export.js	f.stats.zoho
+apps/crm/export.js	f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''
+apps/crm/export.js	f.rest ? '<span class="badge rest">REST</span>' : ''
+apps/crm/export.js	f.downloaded ? '' : '<span class="badge no">not downloaded</span>'
+apps/crm/export.js	refs
+apps/crm/export.js	scope.code ? srcBlock(f) : ''
+apps/crm/export.js	r.visible === false ? ' \u00b7 hidden' : ''
+apps/crm/export.js	g2
+apps/crm/export.js	fl.mandatory ? '●' : ''
+apps/crm/export.js	fl.lookup ? '→ ' + modLink(fl.lookup) : ''
+apps/crm/export.js	_pick(fl.picklist, 12, esc)
+apps/crm/export.js	modLink(r.module)
+apps/crm/export.js	fl.required ? '●' : ''
+apps/crm/export.js	frows
+apps/crm/export.js	L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''
+apps/crm/export.js	secCount
+apps/crm/export.js	secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail no
+apps/crm/export.js	refBy
+apps/crm/export.js	rows
+apps/crm/export.js	relsHtmlFor(m)
+apps/crm/export.js	layoutsHtml
+apps/crm/export.js	r.linking_module
+apps/crm/export.js	what
+apps/crm/export.js	what
+apps/crm/export.js	modLink(r.parent)
+apps/crm/export.js	r.child ? modLink(r.child) : ''
+apps/crm/export.js	r.visible ? '' : ' \u00b7 hidden'
+apps/crm/export.js	EMPTY
+apps/crm/export.js	empty
+apps/crm/export.js	(g.field && g.field.api_name) || '?'
+apps/crm/export.js	g.comparator || ''
+apps/crm/export.js	wfValOf(g)
+apps/crm/export.js	op
+apps/crm/export.js	ea.unit
+apps/crm/export.js	ea.period || ''
+apps/crm/export.js	modl
+apps/crm/export.js	w.active ? '' : '<span class="badge no">inactive</span>'
+apps/crm/export.js	det.repeat ? 'yes' : 'no'
+apps/crm/export.js	tim ? ` (${tim})` : ''
+apps/crm/export.js	tim
+apps/crm/export.js	c.sequence_number || i + 1
+apps/crm/export.js	w.active ? '\u25cf' : ''
+apps/crm/export.js	wsc.count || ''
+apps/crm/export.js	fl
+apps/crm/export.js	fl
+apps/crm/export.js	count
+apps/crm/export.js	desc ? `<p class="hxd">${desc}</p>` : ''
+apps/crm/export.js	desc
+apps/crm/export.js	count ? rows : '<p class="hxnone">None</p>'
+apps/crm/export.js	hLink(n)
+apps/crm/export.js	hLink(n)
+apps/crm/export.js	hLink(n)
+apps/crm/export.js	hLink(n)
+apps/crm/export.js	n.stats.lines
+apps/crm/export.js	n.stats.codeLines
+apps/crm/export.js	hLink(n)
+apps/crm/export.js	n.stats.apiCalls
+apps/crm/export.js	n.stats.invokeurl
+apps/crm/export.js	n.stats.crm
+apps/crm/export.js	n.stats.zoho
+apps/crm/export.js	n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''
+apps/crm/export.js	f.rest ? '\u25cf' : ''
+apps/crm/export.js	f.downloaded ? '' : '\u2014'
+apps/crm/export.js	f.stats ? f.stats.lines : ''
+apps/crm/export.js	f.stats ? f.stats.apiCalls : ''
+apps/crm/export.js	k
+apps/crm/export.js	rb
+apps/crm/export.js	status
+apps/crm/export.js	usesLinks
+apps/crm/export.js	actWithheld
+apps/crm/export.js	healthTotal
+apps/crm/export.js	EXPORT_CSS
+apps/crm/export.js	scope.code ? '' : ' · source code excluded'
+apps/crm/export.js	toc
+apps/crm/export.js	fnHtml || absent(scope.functions, 'functions')
+apps/crm/export.js	modHtml || absent(scope.modules, 'modules')
+apps/crm/export.js	relHtml
+apps/crm/export.js	wfHtml
+apps/crm/export.js	schHtml
+apps/crm/export.js	actHtml
+apps/crm/export.js	connHtml
+apps/crm/export.js	failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''
+apps/crm/export.js	failHtml
+apps/crm/export.js	scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''
+apps/crm/export.js	healthHtml
+apps/crm/export.js	sanitize(m.api_name || 'unknown')
+apps/crm/export.js	w.id
+apps/crm/export.js	bound.label
+apps/crm/export.js	inst
+apps/crm/export.js	org
+apps/crm/export.js	env
+apps/crm/export.js	now
+apps/crm/export.js	notDown ? ` (${notDown} not downloaded - listed, without source)` : ''
+apps/crm/export.js	notDown
+apps/crm/export.js	freshnessLine()
+apps/crm/export.js	n.namespace
+apps/crm/export.js	n.name
+apps/crm/export.js	params(n)
+apps/crm/export.js	n.return_type ? ' \u2192 ' + n.return_type : ''
+apps/crm/export.js	n.rest ? ' \u00b7 REST' : ''
+apps/crm/export.js	n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} A
+apps/crm/export.js	n.stats.lines
+apps/crm/export.js	n.stats.apiCalls
+apps/crm/export.js	n.downloaded ? '' : ' \u00b7 not downloaded'
+apps/crm/export.js	n.description ? ' - ' + first(n.description) : ''
+apps/crm/export.js	m.api_name
+apps/crm/export.js	w.name
+apps/crm/export.js	w.module ? ' (' + w.module + ')' : ''
+apps/crm/export.js	wsc.count
+apps/crm/export.js	last ? ' \u00b7 last run ' + String(last).slice(0, 16) : ''
+apps/crm/export.js	sc.name
+apps/crm/export.js	sc.function_name || '?'
+apps/crm/export.js	sc.frequency ? ' (' + sc.frequency + ')' : ''
+apps/crm/export.js	scope.code ? ' (full source)' : ' (signatures only - source code exclu
+apps/crm/export.js	n.namespace
+apps/crm/export.js	n.name
+apps/crm/export.js	n.api_name || ''
+apps/crm/export.js	n.return_type ? ` \u00b7 returns ${n.return_type}` : ''
+apps/crm/export.js	n.return_type
+apps/crm/export.js	n.rest ? ' \u00b7 REST-enabled' : ''
+apps/crm/export.js	n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}
+apps/crm/export.js	p._type
+apps/crm/export.js	p.name ? ' ' + p.name : ''
+apps/crm/export.js	n.stats.lines
+apps/crm/export.js	n.stats.codeLines
+apps/crm/export.js	n.stats.apiCalls || 'none'
+apps/crm/export.js	n.stats.apiCalls ? ` (${n.stats.invokeurl} invokeurl, ${n.stats.crm} z
+apps/crm/export.js	n.stats.invokeurl
+apps/crm/export.js	n.stats.crm
+apps/crm/export.js	n.stats.zoho
+apps/crm/export.js	n.stats.sendmail ? `, ${n.stats.sendmail} sendmail` : ''
+apps/crm/export.js	n.stats.sendmail
+apps/crm/export.js	n.modulesUnknown
+apps/crm/export.js	n.modified_by ? 'by ' + n.modified_by : ''
+apps/crm/export.js	n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''
+apps/crm/export.js	r.linking_module
+apps/crm/export.js	title
+apps/crm/export.js	_mdCell(r.api)
+apps/crm/export.js	_mdCell(r.label)
+apps/crm/export.js	_mdCell(r.parent)
+apps/crm/export.js	r.child ? '`' + _mdCell(r.child) + '`' : ''
+apps/crm/export.js	_mdCell(r.via || '')
+apps/crm/export.js	_mdCell(r.type)
+apps/crm/export.js	_mdCell(r.api)
+apps/crm/export.js	_mdCell(r.parent)
+apps/crm/export.js	m.api_name
+apps/crm/export.js	mref.text
+apps/crm/export.js	_mdCell(f.label || f.api_name)
+apps/crm/export.js	_mdCell(f.api_name)
+apps/crm/export.js	f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''
+apps/crm/export.js	_pick(f.picklist, 12, _mdCell)
+apps/crm/export.js	_mdCell(r.api_name)
+apps/crm/export.js	_mdCell(r.label || '')
+apps/crm/export.js	_mdCell(r.module || r.connected_module || '')
+apps/crm/export.js	r.linking_module ? ' via ' + _mdCell(r.linking_module) : ''
+apps/crm/export.js	_mdCell(r.type || '')
+apps/crm/export.js	r.visible === false ? ' (hidden)' : ''
+apps/crm/export.js	_mdCell(L.name || String(L.id))
+apps/crm/export.js	L.visible === false ? ' (hidden)' : ''
+apps/crm/export.js	_mdCell(sec.display_label || sec.name || 'Section')
+apps/crm/export.js	_mdCell(fl.field_label || fl.display_label || fl.api_name)
+apps/crm/export.js	_mdCell(fl.api_name || '')
+apps/crm/export.js	_mdCell(fl.data_type || '')
+apps/crm/export.js	fl.required ? '\u25cf' : ''
+apps/crm/export.js	_mdCell(n.namespace + '.' + n.name)
+apps/crm/export.js	s.lines
+apps/crm/export.js	s.codeLines
+apps/crm/export.js	s.invokeurl
+apps/crm/export.js	s.crm
+apps/crm/export.js	s.zoho
+apps/crm/export.js	s.sendmail
+apps/crm/export.js	s.apiCalls
+apps/crm/export.js	withheld
+apps/crm/export.js	a.field_label || a.field
+apps/crm/export.js	a.field_type ? ' (' + a.field_type + ')' : ''
+apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
+apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
+apps/crm/export.js	mapVal(m)
+apps/crm/export.js	_mdCell(a.name || a.id)
+apps/crm/export.js	_mdCell(actionKindLabel(a.kind))
+apps/crm/export.js	_mdCell(actProv(a))
+apps/crm/export.js	_mdCell(detail)
+apps/crm/export.js	_mdCell(c.name)
+apps/crm/export.js	_mdCell(c.label || '')
+apps/crm/export.js	_mdCell(c.connector || '')
+apps/crm/export.js	status
+apps/crm/export.js	fails.at || 'an unknown date'
+apps/crm/export.js	fails.usage.success ?? 'unknown'
+apps/crm/export.js	fails.usage.failure ?? 'unknown'
+apps/crm/export.js	_mdCell(f.name)
+apps/crm/export.js	_mdCell(f.componentType)
+apps/crm/export.js	f.count
+apps/crm/export.js	_mdCell(f.lastFailedAt)
+apps/crm/export.js	_mdCell(f.reason)
+apps/crm/export.js	PRODUCT_NAME
+apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
+apps/crm/export.js	PRODUCT_URL
+apps/crm/export.js	PRODUCT_AUTHOR
+apps/crm/export.js	LEGAL_DISCLAIMER
+apps/crm/export.js	sanitize((bound && bound.instance) || 'workspace')
+apps/crm/export.js	stamp
+apps/crm/export.js	name
+apps/crm/export.js	sanitize((bound && bound.instance) || 'workspace')
+apps/crm/export.js	stamp
+apps/crm/export.js	name
+# means somebody read it and decided it cannot carry markup. It should shrink;
+# when it grows, the run says so and the commit says which of the two reasons.
+apps/crm/export.js	(g.field && g.field.api_name) || '?'
+apps/crm/export.js	EMPTY
+apps/crm/export.js	EXPORT_CSS
+apps/crm/export.js	L.visible === false ? ' (hidden)' : ''
+apps/crm/export.js	L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''
+apps/crm/export.js	LEGAL_DISCLAIMER
+apps/crm/export.js	PRODUCT_AUTHOR
+apps/crm/export.js	PRODUCT_NAME
+apps/crm/export.js	PRODUCT_URL
+apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
+apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
+apps/crm/export.js	_mdCell(L.name || String(L.id))
+apps/crm/export.js	_mdCell(a.name || a.id)
+apps/crm/export.js	_mdCell(actProv(a))
+apps/crm/export.js	_mdCell(actionKindLabel(a.kind))
+apps/crm/export.js	_mdCell(c.connector || '')
+apps/crm/export.js	_mdCell(c.label || '')
+apps/crm/export.js	_mdCell(c.name)
+apps/crm/export.js	_mdCell(detail)
+apps/crm/export.js	_mdCell(f.api_name)
+apps/crm/export.js	_mdCell(f.componentType)
+apps/crm/export.js	_mdCell(f.label || f.api_name)
+apps/crm/export.js	_mdCell(f.lastFailedAt)
+apps/crm/export.js	_mdCell(f.name)
+apps/crm/export.js	_mdCell(f.reason)
+apps/crm/export.js	_mdCell(fl.api_name || '')
+apps/crm/export.js	_mdCell(fl.data_type || '')
+apps/crm/export.js	_mdCell(fl.field_label || fl.display_label || fl.api_name)
+apps/crm/export.js	_mdCell(n.namespace + '.' + n.name)
+apps/crm/export.js	_mdCell(r.api)
+apps/crm/export.js	_mdCell(r.api_name)
+apps/crm/export.js	_mdCell(r.label || '')
+apps/crm/export.js	_mdCell(r.label)
+apps/crm/export.js	_mdCell(r.module || r.connected_module || '')
+apps/crm/export.js	_mdCell(r.parent)
+apps/crm/export.js	_mdCell(r.type || '')
+apps/crm/export.js	_mdCell(r.type)
+apps/crm/export.js	_mdCell(r.via || '')
+apps/crm/export.js	_mdCell(sec.display_label || sec.name || 'Section')
+apps/crm/export.js	_pick(f.picklist, 12, _mdCell)
+apps/crm/export.js	_pick(fl.picklist, 12, esc)
+apps/crm/export.js	a.field_label || a.field
+apps/crm/export.js	a.field_type ? ' (' + a.field_type + ')' : ''
+apps/crm/export.js	actHtml
+apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
+apps/crm/export.js	actWithheld
+apps/crm/export.js	areaAsOf(t.id)
+apps/crm/export.js	behind
+apps/crm/export.js	bound.label
+apps/crm/export.js	c.sequence_number || i + 1
+apps/crm/export.js	connHtml
+apps/crm/export.js	count
+apps/crm/export.js	count ? rows : '<p class="hxnone">None</p>'
+apps/crm/export.js	desc
+apps/crm/export.js	desc ? `<p class="hxd">${desc}</p>` : ''
+apps/crm/export.js	det.repeat ? 'yes' : 'no'
+apps/crm/export.js	ea.period || ''
+apps/crm/export.js	ea.unit
+apps/crm/export.js	empty
+apps/crm/export.js	env
+apps/crm/export.js	f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href
+apps/crm/export.js	f.count
+apps/crm/export.js	f.downloaded ? '' : '<span class="badge no">not downloaded</span>'
+apps/crm/export.js	f.downloaded ? '' : '\u2014'
+apps/crm/export.js	f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''
+apps/crm/export.js	f.modulesUnknown
+apps/crm/export.js	f.rest ? '<span class="badge rest">REST</span>' : ''
+apps/crm/export.js	f.rest ? '\u25cf' : ''
+apps/crm/export.js	f.stats ? f.stats.apiCalls : ''
+apps/crm/export.js	f.stats ? f.stats.lines : ''
+apps/crm/export.js	f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} z
+apps/crm/export.js	f.stats.apiCalls || 'none'
+apps/crm/export.js	f.stats.codeLines
+apps/crm/export.js	f.stats.crm
+apps/crm/export.js	f.stats.invokeurl
+apps/crm/export.js	f.stats.lines
+apps/crm/export.js	f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''
+apps/crm/export.js	f.stats.zoho
+apps/crm/export.js	failHtml
+apps/crm/export.js	failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''
+apps/crm/export.js	fails.at || 'an unknown date'
+apps/crm/export.js	fails.usage.failure ?? 'unknown'
+apps/crm/export.js	fails.usage.success ?? 'unknown'
+apps/crm/export.js	fl
+apps/crm/export.js	fl.lookup ? '→ ' + modLink(fl.lookup) : ''
+apps/crm/export.js	fl.mandatory ? '●' : ''
+apps/crm/export.js	fl.required ? '\u25cf' : ''
+apps/crm/export.js	fl.required ? '●' : ''
+apps/crm/export.js	fnHtml || absent(scope.functions, 'functions')
+apps/crm/export.js	freshnessLine()
+apps/crm/export.js	frows
+apps/crm/export.js	g.comparator || ''
+apps/crm/export.js	g2
+apps/crm/export.js	hLink(n)
+apps/crm/export.js	healthHtml
+apps/crm/export.js	healthTotal
+apps/crm/export.js	inst
+apps/crm/export.js	k
+apps/crm/export.js	last ? ' \u00b7 last run ' + String(last).slice(0, 16) : ''
+apps/crm/export.js	layoutsHtml
+apps/crm/export.js	m.api_name
+apps/crm/export.js	mapVal(m)
+apps/crm/export.js	modHtml || absent(scope.modules, 'modules')
+apps/crm/export.js	modLink(r.module)
+apps/crm/export.js	modLink(r.parent)
+apps/crm/export.js	modl
+apps/crm/export.js	mref.text
+apps/crm/export.js	n.api_name || ''
+apps/crm/export.js	n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}
+apps/crm/export.js	n.description ? ' - ' + first(n.description) : ''
+apps/crm/export.js	n.downloaded ? '' : ' \u00b7 not downloaded'
+apps/crm/export.js	n.modified_by ? 'by ' + n.modified_by : ''
+apps/crm/export.js	n.modulesUnknown
+apps/crm/export.js	n.name
+apps/crm/export.js	n.namespace
+apps/crm/export.js	n.rest ? ' \u00b7 REST' : ''
+apps/crm/export.js	n.rest ? ' \u00b7 REST-enabled' : ''
+apps/crm/export.js	n.return_type
+apps/crm/export.js	n.return_type ? ' \u2192 ' + n.return_type : ''
+apps/crm/export.js	n.return_type ? ` \u00b7 returns ${n.return_type}` : ''
+apps/crm/export.js	n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} A
+apps/crm/export.js	n.stats.apiCalls
+apps/crm/export.js	n.stats.apiCalls ? ` (${n.stats.invokeurl} invokeurl, ${n.stats.crm} z
+apps/crm/export.js	n.stats.apiCalls || 'none'
+apps/crm/export.js	n.stats.codeLines
+apps/crm/export.js	n.stats.crm
+apps/crm/export.js	n.stats.invokeurl
+apps/crm/export.js	n.stats.lines
+apps/crm/export.js	n.stats.sendmail
+apps/crm/export.js	n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''
+apps/crm/export.js	n.stats.sendmail ? `, ${n.stats.sendmail} sendmail` : ''
+apps/crm/export.js	n.stats.zoho
+apps/crm/export.js	n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''
+apps/crm/export.js	name
+apps/crm/export.js	notDown
+apps/crm/export.js	notDown ? ` (${notDown} not downloaded - listed, without source)` : ''
+apps/crm/export.js	now
+apps/crm/export.js	op
+apps/crm/export.js	org
+apps/crm/export.js	p._type
+apps/crm/export.js	p.name ? ' ' + p.name : ''
+apps/crm/export.js	params(n)
+apps/crm/export.js	r.child ? '`' + _mdCell(r.child) + '`' : ''
+apps/crm/export.js	r.child ? modLink(r.child) : ''
+apps/crm/export.js	r.linking_module
+apps/crm/export.js	r.linking_module ? ' via ' + _mdCell(r.linking_module) : ''
+apps/crm/export.js	r.visible === false ? ' (hidden)' : ''
+apps/crm/export.js	r.visible === false ? ' \u00b7 hidden' : ''
+apps/crm/export.js	r.visible ? '' : ' \u00b7 hidden'
+apps/crm/export.js	rb
+apps/crm/export.js	refBy
+apps/crm/export.js	refs
+apps/crm/export.js	relHtml
+apps/crm/export.js	relsHtmlFor(m)
+apps/crm/export.js	rows
+apps/crm/export.js	s.apiCalls
+apps/crm/export.js	s.codeLines
+apps/crm/export.js	s.crm
+apps/crm/export.js	s.invokeurl
+apps/crm/export.js	s.lines
+apps/crm/export.js	s.sendmail
+apps/crm/export.js	s.zoho
+apps/crm/export.js	sanitize((bound && bound.instance) || 'workspace')
+apps/crm/export.js	sanitize(m.api_name || 'unknown')
+apps/crm/export.js	sc.frequency ? ' (' + sc.frequency + ')' : ''
+apps/crm/export.js	sc.function_name || '?'
+apps/crm/export.js	sc.name
+apps/crm/export.js	schHtml
+apps/crm/export.js	scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${
+apps/crm/export.js	scope.code ? ' (full source)' : ' (signatures only - source code exclu
+apps/crm/export.js	scope.code ? '' : ' · source code excluded'
+apps/crm/export.js	scope.code ? srcBlock(f) : ''
+apps/crm/export.js	scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''
+apps/crm/export.js	secCount
+apps/crm/export.js	secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail no
+apps/crm/export.js	stamp
+apps/crm/export.js	status
+apps/crm/export.js	tabLabel(t.id)
+apps/crm/export.js	tim
+apps/crm/export.js	tim ? ` (${tim})` : ''
+apps/crm/export.js	title
+apps/crm/export.js	toc
+apps/crm/export.js	usesLinks
+apps/crm/export.js	w.active ? '' : '<span class="badge no">inactive</span>'
+apps/crm/export.js	w.active ? '\u25cf' : ''
+apps/crm/export.js	w.id
+apps/crm/export.js	w.module ? ' (' + w.module + ')' : ''
+apps/crm/export.js	w.name
+apps/crm/export.js	wfHtml
+apps/crm/export.js	wfValOf(g)
+apps/crm/export.js	what
+apps/crm/export.js	withheld
+apps/crm/export.js	wsc.count
+apps/crm/export.js	wsc.count || ''

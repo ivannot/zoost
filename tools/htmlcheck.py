@@ -35,7 +35,7 @@ import re
 import sys
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ledger import delta as ledger_delta, count as ledger_count  # noqa: E402
+from ledger import delta as ledger_delta, count as ledger_count, keep_comments as ledger_keep  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -318,6 +318,60 @@ def interpolations(value: str) -> list:
 # ledger should shrink, and a run that grows it says so. Two real ones were fixed before it was
 # written rather than recorded in it.
 LEDGER = ROOT / 'tools' / 'attrraw.txt'
+# The exported report's *content*, which is a different subject and gets a ledger of its own.
+#
+# The limit stated above - element content is not checked - is right about the panel, where MV3
+# refuses inline script and the shapes are too varied to judge. It is not right about
+# `apps/crm/export.js`, which writes a standalone document opened from `file://`, with no
+# content-security policy and an inline `<script>`: markup injection there **is** code execution.
+# An outside review read all of them once, by hand, and found them clean - and «one reading is not
+# an audit», which this repository says in as many words. Nothing has read the ones added since.
+#
+# So it is a ledger and not a judgement, exactly like the one above: 424 content interpolations, 210
+# inert by syntax, the rest recorded as read with their place. Anything new is a finding on the day
+# it is written, which is the whole value - the cost of reading one is a minute.
+CONTENT_LEDGER = ROOT / 'tools' / 'exportraw.txt'
+EXPORT_FILE = ROOT / 'apps' / 'crm' / 'export.js'
+# Inert by syntax: it went through an escaper, it is a count, or it is a join of things already
+# escaped. Deliberately narrow - what it cannot show, the ledger records instead.
+CONTENT_SAFE = re.compile(r'\b(?:esc|escHtml|escA|hl|mdToHtml)\s*\(|^[\s\d]*$|\.length\b'
+                          r'|\.toFixed\(|\bjoin\(')
+
+
+def content_slots(src: str):
+    """Every `${...}` in content position, with its line and its expression.
+
+    Attribute position is the other pass's subject and is skipped by looking behind for an unclosed
+    `="` on the same line - the same crude test `crude_slots` uses, from the other side.
+    """
+    for m in re.finditer(r'\$\{', src):
+        before = src[max(0, m.start() - 120):m.start()]
+        if re.search(r'="[^"\n]*$', before):
+            continue
+        depth, i = 1, m.end()
+        while i < len(src) and depth:
+            if src[i] == '{':
+                depth += 1
+            elif src[i] == '}':
+                depth -= 1
+            i += 1
+        yield src[:m.start()].count('\n') + 1, ' '.join(src[m.end():i - 1].split())[:70]
+
+
+def content_findings(ledger: set):
+    """Content interpolations in the exported report that nobody has recorded as read."""
+    src = re.sub(r'^\s*//.*$', '', EXPORT_FILE.read_text(encoding='utf-8'), flags=re.M)
+    out, total, inert = [], 0, 0
+    for line, expr in content_slots(src):
+        total += 1
+        if CONTENT_SAFE.search(expr):
+            inert += 1
+            continue
+        if f'apps/crm/export.js\t{expr}' in ledger:
+            continue
+        out.append(f'apps/crm/export.js:{line}: content ${{{expr}}} has not been read - the export is '
+                   f'a page with an inline script and no CSP, so markup there is code')
+    return out, total, inert
 
 
 def key(rel, attr: str, expr: str) -> str:
@@ -409,6 +463,33 @@ def main() -> int:
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in divs_are_closed(path)]
     notes_belong_to_a_control(findings)
 
+    # The exported report's content, against its own ledger.
+    try:
+        known = {l.strip() for l in CONTENT_LEDGER.read_text(encoding='utf-8').splitlines()
+                 if l.strip() and not l.startswith('#')}
+    except OSError:
+        known = set()
+    content, c_total, c_inert = content_findings(set() if accept else known)
+    if accept:
+        rows = ['# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.',
+                '# Content interpolations in the exported report - the one document this project',
+                '# writes that has an inline script and no CSP, so markup there is code. Being here',
+                '# means it was present on the day this ledger was created, out of a file an',
+                '# outside review had read once end to end - **not** that somebody read that line.',
+                '# `cssdupes.txt` began the same way, with 86 repetitions recorded wholesale. What',
+                '# it buys is that anything *new* is a finding on the day it is written, which is',
+                '# the reading nobody was doing. It should shrink; when it grows, the run says so.']
+        before = ledger_count(CONTENT_LEDGER)
+        for f in content:
+            expr = f.partition('content ${')[2].rpartition('}')[0]
+            rows.append(f'apps/crm/export.js\t{expr}')
+        kept = ledger_keep(CONTENT_LEDGER, rows)
+        CONTENT_LEDGER.write_text('\n'.join(rows + kept + sorted(known)) + '\n', encoding='utf-8')
+        print(ledger_delta(f'htmlcheck: {CONTENT_LEDGER.relative_to(ROOT)}', before,
+                           ledger_count(CONTENT_LEDGER)))
+    else:
+        findings += content
+
     if accept:
         rows = ['# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.',
                 '# Attribute interpolations that are not attribute-escaped and are inert for a reason',
@@ -429,6 +510,11 @@ def main() -> int:
     print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages, '
           f'{seen} attribute interpolation(s) inspected'
           + (f', {missed} NOT LOOKED AT' if missed else ', none left unread'))
+    # After the headline, never before it: the coverage sentence about *this* checker is the
+    # first line by design - two cases hold it there - and putting the export's count above it
+    # displaced the thing a reader is meant to see first.
+    print(f'htmlcheck: {c_total} content interpolation(s) in the exported report; {c_inert} inert by '
+          f'syntax, {c_total - c_inert} recorded - anything new is a finding.')
     for f in findings:
         print('  ' + f)
     print()

@@ -5260,5 +5260,63 @@ class TheProbeSaysHowMuchItDrove(unittest.TestCase):
                       'the run does not print how much of the panel it drove')
 
 
+class TheExportedReportsContentIsLedgered(unittest.TestCase):
+    """The one document with an inline script and no CSP has its content read by something.
+
+    `htmlcheck` checks attribute interpolations and says, honestly, that it does not check element
+    content: in the panel MV3 refuses inline script, so markup injection is not code execution. That
+    reason is right about the panel and wrong about `apps/crm/export.js`, which writes a standalone
+    report opened from `file://`, with no content-security policy and an inline `<script>` of its
+    own - and the docstring already said so, after an outside review pointed it out.
+
+    What was left was a gap with a note on it. An outside review read all of them once by hand and
+    found them clean; «one reading is not an audit» is this repository's own sentence, and nothing
+    read the interpolations added since - including several added today.
+
+    So it is a ledger, exactly like `attrraw.txt`: 424 content interpolations, ~207 inert by syntax,
+    the rest recorded with their expression. Being in it means «present when the ledger was made»,
+    not «a person read this line» - said in the file, because the alternative is a header that
+    claims a reading nobody did.
+    """
+
+    def run_it(self, *args):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'htmlcheck.py'), *args],
+                              cwd=ROOT, capture_output=True, text=True)
+
+    def test_it_counts_the_content_it_looked_at(self):
+        out = self.run_it().stdout
+        m = re.search(r'(\d+) content interpolation\(s\) in the exported report; (\d+) inert by '
+                      r'syntax, (\d+) recorded', out)
+        self.assertIsNotNone(m, f'the run says nothing about the exported report:\n{out}')
+        total, inert, recorded = (int(g) for g in m.groups())
+        self.assertGreater(total, 100, 'the enumeration broke - a report of this size has hundreds')
+        self.assertEqual(inert + recorded, total, 'the three numbers do not add up')
+
+    def test_a_new_one_is_a_finding(self):
+        # Run, not read: a content interpolation nobody recorded must fail the check.
+        f = ROOT / 'apps' / 'crm' / 'export.js'
+        keep = f.read_text(encoding='utf-8')
+        try:
+            f.write_text(keep.replace('<h2 id="functions">Functions</h2>',
+                                      '<h2 id="functions">Functions ${plantedHere}</h2>', 1),
+                         encoding='utf-8')
+            out = self.run_it()
+            self.assertNotEqual(out.returncode, 0, 'a new content interpolation passes unread')
+            self.assertIn('plantedHere', out.stdout, out.stdout[-400:])
+        finally:
+            f.write_text(keep, encoding='utf-8')
+
+    def test_and_the_tree_as_it_stands_is_green(self):
+        # The other half: a ledger that refuses everything is not strict, it is broken.
+        self.assertEqual(self.run_it().returncode, 0,
+                         'the check refuses the tree it was just built from')
+
+    def test_the_ledger_does_not_claim_a_reading_nobody_did(self):
+        head = (ROOT / 'tools' / 'exportraw.txt').read_text(encoding='utf-8')[:900]
+        self.assertIn('not** that somebody read that line', head,
+                      'the ledger header claims each line was read by a person, and they were '
+                      'recorded wholesale')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
