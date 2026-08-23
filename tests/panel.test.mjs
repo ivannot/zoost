@@ -11764,3 +11764,64 @@ test('crm: the export contents name the chapters the export has, in the order it
       `id=${what}: the contents and the document disagree.\n    contents: ${contents.join(' | ')}\n    document: ${chapters.join(' | ')}`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The same composition, in the twin, and it was wrong there too.
+//
+// The Analytics export derives both halves from `exportSections()` - the contents and the body walk
+// the same array - so the defect the CRM report had could not happen here. Except for the one
+// chapter that is not a section: the SQL dialect reference, written into the document **before** the
+// sections and appended to the contents **after** them. Contents said
+//
+//   Views · Structure · Relations · Query table SQL · Health · Zoho Analytics SQL
+//
+// over a document that opens with Zoho Analytics SQL, so every entry named the chapter before the
+// one it stood for - the CRM defect exactly, in the report that had been written to avoid it, on the
+// single line that steps outside the derivation.
+//
+// It also carried the reference's title typed out a second time, and the block builds its own
+// heading. Two copies of one string; both are the module's now.
+//
+// Run rather than read: the document is built with the real `analytics-sql.js` evaluated beside it,
+// because a stub would compare this test's idea of the heading against itself.
+//
+// **The limits, stated.** The fixture asks for every section and holds nothing, which exercises the
+// order and not what a chapter contains; `lineage` needs `deps` and is absent from both lists here,
+// which is the composition holding rather than a gap. It reads the Markdown report - the HTML one
+// builds its `<nav>` and its body from the same array in the same loop, with nothing outside it.
+test('analytics: the export contents name the chapters in the order the document has them', async () => {
+  const win = {};
+  vm.runInContext(read('apps/analytics/analytics-sql.js'),
+    vm.createContext({ window: win, console, Object, String, Number, Array, JSON, Math, Date, RegExp }));
+  assert.ok(win.ZOHO_ANALYTICS_SQL && win.ZOHO_ANALYTICS_SQL.markdown,
+    'analytics-sql.js no longer publishes a markdown() - the derivation broke');
+
+  const globals = {
+    window: win,
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
+    PRODUCT_NAME: 'Zoost', LEGAL_DISCLAIMER: 'x',
+    bound: { workspace: 'w', name: 'W', label: '', origin: 'o' },
+    views: [], schema: {}, relations: [], deps: null,
+    esc: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+    shortDate: () => '—', fkText: () => '', viewById: () => new Map(),
+    sqlReadState: async () => ({ kind: 'ok', body: 'select 1' }), sqlText: (x) => String(x || ''),
+    beginWorkspaceOp: () => ({}),
+    healthFindings: () => ({ counts: { views: 0, tables: 0, columns: 0, relations: 0, sql: 0 },
+                             orphans: [], islands: [], system: [], unread: [] }),
+  };
+  const { buildExportMarkdown } = load([
+    sliceFn('apps/analytics/sidepanel.js', 'exportSections'),
+    sliceFn('apps/analytics/sidepanel.js', 'buildExportMarkdown'),
+  ], globals);
+
+  const md = await buildExportMarkdown({ views: true, structure: true, relations: true,
+                                         sql: true, lineage: true, health: true });
+  const at = md.indexOf('## Contents');
+  assert.ok(at > 0, 'the Markdown report has no contents - the derivation broke');
+  const contents = md.slice(at).split('\n\n')[1].split('\n')
+    .map((l) => l.replace(/^-\s*/, '').trim()).filter(Boolean);
+  const chapters = [...md.matchAll(/^## (.+)$/gm)].map((m) => m[1].trim()).filter((t) => t !== 'Contents');
+  assert.ok(chapters.length >= 5, `only ${chapters.length} chapter(s) read - the derivation broke`);
+  assert.deepEqual(contents, chapters,
+    `the contents and the document disagree.\n    contents: ${contents.join(' | ')}\n    document: ${chapters.join(' | ')}`);
+});

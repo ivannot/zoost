@@ -3157,11 +3157,17 @@ async function buildExportMarkdown(sc, op = beginWorkspaceOp()) {
   const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
   let out = `# ${bound.label || bound.name || bound.workspace}\n\nZoho Analytics workspace ${bound.label && bound.name ? `${bound.name} ` : ''}\`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
   out += '> Read-only mirror. Zoost never writes to Zoho Analytics and never reads record data.\n\n';
-  out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n- Zoho Analytics SQL - what query tables allow\n\n';
+  // The dialect reference is written **before** the sections, so it is listed before them: the
+  // contents used to name it last while the document put it first, which shifted every entry
+  // after it by one. And its title is taken from the block itself rather than typed again here -
+  // a heading and a contents entry that are two copies of one string is how they came apart.
+  const sqlRef = window.ZOHO_ANALYTICS_SQL.markdown();
+  const sqlTitle = (sqlRef.match(/^## (.+)$/m) || [, 'Zoho Analytics SQL'])[1];
+  out += '## Contents\n\n' + [sqlTitle, ...secs.map((x) => x.title)].map((t) => `- ${t}`).join('\n') + '\n\n';
   // The dialect reference travels with the export on purpose: this file exists to be handed to an
   // agent that has never seen Analytics, and a workspace description without the tool's constraints
   // would get it writing SQL that cannot run.
-  out += window.ZOHO_ANALYTICS_SQL.markdown() + '\n';
+  out += sqlRef + '\n';
   for (const x of secs) {
     out += `## ${x.title}\n\n`;
     if (x.rows) out += row(x.head) + '\n' + row(x.head.map(() => '---')) + '\n' + x.rows.map(row).join('\n') + '\n\n';

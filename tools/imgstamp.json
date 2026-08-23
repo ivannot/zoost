@@ -1,39 +1,39 @@
 {
   "analytics-ai": {
     "app": "analytics",
-    "from": "e63c23e3a66f7172"
+    "from": "ff58c3321eee76f7"
   },
   "analytics-columns": {
     "app": "analytics",
-    "from": "8b5fa907ee78a944"
+    "from": "1b56397e675d12fd"
   },
   "analytics-er": {
     "app": "analytics",
-    "from": "6cd7e7efc99452c2"
+    "from": "c87585b05e1fd08c"
   },
   "analytics-export": {
     "app": "analytics",
-    "from": "0b3297e70625c274"
+    "from": "c8d4c7d88c0d88b8"
   },
   "analytics-health": {
     "app": "analytics",
-    "from": "81fb17b370e6563e"
+    "from": "c7ea375e5abc8404"
   },
   "analytics-lineage": {
     "app": "analytics",
-    "from": "fcdf1dd76c48cbc9"
+    "from": "8554bf8ec3af675b"
   },
   "analytics-panel": {
     "app": "analytics",
-    "from": "2e209e12a25e6f45"
+    "from": "ad1fc9051a36a0b1"
   },
   "analytics-search": {
     "app": "analytics",
-    "from": "84a644177ad4fc7c"
+    "from": "a149c5f265548a76"
   },
   "analytics-settings": {
     "app": "analytics",
-    "from": "b38116b52f8e4ca8"
+    "from": "5d8803f45e7b3b95"
   },
   "crm-actions": {
     "app": "crm",
