@@ -88,9 +88,6 @@ EXAMINED = {
     ("owner", "crm-ai"): ("every flag is owned by its generation - aiBusy released only when aiGen "
                           "has not moved, aiSeedWarned and the conversation cleared together - in "
                           "both products", "2026-08-23"),
-    ("workspace", "crm-ai"): ("every consumer of the seed figures rebuilds before reading; "
-                              "aiBuildSeed guards its three global writes; the focus path is "
-                              "cleared on a switch", "2026-08-23"),
     ("siblings", "store"): ("both listings carry the same ten sections and nine payload blocks, the "
                             "same claims, disclosures that differ only where the products do, and a "
                             "whatsnew note for every tag since each adopted the convention",
@@ -122,6 +119,7 @@ CLOSED = {
     ("await", "options"):     ("tests/panel.test.mjs: an overtaken loader publishes nothing", "planted 2026-08-23"),
     ("await", "crm-export"):  ("tests/tools_test.py: the export reads no panel state after an await", "planted 2026-08-23"),
     ("owner", "options"):     ("tests/panel.test.mjs: a refused save keeps the edits and says so", "planted 2026-08-23"),
+    ("workspace", "crm-ai"):  ("tests/panel.test.mjs: every reader of the seed facts rebuilds the seed first", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

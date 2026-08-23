@@ -10735,3 +10735,59 @@ test('every settings write on the options page goes through the one writer', () 
       `when the browser refuses: ${rogue.join(', ')}`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// What the assistant says about the index it sent describes the workspace on screen.
+//
+// `aiSeedSize`, `aiSeedOmitted` and `aiSeedTruncated` are module state written by `aiBuildSeed` and
+// they are the three facts the panel reports *about* the seed - «sent with every message: 42k
+// characters», «the 61 module names left out», and the one-off «Large org» note in the transcript.
+// Nothing clears them on a change of workspace, and nothing needs to, on one condition: every reader
+// rebuilds the seed first. That held when it was measured, and was held by nothing at all - removing
+// the rebuild from `aiContextLabel` in both products left the whole battery green except the twin
+// ledger, which reports «both sides moved» and is a diff notice, not a finding.
+//
+// What it would have cost: open the assistant in one org, switch to another, and the context line
+// keeps quoting the first org's index size and the names it left out - a claim about what the model
+// was sent, and wrong. That is worse than a stale number, because it is the sentence the reader uses
+// to decide whether to trust the answer.
+//
+// **The limit, stated:** the rebuilders are `aiBuildSeed` and its *direct* callers - one level, not
+// the transitive closure, which spreads over most of the panel and would approve anything. A reader
+// that rebuilds two calls deep is a finding here and needs this test widened rather than silenced.
+test('every reader of the seed facts rebuilds the seed first', () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const files = readdirSync(join(ROOT, 'apps', app)).filter((f) => f.endsWith('.js'));
+    const bodies = new Map();
+    for (const f of files) {
+      const src = read(`apps/${app}/${f}`)
+        .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+        .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+      for (const m of src.matchAll(/^(?:async )?function (\w+)\([^\n]*\{/gm)) {
+        const end = src.indexOf('\n}', m.index);
+        if (end > 0) bodies.set(m[1], { file: f, body: src.slice(m.index, end) });
+      }
+    }
+    if (!bodies.has('aiBuildSeed')) continue;
+
+    // Derived: the facts are whatever `aiBuildSeed` publishes into module state.
+    const facts = [...new Set([...bodies.get('aiBuildSeed').body.matchAll(/^\s{0,4}(ai\w+)\s*=(?!=)/gm)].map((m) => m[1]))];
+    assert.ok(facts.length >= 2, `id=${app}: aiBuildSeed publishes ${facts.length} fact(s) - the derivation broke`);
+
+    // One level of callers, and no more. Named in the failure so a widening is a decision.
+    const rebuilders = new Set(['aiBuildSeed']);
+    for (const [name, { body }] of bodies) if (/await\s+aiBuildSeed\s*\(/.test(body)) rebuilders.add(name);
+
+    const bare = [];
+    for (const [name, { file, body }] of bodies) {
+      if (name === 'aiBuildSeed') continue;
+      const reads = facts.filter((f) => new RegExp(`(?<![\\w$.])${f}(?!\\s*=[^=])`).test(body));
+      if (!reads.length) continue;
+      const fresh = [...rebuilders].some((r) => new RegExp(`await\\s+${r}\\s*\\(`).test(body));
+      if (!fresh) bare.push(`${file}:${name} reads ${reads.join(', ')}`);
+    }
+    assert.deepEqual(bare, [],
+      `id=${app}: these report facts about the index the model was sent without rebuilding it, so ` +
+      `after a change of workspace they describe the org the reader left: ${bare.join('; ')}`);
+  }
+});
