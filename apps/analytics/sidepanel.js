@@ -1783,7 +1783,17 @@ function sqlHit(text, term, re) {
 async function ensureSqlCache(op = beginWorkspaceOp()) {
   if (!op.current()) return null;
   if (sqlCache) return sqlCache;
-  const entries = Object.entries(sqls).filter(([, q]) => q && q.stem);
+  // A stem **or** a body already in memory. The stem is the name of the `.sql` file on disk and is
+  // only needed to go and read one - which the loop below decides for itself, three lines down,
+  // with `typeof q.sql === 'string'`.
+  //
+  // It was `q.stem` alone, and a pull publishes `sqls` straight from the bridge, whose answer has no
+  // stem in it. So after every Pull all this filtered out **every** query, `entries` was empty, and
+  // the search reported «no query matches» over queries it had never opened - while `sqlUnread`
+  // stayed 0, because `sqlState` sees an entry and calls it read, so the "absence here is not
+  // exhaustive" caveat was suppressed too. The one sentence written to stop this said the opposite.
+  // Fixed by reopening the panel, which is why it survived: `loadFromDisk` puts the stems back.
+  const entries = Object.entries(sqls).filter(([, q]) => q && (q.stem || typeof q.sql === 'string'));
   if (entries.length) op.say(`Reading the SQL of ${entries.length} quer${entries.length === 1 ? 'y' : 'ies'}\u2026`, 'busy');
   const m = new Map();
   const loaded = new Map();

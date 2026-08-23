@@ -860,7 +860,12 @@ PULL_AN = r"""
         const sql = {};
         for (const id of m.ids) {
           const e = fxIndex[id]; if (!e) continue;
-          sql[id] = { sql: bodies[id], stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
+          // **No `stem`**, because the real bridge sends none: its answer is
+          // `{ id, sql, parents, sources }`. Inventing one here made the pull probe drive a shape the
+          // product never sees, and it hid a defect for as long as it existed - after a real pull the
+          // SQL search filtered every query out and reported «no match» over queries it had never
+          // opened. A fake that is kinder than the thing it stands for is worse than none.
+          sql[id] = { id, sql: bodies[id], parents: e.parents || [], sources: e.sources || {} };
         }
         return { ok: true, sql, failed: [] };
       },

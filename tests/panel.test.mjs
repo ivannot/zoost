@@ -11358,3 +11358,40 @@ test('crm: every surface answers «fired by» through the same lookup', () => {
     'the export builds the map with the id key alone, so its «Fired by» column is blank for an ' +
     'action the panel shows a rule for');
 });
+
+// ---------------------------------------------------------------------------------------------
+// After a pull, `in: SQL` searches the queries rather than reporting on none.
+//
+// `ensureSqlCache` gathered the queries to search with `filter(([, q]) => q && q.stem)`. A stem is
+// the name of the `.sql` file on disk, and it is put there by `loadFromDisk`. **A pull publishes
+// `sqls` straight from the bridge**, whose answer is `{id, sql, parents, sources}` - no stem. So
+// immediately after a Pull all this filtered out every query, and the branch written for exactly
+// this case, three lines below, was never reached.
+//
+// What the reader saw: «No query matches. The search box is narrowing 12 queries down to none» -
+// and no caveat, because `sqlUnread` counts views whose SQL is *missing*, and these are present.
+// The one sentence written to stop this - «searched 47/50, absence is not exhaustive» - was
+// suppressed by the same shape it exists for. Reopening the panel fixed it, which is why it lasted.
+//
+// Every fixture in this suite seeds a stem, and the pull probe's fake bridge **invents one the real
+// bridge never sends**, so nothing could see it.
+test('analytics: the SQL search reads what a pull just published', async () => {
+  const ctx = {
+    Map, Set, Object, String, Array, Promise, console, JSON,
+    // Exactly what `pullAll` assigns: `sqls: sq.sql || {}`.
+    sqls: { v1: { id: 'v1', sql: 'select a from t', parents: [], sources: {} },
+            v2: { id: 'v2', sql: 'select b from u', parents: [], sources: {} } },
+    sqlCache: null, sqlDiskUnread: new Set(), views: [], pullFailed: [],
+    sqlState: () => ({ kind: 'read' }), viewById: () => new Map(),
+    beginWorkspaceOp: () => ({ current: () => true, say: () => {}, read: async () => { throw new Error('no file'); } }),
+    setStatus: () => {}, sqlUnread: 0,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'), ctx);
+  const cache = await vm.runInContext('ensureSqlCache()', ctx);
+
+  assert.ok(cache && cache.size >= 2,
+    `the search cache holds ${cache ? cache.size : 'nothing'} of the 2 queries the pull published, ` +
+    `so «no match» would be reported over queries that were never opened`);
+  assert.equal(cache.get('v1'), 'select a from t', 'the body the pull carried is not what is searched');
+});
