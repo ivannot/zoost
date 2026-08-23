@@ -117,9 +117,9 @@ The extension's entire interface is a side panel shown beside the Zoho Analytics
 ## 6. storage justification (max 1000)
 
 ```
-chrome.storage.local holds the user's own settings, on their machine only: the AI provider, model name and API key, the agent's tool-step limit, the diagram layout defaults, the fallback Zoho data centre, the saved search patterns (named regular expressions the search box offers), and the sample workspace's id, so the panel can offer to open it before it may read the folder. The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256). It also carries the graph data from the side panel to the diagram window, a separate extension page that cannot be handed the object directly.
+chrome.storage.local holds the user's own settings, on their machine only: the AI provider, model name and API key, the agent's tool-step limit, the diagram layout defaults, the fallback Zoho data centre, the saved search patterns (named regular expressions the search box offers), and the sample workspace's id, so the panel can offer to open it before it may read the folder. The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256).
 
-chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked. It is memory-only and cleared when the browser closes.
+chrome.storage.session holds two things, both memory-only and cleared when the browser closes: the decrypted API key, while passphrase protection is unlocked; and the diagram data on its way to the diagram window, a separate extension page, removed the moment that window reads it.
 
 No workspace content is stored there. The mirror is written to the folder the user picks, through the File System Access API. Nothing is sent anywhere, and there is no remote storage of any kind.
 ```
