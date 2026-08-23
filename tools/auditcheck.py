@@ -412,7 +412,7 @@ ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of'
 # index says what it left out. Corrected before the batch was accepted, so the ledger records prose
 # that had been read rather than prose that had been counted.
 OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md',
-           'docs/boundaries.md', 'apps/*/*.html']
+           'docs/boundaries.md', 'apps/*/*.html', 'apps/*/*.js']
 # A dashboard field, fenced or not. The numbering is the file's own, the same one `storecopy.SECTION`
 # reads - this matches the heading and stops at the next one, so a section with no fence (the data
 # disclosures: a table and a blockquote) is still outward prose. Anything not under a numbered
@@ -465,6 +465,36 @@ def sentences(path: Path) -> list:
         # held «the rows > inside tables are never sent» - so it became part of the key of a real
         # claim, and a reader met a promise with a stray character through the middle of it.
         s = re.sub(r'^[ \t]*>[ \t]?', '', '\n\n'.join(out), flags=re.M)
+    elif path.suffix == '.js':
+        # What a shipped script *says*, which is its `MSG` table and nothing else.
+        #
+        # This was the limit written into the previous widening, and it is the larger half by volume:
+        # `graphview.js` alone holds 43 sentences the reader sees and the markup holds three. An
+        # absolute planted in that table went through the whole battery with `auditcheck` reporting
+        # zero, because it never opened a `.js` file.
+        #
+        # The table is the boundary, not every string in the file. A selector, a class name, a URL
+        # and a Deluge keyword are all string literals and none of them is prose; `MSG` exists
+        # precisely because this project already decided that what the product says lives in one
+        # place, and `tests/panel.test.mjs` holds every shipped script to it. So the boundary is a
+        # decision that was already made, read rather than restated.
+        #
+        # A value that is a function - `hRankedOver(ranked, all)` and its like - is skipped: its
+        # sentence is assembled at run time out of numbers, and the parts of it that are fixed say
+        # nothing on their own.
+        m = re.search(r'^const MSG = \{$(.*?)^\};$', s, re.S | re.M)
+        if not m:
+            return []
+        # Each value is its own unit and is returned here rather than joined into a stream.
+        # Joined, the sentence splitter glued consecutive fragments together - most of these are
+        # labels with no full stop - and produced keys like «boxes boxes Hide ${name} boxes
+        # Removing...», which is both unreadable and *unstable*: editing any one fragment rewrites
+        # the whole run and puts it back on the ledger as new. That is the exact defect this
+        # function's own docstring records about page chrome, two lines from being reintroduced.
+        out = []
+        for lit in re.finditer(r""":\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)""", m.group(1)):
+            out.append(' '.join(lit.group(1)[1:-1].split()))
+        return [x for x in out if x]
     elif path.suffix == '.html':
         s = re.sub(r'<(script|style)[\s\S]*?</\1>', ' ', s)
         # A stamp is a date or a version written by tools/stamp.py, and it moves whenever the page

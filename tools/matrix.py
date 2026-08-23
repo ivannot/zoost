@@ -94,11 +94,6 @@ EXAMINED = {
                               "taking effect. NOT fixed: which of the two behaviours is wanted is a "
                               "product decision. docs/findings/2026-08-23-a-fold-does-not-survive-a-"
                               "relayout.md", "2026-08-23"),
-    ("claim", "diagrams"): ("every absolute in the graph windows checked against the code: «every "
-                           "loss is counted» holds - matchArrangement puts every id in matched, "
-                           "fresh or stale - and docs/diagrams.md's «both skip what erHiddenSet "
-                           "hides» is true of the two it names. The paragraph that was *not* stale "
-                           "named a live defect and it is fixed under this cell", "2026-08-23"),
 }
 
 # Closed: (class, surface) -> (what catches it, where the plant is recorded).
@@ -122,6 +117,7 @@ CLOSED = {
     ("await", "tools"):       ("tests/tools_test.py: the probe says how many of its waits are bets; the ceiling moves only deliberately, in either direction", "planted 2026-08-23"),
     ("siblings", "store"):    ("tests/tools_test.py: both listings have the same numbered sections, and each number means the same field", "planted 2026-08-23"),
     ("claim", "options"):     ("tools/auditcheck.py now reads the shipped pages; tests/tools_test.py holds every one of them in the subject", "planted 2026-08-23"),
+    ("claim", "diagrams"):    ("tools/auditcheck.py now reads the MSG tables - what the product says, not what its markup holds", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

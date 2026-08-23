@@ -5855,5 +5855,71 @@ class TheProductsOwnProseIsRead(unittest.TestCase):
                       f'an absolute added to the Settings page is not reported:\n{out.stdout[-600:]}')
 
 
+class WhatTheProductSaysIsRead(unittest.TestCase):
+    """A shipped script's `MSG` table is prose a reader reaches, and it was the larger half.
+
+    The previous widening put the shipped *markup* into `auditcheck`'s subject and wrote its own
+    limit into the docstring: prose built in a script was still unread. Measured, that limit was the
+    bigger part - a graph window's markup carries three sentences and its `MSG` table forty-three.
+    An absolute planted in that table («Every box in this diagram is always drawn.») was reported by
+    nothing, because the tool never opened a `.js` file.
+
+    The table is the boundary rather than every string literal: a selector, a class name and a URL
+    are all strings and none of them is prose. `MSG` exists because this project already decided that
+    what the product says lives in one place, and `tests/panel.test.mjs` holds every shipped script
+    to it - so the boundary is a decision already made, read rather than restated here.
+
+    **The limits, stated.** A value that is a *function* - a sentence assembled at run time out of
+    numbers - is skipped, because its fixed parts say nothing on their own. And a script with no
+    `MSG` table contributes nothing, which is correct today and would hide a second table introduced
+    under another name.
+    """
+
+    def subject(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ac_msg', ROOT / 'tools' / 'auditcheck.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def scripts_with_a_table(self):
+        return sorted(p for p in (ROOT / 'apps').glob('*/*.js')
+                      if re.search(r'^const MSG = \{$', p.read_text(encoding='utf-8'), re.M))
+
+    def test_every_string_table_is_read(self):
+        mod = self.subject()
+        files = self.scripts_with_a_table()
+        self.assertGreaterEqual(len(files), 4, 'no string tables found - the derivation broke')
+        for f in files:
+            got = mod.sentences(f)
+            self.assertTrue(got, f'{f.relative_to(ROOT)} declares a MSG table and none of it is read')
+
+    def test_each_message_is_its_own_key(self):
+        # Joined into one stream, the sentence splitter glues label fragments together and editing
+        # any one of them rewrites the whole run - the ledger churn this tool's own docstring records
+        # about page chrome. Each value has to stand alone.
+        mod = self.subject()
+        got = mod.sentences(ROOT / 'apps' / 'crm' / 'graphview.js')
+        self.assertGreater(len(got), 20, f'only {len(got)} message(s) read out of a table of forty-odd')
+        longest = max(got, key=len)
+        self.assertLess(len(longest), 400,
+                        f'messages are being glued into runs, so one edit rewrites many keys: {longest[:120]}')
+
+    def test_an_absolute_in_a_string_table_is_a_finding(self):
+        # Run it: the plant that went through the whole battery before this existed.
+        f = ROOT / 'apps' / 'crm' / 'graphview.js'
+        keep = f.read_text(encoding='utf-8')
+        try:
+            f.write_text(keep.replace('const MSG = {',
+                                      "const MSG = {\n  planted: 'Every box in this diagram is always drawn.',", 1),
+                         encoding='utf-8')
+            out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'auditcheck.py'), '--offline'],
+                                 cwd=ROOT, capture_output=True, text=True)
+        finally:
+            f.write_text(keep, encoding='utf-8')
+        self.assertIn('always drawn', out.stdout,
+                      f'an absolute added to what the product says is not reported:\n{out.stdout[-600:]}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
