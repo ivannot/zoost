@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("blindspot", "options"):  ("tests/panel.test.mjs: every setting Settings writes is read by something", "planted 2026-08-23"),
     ("blindspot", "crm-ai"):   ("tests/panel.test.mjs: every declared CRM tool is run, and a fall-through is a finding", "planted 2026-08-23"),
     ("workspace", "diagrams"): ("tests/panel.test.mjs: the diagram names its workspace or says it cannot", "planted 2026-08-23"),
     ("partial", "diagrams"):   ("tests/panel.test.mjs: «no caller» says it was measured over the mirror, not the org", "planted 2026-08-23"),

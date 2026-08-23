@@ -10170,3 +10170,44 @@ test('crm: every declared tool runs on the minimum input its schema declares', a
   }
   assert.deepEqual(failures, [], failures.join('; '));
 });
+
+// ---------------------------------------------------------------------------------------------
+// A setting the Settings page writes is read by something.
+//
+// «Every diagram setting saved in Settings was read and thrown away» is a defect this repository
+// already recorded and fixed. Nothing was left behind that would catch the next one: measured by
+// adding a setting written by `options.js` and consumed by nobody, the whole battery stayed green
+// except `imgcheck`, which went red because editing the file changes the digest the screenshots
+// were rendered from - an effect of touching it, not a check that understands a dead setting.
+//
+// Derived from the writes, per product, so a key added tomorrow is covered. A key counts as read
+// when its name appears anywhere in that app outside the `set` that writes it - a `storage.get`, an
+// `onChanged` branch, a destructure. The limit: a key read into a variable and then ignored looks
+// read here, and a key built by concatenation is invisible.
+test('every setting the options page writes is read by something', () => {
+  const offenders = [];
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const opts = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, opts))) continue;
+    const written = [...read(opts).matchAll(/storage\.local\.set\(\{\s*([A-Za-z_]\w*)/g)].map((m) => m[1]);
+    assert.ok(written.length >= 3, `id=${app}: only ${written.length} setting(s) found - the derivation broke`);
+    // Read means read **somewhere other than the page that writes it**, with comments stripped.
+    // «Anywhere in the app» was the first criterion and it passed on the plant: `options.js` names
+    // `settingsStamp` in its own header comment and in the function that writes it, so renaming
+    // every consumer in the panel left the key looking read.
+    const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+    const elsewhere = readdirSync(join(ROOT, 'apps', app))
+      .filter((f) => f.endsWith('.js') && f !== 'options.js')
+      .map((f) => strip(read(`apps/${app}/${f}`))).join('\n');
+    // A key the Settings page reads back itself still counts - that is a legitimate consumer.
+    const ownGets = strip(read(opts));
+    for (const key of [...new Set(written)]) {
+      const outside = (elsewhere.match(new RegExp(`\\b${key}\\b`, 'g')) || []).length;
+      const selfGet = new RegExp(`storage\\.local\\.get\\(\\[?['"]${key}['"]`).test(ownGets);
+      if (!outside && !selfGet) offenders.push(`${app}:${key}`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `these are written by the Settings page and read by nothing - the user changes them and ` +
+    `nothing happens: ${offenders.join(', ')}`);
+});
