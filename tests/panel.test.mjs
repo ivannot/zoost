@@ -12020,3 +12020,116 @@ test('the settings sliders start where the diagram starts, in both products', ()
   }
   assert.ok(compared >= 8, `only ${compared} parameter(s) compared - the derivation broke`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// One number for the assistant, written out in five places.
+//
+// The org-index cap has a name where it belongs - `AI_SEED_CAP_DEFAULT` in `ai.js` - and then the
+// settings page writes `72000` twice as a literal (once to fill the box, once to clamp what comes
+// out of it), the markup writes its bounds as `min="4000" max="400000"`, and the note beside the
+// tool-step box writes «20 is the default» in prose. Five copies of two numbers, in three languages,
+// across two pages that share no scope.
+//
+// Measured: `AI_SEED_CAP_DEFAULT` moved to 60000 leaves the battery green but for the screenshots
+// noticing a file under `apps/` had moved. What a reader would get is a Settings page that offers a
+// number the assistant does not use, saves it, and shows it back.
+//
+// The page cannot import the panel's constant - `options.html` loads neither `ai.js` nor
+// `sidepanel.js`, and giving them a shared module would be a build step this project does not have -
+// so the copies stay and this holds them together. That is the honest shape for a `copy` whose two
+// ends are two documents.
+//
+// Derived from the markup outwards: every number input on a settings page is found by its
+// `type="number"`, and its `min`/`max` are compared with the clamp the page applies to that same id,
+// the default the page fills it from, and the default the panel reads. Nothing is named here; a
+// control added tomorrow is compared without anybody remembering it.
+//
+// **The limits, stated.** It follows a clamp written as `Math.max(lo, Math.min(hi, … || def))`,
+// which is how both pages write it - a clamp expressed some other way is a finding about this check
+// (the count of controls compared is asserted for that reason) rather than a silent pass. The prose
+// half only fires where a note actually states a default in words, and says how many it found.
+test('a number the settings page offers is the number the panel uses', () => {
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name);
+  let controls = 0, prose = 0, derived = 0;
+  for (const app of apps) {
+    const html = read(`apps/${app}/options.html`);
+    const own = shippedScripts().filter((f) => f.startsWith(`apps/${app}/`));
+    // The source, not the scan, and the reason is worth writing down because the first version got
+    // it the other way round: every control here is found **by its id**, which is a string literal,
+    // and the scanner blanks those - so the whole check quietly matched nothing on the twin whose
+    // clamp is spelled slightly differently, and said «nothing clamps this». A check that locates by
+    // a string reads the string. The cost is that a clamp written inside a comment would be read as
+    // code; the shapes matched below are specific enough that this has never happened, and it would
+    // be a false finding rather than a silent pass.
+    const js = Object.fromEntries(own.map((rel) => [rel, read(rel)]));
+    const page = js[`apps/${app}/options.js`];
+    assert.ok(page, `apps/${app}/options.js is gone - the derivation broke`);
+
+    for (const m of html.matchAll(/<input[^>]*type="number"[^>]*>/g)) {
+      const tag = m[0];
+      const id = (/id="([\w-]+)"/.exec(tag) || [])[1];
+      const lo = (/min="(-?\d+)"/.exec(tag) || [])[1];
+      const hi = (/max="(-?\d+)"/.exec(tag) || [])[1];
+      if (!id || lo === undefined || hi === undefined) continue;
+      controls++;
+
+      // A control whose bounds are read off itself - `+$('x').min` - has no second copy of them, so
+      // there is nothing here to compare and nothing that can drift. That is the shape this check
+      // would like every control to have; it is counted rather than skipped in silence.
+      if (new RegExp(`\\$\\('${id}'\\)\\.(min|max)\\b`).test(page)) { derived++; continue; }
+
+      // The clamp the page applies when it reads that box.
+      const clamp = new RegExp(
+        `Math\\.max\\((\\d+),\\s*Math\\.min\\((\\d+),[^)]*\\$\\('${id}'\\)[^|]*\\|\\|\\s*(\\d+)\\)\\)`).exec(page);
+      assert.ok(clamp, `apps/${app}/options.js: nothing clamps what «${id}» returns, so the min and `
+        + 'max on the control are advice a keyboard can ignore');
+      assert.equal(clamp[1], lo, `apps/${app}: «${id}» accepts down to ${lo} in the markup and is clamped at ${clamp[1]}`);
+      assert.equal(clamp[2], hi, `apps/${app}: «${id}» accepts up to ${hi} in the markup and is clamped at ${clamp[2]}`);
+      const def = clamp[3];
+
+      // What the page fills the box with when nothing is stored.
+      const fill = new RegExp(`\\$\\('${id}'\\)\\.value\\s*=\\s*(?:\\w+(?:\\.\\w+)*\\s*\\|\\|\\s*)?(\\d+)?`).exec(page);
+      assert.ok(fill, `apps/${app}: nothing fills «${id}» - the derivation broke`);
+      if (fill[1]) {
+        assert.equal(fill[1], def,
+          `apps/${app}: «${id}» is shown as ${fill[1]} and saved as ${def} when nothing is stored`);
+      }
+
+      // And the panel's own default for the same setting: the key is whatever the page reads it
+      // from, taken off the fill line rather than guessed.
+      const keyed = new RegExp(`\\$\\('${id}'\\)\\.value\\s*=\\s*\\w+\\.(\\w+)`).exec(page);
+      if (keyed) {
+        const key = keyed[1];
+        for (const [rel, src] of Object.entries(js)) {
+          if (rel.endsWith('/options.js')) continue;
+          const theirs = new RegExp(`\\b${key}:\\s*\\w+\\.${key}\\s*\\|\\|\\s*(\\w+)`).exec(src);
+          if (!theirs) continue;
+          // A named constant is followed to its declaration; a literal stands for itself.
+          const value = /^\d+$/.test(theirs[1])
+            ? theirs[1]
+            : (new RegExp(`\\b(?:const|let|var)\\s+${theirs[1]}\\s*=\\s*(\\d+)`).exec(src) || [])[1];
+          assert.ok(value !== undefined,
+            `${rel}: «${key}» falls back to ${theirs[1]} and nothing here declares it - the derivation broke`);
+          assert.equal(value, def,
+            `apps/${app}: the panel starts «${key}» at ${value} (${rel}) and Settings offers and saves ${def}, `
+            + 'so the page shows a number the assistant does not use');
+        }
+      }
+
+      // The prose, where there is any: «N is the default», in the block that owns the control.
+      const block = html.slice(m.index, html.indexOf('</div>', m.index));
+      const said = /(\d+) is the default/.exec(block);
+      if (said) {
+        prose++;
+        assert.equal(said[1], def,
+          `apps/${app}/options.html: the note beside «${id}» says ${said[1]} is the default and the code uses ${def}`);
+      }
+    }
+  }
+  assert.ok(controls >= 4, `only ${controls} number control(s) compared - the derivation broke`);
+  assert.ok(prose >= 1, `no note states a default in words - the prose half of this check ran over nothing`);
+  assert.ok(derived >= 1,
+    'no control reads its own bounds any more - that is the shape with no copy in it, and this ' +
+    'check counts them so losing the last one is visible');
+});
