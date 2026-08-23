@@ -30,7 +30,7 @@ aiUnlock	6e29500b5ee0	6a9f73479d87	divergent
 appRoot	7ce174166cab	7ce174166cab	identical
 applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
-askScope	2a01329e8e01	a599531ca679	divergent
+askScope	d27f77a79c58	a599531ca679	divergent
 beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	dbcd581f4fb3	1ebef045c187	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical

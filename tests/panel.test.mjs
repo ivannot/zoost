@@ -516,6 +516,9 @@ const stale = load([
   sliceFn('apps/crm/sidepanel.js', 'newestPull'),
   sliceFn('apps/crm/sidepanel.js', 'areaStale'),
 ], {
+  // The areas, which is what freshness has always been about: `newestPull` used to walk the tabs and
+  // could not see an area without one. The fixtures still set `__tabs`, so the ids come from there.
+  get AREA_IDS() { return globalThis.__tabs.map((t) => t.id); },
   get TABS() { return globalThis.__tabs; },
   get tabAccess() { return globalThis.__acc; },
   // The real fallback, not a simplified one: an area with no record of its own inherits the
@@ -10956,7 +10959,7 @@ test('asking for the export scope twice never abandons the first question', asyn
     const ctx = {
       Object, Set, Map, Array, Promise, String, Number, Boolean, console, document: { body: el, getElementById: () => el },
       $: () => el, scopeToUI: () => {}, scopeStaleNote: () => {}, areaStale: () => false,
-      TABS: [], AREA_SCOPE: {}, expScope: { functions: true }, dlgScope: null, dlgAutoCleared: null,
+      TABS: [], AREA_SCOPE: {}, AREA_IDS: [], expScope: { functions: true }, dlgScope: null, dlgAutoCleared: null,
       panelInert: () => {},
     };
     vm.createContext(ctx);
@@ -12201,4 +12204,80 @@ test('every export scope has a box to untick it, and every box is a scope', () =
   }
   assert.ok(pages >= 2, `only ${pages} page(s) draw an export scope - the derivation broke`);
   assert.ok(boxes >= 12, `only ${boxes} box(es) compared - the derivation broke`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// An area that is not a tab, and a guard that only knew about tabs.
+//
+// `noteAccess(area, err, op)` records what Zoho answered for an area: when it was last actually
+// read, and whether the role was refused. It opened with `if (!TAB[area]) return;` - a guard that
+// refuses what it does not know, which is right - and `TAB` is built from the tab registry.
+//
+// `failures` is an area and is **not** a tab. It is pulled, it can be refused, and it has no tab of
+// its own on purpose: a failure is a property of a function, so it shows in the function's detail
+// and in the health view. So `await noteAccess('failures', null, op)`, at the end of every runtime
+// pull, returned before doing anything at all. Driven here: `functions` records a write, `failures`
+// records nothing and returns `undefined`.
+//
+// What that cost, in the reader's terms: the runtime chapter never recorded when it was last read,
+// so it could be exported as though it were as fresh as the rest of the mirror; and a role that had
+// lost access to it looked exactly like an org where nothing had failed. `AREA_SCOPE` had listed
+// `failures` from the day it was written, and reached it never - all three walks over it started
+// from `TABS`.
+//
+// Two correct halves. Nothing in 878 cases, both Python suites or any checker saw it, because each
+// half reads correctly on its own and the defect is only in the pair.
+//
+// The check drives it rather than reading it, and takes the area names **from the calls the panel
+// makes** - so an area added tomorrow is exercised without anybody remembering it.
+//
+// **The limits, stated.** It reads area names that are written as literals at the call; an area
+// passed through a variable is invisible to it, and the count of areas driven is asserted so that
+// going quiet is a finding. It says nothing about what is recorded - only that something is.
+test('crm: every area the panel reports on is an area the panel can record', async () => {
+  const own = shippedScripts().filter((f) => f.startsWith('apps/crm/'));
+  const named = new Set();
+  for (const rel of own) {
+    for (const m of read(rel).matchAll(/\bnote(?:Access|PullFailure)\('(\w+)'/g)) named.add(m[1]);
+  }
+  assert.ok(named.size >= 5, `only ${named.size} area(s) are reported on by name - the derivation broke`);
+
+  const calls = [];
+  const globals = {
+    // Deliberately minimal: `TAB` holds one tab, so an area that is admitted only because it is a
+    // tab cannot hide an area that is admitted for no reason at all.
+    TAB: { functions: { id: 'functions', label: 'Functions' } },
+    AREA_SCOPE: Object.fromEntries([...named].map((a) => [a, [a]])),
+    tabAccess: {}, Object, Date, Promise, console,
+    accessOf: () => 'ok',
+    patchCfg: async (o) => { calls.push(o); },
+    publishAccess: () => {}, renderTabs: () => {}, setStatus: () => {}, tabLabel: (x) => x,
+  };
+  const { noteAccess } = load([sliceFn('apps/crm/sidepanel.js', 'noteAccess')], globals);
+  const op = { current: () => true };
+  for (const area of [...named].sort()) {
+    calls.length = 0;
+    const ok = await noteAccess(area, null, op);
+    assert.equal(ok, true,
+      `noteAccess('${area}') answered ${ok} - the panel reports on «${area}» and cannot record it, so `
+      + 'when it was read and whether the role was refused are both lost in silence');
+    assert.equal(calls.length, 1, `noteAccess('${area}') wrote ${calls.length} time(s)`);
+    assert.ok(calls[0].access && calls[0].access[area],
+      `noteAccess('${area}') wrote something that is not about «${area}»`);
+  }
+
+  // And the other half of the pair: everything about freshness walks the areas, not the tabs. A walk
+  // that starts from `TABS` cannot reach an area without one, which is how this lasted.
+  const panel = crmPanel();
+  const walks = [...panel.matchAll(/TABS\.(?:map|forEach|filter)\(/g)].length;
+  const stale = panel.slice(panel.indexOf('function areaStale'));
+  assert.ok(walks >= 1, 'nothing walks TABS any more - the derivation broke');
+  for (const fn of ['scopeStaleNote', 'newestPull']) {
+    const at = panel.indexOf(`function ${fn}`);
+    assert.ok(at > 0, `${fn} is gone - the derivation broke`);
+    const body = panel.slice(at, panel.indexOf('\n}', at));
+    assert.equal(/\bTABS\b/.test(body), false,
+      `${fn} walks TABS, so an area with no tab of its own is invisible to it`);
+  }
+  assert.ok(stale.length > 0, 'areaStale is gone - the derivation broke');
 });

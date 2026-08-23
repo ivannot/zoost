@@ -575,7 +575,14 @@ function bridgeError(r, fallback) {
 // and a verdict from three months ago is a record of what was asked, not a fact about today. That is
 // also why nothing here ever hides an area *without* an answer: no measurement means visible.
 async function noteAccess(area, err, op) {
-  if (!TAB[area]) return;
+  // An **area**, not a tab. The two are nearly the same list and not quite: `failures` is pulled,
+  // can be refused, and has no tab of its own - a failure is a property of a function, so it shows
+  // in the function's detail and in the health view. This guard read `TAB[area]`, so every
+  // `noteAccess('failures', ...)` returned before doing anything: the runtime chapter never
+  // recorded when it was last read, and a role that had lost access to it was indistinguishable
+  // from an org where nothing had failed. Two correct halves - a guard that refuses what it does
+  // not know, and a caller reporting its own area - composing into a silent bail.
+  if (!TAB[area] && !AREA_SCOPE[area]) return;
   // Written after a pull, which means after every await it made: without the op this records one
   // org's refusal in another org's `.zoost.json`, and the verdict is what later pulls skip on.
   if (op && !op.current()) return;
@@ -664,6 +671,15 @@ const AREA_SCOPE = {
   failures: ['failures'],
 };
 
+// The areas, which is what `AREA_SCOPE` has always been the list of: the tabs, plus the ones with no
+// tab of their own. Everything about freshness walks this rather than `TABS`, because an area
+// without a tab is still pulled and can still be behind - `failures` was in this table from the
+// day it was written and reached by nothing, since all three walks started from the tabs.
+const AREA_IDS = Object.keys(AREA_SCOPE);
+// The name a reader sees for an area. From the tab where there is one, and from the id itself
+// otherwise - derived rather than a second table, so it cannot drift out of step with the first.
+const areaLabel = (id) => (TAB[id] ? TAB[id].label : id.charAt(0).toUpperCase() + id.slice(1));
+
 // Sections whose data is behind are cleared when the dialog opens, and why is written next to them.
 // Cleared rather than removed: an old chapter is sometimes exactly what you want, so the choice
 // stays yours - but it has to be a choice, and the default has to be the safe one. If you tick it
@@ -672,13 +688,13 @@ const AREA_SCOPE = {
 // This makes the export follow the pull settings without a second set of switches to keep in step.
 // Two lists that must agree are two lists that will not.
 function scopeStaleNote() {
-  const behind = TABS.map((t) => t.id).filter(areaStale);
+  const behind = AREA_IDS.filter(areaStale);
   const box = $('scstale');
   if (!box) return;
   if (!behind.length) { box.textContent = ''; box.style.display = 'none'; return; }
   box.style.display = '';
   box.innerHTML = behind.map((id) =>
-    `<div><b>${escHtml(tabLabel(id))}</b> - ${escHtml(areaAsOf(id))}, because ${escHtml(staleReason(id))}. `
+    `<div><b>${escHtml(areaLabel(id))}</b> - ${escHtml(areaAsOf(id))}, because ${escHtml(staleReason(id))}. `
     + 'Unticked; tick it to include it anyway and the report will carry that date.</div>').join('');
 }
 /** What the keyboard can reach while a dialog is up.
@@ -715,7 +731,7 @@ function askScope() {
     _scopeResolve = resolve;
     dlgScope = Object.assign({}, expScope);
     dlgAutoCleared = new Set();
-    TABS.forEach((t) => { if (areaStale(t.id)) (AREA_SCOPE[t.id] || []).forEach((k) => { if (dlgScope[k]) { dlgScope[k] = false; dlgAutoCleared.add(k); } }); });
+    AREA_IDS.forEach((id) => { if (areaStale(id)) AREA_SCOPE[id].forEach((k) => { if (dlgScope[k]) { dlgScope[k] = false; dlgAutoCleared.add(k); } }); });
     scopeToUI();
     scopeStaleNote();
     $('scrim').classList.add('on'); panelInert(true); $('expscope').classList.add('on');
@@ -1008,7 +1024,7 @@ const pulledAt = (id) => (tabAccess[id] && tabAccess[id].pulledAt) || wsLastPull
 // a full pull writes its areas seconds apart and that is not a difference worth reporting.
 const STALE_MARGIN_MS = 6 * 60 * 60 * 1000;
 function newestPull() {
-  return TABS.map((t) => pulledAt(t.id)).filter(Boolean).sort().slice(-1)[0] || null;
+  return AREA_IDS.map(pulledAt).filter(Boolean).sort().slice(-1)[0] || null;
 }
 function areaStale(id) {
   const newest = newestPull(); if (!newest) return false;      // nothing pulled yet: nothing is behind
