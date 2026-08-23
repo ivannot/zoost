@@ -30,7 +30,7 @@ aiUnlock	6e29500b5ee0	6a9f73479d87	divergent
 appRoot	7ce174166cab	7ce174166cab	identical
 applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
-askScope	c56407b46772	6df03b6040cd	divergent
+askScope	2a01329e8e01	a599531ca679	divergent
 beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	dbcd581f4fb3	1ebef045c187	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
@@ -45,10 +45,10 @@ byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
 clearFocus	e18fb77e57ea	e18fb77e57ea	identical
 closeAI	b99322ae2ed2	b99322ae2ed2	identical
-closeAbout	8e2a65db1025	8e2a65db1025	identical
+closeAbout	ce1a122bff29	ce1a122bff29	identical
 closeHealth	33e8c3372102	39acab54b873	divergent
 closeNavMenu	67073a3b5d66	67073a3b5d66	identical
-closeScope	7e880dca67a7	9961035b74ab	divergent
+closeScope	b272bb357c1c	d0fa6743ab69	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	ecb43a011b8e	ecb43a011b8e	identical
@@ -165,6 +165,7 @@ openZohoHome	2df809b3babd	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
 paintFindMarks	5b967953a498	5b967953a498	identical
+panelInert	bc169e70b382	bc169e70b382	identical
 parseArrangement	6ad270723301	6ad270723301	identical
 pass	56e18c27fc90	4bb92032e77b	divergent
 passKind	684df355a097	bdf6d02817df	divergent
@@ -209,7 +210,7 @@ setPullBusy	14aabfcaebc3	ce2ae8471a4f	divergent
 setReportFallback	f9d85a9ab235	7ef979cd431d	divergent
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
-showAbout	82e6680fac24	aa578e8faf85	divergent
+showAbout	d4c0689d8483	d3b3a7dc9b69	divergent
 showEmergency	cfdb73138aab	cfdb73138aab	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical

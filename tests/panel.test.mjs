@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
+import { sliceFn, sliceConst, load, read, blankNonCode, ROOT } from './slice.mjs';
 import { readdirSync, existsSync } from 'node:fs';
 
 // The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
@@ -7895,7 +7895,10 @@ test('the release workflows take a ref through env and validate its whole shape'
 // The same trap this repository already records about mechanical replaces, arriving a third time.
 for (const app of ['crm', 'analytics']) {
   test(`${app}: every function that uses an op makes one or is given one`, () => {
-    const src = read(`apps/${app}/sidepanel.js`);
+    // Comments and strings blanked: it went red on a *comment* that mentioned `op.say` while
+    // explaining an unrelated fix, and the failure named a function that touches no operation at
+    // all. A scan over prose about code is the third of these met today, so it uses the scanner.
+    const src = blankNonCode(read(`apps/${app}/sidepanel.js`));
     const bad = [];
     for (const m of src.matchAll(/^(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/gm)) {
       const body = src.slice(m.index, src.indexOf('\n}', src.indexOf('{', m.index)));
@@ -10880,5 +10883,77 @@ test('a size ranking states how many functions it could measure', () => {
     assert.match(sec[0], /MSG\.hRankedOver\(withStats\.length, nodes\.length\)/,
       `id=${sec[1]}: a ranking built only from functions with a readable source does not say so, ` +
       `while the report does - the same number, two answers`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A dialog that asks a question cannot forget it was already asking.
+//
+// `askScope()` puts its `resolve` into one module slot and opens the dialog. A second call
+// overwrites it, and the first promise never settles - the export waiting on it stops there, for
+// the life of the panel, having said nothing: it has not reached `op.say` yet, so there is no
+// status line to go stale and nothing on screen at all.
+//
+// The scrim blocks the pointer, and that is the whole of what makes this unreachable today - a
+// property of a z-index, not of the function. It does not block the keyboard: the dialog traps no
+// focus and the background is not inert, so Shift+Tab reaches **Export** behind the scrim and Enter
+// asks the question again. This repository has already written down what it thinks of a guarantee
+// that is a property of the call sites rather than of the code, twice this week.
+//
+// Both halves are answered: the older resolver is settled with «cancelled» rather than dropped, and
+// the panel behind an open dialog is inert, which is the thing that stops the second question being
+// asked at all.
+test('asking for the export scope twice never abandons the first question', async () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/sidepanel.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const src = read(rel);
+    if (!/function askScope\(/.test(src)) continue;
+
+    const cls = () => ({ add() {}, remove() {}, toggle() {}, contains: () => false });
+    const el = { classList: cls(), style: {}, innerHTML: '', textContent: '', checked: false, value: '',
+                 querySelectorAll: () => [], setAttribute() {}, removeAttribute() {} };
+    const ctx = {
+      Object, Set, Map, Array, Promise, String, Number, Boolean, console, document: { body: el, getElementById: () => el },
+      $: () => el, scopeToUI: () => {}, scopeStaleNote: () => {}, areaStale: () => false,
+      TABS: [], AREA_SCOPE: {}, expScope: { functions: true }, dlgScope: null, dlgAutoCleared: null,
+      panelInert: () => {},
+    };
+    vm.createContext(ctx);
+    const pieces = ['_scopeResolve', 'askScope', 'closeScope'].map((n) => {
+      try { return n === '_scopeResolve' ? sliceConst(rel, n) : sliceFn(rel, n); } catch (_) { return ''; }
+    });
+    vm.runInContext(pieces.join('\n'), ctx);
+
+    const first = vm.runInContext('askScope()', ctx);
+    const second = vm.runInContext('askScope()', ctx);
+    let firstSettled = false;
+    first.then(() => { firstSettled = true; });
+    await null; await null;
+    assert.equal(firstSettled, true,
+      `id=${app}: the first question was abandoned - whatever was waiting on it waits for the life ` +
+      `of the panel, having shown nothing`);
+    assert.equal(await first, null, `id=${app}: the abandoned question answered as if the reader had chosen`);
+    vm.runInContext('closeScope(true)', ctx);
+    assert.notEqual(await second, null, `id=${app}: the question actually being asked cannot be answered`);
+  }
+});
+
+test('the panel behind an open dialog cannot be reached by the keyboard', () => {
+  // The scrim is a painted div: it stops the pointer and nothing else. Derived - every place that
+  // raises the scrim must make the background inert, and every place that lowers it must undo that.
+  // The limit: it reads the calls, not the rendered page, so a fourth dialog that raises the scrim
+  // some other way is invisible here and would need this widened.
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/sidepanel.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const src = read(rel);
+    const raise = [...src.matchAll(/\$\('scrim'\)\.classList\.(add|remove)\('on'\)/g)];
+    if (!raise.length) continue;
+    for (const m of raise) {
+      const line = src.slice(src.lastIndexOf('\n', m.index) + 1, src.indexOf('\n', m.index));
+      assert.match(line, /panelInert\((true|false)\)/,
+        `id=${app}: the scrim is raised or lowered without changing what the keyboard can reach: ${line.trim()}`);
+    }
   }
 });

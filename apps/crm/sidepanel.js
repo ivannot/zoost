@@ -681,20 +681,48 @@ function scopeStaleNote() {
     `<div><b>${escHtml(tabLabel(id))}</b> - ${escHtml(areaAsOf(id))}, because ${escHtml(staleReason(id))}. `
     + 'Unticked; tick it to include it anyway and the report will carry that date.</div>').join('');
 }
+/** What the keyboard can reach while a dialog is up.
+ *
+ * The scrim is a painted div at z-index 85: it stops the pointer and nothing else. The dialog traps
+ * no focus and the background was not inert, so Shift+Tab from an open «What goes into the export»
+ * reaches **Export** behind it and Enter asks the same question again - which overwrites the one
+ * resolver `askScope` has and abandons the first promise for the life of the panel.
+ *
+ * `inert` on the two roots rather than a focus trap: it is the platform's own answer, it covers
+ * click, focus, Tab and the accessibility tree in one attribute, and it needs no bookkeeping to undo
+ * beyond setting it back. The dialogs and the scrim sit outside `#wrap`, so nothing that has to stay
+ * reachable is inside what is switched off.
+ */
+function panelInert(on) {
+  // Derived, never named: everything the page is made of except the scrim and the dialogs
+  // themselves. The first version listed two ids and **neither existed** - a helper written from
+  // memory of a layout, which would have set `inert` on nothing at all and passed every check that
+  // only reads the calls. Found by grepping the markup for the names it had invented.
+  [...document.body.children].forEach((el) => {
+    if (el.id === 'scrim' || el.classList.contains('dlg')) return;
+    if (on) el.setAttribute('inert', '');
+    else el.removeAttribute('inert');
+  });
+}
 let _scopeResolve = null;
 function askScope() {
   return new Promise((resolve) => {
+    // The slot holds one question. Overwriting it left whatever was waiting on the older one waiting
+    // for the life of the panel, having shown nothing - it had not reached `op.say` yet, so there was
+    // no status line to go stale and nothing at all on screen. Settled as «cancelled», which is what
+    // it became.
+    if (_scopeResolve) _scopeResolve(null);
     _scopeResolve = resolve;
     dlgScope = Object.assign({}, expScope);
     dlgAutoCleared = new Set();
     TABS.forEach((t) => { if (areaStale(t.id)) (AREA_SCOPE[t.id] || []).forEach((k) => { if (dlgScope[k]) { dlgScope[k] = false; dlgAutoCleared.add(k); } }); });
     scopeToUI();
     scopeStaleNote();
-    $('scrim').classList.add('on'); $('expscope').classList.add('on');
+    $('scrim').classList.add('on'); panelInert(true); $('expscope').classList.add('on');
   });
 }
 function closeScope(ok) {
-  $('scrim').classList.remove('on'); $('expscope').classList.remove('on');
+  $('scrim').classList.remove('on'); panelInert(false); $('expscope').classList.remove('on');
   const r = _scopeResolve; _scopeResolve = null;
   if (r) r(ok ? Object.assign({}, dlgScope) : null);
 }
@@ -708,9 +736,9 @@ function showAbout() {
     + `<h4>Legal</h4><div class="legal">${escHtml(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
     + `The extension has no server of its own and sends nothing anywhere. Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
-  $('scrim').classList.add('on'); $('aboutdlg').classList.add('on');
+  $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
 }
-function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
+function closeAbout() { $('scrim').classList.remove('on'); panelInert(false); $('aboutdlg').classList.remove('on'); }
 
 // ---------- filesystem ----------
 // Which function files this panel has rewritten since the summary was last trusted.

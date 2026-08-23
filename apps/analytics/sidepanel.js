@@ -3025,15 +3025,43 @@ function scopeFromUI() {
   if (!expScope.structure) expScope.sql = false;
   scopeToUI();
 }
+/** What the keyboard can reach while a dialog is up.
+ *
+ * The scrim is a painted div at z-index 85: it stops the pointer and nothing else. The dialog traps
+ * no focus and the background was not inert, so Shift+Tab from an open «What goes into the export»
+ * reaches **Export** behind it and Enter asks the same question again - which overwrites the one
+ * resolver `askScope` has and abandons the first promise for the life of the panel.
+ *
+ * `inert` on the two roots rather than a focus trap: it is the platform's own answer, it covers
+ * click, focus, Tab and the accessibility tree in one attribute, and it needs no bookkeeping to undo
+ * beyond setting it back. The dialogs and the scrim sit outside `#wrap`, so nothing that has to stay
+ * reachable is inside what is switched off.
+ */
+function panelInert(on) {
+  // Derived, never named: everything the page is made of except the scrim and the dialogs
+  // themselves. The first version listed two ids and **neither existed** - a helper written from
+  // memory of a layout, which would have set `inert` on nothing at all and passed every check that
+  // only reads the calls. Found by grepping the markup for the names it had invented.
+  [...document.body.children].forEach((el) => {
+    if (el.id === 'scrim' || el.classList.contains('dlg')) return;
+    if (on) el.setAttribute('inert', '');
+    else el.removeAttribute('inert');
+  });
+}
 let _scopeResolve = null;
 function askScope() {
   return new Promise((resolve) => {
+    // The slot holds one question. Overwriting it left whatever was waiting on the older one waiting
+    // for the life of the panel, having shown nothing - it had not reached `op.say` yet, so there was
+    // no status line to go stale and nothing at all on screen. Settled as «cancelled», which is what
+    // it became.
+    if (_scopeResolve) _scopeResolve(null);
     _scopeResolve = resolve; scopeToUI();
-    $('scrim').classList.add('on'); $('expscope').classList.add('on');
+    $('scrim').classList.add('on'); panelInert(true); $('expscope').classList.add('on');
   });
 }
 function closeScope(ok) {
-  $('scrim').classList.remove('on'); $('expscope').classList.remove('on');
+  $('scrim').classList.remove('on'); panelInert(false); $('expscope').classList.remove('on');
   const r = _scopeResolve; _scopeResolve = null;
   if (r) r(ok ? Object.assign({}, expScope) : null);
 }
@@ -3262,9 +3290,9 @@ function showAbout() {
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
     + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs - view and column names, relations, and the SQL of your query tables - are sent directly from your browser to the provider you configured, and to no one else. `
     + `Rows are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine.</div>`;
-  $('scrim').classList.add('on'); $('aboutdlg').classList.add('on');
+  $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
 }
-function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
+function closeAbout() { $('scrim').classList.remove('on'); panelInert(false); $('aboutdlg').classList.remove('on'); }
 
 // ---------- wiring ----------
 $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
