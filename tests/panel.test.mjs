@@ -9161,32 +9161,52 @@ for (const app of ['crm', 'analytics']) {
 // every raise of it is held to the same standard. A toggle nobody releases that way - `setEnabled`,
 // a filter - is not in scope and needs no exemption, because the file never claimed it was.
 {
-  const PANELS = ['apps/analytics/sidepanel.js', 'apps/crm/sidepanel.js'];
+  // Every shipped script, derived from the manifests' own directories rather than a pair of file
+  // names. The pair was `sidepanel.js` twice, so two raises were outside the subject entirely:
+  // `apps/crm/ai.js` and `apps/crm/automation.js`, the second of which raises the pull lock that
+  // greys out the workspace selector, both Pull buttons and the export.
+  const SCRIPTS = () => readdirSync(join(ROOT, 'apps'))
+    .flatMap((app) => readdirSync(join(ROOT, 'apps', app))
+      .filter((f) => f.endsWith('.js')).map((f) => `apps/${app}/${f}`));
 
   test('a flag raised in a function is released whatever happens in it', () => {
     const bad = [];
     let pairs = 0;
-    for (const rel of PANELS) {
-      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-      // Toggles the file itself treats as needing release: released inside a `finally` at least once.
-      const guarded = new Set();
-      for (const m of src.matchAll(/finally\s*\{[^}]*?\b(\w+)\(false\)/g)) guarded.add(m[1]);
+    const sources = new Map(SCRIPTS().map((rel) => [rel, blankNonCode(read(rel))]));
+
+    // Toggles the code itself treats as needing release: released inside a `finally` at least once,
+    // **however it is spelled**. The criterion was `X(false)` alone - a setter - and `aiBusy = false`
+    // is an assignment, so the flag in the AI surface was invisible even once its file was in the
+    // subject. Two blind spots, one behind the other.
+    //
+    // Gathered across the whole subject rather than per file, because a flag is a page's and not a
+    // file's: `setPullBusy` is released in a `finally` in `sidepanel.js` and raised in
+    // `automation.js`. Per file, removing that file's only `finally` removed the flag from its own
+    // set - so the plant went red saying «the derivation broke» instead of naming the raise, which is
+    // the right colour for the wrong reason and would have read as a broken test.
+    const guarded = new Set();
+    for (const src of sources.values()) {
+      for (const m of src.matchAll(/finally\s*\{[^}]*?(?<![\w$.])(\w+)\(false\)/g)) guarded.add(m[1]);
+      for (const m of src.matchAll(/finally\s*\{[\s\S]{0,300}?(?<![\w$.])(\w+)\s*=\s*false/g)) guarded.add(m[1]);
+    }
+    for (const [rel, src] of sources) {
       for (const name of guarded) {
-        for (const m of src.matchAll(new RegExp(`\\b${name}\\(true`, 'g'))) {
-          // The function this raise sits in: back to the nearest declaration, forward to its close.
-          const at = src.lastIndexOf('\nasync function ', m.index) + 1 || src.lastIndexOf('\nfunction ', m.index) + 1;
+        // `(?<![\w$.])` and not `\b`: `el.disabled = true` and `other.disabled = false` are two
+        // different controls, and reading them as one flag reported three findings that were not.
+        for (const m of src.matchAll(new RegExp(`(?<![\\w$.])${name}\\s*(?:=\\s*true|\\(true)`, 'g'))) {
+          const at = Math.max(src.lastIndexOf('\nasync function ', m.index), src.lastIndexOf('\nfunction ', m.index)) + 1;
           const body = src.slice(at, src.indexOf('\n}', m.index));
           const fn = (body.match(/^(?:async )?function (\w+)/) || [, '?'])[1];
           if (fn === 'setPullBusy' || fn === 'setBusy') continue;      // the setter itself
           pairs++;
           const fin = body.search(/finally\s*\{/);
-          if (fin < 0 || !new RegExp(`${name}\\(false`).test(body.slice(fin))) {
-            bad.push(`${rel} ${fn}() raises ${name}(true) and does not release it in a finally`);
+          if (fin < 0 || !new RegExp(`(?<![\\w$.])${name}\\s*(?:=\\s*false|\\(false)`).test(body.slice(fin))) {
+            bad.push(`${rel} ${fn}() raises ${name} and does not release it in a finally`);
           }
         }
       }
     }
-    assert.ok(pairs >= 3, `only ${pairs} guarded raises found - the derivation broke`);
+    assert.ok(pairs >= 12, `only ${pairs} guarded raises found - the derivation broke`);
     assert.deepEqual(bad, [],
       `a raise with no matching release leaves the panel inert with nothing to press:\n  ` + bad.join('\n  '));
   });

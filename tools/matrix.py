@@ -85,9 +85,6 @@ EXAMINED = {
     ("owner", "diagrams"): ("every module-level `let` assigned 3+ times and reset once - curFocus, "
                             "erTx, erTy, ids - is view state, not a flag anybody holds; the "
                             "beforeprint/afterprint pair closes itself", "2026-08-23"),
-    ("owner", "crm-ai"): ("every flag is owned by its generation - aiBusy released only when aiGen "
-                          "has not moved, aiSeedWarned and the conversation cleared together - in "
-                          "both products", "2026-08-23"),
     ("fastpath", "diagrams"): ("driven, not read: after a fold the window says erHiddenSet=1, "
                               "erVisibleIds=17; force the slow path and the same questions answer 0 "
                               "and 18 with erCut still at 1 - the fold is remembered and stops "
@@ -118,6 +115,7 @@ CLOSED = {
     ("siblings", "store"):    ("tests/tools_test.py: both listings have the same numbered sections, and each number means the same field", "planted 2026-08-23"),
     ("claim", "options"):     ("tools/auditcheck.py now reads the shipped pages; tests/tools_test.py holds every one of them in the subject", "planted 2026-08-23"),
     ("claim", "diagrams"):    ("tools/auditcheck.py now reads the MSG tables - what the product says, not what its markup holds", "planted 2026-08-23"),
+    ("owner", "crm-ai"):      ("tests/panel.test.mjs: a flag raised in a function is released whatever happens in it - every shipped script, either spelling", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),
