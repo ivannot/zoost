@@ -117,32 +117,65 @@ export function load(pieces, globals = {}) {
  * these scans blanked backticked strings whole and reported zero over the very expression it had
  * been written for.
  *
- * What it does not do: regex literals. `/[^\/]/` contains no comment opener, but `/ab*\/c/` would
- * end a block comment that isn't open, and a division sign followed by a star would open one. There
- * is none in this repository - measured, not assumed - and a parser is the only honest fix, which is
- * a dependency this project does not have. Stated here rather than left to be discovered.
+ * **Regex literals were the limit, and the sentence claiming there were none was written without
+ * measuring.** It said «there is none in this repository - measured, not assumed», and there are two:
+ * `apps/crm/export.js` has `.replace(/```/g, …)`, three backticks inside a regex, and `site/site.js`
+ * has ``/`([^`]+)`/g``. Each opens a template literal the scanner then closes at the next backtick,
+ * swallowing whole functions - measured across the shipped scripts: **163 code-shaped lines** gone,
+ * 68 of them in `export.js` and 54 in `site.js`. A check reading that text is a check with a hole in
+ * the middle of it. The claim was the defect; the hole was only its consequence.
+ *
+ * So it reads them. Whether a `/` opens a regex or divides is the one thing this cannot know without
+ * a parser, and it uses the usual heuristic - the character before it, ignoring space - which
+ * `tools/jstext.py` has used here for as long. It is allowed to be a heuristic: the only thing
+ * riding on it is whether a `/*` opens a comment, and both answers leave the *positions* intact.
  */
+const REGEX_AFTER = new Set([...'=(,:[!&|?{};+-*%~^<>']);
 export function blankNonCode(src) {
   const out = [];
   const push = (s) => out.push(s.replace(/[^\n]/g, ' '));
-  let i = 0;
+  let i = 0, prev = '';                     // last significant character of *code*
+  const remember = (t) => { const m = t.replace(/\s+$/, ''); if (m) prev = m[m.length - 1]; };
   while (i < src.length) {
     const c = src[i];
+    // A regex literal, kept as it is: this removes commentary, it does not tokenise. Reading it is
+    // what stops its contents being taken for a comment opener or a template.
+    // Not `/*` and not `//`: a comment opener is not a regex, and this branch sits above the two
+    // that handle them. Without the exclusion it read `/** The one writer of \`functions/` as a
+    // regex - a closing slash inside a path in the prose - and the backtick after it opened a
+    // template that swallowed the next eleven lines. **535 code lines in `sidepanel.js` alone**,
+    // measured against the 2 the old scanner lost there: a widening that made the hole bigger, which
+    // is what the crude count is for.
+    if (c === '/' && src[i + 1] !== '*' && src[i + 1] !== '/' && (prev === '' || REGEX_AFTER.has(prev))) {
+      let j = i + 1, cls = false, ok = false;
+      for (; j < src.length; j++) {
+        const d = src[j];
+        if (d === '\\') { j++; continue; }
+        if (d === '\n') break;             // a regex cannot span a line: this was a division
+        if (cls) { if (d === ']') cls = false; continue; }
+        if (d === '[') { cls = true; continue; }
+        if (d === '/') { ok = true; break; }
+      }
+      if (ok) {
+        while (j + 1 < src.length && /[a-z]/.test(src[j + 1])) j++;   // the flags
+        out.push(src.slice(i, j + 1)); prev = '/'; i = j + 1; continue;
+      }
+    }
     if (c === '/' && src[i + 1] === '/') {
       const nl = src.indexOf('\n', i);
       const end = nl < 0 ? src.length : nl;
-      push(src.slice(i, end)); i = end; continue;
+      push(src.slice(i, end)); i = end; continue;   // a comment is not significant: `prev` stands
     }
     if (c === '/' && src[i + 1] === '*') {
       const close = src.indexOf('*/', i + 2);
       const end = close < 0 ? src.length : close + 2;
-      push(src.slice(i, end)); i = end; continue;
+      push(src.slice(i, end)); i = end; continue;   // ditto
     }
     if (c === "'" || c === '"') {
       let j = i + 1;
       while (j < src.length && src[j] !== c && src[j] !== '\n') j += src[j] === '\\' ? 2 : 1;
       const end = Math.min(j + 1, src.length);
-      push(src.slice(i, end)); i = end; continue;
+      push(src.slice(i, end)); prev = c; i = end; continue;
     }
     if (c === '`') {
       out.push(' ');
@@ -162,9 +195,9 @@ export function blankNonCode(src) {
         if (src[j] === '`') { out.push(' '); j++; break; }
         out.push(src[j] === '\n' ? '\n' : ' '); j++;
       }
-      i = j; continue;
+      prev = '`'; i = j; continue;
     }
-    out.push(c); i++;
+    out.push(c); remember(c); i++;
   }
   return out.join('');
 }

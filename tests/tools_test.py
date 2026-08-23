@@ -4378,7 +4378,7 @@ class TheTwoHostListsAgree(unittest.TestCase):
 
         const IS_ANALYTICS = (chrome.runtime.getManifest().host_permissions || [])
           .filter((h) => h.startsWith('https://analytics.'))
-          .some((h) => h.replace(/\/\*$/, '') === BASE);
+          .some((h) => h.replace(/[/][*]$/, '') === BASE);
 
     So a data centre added to `matches` and not to `host_permissions` injects a script that recognises
     nothing: every command returns false and the panel says «No answer from the Zoho Analytics page» -
@@ -5423,18 +5423,53 @@ def _code_only(src):
     for. Blanked characters become spaces and newlines are kept, so a position here is a position in
     the source.
 
-    What it does not do: regex literals. There is none in this repository whose body contains a
-    comment opener - measured, not assumed - and telling `/` apart needs a parser.
+    **Regex literals, and the sentence here that claimed there were none.** This said «there is none
+    in this repository whose body contains a comment opener - measured, not assumed». It had not been
+    measured, and there are two: ``.replace(/```/g, ...)`` in `apps/crm/export.js` and
+    ``/`([^`]+)`/g`` in `site/site.js`, each of which opened a template literal that then swallowed
+    whole functions. The claim was the defect; the hole was its consequence. It reads them now, by
+    the same heuristic `tools/jstext.py` has used here for as long - the significant character before
+    the slash - which is allowed to be a heuristic because the only thing riding on it is whether a
+    `/*` opens a comment, and both answers leave the positions intact.
+
+    A `/*` and a `//` are excluded from that branch by hand, because the first widening did not do so
+    and read the opener of `/** The one writer of ...functions/` as a regex - a closing slash inside a path
+    in the prose - which lost 535 code lines in `sidepanel.js` against the 2 the narrow version lost.
+    Measuring caught it; reading it would not have.
     """
     out = []
     i, n = 0, len(src)
+    prev = ''                                    # last significant character of *code*
     blank = lambda t: re.sub(r'[^\n]', ' ', t)
+    # A `/` after one of these opens a regex rather than dividing - `tools/jstext.py`'s own list.
+    regex_after = set('=(,:[!&|?{};+-*%~^<>')
     while i < n:
         c = src[i]
+        if (c == '/' and i + 1 < n and src[i + 1] not in '*/' and (prev == '' or prev in regex_after)):
+            j, cls, ok = i + 1, False, False
+            while j < n:
+                d = src[j]
+                if d == '\\':
+                    j += 2; continue
+                if d == '\n':
+                    break                        # a regex cannot span a line: that was a division
+                if cls:
+                    if d == ']':
+                        cls = False
+                    j += 1; continue
+                if d == '[':
+                    cls = True; j += 1; continue
+                if d == '/':
+                    ok = True; break
+                j += 1
+            if ok:
+                while j + 1 < n and src[j + 1].isalpha():
+                    j += 1                       # the flags
+                out.append(src[i:j + 1]); prev = '/'; i = j + 1; continue
         if c == '/' and i + 1 < n and src[i + 1] == '/':
             j = src.find('\n', i)
             j = n if j < 0 else j
-            out.append(blank(src[i:j])); i = j; continue
+            out.append(blank(src[i:j])); i = j; continue        # a comment: `prev` stands
         if c == '/' and i + 1 < n and src[i + 1] == '*':
             j = src.find('*/', i + 2)
             j = n if j < 0 else j + 2
@@ -5444,7 +5479,7 @@ def _code_only(src):
             while j < n and src[j] != c and src[j] != '\n':
                 j += 2 if src[j] == '\\' else 1
             j = min(j + 1, n)
-            out.append(blank(src[i:j])); i = j; continue
+            out.append(blank(src[i:j])); prev = c; i = j; continue
         if c == '`':
             out.append(' ')
             j = i + 1
@@ -5463,7 +5498,14 @@ def _code_only(src):
                 if src[j] == '`':
                     out.append(' '); j += 1; break
                 out.append('\n' if src[j] == '\n' else ' '); j += 1
-            i = j; continue
+            prev = '`'; i = j; continue
+        # **The last significant character, and it was never recorded.** Without this `prev` stayed
+        # empty for the whole file, so *every* `/` looked like the start of a regex - the widening
+        # that was meant to read two of them read hundreds, and each ran to the next slash on its
+        # line, taking a quote with it. Twenty-two lines of `export.js` came out different from the
+        # JavaScript twin, which is how it was found: the two scanners are compared, not trusted.
+        if not c.isspace():
+            prev = c
         out.append(c); i += 1
     return ''.join(out)
 
@@ -5954,6 +5996,88 @@ class WhatTheProductSaysIsRead(unittest.TestCase):
             f.write_text(keep, encoding='utf-8')
         self.assertIn('always drawn', out.stdout,
                       f'an absolute added to what the product says is not reported:\n{out.stdout[-600:]}')
+
+class TheCodeScannerReadsRegexLiterals(unittest.TestCase):
+    """A regex literal is code, and a scanner that cannot see one swallows what follows it.
+
+    `blankNonCode` in `tests/slice.mjs` said, in its own docstring, «regex literals... there is none
+    in this repository - measured, not assumed». It had not been measured, and there are two:
+    `apps/crm/export.js` holds ``.replace(/```/g, ...)`` - three backticks inside a regex - and
+    `site/site.js` holds ``/`([^`]+)`/g``. Each opened a template literal the scanner then closed at
+    the next backtick, taking whole functions with it: **68 code lines in `export.js` and 54 in
+    `site.js`**. A check reading that text is a check with a hole in the middle of it, and
+    `tests/panel.test.mjs`'s flag check reads exactly that text.
+
+    The claim was the defect and the hole only its consequence, which is why this class exists rather
+    than a wider line count: what has to hold is that a named declaration *after* a regex literal is
+    still there.
+
+    **And widening it made the hole bigger before it made it smaller.** The first version treated
+    `/**` as a regex start, found the closing slash inside a path in the prose, and let the backtick
+    after it open a template - 535 code lines lost in `sidepanel.js` alone, against the 2 the old
+    scanner lost there. Only measuring caught that; reading it would not have.
+    """
+
+    def scan(self, rel):
+        js = ("import { read, blankNonCode } from './tests/slice.mjs';"
+              f"process.stdout.write(blankNonCode(read({rel!r})));")
+        out = subprocess.run([shutil.which('node') or 'node', '--input-type=module', '-e', js],
+                             cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr[-400:])
+        return out.stdout
+
+    def test_positions_are_preserved(self):
+        # Everything below reads by line, and a scanner that shifts one is worse than none.
+        for rel in ('apps/crm/export.js', 'site/site.js', 'apps/crm/sidepanel.js'):
+            raw = (ROOT / rel).read_text(encoding='utf-8')
+            self.assertEqual(len(self.scan(rel)), len(raw), f'{rel}: the scan changed the length')
+
+    def test_a_declaration_after_a_regex_literal_survives(self):
+        # Derived: every regex literal in the file, and the next top-level declaration after it. Both
+        # files that carry one are read, and a third that does not is the control.
+        for rel in ('apps/crm/export.js', 'site/site.js'):
+            raw = (ROOT / rel).read_text(encoding='utf-8').split('\n')
+            scanned = self.scan(rel).split('\n')
+            marks = [i for i, l in enumerate(raw) if re.search(r'\.replace\(/', l) or re.search(r'= */[^/*]', l)]
+            self.assertTrue(marks, f'{rel}: no regex literal found - the derivation broke')
+            found = 0
+            for at in marks:
+                for i in range(at + 1, min(at + 40, len(raw))):
+                    if re.match(r'^(const|let|function|async function) \w+', raw[i].strip()):
+                        found += 1
+                        self.assertTrue(scanned[i].strip(),
+                                        f'{rel}:{i + 1} was swallowed by the regex literal at line {at + 1}: '
+                                        f'{raw[i].strip()[:70]}')
+                        break
+            self.assertGreater(found, 0, f'{rel}: no declaration follows any regex literal')
+
+    def test_the_two_scanners_agree_line_for_line(self):
+        """One idea of what code is, in two languages, compared rather than trusted.
+
+        `blankNonCode` (JavaScript) and `_code_only` (Python) do the same job for the checks written
+        in each language, and they drifted the moment one of them learnt about regex literals: the
+        Python copy never recorded the last significant character, so *every* `/` looked like a regex
+        start and each ran to the next slash on its line. Twenty-two lines of `export.js` came out
+        different, which is how it was found - by comparing them, not by reading either.
+
+        Line by line and stripped, because trailing space is not a disagreement about code.
+        """
+        for rel in ('apps/crm/export.js', 'site/site.js', 'apps/crm/sidepanel.js',
+                    'site/_worker.js', 'apps/analytics/graphview.js'):
+            raw = (ROOT / rel).read_text(encoding='utf-8')
+            py = _code_only(raw).split('\n')
+            js = self.scan(rel).split('\n')
+            self.assertEqual(len(py), len(js), f'{rel}: the two scanners disagree on the line count')
+            bad = [i + 1 for i, (a, b) in enumerate(zip(py, js)) if a.strip() != b.strip()]
+            self.assertEqual(bad, [], f'{rel}: the Python and JavaScript scanners disagree at lines '
+                                      f'{bad[:8]} - one of them is reading something the other is not')
+
+    def test_a_scanner_that_kept_everything_would_be_caught(self):
+        # The other half. A scan that blanks nothing passes every assertion above, so the thing that
+        # must also hold is that it still removes what it is for: no comment survives as text.
+        scanned = self.scan('apps/crm/export.js')
+        self.assertNotIn('export a self-contained, shareable HTML report', scanned,
+                         'the scanner stopped removing comments, and the checks above would not know')
 
 
 if __name__ == '__main__':
