@@ -781,10 +781,10 @@ function distrustEverything() {
  *  anywhere else - and `tools/probe.py` proves them in a browser, each one red on the defect put
  *  back. */
 const noteWrite = (rel) => {
-  if (isModuleFile(rel)) { graphCache = null; moduleFilesCache = null; return; }
+  if (isModuleFile(rel)) { graphCache = null; moduleFilesCache = null; aiConnCache = null; return; }
   // The index is what says which names are modules of this org, so a pull that rewrites it changes
   // every module reading the panel is about to resolve.
-  if (rel === 'modules/index.json') { modNamesCache = null; graphCache = null; return; }
+  if (rel === 'modules/index.json') { modNamesCache = null; graphCache = null; aiConnCache = null; return; }
   if (rel === 'connections/index.json') { aiConnCache = null; return; }
   if (rel === 'actions/index.json') { aiActCache = null; return; }
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
@@ -798,7 +798,18 @@ const noteWrite = (rel) => {
   if (rel.startsWith('failures/')) { failIndex = null; healthData = null; return; }
   if (!rel.startsWith('functions/')) return;
   if (rel.endsWith('.meta.json')) _dirtyMeta.add(rel.replace(/\.meta\.json$/, '.dg'));
-  else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; }
+  // `aiConnCache` rides with `graphCache` in **every** branch that drops it, not only where its
+  // own source moved. A module write cannot change which functions use a connection, so one of
+  // the three is redundant - and the redundancy costs rebuilding a small map from a graph that
+  // is being rebuilt anyway, while the alternative is a per-branch judgement that has to be made
+  // correctly again every time a branch is added. This file already chose that trade.
+  //
+  // `aiConnCache` too, and it was not. What it holds is «which functions use this connection»,
+  // built by walking the graph's nodes - so it is as much a reading of the sources as `graphCache`
+  // is, and a pull that changed one function left `get_connection` answering «used by 3» from the
+  // cache while the graph would have said 4. The rule this function states in its own comment two
+  // branches up: invalidation derives from the write, never from the memory of whoever caused it.
+  else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; aiConnCache = null; }
 };
 // The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
 // root again - two calls to the browser's file system before the one that does the work - so half of

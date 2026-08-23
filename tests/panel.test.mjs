@@ -10362,3 +10362,49 @@ test('a module file that will not parse is counted, not dropped', () => {
   assert.match(src, /\$\{mk\.length\}\$\{modBad\}/,
     'the count is kept and never said, which is the same as not keeping it');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A cache built from the graph is dropped wherever the graph is.
+//
+// `aiConnCache` holds «which functions use this connection», built by walking `ensureGraph()`'s
+// nodes - so it is a reading of the function sources exactly as `graphCache` is. Writing a `.dg`
+// dropped `codeCache` and `graphCache` and left it, so a pull that changed one function left
+// `get_connection` answering «used by 3 functions» from the cache while the graph would have said
+// four. The fast path and the slow path, disagreeing about the same question.
+//
+// Derived: a cache whose value comes out of `ensureGraph` must appear in every `noteWrite` branch
+// `graphCache` appears in. The limit, stated: it finds the dependency by reading the function that
+// fills the cache, so one filled indirectly - through a helper that calls `ensureGraph` itself - is
+// invisible here, and there is none today.
+test('every cache read out of the graph is invalidated with the graph', () => {
+  const panel = read('apps/crm/sidepanel.js');
+  const ai = read('apps/crm/ai.js');
+  const src = panel + '\n' + ai;
+
+  // Which caches are filled from the graph: a `<name>Cache = ...` inside a function that awaits
+  // `ensureGraph`.
+  const fromGraph = new Set();
+  // The whole declaration line, not `\([^)]*\)`: a default parameter contains parentheses -
+  // `function aiLoadConnections(op = beginWorkspaceOp())` - so that pattern stopped at the inner
+  // `)` and matched nothing at all. A derivation that finds none of its subject reads as «clean».
+  for (const m of src.matchAll(/^(?:async )?function (\w+)[^\n]*\{\s*$/gm)) {
+    const a = m.index;
+    const b = src.indexOf('\n}', a);
+    const body = src.slice(a, b < 0 ? src.length : b);
+    if (!/await ensureGraph\(/.test(body)) continue;
+    for (const c of body.matchAll(/\b(\w*Cache)\s*=\s*(?!null)/g)) fromGraph.add(c[1]);
+  }
+  assert.ok(fromGraph.size >= 1, 'no cache is filled from the graph - the derivation broke');
+
+  // Every branch of noteWrite that drops graphCache must drop them too.
+  const note = panel.slice(panel.indexOf('const noteWrite ='), panel.indexOf('\n};', panel.indexOf('const noteWrite =')));
+  const branches = note.split('\n').filter((l) => /graphCache = null/.test(l));
+  assert.ok(branches.length >= 2, `only ${branches.length} branch(es) drop the graph - the slice is wrong`);
+  const missed = [];
+  for (const line of branches) {
+    for (const c of fromGraph) if (!line.includes(`${c} = null`)) missed.push(`${c} survives: ${line.trim().slice(0, 70)}`);
+  }
+  assert.deepEqual(missed, [],
+    `these caches are built from the graph and outlive a write that rebuilds it, so the assistant ` +
+    `answers from one and the panel from the other: ${missed.join('; ')}`);
+});
