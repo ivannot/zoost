@@ -636,9 +636,11 @@ function erCovers(id) {
   // What the reader has folded away is not on the drawing, so it is not counted, not covered and not
   // in the badge. `erFit` and the print handler already skip it - «Both skip what erHiddenSet hides
   // now», says docs/diagrams.md - and that was done for two readers of five. Fold a branch with a
-  // `-` mark and the hint says «3 boxes off the diagram» while the status line above it and the tab
-  // badge beside it go on counting them: the window stating in one line that three boxes went and in
-  // another that they are still there.
+  // `-` mark and the hint said «3 boxes off the diagram» while the status line above it and the tab
+  // badge beside it went on counting them: the window stating in one line that three boxes went and
+  // in another that they are still there. All five read it now - this one, `erFit`, the print
+  // handler, `erVisibleIds` behind the badge, and `entityBreakdown` behind the status line, which
+  // was the last and was found by reading this paragraph and checking whether it was still true.
   const gone = erHiddenSet();
   if (gone.has(id)) return 0;
   let k = 0;

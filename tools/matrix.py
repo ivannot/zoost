@@ -95,6 +95,11 @@ EXAMINED = {
                             "same claims, disclosures that differ only where the products do, and a "
                             "whatsnew note for every tag since each adopted the convention",
                             "2026-08-23"),
+    ("claim", "diagrams"): ("every absolute in the graph windows checked against the code: «every "
+                           "loss is counted» holds - matchArrangement puts every id in matched, "
+                           "fresh or stale - and docs/diagrams.md's «both skip what erHiddenSet "
+                           "hides» is true of the two it names. The paragraph that was *not* stale "
+                           "named a live defect and it is fixed under this cell", "2026-08-23"),
     ("claim", "options"): ("every absolute on the page checked against the code: the passphrase is "
                            "never stored (what session holds is the decrypted key, and privacy.html "
                            "says so), «nothing on disk is deleted» holds, and «until a workspace has "

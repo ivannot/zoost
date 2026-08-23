@@ -1154,3 +1154,54 @@ test('analytics: the panel opens the diagram for an entity with no relations', (
             `the button still refuses a view with no relations: ${line.trim()}`);
   assert.ok(/inDiagram/.test(line), 'the button no longer checks that the diagram contains the view');
 });
+
+// ---------------------------------------------------------------------------------------------
+// Every line that counts boxes counts the same boxes.
+//
+// Folding a branch takes boxes off the drawing. `erFit`, the print handler, `erCovers` and the tab
+// badge were each taught to skip what is folded - four readers of one piece of state, fixed one at
+// a time as somebody noticed. The fifth was the status line's own breakdown, sitting *beside* the
+// badge: fold three boxes and the badge said they were gone while the line next to it went on
+// counting them. The note in `erCovers` describes that in exactly those words; the prose was right
+// and the code was behind it.
+//
+// Run rather than read: the property is «the number drops when a box is folded», and a check that
+// looked for the name `erHiddenSet` would pass on a call that does nothing with it.
+test('crm: the status breakdown stops counting a box that was folded away', () => {
+  const NODES = {
+    'a.one': { id: 'a.one', name: 'one', namespace: 'a', calls: ['a.two'], called_by: [] },
+    'a.two': { id: 'a.two', name: 'two', namespace: 'a', calls: [], called_by: ['a.one'] },
+  };
+  // The context is built here rather than through `load()` because the test *changes* two of its
+  // globals between calls - `curView` and what the fold hides - and `load` hands back the values it
+  // was asked for, not the context they live in. Reassigning those had no effect and the first
+  // version of this reported the defect as still present after it had been fixed.
+  const ctx = {
+    Object, Set, String,
+    N: NODES,
+    entityOf: () => 'function',
+    entitiesPresent: () => ['function'],
+    entityWord: () => 'function',
+    passKind: () => true,
+    curView: 'er',
+    erHiddenSet: () => new Set(),
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/graphview.js', 'entityBreakdown'), ctx);
+  const run = () => vm.runInContext('entityBreakdown()', ctx);
+
+  const whole = run();
+  assert.match(whole, /<b>2<\/b>/, `it stopped counting what is drawn: ${whole}`);
+
+  // Fold one away: the count must follow, and must say «of 2» so the reader is told what it is a
+  // fraction of - the same shape the chips already use.
+  ctx.erHiddenSet = () => new Set(['a.two']);
+  const folded = run();
+  assert.match(folded, /<b>1<\/b>/,
+    `a folded box is still counted here while the tab badge beside it says it is gone: ${folded}`);
+  assert.match(folded, /of 2/, `the reader is not told what the 1 is out of: ${folded}`);
+
+  // And outside the ER view there is no folding, so nothing changes.
+  ctx.curView = 'graph';
+  assert.match(run(), /<b>2<\/b>/, 'the fold is applied where folding does not exist');
+});

@@ -105,10 +105,18 @@ const entityWord = (e) => e.replace(/s$/, '');
 // at the first semicolon closing a line, which inside a multi-line body is not the end of anything.
 function entityBreakdown() {
   const c = {}, all = {};
-  Object.values(N).forEach((n) => {
+  // The fifth reader of what the fold hid, and the last one that was still counting it. `erFit`,
+  // the print handler, `erCovers` and the tab badge all skip it; this line sat beside the badge and
+  // disagreed with it - the window saying in one place that three boxes went and in another that
+  // they are still there, which the note in `erCovers` describes in exactly those words.
+  //
+  // Only in the ER view, where folding exists at all: `erHiddenSet()` is empty elsewhere, and
+  // asking is cheaper than reasoning about whether it always will be.
+  const gone = curView === 'er' ? erHiddenSet() : new Set();
+  Object.entries(N).forEach(([id, n]) => {
     const k = entityOf(n);
     all[k] = (all[k] || 0) + 1;
-    if (passKind(n)) c[k] = (c[k] || 0) + 1;
+    if (passKind(n) && !gone.has(id)) c[k] = (c[k] || 0) + 1;
   });
   return entitiesPresent().map((k) => {
     const shown = c[k] || 0;
