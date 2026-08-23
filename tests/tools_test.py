@@ -5144,5 +5144,71 @@ class StoreCeilingsAreCountedAndTheGapIsPrinted(unittest.TestCase):
                             '- if that becomes true, this case is what has to change')
 
 
+class DriftFromTheSubmittedListingIsSaid(unittest.TestCase):
+    """What the repository says and what the Store was told are compared, and the answer is printed.
+
+    `auditcheck` compared §1 and §2 against the manifest - their authority - and said «2 store fields
+    compared». §3 to §10 have no authority but *what was pasted*, which `submitted.py` records in
+    `store/<app>/listing.json`, and nothing looked at it. So the release gate could pass while five
+    sections in the repository said something the Store had never been told, and `CLAUDE.md` records
+    exactly that: §4 and §5 drifted for four and nine days while the Store still served an absolute
+    the site had already walked back.
+
+    Measured when this was written: CRM §3, §7, §10 and Analytics §3, §10 had drifted, and the only
+    way to know was to run a command by hand.
+
+    A **note and never a finding**. Drift is the normal state between an edit and the next
+    submission; a gate here would refuse every release that improved the copy, which is the
+    always-refuses failure this repository names. What was missing was the sentence, and it carries
+    the command that prints the text, so it can be acted on where it is read.
+    """
+
+    def report(self, *args):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'auditcheck.py'), '--offline', *args],
+                              cwd=ROOT, capture_output=True, text=True).stdout
+
+    def test_the_run_says_which_sections_drifted(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('storecopy_ut', ROOT / 'tools' / 'storecopy.py')
+        sc = importlib.util.module_from_spec(spec); spec.loader.exec_module(sc)
+        out = self.report()
+        for app in sorted(d.name for d in (ROOT / 'apps').iterdir() if (d / 'manifest.json').exists()):
+            drifted = sc.changed_sections(app)
+            self.assertIn(f'store/{app}:', out, f'the run says nothing at all about {app}\n{out}')
+            if drifted:
+                for n in drifted:
+                    self.assertRegex(out, rf'store/{app}:[^\n]*§?{n}\b',
+                                     f'{app} §{n} has drifted and the run does not name it')
+                self.assertRegex(out, rf'store/{app}:[^\n]*storecopy\.py {app}',
+                                 f'{app} drift is reported without the command that prints the text')
+
+    def test_it_is_a_note_and_not_a_finding(self):
+        # The half that keeps it usable: a release must not be refused because the copy improved.
+        # Read off *where the sentence appears*, not off the finding count - `--offline` reports its
+        # own skipped live comparison as a finding by design, so the count is never zero here and
+        # the first version of this asserted against it and failed for the wrong reason.
+        out = self.report()
+        under = out[:out.index('auditcheck:')] if 'auditcheck:' in out else out
+        self.assertNotIn('differ from what was last pasted', under,
+                         'drift against the submitted listing is reported above the notes, so it '
+                         'would refuse every release that changed the copy')
+        self.assertIn('differ from what was last pasted', out,
+                      'the drift sentence is not printed at all')
+
+    def test_nothing_submitted_yet_is_not_everything_drifted(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('storecopy_ut2', ROOT / 'tools' / 'storecopy.py')
+        sc = importlib.util.module_from_spec(spec); spec.loader.exec_module(sc)
+        with tempfile.TemporaryDirectory() as t:
+            root = pathlib.Path(t)
+            (root / 'store' / 'crm').mkdir(parents=True)
+            (root / 'store' / 'crm' / 'store-listing.md').write_text(
+                '## 1. Item name\n\n```\nZoost\n```\n', encoding='utf-8')
+            sc.ROOT = root
+            self.assertEqual(sc.changed_sections('crm'), [],
+                             'an unrecorded listing reads as «everything drifted», which is a '
+                             'different fact from «nobody has submitted yet»')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

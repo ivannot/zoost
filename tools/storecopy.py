@@ -78,6 +78,22 @@ def digests(app: str) -> dict:
     return {str(n): hashlib.sha256(body.encode()).hexdigest()[:12] for n, _, _, body in sections(app)}
 
 
+def changed_sections(app: str) -> list:
+    """Which sections differ from what was last pasted, as a list of numbers. Empty when nothing has.
+
+    Split out of `changed()` so a caller can *ask* rather than parse printed lines: `auditcheck`
+    reports this at the end of a piece of work, which is where it gets read. An unrecorded listing
+    answers `[]` and not «everything» - «nobody has submitted yet» is not «everything drifted», and
+    the difference is what the printed version says in its own words.
+    """
+    led = ROOT / 'store' / app / 'listing.json'
+    was = json.loads(led.read_text(encoding='utf-8')).get('sections', {}) if led.exists() else {}
+    if not was:
+        return []
+    return [str(n) for n, _name, _cap, body in sections(app)
+            if was.get(str(n)) != hashlib.sha256(body.encode()).hexdigest()[:12]]
+
+
 def changed(app: str) -> int:
     """Which boxes in the dashboard actually need touching this time.
 

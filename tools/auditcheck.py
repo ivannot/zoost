@@ -344,6 +344,38 @@ def store_matches_manifest(findings: list, notes: list) -> None:
             checked += 1
     notes.append(f'{checked} store fields compared against their manifest')
 
+    # And the other seven, which nothing here looked at. §1 and §2 are compared against the manifest
+    # because it is their authority; §3 to §10 have no authority but *what was pasted*, recorded in
+    # `store/<app>/listing.json` by `submitted.py`. Between the two there was silence: this printed
+    # «2 store fields compared» and a release gate could pass while five sections in the repository
+    # said something the Store had never been told. `CLAUDE.md` records that happening to §4 and §5,
+    # for four and nine days, while the Store still served an absolute the site had walked back.
+    #
+    # A **note and never a finding**, deliberately. Drift is the normal state between an edit and the
+    # next submission - a gate here would refuse every release that improved the copy, which is the
+    # «always refuses» failure this repository names. What was missing is not a refusal, it is the
+    # sentence, and it carries the command that prints the text so it can be acted on where it is
+    # read rather than after a round trip.
+    try:
+        import storecopy
+    except Exception:                                   # noqa: BLE001 - said, not swallowed
+        notes.append('storecopy could not be imported, so drift against the submitted copy is unchecked')
+        storecopy = None
+    if storecopy is not None:
+        for mf in sorted((ROOT / 'apps').glob('*/manifest.json')):
+            app = mf.parent.name
+            try:
+                drifted = storecopy.changed_sections(app)
+            except Exception as e:                      # noqa: BLE001
+                notes.append(f'store/{app}: drift against the submitted copy could not be read ({e})')
+                continue
+            if drifted:
+                notes.append(f'store/{app}: §{", §".join(drifted)} differ from what was last pasted '
+                             f'into the dashboard - `python3 tools/storecopy.py {app} <n> --copy` '
+                             f'prints each one ready to paste')
+            else:
+                notes.append(f'store/{app}: every section matches what was last pasted')
+
 
 # ---------------------------------------------------------------------------------------------------
 # 3. Absolute claims, presented — never judged
