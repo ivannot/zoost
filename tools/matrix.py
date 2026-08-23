@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("blindspot", "crm-panel"): ("tests/panel.test.mjs: every id the panel reaches for is defined somewhere", "planted 2026-08-23"),
     ("fastpath", "crm-ai"):    ("tests/panel.test.mjs: a cache read out of the graph is invalidated with the graph", "planted 2026-08-23"),
     ("silent", "crm-ai"):      ("tests/panel.test.mjs: an overtaken load refuses instead of answering empty", "planted 2026-08-23"),
     ("partial", "crm-ai"):     ("tests/panel.test.mjs: «none» from the assistant says what it was measured over", "planted 2026-08-23"),

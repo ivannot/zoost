@@ -10408,3 +10408,88 @@ test('every cache read out of the graph is invalidated with the graph', () => {
     `these caches are built from the graph and outlive a write that rebuilds it, so the assistant ` +
     `answers from one and the panel from the other: ${missed.join('; ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Every element the panel reaches for exists somewhere.
+//
+// `$('typo')` answers null, and every site that follows one is written `const el = $('x'); if (!el)
+// return;` - so a renamed id turns a control into a no-op that says nothing. «Which exit says
+// nothing?» is one of the six questions CLAUDE.md keeps, and this is the shape it takes in a panel
+// of five thousand lines: nothing on screen is wrong, one thing simply stops working.
+//
+// `callcheck` holds the sibling rule for functions - «every function a page calls is in the page» -
+// and there was none for elements. Measured while writing this: 228 ids reached for in the CRM, 249
+// in its markup, and after counting the ones the scripts build themselves, none missing. A clean
+// tree and no check, which is the definition of this cell.
+//
+// Two limits, stated. `content-bridge.js` and `hook.js` read *Zoho's* page and are excluded by
+// name - `dreZuId` is theirs, not ours. And an id built by concatenation is invisible: what counts
+// as defined is the name appearing as a literal in some file of the same app, which is why
+// `btn('chipall', ...)` - assigned through a parameter - is correctly seen as defined.
+test('every id the panel reaches for is defined somewhere in its app', () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const dir = join(ROOT, 'apps', app);
+    const files = readdirSync(dir);
+    const defined = new Set();
+    for (const f of files.filter((n) => n.endsWith('.html'))) {
+      for (const m of read(`apps/${app}/${f}`).matchAll(/\bid="([^"]+)"/g)) defined.add(m[1]);
+    }
+    // **`site/report.html` only**, and that is the whole of the exception: the panel opens
+    // zoost.it/report and writes the trace into it, so a lookup there is at a document this
+    // repository owns. Every site page was included first, and `#health` on a guide then vouched
+    // for `#health` in the panel - a rename in the panel's own markup went unnoticed because a
+    // different document happened to use the name.
+    for (const m of read('site/report.html').matchAll(/\bid="([^"]+)"/g)) defined.add(m[1]);
+    // Anything a script names as a literal: markup it builds, `.id = 'x'`, or an argument to a
+    // helper that assigns one.
+    for (const f of files.filter((n) => n.endsWith('.js'))) {
+      // **The lookups are removed first.** Harvesting every literal included `$('health')` itself,
+      // so every id was defined by the very expression being checked and the case could not fail -
+      // both plants passed. A gate that always passes looks exactly like a clean tree.
+      // `buildExport*` builds a **standalone report**, a different document with its own ids -
+      // `<h2 id="health">` there was vouching for `#health` in the panel, so renaming the panel's
+      // went unnoticed. Blanked out, derived from the function name rather than the file, because
+      // the file also holds code that does touch the panel.
+      let body = read(`apps/${app}/${f}`)
+        .replace(/\$\('[^']+'\)/g, ' ')
+        .replace(/getElementById\('[^']+'\)/g, ' ');
+      for (const b of [...body.matchAll(/function buildExport\w*\(/g)].reverse()) {
+        const end = body.indexOf('\n}', b.index);
+        body = body.slice(0, b.index) + ' '.repeat((end < 0 ? body.length : end) - b.index) +
+               body.slice(end < 0 ? body.length : end);
+      }
+      // Only where a literal *is* an id: in markup the script builds, or assigned to `.id`.
+      // Harvesting every literal made any name that appears elsewhere in the code - `'health'` is
+      // also a view mode and a tab label - unfalsifiable, so renaming `id="health"` in the markup
+      // went unnoticed. Measured on the plant.
+      for (const m of body.matchAll(/\bid=["']([A-Za-z][\w-]*)["']/g)) defined.add(m[1]);
+      for (const m of body.matchAll(/\.id\s*=\s*['"]([A-Za-z][\w-]*)['"]/g)) defined.add(m[1]);
+      // And an id handed to a helper that assigns one: `btn('chipall', …)` where `btn` does
+      // `e.id = id`. Derived from the helper's body, so it is not a list of blessed names.
+      for (const h of body.matchAll(/(?:const|let|function)\s+(\w+)\s*=?\s*\(([^)]*)\)\s*=?>?\s*\{([\s\S]{0,400}?)\n\s*\}/g)) {
+        const [, fname, params, fbody] = h;
+        const first = (params.split(',')[0] || '').trim();
+        if (!first || !new RegExp(`\\.id\\s*=\\s*${first}\\b`).test(fbody)) continue;
+        for (const c of body.matchAll(new RegExp(`\\b${fname}\\(\\s*['"]([A-Za-z][\\w-]*)['"]`, 'g'))) defined.add(c[1]);
+      }
+    }
+    let looked = 0;
+    const missing = [];
+    for (const f of files.filter((n) => n.endsWith('.js') && n !== 'content-bridge.js' && n !== 'hook.js')) {
+      const src = read(`apps/${app}/${f}`)
+        .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+        .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+      for (const m of src.matchAll(/\$\('([^']+)'\)|getElementById\('([^']+)'\)/g)) {
+        looked++;
+        const id = m[1] || m[2];
+        if (!defined.has(id)) {
+          missing.push(`apps/${app}/${f}:${src.slice(0, m.index).split('\n').length} $('${id}')`);
+        }
+      }
+    }
+    assert.ok(looked > 100, `id=${app}: only ${looked} element lookups found - the derivation broke`);
+    assert.deepEqual(missing, [],
+      `these are reached for and defined nowhere, so they answer null and the control silently ` +
+      `does nothing: ${missing.join(', ')}`);
+  }
+});
