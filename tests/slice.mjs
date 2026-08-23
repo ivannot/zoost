@@ -97,3 +97,74 @@ export function load(pieces, globals = {}) {
   vm.runInContext(pieces.join('\n\n') + `\n;({ ${names.join(', ')} })`, ctx);
   return vm.runInContext(`({ ${names.join(', ')} })`, ctx);
 }
+
+/** Comments and literal text blanked, code kept, every position preserved.
+ *
+ * One left-to-right pass, because the two-regex idiom - block comments, then line comments, then
+ * strings - has a hole in *both* orders and this file met one of them. `site/_worker.js` has a line
+ * comment containing `` `/api/*` ``, so blanking block comments first opened a fake block at those
+ * two characters and swallowed **2,746 characters of real code**, including the only use of
+ * `CACHE_KEY`. A check written over that text reported the marker as declared and never read - a
+ * finding about nothing, in the position where the finding about something would have been. Turning
+ * the order round trades it for a worse one: every `'https://…'` in the file contains `//`.
+ *
+ * So it is a scanner. Strings, template literals and both comment shapes, in the one place that can
+ * tell them apart - the order they appear in.
+ *
+ * Two deliberate choices. Every blanked character becomes a space and every newline is kept, so a
+ * position in the result is a position in the source and a line number is a line number. And a
+ * template literal's `${...}` is **kept**: an interpolation is code, and a first version of one of
+ * these scans blanked backticked strings whole and reported zero over the very expression it had
+ * been written for.
+ *
+ * What it does not do: regex literals. `/[^\/]/` contains no comment opener, but `/ab*\/c/` would
+ * end a block comment that isn't open, and a division sign followed by a star would open one. There
+ * is none in this repository - measured, not assumed - and a parser is the only honest fix, which is
+ * a dependency this project does not have. Stated here rather than left to be discovered.
+ */
+export function blankNonCode(src) {
+  const out = [];
+  const push = (s) => out.push(s.replace(/[^\n]/g, ' '));
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '/' && src[i + 1] === '/') {
+      const nl = src.indexOf('\n', i);
+      const end = nl < 0 ? src.length : nl;
+      push(src.slice(i, end)); i = end; continue;
+    }
+    if (c === '/' && src[i + 1] === '*') {
+      const close = src.indexOf('*/', i + 2);
+      const end = close < 0 ? src.length : close + 2;
+      push(src.slice(i, end)); i = end; continue;
+    }
+    if (c === "'" || c === '"') {
+      let j = i + 1;
+      while (j < src.length && src[j] !== c && src[j] !== '\n') j += src[j] === '\\' ? 2 : 1;
+      const end = Math.min(j + 1, src.length);
+      push(src.slice(i, end)); i = end; continue;
+    }
+    if (c === '`') {
+      out.push(' ');
+      let j = i + 1;
+      while (j < src.length) {
+        if (src[j] === '\\') { out.push('  '); j += 2; continue; }
+        if (src[j] === '$' && src[j + 1] === '{') {
+          let k = j + 2, depth = 1;
+          while (k < src.length && depth) {
+            if (src[k] === '{') depth++;
+            else if (src[k] === '}') depth--;
+            k++;
+          }
+          out.push('  ' + src.slice(j + 2, k));   // the expression, kept
+          j = k; continue;
+        }
+        if (src[j] === '`') { out.push(' '); j++; break; }
+        out.push(src[j] === '\n' ? '\n' : ' '); j++;
+      }
+      i = j; continue;
+    }
+    out.push(c); i++;
+  }
+  return out.join('');
+}

@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
+import { sliceFn, sliceConst, load, read, blankNonCode, ROOT } from './slice.mjs';
 import { readdirSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
 import { execSync } from 'node:child_process';
@@ -1094,4 +1094,81 @@ test('what the site and the Worker both compute, they compute alike', () => {
         `${JSON.stringify(a(i))} against ${JSON.stringify(b(i))}`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A cached answer's key moves when the answer's shape moves.
+//
+// Both cached endpoints carry a version marker in their cache key, and the file says it «must be
+// bumped whenever the payload's shape changes». That was prose, and the file also records what it
+// costs when it is not followed: a deploy is invisible for up to an hour, the new code runs, hits
+// the old cached response and returns it unchanged - «exactly what happened when `repo` was added».
+// The key deliberately ignores the query string, so a stale entry cannot be busted from outside
+// either. Measured: adding a field to the `/api/versions` payload without touching the marker left
+// the whole battery green.
+//
+// So the shape is derived and recorded as a **digest**, never as a list of names: what has to hold
+// is «these two move together», and a list would invite editing the list instead of the marker.
+// Bumping the marker and the digest is one edit at the point of the change, which is where a rule
+// this repository can keep is attached.
+//
+// **The limit, stated:** top-level keys only. A field added *inside* `crm: {...}` changes what a
+// page reads and is not seen here - the nesting would need a parser, and the two blocks that have
+// it are built by named helpers whose own shape is asserted elsewhere in this file.
+const CACHED_SHAPES = {
+  '/api/versions?v=21': 'b54359f379',
+  '/api/ahead?v=3': '2087301924',
+};
+
+test('a cached payload cannot change shape behind its own cache key', () => {
+  // Two views of one text, at the same offsets: the marker's *value* is a string literal, which the
+  // scanner blanks, and everything else must be read with strings and comments gone. `blankNonCode`
+  // preserves every position, so an index found in one is an index in the other.
+  const raw = read('site/_worker.js');
+  const src = blankNonCode(raw);
+  assert.equal(src.length, raw.length, 'the scanner moved a position - nothing below can be trusted');
+
+  // Derived: every marker declared, and the payload of whichever function reads it.
+  const markers = [...raw.matchAll(/^const (\w+) = '(\/api\/[^']+\?v=\d+)';/gm)];
+  assert.ok(markers.length >= 2, `only ${markers.length} cache marker(s) found - the derivation broke`);
+
+  const seen = {};
+  for (const [, name, marker] of markers) {
+    const decl = raw.indexOf(`const ${name} = '`);
+    const at = src.indexOf(name, decl + `const ${name} = '`.length);
+    assert.ok(at > 0, `${name} is declared and never used - a marker nothing reads guards nothing`);
+    const from = src.indexOf('JSON.stringify({', at);
+    assert.ok(from > 0, `${name}: no payload built after it - the derivation broke`);
+
+    // Top-level keys of that literal, by brace depth.
+    const open = from + 'JSON.stringify('.length;
+    let depth = 0, end = open;
+    for (; end < src.length; end++) {
+      if (src[end] === '{') depth++;
+      else if (src[end] === '}') { depth--; if (!depth) break; }
+    }
+    const body = src.slice(open + 1, end);
+    const keys = [];
+    depth = 0;
+    for (const line of body.split('\n')) {
+      // `name:` and the shorthand `name,` both. Reading only the first said «3 fields» about the
+      // five-field payload of /api/ahead, whose first two are shorthand - and a derivation that
+      // silently reads part of its subject is the thing this repository keeps finding in checkers.
+      const m = depth === 0 && /^\s{4}(\w+)\s*[,:]/.exec(line);
+      if (m) keys.push(m[1]);
+      for (const ch of line) { if ('{(['.includes(ch)) depth++; else if ('})]'.includes(ch)) depth--; }
+    }
+    assert.ok(keys.length >= 4, `${name}: read ${keys.length} field(s) - the derivation broke`);
+
+    // A digest, so nothing here is a list of names to be edited instead of the marker.
+    let h = 0n;
+    for (const c of [...keys].sort().join(',')) h = (h * 131n + BigInt(c.codePointAt(0))) % (1n << 40n);
+    seen[marker] = h.toString(16).padStart(10, '0');
+  }
+
+  assert.deepEqual(seen, CACHED_SHAPES,
+    'a cached payload changed shape without its cache key moving with it, so a page deployed now ' +
+    'is served the old shape from the edge for as long as the entry lives - and the key ignores the ' +
+    'query string, so nothing outside can bust it. Bump the marker in site/_worker.js and the ' +
+    'digest here, together.');
 });

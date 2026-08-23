@@ -5378,38 +5378,62 @@ class ExaminedIsNotClosed(unittest.TestCase):
 
 
 def _code_only(src):
-    """Comments and literal text blanked, `${...}` interpolations kept, lengths and lines preserved.
+    """Comments and literal text blanked, code kept, every position preserved.
 
-    The interpolations are the point: `bound` was read inside a template literal building the export's
-    file name, and a first version of this scan blanked backticked strings whole and reported zero
-    over the very site it was written for. Positions stay usable because every blanked character is
-    replaced by a space and every newline is kept.
+    One left-to-right pass, because the two-regex idiom - block comments, then line comments, then
+    strings - has a hole in *both* orders, and one of them is live in this repository.
+    `site/_worker.js` has a line comment containing `/api/*`, so blanking block comments first opens
+    a fake block at those two characters and swallows 2,746 characters of real code. Turning the
+    order round trades it for a worse one: every `'https://...'` contains `//`. Measured over the
+    shipped scripts, the first order swallows code in three files.
+
+    The `${...}` of a template literal is **kept**: an interpolation is code, and a first version of
+    this blanked backticked strings whole and reported zero over the very expression it was written
+    for. Blanked characters become spaces and newlines are kept, so a position here is a position in
+    the source.
+
+    What it does not do: regex literals. There is none in this repository whose body contains a
+    comment opener - measured, not assumed - and telling `/` apart needs a parser.
     """
-    blank = lambda m: re.sub(r'[^\n]', ' ', m.group())
-    src = re.sub(r'/\*[\s\S]*?\*/', blank, src)
-    src = re.sub(r'^([ \t]*)//.*$', blank, src, flags=re.M)
-    src = re.sub(r"'(?:\\.|[^'\\\n])*'|\"(?:\\.|[^\"\\\n])*\"", blank, src)
-    out, i, n = [], 0, len(src)
+    out = []
+    i, n = 0, len(src)
+    blank = lambda t: re.sub(r'[^\n]', ' ', t)
     while i < n:
-        if src[i] != '`':
-            out.append(src[i]); i += 1; continue
-        out.append(' '); j = i + 1
-        while j < n:
-            if src[j] == '\\':
-                out.append('  '); j += 2; continue
-            if src[j] == '$' and j + 1 < n and src[j + 1] == '{':
-                k, depth = j + 2, 1
-                while k < n and depth:
-                    if src[k] == '{':
-                        depth += 1
-                    elif src[k] == '}':
-                        depth -= 1
-                    k += 1
-                out.append('  ' + src[j + 2:k]); j = k; continue
-            if src[j] == '`':
-                out.append(' '); j += 1; break
-            out.append('\n' if src[j] == '\n' else ' '); j += 1
-        i = j
+        c = src[i]
+        if c == '/' and i + 1 < n and src[i + 1] == '/':
+            j = src.find('\n', i)
+            j = n if j < 0 else j
+            out.append(blank(src[i:j])); i = j; continue
+        if c == '/' and i + 1 < n and src[i + 1] == '*':
+            j = src.find('*/', i + 2)
+            j = n if j < 0 else j + 2
+            out.append(blank(src[i:j])); i = j; continue
+        if c in '"\'':
+            j = i + 1
+            while j < n and src[j] != c and src[j] != '\n':
+                j += 2 if src[j] == '\\' else 1
+            j = min(j + 1, n)
+            out.append(blank(src[i:j])); i = j; continue
+        if c == '`':
+            out.append(' ')
+            j = i + 1
+            while j < n:
+                if src[j] == '\\':
+                    out.append('  '); j += 2; continue
+                if src[j] == '$' and j + 1 < n and src[j + 1] == '{':
+                    k, depth = j + 2, 1
+                    while k < n and depth:
+                        if src[k] == '{':
+                            depth += 1
+                        elif src[k] == '}':
+                            depth -= 1
+                        k += 1
+                    out.append('  ' + src[j + 2:k]); j = k; continue
+                if src[j] == '`':
+                    out.append(' '); j += 1; break
+                out.append('\n' if src[j] == '\n' else ' '); j += 1
+            i = j; continue
+        out.append(c); i += 1
     return ''.join(out)
 
 
