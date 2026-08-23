@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("siblings", "crm-ai"):    ("tests/panel.test.mjs: the prompt names the tools from the registry, never typed", "planted 2026-08-23"),
     ("silent", "store"):       ("tests/tools_test.py: auditcheck says which listing sections differ from what was pasted", "planted 2026-08-23"),
     ("blindspot", "store"):    ("tests/tools_test.py: the listing checker enforces §2 and prints what it skips", "planted 2026-08-23"),
     ("blindspot", "options"):  ("tests/panel.test.mjs: every setting Settings writes is read by something", "planted 2026-08-23"),

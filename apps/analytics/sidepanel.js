@@ -2617,7 +2617,9 @@ async function aiSystemPrompt(withTools, cap, op = beginWorkspaceOp()) {
     if (st.kind === 'read') focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(sqlText(st.body), 4000)}\n\u0060\u0060\u0060\n`;
   }
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view - structure, foreign keys, SQL and lineage - so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
+    // Named from the registry, never typed. This list is complete today by care alone, and the
+    // CRM twin's was not: `list_actions` was added there and the sentence stayed at ten names.
+    ? `You have READ-ONLY tools over the local mirror: ${AI_TOOLS.map((t) => t.name).join(', ')}. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view - structure, foreign keys, SQL and lineage - so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.`
     : 'Answer from the WORKSPACE INDEX and CURRENT FOCUS below. If you need a structure or a query that is not shown, say which view you would need rather than inventing it.';
   return `You are an expert assistant for Zoho Analytics, working on the user\'s real workspace.\n${toolsLine}\n`
     + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in a table - so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic - a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`

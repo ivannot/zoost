@@ -10211,3 +10211,34 @@ test('every setting the options page writes is read by something', () => {
     `these are written by the Settings page and read by nothing - the user changes them and ` +
     `nothing happens: ${offenders.join(', ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The sentence that tells the model which tools it has names every tool it has.
+//
+// `list_actions` was added to the CRM's `AI_TOOLS` and the sentence stayed at ten names. The tool
+// existed, worked - the case above runs it - and the model was told it did not have it. One of a
+// set changed and its sibling left behind: the enumeration trap this repository records about the
+// site, where a part is listed in as many places as it has siblings and adding it to one of them is
+// not adding it.
+//
+// The Analytics twin's list was complete, by care rather than by construction. Both are built from
+// the registry now, so the sentence cannot fall behind it again.
+test('the assistant is told about every tool it is given', () => {
+  for (const [rel, marker] of [['apps/crm/ai.js', 'READ-ONLY tools to explore'],
+                               ['apps/analytics/sidepanel.js', 'READ-ONLY tools over the local mirror']]) {
+    const src = read(rel);
+    const at = src.indexOf(marker);
+    assert.ok(at > 0, `id=${rel}: the sentence that lists the tools has gone`);
+    // From the start of *the line*, not from the marker: the marker sits after the backtick, so
+    // slicing at it could never see the template literal the last assertion is about.
+    const line = src.slice(src.lastIndexOf('\n', at) + 1, src.indexOf('\n', at));
+    // Derived, not enumerated: the names must come from the registry at run time. A typed list is
+    // the defect, whatever it currently contains - so the assertion is about the mechanism.
+    assert.match(line, /AI_TOOLS\.map\(\(t\) => t\.name\)/,
+      `id=${rel}: the tool names are typed into the prompt, so the next tool added will be invisible ` +
+      `to the model - which is what happened to list_actions`);
+    // And it is a template literal, or the interpolation is text. `node --check` catches the broken
+    // half of that; this catches the half that parses and prints `${AI_TOOLS...}` to the model.
+    assert.ok(line.includes('? `You have'), `id=${rel}: the sentence is a plain string, so the names never expand`);
+  }
+});

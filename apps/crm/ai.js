@@ -386,8 +386,13 @@ function productHelp() {
 async function aiSystemPromptB(withTools, cap, op = beginWorkspaceOp()) {
   const seed = await aiBuildSeed(cap, op);
   const focus = await aiFocus(op);
+  // Named from the registry, never typed. `list_actions` was added to `AI_TOOLS` and this sentence
+  // was left at ten names - so the tool existed, worked, and the model was told it did not have it.
+  // One of a set changed and its sibling left behind, which is the enumeration trap this repository
+  // records about the site: a part is listed in as many places as it has siblings, and adding it to
+  // one of them is not adding it.
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection, list_failures. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists - call tools for the details you need.'
+    ? `You have READ-ONLY tools to explore the real org: ${AI_TOOLS.map((t) => t.name).join(', ')}. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists - call tools for the details you need.`
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
   return `You are an expert assistant for Zoho CRM Deluge scripting and Zoho CRM architecture, working on the user\'s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
 }
