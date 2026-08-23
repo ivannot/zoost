@@ -11427,3 +11427,63 @@ test('crm: Settings can set every export scope the panel offers', () => {
   assert.deepEqual(without, [],
     `these export scopes have no checkbox on the settings page, so they cannot be made a default: ${without}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// What the panel shows about a runtime reading is in both reports.
+//
+// `failures/index.json` carries four things: when it was read, the aggregate `usage`, the per-
+// function `runs` for the last 24 hours, and the `credits` counted against the org's ceiling. The
+// health view shows all four - a «Most run, measured» group, a per-row `· ran N× in 24h`, and the
+// credits sentence - and `list_failures` sends all four to the assistant.
+//
+// Both reports read `at`, `usage`, `capped` and the failure rows, and neither read `runs` or
+// `credits`. `loadExportData` already loads the whole file, so this cost no extra read: it is the
+// project's own rule - «every piece of information the panel shows about an item belongs in the
+// HTML and Markdown exports too» - broken on data that was already in hand.
+//
+// The one derived check nearby deliberately skips this area («Most run is a reading of Zoho's
+// runtime»), which is correct for what it is about and is why nothing caught it.
+test('crm: both reports carry the run counts and the credit reading', () => {
+  const globals = {
+    SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
+    envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k, firedBy: () => [],
+    actStale: () => false, actKept: () => false, actThin: () => false,
+    _mdCell: (x) => String(x == null ? '' : x),
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '', sanitize: (x) => String(x || ''),
+    escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+    esc: (x) => String(x == null ? '' : x), hl: (x) => String(x || ''), first: (x) => String(x || ''),
+    params: () => '', fnAnchor: (x) => `fn-${x}`, modAnchor: (x) => `mod-${x}`,
+    wfAnchor: (x) => `wf-${x}`, schAnchor: (x) => `sch-${x}`, connAnchor: (x) => `conn-${x}`,
+    FAIL_CAPPED: 'capped.',
+    MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
+           hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
+  };
+  const fails = {
+    at: '2026-08-23T10:00:00Z',
+    usage: { success: 900, failure: 3 },
+    runs: [{ id: '1', name: 'nightlyDigest', count: 412 }, { id: '2', name: 'syncContact', count: 88 }],
+    credits: { used: 12345, limit: 50000 },
+    failures: [],
+  };
+  const scope = { functions: true, failures: true };
+
+  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const html = buildExportHtml([], [], { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
+  assert.match(html, /nightlyDigest/, 'the HTML report does not name the busiest functions the panel lists');
+  assert.match(html, /412/, 'the HTML report drops the run counts');
+  assert.match(html, /12345[\s\S]{0,60}50000/, 'the HTML report drops the credit reading');
+  assert.match(html, /how often, not how long/,
+    'the run counts are in the report without the caveat the panel gives them - and a report is read ' +
+    'without the panel beside it');
+
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const md = buildExportMarkdown({ fns: [], mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [],
+                                   conns: [], fails, acts: [], actUsers: new Map() }, scope);
+  assert.match(md, /nightlyDigest/, 'the Markdown report does not name the busiest functions');
+  assert.match(md, /412/, 'the Markdown report drops the run counts');
+  assert.match(md, /12345[\s\S]{0,60}50000/, 'the Markdown report drops the credit reading');
+  assert.match(md, /how often, not how long/, 'the Markdown report drops the caveat');
+});

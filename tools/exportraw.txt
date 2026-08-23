@@ -44,6 +44,7 @@ apps/crm/export.js	_mdCell(r.api_name)
 apps/crm/export.js	_mdCell(r.label || '')
 apps/crm/export.js	_mdCell(r.label)
 apps/crm/export.js	_mdCell(r.module || r.connected_module || '')
+apps/crm/export.js	_mdCell(r.name || r.id)
 apps/crm/export.js	_mdCell(r.parent)
 apps/crm/export.js	_mdCell(r.type || '')
 apps/crm/export.js	_mdCell(r.type)
@@ -92,6 +93,8 @@ apps/crm/export.js	f.stats.zoho
 apps/crm/export.js	failHtml
 apps/crm/export.js	failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''
 apps/crm/export.js	fails.at || 'an unknown date'
+apps/crm/export.js	fails.credits.limit ?? 'unknown'
+apps/crm/export.js	fails.credits.used ?? 'unknown'
 apps/crm/export.js	fails.usage.failure ?? 'unknown'
 apps/crm/export.js	fails.usage.success ?? 'unknown'
 apps/crm/export.js	fl
@@ -155,6 +158,7 @@ apps/crm/export.js	p.name ? ' ' + p.name : ''
 apps/crm/export.js	params(n)
 apps/crm/export.js	r.child ? '`' + _mdCell(r.child) + '`' : ''
 apps/crm/export.js	r.child ? modLink(r.child) : ''
+apps/crm/export.js	r.count == null ? 'unknown' : r.count
 apps/crm/export.js	r.linking_module
 apps/crm/export.js	r.linking_module ? ' via ' + _mdCell(r.linking_module) : ''
 apps/crm/export.js	r.visible === false ? ' (hidden)' : ''

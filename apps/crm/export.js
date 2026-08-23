@@ -427,8 +427,23 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + (fails.usage
         ? `In the 24 hours before that: ${esc(String(fails.usage.success ?? 'unknown'))} run(s), ${esc(String(fails.usage.failure ?? 'unknown'))} failed. `
         : '')
+    // The credit reading, beside the run counts it belongs with. The panel says both and the reports
+    // said neither, on data `loadExportData` already has in hand: `failures/index.json` carries
+    // `runs` and `credits` and both builders read only `usage`, `capped`, `at` and the failure rows.
+    + (fails.credits && (fails.credits.used != null || fails.credits.limit != null)
+        ? `Over the same period Zoho counted ${esc(String(fails.credits.used ?? 'unknown'))} against a ceiling of ${esc(String(fails.credits.limit ?? 'unknown'))}. `
+        : '')
     + (fails.capped ? esc(FAIL_CAPPED) + ' ' : '')
     + 'The input of each failed execution stays in Zoho - Zoost does not read it.</p>'
+    // The busiest functions, as the health view lists them - with the same caveat, because the
+    // number is a count of runs and not of time, and a report is read without the panel beside it.
+    + ((fails.runs || []).length
+        ? `<p class="note">The busiest ${esc(String(fails.runs.length))} functions over the same period, as Zoho counted them - not every function, and Zoho reports how often, not how long: a function that runs often is not automatically the expensive one.</p>`
+          + '<table><thead><tr><th>Function</th><th>Runs in 24h</th></tr></thead><tbody>'
+          + fails.runs.map((r) => `<tr><td>${esc(r.name || String(r.id || '?'))}</td>`
+              + `<td>${esc(r.count == null ? 'unknown' : String(r.count))}</td></tr>`).join('')
+          + '</tbody></table>'
+        : '')
     + (failRows.length
         ? '<table><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
           + failRows.map((f) => `<tr><td>${esc(f.name)}</td><td>${esc(f.componentType || '')}</td><td>${esc(String(f.count))}</td>`
@@ -776,8 +791,18 @@ function buildExportMarkdown(d, scope) {
     md += '---\n\n## Failures\n\n';
     md += `Read from Zoho on ${fails.at || 'an unknown date'}.`;
     if (fails.usage) md += ` In the 24 hours before that: ${fails.usage.success ?? 'unknown'} run(s), ${fails.usage.failure ?? 'unknown'} failed.`;
+    if (fails.credits && (fails.credits.used != null || fails.credits.limit != null)) {
+      md += ` Over the same period Zoho counted ${fails.credits.used ?? 'unknown'} against a ceiling of ${fails.credits.limit ?? 'unknown'}.`;
+    }
     if (fails.capped) md += ' ' + FAIL_CAPPED;
     md += ' The input of each failed execution stays in Zoho - Zoost does not read it.\n\n';
+    if ((fails.runs || []).length) {
+      md += `The busiest ${fails.runs.length} functions over the same period, as Zoho counted them - not every `
+        + 'function, and Zoho reports how often, not how long: a function that runs often is not automatically '
+        + 'the expensive one.\n\n';
+      md += '| function | runs in 24h |\n|---|---|\n';
+      md += fails.runs.map((r) => `| ${_mdCell(r.name || r.id)} | ${r.count == null ? 'unknown' : r.count} |`).join('\n') + '\n\n';
+    }
     if (failRows.length) {
       md += '| function | invoked by | times | last failure | reason |\n|---|---|---|---|---|\n';
       md += failRows.map((f) => `| ${_mdCell(f.name)} | ${_mdCell(f.componentType)} | ${f.count} | ${_mdCell(f.lastFailedAt)} | ${_mdCell(f.reason)} |`).join('\n') + '\n\n';
