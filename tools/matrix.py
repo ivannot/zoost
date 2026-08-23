@@ -95,6 +95,12 @@ EXAMINED = {
                             "same claims, disclosures that differ only where the products do, and a "
                             "whatsnew note for every tag since each adopted the convention",
                             "2026-08-23"),
+    ("fastpath", "diagrams"): ("driven, not read: after a fold the window says erHiddenSet=1, "
+                              "erVisibleIds=17; force the slow path and the same questions answer 0 "
+                              "and 18 with erCut still at 1 - the fold is remembered and stops "
+                              "taking effect. NOT fixed: which of the two behaviours is wanted is a "
+                              "product decision. docs/findings/2026-08-23-a-fold-does-not-survive-a-"
+                              "relayout.md", "2026-08-23"),
     ("claim", "diagrams"): ("every absolute in the graph windows checked against the code: «every "
                            "loss is counted» holds - matchArrangement puts every id in matched, "
                            "fresh or stale - and docs/diagrams.md's «both skip what erHiddenSet "
