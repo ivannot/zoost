@@ -217,10 +217,10 @@ apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
 apps/crm/export.js	PRODUCT_URL
 apps/crm/export.js	PRODUCT_AUTHOR
 apps/crm/export.js	LEGAL_DISCLAIMER
-apps/crm/export.js	sanitize((bound && bound.instance) || 'workspace')
+apps/crm/export.js	sanitize(whose)
 apps/crm/export.js	stamp
 apps/crm/export.js	name
-apps/crm/export.js	sanitize((bound && bound.instance) || 'workspace')
+apps/crm/export.js	sanitize(whose)
 apps/crm/export.js	stamp
 apps/crm/export.js	name
 # means somebody read it and decided it cannot carry markup. It should shrink;

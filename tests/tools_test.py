@@ -5372,5 +5372,120 @@ class ExaminedIsNotClosed(unittest.TestCase):
                       'session re-derives them from nothing')
 
 
+def _code_only(src):
+    """Comments and literal text blanked, `${...}` interpolations kept, lengths and lines preserved.
+
+    The interpolations are the point: `bound` was read inside a template literal building the export's
+    file name, and a first version of this scan blanked backticked strings whole and reported zero
+    over the very site it was written for. Positions stay usable because every blanked character is
+    replaced by a space and every newline is kept.
+    """
+    blank = lambda m: re.sub(r'[^\n]', ' ', m.group())
+    src = re.sub(r'/\*[\s\S]*?\*/', blank, src)
+    src = re.sub(r'^([ \t]*)//.*$', blank, src, flags=re.M)
+    src = re.sub(r"'(?:\\.|[^'\\\n])*'|\"(?:\\.|[^\"\\\n])*\"", blank, src)
+    out, i, n = [], 0, len(src)
+    while i < n:
+        if src[i] != '`':
+            out.append(src[i]); i += 1; continue
+        out.append(' '); j = i + 1
+        while j < n:
+            if src[j] == '\\':
+                out.append('  '); j += 2; continue
+            if src[j] == '$' and j + 1 < n and src[j + 1] == '{':
+                k, depth = j + 2, 1
+                while k < n and depth:
+                    if src[k] == '{':
+                        depth += 1
+                    elif src[k] == '}':
+                        depth -= 1
+                    k += 1
+                out.append('  ' + src[j + 2:k]); j = k; continue
+            if src[j] == '`':
+                out.append(' '); j += 1; break
+            out.append('\n' if src[j] == '\n' else ' '); j += 1
+        i = j
+    return ''.join(out)
+
+
+class ExportReadsNothingLate(unittest.TestCase):
+    """The export builds its report from an operation, so nothing in it may come from the panel.
+
+    `apps/crm/export.js` has no module state of its own - one `const` of CSS and nothing else - and
+    every value it uses arrives through `beginWorkspaceOp()`, which carries the folder, the
+    generation and a guard on every read and write. One value did not: the report's own file name was
+    built from `bound`, the panel's binding, read after all the awaits.
+
+    That is not caught by `op.write`. `bound` is reassigned by a pull and by a rebinding of the Zoho
+    tab, and neither of those moves the workspace - so the folder and the generation still match, the
+    write is allowed, and the file is named for one org while its contents mirror another. A report
+    that misnames the org it describes is the one thing this product may not produce.
+
+    **The limit, stated:** this reads `apps/crm/export.js` only, because it is the one shipped file
+    here that is a pure consumer of an operation and owns no state. The panels legitimately read
+    their own globals after an await, guarded by `current()`, and telling those apart needs a parser.
+    """
+
+    def names(self):
+        """The panel's *mutable* module state, and only that.
+
+        `asynccheck.globals_of` was tried first and answers a different question - it is built for the
+        write check, so it hands back every top-level name including `MSG`, `setStatus` and `null`.
+        Reading a constant or a function after an await is not this defect; reading something that can
+        be reassigned under you is. So: top-level `let` and `var`, which is what «can change while you
+        are awaiting» means in this file. The limit is that a declaration wrapped across lines is not
+        seen - there are none in either panel today, and one added tomorrow is invisible here rather
+        than wrong.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ac_for_export', ROOT / 'tools' / 'asynccheck.py')
+        ac = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ac)
+        src = (ROOT / 'apps' / 'crm' / 'sidepanel.js').read_text(encoding='utf-8')
+        names = set()
+        for m in re.finditer(r'^(?:let|var)\s+(.+?);\s*$', src, re.M):
+            for part in m.group(1).split(','):
+                n = part.strip().split('=')[0].strip()
+                if re.fullmatch(r'[A-Za-z_$][\w$]*', n):
+                    names.add(n)
+        self.assertGreater(len(names), 20, 'the panel\'s module state was not found at all - the '
+                                           'declarations moved and this test now proves nothing')
+        return ac, sorted(names)
+
+    def late_reads(self, source):
+        ac, names = self.names()
+        code = _code_only(source)
+        found = []
+        for name, body, _start in ac.functions(source):
+            at = source.find(body)
+            blanked = code[at:at + len(body)]
+            first = blanked.find('await ')
+            if first < 0:
+                continue
+            for g in names:
+                for m in re.finditer(r'(?<![\w$.])' + re.escape(g) + r'(?![\w$])', blanked[first:]):
+                    line = code[:at + first + m.start()].count('\n') + 1
+                    found.append((line, name, g))
+        return sorted(set(found))
+
+    def test_nothing_in_the_export_is_read_from_the_panel_after_an_await(self):
+        src = (ROOT / 'apps' / 'crm' / 'export.js').read_text(encoding='utf-8')
+        late = self.late_reads(src)
+        self.assertEqual(late, [], 'the export takes these from the panel after an await, so they '
+                                   'describe whatever the panel had become by then, not the workspace '
+                                   'being written: ' + ', '.join(f'{n}() reads {g} at line {ln}' for ln, n, g in late))
+
+    def test_it_sees_the_read_that_was_there(self):
+        # The defect itself, restored in a copy: the file name built from `bound` inside a template
+        # literal, after every await. A scan that blanks template literals whole reports zero here.
+        src = (ROOT / 'apps' / 'crm' / 'export.js').read_text(encoding='utf-8')
+        planted = src.replace('const name = `export/zoost-${sanitize(whose)}-${stamp}.md`;',
+                              "const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;")
+        self.assertNotEqual(planted, src, 'the export no longer builds its name where this test plants')
+        late = self.late_reads(planted)
+        self.assertTrue(any(g == 'bound' for _, _, g in late),
+                        'the plant was not seen - most likely the template literal is being blanked whole')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

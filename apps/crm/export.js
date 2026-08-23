@@ -775,6 +775,13 @@ function buildExportMarkdown(d, scope) {
 async function exportMarkdown() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (!dir) return;
+  // The name is part of the report, and it was the one thing in here read from the panel instead of
+  // from the operation - after every await, when the writing was already done. `bound` is reassigned
+  // by a pull and by a rebinding of the Zoho tab, neither of which moves the workspace, so `op.write`
+  // would let it through: the right folder, the right generation, and a file whose name claims a
+  // different org from the one whose mirror is inside it. Read once, beside the op, so the name and
+  // the contents describe the same instant.
+  const whose = (bound && bound.instance) || 'workspace';
   const scope = await askScope(); if (!scope) return;
   try {
     await requirePerm(op.root);
@@ -782,7 +789,7 @@ async function exportMarkdown() {
     const data = await loadExportData(op);
     const md = buildExportMarkdown(data, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;
+    const name = `export/zoost-${sanitize(whose)}-${stamp}.md`;
     await op.write(name, md);
     op.say(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
   } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
@@ -790,6 +797,13 @@ async function exportMarkdown() {
 async function exportHtml() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (!dir) return;
+  // The name is part of the report, and it was the one thing in here read from the panel instead of
+  // from the operation - after every await, when the writing was already done. `bound` is reassigned
+  // by a pull and by a rebinding of the Zoho tab, neither of which moves the workspace, so `op.write`
+  // would let it through: the right folder, the right generation, and a file whose name claims a
+  // different org from the one whose mirror is inside it. Read once, beside the op, so the name and
+  // the contents describe the same instant.
+  const whose = (bound && bound.instance) || 'workspace';
   const scope = await askScope(); if (!scope) return;
   try {
     await requirePerm(op.root);
@@ -797,7 +811,7 @@ async function exportHtml() {
     const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData(op);
     const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
+    const name = `export/zoost-${sanitize(whose)}-${stamp}.html`;
     await op.write(name, html);
     op.say(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
   } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
