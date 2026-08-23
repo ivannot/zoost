@@ -30,8 +30,13 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
   + 'OR CONDITIONS OF ANY KIND, express or implied. The author accepts no liability for any loss, damage or data issue '
   + 'arising from its use, and is under no obligation to provide support or maintenance.';
 
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'connections', 'health'];
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, connections: true, health: true };
+// The panel's twelve, in the panel's order. This held **nine**: `actions`, `addresses` and
+// `failures` were added to the export dialog and not here, so the three chapters that carry the
+// most - what a rule fires, the address it sends as, what is failing - could be set in the dialog
+// every time and never as a default. The page also drew nine checkboxes, so the gap was invisible
+// on screen: it looked like the whole set.
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
 const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];

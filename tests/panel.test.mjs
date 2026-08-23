@@ -11395,3 +11395,35 @@ test('analytics: the SQL search reads what a pull just published', async () => {
     `so «no match» would be reported over queries that were never opened`);
   assert.equal(cache.get('v1'), 'select a from t', 'the body the pull carried is not what is searched');
 });
+
+// ---------------------------------------------------------------------------------------------
+// The export defaults page can set every box the export dialog has.
+//
+// `SCOPE_KEYS` is the list of what an export may contain. The panel holds twelve; the settings page
+// held **nine** - `actions`, `addresses` and `failures` were added to the dialog and not here, so
+// the three chapters that carry the most (what a rule fires, the address it sends as, what is
+// failing) could be ticked in the dialog every single time and never set as a default. The page drew
+// nine checkboxes too, so on screen it looked like the whole set.
+//
+// Derived from the panel, which is where the export actually reads its scope: the keys must match,
+// and the page must have a control for each. An existing test already covers the *deliberate* half -
+// that a preset carries what the page cannot show - and this is the other half of the same rule.
+test('crm: Settings can set every export scope the panel offers', () => {
+  const keysOf = (rel) => {
+    const m = /^const SCOPE_KEYS = \[([^\]]+)\]/m.exec(blankNonCode(read(rel)) === '' ? '' : read(rel));
+    assert.ok(m, `${rel}: SCOPE_KEYS was not found - the derivation broke`);
+    return m[1].split(',').map((x) => x.trim().replace(/^'|'$/g, ''));
+  };
+  const panel = keysOf('apps/crm/sidepanel.js');
+  const page = keysOf('apps/crm/options.js');
+  assert.ok(panel.length >= 10, `the panel offers ${panel.length} scope(s) - the derivation broke`);
+  assert.deepEqual(page, panel,
+    `Settings and the export dialog disagree about what an export may contain: Settings is missing ` +
+    `${panel.filter((k) => !page.includes(k))}, and invents ${page.filter((k) => !panel.includes(k))}`);
+
+  // And a key with no control is a default nobody can set.
+  const html = read('apps/crm/options.html');
+  const without = panel.filter((k) => !html.includes(`id="sc_${k}"`));
+  assert.deepEqual(without, [],
+    `these export scopes have no checkbox on the settings page, so they cannot be made a default: ${without}`);
+});
