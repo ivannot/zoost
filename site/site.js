@@ -71,6 +71,7 @@
       releasesPage: 'The releases page has the answer',
       released: 'Released', download: 'Download', hashes: 'notes and hash',
       noNotes: 'No notes were published for this version.',
+      notesUnread: 'The notes for this version could not be fetched. They are on the release page.',
       queued: 'submitted, awaiting review', refused: 'this submission was rejected',
       askFailed: 'This check could not be run just now.',
       storeAsOf: 'The Store was last asked',
@@ -88,6 +89,7 @@
       releasesPage: 'La pagina delle release ha la risposta',
       released: 'Rilasciata', download: 'Scarica', hashes: 'note e hash',
       noNotes: 'Per questa versione non sono state pubblicate note.',
+      notesUnread: 'Non e stato possibile recuperare le note di questa versione. Sono nella pagina della release.',
       queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
       askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
       storeAsOf: 'Lo Store è stato interrogato l\'ultima volta il',
@@ -305,7 +307,12 @@
                  esc(a.version) + '-store.zip</a> · <a href="' + REPO_URL + '/releases/tag/' +
                  esc(a.tag) + '">' + esc(t('hashes')) + '</a></p>');
         out.push('<div class="note">' +
-                 (a.notes ? mdToHtml(a.notes) : '<p>' + esc(t('noNotes')) + '</p>') + '</div>');
+                 // Three answers, not two. «There are none» is a fact about the version; «could
+                 // not be fetched» is a fact about this request, and stating the first over the
+                 // second argues against installing a version for a reason that is not true.
+                 (a.notes ? mdToHtml(a.notes)
+                   : '<p>' + esc(t(a.notesWhy === 'unreadable' ? 'notesUnread' : 'noNotes')) + '</p>') +
+                 '</div>');
       });
       return out.join('') + '</div>';
     }).join('');

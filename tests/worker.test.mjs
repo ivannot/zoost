@@ -878,3 +878,73 @@ test('every surface that shows the Store reading says when it is old', () => {
   }
   assert.match(src, /title="' \+ esc\(t\('storeStale'\)\)/, 'the mark carries no reason');
 });
+
+// ---------------------------------------------------------------------------------------------
+// «Not read» must not masquerade as «does not exist», and the page must not flatten the two back.
+//
+// `whatsnew()` answered null for a 404 and null for a 502, so /emergency stated «No notes were
+// published for this version» over a request that had merely failed - an argument against
+// installing a version, made from a fact that was not one. This product has already fixed exactly
+// this in the Analytics panel, where a query table whose SQL could not be fetched was reported as
+// not being a query table; a rule learnt in the panel does not travel to the Worker by itself.
+function whatsnewIn(status, body = '') {
+  const ctx = {
+    console, URL, JSON, Error,
+    EXT_ID: { crm: 'x' }, IS_VERSION: /^\d+(\.\d+){1,3}$/, REPO: 'x/y', UA: 'ua',
+    timeout: () => null,
+    fetch: async () => ({ ok: status >= 200 && status < 300, status, text: async () => body }),
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('site/_worker.js', 'whatsnew'), ctx);
+  return vm.runInContext('whatsnew', ctx)('crm', '1.2.3');
+}
+
+test('a 404 is «there are none» and anything else is «I could not find out»', async () => {
+  // Read as properties, not compared as objects: what comes back was built inside the vm context and
+  // so carries that realm's Object prototype, which deepEqual will not match against one from here.
+  const shape = (r) => ({ none: !!(r && r.none), text: (r && r.text) || null });
+  assert.deepEqual(shape(await whatsnewIn(404)), { none: true, text: null },
+    'a version from before the convention must read as having no notes');
+  assert.deepEqual(shape(await whatsnewIn(200, '')), { none: true, text: null },
+    'an empty file is none, not a failure');
+  assert.deepEqual(shape(await whatsnewIn(200, ' hello ')), { none: false, text: 'hello' },
+    'notes that exist are returned');
+  for (const s of [500, 502, 429, 403]) {
+    await assert.rejects(() => whatsnewIn(s), `HTTP ${s} was reported as «no notes were published»`);
+  }
+});
+
+test('every absence the Worker can report has a sentence of its own on the page', () => {
+  // Derived from what the Worker emits, not from a list here: the states are read off the source, so
+  // a fourth added tomorrow fails this until the page has a word for it. The limit is stated rather
+  // than hidden - it reads the literals assigned to `notesWhy`, so a state built by concatenation
+  // would be invisible, and there is no cruder enumeration of «values a field can take» available.
+  const w = read('site/_worker.js');
+  const states = [...w.matchAll(/notesWhy:\s*([^\n]+)/g)]
+    .flatMap((m) => [...m[1].matchAll(/'([a-z-]+)'/g)].map((x) => x[1]));
+  assert.ok(states.length >= 3, `only ${states.length} notesWhy state(s) found - the derivation broke`);
+  assert.ok(states.includes('ok') && states.includes('none') && states.includes('unreadable'),
+    `the three answers are not all emitted: ${states.join(', ')}`);
+
+  const src = read('site/site.js');
+  // Every state other than «ok» reaches the reader as prose, so each must be branched on and worded.
+  for (const st of states.filter((s) => s !== 'ok')) {
+    assert.ok(new RegExp(`notesWhy\\s*===\\s*'${st}'`).test(src) || st === 'none',
+      `id=${st}: the Worker can report it and the page never asks about it`);
+  }
+  for (const lang of ['en', 'it']) {
+    const at = src.indexOf(`${lang}: {`);
+    const table = src.slice(at, src.indexOf('\n    }', at));
+    assert.match(table, /noNotes:/, `id=${lang} has no wording for «there are none»`);
+    assert.match(table, /notesUnread:/, `id=${lang} has no wording for «could not be fetched»`);
+  }
+  // And the two must not be the same sentence, in either language - which is the defect itself,
+  // written back as an assertion.
+  for (const lang of ['en', 'it']) {
+    const at = src.indexOf(`${lang}: {`);
+    const table = src.slice(at, src.indexOf('\n    }', at));
+    const a = /noNotes: '([^']+)'/.exec(table)[1];
+    const b = /notesUnread: '([^']+)'/.exec(table)[1];
+    assert.notEqual(a, b, `id=${lang}: the two absences say the same thing`);
+  }
+});

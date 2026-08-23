@@ -203,14 +203,31 @@ async function repoVersion(app) {
 // The version is interpolated into a path, so it is checked against the shape guard first even
 // though every caller here takes it from a tag that already matched `\d+\.\d+\.\d+`. The guard costs
 // nothing and the assumption it protects is one refactor away from stopping being true.
+//
+// It answers «here they are», «there are none» and «I could not find out» as three different things,
+// and that is the whole of this function's shape. It used to answer the last two identically - null
+// for a 404 and null for a 502 - and the page then stated «No notes were published for this
+// version» over a request that had simply failed. That is the defect this product already fixed one
+// system over, in the Analytics panel, where a query table whose SQL could not be fetched was
+// reported as not being a query table: **«not read» must never masquerade as «does not exist»**. It
+// matters more here than it did there, because /emergency exists to help somebody decide whether a
+// version is worth installing by hand, and an empty changelog is an argument against bothering.
 async function whatsnew(app, version) {
-  if (!EXT_ID[app] || !IS_VERSION.test(version)) return null;
+  // A programmer error rather than a state of the world, so it throws and reads as unreadable: a
+  // caller passing a version that is not one has not established that there are no notes.
+  if (!EXT_ID[app] || !IS_VERSION.test(version)) throw new Error('whatsnew: bad app or version');
   const r = await fetch(
     `https://raw.githubusercontent.com/${REPO}/main/store/${app}/whatsnew/${version}.md`,
     { headers: { 'user-agent': UA }, signal: timeout(6000) });
-  if (!r.ok) return null;                  // a version from before the convention has none
+  // 404 is the one answer that means it: a version from before the convention has no file. Anything
+  // else - 5xx, a rate limit, a network fault - is GitHub declining to say, and saying so is the
+  // only honest thing left.
+  if (r.status === 404) return { none: true };
+  if (!r.ok) throw new Error(`whatsnew: ${r.status}`);
   const t = (await r.text()).trim();
-  return t ? t.slice(0, 8000) : null;      // a size guard, so a surprise file cannot blow the payload
+  // A size guard, so a surprise file cannot blow the payload. An empty file is «none»: there is
+  // nothing to show and nothing failed.
+  return t ? { text: t.slice(0, 8000) } : { none: true };
 }
 
 // When a given path last changed. GitHub knows this without any credential, and for a *guide* it is
@@ -350,7 +367,7 @@ async function versions(request, env, ctx) {
 // when there is not sends them to install an older build over a newer one by hand. So a Store
 // version that could not be read yields an empty list and a `cws` field saying why, and the page
 // renders that as «nobody could ask» rather than as either answer.
-const AHEAD_KEY = '/api/ahead?v=2';
+const AHEAD_KEY = '/api/ahead?v=3';  // bumped: each ahead entry gained notesWhy
 
 async function ahead(request, env, ctx) {
   const cache = caches.default;
@@ -381,7 +398,11 @@ async function ahead(request, env, ctx) {
         // release workflow uploads, and it is the file the attestation was signed over. A second
         // request to find out a URL we already know would be a second thing to fail.
         zip: `https://github.com/${REPO}/releases/download/${t.tag}/zoost-${app}-${t.version}-store.zip`,
-        notes: notes[i] || null,
+        notes: notes[i] && notes[i].text ? notes[i].text : null,
+        // Which of the two absences this is. `settled()` turns a throw into null, so null here is
+        // «could not find out» and `{none:true}` is «there are none» - the page says a different
+        // sentence for each, and the cache below holds only the first one briefly.
+        notesWhy: notes[i] ? (notes[i].text ? 'ok' : 'none') : 'unreadable',
       })),
       url: listing(app),
     };
@@ -389,11 +410,12 @@ async function ahead(request, env, ctx) {
 
   const [crm, analytics] = await Promise.all([block('crm'), block('analytics')]);
 
-  // A missing note is not an outage - versions released before the convention have none - but a note
-  // that failed to fetch looks exactly the same from here, and caching that for ten minutes would
-  // show an empty changelog next to a version somebody is deciding about. Where something is ahead
-  // and its notes are absent, the answer expires with the minute rather than with the hour.
-  const gaps = [crm, analytics].some((b) => b.ahead.some((a) => !a.notes));
+  // A note that failed to fetch is cached for a minute, not an hour: an empty changelog beside a
+  // version somebody is deciding about is exactly the answer not worth holding on to. It used to be
+  // «absent», which could not tell that from a version released before the convention - so every
+  // such version pinned this endpoint to the short TTL for ever, over nothing that would ever
+  // change. Now the two are distinguishable and only the failure is treated as one.
+  const gaps = [crm, analytics].some((b) => b.ahead.some((a) => a.notesWhy === 'unreadable'));
   const complete = xml != null && crm.store != null && analytics.store != null && !gaps;
 
   const res = new Response(JSON.stringify({
