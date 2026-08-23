@@ -1255,3 +1255,78 @@ test('a complete answer is held for the full time even when nothing is published
     'a reading that failed is held as long as a good one, so an outage outlives itself');
   assert.equal((await versionsTtl(null)).ttl, short, 'an empty store reads as a complete answer');
 });
+
+// ---------------------------------------------------------------------------------------------
+// «updated <date>» on a guide travels through three programs, and nothing followed it end to end.
+//
+// The chain: the page carries `data-app` and `data-updated-key` on its `.upd` line; `site.js` turns
+// the key into a field of the `/api/versions` payload; the Worker fills that field from
+// `lastChanged('site/docs-<product>.html')`. Three hops, each written correctly, and each one edge
+// away from naming a different product's guide than the page does.
+//
+// Measured: renaming the Worker's `docsAnalyticsUpdated` field leaves the **whole battery green**,
+// and the Analytics guide then falls down `site.js`'s else-branch and prints the CRM guide's date -
+// a date about a file the reader is not reading, with nothing anywhere saying so.
+//
+// It is also the composition that no *single-surface* check can reach, which is why it survived: the
+// pages are checked by `sitecheck`, the Worker by its own cases, `site.js` by its own, and the defect
+// exists in none of the three.
+//
+// Removing the attribute from a page, by contrast, is caught - by the translation markers, because
+// editing an English page puts it out of step with its Italian twin. That is a true signal about a
+// different thing, and taking it for cover here would be the mistake this grid keeps finding: a
+// check that fires for the right reason on the wrong subject.
+//
+// **The limits, stated.** It follows names, not values: it proves the page, the script and the
+// Worker are talking about the same file, not that `lastChanged` returns the right date for it. The
+// key-to-field mapping is read out of `site.js`'s own ternary, so a mapping written some other way
+// (a table, a computed name) is a finding about this check rather than a silent pass - the count of
+// links followed is asserted for exactly that reason.
+test('«updated» on a guide names that guide, through all three programs', () => {
+  const script = read('site/site.js');
+  // site.js: `data-updated-key === '<key>' ? d.<fieldA> : d.<fieldB>`
+  const tern = /getAttribute\('data-updated-key'\) === '(\w+)' \? d\.(\w+) : d\.(\w+)/.exec(script);
+  assert.ok(tern, 'site.js no longer chooses the date field from data-updated-key - the derivation broke');
+  const [, keyed, fieldWhenKeyed, fieldOtherwise] = tern;
+
+  // the Worker: `<field>: <local>` in the payload, and the path each local was read from.
+  const worker = read('site/_worker.js');
+  const fileOf = (field) => {
+    const m = new RegExp(`\\b${field}:\\s*(\\w+)\\b`).exec(worker);
+    assert.ok(m, `the Worker's payload has no ${field} - site.js reads a field that is never sent`);
+    const local = m[1];
+    // The locals are destructured from the same `Promise.all` the calls sit in, in order, so the
+    // position of the name is the position of the call. Read that way rather than by proximity: two
+    // `lastChanged` calls a line apart are indistinguishable to a nearest-match.
+    const d = /const \[([^\]]+)\] =\s*await Promise\.all\(\[([\s\S]*?)\]\);/.exec(worker);
+    assert.ok(d, 'the Worker no longer gathers its sources in one Promise.all - the derivation broke');
+    const names = d[1].split(',').map((x) => x.trim());
+    const calls = d[2].split(/,\s*\n/).flatMap((l) => l.split(/,(?=\s*settled)/)).map((x) => x.trim()).filter(Boolean);
+    assert.equal(names.length, calls.length,
+      `${names.length} name(s) against ${calls.length} call(s) in the Worker's gather - the derivation broke`);
+    const at = names.indexOf(local);
+    assert.ok(at >= 0, `${local} is not one of the Worker's gathered sources - the derivation broke`);
+    const p = /lastChanged\('([^']+)'\)/.exec(calls[at]);
+    assert.ok(p, `${field} is not filled from a file's last change but from «${calls[at].slice(0, 40)}»`);
+    return p[1];
+  };
+  const keyedFile = fileOf(fieldWhenKeyed);
+  const otherFile = fileOf(fieldOtherwise);
+  assert.notEqual(keyedFile, otherFile, 'both branches read the same file - the choice does nothing');
+
+  // and now the pages, all of them, in both languages.
+  let followed = 0;
+  for (const rel of listPages()) {
+    const html = read(rel);
+    const m = /<p class="upd"([^>]*)>([\s\S]*?)<\/p>/.exec(html);
+    if (!m || !/class="dv"/.test(m[2])) continue;      // not a guide: no version, so no «updated» pair
+    const app = (/data-app="([^"]+)"/.exec(m[1]) || [, 'crm'])[1];
+    const key = (/data-updated-key="([^"]+)"/.exec(m[1]) || [, ''])[1];
+    const file = key === keyed ? keyedFile : otherFile;
+    followed++;
+    assert.ok(file.includes(app),
+      `${rel}: the page is about ${app} and its «updated» date is read from ${file}` +
+      `${key ? ` (data-updated-key="${key}")` : ' (no data-updated-key, so the default branch)'}`);
+  }
+  assert.ok(followed >= 4, `only ${followed} guide(s) followed - the derivation broke`);
+});

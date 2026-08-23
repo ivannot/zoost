@@ -107,6 +107,7 @@ CLOSED = {
     # re-derived tomorrow. Everything else in those three rows is open.
     ("compose", "diagrams"):  ("tests/panel.test.mjs: diagram defaults saved in Settings are applied by either graph", "planted 2026-08-23"),
     ("copy", "crm-panel"):    ("tests/panel.test.mjs: a constant declared in two scripts of one product is not two lists", "planted 2026-08-23"),
+    ("compose", "site"):     ("tests/worker.test.mjs: «updated» on a guide names that guide, through all three programs", "planted 2026-08-23"),
     ("copy", "diagrams"):    ("tests/panel.test.mjs: the settings sliders start where the diagram starts, in both products", "planted 2026-08-23"),
     ("fake", "crm-export"): ("tests/panel.test.mjs: the reports escape what came out of the org, with the escapers the page ships", "planted 2026-08-23"),
     ("compose", "an-panel"):  ("tests/panel.test.mjs: the analytics export contents name the chapters in the order the document has them", "planted 2026-08-23"),
