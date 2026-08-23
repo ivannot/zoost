@@ -1422,3 +1422,52 @@ for (const app of ['crm', 'analytics']) {
       `freezes with nothing on screen: ${bare.join(', ')}`);
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A refusal names the reason it actually refused for.
+//
+// `erApplyArrangement` had one guard for two different facts - the file was written by the other
+// Zoost, or it arranges a different kind of diagram - and one sentence for both, which described
+// only the second. Loading a CRM arrangement into the Analytics window said «This file arranges
+// schema, and this window is not drawing one» **while the window was drawing a schema**: the one
+// fact that explains the refusal is never said, and the one that is said is false about what is on
+// screen.
+//
+// Reachable by anyone running both extensions - the suggested filenames are near-identical between
+// them - and the `app` guard itself was right all along. Only its message was not.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: an arrangement from the other product says so`, () => {
+    const said = [];
+    const ctx = vm.createContext({
+      Set, Map, Object, Array, String, console,
+      APP: 'zoostworkbenchforzoho' + app,
+      DATA: { kind: 'schema', workspace: { instance: 'x', org: '1' } },
+      MSG: load([sliceConst(`apps/${app}/graphview.js`, 'MSG')]).MSG,
+      erHint: (m, bad) => said.push([String(m), !!bad]),
+      ekey: (a, b) => `${a} ${b}`,
+      erIds: [], edgesA: [], N: {}, erPos: {}, erHeld: {}, erCut: new Map(),
+      erArranged: false, erPinOnly: null, erRaised: new Map(), erRaiseN: 0,
+      erLaidOut: true, curView: 'er', nodesA: [],
+      erShowMaybeHeavy: () => {}, erFit: () => {}, erRender: () => {},
+      matchArrangement: () => ({ matched: [], lost: [] }), erArrWorkspace: () => 'x/1',
+    });
+    vm.runInContext(gfn(app, 'erApplyArrangement'), ctx);
+
+    // Written by the other product, and drawing the very kind it names.
+    const other = app === 'crm' ? 'zoostworkbenchforzohoanalytics' : 'zoostworkbenchforzohocrm';
+    vm.runInContext(`erApplyArrangement({ app: ${JSON.stringify(other)}, kind: 'schema', positions: {} })`, ctx);
+    assert.equal(said.length, 1, `id=${app}: the file from the other product was not refused`);
+    assert.doesNotMatch(said[0][0], /is not drawing one/,
+      `id=${app}: the refusal says the window is not drawing what it is drawing - the reader is sent ` +
+      `to look for a fault that is not there: "${said[0][0]}"`);
+    assert.match(said[0][0], /other Zoost|other product/,
+      `id=${app}: the one fact that explains the refusal is never said: "${said[0][0]}"`);
+
+    // And the kind refusal keeps its own sentence, because it is a different fact.
+    said.length = 0;
+    vm.runInContext("erApplyArrangement({ kind: 'calls', positions: {} })", ctx);
+    assert.equal(said.length, 1, `id=${app}: a file for the other kind of diagram was not refused`);
+    assert.match(said[0][0], /is not drawing one/,
+      `id=${app}: the two refusals were merged the other way round: "${said[0][0]}"`);
+  });
+}

@@ -766,7 +766,9 @@ function erArrName() {
 }
 
 function erApplyArrangement(file) {
-  if ((file.app && file.app !== APP) || (file.kind && file.kind !== ((DATA && DATA.kind) || ''))) {
+  // Two different refusals, two sentences. They shared one, and it named only the second.
+  if (file.app && file.app !== APP) { erHint(MSG.arrOtherProduct, true); return; }
+  if (file.kind && file.kind !== ((DATA && DATA.kind) || '')) {
     erHint(MSG.arrWrongKind(file.kind), true); return;
   }
   // The workspace before the ids, because it is the reason and they are only the symptom. Where a

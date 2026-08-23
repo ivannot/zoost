@@ -35,6 +35,13 @@ const MSG = {
   arrWrongWorkspace: (was, now) => `That arrangement was saved from ${was}, and this diagram is ${now}. `
     + 'Nothing in it belongs to this one.',
   arrWrongKind: (was) => `This file arranges ${was || 'a different diagram'}, and this window is not drawing one.`,
+  // **Two refusals shared one sentence, and it described only the second.** An arrangement written
+  // by the *other* Zoost was refused with «this window is not drawing one» while the window was
+  // drawing exactly that - the one fact the file carries that explains the refusal was never said,
+  // and the sentence that was said is false about what is on screen. Reachable by anyone running
+  // both extensions: the suggested filenames are near-identical between them.
+  arrOtherProduct: 'That arrangement was saved by the other Zoost. The two products draw different '
+    + 'things, so nothing in it names anything here.',
   arrNothingMatched: 'Nothing in that file is on this diagram - it was saved from a different graph, or everything in it has since been renamed.',
   arrBadFile: {
     notJson: 'That file is not readable as an arrangement.',
