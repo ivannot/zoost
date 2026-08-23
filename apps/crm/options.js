@@ -37,7 +37,7 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 // on screen: it looked like the whole set.
 const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
 const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
 const CFG_FILE = '.zoost.json';

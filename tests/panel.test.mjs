@@ -11489,3 +11489,112 @@ test('crm: both reports carry the run counts and the credit reading', () => {
   assert.match(md, /12345[\s\S]{0,60}50000/, 'the Markdown report drops the credit reading');
   assert.match(md, /how often, not how long/, 'the Markdown report drops the caveat');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A list the code holds, written out again by hand in the file next door.
+//
+// `SCOPE_KEYS`, `SCOPE_FULL` and `SCOPE_SAFE` are declared **twice** in the CRM - once in
+// `sidepanel.js`, where the export dialog reads them, and once in `options.js`, where the defaults
+// page does. Three lists, two copies each, kept in step by whoever remembers. They did not stay in
+// step: `SCOPE_SAFE` on the settings page was missing `actions`, `addresses` and `failures`, so
+// **Safe** meant one thing in the dialog and another in Settings - and because `Object.assign`
+// only copies the keys it *has*, the three it lacked were left at whatever they happened to be
+// rather than set. Nothing said so; the button worked.
+//
+// A check written about `SCOPE_KEYS` by name had already run over this file for weeks. It found the
+// list it was told to look at and said nothing about the two beside it, which is what a check named
+// after an instance does. So this one is about the shape: whenever the same SCREAMING_CASE constant
+// is declared at the top level of two scripts of one product, the two are compared.
+//
+// The criterion for «this is a copy» comes off the values, never off the name: two object literals
+// that **share a key** are one list written twice, and must then carry the same keys with the same
+// values. Two that share none are two different tables that happen to share a name - measured, and
+// that is exactly `MSG`, whose three declarations (panel, settings, diagram) partition cleanly with
+// zero keys in common. Arrays are compared whole.
+//
+// Limits, so they are declared rather than discovered: it reads **top-level** `const NAME = {…}` and
+// `const NAME = […]` only, so a list built by a function, assembled conditionally or nested inside
+// another declaration is invisible to it; and it compares the *text* of a value, so two spellings of
+// one thing (`0` and `-0`, a call and its result) read as a disagreement, which is the safe way
+// round. The keys are read off the scanner - a `const` inside a comment is not a declaration - and
+// the values off the source, because a value can be a string and the scanner blanks those.
+test('a constant declared in two scripts of one product is not two lists', () => {
+  const decls = (rel) => {
+    const scan = blankNonCode(read(rel)), raw = read(rel), out = new Map();
+    for (const m of scan.matchAll(/^const ([A-Z][A-Z0-9_]{2,}) = ([[{])/gm)) {
+      let depth = 0, j = m.index + m[0].length - 1;
+      for (; j < scan.length; j++) {
+        if (scan[j] === '[' || scan[j] === '{') depth++;
+        else if (scan[j] === ']' || scan[j] === '}') { depth--; if (depth === 0) break; }
+      }
+      if (depth !== 0) continue;                       // unterminated in the scan: not readable, skip
+      out.set(m[1], raw.slice(m.index + m[0].length - 1, j + 1));
+    }
+    return out;
+  };
+  // Top-level members of a literal, by the same brace walk. Strings are stepped over whole, so a
+  // comma or a brace inside one does not split anything.
+  const members = (body) => {
+    const parts = [];
+    let depth = 0, buf = '', str = null;
+    for (const ch of body.slice(1, -1)) {
+      if (str) { buf += ch; if (ch === str && buf.at(-2) !== '\\') str = null; continue; }
+      if (ch === '"' || ch === "'" || ch === '`') { str = ch; buf += ch; continue; }
+      if (ch === '[' || ch === '{' || ch === '(') depth++;
+      else if (ch === ']' || ch === '}' || ch === ')') depth--;
+      if (ch === ',' && depth === 0) { parts.push(buf); buf = ''; } else buf += ch;
+    }
+    parts.push(buf);
+    return parts.map((p) => p.trim()).filter(Boolean);
+  };
+  const keyed = (body) => {
+    const map = new Map();
+    for (const p of members(body)) {
+      const m = /^(?:([A-Za-z_$][\w$]*)|'([^']*)'|"([^"]*)")\s*:([\s\S]*)$/.exec(p);
+      if (!m) return null;                             // a spread or a computed key: not comparable
+      map.set(m[1] ?? m[2] ?? m[3], m[4].replace(/\s+/g, ' ').trim());
+    }
+    return map;
+  };
+
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name);
+  let pairs = 0;
+  const bad = [];
+  for (const app of apps) {
+    const per = new Map();
+    for (const rel of shippedScripts().filter((f) => f.startsWith(`apps/${app}/`))) {
+      for (const [name, body] of decls(rel)) {
+        if (!per.has(name)) per.set(name, []);
+        per.get(name).push({ rel, body });
+      }
+    }
+    for (const [name, where] of per) {
+      for (let a = 0; a < where.length; a++) {
+        for (let b = a + 1; b < where.length; b++) {
+          const [x, y] = [where[a], where[b]];
+          pairs++;
+          if (x.body.startsWith('[')) {
+            if (x.body.replace(/\s+/g, ' ') !== y.body.replace(/\s+/g, ' ')) {
+              bad.push(`${name}: ${x.rel} and ${y.rel} hold different lists`);
+            }
+            continue;
+          }
+          const kx = keyed(x.body), ky = keyed(y.body);
+          if (!kx || !ky) continue;                    // not readable as a plain table
+          const shared = [...kx.keys()].filter((k) => ky.has(k));
+          if (!shared.length) continue;                // two tables that share a name, not a copy
+          const miss = [...kx.keys()].filter((k) => !ky.has(k));
+          const extra = [...ky.keys()].filter((k) => !kx.has(k));
+          const differ = shared.filter((k) => kx.get(k) !== ky.get(k));
+          if (miss.length || extra.length || differ.length) {
+            bad.push(`${name}: ${x.rel} and ${y.rel} share ${shared.length} key(s), so they are one `
+              + `list written twice - ${y.rel} is missing [${miss}], adds [${extra}], disagrees on [${differ}]`);
+          }
+        }
+      }
+    }
+  }
+  assert.ok(pairs >= 4, `only ${pairs} duplicated constant(s) compared - the derivation broke`);
+  assert.deepEqual(bad, [], `a list is written out twice and the copies have drifted:\n  ${bad.join('\n  ')}`);
+});
