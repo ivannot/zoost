@@ -25,6 +25,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -4536,6 +4537,88 @@ class DatesAreOneClock(unittest.TestCase):
                              cwd=ROOT, capture_output=True, text=True,
                              env={**os.environ, 'TZ': 'UTC'})
         self.assertRegex(out.stdout, r'\d{4}|stamp', 'stamp.py --check says nothing at all')
+
+class OneProductUnreadableIsNotAReading(unittest.TestCase):
+    """The Store reading is written whole or not at all.
+
+    `storestatus.py` promises, in its own docstring, that «a failure never overwrites a good
+    reading»: if Google cannot be asked it exits non-zero, the workflow goes red without writing, and
+    what is in KV stands. That holds for a *total* failure - `cws.call` raises SystemExit on any HTTP
+    error - and did not hold for a partial one. `shape()` returns None for an answer carrying neither
+    revision status, which is the case it was written for, and `main()` then put that None in the
+    payload and exited 0. The workflow PUTs one key, so the whole reading is replaced: the product
+    that could not be read goes to «unknown» on every page, and `asOf` advances.
+
+    That last part is what makes it destructive rather than merely lossy. A date that stopped
+    advancing is the only signal this design has that the pipeline broke; publishing a partial
+    reading keeps the date moving while the number is gone, so the failure is invisible in the one
+    place built to show it.
+
+    Both halves are proven here: it refuses a partial answer, and it accepts a complete one - a gate
+    that always refuses looks identical to a strict one until somebody needs it.
+    """
+
+    ANSWER = {'publishedItemRevisionStatus': {'state': 'PUBLISHED',
+                                              'distributionChannels': [{'crxVersion': '1.2.3'}]}}
+
+    def _run(self, unreadable):
+        """storestatus.main() against a stubbed Google. Returns (exit code, payload or None)."""
+        import importlib
+        stub = types.ModuleType('cws')
+        stub.key_from_env = lambda *a, **k: {}
+        stub.token = lambda *a, **k: 'stub-token'
+        # A 200 carrying neither revision status - which is what `shape` exists to survive.
+        stub.status = lambda tok, app: {} if app in unreadable else self.ANSWER
+        with tempfile.TemporaryDirectory() as d:
+            out = pathlib.Path(d) / 'status.json'
+            saved, savedargv = sys.modules.get('cws'), sys.argv
+            sys.modules['cws'] = stub
+            sys.path.insert(0, str(ROOT / 'tools'))
+            try:
+                mod = importlib.import_module('storestatus')
+                importlib.reload(mod)
+                sys.argv = ['storestatus.py', '--out', str(out)]
+                try:
+                    code = mod.main()
+                except SystemExit as e:
+                    code = e.code if isinstance(e.code, int) else 1
+                return code, (json.loads(out.read_text(encoding='utf-8')) if out.exists() else None)
+            finally:
+                sys.argv = savedargv
+                sys.modules.pop('storestatus', None)
+                if saved is None:
+                    sys.modules.pop('cws', None)
+                else:
+                    sys.modules['cws'] = saved
+
+    def test_it_refuses_to_publish_a_reading_missing_a_product(self):
+        code, payload = self._run(unreadable={'analytics'})
+        self.assertNotEqual(code, 0,
+                            'one product unreadable and the reading is published anyway - the other '
+                            'product\'s good number in KV is replaced and asOf advances, so the only '
+                            'signal that anything broke keeps saying all is well')
+        self.assertIsNone(payload, 'it wrote the file it was about to refuse')
+
+    def test_it_publishes_a_complete_one(self):
+        code, payload = self._run(unreadable=set())
+        self.assertEqual(code, 0, 'a complete answer is refused - the gate always says no')
+        self.assertIsNotNone(payload, 'nothing was written')
+        for app in self.APPS():
+            self.assertIsNotNone(payload.get(app), f'{app} missing from a reading that was accepted')
+
+    def APPS(self):
+        return sorted(d.name for d in (ROOT / 'apps').iterdir() if (d / 'manifest.json').exists())
+
+    def test_the_products_it_asks_about_are_the_products_that_exist(self):
+        # Derived from the shipped manifests, not from a list here: a third product added tomorrow
+        # is covered without anyone remembering this file. The reading is one key for the whole
+        # suite, so a product the tool never asks about is a product the site can only call unknown.
+        src = (ROOT / 'tools' / 'storestatus.py').read_text(encoding='utf-8')
+        asked = sorted(re.findall(r"'(\w+)'", re.search(r'^APPS = \(([^)]*)\)', src, re.M).group(1)))
+        self.assertEqual(asked, self.APPS(),
+                         'the tool asks Google about a different set of products than the ones that '
+                         'ship - the reading would be missing one, or carry one that does not exist')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -26,8 +26,11 @@ It also fixes what the file could not: `asOf` is refreshed on **every** run inst
 numbers move, so a workflow that quietly stopped shows up as a date that stopped advancing. The page
 prints it rather than judging it - a threshold here would turn a cron that ran late into «unknown».
 
-**A failure never overwrites a good reading.** If Google cannot be asked this exits non-zero, the
-workflow goes red without writing, and what is in KV stands.
+**A failure never overwrites a good reading, and a partial answer is a failure.** If Google cannot
+be asked this exits non-zero, the workflow goes red without writing, and what is in KV stands. That
+sentence used to be true only of a *total* failure: one item answering 200 with no revision status
+was published as `null` and replaced the reading for both products, since it is one key. The
+sentence is what it always claimed to be now - every product, or nothing.
 
 What it costs is freshness: the badge was at most ten minutes behind and is now as far behind as the
 schedule. That was worth paying because the moment anyone cares is the hour after a submission, and
@@ -92,6 +95,20 @@ def main() -> int:
            'cws': 'ok'}
     for app in APPS:
         out[app] = shape(cws.status(tok, app))
+
+    # Whole or not at all. `cws.call` raises on any HTTP error, so a *total* failure already leaves
+    # what is in KV alone - which is what the docstring promises. A **partial** one did not: `shape`
+    # returns None for an answer carrying neither revision status, and publishing that replaces the
+    # one key the whole suite reads, so the product that could not be read goes to «unknown» on every
+    # page. Worse, `asOf` would advance: a date that stopped moving is the only signal this design
+    # has that the pipeline broke, and a partial write keeps it moving while the number is gone.
+    missing = [a for a in APPS if not out[a]]
+    if missing:
+        print(f'{", ".join(missing)}: no revision status in the answer - writing nothing, so the '
+              f'reading already in KV stands. An old number is worse than none only if nobody can '
+              f'tell it is old, and refusing here is what keeps asOf from saying otherwise.',
+              file=sys.stderr)
+        return 1
 
     # Sorted keys so two readings of the same state are the same bytes. Nothing diffs this any more,
     # but a payload that reorders itself makes any future comparison useless for no gain.

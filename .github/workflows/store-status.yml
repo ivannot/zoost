@@ -54,9 +54,10 @@ jobs:
       - name: Ask the Store
         env:
           CWS_SERVICE_ACCOUNT: ${{ secrets.CWS_SERVICE_ACCOUNT }}
-        # Writes nothing on failure: `storestatus.py` exits non-zero if Google cannot be asked or
-        # answers something that is not a version, so the step goes red before the file exists and
-        # the reading already in KV stands. A wrong number is worse than an old one.
+        # Writes nothing on failure: `storestatus.py` exits non-zero if Google cannot be asked,
+        # answers something that is not a version, or answers for one item and not the other - so the
+        # step goes red before the file exists and the reading already in KV stands. A wrong number
+        # is worse than an old one, and a reading missing a product is both.
         run: |
           set -euo pipefail
           python3 tools/storestatus.py --out status.json
