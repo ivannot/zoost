@@ -324,7 +324,12 @@ function erTipText(set, first, back) {
   return (back ? MSG.backTip : MSG.cutTip)(shown.map((id) => (N[id] ? label(N[id]) : id)), more);
 }
 
+// A short wait, because a pointer crossing a rim of twenty marks on its way somewhere else has not
+// asked about any of them. Long enough not to flash, shorter than the browser's own second.
 function erTipOn(anchor, get) {
+  // `_tipT` is declared in graphview.js: classic scripts on one page share a scope, and both
+  // are on graphview.html and nowhere else. The wait moved here with the code; the sentence
+  // above it did not, and sat for ten days in the other file over an unrelated function.
   clearTimeout(_tipT);
   const { set, first, back } = get();
   erFlag(set);                         // the outline is immediate: it answers about what is on screen

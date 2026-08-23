@@ -987,8 +987,6 @@ function erTipShow(anchor, set, first, back) {
   tip.style.top = Math.max(8, y) + 'px';
 }
 function erTipHide() { clearTimeout(_tipT); const tip = $('ertip'); if (tip) tip.classList.remove('on'); }
-// A short wait, because a pointer crossing a rim of twenty marks on its way somewhere else has not
-// asked about any of them. Long enough not to flash, shorter than the browser's own second.
 /** Put `id` back on the drawing, by dropping the removals that took it - the one that did, then any
  *  later one that does it again, and no others.
  *
