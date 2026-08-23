@@ -4363,11 +4363,11 @@ async function renameWorkspace() {
     // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
     // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
-    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
+    if (!(await ensurePerm(op.root))) { op.say(MSG.folder, 'warn'); return; }
     if (!op.current()) return;
     await patchCfg({ label }, op);
     if (!op.current()) return;
-    setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
+    op.say(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await loadWorkspaces();
   } catch (e) { if (op.current()) setStatus('Could not save the name. ' + friendlyError(e), 'bad'); }
 }

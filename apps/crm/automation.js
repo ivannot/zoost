@@ -24,15 +24,15 @@ async function rebuildSchedules() {
   const op = beginWorkspaceOp();   // the workspace this rebuild is about
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-    setStatus('Reading schedules\u2026', 'busy');
+    if (!(await ensurePerm(dir))) { op.say(MSG.folder, 'warn'); return; }
+    op.say('Reading schedules\u2026', 'busy');
     const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     if (!(await loadScheduleIndex(op))) return;
     renderSchedules();
     // `emptyReason()` first, like the tree three lines down and like the other four tabs: on a
     // sample workspace Pull is refused by design, so «use Pull all» sends the reader to press a grey
     // button. The status line also stopped being 'ok' over an empty list.
-    setStatus(scheduleData.length ? `${scheduleData.length} schedules.`
+    op.say(scheduleData.length ? `${scheduleData.length} schedules.`
                                   : (emptyReason() || 'No schedules pulled yet - use Pull all.'),
               scheduleData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
@@ -165,13 +165,13 @@ async function rebuildWorkflows() {
   const op = beginWorkspaceOp();   // the workspace this rebuild is about
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-    setStatus('Reading workflows\u2026', 'busy');
+    if (!(await ensurePerm(dir))) { op.say(MSG.folder, 'warn'); return; }
+    op.say('Reading workflows\u2026', 'busy');
     const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     if (!(await loadWorkflowIndex(op))) return;
     renderWorkflows(); updateMissingButton();
     const dl = workflowData.filter((e) => e.downloaded).length;
-    setStatus(`${workflowData.length} workflows (${dl} downloaded).`, 'ok');
+    op.say(`${workflowData.length} workflows (${dl} downloaded).`, 'ok');
   } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }
@@ -484,8 +484,8 @@ async function rebuildActions() {
   const op = beginWorkspaceOp();
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-    setStatus('Reading automation actions\u2026', 'busy');
+    if (!(await ensurePerm(dir))) { op.say(MSG.folder, 'warn'); return; }
+    op.say('Reading automation actions\u2026', 'busy');
     const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     const idx = await loadActionsIndex(op); if (!idx || !op.current()) return;
     // Both publications after the last await, not before it. The first version of this guard sat
@@ -497,7 +497,7 @@ async function rebuildActions() {
     actionData = idx.map((a) => ({ ...a, path: 'actions/' + a.kind + '/' + a.id }));
     buildTypeChips();          // the kinds come from the data, so the filter is built after it loads
     renderActions();
-    setStatus(actionData.length ? `${actionData.length} automation action(s).` : (emptyReason() || 'No automation actions pulled yet - click Pull all.'), actionData.length ? 'ok' : 'warn');
+    op.say(actionData.length ? `${actionData.length} automation action(s).` : (emptyReason() || 'No automation actions pulled yet - click Pull all.'), actionData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus('Actions error: ' + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }

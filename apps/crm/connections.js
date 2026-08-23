@@ -18,8 +18,8 @@ async function rebuildConnections() {
   const op = beginWorkspaceOp();
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-    setStatus('Reading connections…', 'busy');
+    if (!(await ensurePerm(dir))) { op.say(MSG.folder, 'warn'); return; }
+    op.say('Reading connections…', 'busy');
     const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     const cat = await loadConnectionsIndex(op); if (!cat || !op.current()) return;
     // usage: which functions reference each connection (join meta.connections[].name)
@@ -29,7 +29,7 @@ async function rebuildConnections() {
     // one silent exit; everything else is a real failure and is said.
     let g;
     try { g = await ensureGraph(op); }
-    catch (e) { if ((e && e.message) === WS_MOVED) return; setStatus('Connections: could not build the usage graph - ' + ((e && e.message) || e), 'bad'); return; }
+    catch (e) { if ((e && e.message) === WS_MOVED) return; op.say('Connections: could not build the usage graph - ' + ((e && e.message) || e), 'bad'); return; }
     const usedBy = {};
     Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (usedBy[c.name] ||= []).push(n); }));
     if (!op.current()) return;
@@ -38,7 +38,7 @@ async function rebuildConnections() {
     const catNames = new Set(cat.map((c) => c.name));
     Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: 'connections/' + name, uses: usedBy[name].slice() }); });
     renderConnections();
-    setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet - click Pull all.'), connectionData.length ? 'ok' : 'warn');
+    op.say(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet - click Pull all.'), connectionData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus('Connections error: ' + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }

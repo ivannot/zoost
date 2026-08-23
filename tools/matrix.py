@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("workspace", "crm-export"): ("tests/panel.test.mjs: a function that guards one status message guards them all", "planted 2026-08-23"),
     ("partial", "crm-export"): ("tests/panel.test.mjs: an empty section says whether it was asked for", "planted 2026-08-23"),
     ("silent", "crm-export"):  ("tests/panel.test.mjs: both exports say which kind of missing source it is", "planted 2026-08-23"),
     ("fastpath", "crm-panel"): ("tests/panel.test.mjs: an unread source measures as nothing, and nobody substitutes a number", "planted 2026-08-23"),

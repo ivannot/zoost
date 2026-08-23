@@ -778,13 +778,13 @@ async function exportMarkdown() {
   const scope = await askScope(); if (!scope) return;
   try {
     await requirePerm(op.root);
-    setStatus('Building AI (Markdown) export\u2026', 'busy');
+    op.say('Building AI (Markdown) export\u2026', 'busy');
     const data = await loadExportData(op);
     const md = buildExportMarkdown(data, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;
     await op.write(name, md);
-    setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
+    op.say(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
   } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
 }
 async function exportHtml() {
@@ -793,12 +793,12 @@ async function exportHtml() {
   const scope = await askScope(); if (!scope) return;
   try {
     await requirePerm(op.root);
-    setStatus('Building HTML export\u2026', 'busy');
+    op.say('Building HTML export\u2026', 'busy');
     const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData(op);
     const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
     await op.write(name, html);
-    setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
+    op.say(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
   } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
 }

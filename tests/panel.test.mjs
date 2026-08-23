@@ -9913,3 +9913,67 @@ test('an export does not report a scope you turned off as an absence', () => {
   const calls = (src.match(/absent\(scope\./g) || []).length;
   assert.ok(calls >= 3, `absent() is called ${calls} time(s); the sections that can be empty do not use it`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// A function that decided its messages belong to a workspace must not leave one behind.
+//
+// `beginWorkspaceOp()` carries `say()`, which is `setStatus` that keeps quiet once the workspace on
+// screen is not the one the operation started in: «Progress belongs to a workspace as much as a
+// write does», written after a pull counted «Downloading 214/900» into a panel showing another org.
+//
+// Seven functions guarded their *error* exit with `if (op.current()) setStatus(...)` and left every
+// other message raw. `exportHtml` is the clearest: the failure path checks, and the line above it -
+// «Exported → export/zoost-<this org>-...html (in your workspace folder)» - does not. The file goes
+// to the right folder, because `op.write` guards both sides of its await; the sentence announcing
+// it lands on whatever workspace is on screen by then, and names the other one.
+//
+// The criterion is the code's own, not one invented here: `op.say` is used in 22 places and raw
+// `setStatus` in far more, so «always use op.say» is not this project's rule and is not asserted.
+// What is asserted is consistency **within a function** - having guarded one exit, guard the rest.
+//
+// Two limits, stated rather than left to be met. It does not model `if (!op.current()) return;`,
+// which guards everything after it - the Analytics twin of `renameWorkspace` is written that way
+// and passes only because it has no `setStatus` at all, so a function combining early returns with
+// a guarded catch would be reported wrongly. And it reads `setStatus` alone: `healthSay` is another
+// sink for the same kind of message and is not examined.
+test('a function that guards one status message guards them all', () => {
+  const offenders = [];
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    for (const f of readdirSync(join(ROOT, 'apps', app)).filter((n) => n.endsWith('.js'))) {
+      const rel = `apps/${app}/${f}`;
+      // Comments are blanked, not removed: stripping them shifts every position after the first
+      // one, and the first version of this reported line 4707 for a function that starts at 5125.
+      // A check that names the wrong place is a check nobody can act on.
+      const src = read(rel)
+        .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+        .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+      for (const m of src.matchAll(/^(?:async )?function (\w+)\([^)]*\)\s*\{/gm)) {
+        const a = m.index;
+        // A declaration that closes on its own line ends there. Without this a one-line function -
+        // `function healthSay(text, cls) { … }` - swallowed everything down to the next brace in
+        // column zero and was credited with another function's messages. The same over-capture
+        // `asynccheck` and `slice.mjs` each record, met a third time by somebody who had read both.
+        const eol = src.indexOf('\n', a);
+        const first = src.slice(a, eol < 0 ? src.length : eol);
+        const b = (first.includes('{') && first.trimEnd().endsWith('}'))
+          ? a + first.length : src.indexOf('\n}', a);
+        const body = src.slice(a, b < 0 ? src.length : b);
+        if (!/op\.current\(\)\)\s*(?:setStatus|\{)/.test(body)) continue;   // never decided
+        const firstAwait = body.indexOf('await ');
+        if (firstAwait < 0) continue;
+        for (const s of body.matchAll(/(?<![.\w)])\bsetStatus\(/g)) {
+          if (s.index <= firstAwait) continue;
+          // Both spellings of the guard: `if (op.current()) setStatus(...)` and the braced form,
+          // `if (op.current()) { setStatus(...); healthSay(...); }`. Reading only the first named a
+          // site that was guarded - one spelling of a thing, which is the mistake this whole file
+          // keeps recording about other people's code.
+          if (/op\.current\(\)\)\s*\{?\s*$/.test(body.slice(Math.max(0, s.index - 30), s.index))) continue;
+          offenders.push(`${rel}:${m[1]} line ${src.slice(0, a + s.index).split('\n').length}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `these guard one message against a change of workspace and leave another raw, so the panel ` +
+    `announces one workspace's work over another: ${offenders.join('; ')}`);
+});

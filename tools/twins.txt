@@ -181,7 +181,7 @@ relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	65b6796a1174	479e5c41dd33	divergent
 rememberActive	b905c9b77414	b905c9b77414	identical
 removeFileAt	d6514d26b3e4	1b045eb72889	divergent
-renameWorkspace	99bfdcd2240f	bf0d938e89ff	divergent
+renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b47086e0e791	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	de56c9b9ed2d	5037a60baf16	divergent
