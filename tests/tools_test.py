@@ -6500,5 +6500,67 @@ class EveryPermissionIsJustifiedAndEveryJustificationIsAsked(unittest.TestCase):
                                 'the heading shape changed and this check stopped reading them')
 
 
+class TheTwoHalvesOfLiveSyncReachTheSamePages(unittest.TestCase):
+    """A page with one of the two content scripts on it is a half-installed live sync.
+
+    Zoho CRM injects two: `hook.js` into the page's MAIN world, where it notices a save, a deletion
+    or a creation, and `content-bridge.js` into the isolated world, which is the only thing listening
+    for what the hook posts. Their `matches` are two hand-written copies of one list of data centres -
+    eighteen entries each, kept in step by whoever remembers.
+
+    They do not fail loudly when they come apart. A page with the hook and no bridge posts notices to
+    nobody; a page with the bridge and no hook produces none, and the panel simply never hears that
+    anything changed. Measured by dropping the two `zohocloud.ca` entries from the hook's block:
+    the whole battery green but for the screenshots noticing a file under `apps/` had moved.
+
+    The criterion comes off the values rather than off a count, the same way the duplicated-constant
+    check does: two blocks that **share a match** are covering the same pages and must cover exactly
+    the same pages. Two with nothing in common are two different jobs and are left alone - so a
+    product that one day injects something else somewhere else needs no exception written for it.
+
+    Also here because it belongs to the same fact: a page listed in `matches` and not in
+    `host_permissions` is a script Chrome will inject into a page the extension may not read.
+
+    **The limits, stated.** It compares the patterns as written. Two spellings of one page -
+    `https://crm.zoho.com/*` and `https://*.zoho.com/*` - would read as different pages, which is a
+    false finding rather than a silent pass. It says nothing about whether either script does its job
+    on those pages; `tests/panel.test.mjs` drives the vocabulary they share.
+    """
+
+    def test_blocks_that_share_a_page_share_all_of_them(self):
+        compared = 0
+        for app in sorted(p.name for p in (ROOT / 'apps').iterdir() if (p / 'manifest.json').exists()):
+            man = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
+            blocks = man.get('content_scripts') or []
+            hosts = set(man.get('host_permissions') or [])
+            for b in blocks:
+                what = ', '.join(b.get('js') or ['?'])
+                stray = sorted(set(b.get('matches') or []) - hosts)
+                self.assertEqual(
+                    stray, [],
+                    f'{app}: {what} is injected into pages the manifest asks no permission for, so '
+                    f'Chrome puts a script where the extension may not read: {stray}')
+            for i in range(len(blocks)):
+                for j in range(i + 1, len(blocks)):
+                    a, b = set(blocks[i].get('matches') or []), set(blocks[j].get('matches') or [])
+                    if not (a & b):
+                        continue          # two different jobs, not two copies of one list
+                    compared += 1
+                    ja = ', '.join(blocks[i].get('js') or ['?'])
+                    jb = ', '.join(blocks[j].get('js') or ['?'])
+                    self.assertEqual(
+                        sorted(a - b), [],
+                        f'{app}: {ja} runs on these and {jb} does not, so on those pages one half of '
+                        f'live sync is there and the other is not, in silence: {sorted(a - b)}')
+                    self.assertEqual(
+                        sorted(b - a), [],
+                        f'{app}: {jb} runs on these and {ja} does not, so on those pages one half of '
+                        f'live sync is there and the other is not, in silence: {sorted(b - a)}')
+        self.assertGreaterEqual(
+            compared, 1,
+            'no two content scripts share a page any more - either they were merged, or this check '
+            'has stopped having a subject and should say so rather than pass')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
