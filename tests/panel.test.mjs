@@ -10493,3 +10493,48 @@ test('every id the panel reaches for is defined somewhere in its app', () => {
       `does nothing: ${missing.join(', ')}`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// A read that failed does not authorise a write over the thing it failed to read.
+//
+// Every save on the options page is a read-modify-write of one object: read `aicfg`, change one
+// field, put the whole thing back. The read was `let c = {}; try { … } catch (_) {}`, so a failure
+// left `c` empty and the write replaced the stored configuration with a single field - losing the
+// encrypted API key, both model names and the rest. The user typed a passphrase to protect that
+// key; a quota error, or an extension update under an open options page (which this repository has
+// already met once), would have thrown it away without a word.
+//
+// Reading for *display* keeps its fallback, and that asymmetry is the point: an empty form renders
+// and costs nothing. What it must not do is stay quiet, because Save writes the form back whole.
+test('the options page refuses to save over settings it could not read', () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const src = read(rel)
+      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+      .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+
+    // Derived: every place that writes `aicfg` back, and where the value it writes came from.
+    const writes = [...src.matchAll(/storage\.local\.set\(\{\s*aicfg:\s*(\w+)\s*\}/g)];
+    assert.ok(writes.length >= 2, `id=${app}: only ${writes.length} write(s) of aicfg - the derivation broke`);
+    for (const w of writes) {
+      const before = src.slice(0, w.index);
+      const fnAt = Math.max(before.lastIndexOf('\nasync function'), before.lastIndexOf('.onclick = async'));
+      const body = src.slice(fnAt, w.index);
+      // Either the value is built from the form alone, or it came from a read that can refuse.
+      const fromRead = /storage\.local\.get\('aicfg'\)|readCfgForWrite\(/.test(body);
+      if (!fromRead) continue;
+      assert.match(body, /readCfgForWrite\(/,
+        `id=${app}: a write of aicfg is built from a read that swallows its own failure, so a ` +
+        `failed read overwrites the stored key with whatever this handler set`);
+      assert.match(body, /catch[\s\S]{0,200}return;/,
+        `id=${app}: the read can refuse and the handler writes anyway`);
+    }
+
+    // And the display read says so rather than showing an empty form silently.
+    const load = /async function loadAi\(\)[\s\S]*?\n\}/.exec(src);
+    assert.ok(load, `id=${app}: loadAi has gone`);
+    assert.match(load[0], /catch[\s\S]{0,300}toast\(/,
+      `id=${app}: a failed read renders an empty form with no word, and Save then writes it back`);
+  }
+});

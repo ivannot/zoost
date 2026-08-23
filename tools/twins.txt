@@ -130,14 +130,14 @@ knownSample	459c41b78d33	e5b6c71b1533	divergent
 layToUI	d3151f0c87f6	d3151f0c87f6	identical
 layoutZoneHtml	c3b79caff8de	59b769693ab7	divergent
 linkedUnderFilter	c56b421e0c46	c56b421e0c46	identical
-loadAi	e9574ddbd60c	deddc32d7750	divergent
+loadAi	e33afa7fdcb6	ac847f403991	divergent
 loadDc	4e2ba588f615	9527b138e9ce	divergent
 loadLay	589802a799f7	589802a799f7	identical
 loadRx	1c3c28e17b59	1c3c28e17b59	identical
 loadRxShortcuts	0c1fc69cd664	0c1fc69cd664	identical
 loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
 loadZohoDc	83d8c8288511	83d8c8288511	identical
-loseLock	5267c941abee	5267c941abee	identical
+loseLock	ad3671ede385	ad3671ede385	identical
 markDirty	e539acbb45b6	e539acbb45b6	identical
 markEngine	073f8c57884a	e2cfadb5389c	divergent
 markEngineOptions	6d0ea3340c88	6d0ea3340c88	identical
@@ -172,6 +172,7 @@ pickRoot	f7f5b59cd421	3f6e88e32e8d	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
 pullAll	97e829488969	4905ea8927dc	divergent
+readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical

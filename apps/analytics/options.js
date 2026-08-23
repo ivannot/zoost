@@ -175,7 +175,9 @@ async function loseLock() {
     + `Kept: your model names, and every other setting on this page.\n`
     + `Lost: nothing but the stored key - paste it in again from your provider's dashboard.\n\n`
     + `Continue?`)) return;
-  const cfg = Object.assign({}, (await chrome.storage.local.get('aicfg')).aicfg || {});
+  let cfg;
+  try { cfg = await readCfgForWrite(); }
+  catch (e) { toast('Could not read the saved settings, so nothing was removed. Try again.', true); return; }
   for (const prov of which) { cfg[prov] = Object.assign({}, cfg[prov]); delete cfg[prov].apiKeyEnc; cfg[prov].apiKey = ''; }
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
   await chrome.storage.local.set({ aicfg: cfg });
@@ -230,6 +232,19 @@ function syncLockRow() {
            : 'Enter the current passphrase to turn the protection off - the key has to be decrypted to be stored in clear text. If you have lost it, use «Remove the protection» below.';
 }
 
+// **A read that failed must never authorise a write.** Every save on this page is a
+// read-modify-write of one object: read `aicfg`, change one field, put the whole thing back. The
+// read was `let c = {}; try { … } catch (_) {}`, so a failure left `c` empty and the write then
+// replaced the stored configuration with a single field - losing the encrypted API key, the model
+// names and the rest. The user typed a passphrase to protect that key; a quota error or an
+// extension update under an open options page would have thrown it away without a word.
+//
+// It throws instead, and the callers say so and stop. Reading for *display* keeps its fallback:
+// an empty form is visible and costs nothing, and the two cases are different.
+async function readCfgForWrite() {
+  const r = await chrome.storage.local.get('aicfg');   // throws: the caller must not write
+  return Object.assign({}, r.aicfg || {});
+}
 async function currentAi() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
   return { anthropic: c.anthropic || {}, openai: c.openai || {} };
@@ -244,8 +259,15 @@ function showForget(prov, stored) {
 }
 
 async function loadAi() {
+  // Reading for *display* keeps its fallback - an empty form renders and nothing is lost. What it
+  // must not do is stay quiet: Save writes the form back whole, so a reader who cannot tell «nothing
+  // is stored yet» from «I could not read what is stored» saves the empty one over their key.
   let c = {};
-  try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
+  try { c = (await chrome.storage.local.get('aicfg')).aicfg || {}; }
+  catch (_) {
+    toast('Could not read your saved AI settings - what is shown below is not what is stored. '
+      + 'Reload this page before saving, or Save will overwrite it.', true);
+  }
   const cfg = {
     active: c.active || 'anthropic',
     anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
@@ -414,7 +436,9 @@ $('aiengine').onchange = async () => {
     return;
   }
   markEngine();
-  let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
+  let c;
+  try { c = await readCfgForWrite(); }
+  catch (e) { toast('Could not read the saved settings, so nothing was changed - the stored key is untouched. Try again.', true); return; }
   c.active = $('aiengine').value;
   prevEngine = c.active;
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
