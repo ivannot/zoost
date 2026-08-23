@@ -1330,3 +1330,102 @@ test('«updated» on a guide names that guide, through all three programs', () =
   }
   assert.ok(followed >= 4, `only ${followed} guide(s) followed - the derivation broke`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The same decision, in the endpoint next door, still wrong.
+//
+// «Not published is an answer, and it must not be cached like an outage» was found and fixed in
+// `/api/versions`, whose completeness now asks whether the Store was *readable* and whether every
+// source *answered*. `/api/ahead` decides the identical question three hundred lines below with
+//
+//     xml != null && crm.store != null && analytics.store != null && !gaps
+//
+// - by whether both products have a **published version**. A product mid-republication has
+// `store: null`, which is a fact Google gave us, and the endpoint reads it as a failure.
+//
+// Measured live rather than reasoned about, while both listings sat in review:
+// `curl -D - https://zoost.it/api/ahead` answered `cache-control: public, max-age=60`, with
+// `"cws": "ok"`, a `storeAsOf` minutes old and no unreadable notes. A complete, correct answer held
+// for a tenth of its time, for as long as a republication lasts - and this endpoint is the expensive
+// one: it fetches the Store, the tag feed and a release note per version ahead.
+//
+// The fix reached one endpoint and not its sibling, which is what this cell is for: two halves each
+// right on their own - a Store reader that says «published: none», and a TTL that asks «did
+// everything answer» - composed into a question neither of them asks.
+//
+// **The limits, stated.** It drives the endpoint and reads the header it sets, so it proves which
+// TTL is chosen and not what the body says; the shape of the body is held by the cache-marker case
+// above. The fixtures are the three states that matter - published, in review, and unreadable - not
+// every combination.
+function aheadTtl(reading, answers) {
+  const ctx = load([
+    sliceConst('site/_worker.js', 'REPO'), sliceConst('site/_worker.js', 'EXT_ID'),
+    sliceConst('site/_worker.js', 'UA'), sliceConst('site/_worker.js', 'IS_VERSION'),
+    sliceConst('site/_worker.js', 'TTL'), sliceConst('site/_worker.js', 'TTL_PARTIAL'),
+    sliceConst('site/_worker.js', 'timeout'), sliceConst('site/_worker.js', 'listing'),
+    sliceConst('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'AHEAD_KEY'),
+    sliceConst('site/_worker.js', 'isNewer'), sliceFn('site/_worker.js', 'cmpVer'),
+    sliceFn('site/_worker.js', 'verOf'), sliceFn('site/_worker.js', 'pickLatestTag'),
+    sliceFn('site/_worker.js', 'tagsAhead'), sliceFn('site/_worker.js', 'tagsFeed'),
+    sliceFn('site/_worker.js', 'whatsnew'), sliceFn('site/_worker.js', 'storeStatus'),
+    sliceFn('site/_worker.js', 'ahead'),
+  ], {
+    AbortSignal: { timeout: () => null }, Request, Response, URL, Promise, isNaN, JSON, Date,
+    caches: { default: { match: async () => null, put: async () => {} } },
+    fetch: answers || (async () => ({
+      ok: true, status: 200,
+      text: async () => '<feed><entry><link href="https://github.com/x/y/releases/tag/crm-v1.46.0"/></entry>'
+                      + '<entry><link href="https://github.com/x/y/releases/tag/analytics-v1.29.0"/></entry></feed>',
+      json: async () => ({ version: '1.46.0' }),
+    })),
+  });
+  const env = { CF_VERSION: { timestamp: '2026-08-23T09:58:44Z' }, STATUS: { get: async () => reading } };
+  return ctx.ahead({ url: 'https://zoost.it/api/ahead' }, env, { waitUntil: () => {} })
+    .then((r) => Number(/max-age=(\d+)/.exec(r.headers.get('cache-control'))[1]));
+}
+
+test('the other endpoint holds a complete answer for the full time too', async () => {
+  const long = Number(sliceConst('site/_worker.js', 'TTL').match(/=\s*(\d+)/)[1]);
+  const short = Number(sliceConst('site/_worker.js', 'TTL_PARTIAL').match(/=\s*(\d+)/)[1]);
+  assert.ok(long > short, 'the two TTLs are the same - this test proves nothing');
+
+  assert.equal(await aheadTtl({
+    crm: { published: { version: '1.46.0', state: 'PUBLISHED' } },
+    analytics: { published: { version: '1.29.0', state: 'PUBLISHED' } },
+    cws: 'ok', asOf: '2026-08-23T14:51:43Z',
+  }), long, 'a fully published reading is not held long');
+
+  // The live state when this was written, and what `curl` answered: 60 instead of 600.
+  const got = await aheadTtl({
+    crm: { submitted: { version: '1.46.0', state: 'PENDING_REVIEW' } },
+    analytics: { submitted: { version: '1.29.0', state: 'PENDING_REVIEW' } },
+    cws: 'ok', asOf: '2026-08-23T14:51:43Z',
+  });
+  assert.equal(got, long,
+    `Google answered and neither product is published - a complete reading, held for ${got}s instead `
+    + `of ${long}s. This endpoint fetches the Store, the tag feed and a release note per version `
+    + `ahead, so that is ${long / got}x the upstream cost for the length of a republication`);
+
+  // And the other half: a reading nobody could take must still expire with the outage.
+  assert.equal(await aheadTtl({ crm: null, analytics: null, cws: 'unreadable', asOf: null }), short,
+    'a reading that failed is held as long as a good one, so an outage outlives itself');
+  assert.equal(await aheadTtl(null), short, 'an empty store reads as a complete answer');
+
+  // And the third source: a release note that could not be fetched. It needs a tag *ahead* of what
+  // is published, or nothing asks for a note at all and the branch is unreachable - which is what
+  // the first version of this case did, so dropping `!gaps` from the condition changed nothing and
+  // the plant passed. A fixture that cannot reach the branch proves nothing about it.
+  const aheadOfStore = async (url) => (String(url).includes('releases/download') || String(url).includes('whatsnew')
+    ? { ok: false, status: 500, text: async () => '' }
+    : { ok: true, status: 200,
+        text: async () => '<feed><entry><link href="https://github.com/x/y/releases/tag/crm-v1.47.0"/></entry></feed>',
+        json: async () => ({ version: '1.47.0' }) });
+  const withGap = await aheadTtl({
+    crm: { published: { version: '1.46.0', state: 'PUBLISHED' } },
+    analytics: { published: { version: '1.29.0', state: 'PUBLISHED' } },
+    cws: 'ok', asOf: '2026-08-23T14:51:43Z',
+  }, aheadOfStore);
+  assert.equal(withGap, short,
+    'a version is ahead and its release notes could not be read, and the answer is held for the full '
+    + 'time - so the gap outlives whatever caused it');
+});

@@ -438,7 +438,14 @@ async function ahead(request, env, ctx) {
   // such version pinned this endpoint to the short TTL for ever, over nothing that would ever
   // change. Now the two are distinguishable and only the failure is treated as one.
   const gaps = [crm, analytics].some((b) => b.ahead.some((a) => a.notesWhy === 'unreadable'));
-  const complete = xml != null && crm.store != null && analytics.store != null && !gaps;
+  // Whether every **source answered**, never whether every value is present - the same question
+  // `/api/versions` asks three hundred lines up, and for the same reason. This read
+  // `crm.store != null && analytics.store != null`, so a product mid-republication - which has
+  // `store: null`, a fact Google gave us - pinned the endpoint to the short TTL for the whole of
+  // a review. Measured live at `max-age=60` with `cws: ok` and nothing wrong, on the endpoint
+  // that costs the most to build: the Store, the tag feed, and a release note per version ahead.
+  // The fix had already been made next door and had not travelled here.
+  const complete = s.cws === 'ok' && xml != null && !gaps;
 
   const res = new Response(JSON.stringify({
     crm,
