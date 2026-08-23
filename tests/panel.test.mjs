@@ -10181,6 +10181,9 @@ test('crm: every declared tool runs on the minimum input its schema declares', a
   const piece = (n) => { try { return sliceFn('apps/crm/ai.js', n); } catch { return sliceConst('apps/crm/ai.js', n); } };
   vm.runInContext([
     'const aiSeedOmitted = []; let aiSeedSize = 0;',
+    // `firedBy` lives in automation.js and `list_actions` calls it: the panel is one scope across
+    // several scripts, and a lift that stops at one file throws where the real page would not.
+    sliceFn('apps/crm/automation.js', 'firedBy'),
     ...['aiCap', 'aiModuleText', 'fnSource', 'aiExecTool'].map(piece),
   ].join('\n'), ctx);
 
@@ -11293,4 +11296,65 @@ test('crm: the exported report states how much of the org its graph covers', () 
   const whole = build({ nodes: 6, inOrg: 6, notInMirror: 0 });
   assert.doesNotMatch(whole, /could not be downloaded|could not be established/,
     'a complete mirror is hedged about anyway');
+});
+
+// ---------------------------------------------------------------------------------------------
+// «Which rules fire this action» has one answer, not four.
+//
+// `buildActionUsers` writes two keys per action on purpose - by id and by lowercased name - because
+// the id Zoho puts inside a workflow's `instant_actions.actions[]` is not always the id the actions
+// census carries. The same asymmetry is recorded as *measured* one function over: 77 of 77 workflow
+// references matched by name and none by id.
+//
+// `actionFiredBy` read both. Four other readers asked the id key alone - the health view's «nothing
+// fires it» group, the assistant's «attached to no rule» count and its `list_actions` tool, and both
+// reports, where the map was not even built with the second key. So one action reads as `1 rule` on
+// the Actions tab and as fired by nothing in the list a reader uses to decide what is safe to delete.
+//
+// The sample workspace writes matching ids, so the fallback never fires in any fixture: this is a
+// case that could only be found by reading, and can only be held by running it on the mismatch.
+test('crm: every surface answers «fired by» through the same lookup', () => {
+  const ctx = {
+    Map, Set, Object, String, Array, console,
+    actionUsers: null,
+  };
+  vm.createContext(ctx);
+  vm.runInContext([sliceFn('apps/crm/automation.js', 'buildActionUsers').replace(/^async /, ''),
+                   sliceFn('apps/crm/automation.js', 'firedBy')].join('\n'), ctx);
+
+  // The mismatch: the rule names the action by an id the census does not carry.
+  ctx.map = new Map([
+    ['email_notifications:99999', [{ id: 7, name: 'Renewal' }]],
+    ['email_notifications:name:renewal notice', [{ id: 7, name: 'Renewal' }]],
+  ]);
+  ctx.act = { kind: 'email_notifications', id: '5000', name: 'Renewal notice' };
+  const found = vm.runInContext('firedBy(act, map)', ctx);
+  assert.equal(found.length, 1,
+    'the shared lookup does not fall back to the name, so the two keys buy nothing');
+
+  // And every reader goes through it: derived, so a fifth one added tomorrow is a finding.
+  const bad = [];
+  for (const rel of ['apps/crm/health.js', 'apps/crm/ai.js', 'apps/crm/export.js']) {
+    const src = blankNonCode(read(rel));
+    // No string literal in the pattern: the scan blanks `':'`, so a criterion written with it
+    // cannot match anything. What survives is the shape - `<map>.get(a.kind + ...`.
+    for (const m of src.matchAll(/(\w+)\.get\((?:a\.kind|a\.type)\s*\+/g)) {
+      bad.push(`${rel}: ${m[0]}...`);
+    }
+  }
+  assert.deepEqual(bad, [],
+    `these look up which rules fire an action by id alone, so an action whose ids disagree reads as ` +
+    `fired by nothing: ${bad.join('; ')}`);
+
+  // The export builds its own map, and it must carry both keys too. **Raw source, not the scanner**:
+  // the key is a string literal - `` `${a.type}:name:${...}` `` - and the scanner blanks literal
+  // text by design, so `:name:` is not there to find. That is the third time today I have looked for
+  // a literal in a scan that removes literals; the rule is that a check about a *string* reads the
+  // source, and a check about *structure* reads the scan.
+  const exp = read('apps/crm/export.js');
+  const at = exp.indexOf('const actUsers = new Map()');
+  assert.ok(at > 0, 'the export no longer builds its own map - this test is measuring nothing');
+  assert.match(exp.slice(at, exp.indexOf('  }));', at)), /:name:/,
+    'the export builds the map with the id key alone, so its «Fired by» column is blank for an ' +
+    'action the panel shows a rule for');
 });

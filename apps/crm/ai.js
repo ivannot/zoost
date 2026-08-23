@@ -287,7 +287,7 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   const acts = await aiLoadActions(op);
   const byKind = {};
   acts.list.forEach((a) => (byKind[a.kind] = (byKind[a.kind] || 0) + 1));
-  const unattached = acts.list.filter((a) => !a.associated && !(acts.users.get(a.kind + ':' + String(a.id)) || []).length).length;
+  const unattached = acts.list.filter((a) => !a.associated && !firedBy(a, acts.users).length).length;
   const actions = acts.list.length
     ? `\n## Automation actions (${acts.list.length})\n`
       + Object.keys(byKind).sort().map((k) => `- ${actionKindLabel(k)}: ${byKind[k]}`).join('\n')
@@ -640,8 +640,8 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     let sel = acts.list;
     if (kind) sel = sel.filter((a) => a.kind === kind || actionKindLabel(a.kind).toLowerCase() === String(input.kind).toLowerCase());
     if (input.module) sel = sel.filter((a) => (a.module || '').toLowerCase() === String(input.module).toLowerCase());
-    if (input.unused === true) sel = sel.filter((a) => !(acts.users.get(a.kind + ':' + String(a.id)) || []).length && !a.associated);
-    if (input.unused === false) sel = sel.filter((a) => (acts.users.get(a.kind + ':' + String(a.id)) || []).length || a.associated);
+    if (input.unused === true) sel = sel.filter((a) => !firedBy(a, acts.users).length && !a.associated);
+    if (input.unused === false) sel = sel.filter((a) => firedBy(a, acts.users).length || a.associated);
     const crit = [kind ? 'kind ' + kind : '', input.module ? 'module ' + input.module : '',
                   input.unused === true ? 'attached to nothing' : input.unused === false ? 'in use' : ''].filter(Boolean).join(', ') || 'all';
     const head = `${sel.length} action(s) match (${crit}); ${acts.list.length} in the workspace.`;
@@ -649,7 +649,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     // The sender address is deliberately absent unless the user turned it on: this text is sent to a
     // provider, and «which address» is a fact about a person in a way «a user address» is not.
     const lines = sel.map((a) => {
-      const users = acts.users.get(a.kind + ':' + String(a.id)) || [];
+      const users = firedBy(a, acts.users);
       const extra = a.kind === 'field_updates'
         ? ` writes ${a.field || '?'} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}`
         : a.kind === 'email_notifications'

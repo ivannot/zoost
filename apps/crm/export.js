@@ -392,7 +392,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const actWithheld = acts.filter((a) => a.from_address).length;
   const actRows = acts.slice().sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b))
     .map((a) => {
-      const users = (actUsers && actUsers.get(a.kind + ':' + String(a.id))) || [];
+      const users = firedBy(a, actUsers);
       const detail = a.kind === 'email_notifications'
         ? [a.template ? 'template: ' + esc(a.template.name || a.template.id) : '',
            a.from_type ? 'from: ' + (scope.addresses && (a.from_name || a.from_address) ? esc([a.from_name, a.from_address].filter(Boolean).join(' ')) : esc(a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
@@ -541,9 +541,14 @@ async function loadExportData(op = beginWorkspaceOp()) {
     const list = [];
     if (c.instant_actions && c.instant_actions.actions) list.push(...c.instant_actions.actions);
     (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => list.push(...(sa.actions || [])));
-    list.forEach((a) => { if (!a || !a.type) return; const k = a.type + ':' + String(a.id);
-      if (!actUsers.has(k)) actUsers.set(k, []);
-      if (!actUsers.get(k).some((x) => String(x.id) === String(w.id))) actUsers.get(k).push({ id: w.id, name: w.name }); });
+    // Both keys, like `buildActionUsers`: the id inside a workflow's action list is not always the
+    // id the census carries, and this map was built with the id alone - so the report answered «no
+    // rules» about an action the panel shows a rule for.
+    list.forEach((a) => { if (!a || !a.type) return;
+      for (const k of [`${a.type}:${String(a.id)}`, `${a.type}:name:${String(a.name || '').toLowerCase()}`]) {
+        if (!actUsers.has(k)) actUsers.set(k, []);
+        if (!actUsers.get(k).some((x) => String(x.id) === String(w.id))) actUsers.get(k).push({ id: w.id, name: w.name });
+      } });
   }));
   return { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers };
 }
@@ -734,7 +739,7 @@ function buildExportMarkdown(d, scope) {
     if (withheld && !scope.addresses) md += `> ${withheld} sender address(es) withheld - that section was left off. Nothing else about those notifications is missing.\n\n`;
     md += '| Action | Kind | Module | Rules | Fired by | Detail |\n|---|---|---|---|---|---|\n';
     acts.slice().sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b)).forEach((a) => {
-      const users = (d.actUsers && d.actUsers.get(a.kind + ':' + String(a.id))) || [];
+      const users = firedBy(a, d.actUsers);
       const detail = a.kind === 'email_notifications'
         ? [a.template ? 'template ' + (a.template.name || a.template.id) : '',
            a.from_type ? 'from ' + ((scope.addresses && [a.from_name, a.from_address].filter(Boolean).join(' ')) || (a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',

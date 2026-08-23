@@ -377,11 +377,27 @@ async function buildActionUsers(op = beginWorkspaceOp()) {
   }
   return op.current() ? map : null;
 }
-function actionFiredBy(a) {
-  if (!actionUsers) return [];
-  return actionUsers.get(`${a.kind}:${String(a.id)}`)
-      || actionUsers.get(`${a.kind}:name:${String(a.name || '').toLowerCase()}`) || [];
+/** Which rules fire this action, by id and then by name.
+ *
+ * `buildActionUsers` writes two keys per action on purpose: the id Zoho puts inside a workflow's
+ * `instant_actions.actions[]` is not always the id the actions census carries - the same asymmetry
+ * `healthOpenWorkflow` records as *measured*, where 77 of 77 workflow references matched by name and
+ * none by id. The name key is the answer to that.
+ *
+ * **Four other readers asked the id key alone**: the health view's «nothing fires it» group, the
+ * assistant's «attached to no rule» count and its `list_actions` tool, and both reports - where
+ * `loadExportData` did not even build the second key. So one action read as `1 rule` on the Actions
+ * tab and as *fired by nothing* in the list a reader uses to decide what is safe to delete.
+ *
+ * The map is a parameter now, so the panel's global and the export's local one go through the same
+ * lookup. The panel's own callers pass nothing and get the global, as before.
+ */
+function firedBy(a, map = actionUsers) {
+  if (!map) return [];
+  return map.get(`${a.kind}:${String(a.id)}`)
+      || map.get(`${a.kind}:name:${String(a.name || '').toLowerCase()}`) || [];
 }
+function actionFiredBy(a) { return firedBy(a); }
 const ACTION_LABEL = { email_notifications: 'Email notifications', field_updates: 'Field updates',
                        tasks: 'Tasks', webhooks: 'Webhooks' };
 // A kind Zoho invents tomorrow gets a readable label without anyone editing this: underscores out,

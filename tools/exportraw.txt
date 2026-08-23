@@ -18,6 +18,8 @@ apps/crm/export.js	PRODUCT_AUTHOR
 apps/crm/export.js	PRODUCT_NAME
 apps/crm/export.js	PRODUCT_URL
 apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
+apps/crm/export.js	String(a.id)
+apps/crm/export.js	String(a.name || '').toLowerCase()
 apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
 apps/crm/export.js	_mdCell(L.name || String(L.id))
 apps/crm/export.js	_mdCell(a.name || a.id)
@@ -51,6 +53,7 @@ apps/crm/export.js	_pick(f.picklist, 12, _mdCell)
 apps/crm/export.js	_pick(fl.picklist, 12, esc)
 apps/crm/export.js	a.field_label || a.field
 apps/crm/export.js	a.field_type ? ' (' + a.field_type + ')' : ''
+apps/crm/export.js	a.type
 apps/crm/export.js	actHtml
 apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
 apps/crm/export.js	actWithheld

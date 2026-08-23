@@ -102,7 +102,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const actUse = actionUsers || await buildActionUsers(op);
   if (!op.current()) throw new Error(WS_MOVED);
   const unattached = actIdx
-    .filter((a) => !a.associated && !(actUse.get(a.kind + ':' + String(a.id)) || []).length)
+    .filter((a) => !a.associated && !firedBy(a, actUse).length)
     .sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b))
     .map((a) => ({ html: `<a data-kind="action" data-id="${escA(a.kind + ':' + a.id)}">${escHtml(a.name || a.id)}</a>`
       + ` <span class="meta">${escHtml(actionKindLabel(a.kind))}${a.module ? ' \u00b7 ' + escHtml(a.module) : ''}</span>` }));
