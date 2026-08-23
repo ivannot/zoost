@@ -80,7 +80,8 @@ erEdgePoints	38225449fcf9	38225449fcf9	identical
 erFieldsFor	39b26c15f9ce	7f029df0a700	divergent
 erFit	e39f858172c7	e39f858172c7	identical
 erFitToArcs	2f5e6e917735	2f5e6e917735	identical
-erHiddenSet	6e39611ba7ab	6e39611ba7ab	identical
+erFoldedBy	3975dc0053d8	3975dc0053d8	identical
+erHiddenSet	f3668a1916a8	f3668a1916a8	identical
 erHint	939b44770708	939b44770708	identical
 erInitControls	f0553dc6bea7	4dfb3adf808b	divergent
 erInk	8775ab41a352	8775ab41a352	identical
@@ -93,7 +94,7 @@ erParamsToUI	4fcd92a95216	4fcd92a95216	identical
 erPick	1abe2d6a2c51	1abe2d6a2c51	identical
 erPickCard	6e172af64b88	02e5c971b706	divergent
 erPinnedNow	a1aa575af755	a1aa575af755	identical
-erReach	67c9311a7d26	67c9311a7d26	identical
+erReach	f5456fd28a60	f5456fd28a60	identical
 erRender	ca365eb7051e	cd799080aed2	divergent
 erResize	772c4f787802	772c4f787802	identical
 erSaveParams	1e7bbd6e4b26	c7d049ed3cc9	divergent
@@ -109,10 +110,10 @@ erTipOn	cda3bfa68316	cda3bfa68316	identical
 erTipShow	4ce0ece76994	4ce0ece76994	identical
 erTipText	b770d433afce	b770d433afce	identical
 erToggleCut	0de7d083cd1d	0de7d083cd1d	identical
-erUnhide	aeec288aee06	aeec288aee06	identical
+erUnhide	cd9ab515870d	cd9ab515870d	identical
 erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
 erVisibleIds	372e3743dccc	dffd20c3e9ec	divergent
-erWouldGo	9cd722f5fad5	9cd722f5fad5	identical
+erWouldGo	8b7bc7f08079	8b7bc7f08079	identical
 erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent

@@ -1,14 +1,15 @@
 # Findings - 23 August 2026, a fold that a relayout quietly undoes
 
-One finding, from driving the diagram window rather than reading it. It is written down because it
-is **not fixed**: which of two behaviours is wanted is a decision about the product, and the
-measurement should not have to be taken a second time to ask the question.
+One finding, from driving the diagram window rather than reading it. It was written down *before*
+being fixed, because which of two behaviours is wanted was a decision about the product and the
+measurement should not have to be taken a second time to ask the question. It was asked, answered,
+and fixed the same day; the note keeps both halves, because the argument is the part that lasts.
 
 It came out of `fastpath x diagrams`. The ER view skips `erLayout()` when `erLaidOut` is already
 true, which is deliberate and says so - «a drawing filter: nothing is laid out again». What the grid
 asks of a fast path is not that it be avoided, but that the slow path agree with it.
 
-## 1. A fold is remembered and stops taking effect - medium, not fixed
+## 1. A fold is remembered and stops taking effect - medium, **fixed 23 August 2026**
 
 **What broke.** Driving the CRM diagram on `graph-crm-schema.json`: switch to ER, fold one branch
 away, read the window's own state; then force the slow path with `erLaidOut = false; erShow()` and
@@ -26,7 +27,16 @@ because `gone` is empty; the badge reads 17 only because nothing refreshed it.
 The layout excluded the box using `erHiddenSet()` *before* it became empty, and the emptiness is a
 consequence of that exclusion. Which number a surface reports depends on when it asked.
 
-**The fix.** None, deliberately, and that is the finding rather than a lapse. Two answers are
+**The fix.** Ivan chose, in those words: **a fold survives a relayout.** The reader took a branch off
+the drawing and changing the depth is not a request to bring it back. `erReach` now takes the set it
+walks as a parameter - offering a fold asks about the drawing, applying one asks about the whole graph
+- and `erFoldedBy` is the one walk that `erHiddenSet` and `erUnhide` both read, because they had the
+same loop twice and only one of them would have learnt this. `tests/graphview.test.mjs` drives a fold,
+moves the drawing under it, and asserts it is still away, still undoable, and still not greedy.
+
+What follows is the reasoning as it stood before the decision, kept because it is the argument.
+
+**Why it was left open.** Two answers are
 defensible and they are different products. Either **a fold survives a relayout** - the reader took a
 branch off the drawing and changing the depth is not a request to bring it back, which means
 `erHiddenSet` must stop depending on `erIds` - or **a relayout is a fresh drawing**, in which case

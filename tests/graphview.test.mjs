@@ -653,12 +653,14 @@ for (const app of ['crm', 'analytics']) {
  */
 function remover(app, ids, edges, focus) {
   const ctx = vm.createContext({
-    erIds: ids.slice(), edgesA: edges.map((e) => e.slice()),
+    // `nodesA` is every box in the graph and `erIds` is what is drawn right now. They are the same
+    // here until a case pulls them apart, which is what a relayout does.
+    erIds: ids.slice(), nodesA: ids.slice(), edgesA: edges.map((e) => e.slice()),
     N: Object.fromEntries(ids.map((i) => [i, { id: i }])),
     curFocus: focus, erCut: new Map(),
   });
   vm.runInContext(sliceConst(`apps/${app}/graphview.js`, 'ekey'), ctx);
-  vm.runInContext(['erReach', 'erWouldGo', 'erHiddenSet', 'erWouldShowSet', 'erWouldShow', 'erUnhide']
+  vm.runInContext(['erReach', 'erWouldGo', 'erFoldedBy', 'erHiddenSet', 'erWouldShowSet', 'erWouldShow', 'erUnhide']
     .map((f) => gfn(app, f)).join('\n\n'), ctx);
   const run = (src) => vm.runInContext(src, ctx);
   return {
@@ -1213,3 +1215,46 @@ test('crm: the status breakdown stops counting a box that was folded away', () =
   ctx.curView = 'graph';
   assert.match(run(), /<b>2<\/b>/, 'the fold is applied where folding does not exist');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A fold survives a relayout.
+//
+// Taking a branch off the drawing is a decision; changing the depth is not a request to bring it
+// back. Chosen over the other defensible answer - that a relayout is a fresh sheet - because the
+// arrangement file already assumes this one: it saves `folds` beside `positions`.
+//
+// Before, it was neither answer. `erHiddenSet` computes the cascade over `erIds`, and after a
+// relayout the folded box is no longer in it - the layout had excluded it using this very set - so
+// the walk found nothing to take away and returned empty. Measured on the real CRM schema fixture:
+// the fold was still recorded, it hid nothing, the box counted as visible again, and the badge said
+// otherwise only because nothing had refreshed it. Which number a surface reported depended on when
+// it asked.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a box folded away is still away after the drawing is laid out again`, () => {
+    // a - b - c, standing on `a`, fold `b` away: `b` and `c` go, because `c` hung off `b`.
+    const r = remover(app, ['a', 'b', 'c'], [['a', 'b'], ['b', 'c']], 'a');
+    r.take('a', 'b', 'b');
+    assert.deepEqual([...r.hidden()].sort(), ['b', 'c'], 'the fold did not take the branch away');
+
+    // The relayout, as the window performs it: what it draws no longer carries what was hidden.
+    r.ctx.erIds = ['a'];
+    assert.deepEqual([...r.hidden()].sort(), ['b', 'c'],
+      'a relayout brought back a box the reader had folded away, while still recording the fold - ' +
+      'so the drawing and the counters disagree, and which one is right depends on when you look');
+
+    // And putting it back still works from the state a relayout leaves - a fold that cannot be
+    // undone is worse than one that does not stick.
+    r.unhide('b');
+    assert.deepEqual([...r.hidden()], [], 'the fold cannot be undone once the drawing has moved');
+  });
+
+  test(`${app}: folding away takes the branch and nothing that stands on its own`, () => {
+    // The other half, on the state a relayout leaves: making a fold unconditional must not make it
+    // greedy. `c` is reachable from `a` without going through `b`, so folding `b` takes only `b`.
+    const r = remover(app, ['a', 'b', 'c'], [['a', 'b'], ['b', 'c'], ['a', 'c']], 'a');
+    r.take('a', 'b', 'b');
+    assert.deepEqual([...r.hidden()], ['b'], 'a fold took a box that has a life of its own');
+    r.ctx.erIds = ['a', 'c'];
+    assert.deepEqual([...r.hidden()], ['b'], 'the fold grew, or shrank, when the drawing was laid out again');
+  });
+}

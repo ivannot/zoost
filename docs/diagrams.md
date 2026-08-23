@@ -495,11 +495,37 @@ sentence is gone. The card offers **both** directions instead, named and counted
 `Hide Invoices`.
 
 **The state is the removals, replayed - not the hidden set.** `erCut` is the arc and the end that went,
-in the order the reader took them away, and `erHiddenSet` replays them against what was on screen when
-each was made. Recomputing rather than storing is what lets a filter change or a new focus re-evaluate
-cleanly; replaying *in order* is what keeps two removals one inside the other from claiming each
-other's boxes, and `erWouldShow` measures the difference so the `+` offers back exactly what its `-`
-took. A removal whose own box has since gone is skipped rather than reinterpreted.
+in the order the reader took them away, and `erHiddenSet` replays them. Recomputing rather than
+storing is what lets a filter change or a new focus re-evaluate cleanly; replaying *in order* is what
+keeps two removals one inside the other from claiming each other's boxes, and `erWouldShow` measures
+the difference so the `+` offers back exactly what its `-` took. A removal whose own box has since
+gone is skipped rather than reinterpreted.
+
+**A fold survives a relayout, and that is a decision rather than a consequence.** Taking a branch off
+the drawing is the reader's decision; changing the depth is not a request to bring it back. The other
+answer was defensible - a relayout is a fresh sheet, folds cleared, the window saying so - and this
+one was chosen because the arrangement file already assumes it: `folds` is saved beside `positions`,
+which reads as a fold belonging to what the reader arranged rather than to one drawing.
+
+What the code did before was neither answer, and it took driving the window to see it. The replay is
+a reachability walk, and it used to run over `erIds` - what is drawn now. After a relayout the folded
+box is no longer in that set, because the layout had excluded it using this very walk, so the walk
+found nothing to take away and returned empty. Measured on `graph-crm-schema.json`: the fold was still
+recorded, it hid nothing, the box counted as visible again, and the badge said 17 only because nothing
+had refreshed it. Which number a surface reported depended on when it asked.
+
+So the two questions are asked over different sets, and `erReach` takes which one as a parameter.
+**Offering** a fold is about the drawing in front of the reader - «this arc would take four boxes
+away» must count the four they can see - and walks `erIds`. **Applying** one is about a decision
+already made and walks the whole graph, so the branch stays away when the depth changes and takes
+with it anything that only ever hung off it. The box the reader clicked goes unconditionally, after
+the walk rather than before it: adding it first would make the walk skip it and answer that nothing
+was ever attached.
+
+`erHiddenSet` and `erUnhide` ran that loop twice, separately, and the day one of them learnt this the
+other did not - the set said the box was away and the unhide could not find who had taken it, so a
+fold became impossible to undo. **A fold that will not come back is worse than one that does not
+stick.** One walk now, `erFoldedBy`, which answers which fold took each box; both read it.
 
 **And the focus can be taken off the drawing, which is why `erUnhide` exists.** The Explorer beside the
 diagram still lists what has been removed - deliberately - so the reader can focus a box that is not

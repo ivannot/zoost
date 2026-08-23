@@ -264,8 +264,20 @@ function erPick(a, b) { erSelEdge = (erSelEdge === ekey(a, b)) ? null : ekey(a, 
 
 function erClearPick() { if (erSelEdge) { erSelEdge = null; erRender(); } }
 
-function erReach(from, skip) {
-  const inPlay = new Set(erIds);
+/** Which boxes `from` can still get to, over a given set.
+ *
+ * The set is a parameter because the two callers ask different questions. **Offering** a fold is
+ * about the drawing in front of the reader - «this arc would take four boxes away» must count the
+ * four they can see - so it walks `erIds`. **Applying** a fold is about a decision they already
+ * made, and a decision cannot be allowed to depend on what happens to be drawn now: it walks the
+ * whole graph, so the branch stays away when the depth changes and takes with it anything that only
+ * ever hung off it.
+ *
+ * Defaulted rather than passed at both sites: the offer is the ordinary case and reads better
+ * without an argument, and the one caller that means something else says so.
+ */
+function erReach(from, skip, base = erIds) {
+  const inPlay = new Set(base);
   const adj = new Map();
   edgesA.forEach(([a, b]) => {
     if (!inPlay.has(a) || !inPlay.has(b)) return;
@@ -280,26 +292,38 @@ function erReach(from, skip) {
   return seen;
 }
 
-function erWouldGo(from, away, gone) {
-  const before = erReach(from, gone);
+function erWouldGo(from, away, gone, base = erIds) {
+  const before = erReach(from, gone, base);
   if (!before.has(away)) return new Set();
-  const after = erReach(from, new Set([...gone, away]));
+  const after = erReach(from, new Set([...gone, away]), base);
   const out = new Set();
   before.forEach((id) => { if (!after.has(id)) out.add(id); });
   return out;
 }
 
+/** What the reader has folded away, and it stays away.
+ *
+ * **A fold survives a relayout.** Taking a branch off the drawing is a decision; changing the depth
+ * is not a request to bring it back. Chosen deliberately over the other defensible answer - that a
+ * relayout is a fresh sheet - because the arrangement file already assumes this one: it saves
+ * `folds` beside `positions`, which reads as folds belonging to what the reader arranged rather than
+ * to one drawing.
+ *
+ * Before, the fold was *remembered and stopped taking effect*, which is neither answer. The cascade
+ * below is computed over `erIds`, and after a relayout the folded box is no longer in it - the
+ * layout had excluded it using this very set - so `erWouldGo` found nothing to take away and
+ * returned empty. Three things were then true at once: the fold was still recorded, it hid nothing,
+ * and the box counted as visible again, while the badge said otherwise only because nothing had
+ * refreshed it. Which number a surface reported depended on when it asked.
+ *
+ * So the box the reader clicked goes unconditionally, and the cascade - everything that hung off it
+ * and nothing else - is still computed from the drawing as it stands. The order matters: `away` is
+ * added **after** `erWouldGo`, because adding it first would make the reachability walk skip it and
+ * answer that nothing was ever attached.
+ */
 function erHiddenSet() {
   if (!erCut.size) return new Set();
-  const gone = new Set();
-  erCut.forEach((away, k) => {
-    const [a, b] = k.split('\u0000');
-    if (!N[a] || !N[b]) return;
-    const from = away === a ? b : a;
-    if (gone.has(from) || gone.has(away)) return;
-    erWouldGo(from, away, gone).forEach((id) => gone.add(id));
-  });
-  return gone;
+  return new Set(erFoldedBy().keys());
 }
 
 function erWouldShowSet(k) {
@@ -340,20 +364,32 @@ function erTipOn(anchor, get) {
   _tipT = setTimeout(() => erTipShow(anchor, set, first, back), 120);
 }
 
+/** Which fold took each box away - one walk, shared by everything that asks about folds.
+ *
+ * `erHiddenSet` and `erUnhide` used to run the same loop twice, separately, and the day one of them
+ * learnt that a fold survives a relayout the other did not: the set said the box was away and the
+ * unhide could not find who had taken it, so a fold became impossible to undo. A fold that will not
+ * come back is worse than one that does not stick.
+ */
+function erFoldedBy() {
+  const gone = new Set(), by = new Map();
+  erCut.forEach((away, k) => {
+    const [a, b] = k.split('\u0000');
+    if (!N[a] || !N[b]) return;
+    const from = away === a ? b : a;
+    if (gone.has(from) || gone.has(away)) return;
+    // Over the whole graph, not over what is drawn: see `erReach`.
+    const went = erWouldGo(from, away, gone, nodesA);
+    went.add(away);
+    went.forEach((x) => { gone.add(x); if (!by.has(x)) by.set(x, k); });
+  });
+  return by;
+}
+
 function erUnhide(id) {
   for (let guard = erCut.size; guard >= 0; guard--) {
-    const gone = new Set();
-    let culprit = null;
-    for (const [k, away] of erCut) {
-      const [a, b] = k.split('\u0000');
-      if (!N[a] || !N[b]) continue;
-      const from = away === a ? b : a;
-      if (gone.has(from) || gone.has(away)) continue;
-      const went = erWouldGo(from, away, gone);
-      went.forEach((x) => gone.add(x));
-      if (went.has(id)) { culprit = k; break; }
-    }
-    if (culprit === null) return;
+    const culprit = erFoldedBy().get(id);
+    if (culprit === undefined) return;
     erCut.delete(culprit);
   }
 }
