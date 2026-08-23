@@ -108,6 +108,7 @@ CLOSED = {
     ("compose", "diagrams"):  ("tests/panel.test.mjs: diagram defaults saved in Settings are applied by either graph", "planted 2026-08-23"),
     ("copy", "crm-panel"):    ("tests/panel.test.mjs: a constant declared in two scripts of one product is not two lists", "planted 2026-08-23"),
     ("compose", "crm-panel"):("tests/panel.test.mjs: every area the panel reports on is an area the panel can record", "planted 2026-08-24"),
+    ("fake", "crm-ai"):      ("tests/panel.test.mjs: the model stream is assembled by index, across whatever chunks arrive", "planted 2026-08-24"),
     ("fake", "bridges"):     ("tests/panel.test.mjs: the bridge answers Zoho four ways, and none of them was ever tried", "planted 2026-08-24"),
     ("copy", "bridges"):     ("tests/tools_test.py: the two halves of live sync reach the same pages", "planted 2026-08-24"),
     ("copy", "an-panel"):    ("tests/panel.test.mjs: every export scope has a box to untick it, and every box is a scope", "planted 2026-08-24"),

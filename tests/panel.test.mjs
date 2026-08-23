@@ -12367,3 +12367,112 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
   await assert.rejects(() => api('/crm/../../etc/passwd', 'crm'), /malformed request path/,
     'a malformed path is sent to Zoho instead of being refused here');
 });
+
+// ---------------------------------------------------------------------------------------------
+// Everything the model says arrives through one parser, and the parser had never been run.
+//
+// `aiStreamAnthropic` reads a server-sent-event stream off a socket and assembles it into content
+// blocks: text that is shown as it arrives, and `tool_use` blocks whose arguments come in as JSON
+// fragments across many events, keyed by the block's index. Then the agent loop runs the tools and
+// sends the results back.
+//
+// The only stand-in for the model anywhere in the suite is `aiRunAnthropicAgent: async () => {}`.
+// So the stream reader - the byte-level part, the one place a wrong index or a chunk boundary turns
+// an answer into a different answer - was exercised by nothing at all. Measured by writing every
+// block into slot 0: the battery green but for the twin ledger noticing a body had moved. Two tool
+// calls in one turn would then have their arguments spliced into one, and the second tool would be
+// called with the first one's input or not at all.
+//
+// What is faked here is the socket, which is the thing that is genuinely not ours; the parser is the
+// shipped one. The chunks are split **mid-event on purpose**, because a network read boundary falls
+// where it likes and a parser that only works on whole events is a parser that works in a test.
+//
+// **The limits, stated.** It drives the reader, not the agent loop around it: what happens after a
+// `tool_use` is assembled is `aiRunAnthropicAgent`'s business and is not covered here. And it asserts
+// the shape of what comes back, not the wording of a message - the wording is the panel's.
+test('crm: the model stream is assembled by index, across whatever chunks arrive', async () => {
+  const sse = (events) => events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join('');
+  // A body that hands out exactly the byte runs it is given, so a boundary can be put anywhere.
+  const bodyOf = (text, cuts) => {
+    const enc = new TextEncoder();
+    const parts = [];
+    let at = 0;
+    for (const c of [...cuts, text.length]) { parts.push(text.slice(at, c)); at = c; }
+    let i = 0;
+    return { getReader: () => ({ read: async () => (i < parts.length
+      ? { value: enc.encode(parts[i++]), done: false } : { value: undefined, done: true }) }) };
+  };
+
+  const stream = sse([
+    ['content_block_start', { index: 0, content_block: { type: 'text' } }],
+    ['content_block_delta', { index: 0, delta: { type: 'text_delta', text: 'Looking' } }],
+    ['content_block_delta', { index: 0, delta: { type: 'text_delta', text: ' it up.' } }],
+    ['content_block_stop', { index: 0 }],
+    ['content_block_start', { index: 1, content_block: { type: 'tool_use', id: 'a', name: 'get_function' } }],
+    ['content_block_delta', { index: 1, delta: { type: 'input_json_delta', partial_json: '{"name":"ns' } }],
+    ['content_block_start', { index: 2, content_block: { type: 'tool_use', id: 'b', name: 'who_calls' } }],
+    ['content_block_delta', { index: 2, delta: { type: 'input_json_delta', partial_json: '{"name":"other"}' } }],
+    ['content_block_delta', { index: 1, delta: { type: 'input_json_delta', partial_json: '.fn"}' } }],
+    ['content_block_stop', { index: 1 }],
+    ['content_block_stop', { index: 2 }],
+    ['message_delta', { delta: { stop_reason: 'tool_use' } }],
+  ]);
+  // Cut in three places that are all wrong on purpose: inside a JSON payload, between the two
+  // newlines that end an event, and inside a multi-byte character would be the fourth if the
+  // fixture carried one - it does not, and that is a limit rather than a claim.
+  const cuts = [Math.floor(stream.length / 3), stream.indexOf('"}\n\n') + 3, stream.length - 12];
+
+  let seen = '';
+  const g = {
+    TextDecoder, JSON, Object, Array, String, Error, Promise, console,
+    fetch: async () => ({ ok: true, body: bodyOf(stream, cuts.filter((c) => c > 0).sort((a, b) => a - b)) }),
+  };
+  const { aiStreamAnthropic } = load([
+    sliceFn('apps/crm/ai.js', 'aiTrunc'),
+    sliceFn('apps/crm/ai.js', 'aiStreamAnthropic'),
+  ], g);
+
+  const out = await aiStreamAnthropic({ apiKey: 'k', model: 'm' }, [], 's', [], (t) => { seen += t; });
+  // Through JSON before comparing: the slice runs in a vm context, so its arrays and objects have
+  // that realm's prototypes and `deepStrictEqual` refuses two structures that print identically.
+  // Read back at the time: the printed «actual» and «expected» were the same text.
+  const plain = (x) => JSON.parse(JSON.stringify(x));
+
+  assert.equal(seen, 'Looking it up.',
+    `the text shown as it arrives came out as «${seen}» - a chunk boundary changed what the reader saw`);
+  assert.equal(out.stop_reason, 'tool_use', 'the stop reason was lost, so the agent loop stops after one turn');
+  const tools = out.content.filter((b) => b.type === 'tool_use');
+  assert.equal(tools.length, 2, `${tools.length} tool call(s) came back out of two - blocks are being merged`);
+  assert.deepEqual(plain(tools.map((t) => [t.id, t.name, t.input])), [
+    ['a', 'get_function', { name: 'ns.fn' }],
+    ['b', 'who_calls', { name: 'other' }],
+  ], 'a tool call came back with another call\'s arguments - the fragments are not keyed by index');
+  assert.deepEqual(plain(out.content.filter((b) => b.type === 'text').map((b) => b.text)), ['Looking it up.'],
+    'the text block was lost or duplicated');
+
+  // A block whose JSON never completes comes back with an empty input rather than a fragment or a
+  // throw: the model is not ours and a truncated stream must not take the panel down with it.
+  // Measured while writing this: removing the `try` around `JSON.parse` changes nothing here,
+  // because the whole `handle()` call already sits inside one - so this asserts the outcome and
+  // **not** that inner guard, which no test can distinguish. Said rather than implied.
+  const broken = sse([
+    ['content_block_start', { index: 0, content_block: { type: 'tool_use', id: 'c', name: 'who_calls' } }],
+    ['content_block_delta', { index: 0, delta: { type: 'input_json_delta', partial_json: '{"name":' } }],
+    ['content_block_stop', { index: 0 }],
+  ]);
+  g.fetch = async () => ({ ok: true, body: bodyOf(broken, []) });
+  const { aiStreamAnthropic: again } = load([
+    sliceFn('apps/crm/ai.js', 'aiTrunc'), sliceFn('apps/crm/ai.js', 'aiStreamAnthropic'),
+  ], g);
+  const half = await again({ apiKey: 'k', model: 'm' }, [], 's', [], () => {});
+  assert.deepEqual(plain(half.content), [{ type: 'tool_use', id: 'c', name: 'who_calls', input: {} }],
+    'a tool call whose arguments were cut short is no longer answered with an empty input');
+
+  // And a refusal is a refusal: the status and what the endpoint said, not a silent empty answer.
+  g.fetch = async () => ({ ok: false, status: 429, text: async () => 'slow down' });
+  const { aiStreamAnthropic: refused } = load([
+    sliceFn('apps/crm/ai.js', 'aiTrunc'), sliceFn('apps/crm/ai.js', 'aiStreamAnthropic'),
+  ], g);
+  await assert.rejects(() => refused({ apiKey: 'k', model: 'm' }, [], 's', [], () => {}),
+    /429[\s\S]*slow down/, 'a refused request no longer carries the status and what was said');
+});
