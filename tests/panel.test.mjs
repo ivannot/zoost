@@ -1109,7 +1109,9 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
     label: (n) => n.api_name,
     computeMaxDepth() { focused = focused || 'reached'; },
     updateDepthUI() {}, updateScopeUI() {}, updateTopTools() {}, egoStat() {}, erRender() {}, draw() {},
-    bfsEgo() {}, updateBack() {}, erShow() {},
+    // `erShowMaybeHeavy` beside `erShow`: every relayout path goes through the wrapper now, so a
+    // stub that offers only the inner one throws where the real window would not.
+    bfsEgo() {}, updateBack() {}, erShow() {}, erShowMaybeHeavy() {},
     // setFocus also puts back whatever removal had taken the new focus off the drawing - a free
     // variable, and a slice runs in a bare context. Stubbed here on purpose: this case is about the
     // refusal above, and erUnhide has its own case in tests/graphview.test.mjs, running the real one.

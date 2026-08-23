@@ -25,7 +25,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, read, load } from './slice.mjs';
+import { sliceFn, sliceConst, read, load, blankNonCode } from './slice.mjs';
 import vm from 'node:vm';
 
 /** A named function out of the graph window, wherever it now lives.
@@ -1363,5 +1363,62 @@ for (const app of ['crm', 'analytics']) {
     vm.runInContext('collideBoxes(erIds, 36, erPinnedNow(new Set()))', ctx);
     const moved = ctx.erPos.a.x !== 100 || ctx.erPos.a.y !== 100 || ctx.erPos.b.x !== 120 || ctx.erPos.b.y !== 110;
     assert.ok(moved, `id=${app}: two overlapping boxes were left overlapping with nothing pinned`);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Every relayout goes through the spinner, in both products.
+//
+// `SPIN_NODES` was derived as «show it when the work is around a third of a second», and
+// `erShowMaybeHeavy` is what decides. The CRM called it on both relayout paths - a slider moved,
+// Emphasis toggled - and Analytics called `erShow` directly on both, so on a workspace past the
+// ceiling (its own comment names a real one of 377 views) the force settle and the collision passes
+// ran on the main thread with nothing on screen and no repaint.
+//
+// `twincheck` could not see it: both functions were already in the ledger as `divergent`, and once a
+// pair is recorded, *which* line differs is invisible. That is the blind spot the ledger buys, and
+// this is the shape it hides.
+//
+// Derived: a relayout is `erLaidOut = false`, and every place that sets it must reach the wrapper
+// rather than the drawing. The limit is stated - it reads the assignment and the call in the same
+// statement or the next, so a relayout split across a function boundary is not seen.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a relayout is offered the spinner rather than run bare`, () => {
+    const src = blankNonCode(read(`apps/${app}/graphview.js`));
+    const bare = [];
+    let relayouts = 0;
+    // What follows the flag, not the next identifier: `erLaidOut = false;` is followed by
+    // `if (curView === 'er') erShowMaybeHeavy();` on most of these, and capturing the next word
+    // captured `if` - so a corrected site read as a defect and the check could never go green.
+    // `(?<!let )` : the declaration `let erLaidOut = false, erAll = false, ...` is not a relayout,
+    // and counting it as one meant the check could not be satisfied at all.
+    for (const m of src.matchAll(/(?<!let )erLaidOut = false;?/g)) {
+      relayouts++;
+      // To the end of the enclosing function, not a fixed window: the call is often five comment
+      // lines below the flag, and the scanner blanks a comment to spaces of the same length, so any
+      // number picked here is a number that will be wrong the next time somebody explains something.
+      const stop = src.indexOf('\n}', m.index);
+      if (/erShowMaybeHeavy\s*\(/.test(src.slice(m.index, stop < 0 ? src.length : stop))) continue;
+      // **Or the enclosing function paints the frame itself.** `setScopeAll` defers its whole body
+      // through `runHeavy` and then calls `erShow` inside it, which is the same guarantee reached
+      // another way - and the first version of this reported it, which would have been a check
+      // demanding one spelling of a thing rather than the thing.
+      const at = Math.max(src.lastIndexOf('\nfunction ', m.index), src.lastIndexOf('\nconst ', m.index),
+                          src.lastIndexOf('\n$(', m.index));
+      // The **whole** enclosing function, not the text before the match: `setScopeAll` builds its
+      // `work` closure first and hands it to `runHeavy` four lines later, so looking backwards found
+      // nothing and reported a site that is behind a painted frame.
+      const end = src.indexOf('\n}', m.index);
+      const body = src.slice(Math.max(0, at), end < 0 ? src.length : end);
+      if (/runHeavy\(/.test(body)) continue;
+      // And `erShow` itself is what the wrapper wraps: the flag it sets when the graph turns out too
+      // wide to draw is a fallback inside the work, not a request for more of it.
+      if (/^\n(?:async )?function erShow\(/.test(src.slice(at, at + 24))) continue;
+      bare.push(`line ${src.slice(0, m.index).split('\n').length}`);
+    }
+    assert.ok(relayouts >= 2, `id=${app}: only ${relayouts} relayout(s) found - the derivation broke`);
+    assert.deepEqual(bare, [],
+      `id=${app}: these lay the diagram out again without offering the spinner, so a large workspace ` +
+      `freezes with nothing on screen: ${bare.join(', ')}`);
   });
 }

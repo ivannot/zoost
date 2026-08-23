@@ -1177,7 +1177,11 @@ function setFocus(id) {
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
+  // Changing the focus lays the diagram out again, which is the work `SPIN_NODES` was measured
+  // against - and this ran it bare, in both products, so a focus taken on a large graph froze the
+  // window with the previous drawing still up. The wrapper decides whether a spinner is warranted;
+  // calling it unconditionally is not a cost, because below the ceiling it is one frame.
+  if (curView === 'er') erShowMaybeHeavy(); else if (curView === 'rel') relRender();
 }
 // `nameMode` decides what a node is called - the display label or the internal api_name - and it
 // feeds label(), which the list and the boxes both use. Its button lived in the toolbar of the
@@ -2340,12 +2344,7 @@ function erParamsToUI() {
   ER_CTL.forEach(([sl, lb, k]) => { const e = $(sl); if (e) { e.value = erP[k]; $(lb).textContent = k === 'spread' ? (erP[k] / 10).toFixed(1) : erP[k]; } });
   const cb = $('pSub'); if (cb) cb.checked = !!erP.sub;
 }
-function erApplyParams(relayout) {
-  if (_erT) clearTimeout(_erT);
-  _erT = setTimeout(() => {
-    if (relayout) { erLaidOut = false; erShowMaybeHeavy(); } else { erRender(); }
-  }, 110);
-}
+// erApplyParams lives in graphlogic.js: identical in both windows and touching no element.
 function erInitControls() {
   ER_CTL.forEach(([sl, lb, k]) => {
     const e = $(sl); if (!e) return;

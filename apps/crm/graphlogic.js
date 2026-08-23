@@ -249,7 +249,9 @@ function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
   updateDepthUI(); bfsEgo(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
+  // Changing the depth is the most expensive thing this window does after opening, and it ran bare:
+  // the wrapper is what decides whether the work warrants a painted frame. See `erShowMaybeHeavy`.
+  if (curView === 'er') erShowMaybeHeavy(); else if (curView === 'rel') relRender();
 }
 
 function clearFocus() {
@@ -257,7 +259,19 @@ function clearFocus() {
   curFocus = null; scopeAll = false; egoSet = null; egoLevel = {}; erCut = new Map();
   updateScopeUI(); erLaidOut = false;
   graphStat();
-  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
+  if (curView === 'er') erShowMaybeHeavy(); else if (curView === 'rel') relRender();
+}
+
+function erApplyParams(relayout) {
+  if (_erT) clearTimeout(_erT);
+  _erT = setTimeout(() => {
+    // `erShowMaybeHeavy`, not `erShow`: this is a relayout, which is the work `SPIN_NODES` was
+    // measured against. The CRM twin called it here and the Analytics one did not, so on a workspace
+    // past the ceiling - `graphview.js`'s own comment names a real one of 377 views - dragging a
+    // slider ran the force settle and the collision passes on the main thread with nothing on screen
+    // and no repaint. Two products, one input, one of them saying nothing.
+    if (relayout) { erLaidOut = false; erShowMaybeHeavy(); } else { erRender(); }
+  }, 110);
 }
 
 function erPick(a, b) { erSelEdge = (erSelEdge === ekey(a, b)) ? null : ekey(a, b); erRender(); }
@@ -789,7 +803,7 @@ function erApplyArrangement(file) {
     erCut.set(ekey(a, b), away);
   });
   erLaidOut = false;
-  erShow();
+  erShowMaybeHeavy();
   // Framed, not restored: where the reader was looking is not part of what they built, but a drawing
   // they cannot see is not an arrangement either.
   erFit();

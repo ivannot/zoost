@@ -43,7 +43,7 @@ buildReport	3de3b69b14b5	3de3b69b14b5	identical
 buildSchemaGraph	fbecf3b254ed	ee1997168a94	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
-clearFocus	e18fb77e57ea	e18fb77e57ea	identical
+clearFocus	e0db54dca347	e0db54dca347	identical
 closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	ce1a122bff29	ce1a122bff29	identical
 closeHealth	33e8c3372102	39acab54b873	divergent
@@ -63,8 +63,8 @@ ensureBridge	a35079849aae	e7f9159cd83c	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
 entitiesPresent	59df72b07997	59df72b07997	identical
 erApply	e2898a2b70d1	e2898a2b70d1	identical
-erApplyArrangement	912e0085838c	912e0085838c	identical
-erApplyParams	855ddbf1dd6a	657eff579e44	divergent
+erApplyArrangement	caecec884389	caecec884389	identical
+erApplyParams	855ddbf1dd6a	855ddbf1dd6a	identical
 erArrName	fb4966beb8b1	fb4966beb8b1	identical
 erArrState	07de36616551	07de36616551	identical
 erArrWorkspace	ed1ae517ed23	ed1ae517ed23	identical
@@ -205,8 +205,8 @@ scopeToUI	f35c4710f682	13ff88ae9736	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical
 select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	4f2534e0811c	4f2534e0811c	identical
-setDepth	3206752ae3ec	3206752ae3ec	identical
-setFocus	a5fe49c5cb0d	afe3da2e18b3	divergent
+setDepth	770f0a0cfad3	770f0a0cfad3	identical
+setFocus	a8444d56b280	fbd29419ae8c	divergent
 setPullBusy	14aabfcaebc3	ce2ae8471a4f	divergent
 setReportFallback	f9d85a9ab235	7ef979cd431d	divergent
 setScope	12561489336e	92b65c48afac	divergent
