@@ -155,21 +155,44 @@ let aiActCache = null;
  *  rather than a scope tick, because a chat has no dialog to tick: the export asks per file, this
  *  asks once. Off unless the user turned it on - the mirror keeps the address either way, and what
  *  is at stake here is whether it leaves the machine. */
-/** A webhook's address, with the part that is usually a secret taken off.
+/** A webhook's address, reduced to the host.
  *
- *  A Zoho CRM webhook URL routinely carries a token or an API key in its query string, and this text
- *  is sent to Anthropic or OpenAI. It was the *ungated* field: the sender's email address beside it
- *  is behind a switch that is off by default, and the webhook went whole. The model has no use for
- *  the query - what it answers about is «which rule calls out, and where» - so the host and the path
- *  travel and the query is replaced by a mark that says something was there. The panel and the
- *  exports still show it in full: those are the reader's own screen and a file they choose to hand
- *  over. Found by a review of the boundary.
+ *  A Zoho CRM webhook URL routinely carries a credential, and this text is sent to Anthropic or
+ *  OpenAI. It is the *ungated* field: the sender's email address beside it is behind a switch that
+ *  is off by default, and the webhook went whole.
+ *
+ *  This said «the query string is where the secret is» and took off the query string alone - a limit
+ *  whose reason described less ground than the limit claimed. Slack, Teams, Discord, Zapier and Make
+ *  put the entire posting credential in the **path**, with no query at all, so those went to the
+ *  provider intact. What the model answers about is «which rule calls out, and where», and the host
+ *  is the whole of that. The panel and the exports still show the address in full: those are the
+ *  reader's own screen and a file they choose to hand over.
  */
 function webhookForModel(url) {
   const u = String(url || '');
   if (!u) return '';
-  const cut = u.search(/[?#]/);
-  return cut < 0 ? u : `${u.slice(0, cut)}?(query withheld)`;
+  // **The host, and nothing after it.** This withheld the query string only, on the stated premise
+  // that «a Zoho CRM webhook URL routinely carries a token or an API key in its query string». True,
+  // and not the whole truth: Slack, Teams, Discord, Zapier and Make all put the entire posting
+  // credential **in the path** - `https://hooks.slack.com/services/T…/B…/8f3a…` has no query at all
+  // and went to the AI provider whole. A limit whose reason describes less ground than the limit
+  // claims, which is a shape this repository has recorded before.
+  //
+  // What is left is what the reader gets an answer out of - «this posts to hooks.slack.com» - and it
+  // is the one field on this path with no per-item decision behind it, unlike the sender address,
+  // which is behind a switch that is off by default.
+  //
+  // `new URL` alone is not the test. It accepts `httpX://%%%/x` - any scheme parses - and answers an
+  // origin of the string «null», which comes out as `null/(rest withheld)`: a shape that reads like
+  // an answer and is not one. The scheme and a real host are both required, and anything else is
+  // withheld whole rather than half-described.
+  try {
+    const p = new URL(u);
+    if ((p.protocol !== 'https:' && p.protocol !== 'http:') || !p.hostname) return '(webhook address withheld)';
+    return p.pathname === '/' && !p.search && !p.hash ? p.origin : `${p.origin}/(rest withheld)`;
+  } catch (_) {
+    return '(webhook address withheld)';
+  }
 }
 async function shareAddresses() {
   try { const c = await chrome.storage.local.get('aicfg'); return !!(c.aicfg && c.aicfg.shareAddresses); }
@@ -362,12 +385,11 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // export emits neither. The door nobody thought to close, in the block whose comment says
         // exactly that. Found by a review of this file.
         const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
-        // And the webhook's query string, for the same reason and by the same helper `list_actions`
-        // uses one screen over. `webhookForModel`'s own docstring names this threat - «a Zoho CRM
-        // webhook URL routinely carries a token or an API key in its query string, and this text is
-        // sent to Anthropic or OpenAI» - and the fix went into the tool that lists them and not into
-        // the block that focuses one. `{ ...e }` sends the row whole, so every field carrying a
-        // secret has to be named here: the sender was named, the URL beside it was not.
+        // And the webhook's address, for the same reason and by the same helper `list_actions` uses
+        // one screen over. `webhookForModel`'s own docstring names this threat, and the fix went
+        // into the tool that lists them and not into the block that focuses one. `{ ...e }` sends
+        // the row whole, so every field carrying a secret has to be named here: the sender was
+        // named, the URL beside it was not.
         //
         // Unlike the sender there is no setting: the query is withheld always. What the model
         // answers about is which rule calls out and where, and the host and the path say that.

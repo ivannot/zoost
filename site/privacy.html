@@ -214,8 +214,8 @@
       content it needs to answer you is sent directly from your browser to the provider you selected,
       Anthropic or OpenAI. For Zoost CRM that content is <b>Deluge source code</b>, module schemas,
       workflow definitions, schedules, automation actions (their names, kinds, the field an update writes
-      and the value it writes, and a webhook's method, host and path - never its query string, which is
-      where a token usually sits), connection names and their connectors (never their secrets or tokens,
+      and the value it writes, and a webhook's method and host - never its path
+      or its query string, either of which can be the whole of a posting credential), connection names and their connectors (never their secrets or tokens,
       which Zoost never reads), what Zoho reports about <b>failed executions</b> - function names, Zoho's
       own reason text, run counts and credit usage - the name Zoho records against a function or a
       connection as having last changed it, and your questions. Sender addresses on an email action are

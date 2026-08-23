@@ -324,15 +324,26 @@ for (const [app, sample] of [['crm', { label: 'Acme production', instance: 'acme
 // over deliberately; the AI path is the one that leaves without a per-item decision. So what travels
 // there is decided field by field, and each of these was found travelling when it should not.
 
-test('crm: a webhook URL reaches the model without its query string', () => {
-  // A Zoho webhook URL routinely carries a token in its query, and this was the *ungated* field -
-  // beside a sender address that is behind a switch which is off by default.
-  const { webhookForModel } = load([sliceFn('apps/crm/ai.js', 'webhookForModel')]);
+test('crm: a webhook URL reaches the model as a host and nothing else', () => {
+  // A Zoho webhook URL routinely carries a token, and this was the *ungated* field - beside a sender
+  // address that is behind a switch which is off by default.
+  //
+  // It withheld the **query string** only, and this test asserted that a URL without one passed
+  // through unchanged - so the gap was not merely uncovered, it was written down as intended
+  // behaviour. Slack, Teams, Discord, Zapier and Make all put the whole posting credential in the
+  // **path**: `https://hooks.slack.com/services/T…/B…/8f3a…` has no query at all. What the model
+  // needs to answer a question is the host; nothing after it is worth a credential.
+  const { webhookForModel } = load([sliceFn('apps/crm/ai.js', 'webhookForModel')], { URL });
   assert.equal(webhookForModel('https://hooks.example.com/x?token=SECRET'),
-               'https://hooks.example.com/x?(query withheld)');
+               'https://hooks.example.com/(rest withheld)');
   assert.equal(webhookForModel('https://hooks.example.com/x#frag=SECRET'),
-               'https://hooks.example.com/x?(query withheld)');
-  assert.equal(webhookForModel('https://hooks.example.com/x'), 'https://hooks.example.com/x');
+               'https://hooks.example.com/(rest withheld)');
+  assert.equal(webhookForModel('https://hooks.slack.com/services/T00000000/B00000000/8f3aSECRET'),
+               'https://hooks.slack.com/(rest withheld)',
+               'the whole of a Slack posting credential is in the path, and it travelled');
+  assert.equal(webhookForModel('https://hooks.example.com'), 'https://hooks.example.com');
+  // Not a URL we can parse is not a URL we can redact.
+  assert.equal(webhookForModel('httpX://%%%/not-a-url'), '(webhook address withheld)');
   assert.equal(webhookForModel(null), '');
   const src = read('apps/crm/ai.js');
   assert.ok(!/a\.kind === 'webhooks' \? ` \$\{a\.method \|\| ''\} \$\{a\.url/.test(src),

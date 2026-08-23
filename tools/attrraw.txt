@@ -7,7 +7,7 @@
 68f3feec399e35c4  apps/analytics/graphview.js:1433: class="${lk}" is not attribute-escaped
 218d6dfd58005ebf  apps/analytics/sidepanel.js:2816: class="${m.role}" is not attribute-escaped
 3bf63fee64be6cea  apps/analytics/sidepanel.js:3035: href="${x.id}" is not attribute-escaped
-8a035f833293c02f  apps/crm/ai.js:753: class="${m.role}" is not attribute-escaped
+8a035f833293c02f  apps/crm/ai.js:775: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:220: class="${stCls}" is not attribute-escaped
 a1753a7e13b0ab15  apps/crm/export.js:110: href="${fnAnchor(api)}" is not attribute-escaped
 88bb09f1b1fe606a  apps/crm/export.js:145: href="${wfAnchor(w.id)}" is not attribute-escaped
