@@ -36,6 +36,13 @@ CLASSES = [
     ("fastpath",  "a fast path that makes an answer differ from the slow path"),
     ("claim",     "prose that outlived the code it describes"),
     ("blindspot", "a check reporting zero over a surface it never reads"),
+    # The three added on 23 August 2026, after five outside sweeps of a grid that was 87 of 87
+    # closed. Not one of the nine above produced an instance in that audit - the reviewers looked
+    # and reported clean - and about thirty findings came out anyway, every one of them of these
+    # three shapes. A class is added the day a defect nobody predicted arrives; three arrived at once.
+    ("compose",   "two parts each correct, and the defect is in the composition"),
+    ("copy",      "a list the code holds, written out again by hand somewhere else"),
+    ("fake",      "a stub or fixture kinder than the thing it stands for"),
 ]
 
 # The product, in the units somebody works on. Not files: a defect lives in an area.
@@ -56,6 +63,14 @@ SURFACES = [
 # Cells where a class cannot occur on that surface. Each owes a reason, like every other declared
 # exception here.
 NA = {
+    # `compose` needs two parts that can be changed independently, `copy` needs a list the code holds,
+    # `fake` needs something standing in for something else. Where a surface has none of those, it is
+    # declared here rather than left to be wondered about.
+    ("fake", "site"): "static pages stand in for nothing",
+    ("fake", "store"): "prose stands in for nothing",
+    ("fake", "worker"): "no fixture: the Worker is exercised against real shapes in tests/worker.test.mjs",
+    ("copy", "worker"): "it holds the lists; nothing here restates one",
+    ("compose", "store"): "prose has no parts that compose",
     ("await", "site"): "static pages; no async state",
     ("await", "store"): "prose",
     ("workspace", "worker"): "no workspace exists there",
@@ -88,6 +103,13 @@ EXAMINED = {
 # **Only a plant seen to fail first closes a cell.** An opinion that something is probably covered is
 # an open cell with a comment attached, which is the thing this grid exists to stop.
 CLOSED = {
+    # The three new classes, where a plant was seen to fail first *today* - recorded rather than
+    # re-derived tomorrow. Everything else in those three rows is open.
+    ("compose", "diagrams"):  ("tests/panel.test.mjs: diagram defaults saved in Settings are applied by either graph", "planted 2026-08-23"),
+    ("copy", "site"):         ("tests/tools_test.py: the site names every assistant tool, and every tab where its siblings are", "planted 2026-08-23"),
+    ("copy", "options"):      ("tests/panel.test.mjs: Settings can set every export scope the panel offers", "planted 2026-08-23"),
+    ("copy", "crm-export"):   ("tests/panel.test.mjs: both reports carry the run counts and the credit reading", "planted 2026-08-23"),
+    ("fake", "tools"):        ("tools/probe.py sends what the bridge sends; tests/panel.test.mjs builds the cache from it", "planted 2026-08-23"),
     ("await", "crm-panel"):   ("tools/asynccheck.py + tools/asyncglobals.txt", "planted 2026-08-20"),
     ("await", "an-panel"):    ("tools/asynccheck.py", "planted 2026-08-20"),
     ("await", "options"):     ("tests/panel.test.mjs: an overtaken loader publishes nothing", "planted 2026-08-23"),
