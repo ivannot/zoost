@@ -6353,5 +6353,87 @@ class FigureCaptionsNameTheirOwnChapter(unittest.TestCase):
         self.assertEqual(wrong, [], 'these send a reader to the wrong chapter:\n  ' + '\n  '.join(wrong))
 
 
+class EveryStoredKeyIsAccountedFor(unittest.TestCase):
+    """What the extensions write down is what the privacy page describes.
+
+    Three things were stored and in no row: the heights the reader drags the preview and detail panes
+    to, the timestamp the settings page writes so an open panel knows to re-read, and the Analytics
+    export defaults - which live in IndexedDB while the page put «export defaults» under
+    `chrome.storage.local`, true of the CRM only.
+
+    None of the three is sensitive, and that is exactly why they went unlisted for so long: nobody
+    weighs a pane height. But a privacy page is a claim to be *complete*, and a reader who finds a
+    key in DevTools that the page does not mention has no way to tell «too small to list» from «not
+    disclosed». The value of the page is that the question never arises.
+
+    Derived from the code: every key written to `chrome.storage.local`, `chrome.storage.session` or
+    IndexedDB, in either product, must be **named** in the page - and `KNOWN_AS` is where a key whose
+    row calls it something a reader would recognise says so, with the row's own words. That table is
+    a translation, not an exemption: a key missing from it *and* from the page is a finding.
+
+    **The limit, stated:** it reads the key at a literal `set({ key` or `idbHandle.set('key'`, so a
+    key whose name is computed is invisible here. There is none today.
+    """
+
+    # A key the page describes in the reader's words rather than the code's. The phrase is what the
+    # page must contain, so changing the row breaks this rather than passing silently.
+    KNOWN_AS = {
+        'aicfg': 'AI engine choice',
+        'erParams': 'diagram layout settings',
+        'erDrawMax': 'diagram layout settings',
+        'exportScope': 'export defaults',
+        'exportScopeAnalytics': 'export defaults',
+        'rxShortcuts': 'saved search patterns',
+        'sampleWs': 'the sample workspace',
+        'tabPrefs': 'which side-panel tabs you show',
+        'tabAccessView': 'access record',
+        'zohoDc': 'fallback Zoho data centre',
+        'rootDir': 'handle for the working folder',
+        'activeWs': 'which workspace was last active',
+        'activeWsAnalytics': 'which workspace was last active',
+        'previewH': 'preview and detail panes',
+        'detailH': 'preview and detail panes',
+        'settingsStamp': 'timestamp the settings page writes',
+        'aikeys': 'unlocked',
+        'graphData': 'the drawing it is given',
+    }
+
+    def written(self):
+        keys = {}
+        for f in sorted((ROOT / 'apps').glob('*/*.js')):
+            src = f.read_text(encoding='utf-8')
+            for m in re.finditer(r"storage\.(?:local|session)\.set\(\{\s*\[?([A-Za-z_]\w*)", src):
+                name = m.group(1)
+                # `set({ [SESSION]: ... })` writes the *value* of a constant, not the word. Resolved
+                # from the same file, because a check that reports the identifier is reporting the
+                # code's private name for something the page cannot be expected to use.
+                const = re.search(rf"^\s*const {re.escape(name)} = '([\w-]+)';", src, re.M)
+                keys.setdefault(const.group(1) if const else name, set()).add(f.parent.name)
+            for m in re.finditer(r"idbHandle\.set\('([\w]+)'", src):
+                keys.setdefault(m.group(1), set()).add(f.parent.name)
+        return keys
+
+    def test_the_derivation_finds_the_keys(self):
+        keys = self.written()
+        self.assertGreater(len(keys), 8, f'only {len(keys)} stored key(s) found - the derivation broke')
+
+    def test_every_key_is_described_on_the_privacy_page(self):
+        # Whitespace collapsed: the page wraps its prose, and «the sample\n          workspace» is the
+        # same sentence as «the sample workspace». Searching the raw file reported two rows that are
+        # there, which is a check misreading its own subject.
+        page = ' '.join((ROOT / 'site' / 'privacy.html').read_text(encoding='utf-8').split())
+        unlisted = []
+        for key in sorted(self.written()):
+            if key in page:
+                continue
+            phrase = self.KNOWN_AS.get(key)
+            if phrase and phrase in page:
+                continue
+            unlisted.append(key if not phrase else f'{key} (described as "{phrase}", which is not on the page)')
+        self.assertEqual(unlisted, [],
+                         'these are written to the reader\'s machine and the privacy page describes '
+                         f'none of them, so «not listed» and «not disclosed» look the same: {unlisted}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
