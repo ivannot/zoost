@@ -5062,7 +5062,13 @@ class TheGridSaysHowFarAlongItIs(unittest.TestCase):
 
     def test_it_hands_over_the_next_subject(self):
         out = self.report()
-        m = re.search(r'next commit subject:\s+Cell (\d+) of (\d+):', out)
+        # **Both forms.** The counter has been dropped twice: once moved into the body as a bare
+        # remainder, once left off entirely on a commit that recorded a cell as examined rather than
+        # closed. Each time `git log --oneline` stopped showing progress. A tool that hands over only
+        # the closing form invites the second of those again.
+        self.assertRegex(out, r'Cell \d+ of \d+, examined:',
+                         f'no subject is offered for a commit that examines a cell:\n{out}')
+        m = re.search(r'Cell (\d+) of (\d+): <what broke>', out)
         self.assertIsNotNone(m, f'the tool does not hand over a subject line:\n{out}')
         n, total = int(m.group(1)), int(m.group(2))
         self.assertLessEqual(n, total, 'the next cell is past the end of the grid')

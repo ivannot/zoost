@@ -227,7 +227,17 @@ def main() -> int:
     # Printed rather than remembered, because the form drifted once by being remembered. The
     # denominator moves when a cell is declared not-applicable, which is why it is derived here and
     # not typed: the earlier subjects say «of 80» and were right when they were written.
-    print(f"\n  next commit subject:  Cell {len(CLOSED) + 1} of {len(all_cells)}: <what broke>")
+    # Both forms, because the counter has now been dropped twice - once by moving it out of the
+    # subject into the body as a bare remainder, and once by leaving it off entirely on a commit that
+    # recorded a cell as *examined* rather than closed. Both times `git log --oneline` stopped showing
+    # progress and the run read as work trailing off. Both reported by Ivan, reading the log.
+    #
+    # A cell that is examined does not advance the numerator, and the subject says so rather than
+    # borrowing the number of the cell that will be closed next.
+    print(f"\n  next commit subject, if it CLOSES a cell:")
+    print(f"    Cell {len(CLOSED) + 1} of {len(all_cells)}: <what broke>")
+    print(f"  next commit subject, if it only EXAMINES one:")
+    print(f"    Cell {len(CLOSED) + 1} of {len(all_cells)}, examined: <what was measured>")
     print()
     head = "class \\ surface"
     print(f"  {head:12s}" + "".join(f"{s[0][:9]:>11s}" for s in SURFACES))
