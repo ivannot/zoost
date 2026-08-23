@@ -32,7 +32,11 @@ function entitiesPresent() {
 }
 
 function wsLine(ws) {
-  if (!ws || !(ws.instance || ws.org)) return '';
+  // Not blank. A window that cannot name the workspace it is drawing looks exactly like one whose
+  // header happens to be short - and these windows come in pairs: two can be open at once, on two
+  // workspaces, which is the whole reason the identity travels with the drawing at all. Saying so
+  // costs a few words and is the rule this project applies to every other empty state.
+  if (!ws || !(ws.instance || ws.org)) return '\u00b7 <b>workspace not recorded</b>';
   const inst = esc(ws.instance || '?'), org = esc(ws.org || '?');
   // A label the same as the derived name is not a label: printing both would say the one word
   // twice, which is what a sample workspace does by construction and what a user is free to do by

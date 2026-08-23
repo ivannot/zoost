@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
-import { readdirSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 
 // The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
 // so a test about «the panel» reads them as the page composes them. Analytics is still one file.
@@ -10031,4 +10031,56 @@ test('every surface that states «no caller» says what it was measured over', (
   assert.deepEqual(readers, [],
     `these state «no caller» without saying it was measured over the mirror rather than the org: ` +
     readers.join(', '));
+});
+
+// ---------------------------------------------------------------------------------------------
+// A diagram window that cannot name its workspace says so, and does not invent one.
+//
+// These windows come in pairs - two can be open at once, on two workspaces, which is the whole
+// reason the identity travels with the drawing. `wsLine` returned `''` when neither the instance
+// nor the org was known, so the header looked merely short rather than unable to answer; and
+// `pdfTitle` substituted `unknown` and `orgx`, putting two placeholders that look like values into
+// the filename of a document that leaves the machine.
+test('the diagram names its workspace, or says it cannot', () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const logic = `apps/${app}/graphlogic.js`;
+    if (!existsSync(join(ROOT, logic))) continue;
+    const { wsLine } = load([sliceFn(logic, 'wsLine')], { esc: (s) => String(s) });
+
+    // Real values first: a named workspace reads as before.
+    const named = wsLine({ instance: 'yourinstance', org: '1234567890', label: null });
+    assert.match(named, /yourinstance/, `id=${app}: a named workspace stopped being named`);
+    assert.match(named, /1234567890/, `id=${app}: the org went missing from the line`);
+
+    // And the case this is about: nothing known, on both shapes it can arrive in.
+    for (const ws of [null, {}, { instance: null, org: null, label: null }]) {
+      const out = wsLine(ws);
+      assert.notEqual(out.trim(), '',
+        `id=${app}: the window shows a blank where the workspace should be, which reads as a short ` +
+        `header and not as «I cannot tell you whose drawing this is»`);
+    }
+  }
+});
+
+test('a printed diagram is not named after placeholders', () => {
+  // Derived from the source rather than run, because `pdfTitle` reads `DATA` and `curView` - two
+  // module globals a lifter would have to fake, and faking them is how a check ends up asserting
+  // about its own scaffolding. The limit is stated: this reads the expression, not the output.
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/graphview.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const src = read(rel);
+    // Comments blanked before reading: the note above the fix quotes the placeholders it removed,
+    // which is how this repository records a defect - and the first version of this fired on that
+    // quotation. The same shape as the «may only shrink» check earlier today, met again.
+    const code = src
+      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+      .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+    const fn = /function pdfTitle\(\)[\s\S]*?\n\}/.exec(code);
+    assert.ok(fn, `id=${app}: pdfTitle has gone - the print filename comes from somewhere unchecked`);
+    assert.ok(!/'unknown'|"unknown"|'x'|"x"/.test(fn[0]),
+      `id=${app}: the print filename stands a placeholder in for an identity it does not have`);
+    assert.match(fn[0], /filter\(Boolean\)|\?\s*'-'/,
+      `id=${app}: it no longer drops the parts it does not know`);
+  }
 });

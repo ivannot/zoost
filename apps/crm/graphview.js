@@ -2458,7 +2458,12 @@ function pdfTitle() {
   const ws = DATA.workspace || {};
   const kind = DATA.kind === 'schema' ? (curView === 'er' ? 'schema-ER' : 'schema') : (curView === 'er' ? 'graph' : 'functions');
   const d = new Date().toISOString().slice(0, 10);
-  return `Zoost-${kind}-${ws.instance || 'unknown'}-org${ws.org || 'x'}-${d}`;
+  // The parts that are known, and nothing standing in for the parts that are not. This read
+  // `${ws.instance || 'unknown'}-org${ws.org || 'x'}`, so a print with no identity came out as
+  // `Zoost-graph-unknown-orgx-2026-08-23` - a filename on a document that leaves the machine,
+  // carrying two placeholders that look like values. A shorter name says the same thing honestly.
+  const who = [ws.instance, ws.org ? 'org' + ws.org : null].filter(Boolean).join('-');
+  return `Zoost-${kind}${who ? '-' + who : ''}-${d}`;
 }
 let _prevDocTitle = null;
 // A printed page has no controls on it - the fold marks are display:none there - so the arcs must not
