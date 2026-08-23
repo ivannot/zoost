@@ -151,6 +151,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("blindspot", "diagrams"): ("tools/probe.py: the diagram window is driven and asserted, not only photographed", "planted 2026-08-23"),
     ("workspace", "options"):  ("tests/panel.test.mjs: a folder changed in Settings waits for the pull to finish", "planted 2026-08-23"),
     ("partial", "options"):    ("tests/panel.test.mjs: a failed read of aicfg refuses the write that would overwrite it", "planted 2026-08-23"),
     ("blindspot", "crm-export"): ("tests/tools_test.py: the exported report's content is ledgered; a new one is a finding", "planted 2026-08-23"),

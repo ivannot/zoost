@@ -366,6 +366,13 @@ function erToggleCut(a, b, away) {
   else return;
   const after = erHiddenSet().size;
   erRender();                             // a drawing filter: nothing is laid out again
+  // And the two numbers beside the drawing. `erRender` redraws the boxes; it does not re-run the
+  // counts, so folding thirteen boxes away left the tab badge and the status line both saying 18
+  // while five were drawn - and the hint on the same screen said «13 boxes off the diagram». The
+  // note in `erCovers` has described exactly that for months; teaching `entityBreakdown` to skip
+  // what is folded made the *computation* right and changed nothing, because nobody ran it again.
+  // Found by driving the window rather than reading it.
+  graphStat();
   if (after !== before) erHint(after > before ? MSG.folded(after - before) : MSG.unfolded(before - after));
 }
 

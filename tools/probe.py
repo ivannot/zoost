@@ -875,6 +875,61 @@ PULL_AN = r"""
 # The same, one product over: the CRM's functions pull, which is the longest path in that panel -
 # list, prune what Zoho no longer has, write the summary index, then download every source one by one.
 # `downloadMissing()` is where the panel spends minutes on a real org, and nothing here had ever run it.
+
+# The diagram window, which nothing drove. `shots.py` renders three pictures of it and a throw there
+# refuses the render - so a crash was caught - but nothing *asserted* anything about behaviour in
+# 2500 lines of the most interactive code in the product. The panels had a probe; this did not.
+#
+# The case is the defect found by reading, hours before this was written: fold a branch away and the
+# tab badge said the boxes were gone while the status line beside it went on counting them. Five
+# readers of one piece of state, fixed four at a time over months. A check that folds and compares
+# the two numbers would have found the fifth on the day it was written.
+#
+# **A fresh query per click.** Collecting the marks once and clicking them in turn folds the first
+# and re-renders the drawing - and the remaining elements, now detached, still fire their listeners,
+# so clicking the same pair again *unfolds* it. Forty-four clicks came back to exactly where they
+# started, `erCut` at 0, and the run reported that folding does nothing: a statement about the
+# harness that reads as one about the product.
+ER = """
+  const say = (m) => { throw new Error(m); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  (async () => {
+    document.querySelector('.tab[data-v="er"]').click();
+    await wait(700);
+    const badge = () => parseInt(($('ertabn') || {}).textContent || '0', 10) || 0;
+    const line = () => {
+      const m = /<b>(\\d+)<\\/b>/.exec($('statline').innerHTML || '');
+      return m ? parseInt(m[1], 10) : -1;
+    };
+    // **Not** «the two numbers agree»: they legitimately count different things. The badge is the
+    // boxes the ER view will draw, and in Analytics that excludes an entity with no field to show,
+    // so 11 against 25 is correct there and asserting equality imposed a rule the product does not
+    // have. What must hold is that **both follow the drawing**: fold boxes away and neither may
+    // stand still, which is the defect this exists for.
+    const before = { badge: badge(), line: line() };
+    if (before.badge < 2) say(`the fixture draws ${before.badge} boxes - too few to fold one away`);
+    if (before.line < 2) say(`the status line reads ${before.line} - nothing to watch move`);
+    let after = null, tried = 0;
+    while (tried < 12) {
+      const mark = document.querySelector('.ermk.fold');
+      if (!mark) break;
+      tried++;
+      mark.click();
+      await wait(350);
+      if (badge() < before.badge) { after = { badge: badge(), line: line() }; break; }
+    }
+    if (!tried) say('no fold mark on the drawing - this check no longer reaches the control it is about');
+    if (!after) say(`${tried} folds took no box off the drawing - badge stayed at ${before.badge}`      + ` | erCut=${erCut.size} hidden=${erHiddenSet().size} visible=${erVisibleIds().length}`      + ` line=${line()}`);
+    if (after.line >= before.line) {
+      say(`folding took ${before.badge - after.badge} box(es) off the drawing and the status line `
+          + `beside the badge still says ${after.line} - the window is stating in one place that `
+          + 'boxes went and in another that they are here');
+    }
+    document.title = 'SHOT OK';
+  })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
+"""
+
+
 PULL_CRM = r"""
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -977,6 +1032,15 @@ def main() -> int:
             print(f"  {key:18s} driving\u2026", flush=True)
             dest = shots.render_panel((key, app, ws, script))
             dest.unlink(missing_ok=True)          # a probe is not a picture to publish
+            print(f"  {key:18s} ok", flush=True)
+        # The diagram window is a different page with a different loader - `shots.render` stages it
+        # from a graph fixture where `render_panel` stages a workspace - so it is driven here rather
+        # than folded into the loop above.
+        for key, app, fixture, script in (("er-crm", "crm", "graph-crm-schema.json", ER),
+                                          ("er-analytics", "analytics", "graph-analytics.json", ER)):
+            print(f"  {key:18s} driving\u2026", flush=True)
+            dest = shots.render((key, app, fixture, script))
+            dest.unlink(missing_ok=True)
             print(f"  {key:18s} ok", flush=True)
     finally:
         shots._browser_stop()
