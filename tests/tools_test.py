@@ -6139,6 +6139,54 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
         self.assertNotEqual(out.returncode, 0, f'a drift on graphview.html passes:\n{out.stdout[-500:]}')
         self.assertIn('v-er', out.stdout, out.stdout[-500:])
 
+class TheSiteNamesEveryAssistantTool(unittest.TestCase):
+    """The tool list on `site/ai.html` is a hand-typed copy of a registry the code holds.
+
+    Both products declare their tools in an `AI_TOOLS` array and the site prints them as a list of
+    `<code>` chips. The CRM's had **nine of eleven**: `list_actions` and `list_failures` were added
+    to the registry and not to the page, in both languages. The same defect was fixed *in the app*
+    earlier the same day - the system prompt named ten of eleven, and the fix derived that sentence
+    from the registry - and did not travel to the site, which is the enumeration trap running one
+    surface over.
+
+    Derived from the registry, per product, so a twelfth tool is a finding on the day it is written.
+
+    **The limit, stated:** it reads the `<code>` chips inside `p.tools`, which is how that page marks
+    a tool name. A tool named in the prose around it is neither found nor required.
+    """
+
+    def registry(self, app):
+        src = (ROOT / 'apps' / app / ('ai.js' if app == 'crm' else 'sidepanel.js')).read_text(encoding='utf-8')
+        at = src.index('AI_TOOLS')
+        end = src.index('\n];', at)
+        return sorted(set(re.findall(r"name: '(\w+)'", src[at:end])))
+
+    def listed(self, rel):
+        html = (ROOT / rel).read_text(encoding='utf-8')
+        out = {}
+        for m in re.finditer(r'<h3>([^<]*)</h3>\s*<p class="tools">(.*?)</p>', html, re.S):
+            app = 'crm' if 'CRM' in m.group(1) else 'analytics' if 'Analytics' in m.group(1) else None
+            if app:
+                out[app] = sorted(set(re.findall(r'<code>(\w+)</code>', m.group(2))))
+        return out
+
+    def test_both_products_declare_tools(self):
+        for app in ('crm', 'analytics'):
+            self.assertGreaterEqual(len(self.registry(app)), 8,
+                                    f'{app}: the registry was not read - the derivation broke')
+
+    def test_every_page_lists_exactly_what_the_registry_holds(self):
+        for rel in ('site/ai.html', 'site/it/ai.html'):
+            listed = self.listed(rel)
+            self.assertEqual(sorted(listed), ['analytics', 'crm'],
+                             f'{rel}: the two tool lists were not found - the derivation broke')
+            for app in ('crm', 'analytics'):
+                have, said = self.registry(app), listed[app]
+                self.assertEqual(said, have,
+                                 f'{rel} names {len(said)} {app} tool(s) and the registry holds '
+                                 f'{len(have)}: missing {sorted(set(have) - set(said))}, '
+                                 f'invented {sorted(set(said) - set(have))}')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -358,7 +358,7 @@ git commit -m "baseline"</code></pre>
       one click brings back the single kind you are after. Each is absent when it would do nothing.
       <br><br><b>How to read their shape.</b> The rounded ones are what a Deluge function <b>is</b> -
       its category. The square ones are Zoho objects that stand around it: <b class="ui">Workflows</b>,
-      <b class="ui">Schedules</b>, <b class="ui">Connections</b>. The last two are <b>facts about</b> a
+      <b class="ui">Schedules</b>, <b class="ui">Connections</b>. The last three are <b>facts about</b> a
       node rather than kinds of it.
       <br><br>Any number can be on at once: within a row they add up, across rows they narrow.
       <b class="ui">✕</b> clears them, and there is one in the search box too. They steer all three
@@ -400,7 +400,7 @@ git commit -m "baseline"</code></pre>
     <li>In <b>Explorer</b>, the tab on the edge of the list - <b class="ui">◂ Hide the list</b> - folds it
       away so a field table or a source listing gets the whole window; <b class="ui">▸ Show the list</b>
       brings it back. <b>Drag the same edge</b> to make the list wider or narrower instead. Both are per
-      window and not remembered, and they exist only there: the other three views have no list.</li>
+      window and not remembered, and they exist only there: the other two views have no list.</li>
     <li>The first switch to <b>Wiring</b> computes the layout, which takes a moment on a large org and says
       so with a spinner and the node count. It is computed once per set; going back to the tab is
       instant, and changing the filter or the scope computes it again for what is left - the chips do
@@ -437,7 +437,7 @@ git commit -m "baseline"</code></pre>
       thing you were told. An
       arrangement saved from another org is refused, and the line names both.</li>
   </ul>
-  <p><b>What it will not do:</b> above 1200 nodes the free-form layout is not attempted at all -
+  <p><b>What it will not do:</b> above 800 nodes the free-form layout is not attempted at all -
     computing it would freeze the window - so <b class="ui">Everything</b> says so instead of hanging, and
     stays on the focus.
     The <b>Explorer</b> and a focused <b>Wiring</b> stay fast at any org size; use a focus and a small depth.</p>
@@ -596,7 +596,7 @@ git commit -m "baseline"</code></pre>
   <h2 id="failures">10b. What is actually failing</h2>
   <p>The health audit reads the mirror and finds <em>structural</em> suspects - a function nothing calls,
     a call that resolves to nothing. Code you have commented out does not count as a call, so a
-    function whose only mention is a disabled line is named here rather than left looking alive. It cannot tell you what broke this morning. Zoho does know, and Zoost reads it: <b class="ui">Pull all</b> fetches what Zoho reports as having
+    function whose only mention is a disabled line is named here rather than left looking alive. It cannot tell you what broke this morning. Zoho does know, and Zoost reads it: <b class="ui">Pull runtime</b>, in the health view, fetches what Zoho reports as having
     failed, and it is the one thing here read from a system that is running rather than from the shape
     of what you built.</p>
   <p>It shows in the two places a failure belongs, and in no tab of its own - a failure is not a kind
@@ -620,7 +620,7 @@ git commit -m "baseline"</code></pre>
 
   <figure class="shot">
     <img src="/img/crm-failures.webp?v=f84931f93c" width="1760" height="1100" loading="lazy" decoding="async"
-         alt="The Failures tab: the run counts for the last 24 hours above a list of failing functions, with one open showing its reason and dates.">
+         alt="The health view, Failures group: the run counts for the last 24 hours above a list of failing functions, with one open showing its reason and dates.">
     <figcaption>Chapter 9b: what Zoho reports as failing, with the reason and its line number. The two notes at the bottom of the detail are the two things it will not do.</figcaption>
   </figure>
 
