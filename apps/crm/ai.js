@@ -445,14 +445,26 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   if (name === 'list_functions') {
     const flt = (input.filter || '').toLowerCase();
     const minL = Number(input.min_lines) || 0, minC = Number(input.min_calls) || 0;
-    const rows = Object.values(nodes)
-      .map((n) => ({ id: n.namespace + '.' + n.name, s: n.stats || { lines: 0, apiCalls: 0 } }))
-      .filter((r) => (!flt || r.id.toLowerCase().includes(flt)) && r.s.lines >= minL && r.s.apiCalls >= minC)
+    // A function whose source is not on disk has **no** measurement, and this used to substitute
+    // `{ lines: 0, apiCalls: 0 }` for it. Three harms, and the model could see none of them: it was
+    // told «0 lines, 0 calls» about something unmeasured; a `min_lines` filter then dropped it
+    // silently, so «every function over 50 lines» came back looking complete; and the sort put it
+    // among the smallest. Unknown shown as a zero, which this product states a mirror must never do.
+    const all = Object.values(nodes).map((n) => ({ id: n.namespace + '.' + n.name, s: n.stats }));
+    const named = all.filter((r) => !flt || r.id.toLowerCase().includes(flt));
+    const unmeasured = named.filter((r) => !r.s);
+    const rows = named.filter((r) => r.s && r.s.lines >= minL && r.s.apiCalls >= minC)
       .sort((a, b) => b.s.lines - a.s.lines || a.id.localeCompare(b.id));
     const crit = [flt ? `name contains "${input.filter}"` : '', minL ? `>= ${minL} lines` : '', minC ? `>= ${minC} outbound calls` : ''].filter(Boolean).join(', ') || 'all';
-    if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.`;
+    // Said whether or not anything matched: absence is only evidence when the coverage is stated.
+    const gap = unmeasured.length
+      ? `\n${unmeasured.length} function(s) could not be measured - their source is not in the `
+        + `workspace, so they are neither included nor excluded by the size and call criteria: `
+        + unmeasured.map((r) => r.id).join(', ')
+      : '';
+    if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.${gap}`;
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
-      + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
+      + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n') + gap;
   }
   if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }

@@ -1560,7 +1560,18 @@ const RE_SENDMAIL = /\bsendmail\b/gi;
 // same thing is the shape this repository has been bitten by; this used to be two.
 const _count = (s, re) => { const m = s.match(re); return m ? m.length : 0; };
 function fnStats(src) {
-  const code = String(src || '');
+  // **An absent source is not a measurement of zero.** This took `undefined` - a function whose
+  // `.dg` is not on disk, because its fetch failed and it is in `failures/` - and returned a full
+  // set of zeros, so «could not be read» arrived everywhere downstream as «0 lines, 0 outbound
+  // calls»: indistinguishable from an empty function, in the health audit, in both exports and in
+  // what the assistant is told. That is the one thing this product says a mirror must never do, and
+  // the release that said so fixed the connection counts and the module lists and not this.
+  //
+  // An empty *file* still measures as zeros, which is true of it. The difference is whether there
+  // was anything to read, and only the caller knows - so it is read off the argument here rather
+  // than guessed at by any of the five places that consume the result.
+  if (src === null || src === undefined) return null;
+  const code = String(src);
   const bare = stripNonCode(code);
   const crm = _count(bare, RE_ZOHO_CRM);
   const zohoAny = _count(bare, RE_ZOHO_ANY);

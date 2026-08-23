@@ -9790,3 +9790,54 @@ for (const app of ['crm', 'analytics']) {
     });
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// An unread source is not a measurement of zero.
+//
+// `fnStats(undefined)` returned a full set of zeros, so a function whose `.dg` is not on disk - its
+// fetch failed and it is recorded in `failures/` - arrived everywhere downstream as «0 lines, 0
+// outbound calls»: in the health audit, in both exports, and in what the assistant is told. The
+// release that fixed «used by 0 functions» for connections, and «complete» for a module list that
+// had failed to write, did not reach this one.
+//
+// The tree already abstained - its badge is absent, and the status line says the stats are deferred
+// above STATS_LIMIT - so two readers of one fact disagreed: the row showed nothing and the graph
+// showed a zero.
+test('a source that could not be read measures as nothing, not as zero', () => {
+  const ctx = load([
+    sliceConst('apps/crm/sidepanel.js', 'ZOHO_SERVICES'),
+    sliceConst('apps/crm/sidepanel.js', 'RE_ZOHO_ANY'),
+    sliceConst('apps/crm/sidepanel.js', 'RE_ZOHO_CRM'),
+    sliceConst('apps/crm/sidepanel.js', 'RE_INVOKEURL'),
+    sliceConst('apps/crm/sidepanel.js', 'RE_SENDMAIL'),
+    sliceConst('apps/crm/sidepanel.js', '_count'),
+    sliceFn('apps/crm/sidepanel.js', 'fnStats'),
+  ], { stripNonCode: (s) => s });
+
+  assert.equal(ctx.fnStats(undefined), null, 'an absent source still measures as a set of zeros');
+  assert.equal(ctx.fnStats(null), null, 'an absent source still measures as a set of zeros');
+  // The other half, and it is the one that keeps this honest: a file that *is* there and is empty
+  // really is zero lines, and must not be reported as unmeasured.
+  const empty = ctx.fnStats('');
+  assert.ok(empty && empty.lines === 0 && empty.apiCalls === 0,
+    'an empty file is a measurement of zero and must stay one');
+  const real = ctx.fnStats('info "x";\ninvokeurl [url: "https://example.invalid"];');
+  assert.ok(real.lines === 2 && real.apiCalls === 1, `it stopped counting: ${JSON.stringify(real)}`);
+});
+
+test('nothing substitutes a number for a measurement that was not taken', () => {
+  // Derived from the shipped scripts rather than from the one site that did it: any `stats` read
+  // that falls back to a literal is the same defect wherever it is written. The limit, said rather
+  // than left to be found: it reads `stats` by name, so a value copied into another variable first
+  // is invisible - there is no such copy today.
+  const bad = [];
+  for (const rel of readdirSync(join(ROOT, 'apps')).flatMap((app) =>
+      readdirSync(join(ROOT, 'apps', app)).filter((f) => f.endsWith('.js')).map((f) => `apps/${app}/${f}`))) {
+    const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const m of src.matchAll(/\.stats\s*(?:\|\||\?\?)\s*([{0-9])/g)) {
+      bad.push(`${rel}:${src.slice(0, m.index).split('\n').length}`);
+    }
+  }
+  assert.deepEqual(bad, [],
+    `these turn «not measured» into a number, which the reader cannot tell from a real zero: ${bad.join(', ')}`);
+});

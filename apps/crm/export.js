@@ -435,7 +435,10 @@ async function loadExportData(op = beginWorkspaceOp()) {
   const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
   const fns = [];
   for (const e of entries) {
-    const d = metaById.get(String(e.id)); let code = '';
+    // `null` and not `''`: a source that could not be read is not an empty one, and `fnStats`
+    // tells the two apart now - so a function whose fetch failed no longer reports «0 lines, 0
+    // outbound calls» in a report somebody reads without the extension.
+    const d = metaById.get(String(e.id)); let code = null;
     if (d) { try { code = await op.read(d.dg); } catch (_) {} }
     fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
   }
