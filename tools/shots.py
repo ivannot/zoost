@@ -95,8 +95,19 @@ def have_chrome() -> bool:
         return True
     except SystemExit:
         return False
-NAME = {"crm": "Zoost - workbench for Zoho CRM",
-        "analytics": "Zoost - workbench for Zoho Analytics"}
+# Read, never typed - the same lesson `hosts_of` above records, applied to the field beside it,
+# which it was not. `manifest.json`'s `name` is what the product is called; the panel prints
+# `getManifest().name` in its own header, its exports and its footer. A copy here meant that
+# renaming the product left every published screenshot saying the old name, silently, because
+# the shim supplied it - and the one check that would go red, `imgcheck`, compares a picture
+# with its sources rather than with the product, so it says «re-render» and then agrees.
+def name_of(app: str) -> str:
+    """The app's own name, for the stubbed getManifest()."""
+    import json as _json
+    return _json.loads((ROOT / "apps" / app / "manifest.json").read_text(encoding="utf-8"))["name"]
+
+
+NAME = {a.name: name_of(a.name) for a in sorted((ROOT / "apps").iterdir()) if a.is_dir()}
 
 # What each Store listing publishes, in order. The dashboard takes **at most five**, shows them in
 # the order they are uploaded, and names them nothing - so the file names carry the order and nothing

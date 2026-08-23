@@ -6562,5 +6562,54 @@ class TheTwoHalvesOfLiveSyncReachTheSamePages(unittest.TestCase):
             'has stopped having a subject and should say so rather than pass')
 
 
+class TheRenderHarnessAnswersWhatTheManifestSays(unittest.TestCase):
+    """What the screenshot shim tells the panel about itself is the manifest, not a copy of it.
+
+    Every published screenshot is the shipped page rendered against a stubbed `chrome`, and the panel
+    reads its own identity out of `getManifest()` - the header, the export footer and the legal line
+    all print `getManifest().name`. `tools/shots.py` supplied that name as a **literal**, in a table
+    beside a helper whose docstring records the very lesson it ignored: «an approximation that
+    silently drops a field the product reads is a picture of a state the product does not have»,
+    written when the same stub answered with the name and nothing else and the data-centre picklist
+    came out empty.
+
+    So renaming the product in `manifest.json` left every screenshot saying the old name. Measured:
+    the only red is `imgcheck`, and it fires for the wrong reason - it compares a picture with the
+    sources it was rendered from, so a changed tool makes it say «re-render», and after the re-render
+    it agrees with pictures that name a product that does not exist. A check firing for the right
+    reason on the wrong subject is not cover.
+
+    Read by importing the tool rather than by matching its text: what matters is the value it hands
+    the page, and a regex over the table would pass the day the table is built some other way.
+
+    **The limits, stated.** It compares the fields the stub is *known* to supply - the name and the
+    host permissions, which are the two the panels read off their own manifest. A field added to the
+    stub tomorrow is not compared, and the count of products checked is asserted so that a stub that
+    stopped supplying anything is a finding rather than a pass.
+    """
+
+    def test_the_stub_is_the_manifest(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import shots
+        finally:
+            sys.path.pop(0)
+        apps = sorted(p.name for p in (ROOT / 'apps').iterdir() if (p / 'manifest.json').exists())
+        self.assertGreaterEqual(len(apps), 2, f'{len(apps)} product(s) found - the derivation broke')
+        for app in apps:
+            man = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
+            self.assertIn(app, shots.NAME,
+                          f'{app} has a manifest and the render harness has no name for it, so its '
+                          'screenshots are rendered against a page that cannot say what it is')
+            self.assertEqual(
+                shots.NAME[app], man['name'],
+                f'{app}: the screenshots are rendered with the name «{shots.NAME[app]}» and the '
+                f'manifest says «{man["name"]}» - every published picture states the wrong one')
+            self.assertEqual(
+                json.loads(shots.hosts_of(app)), man.get('host_permissions', []),
+                f'{app}: the shim answers a different host list from the manifest, so anything the '
+                'panel derives from it is photographed wrong')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
