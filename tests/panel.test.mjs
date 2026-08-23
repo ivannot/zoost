@@ -11942,3 +11942,81 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
   }
   assert.ok(rows >= 2, `only ${rows} table row(s) read in the Markdown report - the derivation broke`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The diagram's layout preset, typed out a second time on the settings page.
+//
+// `ER_PRESET.modules` in `graphview.js` is what the diagram draws with when nothing has been saved;
+// `LAY_DEFAULT` in `options.js` is what the sliders sit at, and what **Reset** puts back. They are
+// the same five numbers written twice, under two names, in two files - so nothing compared them, and
+// the previous cell's check cannot: it reads constants that share a *name* across a product's
+// scripts, and these deliberately do not.
+//
+// What drift looks like from outside: Settings shows and saves one set of numbers, the diagram
+// opened without saved parameters draws with another, and **Reset** puts back a state the diagram
+// never had. Measured with `margin` moved to 40 in the CRM's `LAY_DEFAULT`: the whole battery green
+// but for the screenshots noticing a file under `apps/` had moved.
+//
+// Derived per product from the two files, key by key. It says nothing about whether the numbers are
+// *good* - that is a measurement on a real diagram, and the presets carry theirs in comments beside
+// them.
+//
+// **The limits, stated.** It compares `LAY_DEFAULT` against the `modules` preset only, because that
+// is the one the sliders stand for - the other presets are per-mode and have no control on the
+// settings page. It reads the two literals, so a key whose value is an expression rather than a
+// number is compared as text, which is the safe way round.
+test('the settings sliders start where the diagram starts, in both products', () => {
+  // Brace-matched, both levels. The first version sliced from `modules:` to the next `}` and let a
+  // `break` decide where to stop: read back, it was returning the **calls** preset's numbers, and the
+  // case passed anyway. A derivation that stops by counting rather than by matching is one that will
+  // one day compare the wrong pair and say nothing.
+  const objectAt = (src, from) => {
+    let depth = 0, j = src.indexOf('{', from);
+    const start = j;
+    for (; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      else if (src[j] === '}') { depth--; if (depth === 0) return src.slice(start, j + 1); }
+    }
+    throw new Error('unterminated object literal');
+  };
+  const pairs = (body) => {
+    const out = {};
+    // Depth one only: a nested object is skipped whole rather than flattened into its parent.
+    let depth = 0;
+    for (let i = 0; i < body.length; i++) {
+      if (body[i] === '{') { depth++; continue; }
+      if (body[i] === '}') { depth--; continue; }
+      if (depth !== 1) continue;
+      const m = /^(\w+):\s*([\w.]+)\s*(?=[,}])/.exec(body.slice(i));
+      if (m) { out[m[1]] = m[2]; i += m[0].length - 1; }
+    }
+    return out;
+  };
+  const literal = (rel, name, key) => {
+    const src = read(rel);
+    const at = src.indexOf(`const ${name} = `);
+    assert.ok(at > 0, `${rel}: ${name} is gone - the derivation broke`);
+    const body = objectAt(src, at);
+    if (!key) return pairs(body);
+    const kat = body.indexOf(`${key}:`);
+    assert.ok(kat > 0, `${rel}: ${name}.${key} is gone - the derivation broke`);
+    return pairs(objectAt(body, kat));
+  };
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name);
+  let compared = 0;
+  for (const app of apps) {
+    const page = literal(`apps/${app}/options.js`, 'LAY_DEFAULT', null);
+    const draw = literal(`apps/${app}/graphview.js`, 'ER_PRESET', 'modules');
+    assert.ok(Object.keys(page).length >= 4, `id=${app}: ${Object.keys(page).length} key(s) on the page - the derivation broke`);
+    for (const k of Object.keys(page)) {
+      compared++;
+      assert.equal(page[k], draw[k],
+        `id=${app}: Settings starts «${k}» at ${page[k]} and the diagram draws it at ${draw[k]}, so `
+        + 'Reset puts back a state the diagram never had');
+    }
+    assert.deepEqual(Object.keys(draw).sort(), Object.keys(page).sort(),
+      `id=${app}: the two tables hold different parameters - page ${Object.keys(page)}, diagram ${Object.keys(draw)}`);
+  }
+  assert.ok(compared >= 8, `only ${compared} parameter(s) compared - the derivation broke`);
+});
