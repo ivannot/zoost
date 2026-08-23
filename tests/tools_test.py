@@ -4620,5 +4620,51 @@ class OneProductUnreadableIsNotAReading(unittest.TestCase):
                          'ship - the reading would be missing one, or carry one that does not exist')
 
 
+class AsyncCheckReadsWhatShips(unittest.TestCase):
+    """Every script that ships or is served is in `asynccheck`'s subject, or is a declared exclusion.
+
+    The subject was derived from the extensions - each page's script tags, plus the service worker
+    and content-script worlds out of each manifest - and stopped there. The three scripts the site
+    serves were outside it entirely, `site/_worker.js` among them with 23 awaits, and nothing said
+    so. Nothing was wrong in them; this file's whole subject is the difference between «there is
+    nothing there» and «nobody looked», and the headline «790 function(s) read of 792 declared»
+    reads as the first while meaning neither.
+
+    Derived from `git ls-files`, which is a cruder enumeration than the tool's own: a script added
+    under `apps/` or `site/` tomorrow is either read or named, and there is no third state.
+    """
+
+    def subject(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ac_under_test', ROOT / 'tools' / 'asynccheck.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_no_shipped_or_served_script_is_outside_it_unannounced(self):
+        mod = self.subject()
+        shipped = [f for f in subprocess.run(['git', '-C', str(ROOT), 'ls-files', '*.js'],
+                                             capture_output=True, text=True).stdout.split()
+                   if f.startswith(('apps/', 'site/'))]
+        self.assertGreater(len(shipped), 25, 'the crude enumeration broke - it found almost nothing')
+        # The shared libraries are the one declared exclusion, and the tool names them in a pattern
+        # rather than a list, so this asks the pattern rather than restating it.
+        outside = [f for f in shipped if f not in mod.FILES and not mod._LIB.search(f)]
+        self.assertEqual(outside, [],
+                         f'these ship or are served and no scope reads them, and they are not the '
+                         f'declared library exclusion either: {outside}')
+
+    def test_it_says_how_much_of_the_other_axis_it_skips(self):
+        # A count of functions says nothing about how much of each one is read. `await` and `.then(`
+        # are one class in two spellings and only the first is examined - so the run states the
+        # second's size. A blind spot that prints its own size is a limit; one that does not is what
+        # this repository has now met four times.
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'asynccheck.py')],
+                             cwd=ROOT, capture_output=True, text=True)
+        self.assertRegex(out.stdout, r'\d+ \.then\(\) callback\(s\) NOT read',
+                         'the run does not say how many yield sites it skipped')
+        self.assertRegex(out.stdout, r'\d+ await\(s\) read', 'it does not say how many it did read')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

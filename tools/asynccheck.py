@@ -7,6 +7,11 @@ which time the workspace on screen may be another one. Each was fixed where it w
 next review found the next instance. That is the shape of a rule that lives only as prose: it is
 recalled by resemblance to its own wording, and the seventh instance never resembles it.
 
+Its subject is every script the two extensions load - pages, service workers, content-script worlds -
+**and the three the site serves**, which were outside it entirely while `site/_worker.js` alone held
+23 awaits. Nothing there was wrong; «there is nothing there» and «nobody looked» are the two answers
+this file exists to keep apart, and only one of them was true.
+
 So this derives the instances instead. It reads each panel, takes the module-level `let`
 declarations as the set of globals, and reports every assignment to one of them that happens after
 an `await` **with no check between the two**. A check is anything that can stop the function:
@@ -19,6 +24,11 @@ What it cannot do, said plainly rather than left to be discovered:
   * A global written after an await is not automatically wrong. Progress counters, render state and
     caches that belong to no workspace are fine. That is what the ledger is for.
   * It says nothing about *what* the guard checks. A function guarding the wrong thing passes.
+  * **It reads one spelling of a yield.** `await` is where control leaves a function; `.then(cb)` is
+    the same thing written differently, and those callbacks are not read. The run prints how many it
+    skipped rather than leaving the count to be discovered - measured today: 43 across the subject,
+    4 of which write a module global, none of them wrong. A conclusion somebody reached, said out
+    loud, instead of a zero that reads as though the tool had reached it.
 
 It is therefore a ledger, like `tools/cssdupes.txt`: `tools/asyncglobals.txt` holds what is there
 today with its reason, anything not in it fails, and **the ledger may only shrink**. A new site is a
@@ -74,8 +84,20 @@ def _manifest_scopes(app):
     return out
 
 
+# What the site serves. Outside the subject entirely until now, and nothing said so: the headline
+# «790 function(s) read of 792 declared» is a statement about the extensions, and read as one about
+# the tree. `site/_worker.js` alone holds 23 awaits. It has no module-level mutable state today, so
+# there was nothing to find - but «there is nothing there» and «nobody looked» are the two answers
+# this whole file exists to keep apart, and only one of them was true.
+#
+# One scope each: three separate runtimes that share no lexical scope with anything.
+_SITE = ('site/_worker.js', 'site/site.js', 'site/report.js')
+
+
 def _pages():
     out = {}
+    for f in _SITE:
+        out[f'site:{os.path.basename(f)}'] = [f]
     for app in ('crm', 'analytics'):
         for page in sorted(os.listdir(os.path.join(ROOT, 'apps', app))):
             if page.endswith('.html'):
@@ -329,6 +351,33 @@ def main():
     # function, so its state is a local and not the shared state this tool is about. Said here
     # because a gap of two that nobody can account for reads the same as a gap of two that somebody
     # can, and only one of them is a limit rather than a hole.
+    # And a second, cruder scan on the *other* axis, because the one above counts functions and says
+    # nothing about how much of each one this reads. A yield is where control leaves and the workspace
+    # can change underneath - `await` is one spelling of it and `.then(cb)` is the other, and only the
+    # first is read. Counting them separately is what makes the gap visible instead of arguable:
+    # measured, 33 `.then(` callbacks in the subject, 4 of which write a module global. None of the
+    # four is wrong today - a pump's own bookkeeping, a display-only copy read once at startup - but
+    # «none of them is wrong» is a conclusion somebody reached, and «zero findings» was reading as
+    # though the tool had reached it.
+    #
+    # Not widened here, and the reason is measured too: `.then(` bodies are brace-matched rather than
+    # line-bound, so reading them means a second traversal with different rules, and a widening this
+    # file has twice made wrong (636 findings, then 171) is not one to make in passing. What is
+    # refused is the *silence*, which cost nothing to fix.
+    yields = {'await': 0, '.then(': 0}
+    for rel in FILES:
+        src_ = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+        yields['await'] += len(re.findall(r'\bawait\s', src_))
+        yields['.then('] += len(re.findall(r'\.then\s*\(', src_))
+
+    yields = {'await': 0, '.then(': 0}
+    for rel in FILES:
+        src_ = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+        yields['await'] += len(re.findall(r'\bawait\s', src_))
+        yields['.then('] += len(re.findall(r'\.then\s*\(', src_))
+    print(f'asynccheck: {len(FILES)} file(s); {yields["await"]} await(s) read, '
+          f'{yields[".then("]} .then() callback(s) NOT read - the same class, the other spelling.')
+
     print(f'\n{n} finding(s). {read} function(s) read of {crude} declared '
           f'({crude - read} nested inside another, whose state is local); '
           f'{len(keys)} global write(s) after an await, {len(known)} recorded as read.')

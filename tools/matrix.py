@@ -114,6 +114,7 @@ CLOSED = {
     ("workspace", "bridges"):  ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
+    ("blindspot", "worker"):   ("tests/tools_test.py: nothing shipped or served is outside asynccheck unannounced", "planted 2026-08-23"),
     ("claim", "worker"):       ("tests/worker.test.mjs: the upstream cost in the comment is measured, not typed", "planted 2026-08-23"),
     ("silent", "worker"):      ("tests/worker.test.mjs: a 404 is «none» and any other failure is «unreadable», worded apart", "planted 2026-08-23"),
     ("partial", "worker"):     ("tests/tools_test.py: a Store reading missing a product is refused, not published", "planted 2026-08-23"),
