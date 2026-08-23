@@ -123,15 +123,27 @@ async function aiUnlock() {
   aiLockMsg(''); aiShowLock(false); setStatus('API key unlocked for this browser session.', 'ok');
 }
 function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
+// **A change of workspace throws; it does not answer «empty».** These three loaders returned `null`
+// when the workspace moved under them, and every caller wrote `|| {}`, `|| []`, `|| { list: [] }`.
+// So an overtaken load became «this org has no modules», «no connections», «no automation actions» -
+// in the ORG INDEX the model is given, and in `get_module`, which then said «No such module» about
+// one that exists. A denial invented by our own bookkeeping and handed over as a fact.
+//
+// Throwing is what the rest of the panel does: `op.read` throws `WS_MOVED`, `aiSend` catches it and
+// stays quiet because its status is guarded by `current()`. The overtaken case is meant to be
+// silent - what it must not be is *wrong*.
 async function loadModuleFiles(op = beginWorkspaceOp()) {
-  if (!op.current()) return null;
+  if (!op.current()) throw new Error(WS_MOVED);
   if (moduleFilesCache) return moduleFilesCache;
-  const map = {};
+  const map = {}; let unreadable = 0;
   for await (const p of walk(op.root)) {
-    if (!op.current()) return null;
-    if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); map[m.api_name] = m; } catch (_) {} }
+    if (!op.current()) throw new Error(WS_MOVED);
+    // A file that will not parse is not a module that does not exist. Counted, and said by the
+    // index that carries these - the same rule `search_code` follows about a source it cannot read.
+    if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); map[m.api_name] = m; } catch (_) { unreadable++; } }
   }
-  if (!op.current()) return null;
+  if (!op.current()) throw new Error(WS_MOVED);
+  Object.defineProperty(map, '_unreadable', { value: unreadable, enumerable: false });
   moduleFilesCache = map; return map;
 }
 // Connections catalogue for the AI, joined with the functions that use each (same join key as the
@@ -164,7 +176,7 @@ async function shareAddresses() {
   catch (_) { return false; }   // unreadable is «do not share», the direction that cannot leak
 }
 async function aiLoadActions(op = beginWorkspaceOp()) {
-  if (!op.current()) return null;
+  if (!op.current()) throw new Error(WS_MOVED);
   // The list and the users are workspace data and are worth caching. **The setting is not**, and
   // caching it was a defect: `aiActCache` is dropped by a write to actions/, a write to workflows/
   // and a change of workspace - and by nothing else, so turning «share sender addresses» *off* in
@@ -177,12 +189,12 @@ async function aiLoadActions(op = beginWorkspaceOp()) {
   if (aiActCache) return { ...aiActCache, addresses: await shareAddresses() };
   let list = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) list = a; } catch (_) {}
   const users = actionUsers || await buildActionUsers(op);
-  if (!op.current()) return null;
+  if (!op.current()) throw new Error(WS_MOVED);
   aiActCache = { list, users };
   return { ...aiActCache, addresses: await shareAddresses() };
 }
 async function aiLoadConnections(op = beginWorkspaceOp()) {
-  if (!op.current()) return null;
+  if (!op.current()) throw new Error(WS_MOVED);
   if (aiConnCache) return aiConnCache;
   let cat = []; try { cat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(cat)) cat = [];
@@ -191,7 +203,7 @@ async function aiLoadConnections(op = beginWorkspaceOp()) {
   // The failure propagates - the tool loop already turns a thrown tool into an error message the
   // model can read - and only the overtaken case stays silent.
   const g = await ensureGraph(op);
-  if (!op.current()) return null;
+  if (!op.current()) throw new Error(WS_MOVED);
   const used = {};
   Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (used[c.name] ||= []).push(n.namespace + '.' + n.name); }));
   const list = cat.map((c) => ({ ...c, uses: (used[c.name] || []).slice() }));
@@ -228,12 +240,20 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   let funcs = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; funcs += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
 
-  const mods = (await loadModuleFiles(op)) || {}; const mk = Object.keys(mods).sort();
+  // No fallback: the loader answers or throws, and one here would quietly restore the
+  // «empty means moved» defect the next time somebody adds a `return null`.
+  const mods = await loadModuleFiles(op); const mk = Object.keys(mods).sort();
   // Marked in the index too, so a module Zoho refused is known to be unknowable before it is asked
   // about, rather than at the moment the answer would already have been guessed.
-  const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
+  // And how many files in the folder would not parse at all. Those modules are in the mirror and
+  // not in this list, so the count beside the heading is the difference between «the org has
+  // these» and «these are the ones I could read» - which is the whole distinction the line
+  // above draws for a module Zoho itself refused.
+  const modBad = mods._unreadable ? ` - ${mods._unreadable} file(s) in the workspace could not be read`
+    : '';
+  const modules = `\n## Modules (${mk.length}${modBad})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
 
-  const conns = (await aiLoadConnections(op)) || [];
+  const conns = await aiLoadConnections(op);
   const connections = conns.length
     ? `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} \u00b7 used by ${c.uses.length} function(s)${c.connected === false ? ' \u00b7 NOT CONNECTED' : ''}${c.missing ? ' \u00b7 not in catalogue' : ''}`).join('\n') + '\n'
     : '';
@@ -241,7 +261,7 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   // The actions are a vocabulary too: without their names the model cannot answer «which rule sends
   // the renewal notice» except by opening rules one at a time. Counts by kind, not the whole list -
   // an org can have hundreds, and `list_actions` is one call away.
-  const acts = (await aiLoadActions(op)) || { list: [], users: new Map(), addresses: false };
+  const acts = await aiLoadActions(op);
   const byKind = {};
   acts.list.forEach((a) => (byKind[a.kind] = (byKind[a.kind] || 0) + 1));
   const unattached = acts.list.filter((a) => !a.associated && !(acts.users.get(a.kind + ':' + String(a.id)) || []).length).length;
@@ -334,7 +354,7 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // The sender address obeys the same setting here as in the index and in both exports. A
         // focus block that carried it regardless would let the address out through the one door
         // nobody thought to close - and the whole point of that switch is that it has one meaning.
-        const { addresses } = (await aiLoadActions(op)) || { addresses: false };
+        const { addresses } = await aiLoadActions(op);
         // `{ ...e }` sends the whole row, which is why the withholding has to name every field that
         // carries the sender rather than the one the setting is named after. `from_name` is the
         // person's own name when `from_type` is `user`, and it was going to the provider while the
@@ -507,7 +527,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.' + caveat, 60)
                        : `(no matches in ${Object.keys(nodes).length - unread} function(s))${caveat}${overMirror}`;
   }
-  if (name === 'get_module') { const mods = (await loadModuleFiles(op)) || {}; const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_module') { const mods = await loadModuleFiles(op); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
     let d = null; try { d = JSON.parse(await op.read('failures/index.json')); } catch (_) {}
     if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';
@@ -526,7 +546,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
       rows.length, 'Pass a filter to narrow by function name or reason.');
   }
   if (name === 'get_connection') {
-    const list = (await aiLoadConnections(op)) || [];
+    const list = await aiLoadConnections(op);
     const q = String(input.name || '').toLowerCase();
     const c = list.find((x) => (x.name || '').toLowerCase() === q) || list.find((x) => (x.label || '').toLowerCase() === q);
     if (!c) return 'Connection not found: ' + input.name + (list.length ? '\nKnown: ' + list.map((x) => x.name).join(', ') : '\n(no connections pulled - run Pull all)');
@@ -592,7 +612,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `module`, `active` or `has_scheduled_actions`.');
   }
   if (name === 'list_actions') {
-    const acts = (await aiLoadActions(op)) || { list: [], users: new Map(), addresses: false };
+    const acts = await aiLoadActions(op);
     if (!acts.list.length) return 'No automation actions in this workspace - they are pulled with «Pull all» or from the Actions tab.';
     const kind = String(input.kind || '').toLowerCase().replace(/[\s-]/g, '_');
     let sel = acts.list;

@@ -8104,7 +8104,13 @@ test('crm: every caller of a null-returning loader copes with the null', () => {
   const src = crmPanel();
   const lines = src.split('\n');
   const bad = [];
-  for (const fn of ['moduleNames', 'loadModuleFiles', 'getCodeCache', 'aiLoadActions', 'aiLoadConnections', 'failuresIndex']) {
+  // `loadModuleFiles`, `aiLoadActions` and `aiLoadConnections` are **not** here any more: they throw
+  // on a change of workspace instead of returning null. The fallback this test asks for was the
+  // defect in their case - `|| {}` and `|| []` turned «overtaken» into «this org has no modules, no
+  // connections, no actions», in the index the assistant is given and in `get_module`. A caller
+  // cannot read a refusal it never receives, and the case below forbids the fallback coming back.
+  // The three left do return null, and their callers must still cope with it.
+  for (const fn of ['moduleNames', 'getCodeCache', 'failuresIndex']) {
     lines.forEach((line, i) => {
       if (!new RegExp(`await ${fn}\\(`).test(line) || new RegExp(`function ${fn}`).test(line)) return;
       const here = line + '\n' + (lines[i + 1] || '');
@@ -10300,4 +10306,59 @@ test('the assistant hedges an absence, and does not hedge a fact', async () => {
   const whole = build(0, 2);
   const clean = await whole('who_calls', { name: 'standalone.lonely' });
   assert.equal(clean.trim(), '(no callers)', `a complete mirror still hedges: ${clean}`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// A change of workspace under the assistant throws; it does not answer «this org has nothing».
+//
+// `loadModuleFiles`, `aiLoadActions` and `aiLoadConnections` returned `null` when the workspace
+// moved under them - and every caller wrote `|| {}`, `|| []`, `|| { list: [] }`. So an overtaken
+// load became «no modules», «no connections», «no automation actions» in the ORG INDEX the model is
+// given, and `get_module` answered «No such module» about one that exists. A denial invented by our
+// own bookkeeping, handed to the model as a fact about somebody's org.
+//
+// Throwing is what the rest of the panel does - `op.read` throws WS_MOVED and `aiSend`'s status is
+// guarded by `current()`, so the overtaken case stays silent. Silent is right; wrong is not.
+test('an overtaken load refuses rather than answering empty', async () => {
+  const ctx = {
+    console, String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
+    WS_MOVED: 'workspace moved',
+    walk: async function* () {},                 // never reached: the guard fires first
+    isModuleFile: () => false,
+    moduleFilesCache: null, aiConnCache: null, aiActCache: null, actionUsers: null,
+    shareAddresses: async () => false,
+    ensureGraph: async () => ({ nodes: {} }),
+    beginWorkspaceOp: () => ({ current: () => false, read: async () => '[]' }),
+  };
+  vm.createContext(ctx);
+  vm.runInContext(['loadModuleFiles', 'aiLoadActions', 'aiLoadConnections']
+    .map((n) => sliceFn('apps/crm/ai.js', n)).join('\n'), ctx);
+
+  for (const fn of ['loadModuleFiles', 'aiLoadActions', 'aiLoadConnections']) {
+    const moved = { current: () => false, read: async () => '[]' };
+    await assert.rejects(() => vm.runInContext(fn, ctx)(moved), /workspace moved/,
+      `${fn} answers instead of refusing when the workspace has moved - the caller then reads its ` +
+      `«empty» as a fact about the org`);
+  }
+
+  // And the callers must not put the fallback back: `|| {}` beside one of these loaders restores
+  // the defect exactly, whatever the loader does.
+  const src = read('apps/crm/ai.js').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+  const coerced = [...src.matchAll(/await (loadModuleFiles|aiLoadActions|aiLoadConnections)\(op\)\)?\s*\|\|/g)]
+    .map((m) => m[1]);
+  assert.deepEqual(coerced, [],
+    `these callers turn a refusal back into an empty answer: ${coerced.join(', ')}`);
+});
+
+test('a module file that will not parse is counted, not dropped', () => {
+  // The inner `catch (_) {}` swallowed a corrupt module file, so the module vanished from the index
+  // the model is given - «not read» wearing the clothes of «does not exist», in the one place the
+  // assistant is told what the org contains. The same rule `search_code` already follows.
+  const src = read('apps/crm/ai.js');
+  const fn = /async function loadModuleFiles\([\s\S]*?\n\}/.exec(src);
+  assert.ok(fn, 'loadModuleFiles has gone');
+  assert.match(fn[0], /catch \(_\) \{ unreadable\+\+; \}/,
+    'a module file that will not parse is dropped without a count');
+  assert.match(src, /\$\{mk\.length\}\$\{modBad\}/,
+    'the count is kept and never said, which is the same as not keeping it');
 });
