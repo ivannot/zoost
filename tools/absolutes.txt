@@ -390,7 +390,7 @@ e2962f186cc6eb0b  site/how-to.html: Whether you should is a different question, 
 469f9e338e5d7eff  site/index.html: A four-hundred-line function may be a perfectly clean mapping table, and only you know which of yours those are.
 19ed6ecdef004f49  site/index.html: And if it can reach neither, stop: one that has read nothing will answer anyway, from memory, and that answer looks exactly like a real one.
 51714cca3d78b63e  site/index.html: And it asks where the answers do not match what is promised, because a prompt fishing for compliments would be worth nothing.
-dfa64342a9bb38bc  site/index.html: And nothing of ours runs on zoost.it until you press Report a problem : it opens the report page and writes the text into the box, so that you read it before anything is sent.
+347be480dffc17a5  site/index.html: And nothing of ours runs on zoost.it until you press Report this problem : it opens the report page and writes the text into the box, so that you read it before anything is sent.
 594fe33f16d22f4f  site/index.html: And with Zoost you can see all of it at once.
 b3f588c6496edf41  site/index.html: Assistants differ in what they can open, so it asks for that first - use both if you can reach both, one if only one, and say which.
 96aaee7713102f18  site/index.html: Both ask for their own platform's domains in every data centre, api.anthropic.com / api.openai.com , and zoost.it .
@@ -661,7 +661,7 @@ de4e237adb55a4ba  site/it/docs-crm.html: Il riquadro del codice tiene le righe c
 6294efcfc843335a  site/it/docs-crm.html: Il suo dettaglio ha tre tab - Fields , Related lists e Details - e le related list hanno tutto il tab di mezzo per sé.
 a162655f352adef9  site/it/docs-crm.html: L'assistente è l'unica funzionalità che manda dati fuori dalla tua macchina.
 2dca1ff1bc516519  site/it/docs-crm.html: L'intera catena e' una vista a se': il comando History , accanto ad AI nella barra, la apre al posto dell'elenco - tutto quello che hai aperto, dal piu' recente, con evidenziato il punto in cui sei e l'ora di apertura - cosi' puoi saltare direttamente a un passo di qualche tappa fa invece di premere quattro volte indietro.
-7685beb8f204daee  site/it/docs-crm.html: L'unica protezione vera è un segreto che l'estensione non possiede, quindi ⚙ Settings → AI assistant offre Protect the API key with a passphrase .
+bc901bbb92a42266  site/it/docs-crm.html: L'unica protezione vera è un segreto che l'estensione non possiede, quindi ⚙ Settings → AI assistant offre Protect the key with a passphrase .
 f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra porta il nome che hai dato al workspace, se gliene hai dato uno - accanto all'istanza e all'org della piattaforma, mai al posto loro.
 8f28b0569b3318b3  site/it/docs-crm.html: La scheda Connections ribalta la prospettiva: tutto il catalogo, a livello di org - vedi la sezione 8, Le connessioni .
 5855b8d54b120c94  site/it/docs-crm.html: La stessa azione è sulla schermata Not on a Zoho tab , come + Sample workspace : un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.

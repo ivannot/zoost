@@ -445,7 +445,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     credential store, so a key the extension can read on its own is a key anyone with your browser profile
     can read. Encrypting it with a secret kept beside it would look like protection and provide none.</p>
   <p>The one real protection is a secret the extension does not hold, so <b class="ui">⚙ Settings</b> →
-    <b>AI assistant</b> offers <b class="ui">Protect the API key with a passphrase</b>. Turn it on and
+    <b>AI assistant</b> offers <b class="ui">Protect the key with a passphrase</b>. Turn it on and
     choose one: the key is encrypted with it (PBKDF2-SHA256, then AES-GCM-256, both from the browser's own
     cryptography), and what remains on disk is ciphertext. The first time you use the chat after starting
     the browser, the panel asks for the passphrase and offers <b class="ui">Unlock</b>; the key then stays
