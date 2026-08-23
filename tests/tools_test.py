@@ -6435,5 +6435,70 @@ class EveryStoredKeyIsAccountedFor(unittest.TestCase):
                          f'none of them, so «not listed» and «not disclosed» look the same: {unlisted}')
 
 
+class EveryPermissionIsJustifiedAndEveryJustificationIsAsked(unittest.TestCase):
+    """The listing's justification sections are the manifest's permission list, written out by hand.
+
+    `manifest.json` declares what the extension asks for; `store/<app>/store-listing.md` carries one
+    numbered section per permission, because the dashboard has one box per permission and a box left
+    empty stops the submission at the form. The two lists were kept in step by whoever remembered.
+
+    Nothing compared them. Measured by adding `alarms` to **both** manifests: 376 Python tests, every
+    checker, `sitecheck` - all green. It survives specifically because the one check that looks at
+    these sections compares the **two listings against each other**, so a permission added to both
+    products and justified in neither is symmetric and therefore invisible. That is what a copy does:
+    it is checked against the other copy and never against the thing it copies.
+
+    So this reads the manifests. A permission with no section is a dashboard box that would be pasted
+    from nothing, and a section for a permission nobody asks for is a justification Google will read
+    beside a manifest that does not contain it - CLAUDE.md's «declare only what we have; have
+    everything we declare», on the one surface where the two lists are a day and a dashboard apart.
+
+    **The limits, stated.** It matches a section by its *title* - `## N. <name> justification` - so a
+    justification written under a heading of another shape is invisible to it, which is why the count
+    of what it matched is asserted rather than assumed. Host permissions are one section however many
+    hosts there are, by the decision recorded in CLAUDE.md: the field explains why the extension
+    reaches them at all, and the manifest inside the package is the list. And it says nothing about
+    what a justification *says* - `dashcheck` is what compares the text against the dashboard.
+    """
+
+    def apps(self):
+        return sorted(p.name for p in (ROOT / 'apps').iterdir()
+                      if (p / 'manifest.json').exists())
+
+    def test_the_two_lists_are_one_list(self):
+        seen = 0
+        for app in self.apps():
+            man = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
+            asked = set(man.get('permissions') or []) | set(man.get('optional_permissions') or [])
+            if man.get('host_permissions'):
+                asked.add('Host permission')
+            text = (ROOT / 'store' / app / 'store-listing.md').read_text(encoding='utf-8')
+            justified = {m.group(1).strip() for m in
+                         re.finditer(r'^## \d+\. (.+?) justification\b', text, re.M)}
+            # The denominator, by a cruder method than the check: every heading with the word in it
+            # at all. A section the careful pattern cannot read is a finding **about this test**, and
+            # it is raised before anything about the listings - it was found by planting one numbered
+            # `8b`, which the careful pattern skipped in silence and reported nothing.
+            crude = {m.group(1).strip() for m in
+                     re.finditer(r'^#+ *[\w.]* *(.+?) justification\b', text, re.M)}
+            self.assertEqual(sorted(crude - justified), [],
+                             f'{app}: these justification headings are not in the shape this check '
+                             f'reads, so it says nothing about them: {sorted(crude - justified)}')
+            seen += len(justified)
+            self.assertEqual(
+                sorted(asked - justified), [],
+                f'{app}: the manifest asks for these and the listing justifies none of them, so the '
+                f'dashboard has a box that would be pasted from nothing: {sorted(asked - justified)}')
+            self.assertEqual(
+                sorted(justified - asked), [],
+                f'{app}: the listing justifies these and the manifest does not ask for them, so the '
+                f'submission argues for access it does not want: {sorted(justified - asked)}')
+        # The denominator, by the cruder method: a listing whose headings stopped matching would
+        # otherwise pass with two empty sets and report nothing at all.
+        self.assertGreaterEqual(seen, 8,
+                                f'only {seen} justification section(s) matched across the listings - '
+                                'the heading shape changed and this check stopped reading them')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
