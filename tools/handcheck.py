@@ -36,6 +36,11 @@ the product, says in words what happened, and the assistant records it - with hi
 because the sentence he used is the evidence and «pass» is only the filing. Nothing here is inferred
 from a green suite or from an assistant's confidence: if he has not said it, it is not recorded, and
 `release.sh` stops.
+
+**Not part of `tests/run.sh`.** Every answer it records is a person's: what he saw on a real org,
+in his words, on a named commit. Nothing here can produce one, so a battery run would either skip
+it silently or invent it, and the second is the failure this whole file exists to prevent. It runs
+where it belongs - in the release routine, before the tag, with `release.sh` refusing without it.
 """
 import argparse
 import contextlib

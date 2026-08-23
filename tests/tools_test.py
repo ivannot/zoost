@@ -24,6 +24,7 @@ import html
 import struct
 import subprocess
 import sys
+import ast
 import tempfile
 import types
 import unittest
@@ -4981,6 +4982,64 @@ class LedgersSayWhichWayTheyMoved(unittest.TestCase):
                     left.append(f'{f.name}:{line}')
         self.assertEqual(left, [],
                          f'the absolute is still stated as the rule in: {left}')
+
+
+class EveryCheckerIsRunOrSaysWhyNot(unittest.TestCase):
+    """A checker nothing runs cannot be told from one that always passes.
+
+    Fourteen tools here report findings. Eleven are in `tests/run.sh`; three are deliberately not -
+    `auditcheck` needs the network, `handcheck` needs a person on a real org, `dashcheck` needs a
+    page saved out of a dashboard Google exposes no API for. All three reasons are good and only one
+    of the three was written down where somebody would meet it: `auditcheck` says so in its own
+    docstring, and the other two had their reason in `CLAUDE.md`, in a paragraph about releases.
+
+    That is the same shape as everything else in this grid - one of a set treated one way and its
+    siblings left as they were - and the cost is specific: a checker written tomorrow and never
+    wired in reports zero for ever, which is indistinguishable on screen from a clean tree.
+
+    The set is derived from what a tool *prints*, not from its name: anything that reports
+    «finding(s)» or «difference(s)» is a checker. The limit, stated rather than left to be found:
+    `deadcode.py` and `coverage.py` report neither - they are sweeps that produce candidates and
+    counts - so they are outside this and outside the battery, deliberately and by their own
+    docstrings.
+    """
+
+    def checkers(self):
+        out = []
+        for f in sorted((ROOT / 'tools').glob('*.py')):
+            src = f.read_text(encoding='utf-8')
+            if 'finding(s)' in src or 'difference(s)' in src:
+                out.append(f)
+        return out
+
+    def test_the_sweep_finds_them(self):
+        n = len(self.checkers())
+        self.assertGreaterEqual(n, 12, f'only {n} checker(s) found - the derivation broke')
+
+    def test_each_is_in_the_battery_or_says_why_it_is_not(self):
+        run = (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
+        silent = []
+        for f in self.checkers():
+            if f.name in run:
+                continue
+            doc = ast.get_docstring(ast.parse(f.read_text(encoding='utf-8'))) or ''
+            # The reason has to name the battery, so «it is slow» in passing does not count: what a
+            # reader needs to know is that nothing runs this unless they do.
+            if not re.search(r'tests/run\.sh', doc):
+                silent.append(f.name)
+        self.assertEqual(silent, [],
+                         f'these report findings, nothing runs them, and they do not say so: {silent}')
+
+    def test_and_the_ones_in_the_battery_really_are_run(self):
+        # The other half: a name appearing in run.sh inside a comment would satisfy the case above
+        # while running nothing. Every checker named there must be on a line that executes it.
+        run = (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
+        executed = {m for line in run.splitlines() if not line.strip().startswith('#')
+                    for m in re.findall(r'tools/(\w+)\.py', line)}
+        named = {f.stem for f in self.checkers()}
+        wired = sorted(named & executed)
+        self.assertGreaterEqual(len(wired), 10,
+                                f'only {len(wired)} checker(s) actually executed by the battery: {wired}')
 
 
 if __name__ == '__main__':

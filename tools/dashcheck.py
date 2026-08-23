@@ -25,6 +25,13 @@ that disappears is a loud failure; an index that moves is a quiet one.
 The fixtures under tests/ are written from store-listing.md rather than saved from the real page. A
 saved page carries a session token, an email address and the author's own portal - none of which
 belongs in this repository, and the first two are worse than untidy.
+
+**Not part of `tests/run.sh`, and it never can be.** What it compares against lives behind a login:
+Google exposes no API for the listing fields, so the input is a page the author saves out of the
+dashboard by hand. A battery cannot ask for that, and a check that needs a person is not a gate you
+hold him to - it is offered at step 6, before Submit, and refused runs are the moment to reach for
+it. Said here because a checker that nothing runs is one nobody can tell from one that always
+passes, and the reason it is not run belongs beside the tool rather than in a note about releases.
 """
 import argparse
 import html
