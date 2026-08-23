@@ -69,6 +69,7 @@
       ahead1: 'one release ahead of the Store', aheadN: 'releases ahead of the Store',
       cantAsk: 'The Store could not be asked just now, so this page cannot say whether anything is ahead of it.',
       releasesPage: 'The releases page has the answer',
+      versFailed: 'The version numbers could not be read just now.',
       released: 'Released', download: 'Download', hashes: 'notes and hash',
       noNotes: 'No notes were published for this version.',
       notesUnread: 'The notes for this version could not be fetched. They are on the release page.',
@@ -87,6 +88,7 @@
       ahead1: 'una release avanti rispetto allo Store', aheadN: 'release avanti rispetto allo Store',
       cantAsk: 'Non è stato possibile interrogare lo Store, quindi questa pagina non può dire se ci sia qualcosa avanti.',
       releasesPage: 'La pagina delle release ha la risposta',
+      versFailed: 'Non e stato possibile leggere i numeri di versione adesso.',
       released: 'Rilasciata', download: 'Scarica', hashes: 'note e hash',
       noNotes: 'Per questa versione non sono state pubblicate note.',
       notesUnread: 'Non e stato possibile recuperare le note di questa versione. Sono nella pagina della release.',
@@ -125,7 +127,13 @@
   fetch('/api/versions', { headers: { accept: 'application/json' } })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
-      if (!d) return;
+      // Thrown rather than returned, so the one place that words a failure is the one below. This
+      // read `return`, and the badge then simply did not appear: a reader cannot tell a page that
+      // carries no version block from one whose numbers could not be read, and the site's own rule
+      // is that a missing number is said and never left blank. Both siblings already did it - the
+      // /emergency box throws on the same line, and the report form words its own refusal - so this
+      // was one of three, in the same file as one of the other two.
+      if (!d) throw new Error('no answer');
       fillDocsStamp(d);
       if (!box) return;
       // One row per product, four aligned columns. Every number here belongs to exactly one
@@ -215,7 +223,15 @@
       box.innerHTML = bits.join('');
       box.classList.add('on');
     })
-    .catch(function () { /* the badge simply does not appear */ });
+    .catch(function () {
+      // One quiet line, not a broken layout: the numbers are chrome on most pages, and what is
+      // being refused here is the *silence*, not the modesty. It points where the answer actually
+      // is, which is what every other empty state in this project does.
+      if (!box) return;
+      box.innerHTML = '<div class="vrow"><span class="vitem">' + esc(t('versFailed')) +
+                      ' <a href="' + REPO_URL + '/releases">' + esc(t('releasesPage')) + '</a>.</span></div>';
+      box.classList.add('on');
+    });
 
 
   // Linked only when there is a version, which is the same thing as the listing serving content:

@@ -17,6 +17,7 @@ d0c88c4c2c1e3f3c  site/site.js: awaiting: 'in attesa di revisione', notSubmitted
 fb6bf52c19a9c956  site/site.js: inStep: "ed è l'ultima release. Qui non c'è niente da fare.",
 e93d2db5cc787f76  site/site.js: cantAsk: 'Non è stato possibile interrogare lo Store, quindi questa pagina non può dire se ci sia qualcosa avanti.',
 18969a303e7ef867  site/site.js: releasesPage: 'La pagina delle release ha la risposta',
+1dbb5a19284a444c  site/site.js: versFailed: 'Non e stato possibile leggere i numeri di versione adesso.',
 2eb3aa258c8feef5  site/site.js: noNotes: 'Per questa versione non sono state pubblicate note.',
 0f2b4c1017c0bf3d  site/site.js: notesUnread: 'Non e stato possibile recuperare le note di questa versione. Sono nella pagina della release.',
 2536222a76bde5c2  site/site.js: queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',

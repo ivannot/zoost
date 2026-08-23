@@ -1003,3 +1003,48 @@ test('no document is fetched twice for two questions', async () => {
   assert.deepEqual(twice, [],
     `fetched more than once in a single miss, for questions one copy could answer: ${twice.join(', ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// A request the site makes and cannot complete is said, never left blank.
+//
+// Three fetches are made from the two served scripts. `/api/report` words its own refusal and
+// `/api/ahead` replaces its box with «this check could not be run, the releases page has the
+// answer»; `/api/versions` had `.catch(function () { /* the badge simply does not appear */ })`,
+// so a reader could not tell a page that carries no version block from one whose numbers could not
+// be read. One of three, in the same file as one of the other two - and against the site's own
+// stated licence, which is that a number that goes missing reads «unknown» and never as silence.
+//
+// Derived by finding the fetch chains and reading what each one's failure path does, rather than by
+// naming the three. The limit is that it reads the tail of a chain: a failure handled somewhere
+// else entirely would look unhandled here, and there is no such case today.
+test('every fetch the site makes says so when it fails', () => {
+  for (const rel of ['site/site.js', 'site/report.js']) {
+    const src = read(rel);
+    const at = [...src.matchAll(/\bfetch\s*\(/g)].map((m) => m.index);
+    assert.ok(at.length, `no fetch found in ${rel} - the derivation broke`);
+    for (const start of at) {
+      // The chain runs to the `;` that closes it with every bracket balanced. Sliced to a blank
+      // line first, which cut `report.js`'s `.catch` off the end and reported it as having none -
+      // a check finding its own subject by a proxy for where it stops.
+      let d = 0, i = start;
+      for (; i < src.length; i++) {
+        const c = src[i];
+        if (c === '(' || c === '{' || c === '[') d++;
+        else if (c === ')' || c === '}' || c === ']') d--;
+        else if (c === ';' && d === 0) break;
+      }
+      const tail = src.slice(start, i);
+      const cat = /\.catch\s*\(function\s*\([^)]*\)\s*\{([\s\S]*?)\n\s*\}\)/.exec(tail);
+      const line = src.slice(0, start).split('\n').length;
+      assert.ok(cat, `${rel}:${line}: a fetch with no failure path at all`);
+      // Comments do not count as saying something: the defect was a comment where a sentence
+      // belonged, and it read as considered rather than absent.
+      const body = cat[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').trim();
+      assert.ok(body.length > 0,
+        `${rel}:${line}: the failure path is empty - the reader cannot tell a missing feature from ` +
+        `a failed request, which is the one thing this site promises not to do`);
+      assert.ok(/innerHTML|textContent|\bt\(/.test(body),
+        `${rel}:${line}: the failure path runs but puts nothing on the page`);
+    }
+  }
+});
