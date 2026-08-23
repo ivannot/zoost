@@ -134,7 +134,10 @@ seventh instance never resembles it.
 
 `python3 tools/asynccheck.py` derives the instances instead - every global written after an `await`
 with no check in between, per panel - and it is a ledger like `tools/cssdupes.txt`: 59 sites are
-recorded as read, anything new fails, and **the ledger may only shrink**. It earned its place on the
+recorded as read, and **it should shrink; a run that grows it says so**. «May only shrink» was stated
+in five tools and three places here, enforced nowhere, and measured false in three of the four files:
+growth is legitimate when the check starts *seeing* more, which is why the direction is printed and
+the commit says which of the two reasons it was. It earned its place on the
 first run by finding four real ones *and* a fix I believed I had applied and had not: a Python
 edit script had died on an assertion before writing the file, so the function was untouched while
 the commit message said otherwise. The class this belongs to is the one this file already states -
@@ -420,7 +423,7 @@ It is a ledger and not a red light, because on the day it was written 86 repetit
 and a gate that always refuses is one nobody reads. `tools/cssdupes.txt` holds them with their places;
 anything not in it fails, and so does a **new place** for something already listed - that hole was
 found by planting a seventh copy of `.cta` and watching the first version let it through. **The
-ledger may only shrink**: a line that no longer matches is a finding, so consolidating something
+ledger should shrink and says so when it grows**: a line that no longer matches is a finding, so consolidating something
 means recording it with `--accept` in the same change.
 
 Two things it will not do for you. Moving a rule into `site.css` **changes what the page looks like**
@@ -863,7 +866,7 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   words arrive already written and this is the rule most easily broken by whoever has just read it.
   So it is not prose: **`python3 tools/langcheck.py`**, in `tests/run.sh`, is a ledger like
   `tools/cssdupes.txt` - `tools/notenglish.txt` records the 29 deliberate lines with their reason,
-  anything new is a finding, and the ledger may only shrink. What it cannot do is in its docstring: it
+  anything new is a finding, and a run that grows the ledger says so. What it cannot do is in its docstring: it
   knows Italian by a word list, so it is a net and not a proof.
 - British-leaning English in user-facing copy; comments explain **why**, not what.
 - **An absolute claim invites a literal check, and a literal check is what this project asks for.**

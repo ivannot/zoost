@@ -17,7 +17,9 @@ already written.
 
 It is a **ledger**, like `tools/cssdupes.txt` and `tools/asyncglobals.txt`: what is legitimately
 Italian today is recorded in `tools/notenglish.txt` with its reason, anything new is a finding, and
-the ledger may only shrink. Three kinds of entry are legitimate and none of them is a loophole:
+it should shrink, and a run that grows it says so - «may only shrink» was stated here and measured
+false: this file has grown on every commit that touched it. Three kinds of entry are legitimate and
+none of them is a loophole:
 
   - a **quotation** of the Italian site's own copy, inside English prose that is about that copy;
   - the **language-switch link** on each English page, which addresses an Italian reader and carries
@@ -34,6 +36,8 @@ import pathlib
 import re
 import subprocess
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ledger import delta as ledger_delta, count as ledger_count  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LEDGER_REL = 'tools/notenglish.txt'
@@ -67,7 +71,7 @@ def skipped(rel: str) -> bool:
             # The manual-check records. They carry the author's own sentence about what he saw, in the
             # language he said it in - and a quotation translated is a quotation falsified, which this
             # repository states as a rule. Accepting each one into the ledger instead would grow it by
-            # a line every release, and the ledger may only shrink.
+            # a line every release, and a run that grows the ledger says so.
             or rel.endswith('/handchecks.json')
             or rel.startswith('dist/'))
 
@@ -120,11 +124,12 @@ def main() -> int:
     if accept:
         rows = ['# Derived by tools/langcheck.py - do not edit by hand; run it with --accept.',
                 '# Every line here is Italian that is *meant* to be: a quotation of the Italian site,',
-                '# or a string those pages are built from. The ledger may only shrink.']
+                '# or a string those pages are built from. It should shrink; growth is printed.']
         for rel, _, line in found:
             rows.append(f'{key(rel, line)}  {rel}: {line[:150]}')
+        _before = ledger_count(LEDGER)
         LEDGER.write_text('\n'.join(rows) + '\n', encoding='utf-8')
-        print(f'{len(found)} line(s) recorded in {LEDGER.relative_to(ROOT)}')
+        print(ledger_delta(f'langcheck: {LEDGER.relative_to(ROOT)}', _before, ledger_count(LEDGER)))
         return 0
 
     new = [(rel, n, line) for rel, n, line in found if key(rel, line) not in ledger]

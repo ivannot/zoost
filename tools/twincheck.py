@@ -38,6 +38,8 @@ It decides nothing. A difference may be deliberate — say so below, with the re
 import hashlib
 import re
 import sys
+sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
+from ledger import delta as ledger_delta, count as ledger_count, keep_comments as ledger_keep  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -440,7 +442,13 @@ def write_ledger(now):
     ]
     for name, ((ac, _), (bc, _)) in sorted(now.items()):
         lines.append(f'{name}\t{ac}\t{bc}\t{"identical" if ac == bc else "divergent"}')
+    before = ledger_count(LEDGER)
+    # Anything anybody wrote in here that this tool did not: a ledger invites an explanation of why
+    # a pair is recorded, and a regenerating --accept used to delete it without a word.
+    lines = lines + ledger_keep(LEDGER, lines)
     LEDGER.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    print(ledger_delta(f'twincheck: {LEDGER.relative_to(ROOT)}', before, ledger_count(LEDGER)))
+
 
 
 def main():
@@ -536,7 +544,6 @@ def main():
     findings += len(drift)
     if accept:
         write_ledger(now)
-        print(f'  ledger written: {LEDGER.relative_to(ROOT)}')
 
     print('\n== declared deliberate ==')
     for k, v in sorted(EQUIV.items()):

@@ -1,6 +1,7 @@
 # Derived by tools/asynccheck.py - do not edit by hand; run it with --accept.
 # Each line is a global written after an await with no check between the two.
-# Being here means somebody read it and decided it is safe. It may only shrink.
+# Being here means somebody read it and decided it is safe. It should shrink;
+# when it grows, the run says so and the commit says which of the two reasons.
 # The 24 lines added on 22 August 2026 are the options pages, the backgrounds and the content
 # scripts, which this check had never read - `sidepanel.html` was its whole subject, 9 of the 32
 # shipped scripts. The content scripts were *opened* and not read: both are wrapped in an IIFE, so

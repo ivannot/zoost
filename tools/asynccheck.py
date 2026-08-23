@@ -31,7 +31,9 @@ What it cannot do, said plainly rather than left to be discovered:
     loud, instead of a zero that reads as though the tool had reached it.
 
 It is therefore a ledger, like `tools/cssdupes.txt`: `tools/asyncglobals.txt` holds what is there
-today with its reason, anything not in it fails, and **the ledger may only shrink**. A new site is a
+today with its reason, anything not in it fails, and **it should shrink; a run that grows it says so**
+(«may only shrink» was stated here and in four other tools, and measured false in three of them:
+growth is legitimate when the check starts seeing more). A new site is a
 finding on the day it is written, which is the whole point - the cost of reading one is minutes, and
 the cost of the review that would otherwise find it is a day.
 
@@ -42,6 +44,9 @@ import json
 import os
 import re
 import sys
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ledger import delta as ledger_delta, count as ledger_count, keep_comments as ledger_keep  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
@@ -320,13 +325,22 @@ def main():
     known = read_ledger()
 
     if accept:
+        _before = ledger_count(LEDGER)
+        own = ['# Derived by tools/asynccheck.py - do not edit by hand; run it with --accept.',
+               '# Each line is a global written after an await with no check between the two.',
+               '# Being here means somebody read it and decided it is safe. It should shrink;',
+               '# when it grows, the run says so and the commit says which of the two reasons.']
+        # Whatever anybody wrote in here that this tool did not. Nineteen such lines were in this
+        # file - which entries are cache invalidations, why the options pages are recorded rather
+        # than exempted, what the tool cannot see - and a regenerating `--accept` deleted the lot
+        # without a word. Which is how it was found.
+        kept = ledger_keep(LEDGER, own)
         with open(LEDGER, 'w', encoding='utf-8') as fh:
-            fh.write('# Derived by tools/asynccheck.py - do not edit by hand; run it with --accept.\n')
-            fh.write('# Each line is a global written after an await with no check between the two.\n')
-            fh.write('# Being here means somebody read it and decided it is safe. It may only shrink.\n')
+            for line in own + kept:
+                fh.write(line + '\n')
             for k in sorted(keys):
                 fh.write(k + '\n')
-        print(f'asynccheck: recorded {len(keys)} site(s) as read.')
+        print(ledger_delta(f'asynccheck: {os.path.relpath(LEDGER, ROOT)}', _before, ledger_count(LEDGER)))
         return 0
 
     new = sorted(k for k in keys if k not in known)

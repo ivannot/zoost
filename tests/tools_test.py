@@ -4890,5 +4890,98 @@ class TheSyncStampMeansTheCopyHappened(unittest.TestCase):
                 failed.write_bytes(keep_f)
 
 
+class LedgersSayWhichWayTheyMoved(unittest.TestCase):
+    """«The ledger may only shrink» was stated eleven times and enforced nowhere - and it is false.
+
+    Five tools keep a ledger and every one of them says it, as do three places in `CLAUDE.md`.
+    Nothing was behind any of the eleven: `--accept` records whatever is there and prints the new
+    total, so a ledger that grew and one that shrank print the same shape of line. Measured from
+    git: `notenglish.txt` has grown on **every** commit that touched it (33, 38, 39, 41, 42, 43);
+    `asyncglobals.txt` went from 52 entries to 79 in one step; `cssdupes.txt`, the one the rule was
+    written for, fell 86 to 35 and then grew to 38.
+
+    The prose was also wrong to be absolute, which is the more useful half. A ledger grows for two
+    reasons that are identical in the file: new debt was accepted, or **the check started seeing
+    more**. The 52 -> 79 jump was the second - `asynccheck` learnt to read inside an IIFE and found
+    two content bridges it had scored as empty - and refusing that growth would have refused the
+    fix. So the direction is printed, and the commit says which reason.
+    """
+
+    LEDGERS = ('cssdupes.txt', 'notenglish.txt', 'asyncglobals.txt', 'attrraw.txt')
+
+    def helper(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ledger_under_test', ROOT / 'tools' / 'ledger.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_it_names_the_direction_and_the_size(self):
+        m = self.helper()
+        self.assertIn('MORE', m.delta('x', 5, 8), 'growth reads the same as anything else')
+        self.assertIn('shrank', m.delta('x', 8, 5))
+        self.assertIn('unchanged', m.delta('x', 5, 5))
+
+    def test_every_tool_with_a_ledger_reports_the_direction(self):
+        # Derived from the tools that write one, not from a list: a fifth added tomorrow is a
+        # finding here until it says which way its file moved.
+        writers = []
+        for f in sorted((ROOT / 'tools').glob('*.py')):
+            src = f.read_text(encoding='utf-8')
+            if re.search(r'LEDGER\s*=|LEDGER\.write_text|open\(LEDGER', src) and '--accept' in src:
+                writers.append(f)
+        self.assertGreaterEqual(len(writers), 4, f'only {len(writers)} ledger tool(s) found - the sweep broke')
+        silent = [f.name for f in writers if 'ledger_delta(' not in f.read_text(encoding='utf-8')]
+        self.assertEqual(silent, [],
+                         f'these rewrite a ledger and never say whether it grew or shrank: {silent}')
+
+    def test_an_accept_keeps_what_it_did_not_write(self):
+        # `asyncglobals.txt` carried nineteen hand-written lines - which entries are cache
+        # invalidations, why the options pages are recorded rather than exempted, what the tool
+        # cannot see - and a regenerating `--accept` deleted every one of them without a word. Found
+        # by doing it: the file invites an explanation and then throws it away.
+        m = self.helper()
+        with tempfile.TemporaryDirectory() as t:
+            f = pathlib.Path(t) / 'led.txt'
+            own = ['# generated header']
+            f.write_text('# generated header\n# somebody explained this one\nentry\n', encoding='utf-8')
+            self.assertEqual(m.keep_comments(f, own), ['# somebody explained this one'])
+            self.assertEqual(m.count(f), 1, 'comments are counted as entries')
+
+    def test_the_ledger_that_carries_reasoning_still_carries_it(self):
+        # The real file, because the case above proves the helper and this proves it is wired in.
+        led = ROOT / 'tools' / 'asyncglobals.txt'
+        self.assertGreater(sum(1 for l in led.read_text(encoding='utf-8').splitlines()
+                               if l.startswith('#')), 10,
+                           'the explanation of why those entries are safe is gone - an --accept ate it')
+
+    def test_no_tool_still_states_the_absolute_the_measurement_disproved(self):
+        # Grep the claim, not the paragraph: it was in five tools and three places in CLAUDE.md, and
+        # correcting the one in front of you is how a repository ends up contradicting itself.
+        left = []
+        # `ledger.py` is exempt, by name and with its reason: that file *is* the record of the
+        # disproof, so the old rule is quoted in it several times in the course of explaining why it
+        # went. Detecting «quoted» from «stated» by the words around it was tightened twice and got
+        # narrower each time without getting truer - which this repository says to stop doing and
+        # write the limit into the test instead.
+        for f in list((ROOT / 'tools').glob('*.py')) + [ROOT / 'CLAUDE.md']:
+            if f.name == 'ledger.py':
+                continue
+            src = f.read_text(encoding='utf-8')
+            for m_ in re.finditer(r'may only shrink', src):
+                line = src[:m_.start()].count('\n') + 1
+                # A quotation of the old rule inside an explanation of why it went is the record
+                # this repository keeps; what is refused is stating it as the rule.
+                # Both sides of it: a disclaimer can precede the quotation or follow it, and the
+                # first version of this only looked behind - so it reported three passages that
+                # said, one line down, exactly why the rule had gone.
+                near = src[max(0, m_.start() - 400):m_.start() + 400]
+                if not re.search(r'was stated|disproved|measured false|used to say|it is false|no longer',
+                                 near):
+                    left.append(f'{f.name}:{line}')
+        self.assertEqual(left, [],
+                         f'the absolute is still stated as the rule in: {left}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

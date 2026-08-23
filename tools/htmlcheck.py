@@ -33,6 +33,9 @@ content would cry wolf until nobody read it. That limit is stated rather than hi
 import hashlib
 import re
 import sys
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ledger import delta as ledger_delta, count as ledger_count  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -312,7 +315,8 @@ def interpolations(value: str) -> list:
 # ternary of literals, a number. Teaching `suspect()` their names would be an allow-list of functions
 # - the checklist wearing a script's clothes this repository refuses - so they are a **ledger**, like
 # `cssdupes.txt` and `asyncglobals.txt`: recorded with their place, anything new is a finding, and the
-# ledger may only shrink. Two real ones were fixed before it was written rather than recorded in it.
+# ledger should shrink, and a run that grows it says so. Two real ones were fixed before it was
+# written rather than recorded in it.
 LEDGER = ROOT / 'tools' / 'attrraw.txt'
 
 
@@ -409,14 +413,15 @@ def main() -> int:
         rows = ['# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.',
                 '# Attribute interpolations that are not attribute-escaped and are inert for a reason',
                 '# syntax cannot see: an anchor through sanitize(), a colour from our own palette, a',
-                '# ternary of literals, a number. The ledger may only shrink.']
+                '# ternary of literals, a number. It should shrink; growth is printed.']
         for f in findings:
             place, _, rest = f.partition(': ')
             rel, _, _line = place.rpartition(':')
             attr, _, expr = rest.partition('="${')
             rows.append(f'{key(rel, attr, expr.rsplit("}\" is not", 1)[0])}  {f}')
+        _before = ledger_count(LEDGER)
         LEDGER.write_text('\n'.join(rows) + '\n', encoding='utf-8')
-        print(f'{len(findings)} attribute interpolation(s) recorded in {LEDGER.relative_to(ROOT)}')
+        print(ledger_delta(f'htmlcheck: {LEDGER.relative_to(ROOT)}', _before, ledger_count(LEDGER)))
         return 0
     # Before anything about the code: what this tool did not look at. A gap here is a defect in the
     # checker, and it goes first because a finding count printed under an unstated blind spot is the
