@@ -12281,3 +12281,89 @@ test('crm: every area the panel reports on is an area the panel can record', asy
   }
   assert.ok(stale.length > 0, 'areaStale is gone - the derivation broke');
 });
+
+// ---------------------------------------------------------------------------------------------
+// The stand-in for Zoho always said yes.
+//
+// `api()` in the bridge is the one place every read of the org passes through, and Zoho can answer
+// it four different ways: **204**, which is «this org has none of those» and has no body, so
+// `res.json()` would throw and an empty area would arrive as a failure - measured on an org with no
+// webhooks at all; **ok**, the body; **400 INVALID_CSRF_TOKEN** on the first `/deluge/` call after a
+// fresh login, which is warmed and retried exactly once; and anything else, which is thrown with the
+// status, the sentence Zoho wrote and its machine-readable code kept apart.
+//
+// Not one of the four was exercised. The only `fetch` the bridge's cases ever saw was
+// `async () => ({ ok: true })` - a fixture that cannot produce a 204, cannot produce a failure, and
+// cannot produce the one case the retry exists for. Measured by making 204 answer `null` instead of
+// `NO_CONTENT`: the battery green but for the screenshots noticing a file under `apps/` had moved,
+// and every org with an empty area back to reading a refusal where there is simply nothing.
+//
+// That is `fake`: the kindness is in the stand-in, so the code under it is never asked the questions
+// it was written to answer.
+//
+// What is stubbed here is only what is not the subject - `BASE`, `headers`, `warmDeluge` and the
+// answers themselves. `safePath`, `apiError`, `errorDetail` and `NO_CONTENT` are the shipped ones,
+// because a hand-written copy of an error reader is a second reader that agrees with the test.
+//
+// **The limits, stated.** It drives one function; the callers that turn its answers into files are
+// covered where they live. The bodies are minimal - a real Zoho error carries more - and the point
+// is which *branch* is taken, not the wording, which `errorDetail` owns and is exercised through.
+test('crm: the bridge answers Zoho four ways, and none of them was ever tried', async () => {
+  let warmed = 0;
+  const answers = [];
+  const g = {
+    BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console,
+    headers: () => ({}),
+    warmDeluge: async () => { warmed++; },
+    fetch: async () => answers.shift(),
+  };
+  const { api, NO_CONTENT } = load([
+    sliceConst('apps/crm/content-bridge.js', 'NO_CONTENT'),
+    sliceFn('apps/crm/content-bridge.js', 'safePath'),
+    sliceFn('apps/crm/content-bridge.js', 'apiError'),
+    sliceFn('apps/crm/content-bridge.js', 'errorDetail'),
+    sliceFn('apps/crm/content-bridge.js', 'api'),
+  ], g);
+
+  // 204: an area this org has none of. Not a failure, and not a body - `json()` here throws on
+  // purpose, so a branch that stopped treating 204 as its own answer fails rather than passes.
+  answers.push({ status: 204, ok: false, json: async () => { throw new Error('no body'); } });
+  assert.equal(await api('/crm/v2/settings/webhooks', 'crm'), NO_CONTENT,
+    'a 204 no longer answers «this org has none of those», so an empty area reads as a refusal');
+
+  // ok: the body, untouched.
+  answers.push({ status: 200, ok: true, json: async () => ({ webhooks: [] }) });
+  assert.deepEqual(await api('/crm/v2/settings/webhooks', 'crm'), { webhooks: [] },
+    'the body of a successful read no longer comes back as it was');
+
+  // 400 INVALID_CSRF_TOKEN on a /deluge/ call: warmed once, retried once, and the retry answers.
+  answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
+  answers.push({ status: 200, ok: true, json: async () => ({ connections: [] }) });
+  assert.deepEqual(await api('/deluge/api/connections', 'drepn'), { connections: [] },
+    'the first deluge call after a login is no longer warmed and retried');
+  assert.equal(warmed, 1, `the runtime was warmed ${warmed} time(s) - once is the whole design`);
+  assert.equal(answers.length, 0, 'the retry never happened, or happened more than once');
+
+  // …and once only: a second INVALID_CSRF_TOKEN is thrown rather than looped on. «One retry on a
+  // genuinely transient failure, never a retry loop against an assumption.»
+  answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
+  answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
+  await assert.rejects(() => api('/deluge/api/connections', 'drepn'),
+    (e) => e.status === 400, 'a second refusal is retried again - that is a loop against an assumption');
+  assert.equal(warmed, 2, 'the retry warmed more than once for one call');
+
+  // anything else: thrown, with what Zoho said and what it called it, kept apart.
+  answers.push({ status: 403, ok: false,
+    text: async () => '{"code":"NO_PERMISSION","message":"permission denied"}' });
+  await assert.rejects(() => api('/crm/v2/settings/functions', 'crm'), (e) => {
+    assert.equal(e.status, 403, 'the status is lost');
+    assert.equal(e.forbidden, true, 'a 403 is no longer a refusal, so the panel cannot say why');
+    assert.equal(e.detail, 'permission denied', 'the sentence Zoho wrote is lost');
+    assert.equal(e.code, 'NO_PERMISSION', 'the machine-readable reason is lost');
+    return true;
+  });
+
+  // and a path that cannot be right is refused before it is sent.
+  await assert.rejects(() => api('/crm/../../etc/passwd', 'crm'), /malformed request path/,
+    'a malformed path is sent to Zoho instead of being refused here');
+});
