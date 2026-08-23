@@ -712,6 +712,7 @@ $('zohoDc').onchange = async () => {
   toast('Data centre saved.');
 };
 
+const SEC_TABS = 'Tabs';
 const SEC_DIAGRAM = 'Diagram layout';
 
 // ---------- saved search patterns ----------
@@ -820,7 +821,15 @@ $('saveRx').onclick = async () => {
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
   exportScope: { label: 'Export defaults', reload: loadScope },
-  tabPrefs: { label: 'Tabs', reload: loadTabs },
+  // Two keys, one section, the same shape as the diagram pair below: `tabPrefs` is what this page
+  // writes, and `tabAccessView` is what the **panel** writes when a pull discovers that a role no
+  // longer grants a tab - which is exactly what the Tabs section shows. Only the first was
+  // registered, so a page left open went on showing «granted» beside a tab the org had just
+  // refused, for the rest of the session. Nothing marks `tabAccessView` dirty - `dirty` is keyed
+  // by `data-section` in the markup and it has no section element - so it can only take the silent
+  // branch, which is right: the page never writes it, so there is no lost update to guard.
+  tabPrefs: { label: SEC_TABS, reload: loadTabs },
+  tabAccessView: { label: SEC_TABS, reload: loadTabs },
   // Two keys, one section, so the label is a name rather than two copies one edit apart.
   erParams: { label: SEC_DIAGRAM, reload: loadLay },
   erDrawMax: { label: SEC_DIAGRAM, reload: loadLay },

@@ -12688,3 +12688,62 @@ test('a write the browser refuses forgets nothing, in either product', async () 
   }
   assert.equal(ctx._dirtySource.has('functions/a/b.dg'), true, 'a written source left no dirty mark');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A section watches one key, and one of the loaders reads two.
+//
+// The settings page can sit open for hours while the panel writes the same keys, so each section
+// watches its own: `SECTIONS` maps a stored key to the loader that reads it, `onChanged` walks that
+// table, and a key that changed elsewhere either re-reads silently or raises a conflict. The whole
+// guard against the stale save is that table being complete.
+//
+// `loadTabs()` reads **two** keys - `tabPrefs`, which the page writes, and `tabAccessView`, which the
+// **panel** writes every time the access verdicts move: it is what the Tabs section shows about
+// whether your Zoho role still grants each tab. Only the first was registered. So a pull that
+// discovers a refusal updates the fact, and a settings page already open goes on showing the old
+// verdicts for the rest of the session - «granted» beside a tab the org has just refused.
+//
+// Two halves each right on their own: the table maps a key to its loader, and the loader reads what
+// it needs. The composition is a loader registered under one of the two keys it depends on.
+//
+// The fix is the idiom the file already has beside it - `erParams` and `erDrawMax` under one
+// `SEC_DIAGRAM`, with a comment saying why - so `tabPrefs` and `tabAccessView` share `SEC_TABS`.
+// Nothing marks `tabAccessView` dirty, because `dirty` is keyed by `data-section` in the markup and
+// there is no section element for it, so it can only ever take the silent branch: which is correct,
+// as the page never writes it and there is no lost update to guard.
+//
+// **The limits, stated.** It reads the keys a loader asks `chrome.storage.local` for, written as
+// literals; a key reached through a variable is invisible to it, which is why the count of keys
+// compared is asserted. And it says nothing about whether a reload actually redraws anything.
+test('every key the settings page reads is a key it is told about', () => {
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name)
+    .filter((a) => read(`apps/${a}/options.js`).includes('const SECTIONS'));
+  assert.ok(apps.length >= 2, `${apps.length} settings page(s) have a SECTIONS table - the derivation broke`);
+  let compared = 0;
+  for (const app of apps) {
+    const src = read(`apps/${app}/options.js`);
+    const at = src.indexOf('const SECTIONS');
+    const table = src.slice(at, src.indexOf('\n};', at));
+    const sections = [...table.matchAll(/^ {2}(\w+):/gm)].map((m) => m[1]);
+    assert.ok(sections.length >= 3, `id=${app}: ${sections.length} section(s) - the derivation broke`);
+
+    // What the page asks storage for, in either shape it uses.
+    const read1 = [...src.matchAll(/storage\.local\.get\(\s*'(\w+)'/g)].map((m) => m[1]);
+    const readN = [...src.matchAll(/storage\.local\.get\(\s*\[([^\]]*)\]/g)]
+      .flatMap((m) => [...m[1].matchAll(/'(\w+)'/g)].map((x) => x[1]));
+    const asked = [...new Set([...read1, ...readN])];
+    compared += asked.length;
+    assert.ok(asked.length >= 3, `id=${app}: the page reads ${asked.length} key(s) - the derivation broke`);
+
+    const unwatched = asked.filter((k) => !sections.includes(k));
+    assert.deepEqual(unwatched, [],
+      `id=${app}: the settings page shows these and no section watches them, so a change made `
+      + `anywhere else is never picked up and the form goes on showing what it read at load: ${unwatched}`);
+    const unread = sections.filter((k) => !asked.includes(k));
+    assert.deepEqual(unread, [],
+      `id=${app}: these sections watch a key nothing on the page reads, so their reload has nothing `
+      + `to catch up to: ${unread}`);
+  }
+  assert.ok(compared >= 8, `only ${compared} key(s) compared - the derivation broke`);
+});
