@@ -37,79 +37,79 @@
   },
   "crm-actions": {
     "app": "crm",
-    "from": "b38bfece5f97c400"
+    "from": "780ddef19ac60e2a"
   },
   "crm-ai": {
     "app": "crm",
-    "from": "273cb430af9069c3"
+    "from": "bffcffb4c9167ac4"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "6266d9bfce29cd8e"
+    "from": "514e37da35387eb1"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "a3dde51c1b8026f0"
+    "from": "8c8f941067d5b8e9"
   },
   "crm-er": {
     "app": "crm",
-    "from": "23bb71a7cc85b93a"
+    "from": "8ff242e2e18a8670"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "91df32aecebecdf9"
+    "from": "45212f704fd1d580"
   },
   "crm-export": {
     "app": "crm",
-    "from": "e224ba3bdc492aa9"
+    "from": "58c33e5de4aa5e7c"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "3f536f47b4fbff18"
+    "from": "00ff36cbdb0ece52"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "88c9c83823d1bc28"
+    "from": "331d764e9cb52909"
   },
   "crm-health": {
     "app": "crm",
-    "from": "0eb4ec840f2429dd"
+    "from": "02149356029ef1dd"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "e16868642112cfe0"
+    "from": "a74977da1d78d97c"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "73d69e0878ace49f"
+    "from": "cdae34faf640f99b"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "cfa704a565ed6c25"
+    "from": "b4d9b0524009b57c"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "096933f674f7128b"
+    "from": "1506213d5eed9c83"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "e878ece3e7b77217"
+    "from": "65d6f7749d5bcb13"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "a263851ced5cd79c"
+    "from": "437b3e7989ee67e9"
   },
   "crm-search": {
     "app": "crm",
-    "from": "b59d84239502ca26"
+    "from": "7849f37b10b8f914"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "20aeb2944b3fbe69"
+    "from": "29f33208de389727"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "7f0becbc7d784202"
+    "from": "4def5cfd94ddc50c"
   },
   "og": {
     "from": "546a51d336920dde"

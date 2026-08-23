@@ -158,7 +158,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       fnHtml += `<section class="item" id="${escA(fnAnchor(f.api_name))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
         + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.downloaded ? '' : '<span class="badge no">not downloaded</span>'}</div>`
-        + `${refs}${(scope.code && f.code) ? `<pre class="code">${hl(f.code)}</pre>` : ''}</section>`;
+        // Three states, not two. «Not downloaded» has a badge in the header; «downloaded and the
+        // file could not be read» had nothing at all - the section simply ended, and a reader
+        // without the extension saw a function that looks like every other one and happens to show
+        // no source. The Markdown twin says the first and emits an **empty fence** for the second,
+        // which its own comment forbids in those words. Neither covered the case that is a failure.
+        + `${refs}${scope.code ? srcBlock(f) : ''}</section>`;
     });
   });
 
@@ -218,6 +223,14 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     allRels.push({ api: r.api_name, label: r.label || '', parent: m.api_name, child, via, type: r.type || 'default', visible: r.visible !== false, sys: SYS_REL_X.test(r.api_name) || !child });
   }));
   allRels.sort((a, b) => (a.sys - b.sys) || a.parent.localeCompare(b.parent) || a.api.localeCompare(b.api));
+  // What goes where the source would be. `code === null` is «there was nothing to read»; `''` is a
+  // file that is there and is empty, which is a fact about the function and not a failure.
+  const srcBlock = (f) => (
+    !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
+      : f.code === null || f.code === undefined
+        ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
+        : `<pre class="code">${hl(f.code)}</pre>`);
+
   const relRowHtml = (r) => `<tr class="relrow${r.sys ? ' sys' : ''}" data-name="${escA(((r.api || '') + ' ' + (r.label || '') + ' ' + (r.parent || '') + ' ' + (r.child || '')).toLowerCase())}">`
     + `<td class="mono"><b>${esc(r.api)}</b></td><td>${esc(r.label)}</td>`
     + `<td class="mono">${modLink(r.parent)}</td><td class="mono">${r.child ? modLink(r.child) : ''}</td>`
@@ -552,8 +565,8 @@ function buildExportMarkdown(d, scope) {
   // The source comes from `code`, read from disk by loadExportData: a graph node carries none.
   const fnList = (scope.functions ? (d.fns || []) : [])
     .map((f) => Object.assign({ namespace: f.namespace, name: f.api_name, api_name: f.api_name,
-                                rest: f.rest, stats: f.stats, source_code: f.code || '' }, f.node || {},
-                              { downloaded: f.downloaded, source_code: f.code || '',
+                                rest: f.rest, stats: f.stats, source_code: f.code }, f.node || {},
+                              { downloaded: f.downloaded, source_code: f.code,
                                 display_name: f.display_name, associated_place: f.associated_place,
                                 connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime }))
     .sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
@@ -612,7 +625,14 @@ function buildExportMarkdown(d, scope) {
     // An empty fence would read as a function with no body. Not downloaded is a different fact from
     // empty, and this report has one job: never to let the two look alike.
     md += !n.downloaded ? '\n- source: not downloaded - run Pull all, or ↻ Refresh, to fetch it\n\n'
-        : scope.code ? ('\n```deluge\n' + String(n.source_code || '').replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
+        // The third state, which this line had two of. A function whose file could not be read
+        // got an empty fence - «a function with no body», which the comment above forbids in those
+        // words about the case one branch over. `null` is «nothing to read»; `''` is an empty file
+        // and keeps its fence, because that is true of it.
+        : (n.source_code === null || n.source_code === undefined)
+          ? '\n- source: could not be read from the workspace folder - the function exists, this copy does not'
+          + '\n\n'
+        : scope.code ? ('\n```deluge\n' + String(n.source_code).replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
   });
   // Relation-first catalogue: this is the section an LLM should hit when asked
   // \"how do I read the related data of a contact?\"

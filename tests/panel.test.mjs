@@ -9841,3 +9841,42 @@ test('nothing substitutes a number for a measurement that was not taken', () => 
   assert.deepEqual(bad, [],
     `these turn «not measured» into a number, which the reader cannot tell from a real zero: ${bad.join(', ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// A report tells «not downloaded», «could not be read» and «here it is» apart - in both formats.
+//
+// Three states, and each report knew two. The HTML put a «not downloaded» badge in the header and
+// then, where the source would be, wrote nothing at all: a function whose file could not be read
+// looked like every other one and happened to show no code, to a reader who does not have the
+// extension and cannot check. The Markdown said the first properly and emitted an **empty fence**
+// for the second - «a function with no body», which its own comment forbids in those words, two
+// lines above the branch that did it.
+//
+// The two halves of one rule, each written on one side. That is the shape this repository keeps
+// meeting, and the reason both exports are checked together rather than one at a time.
+test('both exports say which kind of missing source it is', () => {
+  const src = read('apps/crm/export.js');
+
+  // Derived: every place a report decides what to print in the source position must ask all three
+  // questions. `downloaded` separates the first; a null/undefined check separates the other two.
+  const html = /const srcBlock = \(f\) => \(([\s\S]*?)\);/.exec(src);
+  assert.ok(html, 'the HTML export no longer has one place that decides what stands for the source');
+  // And it is *used*: the first version of this read the helper's definition and passed while the
+  // section builder had been put back to `f.code ? <pre> : ''` and never called it. A check whose
+  // subject is a definition says nothing about the code that runs.
+  assert.match(src, /scope\.code \? srcBlock\(f\)/,
+    'the section builder does not call srcBlock, so nothing it says ever reaches a reader');
+  assert.match(html[1], /!f\.downloaded/, 'the HTML export cannot tell «not downloaded»');
+  assert.match(html[1], /f\.code === null|f\.code === undefined/, 'it cannot tell «could not be read»');
+  assert.match(html[1], /<pre class="code">/, 'it stopped showing the source it does have');
+
+  const md = src.slice(src.indexOf("md += !n.downloaded ?"), src.indexOf("```\\n\\n') : '\\n';") + 20);
+  assert.ok(md.length > 50, 'the Markdown source block has moved - this check no longer reads it');
+  assert.match(md, /could not be read/, 'the Markdown export emits an empty fence for an unread file');
+  assert.match(md, /not downloaded/, 'the Markdown export cannot tell «not downloaded»');
+
+  // And the two must not disagree about what an *empty* file is: it keeps its fence in Markdown and
+  // its <pre> in HTML, because a file that is there and is empty is a fact about the function.
+  assert.ok(!/source_code \|\| ''/.test(src) && !/f\.code \|\| ''/.test(src),
+    'a missing source is being coerced to an empty string again, which is the fence that lies');
+});
