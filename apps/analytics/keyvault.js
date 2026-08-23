@@ -70,11 +70,38 @@
   // restarts or the extension reloads. It is never written back to storage.local, which is the
   // entire point: on disk there is only the ciphertext.
   const SESSION = 'aikeys';
+
+  /** Every change to that cache, one at a time.
+   *
+   * `remember` and `forget` both read the whole object, build a new one from it and write it back.
+   * Two of those in flight at once read the same thing and the second write erases the first's
+   * effect. Reachable: Save is not disabled while it runs, and `mergeKeys` calls `forget(prov)` for
+   * each provider the reader ticked - so a double-press with both ticked can leave a key the reader
+   * asked to forget sitting in memory. That is the same defect the comment on `forget` records
+   * having just fixed from the other direction.
+   *
+   * It was safe only as a property of four call sites, never of these two functions - the shape a
+   * review of this repository has already named once, about a checker trusting an escaper by name.
+   * And nothing could have said so: `keyvault.js` matches `asynccheck`'s declared library exclusion,
+   * so the one tool for «written after an await with nothing asked in between» never opens it.
+   *
+   * A chain rather than a lock: no flag to release, nothing to leave held if a step throws, and the
+   * order is the order the callers asked in. `catch` on both sides so one failure does not stop the
+   * queue for the rest of the session.
+   */
+  let _chain = Promise.resolve();
+  function serial(fn) {
+    const run = _chain.then(fn, fn);
+    _chain = run.then(() => {}, () => {});
+    return run;
+  }
   async function remember(provider, plain) {
-    try {
-      const r = await chrome.storage.session.get(SESSION);
-      await chrome.storage.session.set({ [SESSION]: Object.assign({}, r[SESSION] || {}, { [provider]: plain }) });
-    } catch (_) {}
+    return serial(async () => {
+      try {
+        const r = await chrome.storage.session.get(SESSION);
+        await chrome.storage.session.set({ [SESSION]: Object.assign({}, r[SESSION] || {}, { [provider]: plain }) });
+      } catch (_) {}
+    });
   }
   async function recall(provider) {
     try { const r = await chrome.storage.session.get(SESSION); return (r[SESSION] || {})[provider] || null; }
@@ -86,13 +113,15 @@
   // whole meaning is «this key is gone» left it in memory. Found while checking an audit's point
   // about session hygiene, which was right for a reason it did not have.
   async function forget(provider) {
-    try {
-      if (!provider) { await chrome.storage.session.remove(SESSION); return; }
-      const r = await chrome.storage.session.get(SESSION);
-      const keys = Object.assign({}, r[SESSION] || {});
-      delete keys[provider];
-      await chrome.storage.session.set({ [SESSION]: keys });
-    } catch (_) {}
+    return serial(async () => {
+      try {
+        if (!provider) { await chrome.storage.session.remove(SESSION); return; }
+        const r = await chrome.storage.session.get(SESSION);
+        const keys = Object.assign({}, r[SESSION] || {});
+        delete keys[provider];
+        await chrome.storage.session.set({ [SESSION]: keys });
+      } catch (_) {}
+    });
   }
 
   window.ZOOST_KEYVAULT = { lock, unlock, remember, recall, forget };

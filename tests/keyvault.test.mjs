@@ -888,3 +888,64 @@ test('the gear and the cross are drawn, not typed', () => {
               `${app}: the two icons are not boxed and centred together`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The session cache is read, changed and written back, and two of those cannot overlap.
+//
+// `remember` and `forget` both do `get(SESSION)`, build a whole new object from what came back, and
+// `set` it. Two of them in flight at once read the same object and the second write erases the
+// first's effect. It is not a hypothetical shape: Save is not disabled while it runs, and
+// `mergeKeys` calls `forget(prov)` for every provider the reader ticked - so a double-press with
+// both ticked runs two of these against one cache, and a key the reader asked to forget stays in
+// memory. That is the exact defect the comment inside `forget` records having just fixed from the
+// other direction, and the fix was a property of four call sites rather than of the function.
+//
+// Nothing was watching, and could not be: `keyvault.js` matches `asynccheck`'s declared library
+// exclusion, so the one checker for «written after an await with nothing asked in between» never
+// opens it.
+test('two changes to the session cache cannot erase each other', async () => {
+  for (const app of ['crm', 'analytics']) {
+    // A store whose get() resolves on a later tick, which is what any real one does. The stub above
+    // answers synchronously inside an async function, which is enough to hide this entirely.
+    const mk = () => {
+      let held = { aikeys: { anthropic: 'A', openai: 'O' } };
+      return {
+        get: async (k) => { await null; return JSON.parse(JSON.stringify({ [k]: held[k] })); },
+        set: async (o) => { await null; Object.assign(held, JSON.parse(JSON.stringify(o))); },
+        remove: async (k) => { await null; delete held[k]; },
+        held: () => held.aikeys,
+      };
+    };
+    const load = (store) => {
+      const win = {};
+      const ctx = vm.createContext({
+        window: win, crypto: globalThis.crypto, TextEncoder, TextDecoder,
+        btoa: (x) => Buffer.from(x, 'binary').toString('base64'),
+        atob: (x) => Buffer.from(x, 'base64').toString('binary'),
+        chrome: { storage: { session: store } },
+      });
+      vm.runInContext(fs.readFileSync(path.join(ROOT, 'apps', app, 'keyvault.js'), 'utf8'), ctx);
+      return win.ZOOST_KEYVAULT;
+    };
+
+    let store = mk();
+    let kv = load(store);
+    await Promise.all([kv.forget('anthropic'), kv.forget('openai')]);
+    assert.deepEqual(store.held(), {},
+      `id=${app}: two forgets at once left ${JSON.stringify(store.held())} in the session cache - ` +
+      `a key the reader asked to forget is still in memory`);
+
+    store = mk();
+    kv = load(store);
+    await Promise.all([kv.forget('anthropic'), kv.remember('openai', 'NEW')]);
+    assert.deepEqual(store.held(), { openai: 'NEW' },
+      `id=${app}: a forget and a remember at once erased each other - got ${JSON.stringify(store.held())}`);
+
+    // And the ordinary case still works, because a lock that refuses everything is not safety.
+    store = mk();
+    kv = load(store);
+    await kv.remember('anthropic', 'X');
+    assert.equal(store.held().anthropic, 'X', `id=${app}: one remember on its own did nothing`);
+    assert.equal(store.held().openai, 'O', `id=${app}: it dropped the other provider`);
+  }
+});
