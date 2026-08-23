@@ -5042,5 +5042,45 @@ class EveryCheckerIsRunOrSaysWhyNot(unittest.TestCase):
                                 f'only {len(wired)} checker(s) actually executed by the battery: {wired}')
 
 
+class TheGridSaysHowFarAlongItIs(unittest.TestCase):
+    """The count of closed cells is a fraction, not a remainder, and it reaches the commit subject.
+
+    Fifteen commits carried «33 cells left» in their *body*. `git log --oneline` therefore showed no
+    progress at all, and a remainder with no denominator cannot say whether a run is a third done or
+    nearly finished - so a reader of the log sees work trailing off. The subjects before them read
+    «Cell 30 of 80: ...», which says both. Reported by Ivan, reading the log; the form had drifted by
+    being remembered rather than derived.
+
+    So the tool prints the next subject, and this holds the shape. The denominator moves when a cell
+    is declared not-applicable, which is why it is computed and never typed - the earlier subjects
+    say «of 80» and were correct when they were written.
+    """
+
+    def report(self):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'matrix.py')],
+                              cwd=ROOT, capture_output=True, text=True).stdout
+
+    def test_it_hands_over_the_next_subject(self):
+        out = self.report()
+        m = re.search(r'next commit subject:\s+Cell (\d+) of (\d+):', out)
+        self.assertIsNotNone(m, f'the tool does not hand over a subject line:\n{out}')
+        n, total = int(m.group(1)), int(m.group(2))
+        self.assertLessEqual(n, total, 'the next cell is past the end of the grid')
+        self.assertGreater(n, 1, 'the numerator is not counting what is already closed')
+
+    def test_the_numbers_are_derived_from_the_grid(self):
+        # Not a second opinion: the same two values the report's own headline states. A subject that
+        # could disagree with the grid it comes from would be worse than none.
+        out = self.report()
+        head = re.search(r'(\d+) real\.', out)
+        closed = re.search(r'(\d+) closed by a plant', out)
+        nxt = re.search(r'Cell (\d+) of (\d+):', out)
+        self.assertTrue(head and closed and nxt, out)
+        self.assertEqual(int(nxt.group(2)), int(head.group(1)),
+                         'the subject names a different total from the grid')
+        self.assertEqual(int(nxt.group(1)), int(closed.group(1)) + 1,
+                         'the subject does not number the cell that is about to be closed')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

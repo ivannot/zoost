@@ -163,6 +163,15 @@ def main() -> int:
           f"{len(all_cells)} real.")
     print(f"        {len(CLOSED)} closed by a plant that was seen to fail first. "
           f"**{len(open_cells)} left.**")
+    # The subject line for the next one, ready to paste. A remainder - «33 left» - is what the
+    # commits between 475bbc0 and here carried, in the *body* only, and it reads as work trailing
+    # off: `git log --oneline` showed no progress at all, and a number with no denominator cannot
+    # say whether a run is a third done or nearly finished. Reported by Ivan, reading the log.
+    #
+    # Printed rather than remembered, because the form drifted once by being remembered. The
+    # denominator moves when a cell is declared not-applicable, which is why it is derived here and
+    # not typed: the earlier subjects say «of 80» and were right when they were written.
+    print(f"\n  next commit subject:  Cell {len(CLOSED) + 1} of {len(all_cells)}: <what broke>")
     print()
     head = "class \\ surface"
     print(f"  {head:12s}" + "".join(f"{s[0][:9]:>11s}" for s in SURFACES))
