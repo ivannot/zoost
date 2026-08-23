@@ -400,8 +400,19 @@ ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of'
 #
 # The other notes carry 70 to 90 absolutes each and would flood the ledger, which is the cost the
 # all-or-nothing `--accept` makes real. This one carries 19.
+# Prose a reader can reach. `apps/*/*.html` is here because the panel and the Settings page are
+# where somebody *acts* on what we say - the site is informational and a wrong number there costs
+# nothing, while a wrong absolute inside the product costs the reader's time or their data. It was
+# outside this list for the length of the project: an absolute planted in `options.html` went through
+# the whole battery with only `imgcheck` moving, and that only because the file's digest changed.
+#
+# The first sweep of it found one. «Whatever is left out is named as left out, so the assistant never
+# assumes something is absent because it was not shown one» - a guarantee about what a language model
+# will conclude, which is not ours to give, in both products. What is true is what Zoost does: the
+# index says what it left out. Corrected before the batch was accepted, so the ledger records prose
+# that had been read rather than prose that had been counted.
 OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md',
-           'docs/boundaries.md']
+           'docs/boundaries.md', 'apps/*/*.html']
 # A dashboard field, fenced or not. The numbering is the file's own, the same one `storecopy.SECTION`
 # reads - this matches the heading and stops at the next one, so a section with no fence (the data
 # disclosures: a table and a blockquote) is still outward prose. Anything not under a numbered

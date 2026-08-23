@@ -5786,5 +5786,74 @@ class BothListingsHaveTheSameShape(unittest.TestCase):
                                  f'number is how the field is found in the dashboard')
 
 
+class TheProductsOwnProseIsRead(unittest.TestCase):
+    """An absolute inside the extension is where an absolute costs most.
+
+    `CLAUDE.md` draws the line itself: the site is informational and a wrong number there harms
+    nobody, while the extension is where somebody *acts* on what it says. `auditcheck` read the site,
+    the README, the store listings and `docs/boundaries.md` - and not one line of the panel or the
+    Settings page, for the length of the project. Measured by planting «Your API key never leaves
+    this machine.» in `apps/crm/options.html`: the whole battery passed, and the only thing that
+    moved was `imgcheck`, because the file's digest changed.
+
+    The first sweep of the widened subject found one real claim: «Whatever is left out is named as
+    left out, so the assistant never assumes something is absent because it was not shown one» - a
+    guarantee about what a language model will conclude, in both products. Corrected to say what
+    Zoost does.
+
+    Derived: every page that ships is inside the subject, taken from the manifests' own file list
+    rather than from a pattern typed here, so a page added tomorrow cannot be outside it quietly.
+
+    **The limit, stated:** this covers markup. Prose built in a script - the panel's `MSG` table and
+    every status line - is *not* read by `auditcheck`, and that is the larger half by volume. Said
+    here rather than left as a silence; widening to it means teaching `sentences()` to read a string
+    table, which is a change to what a sentence *is* and not a pattern.
+    """
+
+    def subject(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ac_outward', ROOT / 'tools' / 'auditcheck.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        seen = set()
+        for pattern in mod.OUTWARD:
+            for p in ROOT.glob(pattern):
+                seen.add(p.relative_to(ROOT).as_posix())
+        return seen
+
+    def shipped_pages(self):
+        out = set()
+        for man in sorted((ROOT / 'apps').glob('*/manifest.json')):
+            app = man.parent
+            for p in sorted(app.glob('*.html')):
+                out.add(p.relative_to(ROOT).as_posix())
+        return out
+
+    def test_there_are_pages_to_read(self):
+        self.assertGreaterEqual(len(self.shipped_pages()), 4,
+                                'no shipped pages found - the derivation broke')
+
+    def test_every_shipped_page_is_in_the_subject(self):
+        missing = sorted(self.shipped_pages() - self.subject())
+        self.assertEqual(missing, [],
+                         f'these ship and a reader reads them, and no absolute in them is ever '
+                         f'recorded or questioned: {missing}')
+
+    def test_a_new_absolute_in_a_shipped_page_is_a_finding(self):
+        # Run it: the plant that went through the whole battery before this existed.
+        page = ROOT / 'apps' / 'crm' / 'options.html'
+        keep = page.read_text(encoding='utf-8')
+        try:
+            page.write_text(keep.replace('</body>',
+                                         '  <p>Your API key never leaves this machine.</p>\n</body>', 1),
+                            encoding='utf-8')
+            out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'auditcheck.py'), '--offline'],
+                                 cwd=ROOT, capture_output=True, text=True)
+        finally:
+            page.write_text(keep, encoding='utf-8')
+        self.assertIn('never leaves this machine', out.stdout,
+                      f'an absolute added to the Settings page is not reported:\n{out.stdout[-600:]}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

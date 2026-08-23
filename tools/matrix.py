@@ -99,11 +99,6 @@ EXAMINED = {
                            "fresh or stale - and docs/diagrams.md's «both skip what erHiddenSet "
                            "hides» is true of the two it names. The paragraph that was *not* stale "
                            "named a live defect and it is fixed under this cell", "2026-08-23"),
-    ("claim", "options"): ("every absolute on the page checked against the code: the passphrase is "
-                           "never stored (what session holds is the decrypted key, and privacy.html "
-                           "says so), «nothing on disk is deleted» holds, and «until a workspace has "
-                           "been pulled, every tab is offered» is what the empty access map does",
-                           "2026-08-23"),
 }
 
 # Closed: (class, surface) -> (what catches it, where the plant is recorded).
@@ -126,6 +121,7 @@ CLOSED = {
     ("fastpath", "options"): ("tests/panel.test.mjs: a stored diagram setting outside a slider is saved as what is shown", "planted 2026-08-23"),
     ("await", "tools"):       ("tests/tools_test.py: the probe says how many of its waits are bets; the ceiling moves only deliberately, in either direction", "planted 2026-08-23"),
     ("siblings", "store"):    ("tests/tools_test.py: both listings have the same numbered sections, and each number means the same field", "planted 2026-08-23"),
+    ("claim", "options"):     ("tools/auditcheck.py now reads the shipped pages; tests/tools_test.py holds every one of them in the subject", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),
