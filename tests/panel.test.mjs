@@ -12747,3 +12747,89 @@ test('every key the settings page reads is a key it is told about', () => {
   }
   assert.ok(compared >= 8, `only ${compared} key(s) compared - the derivation broke`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// The panel and the model were told two different things about the same index.
+//
+// The org index goes to the assistant with **every** message, so the reader sets a ceiling on it and
+// `aiBuildSeed` drops sections until it fits. Whatever it drops is named twice: once in
+// `aiSeedOmitted`, which the panel shows and the status line reports, and once inside the index
+// itself - «NOT LISTED ABOVE: …» - which is the model's only defence against concluding that a
+// function it cannot find does not exist. The settings page states that promise in as many words:
+// «Whatever is left out is named as left out, in the index itself.»
+//
+// Three things came apart in the composition, and all three only on a large org, which is the one
+// place any of it matters. Driven at a 4,000 cap over 400 functions:
+//
+//   - the function index being cut **replaced** `aiSeedOmitted` instead of joining it, so the panel
+//     said «part of the function index» while the note inside said «the 3 module names and the 1
+//     connections» - two statements, neither complete, and the model was never told the thing that
+//     changes its answers;
+//   - the note was appended **after** the truncation, so the seed came out at 4,256 against a cap of
+//     4,000 - the ceiling missed by a builder that had just been given it;
+//   - and «the 1 connections», in a sentence written to be reasoned from.
+//
+// Two halves each right alone: a builder that drops what does not fit, and a note that names what
+// was dropped. The list they name is one list now, and the note is inside the cap.
+//
+// **The limits, stated.** It drives the builder on a fixture, so it proves what the two readers are
+// told and not what the model does with it. The cap is pushed low on purpose - the branch where the
+// function index alone overflows is unreachable at any realistic setting, which is exactly why it
+// was never seen. `aiTrunc`'s marker is part of the arithmetic and the case asserts the total, so a
+// change to that marker cannot quietly reopen the overflow.
+test('crm: what the index leaves out is said once, and inside the cap', async () => {
+  const nodes = {};
+  for (let i = 0; i < 400; i++) {
+    nodes['ns.fn' + i] = { namespace: 'ns', name: 'function_with_a_long_name_' + i, rest: false,
+                           associated_place: [], stats: { lines: 10, apiCalls: 1 } };
+  }
+  const ctx = {
+    Object, Math, Number, Set, JSON, Promise, String, Error, console,
+    AI_SEED_CAP_DEFAULT: 72000, WS_MOVED: 'moved',
+    ensureGraph: async () => ({ nodes }),
+    loadModuleFiles: async () => ({ Contacts: {}, Deals: {}, Accounts: {} }),
+    aiLoadConnections: async () => [{ name: 'c1', connector: 'x', uses: [1, 2] }],
+    aiLoadActions: async () => ({ list: [{ kind: 'tasks', associated: true }], users: new Map() }),
+    firedBy: () => [1], actionKindLabel: (k) => k,
+    aiSeedSize: 0, aiSeedOmitted: [], aiSeedTruncated: false,
+    op: { current: () => true },
+  };
+  vm.createContext(ctx);
+  vm.runInContext([sliceFn('apps/crm/ai.js', 'aiTrunc'),
+                   sliceFn('apps/crm/ai.js', 'aiBuildSeed')].join('\n'), ctx);
+
+  // Small enough that even the function list alone overflows - the branch nobody reaches in use.
+  ctx.cap = 4000;
+  const out = await vm.runInContext('aiBuildSeed(cap, op)', ctx);
+  assert.ok(out.length <= ctx.cap,
+    `the index is ${out.length} characters against a cap of ${ctx.cap} - the reader set a ceiling `
+    + 'and the builder went over it, on every message');
+
+  const note = /NOT LISTED ABOVE: ([\s\S]*?)\. They exist/.exec(out);
+  assert.ok(note, 'the index does not say what was left out, so an absence in it reads as an absence in the org');
+  const said = JSON.parse(JSON.stringify(ctx.aiSeedOmitted));
+  // Four things were dropped here: the function index, and the three sections that never fitted.
+  // The cut used to *replace* the list rather than join it, so both readers agreed - on one fact out
+  // of four. Agreement between them is necessary and is not enough.
+  assert.ok(said.length >= 4,
+    `the index dropped the function list and three sections and only ${said.length} of them is `
+    + `named: ${said}. Both readers agree, and they agree on an answer that is short`);
+  assert.equal(note[1], said.join(' and '),
+    `the panel is told «${said.join(' and ')}» and the model is told «${note[1]}» - two statements `
+    + 'about one index, and the model acts on the one that is not shown to anybody');
+  assert.match(note[1], /function index/,
+    'the function index was cut and the index does not say so, which is the one absence that makes '
+    + 'the model answer «there is no such function» about a function that exists');
+
+  // Agreement, in a sentence written to be reasoned from.
+  assert.equal(/\bthe 1 \w+s\b/.test(note[1]), false,
+    `a count of one is written as a plural in the index the model reads: «${note[1]}»`);
+
+  // And the other end: a cap nothing overflows leaves nothing out and says nothing.
+  ctx.cap = 200000;
+  const whole = await vm.runInContext('aiBuildSeed(cap, op)', ctx);
+  assert.equal(whole.includes('NOT LISTED ABOVE'), false,
+    'the index says something was left out when everything fitted');
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.aiSeedOmitted)), [],
+    'the panel is told something was left out when everything fitted');
+});

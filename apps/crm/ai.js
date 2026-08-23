@@ -295,23 +295,37 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
       + '\nUse `list_actions` for names, what each writes or sends, and which rules fire it.\n'
     : '';
 
+  // «the 1 connections» was what this wrote, in a sentence the model reads and reasons from.
+  const many = (n, one, rest) => `the ${n} ${n === 1 ? one : rest}`;
   const omitted = [];
   let out = funcs;
-  if (out.length + modules.length <= cap) out += modules; else omitted.push(`the ${mk.length} module names`);
-  if (out.length + actions.length <= cap) out += actions; else if (actions) omitted.push(`the ${acts.list.length} automation actions`);
-  if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(`the ${conns.length} connections`);
+  if (out.length + modules.length <= cap) out += modules; else omitted.push(many(mk.length, 'module name', 'module names'));
+  if (out.length + actions.length <= cap) out += actions; else if (actions) omitted.push(many(acts.list.length, 'automation action', 'automation actions'));
+  if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(many(conns.length, 'connection', 'connections'));
   if (!op.current()) throw new Error(WS_MOVED);
+  // One list, read by both readers. The function index being cut used to **replace**
+  // `aiSeedOmitted` while the note inside the index went on naming the other three - so on the
+  // largest orgs, which is the only place this branch is reached, the panel said «part of the
+  // function index» and the index itself said «the N module names», and neither said the one thing
+  // the model most needs: that a function it cannot find may still exist. It is first in the list
+  // because it is the absence that changes an answer.
+  if (out.length > cap) omitted.unshift('part of the function index - this org is larger than the index can hold');
   aiSeedOmitted = omitted;
-  if (out.length > cap) {                 // even the function list alone overflows
-    aiSeedOmitted = ['part of the function index - this org is larger than the index can hold'];
-    out = aiTrunc(out, cap);
-  }
-  aiSeedTruncated = omitted.length > 0 || out.length >= cap;
-  if (omitted.length) {
-    out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and can be fetched by name`
+  const note = omitted.length
+    ? `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and can be fetched by name`
       + ` (list_functions, get_module, get_connection) - do not assume something is absent because`
-      + ` it is not in this index.\n`;
-  }
+      + ` it is not in this index.\n`
+    : '';
+  // The note is part of the index, so it counts against the cap. It used to be appended *after* the
+  // truncation, which put the seed back over the ceiling the reader set - measured at 4,256 against
+  // a cap of 4,000, and the cap is what a question costs before it has been asked.
+  // `aiTrunc` adds its own «(truncated)» marker, so the room to leave is the note **and** that -
+  // measured at 14 over before this line accounted for it, which is small and is still a
+  // ceiling being missed by a builder that had just been told what it was.
+  const MARK = '\n\u2026 (truncated)'.length;
+  if (out.length + note.length > cap) out = aiTrunc(out, Math.max(0, cap - note.length - MARK));
+  out += note;
+  aiSeedTruncated = omitted.length > 0 || out.length >= cap;
   aiSeedSize = out.length;
   return out;
 }
