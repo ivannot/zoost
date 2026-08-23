@@ -10195,7 +10195,12 @@ test('every setting the options page writes is read by something', () => {
   for (const app of readdirSync(join(ROOT, 'apps'))) {
     const opts = `apps/${app}/options.js`;
     if (!existsSync(join(ROOT, opts))) continue;
-    const written = [...read(opts).matchAll(/storage\.local\.set\(\{\s*([A-Za-z_]\w*)/g)].map((m) => m[1]);
+    // Both writers: `saveKeys({...})`, which is where every setting a section owns goes now, and
+    // the bare `storage.local.set({...})` that `stamp()` still is - `settingsStamp` belongs to no
+    // section and there is nothing to be dirty about. Reading only the bare call found **nothing at
+    // all** the day the eight writers were consolidated, and said «the derivation broke», which is
+    // the assertion below doing its job.
+    const written = [...read(opts).matchAll(/(?:storage\.local\.set|saveKeys)\(\{\s*([A-Za-z_]\w*)/g)].map((m) => m[1]);
     assert.ok(written.length >= 3, `id=${app}: only ${written.length} setting(s) found - the derivation broke`);
     // Read means read **somewhere other than the page that writes it**, with comments stripped.
     // «Anywhere in the app» was the first criterion and it passed on the plant: `options.js` names
@@ -10515,7 +10520,10 @@ test('the options page refuses to save over settings it could not read', () => {
       .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
 
     // Derived: every place that writes `aicfg` back, and where the value it writes came from.
-    const writes = [...src.matchAll(/storage\.local\.set\(\{\s*aicfg:\s*(\w+)\s*\}/g)];
+    // Through `saveKeys` now - the one writer that moves a mark only when the write happened - and
+    // this read only the bare `storage.local.set` until that landed, at which point it reported
+    // «0 writes of aicfg» rather than passing over nothing. The assertion below is why.
+    const writes = [...src.matchAll(/(?:storage\.local\.set|saveKeys)\(\{\s*aicfg:\s*(\w+)\s*\}/g)];
     assert.ok(writes.length >= 2, `id=${app}: only ${writes.length} write(s) of aicfg - the derivation broke`);
     for (const w of writes) {
       const before = src.slice(0, w.index);
@@ -10642,5 +10650,88 @@ test('every loader on the options page carries an ordering token', () => {
     }
     assert.deepEqual(bare, [],
       `these read storage and publish without asking whether a newer read has finished: ${bare.join(', ')}`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A write that was refused moves no mark that describes it.
+//
+// Eight places on the two options pages did this by hand: `markOwn(key)`, `dirty.delete(key)`,
+// `conflictBox(key, false)`, and then `await chrome.storage.local.set(...)` - every mark placed
+// *before* the thing it describes. A `set` that throws left the page saying it had no unsaved edits
+// and the conflict box gone, over settings that were never stored; and on the CRM the failure said
+// nothing at all, because an `onclick` handler's rejection is silent. The Analytics twin caught it
+// at three of its six writers and still cleared `dirty` first, so it announced the failure and then
+// contradicted itself.
+//
+// It is the defect this repository recorded in `updateMetaIndex` - a refused write whose caller
+// cleared its dirty mark over something that never happened - one page over, in eight copies. What
+// that history says is that fixing eight sites is not the fix: one writer is.
+test('a refused save keeps the edits and says so', async () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const said = [];
+    const ctx = {
+      Object, Set, Map, Date, Promise, Array, String, console,
+      MSG: { saveFailed: 'Could not save: ' },
+      toast: (m, bad) => said.push([m, !!bad]),
+      conflictBox: () => {},
+      chrome: { storage: { local: { set: async () => { throw new Error('QUOTA_BYTES quota exceeded'); } } } },
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst(rel, 'dirty'), sliceConst(rel, 'ownWrite'),
+                     sliceFn(rel, 'markOwn'), sliceFn(rel, 'saveKeys')].join('\n'), ctx);
+    vm.runInContext("dirty.add('aicfg')", ctx);
+
+    const ok = await vm.runInContext("saveKeys({ aicfg: { active: 'openai' } })", ctx);
+    assert.equal(ok, false, `id=${app}: a refused write reported success`);
+    assert.equal(vm.runInContext("dirty.has('aicfg')", ctx), true,
+      `id=${app}: the page forgot it has unsaved edits over a write that never happened - Save now ` +
+      `looks done, and the value the reader typed is nowhere`);
+    assert.equal(vm.runInContext("ownWrite.has('aicfg')", ctx), false,
+      `id=${app}: the mark saying «this change was mine» outlived a change that was never made, so ` +
+      `the next echo of somebody else's write is read as our own and ignored`);
+    assert.equal(said.length, 1, `id=${app}: the refusal said nothing`);
+    assert.equal(said[0][1], true, `id=${app}: the refusal was announced as good news`);
+    assert.match(said[0][0], /quota exceeded/,
+      `id=${app}: the browser's own reason was dropped - «could not save» alone is not actionable`);
+
+    // The other half: a gate that always refuses looks strict until somebody needs it.
+    said.length = 0;
+    ctx.chrome.storage.local.set = async () => {};
+    vm.runInContext("dirty.add('aicfg')", ctx);
+    assert.equal(await vm.runInContext("saveKeys({ aicfg: {} })", ctx), true, `id=${app}: a write that worked reported failure`);
+    assert.equal(vm.runInContext("dirty.has('aicfg')", ctx), false, `id=${app}: a successful save left the page still dirty`);
+    assert.deepEqual(said, [], `id=${app}: a successful save announced a problem`);
+  }
+});
+
+test('every settings write on the options page goes through the one writer', () => {
+  // Derived twice over: the writers are found by scanning for the call, and the exception is derived
+  // from `SECTIONS` rather than named - `stamp()` writes `settingsStamp`, which no section owns and
+  // which nothing on the page can be dirty about. A ninth save added tomorrow is a finding.
+  //
+  // The limit: it reads the object literal handed to `set`, so a call whose argument is built
+  // elsewhere and passed by name is seen as writing nothing and would pass. There are none today.
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const src = read(rel);
+    const body = src.match(/^const SECTIONS = \{([\s\S]*?)^\};/m);
+    const sections = body ? [...body[1].matchAll(/^\s{2}(\w+):/gm)].map((k) => k[1]) : [];
+    assert.ok(sections.length >= 3, `id=${app}: SECTIONS was not read - this test proves nothing`);
+
+    const writer = sliceFn(rel, 'saveKeys');
+    const outside = src.replace(writer, '');
+    const rogue = [];
+    for (const m of outside.matchAll(/chrome\.storage\.local\.set\(\{([^}]*)/g)) {
+      for (const k of m[1].matchAll(/(\w+)\s*:/g)) {
+        if (sections.includes(k[1])) rogue.push(k[1]);
+      }
+    }
+    assert.deepEqual(rogue, [],
+      `id=${app}: these settings are written straight to storage, so nothing withdraws their marks ` +
+      `when the browser refuses: ${rogue.join(', ')}`);
   }
 });

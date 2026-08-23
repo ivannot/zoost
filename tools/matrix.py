@@ -121,6 +121,7 @@ CLOSED = {
     ("await", "an-panel"):    ("tools/asynccheck.py", "planted 2026-08-20"),
     ("await", "options"):     ("tests/panel.test.mjs: an overtaken loader publishes nothing", "planted 2026-08-23"),
     ("await", "crm-export"):  ("tests/tools_test.py: the export reads no panel state after an await", "planted 2026-08-23"),
+    ("owner", "options"):     ("tests/panel.test.mjs: a refused save keeps the edits and says so", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

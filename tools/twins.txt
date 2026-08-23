@@ -138,7 +138,7 @@ loadRx	fb46317b54c3	fb46317b54c3	identical
 loadRxShortcuts	0c1fc69cd664	0c1fc69cd664	identical
 loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
 loadZohoDc	83d8c8288511	83d8c8288511	identical
-loseLock	ad3671ede385	ad3671ede385	identical
+loseLock	0da0b6793922	0da0b6793922	identical
 markDirty	e539acbb45b6	e539acbb45b6	identical
 markEngine	073f8c57884a	e2cfadb5389c	divergent
 markEngineOptions	6d0ea3340c88	6d0ea3340c88	identical
@@ -197,6 +197,7 @@ rxCompile	061ffb3e51f2	061ffb3e51f2	identical
 rxDefaults	b63f0be3e4f9	b63f0be3e4f9	identical
 rxProblems	5927f3cfe8d2	5927f3cfe8d2	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
+saveKeys	647ec30fc72a	647ec30fc72a	identical
 scopeFromUI	3a730daf94e4	c83939bc53c4	divergent
 scopeToUI	f35c4710f682	13ff88ae9736	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical

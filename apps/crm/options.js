@@ -11,6 +11,13 @@ const $ = (id) => document.getElementById(id);
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 
+// What this page says in more than one place. `saveFailed` prefixes the platform's own sentence
+// rather than replacing it: the browser knows why it refused and we do not. The Analytics twin had
+// this and the CRM did not - so a refused save was said there and silent here, which is why the
+// helper below carries the message rather than each writer.
+const MSG = {
+  saveFailed: 'Could not save: ',
+};
 // The two engines under the names the user chose them by. Written out as a ternary at each site
 // until the duplicate-message check found the pair - two copies of one mapping, which is how a
 // third provider would have ended up named on one surface and not the other.
@@ -202,8 +209,7 @@ async function loseLock() {
   try { cfg = await readCfgForWrite(); }
   catch (e) { toast('Could not read the saved settings, so nothing was removed. Try again.', true); return; }
   for (const prov of which) { cfg[prov] = Object.assign({}, cfg[prov]); delete cfg[prov].apiKeyEnc; cfg[prov].apiKey = ''; }
-  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
-  await chrome.storage.local.set({ aicfg: cfg });
+  if (!await saveKeys({ aicfg: cfg })) return;
   try { await chrome.storage.session.remove('aikeys'); } catch (_) {}
   aiPassChanging = false;
   await loadAi();
@@ -351,7 +357,8 @@ $('aiengine').onchange = async () => {
   catch (e) { toast('Could not read the saved settings, so nothing was changed - the stored key is untouched. Try again.', true); return; }
   c.active = $('aiengine').value;
   prevEngine = c.active;
-  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false); await chrome.storage.local.set({ aicfg: c }); await stamp();
+  if (!await saveKeys({ aicfg: c })) return;
+  await stamp();
   toast(`Engine set to ${engineLabel(c.active)}.`);
 };
 $('saveAi').onclick = async () => {
@@ -422,7 +429,8 @@ $('saveAi').onclick = async () => {
   }
   const p = cfg[cfg.active] || {};
   const ready = !!((p.apiKey || p.apiKeyEnc) && p.model);
-  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false); await chrome.storage.local.set({ aicfg: cfg }); await stamp();
+  if (!await saveKeys({ aicfg: cfg })) return;
+  await stamp();
   toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.`
     : ready ? 'AI settings saved.'
     : 'Saved - but the selected engine still needs a model and an API key.', !ready);
@@ -468,7 +476,7 @@ SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFro
 // A page may only write the settings it can show. What it does not show, it carries.
 $('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); };
 $('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); };
-$('saveScope').onclick = async () => { scopeFromUI(); markOwn('exportScope'); dirty.delete('exportScope'); conflictBox('exportScope', false); await chrome.storage.local.set({ exportScope: scope }); await stamp(); toast('Export defaults saved.'); };
+$('saveScope').onclick = async () => { scopeFromUI(); if (!await saveKeys({ exportScope: scope })) return; await stamp(); toast('Export defaults saved.'); };
 
 // ---------- diagram layout ----------
 let lay = Object.assign({}, LAY_DEFAULT);
@@ -498,14 +506,14 @@ $('pDrawMax').addEventListener('input', () => {
   $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
-$('saveLay').onclick = async () => { markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false); markOwn('erDrawMax'); dirty.delete('erDrawMax'); conflictBox('erDrawMax', false);
+$('saveLay').onclick = async () => {
   // Merged, never replaced. This page edits the sliders; `kind` and `mode` belong to the diagram
   // window, which writes them when the reader tunes a graph inside it. Replacing the object erased
   // both - so tuning a spread in the window and then visiting this page for anything at all threw
   // that tuning away. The same shape as the export-scope preset: a page may only write the settings
   // it can show, and it carries the rest.
   const prev = (await chrome.storage.local.get('erParams')).erParams || {};
-  await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax });
+  if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
   await stamp(); toast('Diagram defaults saved.'); };
 async function loadLay() {
   const current = beginLoad('erParams');
@@ -622,8 +630,7 @@ async function loadTabs() {
   renderTabs();
 }
 $('saveTabs').onclick = async () => {
-  markOwn('tabPrefs'); dirty.delete('tabPrefs'); conflictBox('tabPrefs', false);
-  await chrome.storage.local.set({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } });
+  if (!await saveKeys({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } })) return;
   await stamp();
   toast('Tabs saved.');
 };
@@ -665,8 +672,7 @@ async function loadDc() {
   $('zohoDc').value = dcs.includes(want) ? want : dcs[0];
 }
 $('zohoDc').onchange = async () => {
-  markOwn('zohoDc'); dirty.delete('zohoDc'); conflictBox('zohoDc', false);
-  await chrome.storage.local.set({ zohoDc: $('zohoDc').value });
+  if (!await saveKeys({ zohoDc: $('zohoDc').value })) return;
   toast('Data centre saved.');
 };
 
@@ -769,10 +775,9 @@ $('saveRx').onclick = async () => {
   if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
   const bad = rxProblems(rxCur);
   if (bad) { toast(bad, true); return; }
-  markOwn('rxShortcuts'); dirty.delete('rxShortcuts'); conflictBox('rxShortcuts', false);
   // No settingsStamp here: the panel reads this list fresh every time the menu opens, so there is
   // nothing cached anywhere to tell about the change.
-  await chrome.storage.local.set({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) });
+  if (!await saveKeys({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) })) return;
   toast('Patterns saved.');
 };
 
@@ -796,6 +801,36 @@ function wasOwn(key) {
   return false;
 }
 function markDirty(key) { dirty.add(key); }
+
+/** One key, one write, and every mark that describes the outcome moved by the write that happened.
+ *
+ * Eight places did this by hand - `markOwn(key)`, `dirty.delete(key)`, `conflictBox(key, false)`,
+ * then `await chrome.storage.local.set(...)` - which puts every mark *before* the thing they
+ * describe. A write that throws left the page saying it had no unsaved edits, with the conflict box
+ * gone, over settings that were never stored; and in this product the failure said nothing at all,
+ * because an `onclick` handler's rejection is silent. This is the defect already recorded in
+ * `updateMetaIndex` - a refused write whose caller cleared its dirty mark over something that never
+ * happened - one page over, in eight copies.
+ *
+ * `markOwn` still runs first and has to: the `onChanged` echo can arrive before `set` resolves, so a
+ * mark placed after it would be too late to recognise our own write. What moves after the write is
+ * everything that is a *claim about the outcome*. On a refusal the mark is withdrawn, the key goes
+ * back to dirty - pressing Save is a statement that the form and the disk disagree - and the reason
+ * is said.
+ */
+async function saveKeys(obj) {
+  const keys = Object.keys(obj);
+  keys.forEach(markOwn);
+  try {
+    await chrome.storage.local.set(obj);
+  } catch (e) {
+    keys.forEach((k) => { ownWrite.delete(k); dirty.add(k); });
+    toast(MSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
+    return false;
+  }
+  keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
+  return true;
+}
 function conflictBox(key, on) {
   const id = 'cf_' + key;
   let el = document.getElementById(id);

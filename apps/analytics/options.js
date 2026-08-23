@@ -179,8 +179,7 @@ async function loseLock() {
   try { cfg = await readCfgForWrite(); }
   catch (e) { toast('Could not read the saved settings, so nothing was removed. Try again.', true); return; }
   for (const prov of which) { cfg[prov] = Object.assign({}, cfg[prov]); delete cfg[prov].apiKeyEnc; cfg[prov].apiKey = ''; }
-  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
-  await chrome.storage.local.set({ aicfg: cfg });
+  if (!await saveKeys({ aicfg: cfg })) return;
   try { await chrome.storage.session.remove('aikeys'); } catch (_) {}
   aiPassChanging = false;
   await loadAi();
@@ -371,12 +370,8 @@ async function saveAi() {
     cfg.active = usable[0];
     moved = engineLabel(cfg.active);
   }
-  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
-  try {
-    await chrome.storage.local.set({ aicfg: cfg });
-    toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.` : 'AI settings saved.');
-  }
-  catch (e) { toast(MSG.saveFailed + e.message, true); }
+  if (!await saveKeys({ aicfg: cfg })) return;
+  toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.` : 'AI settings saved.');
   // Re-read from where it was just written, rather than patching the flags by hand: the form has to
   // agree with the disk, and the page has three of them to keep in step (is a key stored, is it
   // encrypted, is a passphrase set). Reconstructing that here is a second copy of loadAi() waiting to
@@ -405,13 +400,11 @@ $('pDrawMax').addEventListener('input', () => {
 });
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
 $('saveLay').onclick = async () => {
-  markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false);
-  markOwn('erDrawMax'); dirty.delete('erDrawMax'); conflictBox('erDrawMax', false);
   // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
   // writes it when the reader changes Emphasis in there. Replacing the object threw it away.
   const prev = (await chrome.storage.local.get('erParams')).erParams || {};
-  try { await chrome.storage.local.set({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax }); toast('Diagram defaults saved.'); }
-  catch (e) { toast(MSG.saveFailed + e.message, true); }
+  if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
+  toast('Diagram defaults saved.');
 };
 async function loadLay() {
   const current = beginLoad('erParams');
@@ -444,11 +437,8 @@ $('aiengine').onchange = async () => {
   catch (e) { toast('Could not read the saved settings, so nothing was changed - the stored key is untouched. Try again.', true); return; }
   c.active = $('aiengine').value;
   prevEngine = c.active;
-  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
-  try {
-    await chrome.storage.local.set({ aicfg: c });
-    toast(`Engine set to ${engineLabel(c.active)}.`);
-  } catch (e) { toast(MSG.saveFailed + e.message, true); }
+  if (!await saveKeys({ aicfg: c })) return;
+  toast(`Engine set to ${engineLabel(c.active)}.`);
 };
 $('saveAi').onclick = () => saveAi();
 
@@ -483,8 +473,7 @@ async function loadDc() {
   $('zohoDc').value = dcs.includes(want) ? want : dcs[0];
 }
 $('zohoDc').onchange = async () => {
-  markOwn('zohoDc'); dirty.delete('zohoDc'); conflictBox('zohoDc', false);
-  await chrome.storage.local.set({ zohoDc: $('zohoDc').value });
+  if (!await saveKeys({ zohoDc: $('zohoDc').value })) return;
   toast('Data centre saved.');
 };
 
@@ -587,10 +576,9 @@ $('saveRx').onclick = async () => {
   if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
   const bad = rxProblems(rxCur);
   if (bad) { toast(bad, true); return; }
-  markOwn('rxShortcuts'); dirty.delete('rxShortcuts'); conflictBox('rxShortcuts', false);
   // No settingsStamp here: the panel reads this list fresh every time the menu opens, so there is
   // nothing cached anywhere to tell about the change.
-  await chrome.storage.local.set({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) });
+  if (!await saveKeys({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) })) return;
   toast('Patterns saved.');
 };
 
@@ -611,6 +599,36 @@ function wasOwn(key) {
   return false;
 }
 function markDirty(key) { dirty.add(key); }
+
+/** One key, one write, and every mark that describes the outcome moved by the write that happened.
+ *
+ * Eight places did this by hand - `markOwn(key)`, `dirty.delete(key)`, `conflictBox(key, false)`,
+ * then `await chrome.storage.local.set(...)` - which puts every mark *before* the thing they
+ * describe. A write that throws left the page saying it had no unsaved edits, with the conflict box
+ * gone, over settings that were never stored; and in this product the failure said nothing at all,
+ * because an `onclick` handler's rejection is silent. This is the defect already recorded in
+ * `updateMetaIndex` - a refused write whose caller cleared its dirty mark over something that never
+ * happened - one page over, in eight copies.
+ *
+ * `markOwn` still runs first and has to: the `onChanged` echo can arrive before `set` resolves, so a
+ * mark placed after it would be too late to recognise our own write. What moves after the write is
+ * everything that is a *claim about the outcome*. On a refusal the mark is withdrawn, the key goes
+ * back to dirty - pressing Save is a statement that the form and the disk disagree - and the reason
+ * is said.
+ */
+async function saveKeys(obj) {
+  const keys = Object.keys(obj);
+  keys.forEach(markOwn);
+  try {
+    await chrome.storage.local.set(obj);
+  } catch (e) {
+    keys.forEach((k) => { ownWrite.delete(k); dirty.add(k); });
+    toast(MSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
+    return false;
+  }
+  keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
+  return true;
+}
 function conflictBox(key, on) {
   const id = 'cf_' + key;
   let el = document.getElementById(id);

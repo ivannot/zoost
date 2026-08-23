@@ -150,7 +150,15 @@ for (const app of ['crm', 'analytics']) {
     // day that write became a merge - which is what stops the settings page erasing `kind` and
     // `mode`, and is more correct rather than less. What must hold is that the ceiling is its own
     // top-level key and is not parked inside the layout object.
-    const set = oj.slice(oj.indexOf('storage.local.set({', oj.indexOf('saveLay')));
+    // The write itself, whatever it is called. `saveLay` used to call `storage.local.set({...})`
+    // directly and now hands its object to `saveKeys`, the one writer that moves a mark only when
+    // the write happened - and this line searched for the old spelling, found nothing, and asserted
+    // over an empty string. Both spellings, and it fails loudly when neither is there.
+    const from = oj.indexOf('saveLay');
+    const at = Math.min(...[oj.indexOf('storage.local.set({', from), oj.indexOf('saveKeys({', from)]
+      .filter((i) => i >= 0).concat([Infinity]));
+    assert.ok(Number.isFinite(at), 'saveLay writes nothing that this test can find');
+    const set = oj.slice(at);
     assert.match(set.slice(0, 200), /erDrawMax: drawMax/, 'the ceiling is not written as its own key');
     const inParams = set.slice(set.indexOf('erParams:'), set.indexOf('erDrawMax:'));
     assert.ok(!/drawMax/i.test(inParams),
