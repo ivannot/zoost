@@ -6307,7 +6307,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 
 // ---------------------------------------------------------------------------------------------
 // Which argument names the module is a property of each task, not a pattern. Written from memory it
-// was «the first one», and `getRelatedRecords("Tariffe_Prestazioni", "Professionisti", id)` names the
+// was «the first one», and `getRelatedRecords("Campaign_Products", "Campaigns", id)` names the
 // **relation** first and its parent module second - so the wrong word was linked, in somebody's real
 // code, and the module that was actually touched was missed. Every signature here was then read off
 // its own documentation page one at a time; these cases are that reading, held so it cannot rot.
@@ -6321,8 +6321,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     .nodes['standalone.a'];
 
   test('the module is taken from the argument its own task puts it in', () => {
-    const n = mods('x = zoho.crm.getRelatedRecords("Prices_Services", "Practitioners", id);');
-    assert.deepEqual(n.modules.map((m) => m.name), ['Practitioners'],
+    const n = mods('x = zoho.crm.getRelatedRecords("Campaign_Products", "Campaigns", id);');
+    assert.deepEqual(n.modules.map((m) => m.name), ['Campaigns'],
                      'the relation name was read as if it were the module');
     const d = mods('a = zoho.crm.getRecordById("Contacts", id);\nb = zoho.crm.updateRecord("Deals", id, mp);');
     assert.deepEqual(d.modules, [{ name: 'Contacts', mode: 'read', via: 'getRecordById' },
@@ -6387,11 +6387,11 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     const h = {};
     new Function('window', read('apps/crm/highlight.js'))(h);
     const linkFor = (name, kind, parent) => kind === 'mod'
-      ? (['Practitioners', 'Contacts'].includes(name) ? name : null)
-      : (parent === 'Practitioners' && name === 'Prices_Services' ? 'Prices' : null);
-    const out = h.highlightDeluge('x = zoho.crm.getRelatedRecords("Prices_Services","Practitioners",id);', null, linkFor);
-    assert.ok(/data-mod="Prices"/.test(out), 'the relation does not lead to the module it identifies');
-    assert.ok(/data-mod="Practitioners"/.test(out), 'the parent module is not a link');
+      ? (['Campaigns', 'Contacts'].includes(name) ? name : null)
+      : (parent === 'Campaigns' && name === 'Campaign_Products' ? 'Products' : null);
+    const out = h.highlightDeluge('x = zoho.crm.getRelatedRecords("Campaign_Products","Campaigns",id);', null, linkFor);
+    assert.ok(/data-mod="Products"/.test(out), 'the relation does not lead to the module it identifies');
+    assert.ok(/data-mod="Campaigns"/.test(out), 'the parent module is not a link');
     // and a string that is not one of those arguments stays a string
     const plain = h.highlightDeluge('info "Contacts";', null, linkFor);
     assert.ok(!/c-link/.test(plain), 'a string outside an argument position was turned into a link');

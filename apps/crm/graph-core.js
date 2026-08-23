@@ -57,7 +57,7 @@
   // matters to somebody about to change a field, so it is carried rather than flattened to «uses».
   // `arg` is *which* argument names the module, because it is not always the first - and assuming it
   // was is a defect this file carried until somebody read a real line of Deluge: in
-  // `getRelatedRecords("Tariffe", "Professionisti", id)` the first argument is the **related list**
+  // `getRelatedRecords("Campaign_Products", "Campaigns", id)` the first argument is the **related list**
   // and the module is the second. Each entry here is a documented signature, not a pattern.
   const MODULE_TASK = {
     getRecordById: { mode: 'read', arg: 0 }, getRecords: { mode: 'read', arg: 0 },

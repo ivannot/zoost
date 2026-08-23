@@ -6187,6 +6187,65 @@ class TheSiteNamesEveryAssistantTool(unittest.TestCase):
                                  f'{len(have)}: missing {sorted(set(have) - set(said))}, '
                                  f'invented {sorted(set(said) - set(have))}')
 
+class ExamplesUseTheSampleWorkspaceNames(unittest.TestCase):
+    """A module name in an example comes from the sample workspace, not from somewhere real.
+
+    `CLAUDE.md` forbids the test environment showing through - «no real org, portal, instance,
+    module, field, function or connection names», in code, comments, examples, tests and the site
+    alike - and nothing checked it, because nothing here can know which names are real.
+
+    Something *can* be checked: the project ships an invented org, `+ Sample` writes it, and every
+    module a reader is shown could come from there. Four surfaces carried
+    `getRelatedRecords("Tariffe_Prestazioni", "Professionisti", id)` - Italian module names in a
+    clinical-practice shape, with `Prices_Services` / `Practitioners` as the English twin, which is
+    the same domain translated rather than a different one. Found by an outside review, flagged as
+    the class nothing here can verify; neutralised rather than argued about, since the placeholder
+    costs nothing and the doubt does not.
+
+    **The limit, and it is the whole of it:** this cannot tell a real name from an invented one. What
+    it can do is hold the *examples* to the vocabulary the product itself ships, so a name from
+    somewhere else has to be put there deliberately and will be visible when it is.
+    """
+
+    # The `zoho.crm.` prefix is **optional**, and requiring it was the first version's hole: the
+    # guides write `getRelatedRecords("A", "B", id)` bare, so the four surfaces that carried the
+    # names this class is about were not read at all. Caught by planting one back and watching the
+    # check stay green - which is the reason every one of these gets a plant.
+    CALLS = re.compile(r'(?:zoho\.crm\.)?(getRelatedRecords|getRecordById|updateRecord|createRecord|'
+                       r'searchRecords|getRecords)\("([^"]+)"(?:,\s*"([^"]+)")?')
+
+    def sample_names(self):
+        src = (ROOT / 'apps' / 'crm' / 'sample-org.js').read_text(encoding='utf-8')
+        names = set(re.findall(r"'([A-Z][A-Za-z_]{2,})'", src)) | set(re.findall(r'"([A-Z][A-Za-z_]{2,})"', src))
+        self.assertGreater(len(names), 20, 'the sample workspace was not read - the derivation broke')
+        return names
+
+    def surfaces(self):
+        out = [ROOT / 'site' / 'docs-crm.html', ROOT / 'site' / 'it' / 'docs-crm.html',
+               ROOT / 'README.md']
+        out += sorted((ROOT / 'apps' / 'crm').glob('*.js'))
+        return out
+
+    def test_every_module_named_in_an_example_is_one_the_sample_ships(self):
+        known = self.sample_names()
+        strangers, examples = [], 0
+        for f in self.surfaces():
+            for m in self.CALLS.finditer(f.read_text(encoding='utf-8')):
+                examples += 1
+                for name in (m.group(2), m.group(3)):
+                    # A bare api_name only. The exports build these calls for the reader, so the
+                    # argument is `${esc(r.api)}` or `<relation API name>` there - a placeholder is
+                    # not a module name and reporting it would be the check misreading its subject.
+                    if not name or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', name):
+                        continue
+                    if name not in known:
+                        strangers.append(f'{f.relative_to(ROOT)}: {name} in {m.group(1)}(...)')
+        self.assertGreater(examples, 3, f'only {examples} example call(s) found - the derivation broke')
+        self.assertEqual(strangers, [],
+                         'these examples name a module the sample workspace does not contain, so a '
+                         'reader cannot tell an invented name from one that came from somewhere '
+                         f'real: {strangers}')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

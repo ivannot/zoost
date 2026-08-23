@@ -33,7 +33,7 @@
     'g'
   );
   // Which argument of which task names something the panel can open. Read from the documented
-  // signatures one by one, because they do not agree: `getRelatedRecords("Tariffe","Professionisti",id)`
+  // signatures one by one, because they do not agree: `getRelatedRecords("Campaign_Products","Campaigns",id)`
   // names a **related list** first and the module second, and assuming the first argument everywhere
   // linked the wrong word - reported from a real line of Deluge.
   const ARGS = {
