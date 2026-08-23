@@ -9880,3 +9880,36 @@ test('both exports say which kind of missing source it is', () => {
   assert.ok(!/source_code \|\| ''/.test(src) && !/f\.code \|\| ''/.test(src),
     'a missing source is being coerced to an empty string again, which is the fence that lies');
 });
+
+// ---------------------------------------------------------------------------------------------
+// «There are none» and «you did not ask for them» are different facts.
+//
+// With Functions unticked in the export dialog, the HTML report printed «Functions / No
+// functions.» - a positive claim about somebody's org, in a document written for people who do not
+// have the extension and cannot go and check. Same for Modules, same for Connections. The Markdown
+// twin omits the heading entirely when a list is empty and so never says it: two halves of one
+// rule, one on each side.
+//
+// The heading stays rather than vanishing. A reader wondering why a section is missing is better
+// served by being told it was left out - the export states what it does not contain beside what it
+// does, which is what every other surface in this product is held to.
+test('an export does not report a scope you turned off as an absence', () => {
+  const src = read('apps/crm/export.js');
+
+  const helper = /const absent = \(asked, what\) => \(([\s\S]*?)\);/.exec(src);
+  assert.ok(helper, 'the export has no one place that decides what an empty section means');
+  assert.match(helper[1], /Not included in this export/, 'it cannot say «you did not ask for this»');
+  assert.match(helper[1], /No \$\{what\}/, 'it stopped being able to say «there are none»');
+
+  // Derived, and this is the half that matters: every scope the export can switch off must reach
+  // that helper when its section is empty. A literal «No X.» beside a scope flag is the defect.
+  const scopes = [...new Set([...src.matchAll(/scope\.(\w+)/g)].map((m) => m[1]))];
+  assert.ok(scopes.length >= 8, `only ${scopes.length} scope(s) found - the derivation broke`);
+  const lying = [...src.matchAll(/class="empty">No ([a-z ]+)\./g)].map((m) => m[1].trim());
+  assert.deepEqual(lying, [],
+    `these state an absence as a fact without asking whether it was asked for: ${lying.join(', ')}`);
+
+  // And it is used, not merely defined - the trap the source-block check fell into an hour ago.
+  const calls = (src.match(/absent\(scope\./g) || []).length;
+  assert.ok(calls >= 3, `absent() is called ${calls} time(s); the sections that can be empty do not use it`);
+});
