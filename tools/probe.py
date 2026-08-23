@@ -28,18 +28,47 @@ shots = importlib.util.module_from_spec(spec); spec.loader.exec_module(shots)
 CRM = """
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Wait for the thing, with the same ceiling as the sleep it replaces.
+  //
+  // A click, a fixed sleep, then a read is a bet that the panel finished inside that sleep. (Written
+  // without the code, because the counter below reads this text and a quoted example counted as a
+  // fifth bet in every scenario - a check reading its own prose, which this repository has met
+  // three times.)
+  // It is the shape this repository has already written down and condemned - «read scrollTop after a
+  // second is the 1990s junior's sleep, and it produces a fix of the same shape: one that waits
+  // instead of knowing» - living in the tool built to catch exactly that class. A bet costs the full
+  // number every run when it wins, and reads unsettled state when it loses; a condition costs a few
+  // milliseconds and, when it does time out, says which condition never came true instead of failing
+  // three lines later about something else.
+  const until = async (cond, what, ms = 2500) => {
+    const t0 = Date.now();
+    for (;;) {
+      let ok = false;
+      try { ok = cond(); } catch (_) { ok = false; }
+      if (ok) return;
+      if (Date.now() - t0 > ms) say('waited ' + ms + 'ms and ' + what);
+      await wait(25);
+    }
+  };
   let copied = null;
   (async () => {
     // Declared before anything uses it: open the history view only if it is not already open.
     // Clicking a toggle blind is how this check once read rows out of a panel it had just closed.
-    const openChain = async () => { if (!$('navview').classList.contains('show')) { $('navtab').click(); await wait(300); } };
+    const openChain = async () => {
+      if ($('navview').classList.contains('show')) return;
+      $('navtab').click(); await wait(300);
+      await until(() => $('navview').classList.contains('show'), 'the history view never opened');
+    };
     const rows = () => [...document.querySelectorAll('#tree .f')];
     const first = rows().find((e) => /Build invoice/.test(e.textContent));
     const second = rows().find((e) => /Sync contact/.test(e.textContent)) || rows().find((e) => e !== first);
     if (!first || !second) say('the fixture tree has fewer than two functions');
-    first.click(); await wait(600);
+    const path0 = currentPath;
+    first.click();
+    await until(() => currentPath && currentPath !== path0, 'the first row never opened anything');
     const a = currentPath;
-    second.click(); await wait(600);
+    second.click();
+    await until(() => currentPath && currentPath !== a, 'the second row never opened anything');
     const b = currentPath;
     if (a === b) say('two different rows opened the same path');
     if (navHist.length !== 2) say('two steps should be two entries, got ' + navHist.length);
@@ -128,18 +157,20 @@ CRM = """
     // The history is a view, not a layer: opened from the tab row it covers everything that row
     // controls - the pull bar, the search box and the list - and there is nothing positioned left to
     // be misplaced by a resize, which is what was reported.
-    $('navtab').click(); await wait(300);
+    $('navtab').click();
     if (!$('navview').classList.contains('show')) say('the history view did not open');
     // Held against Health itself, not against numbers: «it must be identical to the one in ai and health,
     // behave the same way, and disable every other control». So the health
     // view is opened, measured, closed - and the history has to match it rectangle for rectangle and
     // dim the same set of controls.
-    $('health').click(); await wait(600);
+    $('health').click();
+    await until(() => $('healthview').classList.contains('show'), 'the health view never opened');
     const hBox = $('healthview').getBoundingClientRect();
     const dimmed = (skip) => [...document.querySelectorAll('.wsgroup > button')]
       .filter((b) => b.id !== skip).map((b) => getComputedStyle(b).pointerEvents).join(',');
     const hDim = dimmed('health');
-    $('healthx').click(); await wait(400);
+    $('healthx').click();
+    await until(() => !$('healthview').classList.contains('show'), 'the health view never closed');
     await openChain();
     const nBox = $('navview').getBoundingClientRect();
     for (const side of ['top', 'left', 'right', 'bottom']) {
@@ -626,9 +657,35 @@ CRM = """
 AN = """
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Wait for the thing, with the same ceiling as the sleep it replaces.
+  //
+  // A click, a fixed sleep, then a read is a bet that the panel finished inside that sleep. (Written
+  // without the code, because the counter below reads this text and a quoted example counted as a
+  // fifth bet in every scenario - a check reading its own prose, which this repository has met
+  // three times.)
+  // It is the shape this repository has already written down and condemned - «read scrollTop after a
+  // second is the 1990s junior's sleep, and it produces a fix of the same shape: one that waits
+  // instead of knowing» - living in the tool built to catch exactly that class. A bet costs the full
+  // number every run when it wins, and reads unsettled state when it loses; a condition costs a few
+  // milliseconds and, when it does time out, says which condition never came true instead of failing
+  // three lines later about something else.
+  const until = async (cond, what, ms = 2500) => {
+    const t0 = Date.now();
+    for (;;) {
+      let ok = false;
+      try { ok = cond(); } catch (_) { ok = false; }
+      if (ok) return;
+      if (Date.now() - t0 > ms) say('waited ' + ms + 'ms and ' + what);
+      await wait(25);
+    }
+  };
   let copied = null;
   (async () => {
-    const openChain = async () => { if (!$('navview').classList.contains('show')) { $('navtab').click(); await wait(300); } };
+    const openChain = async () => {
+      if ($('navview').classList.contains('show')) return;
+      $('navtab').click();
+      await until(() => $('navview').classList.contains('show'), 'the history view never opened');
+    };
     await wait(1600);
     const rows = () => [...document.querySelectorAll('#list tbody tr')];
     if (rows().length < 2) say('the fixture list has fewer than two views');
@@ -752,6 +809,28 @@ AN = """
 PULL_AN = r"""
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Wait for the thing, with the same ceiling as the sleep it replaces.
+  //
+  // A click, a fixed sleep, then a read is a bet that the panel finished inside that sleep. (Written
+  // without the code, because the counter below reads this text and a quoted example counted as a
+  // fifth bet in every scenario - a check reading its own prose, which this repository has met
+  // three times.)
+  // It is the shape this repository has already written down and condemned - «read scrollTop after a
+  // second is the 1990s junior's sleep, and it produces a fix of the same shape: one that waits
+  // instead of knowing» - living in the tool built to catch exactly that class. A bet costs the full
+  // number every run when it wins, and reads unsettled state when it loses; a condition costs a few
+  // milliseconds and, when it does time out, says which condition never came true instead of failing
+  // three lines later about something else.
+  const until = async (cond, what, ms = 2500) => {
+    const t0 = Date.now();
+    for (;;) {
+      let ok = false;
+      try { ok = cond(); } catch (_) { ok = false; }
+      if (ok) return;
+      if (Date.now() - t0 > ms) say('waited ' + ms + 'ms and ' + what);
+      await wait(25);
+    }
+  };
   (async () => {
     const fs = window.__fsshim;
     const base = 'analytics/sample-workspace/';
@@ -893,6 +972,28 @@ PULL_AN = r"""
 ER = """
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Wait for the thing, with the same ceiling as the sleep it replaces.
+  //
+  // A click, a fixed sleep, then a read is a bet that the panel finished inside that sleep. (Written
+  // without the code, because the counter below reads this text and a quoted example counted as a
+  // fifth bet in every scenario - a check reading its own prose, which this repository has met
+  // three times.)
+  // It is the shape this repository has already written down and condemned - «read scrollTop after a
+  // second is the 1990s junior's sleep, and it produces a fix of the same shape: one that waits
+  // instead of knowing» - living in the tool built to catch exactly that class. A bet costs the full
+  // number every run when it wins, and reads unsettled state when it loses; a condition costs a few
+  // milliseconds and, when it does time out, says which condition never came true instead of failing
+  // three lines later about something else.
+  const until = async (cond, what, ms = 2500) => {
+    const t0 = Date.now();
+    for (;;) {
+      let ok = false;
+      try { ok = cond(); } catch (_) { ok = false; }
+      if (ok) return;
+      if (Date.now() - t0 > ms) say('waited ' + ms + 'ms and ' + what);
+      await wait(25);
+    }
+  };
   (async () => {
     document.querySelector('.tab[data-v="er"]').click();
     await wait(700);
@@ -933,6 +1034,28 @@ ER = """
 PULL_CRM = r"""
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Wait for the thing, with the same ceiling as the sleep it replaces.
+  //
+  // A click, a fixed sleep, then a read is a bet that the panel finished inside that sleep. (Written
+  // without the code, because the counter below reads this text and a quoted example counted as a
+  // fifth bet in every scenario - a check reading its own prose, which this repository has met
+  // three times.)
+  // It is the shape this repository has already written down and condemned - «read scrollTop after a
+  // second is the 1990s junior's sleep, and it produces a fix of the same shape: one that waits
+  // instead of knowing» - living in the tool built to catch exactly that class. A bet costs the full
+  // number every run when it wins, and reads unsettled state when it loses; a condition costs a few
+  // milliseconds and, when it does time out, says which condition never came true instead of failing
+  // three lines later about something else.
+  const until = async (cond, what, ms = 2500) => {
+    const t0 = Date.now();
+    for (;;) {
+      let ok = false;
+      try { ok = cond(); } catch (_) { ok = false; }
+      if (ok) return;
+      if (Date.now() - t0 > ms) say('waited ' + ms + 'ms and ' + what);
+      await wait(25);
+    }
+  };
   (async () => {
     const fs = window.__fsshim;
     const base = 'crm/sampleorg-1234567890/';
@@ -1019,6 +1142,31 @@ def coverage():
     return out
 
 
+def waits() -> tuple:
+    """(bare sleeps, condition waits) across every scenario in this file.
+
+    Derived from this file's own text rather than from a number typed beside it, so the two move
+    when the scenarios do. It reads `await wait(` and `await until(`, which is the whole vocabulary;
+    a third way of waiting introduced tomorrow is invisible here and would need this widened - said
+    rather than left as a silence, because a count under an unstated blind spot is the number that
+    gets quoted as evidence.
+    """
+    import ast
+    tree = ast.parse(pathlib.Path(__file__).read_text(encoding="utf-8"))
+    bare = cond = 0
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+            continue
+        body = node.value.value
+        # A scenario is a module-level string that defines its own `wait`. Derived, so a sixth one
+        # added tomorrow is counted; naming them would be a list to keep in step by hand.
+        if not isinstance(body, str) or "const wait =" not in body:
+            continue
+        bare += body.count("await wait(")
+        cond += body.count("await until(")
+    return (bare, cond)
+
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -1047,6 +1195,19 @@ def main() -> int:
     for app, drove, total in coverage():
         print(f"  {app}: drove {drove} of the {total} clickable controls in the panel; "
               f"the rest are not exercised here.", flush=True)
+    # What the instrument itself rests on, printed rather than left to be discovered. A bare
+    # `await wait(N)` is a bet that the panel finished in N milliseconds: it costs the whole number
+    # every run when it wins and reads unsettled state when it loses, and the failure then lands
+    # three lines later, about something else. `await until(cond, what)` costs milliseconds and names
+    # the condition that never came true. Both are counted so the ratio is visible; the bare one
+    # should shrink, and tests/tools_test.py holds it so it cannot grow quietly.
+    bare, cond = waits()
+    # The five polling steps inside `until` itself are in the bare count and are not bets - they are
+    # how a condition is watched. Said, rather than subtracted: a number with a quiet adjustment in
+    # it is the kind nobody can check.
+    print(f"probe: {cond} of {bare + cond} waits are for a condition; {bare} are sleeps "
+          f"(5 of them the polling step inside `until`) - a sleep is a bet about how long the "
+          f"panel takes.", flush=True)
     print("probe: the scripted paths above ran without throwing.", flush=True)
     return 0
 

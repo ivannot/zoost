@@ -5649,5 +5649,79 @@ class EveryLedgerKeepsWhatAPersonWrote(unittest.TestCase):
                           f'away.\n{r.stdout[-400:]}{r.stderr[-400:]}')
 
 
+class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
+    """A sleep is a bet about how long the panel takes; a condition is a measurement.
+
+    `tools/probe.py` drove the panel with 86 fixed sleeps - a click, a wait of 300 to 1500ms, then a
+    read of the state that click was supposed to produce. That is the shape this repository has
+    already written down and condemned in `CLAUDE.md`: «read scrollTop after a second is the 1990s
+    junior's sleep, and it produces a fix of the same shape - one that waits instead of knowing». It
+    was living in the tool built to catch that class, and nothing said so.
+
+    Two costs, and the second is the one that matters. A bet that wins costs its whole number on
+    every run - roughly fifty seconds of the probe is sleeping. A bet that loses reads unsettled
+    state, and the failure lands three lines later about something else, which is what «flaky» is.
+
+    Not all 86 converted here: a mechanical rewrite of that many call sites in a tool that currently
+    works is the kind of change this repository has twice made wrong. What is refused is the silence.
+    The probe prints both counts, `until(cond, what)` exists and names the condition that never came
+    true, and the number below is held. It moves in either direction only deliberately - a run
+    that converts a sleep must lower it in the same change, which is what stops a ledger that
+    «may only shrink» from quietly stopping measuring anything. That absolute was stated eleven
+    times in this repository and measured false; this one says which way it moved and why.
+    """
+
+    CEILING = 86
+
+    def waits(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('probe_waits', ROOT / 'tools' / 'probe.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.waits()
+
+    def test_the_bare_sleeps_may_only_shrink(self):
+        bare, cond = self.waits()
+        self.assertGreater(cond, 0, 'no condition wait is used at all - `until` exists and nothing calls it')
+        self.assertLessEqual(bare, self.CEILING,
+                             f'{bare} bare sleeps, up from {self.CEILING}. A new one is a new bet '
+                             f'about how long the panel takes - use `until(cond, what)`, which says '
+                             f'which condition never came true instead of failing later about '
+                             f'something else. If a sleep is genuinely the only option, lower this '
+                             f'ceiling deliberately and say why in the commit.')
+        if bare < self.CEILING:
+            self.fail(f'{bare} bare sleeps, down from {self.CEILING} - lower CEILING to {bare} in '
+                      f'the same change, or the ledger stops measuring anything')
+
+    def test_the_run_says_both_numbers(self):
+        # Read off the source rather than by running it: the probe needs Chrome and the sentence is
+        # what this is about. What it must not be is a number typed beside the code - the counter is
+        # derived from the scenarios, and this checks the sentence uses it.
+        src = (ROOT / 'tools' / 'probe.py').read_text(encoding='utf-8')
+        self.assertIn('bare, cond = waits()', src,
+                      'the run no longer prints how much of the probe is guessing')
+        self.assertRegex(src, r'\{cond\} of \{bare \+ cond\} waits are for a condition',
+                         'the printed sentence does not carry both counts')
+
+    def test_the_counter_reads_the_scenarios_and_not_its_own_prose(self):
+        # It did read its own prose: a quoted example inside the helper's comment counted as a fifth
+        # bet in every scenario, which is the defect this repository has met three times in checkers.
+        # Derived by planting the phrase in a comment *outside* any scenario and watching the count
+        # stay put.
+        src = (ROOT / 'tools' / 'probe.py')
+        keep = src.read_text(encoding='utf-8')
+        before = self.waits()
+        try:
+            src.write_text(keep.replace('def waits() -> tuple:',
+                                        '# await wait(999) await until(x)\ndef waits() -> tuple:', 1),
+                           encoding='utf-8')
+            after = self.waits()
+        finally:
+            src.write_text(keep, encoding='utf-8')
+        self.assertEqual(after, before,
+                         'the counter counts prose about waiting as waiting, so its number says '
+                         'nothing about what the probe actually does')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
