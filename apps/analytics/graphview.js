@@ -777,6 +777,15 @@ $('focusx').onclick = () => clearFocus();
 //
 // Counted from the graph, never from nodesA/edgesA - those are layout state, and this line is
 // written once before initPositions() has filled them.
+// The noun follows the number it is standing next to, and that is not always the selection.
+//
+// «1 of 87 table» - the Analytics twin - pluralised on the 1 while the word sits after the 87. «1
+// modules» - the CRM - never pluralised at all, because `NOUN()` hands back a fixed plural. Both are
+// reached whenever a focused view has exactly one node or one edge, which is the case that carries
+// «it takes part in none» - the sentence a reader is most likely to stop and read.
+//
+// One helper, because the rule is one rule: whichever number the word is attached to decides it.
+const countedAs = (shown, total, one, many) => ((total == null ? shown : total) === 1 ? one : many);
 function statOf(set, allN, allE) {
   const c = statCounts(set);
   const nf = c.n !== allN ? ` <span style="color:#94a3b8">of ${allN}</span>` : '';
@@ -786,7 +795,8 @@ function statOf(set, allN, allE) {
   // alone - the ER model Zoho Analytics returns links nothing to it - and saying so is the difference
   // between an answer and a shrug.
   const alone = c.n === 1 && c.e === 0 && curFocus;
-  return `<b>${c.n}</b>${nf} table${c.n === 1 ? '' : 's'} · <b>${c.e}</b>${ef} relation${c.e === 1 ? '' : 's'}`
+  return `<b>${c.n}</b>${nf} ${countedAs(c.n, nf ? allN : null, 'table', 'tables')}`
+    + ` · <b>${c.e}</b>${ef} ${countedAs(c.e, ef ? allE : null, 'relation', 'relations')}`
     + (alone ? ' <span style="color:#94a3b8">- it takes part in none, so there is nothing to draw around it</span>' : '');
 }
 // The whole-graph line, with no focus on it. Lifted out of the init block so the chips can put it

@@ -4,7 +4,7 @@
 # ternary of literals, a number. It should shrink; growth is printed.
 97a1176ce268894d  apps/analytics/graphview.js:332: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:338: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-68f3feec399e35c4  apps/analytics/graphview.js:1444: class="${lk}" is not attribute-escaped
+68f3feec399e35c4  apps/analytics/graphview.js:1454: class="${lk}" is not attribute-escaped
 218d6dfd58005ebf  apps/analytics/sidepanel.js:2826: class="${m.role}" is not attribute-escaped
 3bf63fee64be6cea  apps/analytics/sidepanel.js:3045: href="${x.id}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:775: class="${m.role}" is not attribute-escaped
@@ -25,9 +25,9 @@ d61ee0b22eedce02  apps/crm/export.js:152: href="${connAnchor(c.name)}" is not at
 43eae51bbdfcc8ce  apps/crm/export.js:349: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
 bef76920dac33787  apps/crm/export.js:360: href="${fnAnchor(f.api_name)}" is not attribute-escaped
 d4a7415c6238ee04  apps/crm/export.js:370: href="${modAnchor(m.api_name)}" is not attribute-escaped
-c18c1fd8b287c86e  apps/crm/graphview.js:406: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-c18c1fd8b287c86e  apps/crm/graphview.js:414: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-5859e8f4ffb251d8  apps/crm/graphview.js:1781: class="${lk}" is not attribute-escaped
+c18c1fd8b287c86e  apps/crm/graphview.js:409: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
+c18c1fd8b287c86e  apps/crm/graphview.js:417: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
+5859e8f4ffb251d8  apps/crm/graphview.js:1794: class="${lk}" is not attribute-escaped
 20867c10b8f60824  apps/crm/health.js:158: class="${g.items.length ? (g.bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
 84ff11af55c61f48  apps/crm/highlight.js:118: title="${why}" is not attribute-escaped
 1fb496710d9f6227  apps/crm/modules.js:181: class="${ref ? 'st-none' : m.error ? 'st-err' : 'st-ok'}" is not attribute-escaped

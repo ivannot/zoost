@@ -1471,3 +1471,49 @@ for (const app of ['crm', 'analytics']) {
       `id=${app}: the two refusals were merged the other way round: "${said[0][0]}"`);
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The noun follows the number it stands next to.
+//
+// «1 of 87 table» on Analytics - pluralised on the 1 while the word sits after the 87 - and «1
+// modules» on the CRM, whose `NOUN()` hands back a fixed plural and never agreed with anything.
+// Both wrong, differently, which is a shape `twincheck` cannot see: the two bodies already differ,
+// so the pair is recorded as divergent and *which* way is invisible.
+//
+// Reached whenever a focused view has exactly one node or one edge - the case that carries «it takes
+// part in none, so there is nothing to draw around it», the sentence a reader is most likely to stop
+// and read.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a count of one is not written as a plural`, () => {
+    const ctx = vm.createContext({
+      Object, String, Number, console,
+      statCounts: (set) => set,
+      curFocus: 'x',
+      DATA: { kind: 'schema' },
+      NOUN: () => ({ n: 'modules', n1: 'module', e: 'lookups', e1: 'lookup' }),
+    });
+    // `countedAs` is an arrow constant, not a declaration, so it comes through sliceConst - the
+    // lifter's own limit, and a slice that leaves a callee behind throws three lines in.
+    vm.runInContext([sliceConst(`apps/${app}/graphview.js`, 'countedAs'), gfn(app, 'statOf')].join('\n'), ctx);
+    const say = (n, e, allN, allE) => {
+      ctx.a = { n, e }; ctx.b = allN; ctx.c = allE;
+      return String(vm.runInContext('statOf(a, b, c)', ctx)).replace(/<[^>]+>/g, '');
+    };
+
+    // One of many: the word sits after the total, so it agrees with the total.
+    const many = say(1, 0, 87, 120);
+    assert.doesNotMatch(many, /\b1 of 87 (table|module|node)\b(?!s)/,
+      `id=${app}: «${many.slice(0, 40)}» puts the singular on the number the word is not next to`);
+
+    // One of one: no «of N» at all, so the word agrees with the one.
+    const one = say(1, 1, 1, 1);
+    assert.doesNotMatch(one, /\b1 (tables|modules|nodes)\b/,
+      `id=${app}: «${one.slice(0, 40)}» writes a count of one as a plural`);
+    assert.doesNotMatch(one, /\b1 (relations|lookups|links)\b/,
+      `id=${app}: «${one.slice(0, 40)}» writes one edge as a plural`);
+
+    // And many of many is still plural, because a rule that always says the singular is not a rule.
+    const plural = say(5, 9, 5, 9);
+    assert.match(plural, /5 \w+s\b/, `id=${app}: «${plural.slice(0, 40)}» lost the plural entirely`);
+  });
+}

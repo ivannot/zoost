@@ -132,8 +132,11 @@ function entityBreakdown() {
   }).join(' \u00b7 ');
 }
 const NOUN = () => (DATA.kind === 'schema'
-  ? { n: 'modules', e: 'lookups', dead: 'unreferenced', all: 'All modules', box: 'table' }
-  : { n: 'nodes', e: 'links', dead: 'nothing calls them', all: 'Everything', box: 'node' });
+  // `n1`/`e1` beside `n`/`e`: the plural alone produced «1 modules» wherever a count of one is
+  // shown, and a singular derived by chopping an «s» is a rule that would be wrong the first time a
+  // noun does not end in one.
+  ? { n: 'modules', n1: 'module', e: 'lookups', e1: 'lookup', dead: 'unreferenced', all: 'All modules', box: 'table' }
+  : { n: 'nodes', n1: 'node', e: 'links', e1: 'link', dead: 'nothing calls them', all: 'Everything', box: 'node' });
 /** The workspace this window is drawing, as the header states it.
  *
  *  The name the user gave it, if there is one, and never *instead of* the platform's: a header
@@ -1078,6 +1081,15 @@ const focusName = (id) => (id && N[id] ? label(N[id]) : (id || ''));
 // Counted from the graph, never from nodesA/edgesA - those are layout state, and this line is
 // written once before initPositions() has filled them. It reported «0 of 90 modules» on the schema
 // side and nowhere else, because the call-graph branch happens to count from N already.
+// The noun follows the number it is standing next to, and that is not always the selection.
+//
+// «1 of 87 table» - the Analytics twin - pluralised on the 1 while the word sits after the 87. «1
+// modules» - the CRM - never pluralised at all, because `NOUN()` hands back a fixed plural. Both are
+// reached whenever a focused view has exactly one node or one edge, which is the case that carries
+// «it takes part in none» - the sentence a reader is most likely to stop and read.
+//
+// One helper, because the rule is one rule: whichever number the word is attached to decides it.
+const countedAs = (shown, total, one, many) => ((total == null ? shown : total) === 1 ? one : many);
 function statOf(set, allN, allE) {
   const c = statCounts(set);
   const nf = c.n !== allN ? ` <span style="color:#94a3b8">of ${allN}</span>` : '';
@@ -1085,7 +1097,8 @@ function statOf(set, allN, allE) {
   // A reason when the answer is one box with nothing around it, the same as its twin: the count on
   // its own reads as a fault rather than as the finding it is.
   const alone = c.n === 1 && c.e === 0 && curFocus;
-  return `<b>${c.n}</b>${nf} ${NOUN().n} \u00b7 <b>${c.e}</b>${ef} ${NOUN().e}`
+  return `<b>${c.n}</b>${nf} ${countedAs(c.n, nf ? allN : null, NOUN().n1, NOUN().n)}`
+    + ` \u00b7 <b>${c.e}</b>${ef} ${countedAs(c.e, ef ? allE : null, NOUN().e1, NOUN().e)}`
     + (alone ? ' <span style="color:#94a3b8">- it takes part in none, so there is nothing to draw around it</span>' : '');
 }
 // The whole-graph line, with no focus on it. Lifted out of the init block so the chips can put it
