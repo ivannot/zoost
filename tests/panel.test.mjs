@@ -10957,3 +10957,89 @@ test('the panel behind an open dialog cannot be reached by the keyboard', () => 
     }
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// Settings saves the number it is showing.
+//
+// `loadLay` reads `erParams.current` off disk straight into `lay`, then `layToUI` writes each value
+// into a range input - which clamps it to its own bounds *for display only*. `lay` keeps the stored
+// number, and Save writes `lay`. So a value outside a slider's range is shown as one thing and
+// persisted as another, and the reader never sees what they are keeping.
+//
+// The field beside them does it correctly and says why: «a number input accepts anything typed into
+// it, and 0 would refuse every diagram while 10 million would hang the window for minutes». That
+// clamp was applied to `erDrawMax` and to none of the four sliders next to it - one of a set fixed,
+// the others left behind, in the same function.
+//
+// Reachable without anyone editing a file: `erParams.current` is written by the **diagram window**
+// too, from its own controls, and the two pages declare these four ranges separately. They agree
+// today - measured, which is why the second test below exists rather than a sentence saying so.
+test('a stored diagram setting outside a slider is saved as what is shown', async () => {
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const rel = `apps/${app}/options.js`;
+    if (!existsSync(join(ROOT, rel))) continue;
+
+    const bounds = { pMargin: [10, 320], pSpread: [10, 160], pGap: [0, 48], pFs: [8, 22], pDrawMax: [50, 5000] };
+    const fields = {};
+    const el = (id) => (fields[id] ||= {
+      _v: '', min: String((bounds[id] || [0, 0])[0]), max: String((bounds[id] || [0, 0])[1]),
+      checked: false, textContent: '',
+      // A range input holds only what its own bounds allow - which is the whole point here.
+      get value() { return this._v; },
+      set value(x) {
+        const n = Number(x);
+        if (!bounds[id] || !Number.isFinite(n)) { this._v = String(x); return; }
+        this._v = String(Math.min(bounds[id][1], Math.max(bounds[id][0], n)));
+      },
+    });
+    const ctx = {
+      Object, Number, Math, Array, Promise, String, JSON, console,
+      $: el, LAY_CTL: [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],
+                       ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']],
+      LAY_DEFAULT: { margin: 36, spread: 42, gap: 8, fs: 10, sub: true },
+      DRAW_MAX_DEFAULT: 800, lay: null, drawMax: 800,
+      chrome: { storage: { local: { get: async (k) => (k === 'erParams'
+        ? { erParams: { current: { margin: 9999, spread: 42, gap: 8, fs: 10, sub: true } } }
+        : { erDrawMax: 800 }) } } },
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'),
+                     sliceFn(rel, 'layToUI'), sliceFn(rel, 'loadLay')].join('\n'), ctx);
+    await vm.runInContext('loadLay()', ctx);
+
+    const shown = Number(fields.pMargin.value);
+    const kept = vm.runInContext('lay.margin', ctx);
+    assert.equal(kept, shown,
+      `id=${app}: the page shows ${shown} and would save ${kept} - Save writes the module value, ` +
+      `not the control, so the reader keeps a number they were never shown`);
+  }
+});
+
+test('the diagram sliders mean the same thing in Settings and in the window', () => {
+  // Derived, per id: the two pages declare these ranges separately, and a stored value is only
+  // «in range» with respect to one of them. If they part company, Settings clamps to bounds the
+  // window does not have and the same file means two things.
+  //
+  // The limit: it compares the ranges by id, so a control renamed on one side reads as absent on
+  // that side and is reported as such rather than passing quietly.
+  const ranges = (rel) => {
+    const out = {};
+    for (const m of read(rel).matchAll(/id="(p\w+)"[^>]*\bmin="(-?\d+)"[^>]*\bmax="(-?\d+)"/g)) {
+      out[m[1]] = [Number(m[2]), Number(m[3])];
+    }
+    return out;
+  };
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    const a = ranges(`apps/${app}/options.html`);
+    const b = ranges(`apps/${app}/graphview.html`);
+    const shared = Object.keys(a).filter((k) => k in b);
+    assert.ok(shared.length >= 4,
+      `id=${app}: only ${shared.length} slider(s) declared on both sides - the derivation broke, ` +
+      `or a control was renamed on one of them`);
+    for (const k of shared) {
+      assert.deepEqual(a[k], b[k],
+        `id=${app}: ${k} is ${a[k].join('..')} in Settings and ${b[k].join('..')} in the diagram ` +
+        `window, so one of them clamps a stored value the other considers ordinary`);
+    }
+  }
+});

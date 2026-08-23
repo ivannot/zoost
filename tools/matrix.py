@@ -127,6 +127,7 @@ CLOSED = {
     ("owner", "tools"):       ("tests/tools_test.py: every ledger keeps what a person wrote, driven per ledger", "planted 2026-08-23"),
     ("fastpath", "crm-export"): ("tests/panel.test.mjs: a size ranking states how many functions it could measure", "planted 2026-08-23"),
     ("owner", "crm-export"): ("tests/panel.test.mjs: asking for the export scope twice never abandons the first question", "planted 2026-08-23"),
+    ("fastpath", "options"): ("tests/panel.test.mjs: a stored diagram setting outside a slider is saved as what is shown", "planted 2026-08-23"),
     ("blindspot", "site"):    ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools"):   ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),

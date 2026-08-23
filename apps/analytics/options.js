@@ -408,7 +408,24 @@ $('saveLay').onclick = async () => {
 };
 async function loadLay() {
   const current = beginLoad('erParams');
-  try { const r = await chrome.storage.local.get('erParams'); if (current() && r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
+  // Clamped to each control's own bounds, the way the ceiling below already was. Without it the
+  // page shows one number and saves another: `layToUI` puts the stored value into a range input,
+  // which clamps it *for display*, while `lay` keeps what was on disk and Save writes `lay`. The
+  // reason is the one written on the ceiling - a stored setting is not necessarily a value this
+  // page can mean - and it had been applied to one field of five, in this function.
+  //
+  // From the controls rather than from a table: the bounds are declared in the markup, and a
+  // second copy of them here is the next thing to drift.
+  try {
+    const r = await chrome.storage.local.get('erParams');
+    if (current() && r.erParams && r.erParams.current) {
+      lay = Object.assign({}, LAY_DEFAULT, r.erParams.current);
+      LAY_CTL.forEach(([sl, , k]) => {
+        const lo = +$(sl).min, hi = +$(sl).max;
+        if (Number.isFinite(lo) && Number.isFinite(hi) && Number.isFinite(lay[k])) lay[k] = Math.min(hi, Math.max(lo, lay[k]));
+      });
+    }
+  } catch (_) {}
   try {
     const r = await chrome.storage.local.get('erDrawMax');
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
