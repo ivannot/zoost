@@ -6611,5 +6611,65 @@ class TheRenderHarnessAnswersWhatTheManifestSays(unittest.TestCase):
                 'panel derives from it is photographed wrong')
 
 
+class TheSettingsShotIsOfAProductInUse(unittest.TestCase):
+    """The screenshot stub must not hand the page a state the page draws as «nothing here».
+
+    Every published picture of the settings page is the shipped page rendered against a stubbed
+    `chrome` and a stubbed `idbHandle`. `showRoot()` asks `idbHandle.get('rootDir')` for the working
+    folder and, when there is none, writes **«Not set»** into the row. The stub answered `null`, so
+    every published settings screenshot showed the page as somebody who has never used the product
+    sees it - the one state a reader looking at a screenshot is not trying to learn about.
+
+    The panel shots already record this lesson, in as many words: their Zoho context used to be
+    `{ ok: false }` against example.com, «so every Analytics panel shot carried an amber Not on a
+    Zoho Analytics tab - the off-platform state, photographed and published to the Store». The source
+    beside it was left answering nothing.
+
+    So: the empty state is read out of the **page**, and the stub is required not to be able to
+    produce it. Both halves derived - the sentence is not written here, it is taken from
+    `showRoot()`, so rewording it in the product does not leave this check watching for a string
+    nobody writes any more.
+
+    **The limits, stated.** It reads the stub as text and the page as text: it proves the stub does
+    not answer `null` for the folder and that the page has an empty state to avoid, not that the
+    rendered picture is right - only opening the image does that, and `imgcheck` holds the images
+    against their sources. It covers the one source whose absence the page draws; a stub that starts
+    answering nothing for something else is not compared.
+    """
+
+    def test_the_folder_row_is_not_photographed_empty(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import shots
+        finally:
+            sys.path.pop(0)
+        stub = shots.OPTIONS_STUB.format(name='"x"', stored='{}', script='', hosts='[]')
+
+        for app in sorted(p.name for p in (ROOT / 'apps').iterdir() if (p / 'options.js').exists()):
+            src = (ROOT / 'apps' / app / 'options.js').read_text(encoding='utf-8')
+            m = re.search(r"idbHandle\.get\('(\w+)'\)", src)
+            if not m:
+                continue                       # this page has no working-folder row
+            key = m.group(1)
+            empty = re.search(r"if \(!h\) \{ el\.textContent = '([^']+)'", src)
+            self.assertIsNotNone(
+                empty, f'{app}: showRoot no longer says anything when there is no folder - either the '
+                       'row lost its empty state, or this check has stopped reading it')
+            i = stub.index('window.idbHandle')
+            hand = stub[i:stub.index(';', stub.index('set:', i))]
+            self.assertNotIn(
+                'get: async () => null', hand,
+                f'{app}: the render harness answers no working folder, so every published settings '
+                f'screenshot shows the row as «{empty.group(1)}» - a picture of a product nobody has '
+                'used yet, which is the one state the reader is not looking at it to learn about')
+            self.assertIn(
+                "queryPermission", hand,
+                f'{app}: the stubbed handle cannot answer whether its permission still stands, so the '
+                'row is photographed with the «access needs to be granted again» tail it would not '
+                'normally carry')
+            self.assertIn(key, "rootDir",
+                          f'{app}: the page asks idbHandle for «{key}» and this check assumed rootDir')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

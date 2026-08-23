@@ -637,7 +637,15 @@ window.chrome = {{
   tabs: {{ query: async () => [], create: () => {{}}, onUpdated: {{ addListener: () => {{}} }} }},
   windows: {{ getAll: async () => [], create: () => {{}} }},
 }};
-window.idbHandle = {{ get: async () => null, set: async () => {{}} }};
+// A folder, chosen, with its permission still granted - because that is the page a reader of
+// this product has in front of them. Answering `null` rendered the working-folder row as «Not
+// set» and published a picture of somebody who has never used it. The same lesson the panel
+// shots already record about the Zoho context - «the off-platform state, photographed and
+// published» - on the source beside it. `sample` is what the file shim calls its root, so the
+// two pictures agree about what the reader's folder is called.
+window.idbHandle = {{ get: async () => ({{ name: 'sample',
+  queryPermission: async () => 'granted', requestPermission: async () => 'granted' }}),
+  set: async () => {{}} }};
 window.addEventListener('load', () => setTimeout(() => {{
   try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}
 }}, 700));
