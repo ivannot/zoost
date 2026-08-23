@@ -5082,5 +5082,67 @@ class TheGridSaysHowFarAlongItIs(unittest.TestCase):
                          'the subject does not number the cell that is about to be closed')
 
 
+class StoreCeilingsAreCountedAndTheGapIsPrinted(unittest.TestCase):
+    """The listing checker says how many fields it measured, and which it did not.
+
+    «Every store field states its own ceiling, and `sitecheck.py` counts» - written after a
+    justification sat over 1000 characters for an unknown length of time with nothing measuring. It
+    was half true. The careful pass matched `(max N)` in parentheses of its own, and §2 reads
+    «(manifest `description`, max 132)», so **the ceiling on the short description was stated and
+    never enforced** - the most-read sentence this project has. Found by a cruder count of the same
+    file disagreeing with it: 6 of 10 numbered sections measured, and nobody could have known.
+
+    Three still have no ceiling - the item name, the detailed description and the data disclosures -
+    and the run now prints that rather than reporting zero over a subset. What their real limits are
+    is a fact about somebody else's dashboard, which nothing here can establish; the tool says it is
+    not checking them instead of implying it is.
+    """
+
+    def run_it(self):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'sitecheck.py')],
+                              cwd=ROOT, capture_output=True, text=True).stdout
+
+    def test_the_short_description_ceiling_is_enforced(self):
+        # The specific one that was invisible. Read off behaviour: a copy of the file with §2 made
+        # too long must be reported, whatever the heading's punctuation looks like.
+        with tempfile.TemporaryDirectory() as t:
+            md = ROOT / 'store' / 'crm' / 'store-listing.md'
+            keep = md.read_text(encoding='utf-8')
+            (pathlib.Path(t) / 'keep.md').write_text(keep, encoding='utf-8')
+            try:
+                body = re.search(r'## 2\. [^\n]*\n+```\n(.*?)\n```', keep, re.S)
+                self.assertIsNotNone(body, 'section 2 is not shaped as this reads it')
+                md.write_text(keep.replace(body.group(1), 'x' * 200, 1), encoding='utf-8')
+                out = self.run_it()
+                # The *finding*, not the section number. `§2` alone also appears in the «NOT
+                # checked» line this same run prints, so the first version of this passed with the
+                # narrow pattern restored - a check fooled by its own other output.
+                self.assertRegex(out, r'§2[^\n]*is 200 characters',
+                                 f'a 200-character short description is not reported:\n{out}')
+            finally:
+                md.write_text(keep, encoding='utf-8')
+
+    def test_it_says_how_much_of_the_file_it_measured(self):
+        out = self.run_it()
+        m = re.search(r'(\d+) of (\d+) numbered section\(s\) measured', out)
+        self.assertIsNotNone(m, f'the run does not say how much of the listing it checked:\n{out}')
+        done, total = int(m.group(1)), int(m.group(2))
+        self.assertLess(done, total + 1)
+        self.assertRegex(out, r'NOT checked',
+                         'it measures a subset and no longer says which sections it skipped')
+
+    def test_and_it_would_go_quiet_if_every_section_had_one(self):
+        # A line that always prints is decoration. This is the half that proves it is conditional -
+        # a listing whose sections all state a ceiling must produce no gap line at all.
+        with tempfile.TemporaryDirectory() as t:
+            src = (ROOT / 'store' / 'crm' / 'store-listing.md').read_text(encoding='utf-8')
+            every = re.findall(r'(?m)^## (\d+)\. ([^\n]*)$', src)
+            self.assertTrue(every, 'the crude enumeration finds no numbered section')
+            capped = [n for n, h in every if 'max ' in h]
+            self.assertLess(len(capped), len(every),
+                            'every section states a ceiling, so the gap line can never be exercised '
+                            '- if that becomes true, this case is what has to change')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

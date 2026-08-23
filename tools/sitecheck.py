@@ -200,11 +200,30 @@ def store_field_limits(findings: list) -> None:
     """
     for md in sorted(ROOT.glob('store/*/store-listing.md')):
         text = md.read_text(encoding='utf-8')
-        for m in re.finditer(r'## (\d+)\. ([^\n]*?)\(max (\d+)\)\n+```\n(.*?)\n```', text, re.S):
+        # The crude enumeration first: every numbered section with a payload block. The careful pass
+        # below reads only those whose heading states a ceiling, and its «0 findings» was being read
+        # as «every field fits». Measured: it enforces 6 of the 10 numbered sections, and the
+        # largest field of all - §3, the detailed description, 11,724 characters - is one of the
+        # four it never looks at. The rule this repository applies to every other tree walker:
+        # print the count of things inspected and derive the denominator by a cruder method.
+        every = re.findall(r'(?m)^## (\d+)\. ([^\n]*)$', text)
+        capped = []
+        # `max (\d+)` anywhere in the heading, not `(max N)` in parentheses of its own. §2 reads
+        # «(manifest `description`, max 132)» and was therefore invisible to the pattern - the
+        # ceiling was stated and not enforced, on the short description, which is the most-read
+        # sentence this project has. Found by the crude count above disagreeing with the careful one.
+        for m in re.finditer(r'## (\d+)\. ([^\n]*?)max (\d+)\)\n+```\n(.*?)\n```', text, re.S):
+            capped.append(m.group(1))
             n, cap = len(m.group(4)), int(m.group(3))
             if n > cap:
                 findings.append(f'{md.relative_to(ROOT)}: §{m.group(1)} {m.group(2).strip()} is '
                                 f'{n} characters, {n - cap} over the {cap} the dashboard accepts')
+        loose = [f'§{num}' for num, _ in every if num not in capped]
+        if loose:
+            print(f'  {md.relative_to(ROOT)}: {len(capped)} of {len(every)} numbered section(s) '
+                  f'measured; {", ".join(loose)} state no ceiling and are NOT checked - a field '
+                  f'that does not fit stops the submission at the form.')
+
 
 
 def txt_served_by_worker(findings: list) -> None:
