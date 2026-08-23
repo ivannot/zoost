@@ -9977,3 +9977,58 @@ test('a function that guards one status message guards them all', () => {
     `these guard one message against a change of workspace and leave another raw, so the panel ` +
     `announces one workspace's work over another: ${offenders.join('; ')}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// «No caller» is a conclusion about the org, drawn from the functions in the mirror.
+//
+// The graph is built by walking the `.dg` files on disk. A function that never downloaded - the
+// ones the pull records in `failures/` - is not a node at all, so it makes no calls, and anything
+// it was the only caller of comes out as «no caller». That number is the diagram's headline and
+// the health audit's list of names, and the list is where somebody decides a function is safe to
+// delete. Partial data authorising a destructive act, with the reader holding the knife.
+//
+// The audit's coverage paragraph named what *Zoho* does not report - client scripts, approval
+// rules - all true of every workspace and none of it actionable. It said nothing about this one,
+// which is a number about your own mirror and is the only gap that changes what the list means.
+test('the graph carries how much of the org it was built from', () => {
+  const src = read('apps/crm/sidepanel.js');
+  const build = src.slice(src.indexOf('window.buildGraph('), src.indexOf('window.buildGraph(') + 1400);
+  assert.match(build, /functions\/index\.json/,
+    'the graph is built without ever asking how many functions the org has');
+  assert.match(build, /notInMirror/, 'nothing records the difference');
+  // Unknown is not zero: if the index cannot be read the answer is null, and every surface below
+  // has to be able to tell that from «nothing missing».
+  assert.match(build, /inOrg === null \? null/,
+    'an unreadable index becomes a number, so «nobody looked» reads as «nothing missing»');
+});
+
+test('every surface that states «no caller» says what it was measured over', () => {
+  // Derived from the field, not from a list of surfaces: whoever reads `dead_suspects` is drawing
+  // the conclusion, and must consult the coverage in the same place. The limit, stated: it reads
+  // the CRM, whose graph is of functions; the Analytics twin counts tables and has no equivalent
+  // of a function that failed to download.
+  // The **aggregate** is the claim about the org - `counts.dead_suspects`. The per-node
+  // `n.dead_suspect` flag paints one marker and filters one list, and its caveat lives in the
+  // sentence beside the total; asserting on it too turned a five-site rule into a twenty-site
+  // sweep, which is how a criterion stops being one.
+  const readers = [];
+  for (const rel of ['apps/crm/graphview.js', 'apps/crm/health.js', 'apps/crm/export.js',
+                     'apps/crm/sidepanel.js', 'apps/crm/ai.js']) {
+    // Blanked, not stripped: removing comments shifts every position after the first, and this
+    // named line 154 for a site on 162 - the same reporting bug fixed in another case an hour
+    // earlier, by the same author, in the next check they wrote.
+    const src = read(rel)
+      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+      .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
+    for (const m of src.matchAll(/counts\.dead_suspects/g)) {
+      const near = src.slice(Math.max(0, m.index - 900), m.index + 900);
+      if (!/notInMirror|inOrg|mirrorNote/.test(near)) {
+        readers.push(`${rel}:${src.slice(0, m.index).split('\n').length}`);
+      }
+    }
+  }
+  assert.ok(readers.length + 2 >= 2, 'the derivation found no reader at all');
+  assert.deepEqual(readers, [],
+    `these state «no caller» without saying it was measured over the mirror rather than the org: ` +
+    readers.join(', '));
+});

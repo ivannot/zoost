@@ -34,7 +34,17 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // The module named here *is* in the workspace - it is its lookup's target that is not - so it
   // opens, and the target stays plain text because there is nothing to open.
   const fkItems = missingFK.map((r) => ({ html: `<a data-kind="module" data-id="${escA(r.module)}">${escHtml(r.module)}</a>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
-  const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  // What is *not in this mirror* comes first, because it is the only gap on this list that changes
+  // what the items below mean. The rest of the sentence names categories Zoho does not report - true
+  // of every workspace, and nothing anybody can act on. This one is a number about yours, and a
+  // function whose only caller failed to download appears in «no caller» because of it.
+  const short = g.counts && g.counts.notInMirror;
+  const mirror = short === null || short === undefined
+    ? `<b>Read from your mirror.</b> How many of your functions are in it could not be established, so treat «no caller» as covering only what is here. `
+    : short > 0
+      ? `<b>Read from your mirror:</b> ${g.counts.nodes} of ${g.counts.inOrg} functions. ${short} could not be downloaded, and a function called only from one of those appears below as having no caller. `
+      : '';
+  const coverage = mirror + `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
   // Everything read from the platform rather than computed from the mirror, fetched once: both
   // groups below need it. It sits above them because moving one of them up put a use of `fx`
   // before its declaration - a temporal dead zone that `node --check` waves through and only

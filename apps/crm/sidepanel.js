@@ -1689,6 +1689,19 @@ async function loadGraph(op = beginWorkspaceOp()) {
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }
   const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs, _modules: n._modules } : n)));
+  // **How much of the org this drawing is of.** The graph is built from the `.dg` files on disk, and
+  // a function that never downloaded - the ones in `failures/` - is not a node at all. So it makes
+  // no calls here, and anything it was the only caller of comes out as «no caller»: the number the
+  // diagram prints in its headline and the list the health audit puts names in, which is where
+  // somebody decides a function is safe to delete.
+  //
+  // `functions/index.json` is what Zoho reported, so the difference is the answer. Unknown rather
+  // than zero when the index cannot be read: «nobody looked» is not «nothing missing», which is the
+  // distinction this panel spent the day learning in four other places.
+  let inOrg = null;
+  try { const idx = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(idx)) inOrg = idx.length; } catch (_) {}
+  g.counts.inOrg = inOrg;
+  g.counts.notInMirror = inOrg === null ? null : Math.max(0, inOrg - g.counts.nodes);
   // What the parser saw, written down for the next build. Only when something had to be read: a
   // graph built entirely from the summary has nothing new to say, and rewriting the file on every
   // open would touch a folder the reader may have under version control.

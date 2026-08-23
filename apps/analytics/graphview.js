@@ -126,10 +126,9 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
   if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
-  $('s-nodes').textContent = DATA.counts.nodes;
-  $('s-edges').textContent = DATA.counts.edges;
-  $('s-dead').textContent = DATA.counts.dead_suspects;
-  $('s-unres').textContent = DATA.counts.unresolved;
+  // The numbers are written by `graphStat()`, which replaces the whole line and runs during this
+  // init a few lines below. Poking the spans here wrote them once and never again - the pattern the
+  // comment above `graphStat` records about this same element. Same on the CRM side.
   const _schema = DATA.kind === 'schema';
   document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }

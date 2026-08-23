@@ -157,10 +157,11 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
   if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
-  $('s-nodes').textContent = DATA.counts.nodes;
-  $('s-edges').textContent = DATA.counts.edges;
-  $('s-dead').textContent = DATA.counts.dead_suspects;
-  $('s-unres').textContent = DATA.counts.unresolved;
+  // The four numbers are written by `graphStat()`, which replaces the whole line and runs twice
+  // during this init, a few lines below. Poking the spans here wrote them once and never again -
+  // the exact pattern the comment above `graphStat` records about this same element - and the
+  // sentence saying what «nothing calls them» was measured over lives in that one place, so a
+  // second writer would have printed the number without it.
   const _schema = DATA.kind === 'schema';
   document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }
@@ -1077,8 +1078,8 @@ function statOf(set, allN, allE) {
 // underneath a summary of the unfiltered graph.
 function graphStat() {
   $('statline').innerHTML = DATA.kind === 'schema'
-    ? `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}${orphanNote()}`
-    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
+    ? `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}${mirrorNote()}${orphanNote()}`
+    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them${mirrorNote()} · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
   erCountRefresh();
 }
 // Whichever of the two is the right one for the state we are in.
@@ -1092,6 +1093,27 @@ function orphanNote() {
   if (curView !== 'er') return '';
   const k = orphanedByFilter();
   return k ? ` \u00b7 <span style="color:#94a3b8">${k} not drawn - nothing links them</span>` : '';
+}
+// What «nothing calls them» was measured over. The drawing is built from the functions in the
+// mirror, and one that never downloaded is not here at all - so it makes no calls, and anything it
+// was the only caller of is counted as having none. Said beside the number rather than in a note
+// somebody has to go and find, because the number is what gets acted on.
+//
+// Unknown is marked too, and differently: «how much of the org is here could not be established»
+// is not «nothing is missing», and this window has no way to tell them apart on its own.
+function mirrorNote() {
+  const c = DATA && DATA.counts ? DATA.counts : {};
+  if (c.notInMirror === undefined) return '';
+  if (c.notInMirror === null) {
+    return ' \u00b7 <span style="color:#94a3b8" title="This counts callers among the functions in your'
+      + ' mirror. How many the org has could not be established.">over an unknown share of the org</span>';
+  }
+  if (!c.notInMirror) return '';
+  // Escaped although they are counts: «it is a number» is a belief about the value, and the checker
+  // that reads this line is built to refuse exactly that argument. It costs nothing to be right.
+  return ` \u00b7 <span style="color:#94a3b8" title="${escA(c.nodes)} of ${escA(c.inOrg)} functions are in this`
+    + ` mirror. ${escA(c.notInMirror)} did not download, and a function called only from one of those is`
+    + ` counted as having no caller.">over ${esc(c.nodes)} of ${esc(c.inOrg)}</span>`;
 }
 // Asked to centre on something this diagram does not contain. Never silently: the whole point of
 // opening it focused was to look at that one thing, so the window says which it was and what it is
