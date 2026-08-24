@@ -364,3 +364,37 @@ been quiet for a moment.
 
 > **The rule.** *When a rule is broken in eighty-six places, look for the one condition all of them
 > are approximating.* Eighty-six edits is a project; one shared condition is an afternoon.
+
+## 25. Five outside scans, and what they cost to check - process
+
+Five subagents read the two panels, the checkers, the public surfaces and the two reports, each with
+no memory of why any line is as it is. Eleven findings survived verification here; several did not,
+and the ones that did not were confident, specific and wrong in a detail that only reading the code
+settles.
+
+The one worth the whole exercise: **the Zoho CRM report's health chapter names functions the reader
+unticked, and links each to a chapter that was never written.** Twelve hours earlier I had reported
+that same report as measured clean across all thirteen scopes. It was - against a fixture whose node
+had `dead_suspect: false`, no unresolved calls and no stats, so no health list could ever be
+non-empty and the linking function was never called. The measurement was real and proved nothing.
+
+> **The rule.** *A sweep that cannot produce a positive is not evidence.* Before believing a clean
+> result, make the subject dirty on purpose and watch it go red - and if you cannot, say that instead
+> of «clean».
+
+Three of the findings were claims about where data goes - a privacy absolute, a line in `llms.txt`
+saying the panel posts a report it never posts, and both store listings' scripting justification
+naming two of its four uses. All three were written when they were true and outlived the code.
+
+> **The rule.** *A claim about behaviour ages the moment the behaviour is extended.* The extension
+> that added a use is the change that should have re-read every sentence describing the uses - the
+> enumeration trap, running on justifications rather than features.
+
+And three checkers were reporting zero over part of their subject: a `<script>` tag pattern that
+dropped a file if it carried a second attribute, a write pattern that knew `=` but not `+=` or `--`,
+and a declaration pattern anchored at column zero that swept none of the 54 functions inside the two
+content bridges. Each is the same class this repository has already named twice, in a different tool
+each time.
+
+> **The rule.** *When a pattern is corrected in one checker, grep for the pattern in the others the
+> same day.* All three of these were the identical regex, copied.

@@ -170,6 +170,17 @@ rule this leaves is the one from the same review: **a limit that is not written 
 `htmlcheck` not reading element content is a conclusion and says so, and not reading two thirds of its
 own subject was invisible to everyone, including whoever wrote it.
 
+**A sweep that cannot produce a positive is not evidence, and «I measured it» is the sentence that
+hides it.** A report was measured clean across all thirteen export scopes and reported as such; the
+fixture's one node could not appear in any of the lists being swept, so the function under test was
+never called. An outside scan found the defect twelve hours later. Before believing a clean result,
+make the subject dirty on purpose and watch it go red - and when that cannot be arranged, say so
+instead of saying «clean». The same day this cost three checkers: a `<script>` pattern that dropped a
+file carrying a second attribute, a write pattern that knew `=` and not `+=`, and a declaration
+pattern anchored at column zero that swept none of the 54 functions inside the two content bridges.
+**When a pattern is corrected in one checker, grep for it in the others the same day** - all three
+were the same regex, copied.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because
