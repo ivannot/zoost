@@ -50,13 +50,29 @@ CRM = """
       await wait(25);
     }
   };
+  // **«The panel has stopped changing» is a condition; «300ms» is a bet.** Most waits in these
+  // scenarios are a click followed by a sleep followed by a read, which is the shape this repository
+  // has already condemned in the product and kept in the tool built to catch it. This watches the
+  // document and returns as soon as it has been quiet for a moment - so a fast machine costs
+  // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
+  // instead of failing three lines later on whatever the click was supposed to have produced.
+  //
+  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
+  // and the counter at the end of the run prints how many are left.
+  let _lastMut = 0;
+  new MutationObserver(() => { _lastMut = Date.now(); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+  const settle = async (what, quiet = 150, ms = 4000) => {
+    _lastMut = Date.now();
+    await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
+  };
   let copied = null;
   (async () => {
     // Declared before anything uses it: open the history view only if it is not already open.
     // Clicking a toggle blind is how this check once read rows out of a panel it had just closed.
     const openChain = async () => {
       if ($('navview').classList.contains('show')) return;
-      $('navtab').click(); await wait(300);
+      $('navtab').click(); await settle();
       await until(() => $('navview').classList.contains('show'), 'the history view never opened');
     };
     const rows = () => [...document.querySelectorAll('#tree .f')];
@@ -90,11 +106,11 @@ CRM = """
     // Measured: 335px of content in a 322px row before the separators and the export group were
     // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
     const wide = document.body.style.width;
-    document.body.style.width = '340px'; await wait(300);
+    document.body.style.width = '340px'; await settle('the panel never finished reflowing');
     const grp = document.querySelector('.wsgroup');
     if (grp.scrollWidth > grp.clientWidth + 1)
       say(`the toolbar needs ${grp.scrollWidth}px in ${grp.clientWidth}px - an icon is off-screen at the minimum width`);
-    document.body.style.width = wide; await wait(200);
+    document.body.style.width = wide; await settle('the panel never finished reflowing');
     const mk = $('pvback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
     if (mk.getBoundingClientRect().width < 15) say('the arrows are smaller than asked for: ' + mk.getBoundingClientRect().width);
@@ -117,14 +133,14 @@ CRM = """
     let blinked = 0;
     const watch = new MutationObserver(() => { if (!$('preview').classList.contains('show')) blinked++; });
     watch.observe($('preview'), { attributes: true, attributeFilter: ['class'] });
-    $('pvback').click(); await wait(900);
+    $('pvback').click(); await settle();
     watch.disconnect();
     if (blinked) say('the detail pane closed ' + blinked + ' time(s) during a step on the same tab');
     if (currentPath !== a) say('back did not return to the first function: ' + currentPath);
     if (!$('pvfwd').classList.contains('show')) say('forward is not offered after going back');
 
     // forward
-    $('pvfwd').click(); await wait(900);
+    $('pvfwd').click(); await settle();
     if (currentPath !== b) say('forward did not return to the second function: ' + currentPath);
 
     // the chain itself, and a jump to a specific step
@@ -132,24 +148,24 @@ CRM = """
     const menu = [...document.querySelectorAll('#navbody .nvrow')];
     if (menu.length !== 2) say('the chain shows ' + menu.length + ' steps, expected 2');
     if (!menu[0].classList.contains('at')) say('the newest row is not marked as where we are');
-    menu[1].click(); await wait(900);
+    menu[1].click(); await settle();
     if (currentPath !== a) say('clicking a step in the chain did not go there: ' + currentPath);
     if ($('navview').classList.contains('show')) say('the history stayed open over what it just opened');
 
     // across a change of tab: the whole point of a history that is not per-list
     const seg = [...document.querySelectorAll('.seg')].find((s) => /Workflows/.test(s.textContent));
     if (seg) {
-      seg.click(); await wait(1200);
+      seg.click(); await settle();
       const wf = [...document.querySelectorAll('#tree .f')][0];
       if (wf) {
-        wf.click(); await wait(900);
+        wf.click(); await settle();
         if (!/^workflows\\//.test(currentPath || '')) say('a workflow row did not open a workflow');
         if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button lingers over a workflow, which has no code');
         // Having gone back to step 0 and then somewhere new, what was ahead is gone - a browser
         // does exactly this - so the chain is two long and we are at its end.
         if (navHist.length !== 2 || navPos !== 1) say('the forward tail was not dropped: ' + navHist.length + '@' + navPos);
         if (navHist[0].path !== a) say('the step behind is not the function we came from');
-        $('pvback').click(); await wait(1500);
+        $('pvback').click(); await settle();
         if (currentPath !== a) say('back across tabs landed on ' + currentPath);
         if (viewMode !== 'functions') say('back across tabs did not return to the Functions tab');
       }
@@ -181,18 +197,18 @@ CRM = """
     if (nDim !== hDim) say(`the history leaves the toolbar live: ${nDim} against health's ${hDim}`);
     if (getComputedStyle($('health')).pointerEvents !== 'none') say('Health itself is still clickable under the history');
     // and it carries its own search, since it covers the one the list uses
-    $('navfind').value = 'zzzznothing'; $('navfind').dispatchEvent(new Event('input')); await wait(300);
+    $('navfind').value = 'zzzznothing'; $('navfind').dispatchEvent(new Event('input')); await settle();
     if (document.querySelectorAll('#navbody .nvrow').length) say('the search does not filter the history');
-    $('navfind').value = ''; $('navfind').dispatchEvent(new Event('input')); await wait(300);
+    $('navfind').value = ''; $('navfind').dispatchEvent(new Event('input')); await settle();
     if (!document.querySelectorAll('#navbody .nvrow').length) say('clearing the box did not bring the chain back');
     // Narrower: it still covers its host exactly. It is meant to be *over* the tab row now, so the
     // old check - that it stayed below the tabs - was asserting the shape this one replaced.
-    document.body.style.width = '420px'; await wait(250);
+    document.body.style.width = '420px'; await settle('the panel never finished reflowing');
     const box = $('navview').getBoundingClientRect(), h2 = $('belowbar').getBoundingClientRect();
     if (Math.abs(box.width - h2.width) > 1 || Math.abs(box.top - h2.top) > 1)
       say(`a narrower panel left the history at ${Math.round(box.width)}px over a ${Math.round(h2.width)}px host`);
     document.body.style.width = '';
-    $('navtab').click(); await wait(300);
+    $('navtab').click(); await settle();
     if ($('navview').classList.contains('show')) say('the history view did not close again');
 
     // Each step says when it was taken, and today's steps say only the time.
@@ -210,12 +226,12 @@ CRM = """
       .find((r) => r.querySelector('.nvk').textContent === 'function');
     if (!fnRow()) say('no function in the chain to check the name toggle against');
     const named1 = fnRow().querySelector('.nvl').textContent;
-    $('navname').click(); await wait(500);
+    $('navname').click(); await settle();
     const named2 = fnRow().querySelector('.nvl').textContent;
     if (named1 === named2) say('the chain did not follow the name toggle: still ' + named2);
     const inTree = [...document.querySelectorAll('#tree .f[aria-selected="true"]')][0];
     if (inTree && !inTree.textContent.includes(named2)) say(`the chain says «${named2}» and the tree «${inTree.textContent.trim()}»`);
-    $('navname').click(); await wait(400);
+    $('navname').click(); await settle();
 
     // And it keeps saying so from another tab, where the list it could be derived from is a
     // different list entirely - which is how the chain came to show raw `.dg` file names.
@@ -223,19 +239,19 @@ CRM = """
     if (bad.length) say('a step with no path: ' + JSON.stringify(navHist.map((x) => [x.path, x.label])));
     const seg0 = [...document.querySelectorAll('.seg')].find((s) => /Workflows/.test(s.textContent));
     if (seg0) {
-      seg0.click(); await wait(1000);
+      seg0.click(); await settle();
       await openChain();
       const r = fnRow();
       if (r && /\\.dg$/.test(r.querySelector('.nvl').textContent))
         say('from another tab the chain fell back to a file name: ' + r.querySelector('.nvl').textContent);
       [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent)).click();
-      await wait(900);
+      await settle('the Functions segment never drew');
     }
 
     // Clear empties the chain and keeps what is open.
     const showing = currentPath;
     await openChain();
-    document.querySelector('#navclear').click(); await wait(300);
+    document.querySelector('#navclear').click(); await settle();
     if (navHist.length !== 1) say('Clear left ' + navHist.length + ' steps');
     if (currentPath !== showing) say('Clear closed what was open');
     if (shown('pvback')) say('back is still painted after Clear');
@@ -265,7 +281,7 @@ CRM = """
     // is exactly what is on screen.
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (x) => { copied = x; } }, configurable: true });
     if (getComputedStyle($('codecopy')).display === 'none') say('no copy button over a function');
-    $('codecopy').click(); await wait(300);
+    $('codecopy').click(); await settle();
     if (copied !== $('pvcode').textContent) say('what was copied is not the code on screen');
     // It stands in a row of buttons, so it is the height of that row - measured against a neighbour
     // rather than given a number, which is how it came out 28px beside their 22.
@@ -275,9 +291,9 @@ CRM = """
     if (!$('codecopy').querySelector('svg')) say('the mark is gone after a copy');
     // It belongs to the pane that holds code, so it goes away with it: on «Details», and on a module,
     // which has no code at all. It stayed lit on both - visible in a picture published on the site.
-    $('pvtab_info').click(); await wait(300);
+    $('pvtab_info').click(); await settle();
     if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button is still there on Details');
-    $('pvtab_code').click(); await wait(300);
+    $('pvtab_code').click(); await settle();
     if (getComputedStyle($('codecopy')).display === 'none') say('the copy button did not come back with the code');
 
     // No fast path may hand back an old photograph. A file rewritten at the same path is what the
@@ -298,7 +314,7 @@ CRM = """
       const meta = JSON.parse(await readFile(mp));
       meta.updatedTime = '2099-01-01T00:00:00+00:00';
       await writeFile(mp, JSON.stringify(meta, null, 2));
-      await rebuildTree(); await wait(700);
+      await rebuildTree(); await settle('the tree never finished drawing');
       const row = treeData.find((e) => e.path === victim.path);
       if (!row || row.updatedTime !== '2099-01-01T00:00:00+00:00') say('the tree still shows the date from the previous meta');
     }
@@ -316,7 +332,7 @@ CRM = """
       // the metadata described, and the reader opens the diagram a second later. With one set for
       // both readings that clear also wiped the mark that says «this source changed», and the
       // diagram came back with the references from before the file was rewritten.
-      await rebuildTree(); await wait(700);
+      await rebuildTree(); await settle('the tree never finished drawing');
       graphCache = null;
       const g = await ensureGraph();
       const node = Object.values(g.nodes).find((n) => n.file === race.path);
@@ -369,8 +385,8 @@ CRM = """
         + '  v = zoho.crm.getRecordById(computed, id);\\n}\\n');
       graphCache = null; modNamesCache = null;
       const r = rows().find((e) => e.dataset.path === fn.path) || rows()[0];
-      r.click(); await wait(900);
-      $('pvtab_info').click(); await wait(500);
+      r.click(); await settle();
+      $('pvtab_info').click(); await settle();
       const chips = [...document.querySelectorAll('#pvcallers .mod')].map((c) => c.dataset.mod);
       if (!chips.includes('Contacts')) say('the module the function reads is not shown: ' + JSON.stringify(chips));
       if (chips.includes('NotAModuleHere')) say('a name that is not a module of this org was drawn as one');
@@ -389,16 +405,16 @@ CRM = """
         + '  b = zoho.crm.getRecordById(mod, "Contacts");\\n  c = zoho.crm.getRecordById("NotAModuleHere", id);\\n}\\n');
       graphCache = null; modNamesCache = null;
       const r2 = rows().find((e) => e.dataset.path === fn2.path) || rows()[0];
-      r2.click(); await wait(900);
-      $('pvtab_code').click(); await wait(400);
+      r2.click(); await settle();
+      $('pvtab_code').click(); await settle();
       const links = [...document.querySelectorAll('#pvcode a.c-link[data-mod]')];
       if (links.length !== 1) say('module links in code: ' + links.length + ', expected exactly one');
       if (links[0].dataset.mod !== 'Contacts') say('the wrong string was linked: ' + links[0].dataset.mod);
       if (getComputedStyle(links[0]).cursor !== 'pointer') say('the module link does not say it is clickable');
-      links[0].click(); await wait(1400);
+      links[0].click(); await settle();
       if (viewMode !== 'modules') say('clicking the module in the code did not open the Modules tab');
       const back2 = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
-      if (back2) { back2.click(); await wait(700); }
+      if (back2) { back2.click(); await settle(); }
     }
 
     // Two loads of the same list, started together. `rebuildModules()` used to empty `moduleData`
@@ -417,17 +433,17 @@ CRM = """
     {
       const seg = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
       if (seg) {
-        seg.click(); await wait(1200);
+        seg.click(); await settle();
         const row = [...document.querySelectorAll('#tree .f')].find((e) => /Contacts/.test(e.textContent));
         if (row) {
-          row.click(); await wait(1200);
+          row.click(); await settle();
           // and it has to be visible even when its group is **closed**, which is the case that was
           // reported next: the row is not drawn at all, so there is nothing to scroll to. Closed
           // here on purpose before jumping, because that is the state a reader leaves behind.
           $('tree').querySelectorAll('.grp:not(.collapsed)').forEach((g) => g.click());
-          await wait(400);
+          await settle('the groups never collapsed');
           const link3 = document.querySelector('#pvcode a.c-link[data-mod]');
-          if (link3) { link3.click(); await wait(1200); }
+          if (link3) { link3.click(); await settle(); }
           // and it has to be *visible*: a jump that selects a row below the fold is a jump the
           // reader has to go looking for. Reported that way, on a module opened from the code.
           // Absence is the finding, not a reason to skip: with the group left closed the row is not
@@ -438,24 +454,24 @@ CRM = """
           const b = $('tree').getBoundingClientRect(), r = sel.getBoundingClientRect();
           if (r.bottom < b.top + 1 || r.top > b.bottom - 1)
             say('the selected module is outside the list box - it has to be scrolled to');
-          $('pvtab_info').click(); await wait(900);
+          $('pvtab_info').click(); await settle();
           // A «Read by» chip opens a function, which lives on the other tab: the tab has to come
           // with it, or the list shows modules while the detail shows a function. Reported.
           const rb = $('pvcallers').querySelector('a.wf-fn[data-file]');
           if (rb) {
-            rb.click(); await wait(1400);
+            rb.click(); await settle();
             if (viewMode !== 'functions') say('a function opened from a module left the tab on ' + viewMode);
             const segM = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
-            if (segM) { segM.click(); await wait(900); }
+            if (segM) { segM.click(); await settle(); }
             const row2 = [...document.querySelectorAll('#tree .f')].find((e) => /Contacts/.test(e.textContent));
-            if (row2) { row2.click(); await wait(1000); $('pvtab_info').click(); await wait(600); }
+            if (row2) { row2.click(); await settle(); $('pvtab_info').click(); await settle(); }
           }
           const txt = $('pvcallers').textContent || '';
           if (!/Read by|Written by|No function reads/.test(txt))
             say('the module detail does not say what code does with it: ' + txt.slice(0, 80));
         }
         const back = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
-        if (back) { back.click(); await wait(900); }
+        if (back) { back.click(); await settle(); }
       }
     }
 
@@ -470,13 +486,13 @@ CRM = """
       // Forget that we know a write happened: this is the case where somebody else made it.
       _dirtySource.clear(); _dirtyMeta.clear();
       const segM2 = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
-      if (segM2) { segM2.click(); await wait(1000); }
+      if (segM2) { segM2.click(); await settle(); }
       // The reported state: the panel opened on another tab, so the functions tree was never loaded
       // in this workspace and there are no rows for the old mechanism to mark.
       treeData = [];
-      $('refresh').click(); await wait(1800);
+      $('refresh').click(); await settle();
       const segF2 = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
-      if (segF2) { segF2.click(); await wait(1400); }
+      if (segF2) { segF2.click(); await settle(); }
       graphCache = null;
       const g3 = await ensureGraph();
       const n3 = Object.values(g3.nodes).find((n) => n.file === fn3.path);
@@ -520,7 +536,7 @@ CRM = """
       });
       if (vis.length > 1) {
         const before = $('tree').scrollTop;
-        vis[vis.length - 1].click(); await wait(900);
+        vis[vis.length - 1].click(); await settle();
         if ($('tree').scrollTop !== before)
           say(`clicking a visible row moved the list from ${before} to ${$('tree').scrollTop}`);
       }
@@ -529,11 +545,11 @@ CRM = """
     // Nothing to clear, nothing to click. Reported, and held here because a rule that hides a
     // control is exactly the kind that renders as nothing the day the markup moves.
     {
-      $('find').value = ''; $('find').dispatchEvent(new Event('input')); await wait(200);
+      $('find').value = ''; $('find').dispatchEvent(new Event('input')); await settle();
       if (getComputedStyle($('findx')).display !== 'none') say('the clear mark is shown over an empty box');
-      $('find').value = 'x'; $('find').dispatchEvent(new Event('input')); await wait(300);
+      $('find').value = 'x'; $('find').dispatchEvent(new Event('input')); await settle();
       if (getComputedStyle($('findx')).display === 'none') say('the clear mark stays hidden with text in the box');
-      $('find').value = ''; $('find').dispatchEvent(new Event('input')); await wait(300);
+      $('find').value = ''; $('find').dispatchEvent(new Event('input')); await settle();
     }
 
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
@@ -556,13 +572,13 @@ CRM = """
     {
       const segA = [...document.querySelectorAll('.seg')].find((s) => /Actions/.test(s.textContent));
       if (segA) {
-        segA.click(); await wait(1200);
+        segA.click(); await settle();
         const sel = document.querySelector('#typechips .filtersel');
         const opt = sel && [...sel.options].map((o) => o.value).find((v) => v !== 'all' && v !== 'unused');
         if (!opt) say('the Actions tab offers no kind to filter by - the case cannot run');
         else {
-          sel.value = opt; sel.onchange(); await wait(400);
-          await rebuildActions(); await wait(600);
+          sel.value = opt; sel.onchange(); await settle('the layout never finished drawing');
+          await rebuildActions(); await settle('the actions list never finished drawing');
           const now = document.querySelector('#typechips .filtersel');
           if (actionFilter !== opt) say(`reloading the actions list reset the kind filter (${opt} -> ${actionFilter})`);
           if (now && now.value !== opt) say('the kind control shows All while the list is filtered');
@@ -601,10 +617,10 @@ CRM = """
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.
     tabPrefs.hidden = ['workflows'];
-    renderTabs(); await wait(400);
+    renderTabs(); await settle('the tab row never finished drawing');
     if ([...document.querySelectorAll('.seg')].some((s) => s.dataset.tab === 'workflows'))
       say('a hidden tab still has a segment when we are not on it');
-    setMode('workflows'); await wait(600);
+    setMode('workflows'); await settle('the workflows view never finished drawing');
     const seg2 = [...document.querySelectorAll('.seg')].find((s) => s.dataset.tab === 'workflows');
     if (!seg2) say('jumping to a hidden tab left the row without its segment');
     if (!seg2.classList.contains('active')) say('the segment is there but nothing is lit');
@@ -613,7 +629,7 @@ CRM = """
     tabPrefs.hidden = [];
     tabAccess.schedules = { state: 'forbidden' };
     const before = viewMode;
-    healthOpenSchedule('1', 'x'); await wait(500);
+    healthOpenSchedule('1', 'x'); await settle('the jump from health never landed');
     if (viewMode !== before) say('it switched into an area the role forbids');
 
     // A module's detail: three tabs, the names before what uses them, and one scrolling region.
@@ -621,16 +637,16 @@ CRM = """
     // Through the segment, the way a reader gets there: setMode() alone does not rebuild the list.
     const modSeg = [...document.querySelectorAll('.seg')].find((x) => /Modules/.test(x.textContent));
     if (!modSeg) say('there is no Modules segment to click');
-    modSeg.click(); await wait(1200);
+    modSeg.click(); await settle();
     const modRow = [...document.querySelectorAll('#tree .f')].find((e) => /Orders/.test(e.textContent))
       || [...document.querySelectorAll('#tree .f')][0];
     if (!modRow) say('the modules tree is empty in the fixture');
-    modRow.click(); await wait(1500);
+    modRow.click(); await settle();
     if (!$('pvdetails')) say('clicking a module row did not open a module detail');
     for (const id of ['pvtab_code', 'pvtab_rel', 'pvtab_info']) {
       if (getComputedStyle($(id)).display === 'none') say(`a module's detail is missing ${id}`);
     }
-    $('pvtab_info').click(); await wait(500);
+    $('pvtab_info').click(); await settle();
     const det = $('pvdetails'), cal = $('pvcallers');
     // What the thing *is* comes before what uses it: the names block was below «read by / written by»,
     // under the fold. Read from the DOM order rather than from the markup, because the element is
@@ -643,13 +659,43 @@ CRM = """
     });
     if (scrolls.length) say(scrolls.length + ' box(es) inside Details scroll on their own: ' + scrolls.map((e) => e.id || e.className).join(', '));
     // And a function has no Related lists tab at all - absent, not disabled.
-    setMode('functions'); await wait(600);
+    setMode('functions'); await settle('the functions view never finished drawing');
     const fn = [...document.querySelectorAll('#tree .f')][0];
     if (fn) {
-      fn.click(); await wait(900);
+      fn.click(); await settle();
       if (getComputedStyle($('pvtab_rel')).display !== 'none') say('a function offers Related lists');
     }
 
+
+    // ---- the export dialog: what it remembers, and what it writes ----
+    //
+    // Ten of the panel's eighty-nine controls were driven and these were not, on a path that has now
+    // produced four defects in two days - a builder that could not run, a report full of links to
+    // nothing, a filter nobody could predict. The dialog is where a reader decides what the report
+    // contains, and what it *remembers* is the part nothing had ever exercised: a tick that does not
+    // survive being reopened is a choice silently discarded.
+    const fsx = window.__fsshim;
+    $('export').click(); await settle('the export dialog never opened');
+    if (!$('expscope').classList.contains('on')) say('the export dialog did not open');
+    const wasHealth = $('sc_health').checked;
+    $('sc_health').checked = !wasHealth;
+    $('sc_health').dispatchEvent(new Event('change')); await settle();
+    $('expgo').click();
+    // The write goes through the file system shim, so «it finished» is the file appearing.
+    await until(() => fsx.dump().some((x) => /export.*[.]html$/.test(x)), 'no report was written', 8000);
+    await settle('the dialog never closed after exporting');
+    if ($('expscope').classList.contains('on')) say('the dialog stayed open after Export');
+    $('export').click(); await settle('the export dialog never reopened');
+    if ($('sc_health').checked === wasHealth)
+      say('the export dialog opened back on the old ticks - the choice was discarded');
+    $('sc_health').checked = wasHealth; $('sc_health').dispatchEvent(new Event('change'));
+    $('expcancel').click(); await settle('Cancel never closed the dialog');
+    if ($('expscope').classList.contains('on')) say('Cancel left the dialog open');
+
+    // ---- About ----
+    $('about').click(); await settle('About never opened');
+    if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent)) say('About says nothing about what it is');
+    $('aboutok').click(); await settle('About never closed');
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message + ' @@ ' + (e.stack || '').split('\\n').slice(0, 3).join(' / '); });
 """
@@ -679,6 +725,22 @@ AN = """
       await wait(25);
     }
   };
+  // **«The panel has stopped changing» is a condition; «300ms» is a bet.** Most waits in these
+  // scenarios are a click followed by a sleep followed by a read, which is the shape this repository
+  // has already condemned in the product and kept in the tool built to catch it. This watches the
+  // document and returns as soon as it has been quiet for a moment - so a fast machine costs
+  // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
+  // instead of failing three lines later on whatever the click was supposed to have produced.
+  //
+  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
+  // and the counter at the end of the run prints how many are left.
+  let _lastMut = 0;
+  new MutationObserver(() => { _lastMut = Date.now(); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+  const settle = async (what, quiet = 150, ms = 4000) => {
+    _lastMut = Date.now();
+    await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
+  };
   let copied = null;
   (async () => {
     const openChain = async () => {
@@ -689,9 +751,9 @@ AN = """
     await wait(1600);
     const rows = () => [...document.querySelectorAll('#list tbody tr')];
     if (rows().length < 2) say('the fixture list has fewer than two views');
-    rows()[0].click(); await wait(700);
+    rows()[0].click(); await settle();
     const a = selectedId;
-    rows()[1].click(); await wait(700);
+    rows()[1].click(); await settle();
     const b = selectedId;
     if (a === b) say('two different rows selected the same view');
     if (navHist.length !== 2) say('two steps should be two entries, got ' + navHist.length);
@@ -712,11 +774,11 @@ AN = """
     // Measured: 335px of content in a 322px row before the separators and the export group were
     // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
     const wide = document.body.style.width;
-    document.body.style.width = '340px'; await wait(300);
+    document.body.style.width = '340px'; await settle('the panel never finished reflowing');
     const grp = document.querySelector('.wsgroup');
     if (grp.scrollWidth > grp.clientWidth + 1)
       say(`the toolbar needs ${grp.scrollWidth}px in ${grp.clientWidth}px - an icon is off-screen at the minimum width`);
-    document.body.style.width = wide; await wait(200);
+    document.body.style.width = wide; await settle('the panel never finished reflowing');
     const mk = $('dback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
     const mw = mk.getBoundingClientRect();
@@ -725,15 +787,15 @@ AN = """
       say(`mark ${mw.width}x${mw.height} | span ${sb.width}x${sb.height} | detail ${d.width}x${d.height} show=${$('detail').className} | svgw=${getComputedStyle(mk).width}`);
     }
 
-    $('dback').click(); await wait(800);
+    $('dback').click(); await settle();
     if (String(selectedId) !== String(a)) say('back did not return to the first view: ' + selectedId);
-    $('dfwd').click(); await wait(800);
+    $('dfwd').click(); await settle();
     if (String(selectedId) !== String(b)) say('forward did not return to the second view: ' + selectedId);
 
     await openChain();
     const menu = [...document.querySelectorAll('#navbody .nvrow')];
     if (menu.length !== 2) say('the chain shows ' + menu.length + ' steps, expected 2');
-    menu[1].click(); await wait(800);
+    menu[1].click(); await settle();
     if (String(selectedId) !== String(a)) say('clicking a step in the chain did not go there');
 
     // The SQL is shown the way the CRM shows Deluge: lines as the author wrote them, and the box
@@ -741,7 +803,7 @@ AN = """
     // and a wrapped query is one whose indentation has stopped meaning anything.
     const sqlTab = [...document.querySelectorAll('.dtab')].find((x) => /SQL/.test(x.textContent));
     if (sqlTab) {
-      sqlTab.click(); await wait(600);
+      sqlTab.click(); await settle();
       const pre = document.querySelector('pre.sql');
       if (pre) {
         const s = getComputedStyle(pre);
@@ -751,14 +813,14 @@ AN = """
         // this probe happens to have open may be a table, which has none.
         if (getComputedStyle($('codecopy')).display === 'none') say('no copy button over the SQL');
         Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (x) => { copied = x; } }, configurable: true });
-        $('codecopy').click(); await wait(300);
+        $('codecopy').click(); await settle();
         if (copied !== pre.textContent) say('what was copied is not the SQL on screen');
         const cb = $('codecopy').getBoundingClientRect(), nb = $('tab_sql').getBoundingClientRect();
         if (Math.abs(cb.height - nb.height) > 1) say(`the copy button is ${cb.height}px against the row's ${nb.height}px`);
         if (Math.abs(cb.top - nb.top) > 1) say('the copy button is not on the same line as the tabs beside it');
       }
       const cols = [...document.querySelectorAll('.dtab')].find((x) => /Columns/.test(x.textContent));
-      if (cols) { cols.click(); await wait(400); }
+      if (cols) { cols.click(); await settle(); }
       if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button lingers where there is no code');
     }
 
@@ -781,11 +843,11 @@ AN = """
     const link = document.querySelector('#dbody a.fk[data-go]');
     if (link) {
       const target = link.dataset.go;
-      link.click(); await wait(800);
+      link.click(); await settle();
       if (String(selectedId) !== String(target)) say('a lineage link did not open its view');
       if (navHist.length !== 2 || navPos !== 1) say('the forward tail was not dropped: ' + navHist.length + '@' + navPos);
       if (String(navHist[0].id) !== String(a)) say('the step behind is not the view we came from');
-      $('dback').click(); await wait(800);
+      $('dback').click(); await settle();
       if (String(selectedId) !== String(a)) say('back from a link landed on ' + selectedId);
     }
     // **Every internal link in the report lands somewhere.** A link that goes nowhere is worse than
@@ -812,6 +874,32 @@ AN = """
     // If a report has no internal links at all, this loop proves nothing and is the broken thing.
     if (!anchorsSeen) say('no internal links in any scope - this check is measuring nothing');
 
+
+    // ---- the export dialog: what it remembers, and what it writes ----
+    //
+    // The twin of the block in the other panel's scenario, for the same reason: this is where a
+    // reader decides what the report contains, and nothing had ever exercised what it remembers.
+    const fsx = window.__fsshim;
+    $('export').click(); await settle('the export dialog never opened');
+    if (!$('expscope').classList.contains('on')) say('the export dialog did not open');
+    const wasHealth = $('sc_health').checked;
+    $('sc_health').checked = !wasHealth;
+    $('sc_health').dispatchEvent(new Event('change')); await settle();
+    $('expgo').click();
+    await until(() => fsx.dump().some((x) => /export.*[.]html$/.test(x)), 'no report was written', 8000);
+    await settle('the dialog never closed after exporting');
+    if ($('expscope').classList.contains('on')) say('the dialog stayed open after Export');
+    $('export').click(); await settle('the export dialog never reopened');
+    if ($('sc_health').checked === wasHealth)
+      say('the export dialog opened back on the old ticks - the choice was discarded');
+    $('sc_health').checked = wasHealth; $('sc_health').dispatchEvent(new Event('change'));
+    $('expcancel').click(); await settle('Cancel never closed the dialog');
+    if ($('expscope').classList.contains('on')) say('Cancel left the dialog open');
+
+    // ---- About ----
+    $('about').click(); await settle('About never opened');
+    if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent)) say('About says nothing about what it is');
+    $('aboutok').click(); await settle('About never closed');
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """
@@ -854,6 +942,22 @@ PULL_AN = r"""
       if (Date.now() - t0 > ms) say('waited ' + ms + 'ms and ' + what);
       await wait(25);
     }
+  };
+  // **«The panel has stopped changing» is a condition; «300ms» is a bet.** Most waits in these
+  // scenarios are a click followed by a sleep followed by a read, which is the shape this repository
+  // has already condemned in the product and kept in the tool built to catch it. This watches the
+  // document and returns as soon as it has been quiet for a moment - so a fast machine costs
+  // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
+  // instead of failing three lines later on whatever the click was supposed to have produced.
+  //
+  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
+  // and the counter at the end of the run prints how many are left.
+  let _lastMut = 0;
+  new MutationObserver(() => { _lastMut = Date.now(); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+  const settle = async (what, quiet = 150, ms = 4000) => {
+    _lastMut = Date.now();
+    await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
   };
   (async () => {
     const fs = window.__fsshim;
@@ -903,11 +1007,11 @@ PULL_AN = r"""
     fs.load({ [base + '.zoost.json']: JSON.stringify(real, null, 2) });
     await restoreRoot();
     await refreshWorkspaces();
-    await wait(400);
+    await settle('the workspace list never drew');
     const w = wsList.find((x) => String(x.id) === String(cfg.workspace));
     if (!w) say('the workspace is not in the list after refreshWorkspaces: ' + wsList.map((x) => x.id));
     await selectWorkspace(w);
-    await wait(400);
+    await settle('the selected workspace never drew');
 
     await pullAll();
     await wait(600);
@@ -976,11 +1080,11 @@ PULL_AN = r"""
     //    what stops one org's data landing in another's folder, and it had never been exercised.
     window.__bridge.context = () => ({ ok: true, origin: cfg.origin, workspace: '99000999', view: null });
     await refreshContext();
-    await wait(300);
+    await settle('the panel never reacted to the tab it was given');
     const bytes = fs.dump().length;
     let refused = false;
     try { await pullAll(); } catch (_) { refused = true; }
-    await wait(400);
+    await settle('the refusal never reached the status line');
     if (!refused && !/refus|different workspace|until they match/i.test(statusEl().textContent))
       say('a pull on a mismatched tab was not refused: ' + statusEl().textContent);
     if (fs.dump().length !== bytes) say('a refused pull still wrote to the workspace');
@@ -1032,9 +1136,25 @@ ER = """
       await wait(25);
     }
   };
+  // **«The panel has stopped changing» is a condition; «300ms» is a bet.** Most waits in these
+  // scenarios are a click followed by a sleep followed by a read, which is the shape this repository
+  // has already condemned in the product and kept in the tool built to catch it. This watches the
+  // document and returns as soon as it has been quiet for a moment - so a fast machine costs
+  // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
+  // instead of failing three lines later on whatever the click was supposed to have produced.
+  //
+  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
+  // and the counter at the end of the run prints how many are left.
+  let _lastMut = 0;
+  new MutationObserver(() => { _lastMut = Date.now(); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+  const settle = async (what, quiet = 150, ms = 4000) => {
+    _lastMut = Date.now();
+    await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
+  };
   (async () => {
     document.querySelector('.tab[data-v="er"]').click();
-    await wait(700);
+    await settle('the ER view never drew');
     const badge = () => parseInt(($('ertabn') || {}).textContent || '0', 10) || 0;
     const line = () => {
       const m = /<b>(\\d+)<\\/b>/.exec($('statline').innerHTML || '');
@@ -1054,7 +1174,7 @@ ER = """
       if (!mark) break;
       tried++;
       mark.click();
-      await wait(350);
+      await settle('the fold never took effect');
       if (badge() < before.badge) { after = { badge: badge(), line: line() }; break; }
     }
     if (!tried) say('no fold mark on the drawing - this check no longer reaches the control it is about');
@@ -1094,6 +1214,22 @@ PULL_CRM = r"""
       await wait(25);
     }
   };
+  // **«The panel has stopped changing» is a condition; «300ms» is a bet.** Most waits in these
+  // scenarios are a click followed by a sleep followed by a read, which is the shape this repository
+  // has already condemned in the product and kept in the tool built to catch it. This watches the
+  // document and returns as soon as it has been quiet for a moment - so a fast machine costs
+  // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
+  // instead of failing three lines later on whatever the click was supposed to have produced.
+  //
+  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
+  // and the counter at the end of the run prints how many are left.
+  let _lastMut = 0;
+  new MutationObserver(() => { _lastMut = Date.now(); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+  const settle = async (what, quiet = 150, ms = 4000) => {
+    _lastMut = Date.now();
+    await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
+  };
   (async () => {
     const fs = window.__fsshim;
     const base = 'crm/sampleorg-1234567890/';
@@ -1123,7 +1259,7 @@ PULL_CRM = r"""
     // The CRM panel has no restoreRoot(): the folder comes back through loadWorkspaces() alone,
     // which is a difference between the twins and not a mistake in either.
     await loadWorkspaces();
-    await wait(500);
+    await settle('the workspace list never drew');
 
     await pullAll();
     await wait(1500);
@@ -1209,7 +1345,10 @@ def waits() -> tuple:
         # added tomorrow is counted; naming them would be a list to keep in step by hand.
         if not isinstance(body, str) or "const wait =" not in body:
             continue
+        # `settle` is `until` wearing a shorter name - it waits for the document to stop
+        # changing - so counting it as a bet would report the opposite of what it is.
         bare += body.count("await wait(")
+        cond += body.count("await settle(")
         cond += body.count("await until(")
     return (bare, cond)
 

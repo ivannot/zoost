@@ -5789,16 +5789,21 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
     every run - roughly fifty seconds of the probe is sleeping. A bet that loses reads unsettled
     state, and the failure lands three lines later about something else, which is what «flaky» is.
 
-    Not all 86 converted here: a mechanical rewrite of that many call sites in a tool that currently
-    works is the kind of change this repository has twice made wrong. What is refused is the silence.
-    The probe prints both counts, `until(cond, what)` exists and names the condition that never came
-    true, and the number below is held. It moves in either direction only deliberately - a run
-    that converts a sleep must lower it in the same change, which is what stops a ledger that
-    «may only shrink» from quietly stopping measuring anything. That absolute was stated eleven
-    times in this repository and measured false; this one says which way it moved and why.
+    **They were 86 and they are 10, five of which are the polling step inside `until` itself.** The
+    conversion was not done by naming a condition 76 times - it was done by naming the one condition
+    they all shared: `settle()` watches the document and returns as soon as it has been quiet for a
+    moment, so «the panel has finished drawing» is asked rather than guessed. A click followed by a
+    sleep followed by a read was the shape in every one of them.
+
+    What `settle` does not cover is stated where it is defined: work that finishes without touching
+    the DOM. Those five are what is left, and the number below holds them. It moves in either
+    direction only deliberately - a run that converts one must lower it in the same change, which is
+    what stops a ledger that «may only shrink» from quietly stopping measuring anything. That
+    absolute was stated eleven times in this repository and measured false; this one says which way
+    it moved and why.
     """
 
-    CEILING = 86
+    CEILING = 10
 
     def waits(self):
         import importlib.util
