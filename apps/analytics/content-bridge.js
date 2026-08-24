@@ -392,6 +392,18 @@
   // about which org it is: it *is* the page. A command that does not match is refused here.
   //
   // `context` never carries one, because it is how a mismatch is discovered in the first place.
+  // One reply for every command, awaited rather than chained - see `reply` in the listener.
+  async function answer(p, send) {
+    let r;
+    try { r = await p; }
+    catch (e) {
+      send({ ok: false, error: String(e.message || e), status: (e && e.status) || 0,
+             forbidden: !!(e && e.forbidden) });
+      return;
+    }
+    send({ ok: true, ...r });
+  }
+
   function expectedMatches(x, c) {
     if (!x) return true;
     if (x.workspace != null) return String(x.workspace) === String(c.workspace)
@@ -410,7 +422,11 @@
     // `forbidden` and `status` travel as their own fields: an Error does not survive
     // chrome.runtime messaging, and String(e) would drop exactly the two facts the panel needs to
     // tell a refusal from a fault. Same boundary trap as everywhere else in this repository.
-    const reply = (p) => { p.then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e.message || e), status: (e && e.status) || 0, forbidden: !!(e && e.forbidden) })); return true; };
+    // The chain lives in `answer`, a declaration, because `.then(cb)` is a scope the race checker
+    // cannot enter - so what every command in this bridge did with its result was unread. The twin
+    // bridge is written the same way. `sendResponse` is passed rather than closed over, which is
+    // what lets the work leave this listener at all.
+    const reply = (p) => { answer(p, sendResponse); return true; };
     // Only the frame that *is* the Analytics application answers for the tab: the right origin and a
     // workspace resolved out of its own URL. This used to answer unconditionally, which was harmless
     // while the content script ran in one frame per tab and is not any more: a suite shell puts

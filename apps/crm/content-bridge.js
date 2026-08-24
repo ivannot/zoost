@@ -813,6 +813,13 @@
   // `String(e)` throws away everything except the text. That is the boundary trap CLAUDE.md is about:
   // `forbidden` would be lost exactly here, and the panel would go back to guessing from a string.
   // So every handler replies through this, and the two facts travel as their own fields.
+  // One reply for every command, awaited rather than chained - see `reply` in the listener.
+  async function answer(p, send, shape) {
+    let r;
+    try { r = await p; } catch (e) { fail(send)(e); return; }
+    send(shape ? shape(r) : { ok: true, ...r });
+  }
+
   const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
     forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null });
 
@@ -832,7 +839,11 @@
     // Here each line carried its own `.then(...).catch(fail(...))` - eleven copies of one chain,
     // eleven scopes `tools/asynccheck.py` cannot enter, and eleven chances to write the eleventh
     // one differently from the other ten.
-    const reply = (p, shape) => { p.then((r) => sendResponse(shape ? shape(r) : { ok: true, ...r })).catch(fail(sendResponse)); return true; };
+    // The chain lives in `answer`, a declaration, because `.then(cb)` is a scope the race checker
+    // cannot enter - so what every command in this bridge did with its result was unread. Awaited
+    // there instead: the same behaviour, and a checker can see it. `sendResponse` is passed rather
+    // than closed over, which is what lets the work leave this listener at all.
+    const reply = (p, shape) => { answer(p, sendResponse, shape); return true; };
     if (msg?.cmd === 'listFunctions') return reply(listFunctions());
     if (msg?.cmd === 'listWorkflows') return reply(listWorkflows());
     if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));

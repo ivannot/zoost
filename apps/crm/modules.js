@@ -269,6 +269,36 @@ function _pick(values, cap, esc) {
   const v = values || []; if (!v.length) return '';
   return esc(v.slice(0, cap).join(', ')) + (v.length > cap ? ` \u2026(+${v.length - cap} more)` : '');
 }
+
+/** Copy a related list's API name, and say so only if the browser actually did it.
+ *
+ * A `.then()` callback is a scope `tools/asynccheck.py` cannot enter, so what happened after this
+ * write was unread - and what happens after it is a status line, which belongs to whatever workspace
+ * is on screen. Awaited here, where it can be checked.
+ */
+async function copyRelatedName(text) {
+  // A refusal is the browser's own dialogue and needs nothing from us; what must not happen is
+  // «Copied» over a clipboard that was never written.
+  try { await navigator.clipboard.writeText(text); } catch (_) { return; }
+  setStatus(`Copied \u00ab${text}\u00bb`, 'ok');
+}
+
+/** Draw the layout the reader picked, or every field if they picked «all».
+ *
+ * `mine` and `op` are carried in rather than read again: this reads a file, and by the time it comes
+ * back the panel may be showing another module in another workspace - which is what `previewCurrent`
+ * is asked about before anything is written.
+ */
+async function showChosenLayout(sel, m, mine, op) {
+  const body = document.getElementById('laybody'); const v = sel.value;
+  if (v === '__all__') { body.innerHTML = renderFieldsTable(m); return; }
+  body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
+  let full = []; try { full = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+  if (!previewCurrent(mine, op)) return;
+  const L = (full || []).find((x) => String(x.id) === String(v));
+  body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found - re-pull modules.</div>';
+}
+
 function renderFieldsTable(m) {
   const rows = (m.fields || []).map((f) => `<tr>
     <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
@@ -391,21 +421,15 @@ async function openModule(path, layoutId) {
   // the one box it has always written into, and it arrives asynchronously into whatever is on screen.
   $('pvdetails').appendChild($('pvcallers'));
   $('pvtabsr').innerHTML = relBar;
-  $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => {
-    navigator.clipboard.writeText(c.dataset.c).then(() => setStatus(`Copied \u00ab${c.dataset.c}\u00bb`, 'ok')).catch(() => {});
-  }));
+  $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => copyRelatedName(c.dataset.c)));
   const relOpen = $('pvtabsr').querySelector('#relopen');
   if (relOpen) relOpen.onclick = () => openSchemaFocus(m.api_name, parseInt(document.getElementById('reldepth').value, 10) || 2);
   const sel = document.getElementById('laysel');
-  if (sel) sel.onchange = async () => {
-    const body = document.getElementById('laybody'); const v = sel.value;
-    if (v === '__all__') { body.innerHTML = renderFieldsTable(m); return; }
-    body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
-    let full = []; try { full = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
-    if (!previewCurrent(mine, op)) return;
-    const L = (full || []).find((x) => String(x.id) === String(v));
-    body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found - re-pull modules.</div>';
-  };
+  // The handler is a declaration and this is the wiring - an `= async () => {}` is a scope the race
+  // checker cannot enter, and the read below it is exactly the kind that has to be checked: it awaits
+  // a file and then writes into a box that may belong to another module by then. The arrow *returns*
+  // the promise, which is what keeps the `await sel.onchange()` further down meaning what it meant.
+  if (sel) sel.onchange = () => showChosenLayout(sel, m, mine, op);
   const mod = document.getElementById('laymod');
   if (mod) mod.onclick = () => { const v = sel ? sel.value : '__all__'; openModuleLayout(m.module_name || m.api_name, v === '__all__' ? null : v); };
   if (layoutId && sel) { sel.value = String(layoutId); if (sel.value === String(layoutId)) await sel.onchange(); }
