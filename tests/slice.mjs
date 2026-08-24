@@ -64,6 +64,27 @@ export function sliceFn(rel, name) {
  * A test that restates a constant is testing its own copy of it. IS_VERSION *is* the shape guard;
  * duplicating it here would let the guard change and the test keep passing on the old one.
  */
+/** The body of the handler attached to a control, whichever way it is attached.
+ *
+ *  Every shipped async scope is a named function declaration now - `tools/asynccheck.py` reads
+ *  declarations and nothing else, so an inline `$('saveLay').onclick = async () => {…}` was a scope
+ *  no race check could enter. Two cases here sliced the source *from the position of the control id*
+ *  and read whatever followed; with the body lifted above the assignment, that slice starts after the
+ *  thing it was looking for and asserts over the rest of the file. Ask for the handler by the control
+ *  it belongs to instead, and the shape of the attachment stops being the test's business.
+ *
+ *  Throws when the control has no handler, rather than returning an empty string - the failure that
+ *  case had, where a search that found nothing read as a body that said nothing.
+ */
+export function handlerOf(rel, id) {
+  const src = read(rel);
+  const m = src.match(new RegExp(`\\$\\('${id}'\\)\\.on(?:click|change|input)\\s*=\\s*(\\w+);`));
+  if (m) return sliceFn(rel, m[1]);
+  const inline = src.indexOf(`$('${id}').on`);
+  if (inline < 0) throw new Error(`${rel}: no handler attached to ${id}`);
+  return src.slice(inline);
+}
+
 export function sliceConst(rel, name) {
   // Ends at a `;` that closes a *line*, not at the first `;` anywhere. The obvious non-greedy `.*?;`
   // stopped inside a string literal — `const escA = … '&amp;' …` was cut after `&amp` and produced

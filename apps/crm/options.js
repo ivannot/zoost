@@ -59,7 +59,7 @@ async function showRoot() {
   el.textContent = h.name + (granted ? '' : '  (access needs to be granted again)');
   el.classList.remove('none');
 }
-$('pickRoot').onclick = async () => {
+async function onPickRoot() {
   try {
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'zoost-root' });
     if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted'
@@ -77,14 +77,16 @@ $('pickRoot').onclick = async () => {
     await stamp(); await showRoot();
     toast('Working folder set. Reopen the side panel to see the workspaces.');
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
-};
-$('clearRoot').onclick = async () => {
+}
+$('pickRoot').onclick = onPickRoot;
+async function onClearRoot() {
   if (!confirm('Forget the working folder?\n\nNothing on disk is deleted - Zoost simply stops using it until you pick one again.')) return;
   await window.idbHandle.set('rootDir', null);
   await window.idbHandle.set('activeWs', null);
   await stamp(); await showRoot();
   toast('Working folder forgotten.');
-};
+}
+$('clearRoot').onclick = onClearRoot;
 
 // ---------- AI ----------
 /** Decide what each provider's stored key becomes, given what was typed and what was already there.
@@ -348,7 +350,7 @@ function markEngine() {
 // The engine dropdown is a mode switch, not a text field. Persisting it only on "Save" made it
 // possible to change engine, see the panel ignore it, and blame the panel. It now saves on change.
 let prevEngine = 'anthropic';
-$('aiengine').onchange = async () => {
+async function onAiengine() {
   const picked = $('aiengine').value;
   const missing = engineIncomplete(picked);
   if (missing) {
@@ -367,8 +369,9 @@ $('aiengine').onchange = async () => {
   if (!await saveKeys({ aicfg: c })) return;
   await stamp();
   toast(`Engine set to ${engineLabel(c.active)}.`);
-};
-$('saveAi').onclick = async () => {
+}
+$('aiengine').onchange = onAiengine;
+async function onSaveAi() {
   const cfg = {
     active: $('aiengine').value,
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
@@ -448,7 +451,8 @@ $('saveAi').onclick = async () => {
   // drift - which is what left two empty passphrase boxes on screen after a successful save, reading
   // as "it did not take".
   await loadAi();
-};
+}
+$('saveAi').onclick = onSaveAi;
 
 // ---------- export scope ----------
 let scope = Object.assign({}, SCOPE_FULL);
@@ -484,7 +488,10 @@ SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFro
 // A page may only write the settings it can show. What it does not show, it carries.
 $('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); };
 $('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); };
-$('saveScope').onclick = async () => { scopeFromUI(); if (!await saveKeys({ exportScope: scope })) return; await stamp(); toast('Export defaults saved.'); };
+async function onSaveScope() {
+ scopeFromUI(); if (!await saveKeys({ exportScope: scope })) return; await stamp(); toast('Export defaults saved.'); 
+}
+$('saveScope').onclick = onSaveScope;
 
 // ---------- diagram layout ----------
 let lay = Object.assign({}, LAY_DEFAULT);
@@ -514,7 +521,7 @@ $('pDrawMax').addEventListener('input', () => {
   $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
-$('saveLay').onclick = async () => {
+async function onSaveLay() {
   // Merged, never replaced. This page edits the sliders; `kind` and `mode` belong to the diagram
   // window, which writes them when the reader tunes a graph inside it. Replacing the object erased
   // both - so tuning a spread in the window and then visiting this page for anything at all threw
@@ -536,7 +543,9 @@ $('saveLay').onclick = async () => {
   // control for it.
   const { kind: _windowKind, ...keep } = prev;
   if (!await saveKeys({ erParams: Object.assign({}, keep, { current: lay }), erDrawMax: drawMax })) return;
-  await stamp(); toast('Diagram defaults saved.'); };
+  await stamp(); toast('Diagram defaults saved.'); 
+}
+$('saveLay').onclick = onSaveLay;
 async function loadLay() {
   const current = beginLoad('erParams');
   // Clamped to each control's own bounds, the way the ceiling below already was. Without it the
@@ -668,11 +677,12 @@ async function loadTabs() {
   } catch (_) {}
   renderTabs();
 }
-$('saveTabs').onclick = async () => {
+async function onSaveTabs() {
   if (!await saveKeys({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } })) return;
   await stamp();
   toast('Tabs saved.');
-};
+}
+$('saveTabs').onclick = onSaveTabs;
 $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); };
 
 
@@ -710,10 +720,11 @@ async function loadDc() {
   if (!current()) return;
   $('zohoDc').value = dcs.includes(want) ? want : dcs[0];
 }
-$('zohoDc').onchange = async () => {
+async function onZohoDc() {
   if (!await saveKeys({ zohoDc: $('zohoDc').value })) return;
   toast('Data centre saved.');
-};
+}
+$('zohoDc').onchange = onZohoDc;
 
 const SEC_TABS = 'Tabs';
 const SEC_DIAGRAM = 'Diagram layout';
@@ -811,7 +822,7 @@ $('rxRestore').onclick = () => {
   rxDefaults().forEach((d) => { if (!have.has(d.name.toLowerCase())) rxCur.push(d); });
   renderRx(); markDirty('rxShortcuts');
 };
-$('saveRx').onclick = async () => {
+async function onSaveRx() {
   if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
   const bad = rxProblems(rxCur);
   if (bad) { toast(bad, true); return; }
@@ -819,7 +830,8 @@ $('saveRx').onclick = async () => {
   // nothing cached anywhere to tell about the change.
   if (!await saveKeys({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) })) return;
   toast('Patterns saved.');
-};
+}
+$('saveRx').onclick = onSaveRx;
 
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
@@ -893,8 +905,16 @@ function conflictBox(key, on) {
     + '<span class="cfb"><button data-take="' + key + '">Take theirs</button>'
     + '<button data-keep="' + key + '">Keep mine</button></span>';
   sec.insertBefore(el, sec.firstChild);
-  el.querySelector('[data-take]').onclick = async () => { dirty.delete(key); await SECTIONS[key].reload(); conflictBox(key, false); };
+  el.querySelector('[data-take]').onclick = () => takeTheirs(key);
   el.querySelector('[data-keep]').onclick = () => conflictBox(key, false);
+}
+// Named because it awaits: a reload lands after a yield and the section it redraws may have been
+// edited in between, which is precisely what `tools/asynccheck.py` is for and precisely what an
+// inline arrow hides from it.
+async function takeTheirs(key) {
+  dirty.delete(key);
+  await SECTIONS[key].reload();
+  conflictBox(key, false);
 }
 // Any edit inside a section marks it. Attached to the section rather than to each control, so a
 // field added later is covered without anyone remembering - the reorder arrows are clicks and not
@@ -905,23 +925,32 @@ document.querySelectorAll('[data-section]').forEach((sec) => {
   sec.addEventListener('change', () => markDirty(k));
   sec.addEventListener('click', (e) => { if (e.target.closest('.mv')) markDirty(k); });
 });
+// The settings page listens to itself being changed from another window. It awaits a reload,
+// so the section it redraws may have been edited meanwhile - a named declaration, for the same
+// reason as everything else here: an arrow is a scope the race check cannot enter.
+async function otherWindowChanged(ch, area) {
+  if (area !== 'local') return;
+  for (const key of Object.keys(SECTIONS)) {
+    if (!ch[key] || wasOwn(key)) continue;
+    if (dirty.has(key)) conflictBox(key, true);          // your edits stand; you decide
+    else { try { await SECTIONS[key].reload(); } catch (_) {} }   // nothing to lose: just catch up
+  }
+}
 try {
-  chrome.storage.onChanged.addListener(async (ch, area) => {
-    if (area !== 'local') return;
-    for (const key of Object.keys(SECTIONS)) {
-      if (!ch[key] || wasOwn(key)) continue;
-      if (dirty.has(key)) conflictBox(key, true);          // your edits stand; you decide
-      else { try { await SECTIONS[key].reload(); } catch (_) {} }   // nothing to lose: just catch up
-    }
-  });
+  chrome.storage.onChanged.addListener(otherWindowChanged);
 } catch (_) {}
 
 // ---------- init ----------
-(async function init() {
+// A declaration and a call, not an immediately-invoked expression. `functions()` in
+// `tools/asynccheck.py` matches a declaration at the start of a line, so a *named* function
+// wearing a paren is as invisible as an anonymous one - and the whole startup of this page runs
+// inside it, awaits included.
+async function init() {
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   $('legal').textContent = LEGAL_DISCLAIMER;
   await showRoot(); await loadDc(); await loadAi(); await loadScope(); await loadLay(); await loadTabs(); await loadRx();
-})();
+}
+init();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {
   $(id).oninput = () => { syncLockRow(); markEngineOptions(); };

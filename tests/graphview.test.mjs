@@ -25,7 +25,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, read, load, blankNonCode } from './slice.mjs';
+import { sliceFn, sliceConst, read, load, blankNonCode, handlerOf } from './slice.mjs';
 import vm from 'node:vm';
 
 /** A named function out of the graph window, wherever it now lives.
@@ -154,11 +154,11 @@ for (const app of ['crm', 'analytics']) {
     // directly and now hands its object to `saveKeys`, the one writer that moves a mark only when
     // the write happened - and this line searched for the old spelling, found nothing, and asserted
     // over an empty string. Both spellings, and it fails loudly when neither is there.
-    const from = oj.indexOf('saveLay');
-    const at = Math.min(...[oj.indexOf('storage.local.set({', from), oj.indexOf('saveKeys({', from)]
+    const lay = handlerOf(`apps/${app}/options.js`, 'saveLay');
+    const at = Math.min(...[lay.indexOf('storage.local.set({'), lay.indexOf('saveKeys({')]
       .filter((i) => i >= 0).concat([Infinity]));
     assert.ok(Number.isFinite(at), 'saveLay writes nothing that this test can find');
-    const set = oj.slice(at);
+    const set = lay.slice(at);
     assert.match(set.slice(0, 200), /erDrawMax: drawMax/, 'the ceiling is not written as its own key');
     const inParams = set.slice(set.indexOf('erParams:'), set.indexOf('erDrawMax:'));
     assert.ok(!/drawMax/i.test(inParams),

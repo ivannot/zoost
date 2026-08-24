@@ -2,6 +2,21 @@
 # Each line is a global written after an await with no check between the two.
 # Being here means somebody read it and decided it is safe. It should shrink;
 # when it grows, the run says so and the commit says which of the two reasons.
+#
+# The 17 entries added on 24 August came from the check *seeing more*, not from new debt: the two
+# diagram windows ran their whole startup inside `(async function init() {…})()` and both settings
+# pages ran nine handlers inside `onclick = async () => {…}`, and a scope that is not a declaration
+# is one this tool cannot enter. They are named now. Read, and safe, for two reasons worth stating
+# because neither is visible from the line:
+#
+#   `init` in either graphview - a one-shot startup with no competing writer. The window is opened
+#   for one workspace and nothing else runs while it loads, so there is no second operation for a
+#   guard to distinguish it from. DATA, N, ids, erP, drawMax, curFocus, egoDepth.
+#
+#   `onAiengine` / `onSaveAi` in either options page - **the settings page has no workspace**. It
+#   holds no folder handle and no org, so the class this check is about - a value published into a
+#   workspace that has since changed - has nothing to be wrong about here. Each write takes the
+#   value the same operation just computed from the control it read after the await.
 # The 24 lines added on 22 August 2026 are the options pages, the backgrounds and the content
 # scripts, which this check had never read - `sidepanel.html` was its whole subject, 9 of the 32
 # shipped scripts. The content scripts were *opened* and not read: both are wrapped in an IIFE, so
@@ -28,7 +43,15 @@
 #
 # What it cannot see is in the docstring: an arrow-function body, including the onChanged handler
 # where both panels rewrite the folder handle after an await.
+apps/analytics/graphview.js	init	DATA
+apps/analytics/graphview.js	init	N
+apps/analytics/graphview.js	init	curFocus
+apps/analytics/graphview.js	init	drawMax
+apps/analytics/graphview.js	init	egoDepth
+apps/analytics/graphview.js	init	erP
+apps/analytics/graphview.js	init	ids
 apps/analytics/options.js	loseLock	aiPassChanging
+apps/analytics/options.js	onAiengine	prevEngine
 apps/analytics/options.js	saveAi	aiPassChanging
 apps/analytics/options.js	saveKeys	dirty
 apps/analytics/options.js	saveKeys	ownWrite
@@ -57,9 +80,18 @@ apps/analytics/sidepanel.js	refreshWorkspaces	dir
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
+apps/crm/graphview.js	init	DATA
+apps/crm/graphview.js	init	N
+apps/crm/graphview.js	init	curFocus
+apps/crm/graphview.js	init	drawMax
+apps/crm/graphview.js	init	egoDepth
+apps/crm/graphview.js	init	erP
+apps/crm/graphview.js	init	ids
 apps/crm/modules.js	openModule	currentPath
 apps/crm/modules.js	pullModules	index
 apps/crm/options.js	loseLock	aiPassChanging
+apps/crm/options.js	onAiengine	prevEngine
+apps/crm/options.js	onSaveAi	aiPassChanging
 apps/crm/options.js	saveKeys	dirty
 apps/crm/options.js	saveKeys	ownWrite
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted

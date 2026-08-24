@@ -51,7 +51,7 @@ closeNavMenu	67073a3b5d66	67073a3b5d66	identical
 closeScope	b272bb357c1c	d0fa6743ab69	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
-conflictBox	ecb43a011b8e	ecb43a011b8e	identical
+conflictBox	11d7d721e357	11d7d721e357	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
@@ -124,6 +124,7 @@ grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	7753ba68b1be	c9709b0f9729	divergent
 hueFor	14a512e6b267	14a512e6b267	identical
+init	95aac20a6c5c	a0881b200043	divergent
 initPositions	523e3eabcde3	523e3eabcde3	identical
 isZohoUrl	de8efd3b2761	de8efd3b2761	identical
 jitter	5fedc5f24739	5fedc5f24739	identical
@@ -157,6 +158,10 @@ navWhen	6d2200ac5636	6d2200ac5636	identical
 noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
+onAiengine	db42c8c059e5	55f96961b339	divergent
+onSaveLay	632ebb161980	ec35c06238e1	divergent
+onSaveRx	974e36827c7e	974e36827c7e	identical
+onZohoDc	1d9967844be3	1d9967844be3	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	1ccc9b2b0408	0c5941e396f4	divergent
 openRxMenu	cdc4b8f98ab9	4e4329e39c5e	divergent
@@ -165,6 +170,7 @@ openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2df809b3babd	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
+otherWindowChanged	3746866890c2	3746866890c2	identical
 paintFindMarks	5b967953a498	5b967953a498	identical
 panelInert	bc169e70b382	bc169e70b382	identical
 parseArrangement	6ad270723301	6ad270723301	identical
@@ -223,6 +229,7 @@ stepSelection	01087cab90ac	060e86ed5417	divergent
 switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
+takeTheirs	d909b83865da	d909b83865da	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	692c8692eeff	93b7beed0330	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent

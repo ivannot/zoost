@@ -164,7 +164,11 @@ let _hues = null, _huesKey = null;
 const KINDCOL = (k) => declaredHue(k) || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
-(async function init() {
+// A declaration and a call, not an immediately-invoked expression. `functions()` in
+// `tools/asynccheck.py` matches a declaration at the start of a line, so a *named* function
+// wearing a paren is as invisible as an anonymous one - and the whole startup of this page runs
+// inside it, awaits included.
+async function init() {
   // One key per window: the token rides the URL, so two diagrams open together cannot consume each
   // other's payload. Consumed on read - a window owns its graph from here on, and a stale slot must
   // not outlive it. Without a token (the render harness opens the page bare) the plain key answers.
@@ -233,7 +237,8 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     bfsEgo(); egoStat(); updateScopeUI();
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
-})();
+}
+init();
 
 // ---------------- Explorer ----------------
 // What the window is drawing, in two questions.

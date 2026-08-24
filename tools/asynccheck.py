@@ -314,6 +314,11 @@ _SCOPE_SHAPES = (
     ('async arrow', re.compile(r'\basync\s*\([^()]*\)\s*=>')),
     ('async arrow', re.compile(r'\basync\s+\w+\s*=>')),
     ('anonymous async function', re.compile(r'\basync\s+function\s*\(')),
+    # `(async function init() {…})()` is *named* and still unreadable: `functions()` matches a
+    # declaration at the start of a line, and this one starts with a paren. Both options pages ran
+    # their whole startup - seven awaits each - inside one, and nothing here counted it as missed.
+    # Found while converting the shapes above, by reading what was left rather than by the tool.
+    ('async IIFE', re.compile(r'\(\s*async\s+function\b')),
     ('async method', re.compile(r'(?m)^\s*async\s+\w+\s*\([^()]*\)\s*\{')),
     ('.then() callback', re.compile(r'\.then\s*\(')),
 )

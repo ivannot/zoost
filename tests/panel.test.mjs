@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load, read, blankNonCode, ROOT } from './slice.mjs';
+import { sliceFn, sliceConst, load, read, blankNonCode, ROOT, handlerOf } from './slice.mjs';
 import { readdirSync, existsSync } from 'node:fs';
 
 // The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
@@ -4751,7 +4751,7 @@ for (const app of ['crm', 'analytics']) {
       const opts = read(`apps/${app}/options.js`);
       assert.ok(/let rxLoadFailed = true;/.test(opts),
         'why=' + app + ' options can save over a list that was never read');
-      assert.ok(/if \(rxLoadFailed\)/.test(opts.slice(opts.indexOf("$('saveRx')"))),
+      assert.ok(/if \(rxLoadFailed\)/.test(handlerOf(`apps/${app}/options.js`, 'saveRx')),
         'why=' + app + ' Save does not ask whether the load succeeded');
     }
   });
@@ -11204,10 +11204,11 @@ test('crm: diagram defaults saved in Settings are applied by either graph', asyn
     chrome: { storage: { local: { get: async () => JSON.parse(JSON.stringify(stored)) } } },
   };
   vm.createContext(ctx);
-  const src = read('apps/crm/options.js');
-  const at = src.indexOf("$('saveLay').onclick");
-  const body = src.slice(src.indexOf('{', at), src.indexOf('\n  await stamp();', at));
-  vm.runInContext(`(async () => ${body} })()`, ctx);
+  // The handler by the control it belongs to, and run as itself. It used to be sliced out of the
+  // file from the position of `$('saveLay').onclick` and wrapped in an arrow - which broke the day
+  // the body moved above the assignment, and would have broken again at the next reshuffle. The
+  // panels name every async scope now, so ask for the name.
+  vm.runInContext(`${handlerOf('apps/crm/options.js', 'saveLay')}\nonSaveLay();`, ctx);
   await new Promise((r) => setTimeout(r, 5));
 
   assert.equal(stored.erParams.current.margin, 60, 'the page did not save what it shows');

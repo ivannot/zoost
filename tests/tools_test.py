@@ -5634,14 +5634,17 @@ class AsyncCheckSaysWhatItDoesNotRead(unittest.TestCase):
                                       'nobody can tell whether the gap matters')
 
     def test_an_await_outside_a_declaration_is_counted_as_unread(self):
-        # Run it, on a real file. The plant goes inside an arrow-assigned handler - the shape the
-        # tool cannot enter - and the *unread* number must move while the read number does not.
+        # Run it, on a real file. The plant *writes* the shape the tool cannot enter rather than
+        # editing one that happens to be there: the first version inserted an await into an existing
+        # `$('saveScope').onclick = async () => {`, and the day that handler became a named
+        # declaration the replace matched nothing, the numbers did not move, and the case failed
+        # saying the tool had stopped counting. It had not - the fixture had. **A plant that names a
+        # site is a fixture with an expiry date**; plant the shape.
         f = ROOT / 'apps' / 'crm' / 'options.js'
         keep = f.read_text(encoding='utf-8')
         before = self.numbers(self.run_it().stdout)
         try:
-            f.write_text(keep.replace("$('saveScope').onclick = async () => {",
-                                      "$('saveScope').onclick = async () => { await 0;", 1),
+            f.write_text(keep + "\n$('planted').onclick = async () => { await 0; };\n",
                          encoding='utf-8')
             seen, unseen = self.numbers(self.run_it().stdout)
         finally:
@@ -6924,7 +6927,7 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
 
     #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
     #: raises it, because a new scope written the old way is a finding on the day it is written.
-    CEILING = 82
+    CEILING = 65
 
     def ac(self):
         sys.path.insert(0, str(ROOT / 'tools'))

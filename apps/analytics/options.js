@@ -401,13 +401,14 @@ $('pDrawMax').addEventListener('input', () => {
   $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
-$('saveLay').onclick = async () => {
+async function onSaveLay() {
   // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
   // writes it when the reader changes Emphasis in there. Replacing the object threw it away.
   const prev = (await chrome.storage.local.get('erParams')).erParams || {};
   if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
   toast('Diagram defaults saved.');
-};
+}
+$('saveLay').onclick = onSaveLay;
 async function loadLay() {
   const current = beginLoad('erParams');
   // Clamped to each control's own bounds, the way the ceiling below already was. Without it the
@@ -437,7 +438,7 @@ async function loadLay() {
 }
 
 let prevEngine = 'anthropic';
-$('aiengine').onchange = async () => {
+async function onAiengine() {
   // The mode is saved on change; the *form* is not. Running the whole save here wrote whatever was
   // half-typed in the key fields, and once a passphrase can be required it could refuse outright -
   // leaving the selector showing an engine that was never stored. Same shape as the CRM page.
@@ -458,7 +459,8 @@ $('aiengine').onchange = async () => {
   prevEngine = c.active;
   if (!await saveKeys({ aicfg: c })) return;
   toast(`Engine set to ${engineLabel(c.active)}.`);
-};
+}
+$('aiengine').onchange = onAiengine;
 $('saveAi').onclick = () => saveAi();
 
 // ---------- guarding against the stale save ----------
@@ -491,10 +493,11 @@ async function loadDc() {
   if (!current()) return;
   $('zohoDc').value = dcs.includes(want) ? want : dcs[0];
 }
-$('zohoDc').onchange = async () => {
+async function onZohoDc() {
   if (!await saveKeys({ zohoDc: $('zohoDc').value })) return;
   toast('Data centre saved.');
-};
+}
+$('zohoDc').onchange = onZohoDc;
 
 const SEC_DIAGRAM = 'Diagram layout';
 
@@ -591,7 +594,7 @@ $('rxRestore').onclick = () => {
   rxDefaults().forEach((d) => { if (!have.has(d.name.toLowerCase())) rxCur.push(d); });
   renderRx(); markDirty('rxShortcuts');
 };
-$('saveRx').onclick = async () => {
+async function onSaveRx() {
   if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
   const bad = rxProblems(rxCur);
   if (bad) { toast(bad, true); return; }
@@ -599,7 +602,8 @@ $('saveRx').onclick = async () => {
   // nothing cached anywhere to tell about the change.
   if (!await saveKeys({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) })) return;
   toast('Patterns saved.');
-};
+}
+$('saveRx').onclick = onSaveRx;
 
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
@@ -662,23 +666,35 @@ function conflictBox(key, on) {
     + '<span class="cfb"><button data-take="' + key + '">Take theirs</button>'
     + '<button data-keep="' + key + '">Keep mine</button></span>';
   sec.insertBefore(el, sec.firstChild);
-  el.querySelector('[data-take]').onclick = async () => { dirty.delete(key); await SECTIONS[key].reload(); conflictBox(key, false); };
+  el.querySelector('[data-take]').onclick = () => takeTheirs(key);
   el.querySelector('[data-keep]').onclick = () => conflictBox(key, false);
+}
+// Named because it awaits: a reload lands after a yield and the section it redraws may have been
+// edited in between, which is precisely what `tools/asynccheck.py` is for and precisely what an
+// inline arrow hides from it.
+async function takeTheirs(key) {
+  dirty.delete(key);
+  await SECTIONS[key].reload();
+  conflictBox(key, false);
 }
 document.querySelectorAll('[data-section]').forEach((sec) => {
   const k = sec.dataset.section;
   sec.addEventListener('input', () => markDirty(k));
   sec.addEventListener('change', () => markDirty(k));
 });
+// The settings page listens to itself being changed from another window. It awaits a reload,
+// so the section it redraws may have been edited meanwhile - a named declaration, for the same
+// reason as everything else here: an arrow is a scope the race check cannot enter.
+async function otherWindowChanged(ch, area) {
+  if (area !== 'local') return;
+  for (const key of Object.keys(SECTIONS)) {
+    if (!ch[key] || wasOwn(key)) continue;
+    if (dirty.has(key)) conflictBox(key, true);
+    else { try { await SECTIONS[key].reload(); } catch (_) {} }
+  }
+}
 try {
-  chrome.storage.onChanged.addListener(async (ch, area) => {
-    if (area !== 'local') return;
-    for (const key of Object.keys(SECTIONS)) {
-      if (!ch[key] || wasOwn(key)) continue;
-      if (dirty.has(key)) conflictBox(key, true);
-      else { try { await SECTIONS[key].reload(); } catch (_) {} }
-    }
-  });
+  chrome.storage.onChanged.addListener(otherWindowChanged);
 } catch (_) {}
 
 (function init() {
