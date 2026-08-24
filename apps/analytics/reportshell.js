@@ -204,26 +204,7 @@ function reportToc(groups) {
     + `</nav>`;
 }
 
-/** One item, in the card both reports draw them in: a header line, an optional block of
- *  cross-references, and whatever the product puts in the body. */
-function reportItem(o) {
-  return `<section class="item" id="${escReportA(o.anchor)}" data-name="${escReportA((o.search || o.name || '').toLowerCase())}">`
-    + `<div class="ih"><b>${escReport(o.name)}</b>`
-    + (o.code ? ` <code>${escReport(o.code)}</code>` : '')
-    + (o.badges || '')
-    + `</div>`
-    + (o.refs ? `<div class="refs">${o.refs}</div>` : '')
-    + (o.body || '')
-    + `</section>`;
-}
 
-/** «Nothing here» and «you left it out» are different facts, and a report that shows the same blank
- *  for both makes the reader guess which. Both products say which now. */
-function reportAbsent(asked, what) {
-  return asked
-    ? `<p class="empty">No ${escReport(what)}.</p>`
-    : `<p class="empty">Not included in this export - ${escReport(what)} were unticked when it was made.</p>`;
-}
 
 /** The foot: one line, the product's name linked to its site, and nothing else.
  *

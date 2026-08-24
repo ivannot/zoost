@@ -65,8 +65,9 @@ Stated here rather than buried, because it is the part an assessment needs.
   or on a schedule. Two things leave when the user sends them: what they ask the optional AI
   assistant, which is off until they supply their own API key and then talks only to Anthropic or
   OpenAI; and a problem report - versions, the error, the last status lines, counters - which the
-  panel redacts, shows in full, and posts to zoost.it only on a click, where it becomes a public
-  GitHub issue. Those hosts are the only origins the manifests grant.
+  panel redacts and writes into the zoost.it report page it opens in front of you. The panel itself
+  sends nothing: it becomes a public GitHub issue when *you* press Send on that page. Anthropic,
+  OpenAI and zoost.it are the only origins the manifests grant outside your own Zoho product.
 - **The API key is stored in clear text by default, and the product says so rather than implying
   otherwise.** Chrome offers extensions no encryption at rest and no credential store, so a key the
   extension can unlock by itself is one anyone with the browser profile can unlock. A passphrase the

@@ -64,7 +64,12 @@ _LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|t
 def _scripts_of(app, page):
     with open(os.path.join(ROOT, 'apps', app, page), encoding='utf-8') as src:
         html = src.read()
-    return [f'apps/{app}/{m}' for m in re.findall(r'<script\s+src="([^"]+\.js)"></script>', html)
+    # `<script src="x.js" defer></script>` is the same script. The pattern required `src` to be the
+    # only attribute and `>` to follow it, so one extra attribute would drop a whole file out of the
+    # subject - and because the crude denominator is derived from this same list, the headline
+    # would fall in step and report nothing. `callcheck.py` already reads these pages the tolerant
+    # way; this is the sibling that was not walked.
+    return [f'apps/{app}/{m}' for m in re.findall(r'<script[^>]+src="([^"]+\.js)"', html)
             if not _LIB.search(m)]
 
 
@@ -129,7 +134,15 @@ GUARD = re.compile(r'op\.current\(\)|\bcurrent\(\)|sameWs\(|gen !== wsGen|gen ==
                    # overtakes a tree load is another tree load, not only a change of workspace.
                    r'|mine === |mine !== ')
 # Writing into a global: plain assignment, a member of it, or the mutators a Map/Set/Array carries.
-WRITE = re.compile(r'(?:(?<![.\w])(\w+)\s*(?:\[[^\]]*\])?(?:\.\w+)*\s*=(?![=>])'
+# **Every way a name can be written, not only `=`.** This read a plain assignment and a fixed list of
+# mutators, so `n += 1`, `n--`, `x ||= y` and a destructuring assignment were all invisible - and one
+# of them is in the shipped tree: `syncBusy--` immediately after an await, in the same function whose
+# `syncing.delete(key)` two lines below *was* recorded. One read and one not, in adjacent statements,
+# and nobody ever decided that the second was fine. A checker that sees one spelling of a write is a
+# checker whose zero means «no writes of the shape I happen to know».
+WRITE = re.compile(r'(?:(?<![.\w])(\w+)\s*(?:\[[^\]]*\])?(?:\.\w+)*\s*(?:=(?![=>])|[-+*/%|&^]=|\?\?=|\|\|=|&&=)'
+                   r'|(?<![.\w])(\w+)(?:\.\w+)*\s*(?:\+\+|--)'
+                   r'|(?:\+\+|--)\s*(?<![.\w])(\w+)'
                    r'|(\w+)\.(?:push|set|clear|delete|add|splice|sort|unshift)\('
                    r'|Object\.assign\((\w+))')
 
@@ -239,7 +252,11 @@ def writes_in(code):
     statement wearing a brace, and matching at the start of the line missed it - the second of the
     three false negatives an audit measured against the first version of this file."""
     for m in WRITE.finditer(code):
-        name = m.group(1) or m.group(2) or m.group(3)
+        # Every alternative in WRITE captures the name; which one fired is not interesting.
+        # Written as «the first group that matched» rather than as three fixed indices, because
+        # widening the pattern to `+=`, `--` and the rest shifted them - and the mutator branch
+        # went quiet without a word, which a case caught the same minute.
+        name = next((g for g in m.groups() if g), None)
         rest = code[m.end():]
         # `X = await f()` publishes *after* the await, so a guard written above it is not between
         # the two. The first version judged it by the state before the line and let it through.

@@ -131,7 +131,15 @@ No workspace content is stored there. The mirror is written to the folder the us
 ```
 The extension reads the workspace through Zoho Analytics' own endpoints, which are only reachable from a page on the Zoho Analytics origin with the user's session cookies. A content script on that origin performs those authenticated reads and hands the results to the side panel.
 
-chrome.scripting is used for one thing: re-injecting that content script into the Zoho Analytics tab when it is not present - after a navigation, or when the panel is opened on a tab that was already loaded. Without it the panel would work only on tabs opened after the extension started. No code is ever injected into any other site, and nothing is injected that is not part of this extension's own package.
+chrome.scripting injects this extension's own code, never remote code, and only into the manifest's hosts.
+
+1. Re-injecting the content script into the Zoho Analytics tab when it is not present - after a navigation, or on a tab that was already loaded. Without it the panel would work only on tabs opened after the extension started.
+
+2. One line returning a frame's address, in every frame of the tab - how the panel finds the Zoho Analytics frame inside a Zoho One or Zoho CRM Plus shell. Nothing else is read.
+
+3. A problem report's text, into the zoost.it page the panel just opened, so the user reads and sends it.
+
+Nothing outside this package is injected, and no site outside the manifest's hosts is touched.
 ```
 
 ---

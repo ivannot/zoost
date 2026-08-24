@@ -145,13 +145,17 @@ No browsing data, no Zoho CRM data and no personal information go into storage. 
 ## 7. scripting justification (max 1000)
 
 ```
-scripting is used to inject two small scripts into Zoho CRM tabs only, and nowhere else.
+scripting injects this extension's own code, never remote code, and only into the manifest's hosts.
 
-1. A bridge script that calls the Zoho CRM API from the page's own origin, with the session the user is already signed in with. That is what lets it read their own functions, module metadata, layouts, related lists, workflows, schedules and connection names without separate credentials, strictly within their existing Zoho permissions.
+1. A bridge that calls the Zoho CRM API from the page's own origin, with the session the user is already signed in with. That is what reads their own functions, module metadata, layouts, related lists, workflows, schedules and connection names - no separate credentials, within their existing Zoho permissions.
 
-2. A hook that notices when the user saves a Deluge function in the native Zoho editor, so the local file follows. It wraps the page's own fetch and XMLHttpRequest to see the method and URL of that request: no bodies are read, nothing is altered, and it passes on "a function was saved" with its id.
+2. A hook that notices when a Deluge function is saved in the native editor, so the local file follows. It wraps the page's own fetch and XMLHttpRequest to see method and URL: no bodies read, nothing altered.
 
-Neither writes anything to Zoho CRM: no record, no function, no setting, and no remote code is fetched or executed. One thing is written into the page, said here rather than left to be found: Find types the function name into Zoho's search box, when the user asks for it.
+3. One line returning a frame's address, in every frame of the tab - how the panel finds the Zoho CRM frame inside a Zoho One or Zoho CRM Plus shell. Nothing else is read.
+
+4. A problem report's text, into the zoost.it page the panel just opened, so the user reads and sends it.
+
+Nothing is written to Zoho CRM, except this: Find types a function name into Zoho's search box.
 ```
 
 ## 8. tabs justification (max 1000)

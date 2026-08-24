@@ -52,8 +52,12 @@ def sweep(app: str) -> list:
     # 1. declarations nothing refers to. One hit is the declaration itself.
     for p in js_files:
         s = strip_comments(read(p))
-        for kind, pat in (("function", r'^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)'),
-                          ("const", r'^const\s+([A-Za-z_$][\w$]*)\s*=')):
+        # **At the declaration's own indentation, not at column zero.** Both `content-bridge.js` files
+        # wrap everything in an IIFE, so every declaration in them is indented by two - and this swept
+        # 0 of their 54 functions while printing «34 shipped scripts swept». `asynccheck` learnt exactly
+        # this, on exactly those two files, and the sibling walk did not reach here.
+        for kind, pat in (("function", r'^[ \t]*(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)'),
+                          ("const", r'^[ \t]*const\s+([A-Za-z_$][\w$]*)\s*=')):
             for name in sorted(set(re.findall(pat, s, re.M))):
                 seen = len(re.findall(r'(?<![\w$.])' + re.escape(name) + r'(?![\w$])', code))
                 if seen <= 1 and name not in markup:

@@ -249,10 +249,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       wfHtml += head + meta + condHtml + `</section>`;
     });
   });
-  const wfRows = [];
   Object.keys(wfByMod).sort().forEach((mod) => wfByMod[mod].slice().sort(byField('name')).forEach((w) => {
     const wsc = wfScheduled(w.detail);
-    wfRows.push(`<tr><td><a href="#${wfAnchor(w.id)}">${esc(w.name)}</a></td><td class="mono">${esc(w.module || '')}</td><td class="ct">${esc(w.type || '')}</td><td class="ct">${w.active ? '\u25cf' : ''}</td><td class="ct">${wfFnActions(w).length}</td><td class="ct">${wsc.count || ''}</td><td class="ct">${esc(((w.detail && w.detail.last_executed_time) || '').slice(0, 16))}</td></tr>`);
   }));
 
   // schedules
@@ -264,17 +262,19 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       + `<div class="ih"><b>${esc(sc.name)}</b> <code>${esc(sc.frequency || '')}</code>${sc.status !== 'active' ? `<span class="badge no">${esc(sc.status || '')}</span>` : ''}</div>`
       + `<div class="refs"><span><b>Runs function:</b> ${fl}</span>${sc.next ? `<span><b>Next:</b> ${esc(sc.next)}</span>` : ''}</div></section>`;
   });
-  const schRows = scheds.slice().sort(byField('name')).map((sc) => {
-    const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()];
-    const fl = fn ? `<a href="#${fnAnchor(fn.api_name)}">${esc(fn.display_name || fn.api_name)}</a>` : esc(sc.function_name || '?');
-    return `<tr><td><a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a></td><td>${fl}</td><td class="ct">${esc(sc.frequency || '')}</td><td class="ct">${sc.status === 'active' ? '\u25cf' : esc(sc.status || '')}</td></tr>`;
-  });
 
   // health / audit (same checks as the panel, rendered statically with links to #fn anchors)
   const hNodes = Object.values(g.nodes || {});
   const hById = {}, hByAny = {};
   hNodes.forEach((n) => { if (n.id) hById[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) hByAny[String(k).toLowerCase()] = n; }); });
-  const hLink = (n) => `<a href="#${fnAnchor(n.api_name)}">${esc(n.display_name || n.name)}</a>`;
+  // **A link only where the section exists.** The health lists are built from the graph, which is
+  // not filtered by the export's scope - so with Functions unticked this named every function in
+  // the audit and pointed each one at a chapter that was never written. Measured: one dead anchor
+  // per health entry, in the report of an org whose functions the reader deliberately left out.
+  // `fnLink` above already asks this question; this one did not, which is the whole defect.
+  const hLink = (n) => (scope.functions && fnApiSet.has(n.api_name)
+    ? `<a href="#${fnAnchor(n.api_name)}">${esc(n.display_name || n.name)}</a>`
+    : esc(n.display_name || n.name));
   const hOrph = hNodes.filter((n) => n.dead_suspect).sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || ''));
   const hUnres = hNodes.filter((n) => n.unresolved && n.unresolved.length);
   const hAmbig = hNodes.filter((n) => n.ambiguous && n.ambiguous.length);
@@ -300,6 +300,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       : g && g.counts && g.counts.notInMirror > 0
       ? `<div class="hxcov"><b>Read from your mirror:</b> ${esc(g.counts.nodes)} of ${esc(g.counts.inOrg)} functions. ${esc(g.counts.notInMirror)} could not be downloaded, and a function called only from one of those is counted here as having no caller.</div>`
       : '')
+    + (scope.functions ? '' : `<div class="hxcov"><b>Functions were not included in this export.</b> The lists below still name them, because the audit is about them - but there is nothing here to link to. Export again with Functions ticked to read them.</div>`)
     + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
     + hSec(MSG.hOrphan, hOrph.length, 'No caller in code, not REST, no associated_place.', hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
     + hSec(MSG.hUnresolved, hUnres.length, 'Calls a function that does not resolve in this workspace.', hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
@@ -312,23 +313,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const healthTotal = hOrph.length + hUnres.length + hAmbig.length + hBroken.length + hFK.length;
 
   // Contents index: informative tables (one row per item) for functions and modules
-  const fnRows = [];
   Object.keys(byNs).sort().forEach((ns) => {
     byNs[ns].slice().sort(byField('api_name')).forEach((f) => {
       const n = nodeByApi[f.api_name];
-      fnRows.push(`<tr><td><a href="#${fnAnchor(f.api_name)}">${esc(f.display_name || f.api_name)}</a></td>`
-        + `<td class="mono">${esc(f.api_name)}</td><td class="mono">${esc(ns)}</td>`
-        + `<td class="ct">${f.rest ? '\u25cf' : ''}</td><td class="ct">${f.downloaded ? '' : '\u2014'}</td>`
-        + `<td class="ct">${n ? n.calls.length : 0}</td><td class="ct">${n ? n.called_by.length : 0}</td>`
-        + `<td class="ct">${f.stats ? f.stats.lines : ''}</td><td class="ct">${f.stats ? f.stats.apiCalls : ''}</td></tr>`);
     });
   });
-  const modRows = [];
   ['Standard', 'Custom'].forEach((k) => groups[k].slice().sort(byField('api_name')).forEach((m) => {
     const rb = (modRefs && modRefs[m.api_name]) ? modRefs[m.api_name].length : 0;
-    modRows.push(`<tr><td><a href="#${modAnchor(m.api_name)}">${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</a></td>`
-      + `<td class="mono">${esc(m.api_name)}</td><td class="mono">${esc(m.module_name || '')}</td>`
-      + `<td class="ct">${k}</td><td class="ct">${(m.fields || []).length ? (m.fields || []).length : (m.unreadable ? `<span title="${escA(moduleRefusal(m.unreadable).text)}">not described</span>` : 0)}</td><td class="ct">${rb}</td></tr>`);
   }));
   // Connections: catalogue + which functions use each
   const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || byField('name')(a, b)).map((c) => {
@@ -425,7 +416,10 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + `<title>${esc(PRODUCT_NAME)} - ${esc(ws.label || ws.instance || 'Export')}</title>`
     + `<meta name="author" content="${escA(PRODUCT_AUTHOR)}"><meta name="generator" content="${escA(PRODUCT_NAME)}"><meta name="description" content="Export of Zoho CRM Deluge functions and module schema.">${PRODUCT_URL ? `<link rel="canonical" href="${escA(PRODUCT_URL)}">` : ''}`
     + `<style>${EXPORT_CSS}</style></head><body>`
-    + reportHead(esc(ws.label || ws.instance || 'Export'),
+    // Raw: `reportHead` escapes the subject itself. Escaping it here as well produced
+    // «R&amp;D» in the title of a workspace called «R&D» - the meta lines below it are markup
+    // and are escaped by the caller, which is the asymmetry that hid this.
+    + reportHead(ws.label || ws.instance || 'Export',
                  [`${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}`,
                   `Data read from Zoho CRM: ${esc(freshnessLine())}`],
                  'Filter - hides any row, entry or card that does not match\u2026',

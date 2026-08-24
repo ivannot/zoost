@@ -193,6 +193,12 @@ let pullDepth = 0, pullBusy = false;
 
 let wsList = [];            // workspaces found on disk, cached like the CRM panel's
 let views = [], folders = [], schema = {}, relations = [], sqls = {}, deps = null, pullFailed = [];
+// When the views were last read, out of `views.json` where the pull wrote it. The report's
+// freshness line asked `bound.lastPull` and `deps.pulledAt`, and neither exists: `bound` is built
+// from five fields of the config and `deps` is the id-to-dependency map. So every export said
+// «never read» about a workspace pulled a minute earlier, which is the half-truth this project
+// refuses - and the date was on disk the whole time.
+let viewsPulledAt = null;
 const ORPHANS = '__orphans__';
 let typeFilter = null, sortKey = 'name', sortDir = 1, selectedId = null, detailTab = 'cols';
 let detailLoad = 0;
@@ -704,7 +710,8 @@ async function selectWorkspace(w) {
   // made every guard in that file always true. Both reported.
   const gen = ++wsGen;
   dir = w.handle; forgetDirs();
-  bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '', sample: !!w.cfg.sample };
+  bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '',
+            sample: !!w.cfg.sample, lastPull: w.cfg.lastPull || null };
   const op = beginWorkspaceOp();
   await rememberActive('activeWsAnalytics', w.id, gen);
   if (!op.current()) return;   // a second selection overtook this one while IndexedDB was writing
@@ -778,7 +785,7 @@ async function delWorkspace() {
     await base.removeEntry(w.folder, { recursive: true });   // delete inside analytics/, never at the root
     await window.idbHandle.set('activeWsAnalytics', null);
     dir = null; bound = null; forgetDirs();
-    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null;
+    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; viewsPulledAt = null;
     $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; navClear();
     status(`Removed \u00ab${w.folder}\u00bb.`, 'ok');
     await refreshWorkspaces();
@@ -1242,7 +1249,7 @@ function workspaceChangeRefuse() {
 function endBusyElsewhere() { busy = false; updateButtons(); }
 
 function refuseIncompleteSnapshot() {
-  views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; pullFailed = [];
+  views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; viewsPulledAt = null; pullFailed = [];
   sqlCache = null; sqlUnread = 0; sqlDiskUnread.clear();
   // The same state `loadFromDisk` sets when it finds the marker on disk, and it was set there only:
   // three catch blocks reach this function, and after them the empty list fell through to «Nothing
@@ -1587,7 +1594,7 @@ async function writeToDisk(info, op, next) {
   const cfg = await readJson(CFG, {}, op);
   if (!op.current()) return false;
   bound = { workspace: info.workspace, name: info.name, origin: info.origin,
-            label: cfg.label || '', sample: !!cfg.sample };
+            label: cfg.label || '', sample: !!cfg.sample, lastPull: cfg.lastPull || null };
   return true;
 }
 
@@ -1608,7 +1615,7 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   const ps = await readJson(PULL_STATE, null, op);
   if (ps && ps.state === 'writing') {
     if (!op.current()) return false;
-    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; pullFailed = [];
+    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; viewsPulledAt = null; pullFailed = [];
     pullInterrupted = true;
     render();
     status('The last pull was interrupted mid-write, so the files on disk describe two different moments - run Pull all to repair the mirror.', 'warn');
@@ -1618,6 +1625,7 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   const noteFailure = (f) => { failed = failed || f; };
   const readOne = (rel) => readJson(rel, null, op, noteFailure);
   const v = await readOne('views.json');
+  viewsPulledAt = (v && v.pulledAt) || null;
   const s = await readOne('schema.json');
   const l = await readOne('lineage.json');
   const index = await readOne('sql/index.json');
@@ -3313,9 +3321,12 @@ function fkText(viewId, colName) {
 function analyticsFreshness() {
   const day = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : 'never read');
   const parts = [
-    ['Views', bound && bound.lastPull],
+    // `views.json` carries its own date; the rest of the mirror is written by the same pull, so
+    // the config's `lastPull` is what they can honestly claim. Nothing here invents a per-area date
+    // the disk does not hold.
+    ['Views', viewsPulledAt || (bound && bound.lastPull)],
     ['Structure', bound && bound.lastPull],
-    ['Lineage', deps && deps.pulledAt ? deps.pulledAt : (bound && bound.lastPull)],
+    ['Lineage', bound && bound.lastPull],
   ];
   return parts.map(([what, iso]) => `${what} as of ${day(iso)}`).join(' \u00b7 ');
 }
@@ -3421,7 +3432,7 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
    that the shell already has is a rule that makes them differ. */
 .gap{color:var(--muted);font-size:12.5px;border-left:3px solid var(--line);padding-left:10px}
 </style></head><body>
-${reportHead(esc2(bound.label || bound.name || bound.workspace),
+${reportHead(bound.label || bound.name || bound.workspace,
              [`${esc2(bound.label || bound.name || '')} \u00b7 ${esc2(bound.workspace)} \u00b7 ${views.length} views \u00b7 ${Object.keys(schema).length} tables \u00b7 ${relations.length} relations \u00b7 contents: ${esc2(SCOPE_KEYS.filter((k) => sc[k]).join(', ') || 'nothing')}${sc.sql ? '' : ' \u00b7 SQL excluded'}`,
               `Data read from Zoho Analytics: ${esc2(analyticsFreshness())}`],
              'Filter - hides any row, entry or card that does not match\u2026',

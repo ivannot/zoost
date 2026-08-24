@@ -90,6 +90,9 @@ def measure() -> dict:
             "schema.files": 1 if (AN / "schema.json").exists() else 0,
             "lineage.files": 1 if (AN / "lineage.json").exists() else 0,
             "config.files": 1 if (AN / ".zoost.json").exists() else 0,
+            # The marker the pull writes last, and the file no row on the page claimed: the
+            # Analytics table said «14 files» over rows adding up to 13.
+            "pullstate.files": 1 if (AN / ".pull-state.json").exists() else 0,
         },
     }
 
@@ -106,7 +109,10 @@ CLAIMS = [
     (r'(\d+)\s*(?:connections|connessioni)\b', "crm.connections"),
     (r'(\d+)\s*(?:automation actions|azioni di automazione)', "crm.actions"),
     (r'Zoost Analytics\s*-\s*(\d+)\s*fil', "analytics.total"),
-    (r'(\d+)\s*(?:views|viste)\b', "analytics.views"),
+    # Not `views.json`: with the tags stripped, «<td>1</td>…<code>views.json</code>» reads as «1 views»
+    # and the file name became a claim about the count. Harmless while the check only asked whether the
+    # right number was somewhere on the page; a finding the moment it asks about every number.
+    (r'(\d+)\s*(?:views|viste)\b(?!\.)', "analytics.views"),
     (r'(\d+)\s*(?:tables|tabelle)\b', "analytics.tables"),
     (r'(\d+)\s*query tables?\b', "analytics.queries"),
     (r'(\d+)\s*(?:charts|grafici)\b', "analytics.charts"),
@@ -141,6 +147,7 @@ ROW_KEYS = [
     (r'relations|relazioni', "schema.files"),
     (r'depends on what|da cosa dipende', "lineage.files"),
     (r'workspace config|configurazione del workspace', "config.files"),
+    (r'pull finished|finito il pull', "pullstate.files"),
 ]
 ROW = re.compile(r'<td data-label="(?:What it holds|Cosa contiene)">(.*?)</td>\s*'
                  r'<td data-label="(?:Files|File)">(\d+)</td>', re.S)
@@ -181,8 +188,16 @@ def main() -> int:
             hits = {int(x) for x in re.findall(pattern, text, re.I)}
             if not hits:
                 findings.append(f"{rel}: nothing on the page states «{key}» - the sample has {want}")
-            elif want not in hits:
-                findings.append(f"{rel}: says {sorted(hits)} where the sample has {want} ({key})")
+            elif hits != {want}:
+                # **Every number the page states, not «the right one is in there somewhere».** This
+                # asked whether the correct value appeared among the matches, so a page saying «4
+                # modules and 999 workflows» passed on the strength of the 4. That is the enumeration
+                # trap this repository names, inside the tool built for the page whose numbers had
+                # drifted: a wrong number sitting beside a right one is exactly how the drift looks.
+                wrong = sorted(hits - {want})
+                findings.append(f"{rel}: says {wrong} where the sample has {want} ({key})"
+                                if want in hits else
+                                f"{rel}: says {sorted(hits)} where the sample has {want} ({key})")
         rows = row_claims(page.read_text(encoding="utf-8"))
         for app, key, stated, plain in rows:
             if key is None:
@@ -196,6 +211,20 @@ def main() -> int:
                 findings.append(f"{rel}: the row «{plain}» says {stated} file(s), the sample has "
                                 f"{want} ({app}.{key})")
         rowcount += len(rows)
+
+        # **And the rows must add up to the heading above them.** Each row was checked against a
+        # measurement and the heading against the total, and nothing compared the two - so a table
+        # missing a whole row passed: Zoho Analytics said «14 files» over rows summing to 13, and the
+        # file nobody claimed was `.pull-state.json`. This tool's own docstring records the same
+        # defect on this same page («a table that did not add up to its own heading»), which is the
+        # argument for deriving it rather than reading it again.
+        for app, total in ((a, m[a].get('total')) for a in ('crm', 'analytics')):
+            if total is None:
+                continue
+            stated = [n for a2, _k, n, _p in rows if a2 == app]
+            if stated and sum(stated) != total:
+                findings.append(f"{rel}: the {app} table's rows add up to {sum(stated)} under a "
+                                f"heading of {total} - a row is missing, or one of them is wrong")
     print(f"samplecheck: {sum(len(v) for v in m.values())} measurements from the delivered sample, "
           f"{len(CLAIMS)} claims and {rowcount // len(PAGES)} file counts per page, {len(PAGES)} pages")
     for f in findings:

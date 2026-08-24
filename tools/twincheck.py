@@ -78,7 +78,9 @@ OTHER_PAGES = sorted(
 _LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$')
 def _page_scripts(app):
     html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
-    return [ROOT / f'apps/{app}/{m}' for m in re.findall(r'<script\s+src="([^"]+\.js)"></script>', html)
+    # Tolerant of a second attribute - see the same correction in `asynccheck.py`: the narrow form
+    # drops a whole file out of the subject and says nothing.
+    return [ROOT / f'apps/{app}/{m}' for m in re.findall(r'<script[^>]+src="([^"]+\.js)"', html)
             if not _LIB.search(m)]
 SCRIPTS = {'crm': _page_scripts('crm'), 'analytics': _page_scripts('analytics')}
 

@@ -77,8 +77,24 @@ def skipped(rel: str) -> bool:
 
 
 def tracked() -> list:
-    out = subprocess.run(['git', '-C', str(ROOT), 'ls-files'], capture_output=True, text=True).stdout
-    return [p for p in out.splitlines() if pathlib.Path(p).suffix in SUFFIXES and not skipped(p)]
+    """Every file this check judges: what git tracks, **and what is staged or newly written.**
+
+    `git ls-files` alone cannot see a file that has not been added yet - and this check exists because
+    a review note written in Italian was found at the repository root, which is exactly the shape of a
+    file nobody has added. It happened again while writing the note for 24 August: the battery said
+    the repository was monolingual, `git add` was run, and three findings appeared. The pre-push hook
+    narrows that window and does not close it for a file that is never added at all.
+
+    So: the tracked list plus anything untracked that git is not ignoring. `--others
+    --exclude-standard` is git's own answer to «what is here that you have not told me about», which
+    keeps `dist/` and the scratch trees out without a second list to maintain.
+    """
+    def run(*args):
+        return subprocess.run(['git', '-C', str(ROOT), *args], capture_output=True, text=True).stdout
+    seen = run('ls-files').splitlines() + run('ls-files', '--others', '--exclude-standard').splitlines()
+    return [p for p in dict.fromkeys(seen)
+            if pathlib.Path(p).suffix in SUFFIXES and not skipped(p)
+            and (ROOT / p).exists()]
 
 
 def key(rel: str, line: str) -> str:
