@@ -900,6 +900,40 @@ AN = """
     $('about').click(); await settle('About never opened');
     if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent)) say('About says nothing about what it is');
     $('aboutok').click(); await settle('About never closed');
+
+    // ---- a single view re-read, and what the workspace picker may do while it runs ----
+    //
+    // «Pull one» and changing workspace during a pull were both on the list of things only a person
+    // could try. The first is the narrow path a reader takes after one query failed; the second has
+    // already produced a defect here - work that followed the reader into the next workspace.
+    const firstRow = $('list').querySelector('tr[data-id]');
+    if (firstRow) {
+      firstRow.click(); await settle('the detail pane never opened');
+      if (!$('dpull').disabled) {
+        $('dpull').click();
+        await until(() => !pullBusy, 'the single re-read never finished', 15000);
+        await settle('the panel never redrew after the re-read');
+        if (/could not|failed/i.test($('statustext').textContent))
+          say('a single re-read of a view the fixture holds ended on: ' + $('statustext').textContent);
+      }
+    }
+    // The picker, while a pull is running: the change is refused and the box goes back to the
+    // workspace that is actually open, rather than showing one the panel is not reading.
+    setPullBusy(true);
+    const shownWs = $('ws').value;
+    $('ws').value = 'not-a-workspace';
+    const refusedWs = workspaceChangeRefuse();
+    setPullBusy(false);
+    if (!refusedWs) say('a workspace change during a pull was not refused');
+    if ($('ws').value !== shownWs) say('the picker was left showing a workspace the panel is not reading');
+    if (!/pull in progress/i.test($('statustext').textContent))
+      say('the refusal was silent: ' + $('statustext').textContent);
+    // Retry failed, with nothing failed: it must do nothing rather than pretend.
+    const beforeRetry = $('statustext').textContent;
+    $('retry').click(); await settle();
+    if ($('statustext').textContent !== beforeRetry && !/nothing|no /i.test($('statustext').textContent))
+      say('Retry failed with nothing to retry said: ' + $('statustext').textContent);
+
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """
