@@ -242,7 +242,7 @@ CLOSED = {
     ("claim", "diagrams", "diagram"):   ("tools/auditcheck.py now reads the MSG tables - what the product says, not what its markup holds", "planted 2026-08-23"),
     ("owner", "crm-ai", "ai"):          ("tests/panel.test.mjs: a flag raised in a function is released whatever happens in it", "planted 2026-08-23"),
     ("fastpath", "diagrams", "diagram"): ("tests/graphview.test.mjs: crm: the status breakdown stops counting a box that was folded away", "planted 2026-08-23"),
-    ("owner", "diagrams", "diagram"):   ("tests/graphview.test.mjs: everything printing changes is put back afterwards", "planted 2026-08-23"),
+    ("owner", "diagrams", "diagram"):   ("tests/graphview.test.mjs: crm: everything printing changes is put back afterwards", "planted 2026-08-23"),
     ("blindspot", "site", "*"):         ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools", "*"):        ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
     ("claim", "site", "*"):             ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),
@@ -255,8 +255,10 @@ CLOSED = {
     # The lesson for the grid itself: a cell is closed by a check that would catch the class **on
     # that surface**, not by a check that happens to read that surface. Anything closed on a
     # comparison between two things is only closed for what differs between them.
-    ("siblings", "diagrams", "diagram"): ("tests/panel.test.mjs: nothing counts a box the reader folded away "
-                              "(twincheck reads this surface too, and cannot see a defect both twins share)",
+    # The parenthetical said what twincheck cannot see, which is true and is not part of a title -
+    # so the citation resolved against nothing. A note about a check goes in prose, never inside the
+    # name of the thing being cited.
+    ("siblings", "diagrams", "diagram"): ("tests/panel.test.mjs: crm: nothing counts a box the reader folded away",
                               "planted 2026-08-23"),
     ("workspace", "crm-panel", "persist"): ("tests/panel.test.mjs: the CRM's per-org caches are dropped there too, not only in the Functions tab", "planted 2026-08-22"),
     ("owner", "crm-panel", "pull"):     ("tests/panel.test.mjs: every pull that reaches Zoho owns the flag that defers a reconcile", "planted 2026-08-22"),
@@ -264,33 +266,33 @@ CLOSED = {
     ("partial", "crm-panel", "persist"): ("tests/panel.test.mjs: nothing deletes on the word of a list that may have stopped early", "planted 2026-08-22"),
     ("claim", "store", "*"):            ("tests/tools_test.py derives every numbered section from the headings", "planted 2026-08-22"),
     ("partial", "an-panel", "persist"): ("tests/panel.test.mjs: nothing deletes on the word of a list that may have stopped early", "planted 2026-08-22"),
-    ("owner", "an-panel", "pull"):      ("tests/panel.test.mjs: a toggle released in a finally, everywhere", "planted 2026-08-22"),
+    ("owner", "an-panel", "pull"):      ("tests/panel.test.mjs: a nested release leaves the buttons off while anything still holds the pull", "planted 2026-08-22"),
     ("siblings", "an-panel", "pull"):   ("tests/panel.test.mjs: every control the panel greys out is told why", "planted 2026-08-22"),
     ("silent", "an-panel", "persist"):  ("tests/panel.test.mjs: a refused folder permission is never a silent return", "planted 2026-08-22"),
-    ("silent", "crm-panel", "persist"): ("ditto - the same check reads both products", "planted 2026-08-22"),
-    ("workspace", "an-panel", "persist"): ("tests/panel.test.mjs: the selection and the nav chain are forgotten where the workspace changes", "planted 2026-08-22"),
+    ("silent", "crm-panel", "persist"): ("tests/panel.test.mjs: a refused folder permission is never a silent return", "planted 2026-08-22"),
+    ("workspace", "an-panel", "persist"): ("tests/panel.test.mjs: analytics: the generation moves at the switch, before the handle and before any await", "planted 2026-08-22"),
     ("fastpath", "an-panel", "search"): ("tests/panel.test.mjs: analytics: nothing reads the SQL body without asking whether it is still true", "planted 2026-08-22"),
     ("claim", "an-panel", "ai"):        ("tests/panel.test.mjs: the assistant is told about every tool it is given", "planted 2026-08-22"),
-    ("claim", "crm-panel", "publish"):  ("ditto - the same check reads both products", "planted 2026-08-22"),
+    ("claim", "crm-panel", "publish"):  ("tests/panel.test.mjs: the assistant is told about every tool it is given", "planted 2026-08-22"),
     ("claim", "bridges", "pull"):       ("tools/auditcheck.py now reads docs/boundaries.md as outward prose", "planted 2026-08-22"),
     ("siblings", "bridges", "pull"):    ("tests/tools_test.py: every injected host is a permitted host", "planted 2026-08-22"),
     ("silent", "bridges", "pull"):      ("tests/panel.test.mjs: every read the bridge reports on starts as «not read»", "planted 2026-08-22"),
     ("partial", "bridges", "pull"):     ("tests/panel.test.mjs: each walk has the ceiling its own page size needs", "planted 2026-08-22"),
     ("await", "bridges", "*"):          ("tools/asynccheck.py now reads inside the IIFE; 787 of 789 functions", "planted 2026-08-22"),
-    ("blindspot", "bridges", "*"):      ("ditto - the coverage is printed and held by tests/tools_test.py", "planted 2026-08-22"),
-    ("workspace", "bridges", "pull"):   ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
+    ("blindspot", "bridges", "*"):      ("tests/tools_test.py: AsyncCheckSaysWhatItDoesNotRead", "planted 2026-08-22"),
+    ("workspace", "bridges", "pull"):   ("tests/panel.test.mjs: and it is forgotten when the page becomes another page", "planted 2026-08-22"),
     ("owner", "bridges", "pull"):       ("tests/panel.test.mjs: a script re-injected into a page it already ran in can replace itself", "planted 2026-08-22"),
     ("fastpath", "bridges", "persist"): ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
     ("blindspot", "diagrams", "diagram"): ("tools/probe.py: the diagram window is driven and asserted, not only photographed", "planted 2026-08-23"),
     ("workspace", "options", "settings"): ("tests/panel.test.mjs: a working folder changed in Settings waits for the pull to finish", "planted 2026-08-23"),
-    ("partial", "options", "settings"): ("tests/panel.test.mjs: a failed read of aicfg refuses the write that would overwrite it", "planted 2026-08-23"),
+    ("partial", "options", "settings"): ("tests/panel.test.mjs: the options page refuses to save over settings it could not read", "planted 2026-08-23"),
     ("blindspot", "crm-export", "export"): ("tests/tools_test.py: TheExportedReportsContentIsLedgered", "planted 2026-08-23"),
     ("blindspot", "an-panel", "pull"):  ("tests/tools_test.py: the probe prints how many controls it drove, and claims nothing wider", "planted 2026-08-23"),
     ("blindspot", "crm-panel", "*"):    ("tests/panel.test.mjs: every id the panel reaches for is defined somewhere in its app", "planted 2026-08-23"),
     ("fastpath", "crm-ai", "ai"):       ("tests/panel.test.mjs: every cache read out of the graph is invalidated with the graph", "planted 2026-08-23"),
     ("silent", "crm-ai", "ai"):         ("tests/panel.test.mjs: an overtaken load refuses rather than answering empty", "planted 2026-08-23"),
     ("partial", "crm-ai", "ai"):        ("tests/panel.test.mjs: every surface that states «no caller» says what it was measured over", "planted 2026-08-23"),
-    ("siblings", "crm-ai", "ai"):       ("tests/panel.test.mjs: the prompt names the tools from the registry, never typed", "planted 2026-08-23"),
+    ("siblings", "crm-ai", "ai"):       ("tests/panel.test.mjs: the assistant is told about every tool it is given", "planted 2026-08-23"),
     ("silent", "store", "publish"):     ("tests/tools_test.py: auditcheck says which listing sections differ from what was pasted", "planted 2026-08-23"),
     ("blindspot", "store", "publish"):  ("tests/tools_test.py: the listing checker enforces §2 and prints what it skips", "planted 2026-08-23"),
     ("blindspot", "options", "settings"): ("tests/panel.test.mjs: every setting the options page writes is read by something", "planted 2026-08-23"),
@@ -298,7 +300,7 @@ CLOSED = {
     ("workspace", "diagrams", "diagram"): ("tests/panel.test.mjs: the diagram names its workspace, or says it cannot", "planted 2026-08-23"),
     ("partial", "diagrams", "diagram"): ("tests/panel.test.mjs: every surface that states «no caller» says what it was measured over", "planted 2026-08-23"),
     ("workspace", "crm-export", "export"): ("tests/panel.test.mjs: a function that guards one status message guards them all", "planted 2026-08-23"),
-    ("partial", "crm-export", "export"): ("tests/panel.test.mjs: an empty section says whether it was asked for", "planted 2026-08-23"),
+    ("partial", "crm-export", "export"): ("tests/panel.test.mjs: an export does not report a scope you turned off as an absence", "planted 2026-08-23"),
     ("silent", "crm-export", "export"): ("tests/panel.test.mjs: both exports say which kind of missing source it is", "planted 2026-08-23"),
     ("fastpath", "crm-panel", "pull"):  ("tests/panel.test.mjs: nothing substitutes a number for a measurement that was not taken", "planted 2026-08-23"),
     ("siblings", "tools", "*"):         ("tests/tools_test.py: every checker is in the battery or says beside itself why not", "planted 2026-08-23"),
@@ -316,9 +318,9 @@ CLOSED = {
     ("siblings", "options", "settings"): ("tests/panel.test.mjs: a preset keeps what the page cannot show", "planted 2026-08-22"),
     ("claim", "crm-ai", "ai"):          ("tests/panel.test.mjs: both panels: the unlock passphrase does not stay in the DOM", "planted 2026-08-22"),
     ("siblings", "crm-export", "export"): ("tests/panel.test.mjs: both reports read every action field the panel shows", "planted 2026-08-22"),
-    ("claim", "crm-export", "export"):  ("ditto - the contents line is built from the chapters written", "planted 2026-08-22"),
+    ("claim", "crm-export", "export"):  ("tests/panel.test.mjs: both reports read every action field the panel shows", "planted 2026-08-22"),
     ("silent", "diagrams", "diagram"):  ("tests/panel.test.mjs: the diagram window applies a default that names no graph kind", "planted 2026-08-22"),
-    ("silent", "options", "settings"):  ("ditto - the same check reads both pages", "planted 2026-08-22"),
+    ("silent", "options", "settings"):  ("tests/panel.test.mjs: the diagram window applies a default that names no graph kind", "planted 2026-08-22"),
     ("siblings", "site", "publish"):    ("tests/worker.test.mjs: the site and the Worker agree on which version is newer", "planted 2026-08-23"),
 }
 
@@ -358,6 +360,15 @@ def cells():
                 yield ck, cd, sk, sd, cap
 
 
+def _split_tpl(t: str) -> list:
+    """A template title cut into its literal parts, so `${app}: x` becomes ['', ': x'] with a hole."""
+    out, at = [], 0
+    for m in re.finditer(r"\$\{[^}]*\}", t):
+        out.append(t[at:m.start()]); out.append(None); at = m.end()
+    out.append(t[at:])
+    return out
+
+
 def citations() -> list:
     """Every closed cell's citation, resolved against what is actually in the tree.
 
@@ -381,6 +392,18 @@ def citations() -> list:
         if head.endswith(".test.mjs") and f.is_file():
             body = f.read_text(encoding="utf-8", errors="ignore")
             ok = f"test('{rest}'" in body or f'test("{rest}"' in body
+            # …and a title built per product. 103 of them are written as
+            # `` test(`${app}: …`) ``, so the runtime title has a prefix the source never spells and a
+            # citation of what the reader actually sees resolved against nothing. The template becomes
+            # a pattern - every `${…}` is «something» - which is exact enough to catch a rename and
+            # honest about what it cannot distinguish: two products' runs of one template look alike
+            # to it, which is why the citation still carries the prefix for a person to read.
+            if not ok:
+                for t in re.findall(r"test\(`([^`]*)`", body):
+                    pat = "".join(".+" if x is None else re.escape(x) for x in _split_tpl(t))
+                    if re.fullmatch(pat, rest):
+                        ok = True
+                        break
             out.append((ck, sk, cap, "exact" if ok else "MISSING", what))
         elif head.endswith("_test.py") and f.is_file():
             body = f.read_text(encoding="utf-8", errors="ignore")
