@@ -8,6 +8,10 @@
 986d885e376ec51c  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: un controllo. ne basta 1», and then: «scolpiscilo sulla pietra».
 dabb3e4c5df62479  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: questi prodotti siano davvero gemelli. non perchè l'hai scritto in un file che continui a ignorare.»
 27d5c2e0bc3029bd  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: **What broke.** «i link degli export portano alla sezione corretta ma qualche riga più in basso.»
+2cad01de58c39a9c  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: **What broke.** «Un link che non porta da nessuna parte non è un link e non deve esistere.
+1a4afaac78620093  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: Altrimenti l'utente clicca per sempre e pensa che ci sia qualcosa di rotto.» Reported with a dead
+b6f6bed5422e92af  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: **What broke.** With the dead links gone: «non si distingue cosa è cliccabile e cosa no». Two halves.
+af5d30ec77cdd75e  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: **What broke.** «La feature per fare la ricerca testuale non si capisce minimamente su cosa agisce.
 60c557ea95b387da  docs/layout.md: point at the product you are looking at. Italian inflects it for gender, so «Questa ti disegna la
 4acf4995d319b4a8  docs/naming.md: a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
 a56ceb20b3fafe35  docs/naming.md: viene spedito» against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio

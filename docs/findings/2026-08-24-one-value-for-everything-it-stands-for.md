@@ -225,3 +225,142 @@ conversion, and a run that grows the ledger says so. 93 scopes at the start of t
 - **A declaration lifted out of a chain goes to file level.** Twice it was placed inside the wiring
   function it came from, and twice the lifters could no longer see it - the line of the match is not
   the start of the statement.
+
+## 15. Links to anchors the document does not contain - medium, **fixed**
+
+**What broke.** «Un link che non porta da nessuna parte non è un link e non deve esistere.
+Altrimenti l'utente clicca per sempre e pensa che ci sia qualcosa di rotto.» Reported with a dead
+link pasted in: `#v-<id>`, from the Zoho Analytics report. The link was decided by asking whether a
+name is a view in the org; the anchor exists only for the views that get a heading of their own -
+tables and query tables - so every report and dashboard named in a cell pointed at nothing.
+Unticking a chapter is a second route to the same place: the anchors go and the links stay.
+
+**The fix.** The set of anchors the document will actually contain is derived from the same sections
+the body is drawn from, and a name outside it stays plain text. `tools/probe.py` builds the report
+against the sample in every scope and fails on any href with no target; with the fix reverted it
+reports seventeen. The Zoho CRM report was measured across all thirteen scopes and is clean - and
+the case that guards it says so, and says that two plants failed to make it dangle, because a guard
+that has never fired is not the same thing as a proof.
+
+> **The rule.** *Two questions that sound alike are not one value: «does this exist» and «is it in
+> what I am producing».* Every generated document that links to itself has this pair, and they part
+> company the moment anything is filtered.
+
+## 16. Nothing looked clickable, and something that was not looked it - medium, **fixed**
+
+**What broke.** With the dead links gone: «non si distingue cosa è cliccabile e cosa no». Two halves.
+The link styling was written per context - the reference lines, the index, the workflow actions - so
+a link written anywhere else rendered as ordinary black text. And the first column of every table was
+painted the accent colour whether or not the cell was a link, so where the two met the colour said
+nothing at all.
+
+**The fix.** One rule for the whole body, underlined as well as coloured - colour alone is not an
+affordance for a reader who does not see this one - and the colour taken off the column. A case
+fails if any non-anchor rule borrows it.
+
+> **The rule.** *Style a role, not a place.* A rule written per location covers the places that
+> existed when it was written, and every later one silently opts out.
+
+## 17. A filter with no rule anyone could state - medium, **fixed**
+
+**What broke.** «La feature per fare la ricerca testuale non si capisce minimamente su cosa agisce.
+Alcune cose le filtra e altre no. Sarebbe meglio toglierla se non si riesce a dargli un comportamento
+coerente e comprensibile.» It hid elements carrying a `data-name` attribute, which some rows had and
+most of the document did not.
+
+**The fix.** It hides any row, list entry or card that does not contain what you typed, judged on
+visible text, leaving the index alone - and the placeholder says that instead of naming chapters it
+does not restrict itself to. The conclusion offered with the report was the right one and is worth
+keeping: a control nobody can predict is worse than no control.
+
+> **The rule.** *A control that cannot be described in one sentence should be made describable or
+> removed.* «It filters some things» is not a feature, it is a bug with a text box.
+
+## 18. A finished pull that looked hung - medium, **fixed**
+
+**What broke.** After a Pull all: «Rebuilding the list…» with the spinner turning, indefinitely.
+It had finished. The rebuild's own message is a *busy* line, and when there was nothing to append to
+it - no refusal, nothing skipped - nothing ever replaced it. From outside, a finished operation
+showing a spinner and a hung one are the same thing.
+
+**The fix.** The summary the last area wrote is held across the rebuild and put back, and the note is
+appended to that rather than to whatever the status happens to say. The twin already did this right,
+which is the tell: Zoho Analytics ends on its own summary, always.
+
+> **The rule.** *Every operation ends on a line that says it ended.* A busy message is a promise of a
+> next one, and a promise nothing keeps is indistinguishable from a hang.
+
+## 19. The probe drove the function, not the button - process, **fixed**
+
+**What broke.** Finding 18 should have been caught: the browser probe drives a pull. It called
+`pullAll()`, which is the *functions* pull; the button the user presses is `pullEverything()`, and
+the defect was in the tail of that one. The scenario had never executed the control it was named
+after, and the plant proved it - the defect was put back and nothing failed.
+
+**The fix.** Both pull scenarios now assert that a finished pull leaves no spinner behind, and the
+gap between «the function a control calls» and «the control» is the thing to look for next time.
+
+> **The rule.** *Drive the control, not the function behind it.* Everything between the click and
+> the call - the wiring, the guards, the tail nobody re-reads - is exactly where the defects that
+> reach a user live.
+
+## 20. A stub that made a branch unreachable - process, **fixed**
+
+**What broke.** Measuring whether the Zoho CRM report has dead links, across every scope: it did not,
+in any of them. The fixture could not produce one - `isFnAction: () => false` in the test's globals
+meant no workflow action ever resolved to a function, so the cross-references the check was about
+were never emitted. A green sweep over a document with no links in it.
+
+**The fix.** The real one-liner, lifted from the panel. The measurement then meant something, and the
+answer stayed «clean» - which is a different sentence from the one before it.
+
+> **The rule.** *A stub is an assumption with a return value.* When a check comes back clean, ask
+> what the fixture had to be able to do for it to come back dirty - and if it could not, the check
+> proved nothing at all.
+
+## 21. Comments that ship inside the reader's document - low, **fixed**
+
+**What broke.** The report's stylesheet carries its own comments, and those comments travel into
+every exported file. Two of them named the other product and one quoted Ivan in Italian - caught by
+`namecheck` and `langcheck` on the same run, which is the only reason it was caught at all.
+
+**The fix.** Neutral English in anything inside `REPORT_CSS`.
+
+> **The rule.** *Know which of your comments are shipped.* A comment inside a template literal that
+> becomes a user's file is not a note to the next maintainer; it is product copy.
+
+## 22. The check that only runs when nothing else is wrong - high, **fixed**
+
+Written up as finding 1b above, and repeated here because it is the day's most expensive lesson:
+`set -e` turns the *order* of a battery into which answers exist. The check that executes the
+product ran last, so on any day something else was red it did not run at all - and that is the day
+you most want it. It runs third now, and a case derives the ordering from the file.
+
+## 23. Every async scope in the tree is now a named declaration - process
+
+Not a defect: the end of a migration that started at 93 unreadable scopes. `.then(cb)` and
+`= async () => {}` are scopes the race checker cannot enter, so the awaits inside them - and every
+global written after those awaits - were unread. The ledger is at zero, and the tool reads 964 of
+964 awaits.
+
+Two things fell out of finishing it. The tool's headline said «10 NOT read» beside a ledger at zero,
+because its crude denominator counted the word `await` **in comments** - and the comments explaining
+the conversions talk about little else. And correcting that found the last real gap: `async
+function* walk(d)`, the folder walk in both panels, was invisible because the pattern required a
+space after `function`.
+
+> **The rule.** *When two counters in one tool disagree, one of them is lying and it is usually the
+> crude one - but check which before you believe either.* A denominator that counts prose is worse
+> than no denominator: it manufactures a gap that hides the real one.
+
+## 24. Eighty-six bets on how long a panel takes - process
+
+The browser probe waited by sleeping: click, sleep, read, ninety-two times over. That is the shape
+this repository condemns in the product, living in the tool built to catch it.
+
+They are ten now, five of them the polling step inside `until`. Not by naming a condition
+seventy-six times - by naming the one they all shared: watch the document, and continue when it has
+been quiet for a moment.
+
+> **The rule.** *When a rule is broken in eighty-six places, look for the one condition all of them
+> are approximating.* Eighty-six edits is a project; one shared condition is an afternoon.
