@@ -633,7 +633,10 @@ function reportEndpoint({ get = async () => '0', put = async () => {}, turnstile
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('site/_worker.js', 'report'), ctx);
+  // `report` awaits through `settled` now - the two `.then((r) => r.json())` chains it used to
+  // carry were continuations written at the call site, which the race check cannot enter.
+  vm.runInContext([sliceFn('site/_worker.js', 'settled'),
+                   sliceFn('site/_worker.js', 'report')].join('\n'), ctx);
   const request = {
     method: 'POST',
     url: 'https://zoost.it/api/report',

@@ -36,8 +36,8 @@ beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	023ed94d5bc3	0f058d0ea34d	divergent
-buildExportMarkdown	bec112444e2e	76cf76fadc28	divergent
+buildExportHtml	655fb146539c	73de5bd0e49d	divergent
+buildExportMarkdown	ad47b797d821	fbf90f473b83	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildReport	3de3b69b14b5	3de3b69b14b5	identical
@@ -118,6 +118,8 @@ erVisibleIds	372e3743dccc	dffd20c3e9ec	divergent
 erWouldGo	8b7bc7f08079	8b7bc7f08079	identical
 erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
+escReport	2987a53e5c62	2987a53e5c62	identical
+escReportA	46ee492a3bf3	46ee492a3bf3	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	1e57d1af56a5	4b046384501d	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
@@ -205,7 +207,12 @@ render	1f1f526caa02	b47086e0e791	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	de56c9b9ed2d	5037a60baf16	divergent
 renderRx	da8caf217c7f	da8caf217c7f	identical
+reportAbsent	140c532eaa58	140c532eaa58	identical
 reportFacts	991ceaf03121	24f523b42a89	divergent
+reportFoot	5369198eb387	5369198eb387	identical
+reportHead	3dfe0d0350f8	3dfe0d0350f8	identical
+reportItem	147df4e7dedf	147df4e7dedf	identical
+reportToc	bffb45a529c6	bffb45a529c6	identical
 requirePerm	8477c2cb408e	8477c2cb408e	identical
 resetView	601213423bbe	f67417c0398c	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical

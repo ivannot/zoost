@@ -112,7 +112,13 @@ export function load(pieces, globals = {}) {
   const ctx = vm.createContext(globals);
   const names = [];
   for (const p of pieces) {
-    const m = p.match(/function\s+(\w+)\s*\(/) || p.match(/const\s+(\w+)\s*=/);
+    // Anchored at the start of the piece, because a piece *contains* code as text. `REPORT_FILTER_JS`
+    // is a const whose value is the string `function filt(){…}` - the loose pattern found `filt`
+    // inside it, added it to the names, and the evaluation then threw «filt is not defined» about a
+    // function that exists only as characters. Every lifter here reads source and can be fooled by a
+    // string; this one now looks only where a declaration can actually begin.
+    const m = p.match(/^\s*(?:async\s+)?function\s+(\w+)\s*\(/)
+      || p.match(/^\s*(?:const|let|var)\s+(\w+)\s*=/);
     if (m) names.push(m[1]);
   }
   vm.runInContext(pieces.join('\n\n') + `\n;({ ${names.join(', ')} })`, ctx);

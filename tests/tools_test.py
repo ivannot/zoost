@@ -6967,7 +6967,7 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
 
     #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
     #: raises it, because a new scope written the old way is a finding on the day it is written.
-    CEILING = 33
+    CEILING = 30
 
     def ac(self):
         sys.path.insert(0, str(ROOT / 'tools'))
@@ -7031,6 +7031,42 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
             self.assertIn('connections.js', out.stdout)
         finally:
             f.write_text(before, encoding='utf-8')
+
+
+
+class TheOnlyCheckThatExecutesTheProduct(unittest.TestCase):
+    """Where the browser probe sits in the battery, and why it is not last.
+
+    `set -e` ends the run at the first non-zero exit. A check placed after the static ones therefore
+    does not run whenever any of them is red - and «any of them is red» is precisely the state in
+    which you most want to know whether the product still starts. It happened: `imgcheck` was red
+    because the site images were mid-render, the run stopped there, and a template literal that ended
+    early inside a comment shipped with the probe never executed.
+
+    So the order is a claim, and this is the check that holds it: the only thing in the battery that
+    *executes* the shipped panels answers before anything that merely reads them.
+    """
+
+    def run_sh(self):
+        s = (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
+        lines = [l for l in s.split('\n') if l and not l.lstrip().startswith('#')]
+        return lines
+
+    def test_the_probe_runs_before_anything_that_only_reads(self):
+        lines = self.run_sh()
+        probe = [i for i, l in enumerate(lines) if 'tools/probe.py' in l]
+        readers = [i for i, l in enumerate(lines)
+                   if re.search(r'tools/\w*check\w*\.py', l) or 'tools/sitemap.py' in l]
+        # If neither is here any more, this case is measuring nothing and says so rather than passing.
+        self.assertTrue(probe, 'tests/run.sh no longer runs tools/probe.py - either it was removed, '
+                               'in which case nothing in the battery executes the panels, or it was '
+                               'renamed and this case is the thing that is broken')
+        self.assertGreater(len(readers), 5, 'no static checkers found in tests/run.sh - this case '
+                                            'cannot be comparing anything, so it is the broken one')
+        self.assertLess(probe[0], min(readers),
+                        'tools/probe.py runs after a checker that only reads source. `set -e` means '
+                        'it will not run at all on the day one of them is red, which is the day it '
+                        'is worth most.')
 
 
 if __name__ == '__main__':

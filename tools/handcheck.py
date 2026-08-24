@@ -127,9 +127,13 @@ CHECKS = [
     {
         'id': 'export',
         'title': 'An export opens and reads as the panel reads',
-        'do': ['Export HTML and Markdown from the real workspace, and open both.'],
-        'pass': 'Every section the panel shows is in them, and nothing in them is empty or invented.',
-        'covers': ['apps/crm/export.js', 'apps/*/sidepanel.js', 'apps/crm/health.js'],
+        'do': ['Export HTML and Markdown from the real workspace, and open both.',
+               'Open the other product\'s HTML export beside it.'],
+        'pass': ('Every section the panel shows is in them, nothing in them is empty or invented, and '
+                 'the two HTML reports are the same document: same header, same index, same cards, '
+                 'same foot.'),
+        'covers': ['apps/crm/export.js', 'apps/*/sidepanel.js', 'apps/crm/health.js',
+                   'apps/*/reportshell.js'],
     },
     {
         'id': 'diagram',

@@ -595,11 +595,15 @@ async function report(request, env) {
   // The other half is cheaper and just as real: before this, an unauthenticated caller who cannot
   // pass the challenge still caused five KV writes per address, in a namespace shared with the
   // workflow that keeps /api/versions truthful.
-  const ok = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+  // Awaited in two steps rather than chained. `.then((r) => r.json())` is a continuation written at
+  // the call site, which is a scope `tools/asynccheck.py` cannot enter - and `settled()` already
+  // turns a throw into `null`, so there is nothing the `.catch` was doing that this does not.
+  const vres = await settled(fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }),
-  }).then((r) => r.json()).catch(() => null);
+  }));
+  const ok = vres ? await settled(vres.json()) : null;
   // The hostname too: a token is minted for a site key, and if that key's allowed-domain list is
   // ever widened - a preview deployment, a second site - a token minted elsewhere would otherwise
   // be accepted here. Checking it costs one comparison and keeps the widening honest.
@@ -662,7 +666,7 @@ async function report(request, env) {
     ].join('\n'),
     labels: hand ? ['from-page'] : edited ? ['from-panel', 'altered-trace'] : ['from-panel'],
   };
-  const made = await fetch(`https://api.github.com/repos/${REPORT_REPO}/issues`, {
+  const ires = await settled(fetch(`https://api.github.com/repos/${REPORT_REPO}/issues`, {
     method: 'POST',
     headers: {
       authorization: 'Bearer ' + env.GH_TOKEN,
@@ -671,7 +675,8 @@ async function report(request, env) {
       'content-type': 'application/json',
     },
     body: JSON.stringify(issue),
-  }).then((r) => r.json()).catch(() => null);
+  }));
+  const made = ires ? await settled(ires.json()) : null;
   if (!made || !made.html_url) return bad(502, 'GitHub refused it. Please open an issue by hand, or email ivan@zoost.it.');
 
   return new Response(JSON.stringify({ url: made.html_url }), {
@@ -684,31 +689,36 @@ const MOVED = {
   '/docs.html': '/docs-crm',
 };
 
+// The Worker's entry point is a method on the exported object, which is the runtime's contract and
+// not ours to change - but a method is a scope `asynccheck` cannot enter, so everything awaited in
+// here was unread. The contract is one line; the work is a declaration like every other one.
+async function handle(request, env, ctx) {
+  const url = new URL(request.url);
+  if (url.pathname === '/api/versions') return versions(request, env, ctx);
+  if (url.pathname === '/api/ahead') return ahead(request, env, ctx);
+  if (url.pathname === '/api/report') return report(request, env);
+  const to = MOVED[url.pathname];
+  if (to) return Response.redirect(new URL(to, url).toString(), 301);
+
+  // Plain text is served as `text/plain` with no charset, so a browser falls back to guessing and
+  // lands on Windows-1252: every em-dash in llms.txt arrived as `â€”`. HTML escapes this because
+  // it declares its encoding in-band with a <meta> tag; a .txt file has no way to say it, so the
+  // header is the only place it can be said. The file itself was valid UTF-8 all along.
+  if (url.pathname.endsWith('.txt')) {
+    const res = await env.ASSETS.fetch(request);
+    const headers = new Headers(res.headers);
+    headers.set('content-type', 'text/plain; charset=utf-8');
+    // Five minutes, not the default. llms.txt is a document that will change, and the edge cache
+    // key ignores the query string — so a wrong response cannot be busted from outside and simply
+    // has to expire. That is exactly what happened to the missing charset: the fix deployed and
+    // the old header kept being served. A short TTL is what stops the next one lasting as long.
+    headers.set('cache-control', 'public, max-age=300');
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+  }
+
+  return env.ASSETS.fetch(request);   // everything else is a file, served as before
+}
+
 export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/versions') return versions(request, env, ctx);
-    if (url.pathname === '/api/ahead') return ahead(request, env, ctx);
-    if (url.pathname === '/api/report') return report(request, env);
-    const to = MOVED[url.pathname];
-    if (to) return Response.redirect(new URL(to, url).toString(), 301);
-
-    // Plain text is served as `text/plain` with no charset, so a browser falls back to guessing and
-    // lands on Windows-1252: every em-dash in llms.txt arrived as `â€”`. HTML escapes this because
-    // it declares its encoding in-band with a <meta> tag; a .txt file has no way to say it, so the
-    // header is the only place it can be said. The file itself was valid UTF-8 all along.
-    if (url.pathname.endsWith('.txt')) {
-      const res = await env.ASSETS.fetch(request);
-      const headers = new Headers(res.headers);
-      headers.set('content-type', 'text/plain; charset=utf-8');
-      // Five minutes, not the default. llms.txt is a document that will change, and the edge cache
-      // key ignores the query string — so a wrong response cannot be busted from outside and simply
-      // has to expire. That is exactly what happened to the missing charset: the fix deployed and
-      // the old header kept being served. A short TTL is what stops the next one lasting as long.
-      headers.set('cache-control', 'public, max-age=300');
-      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
-    }
-
-    return env.ASSETS.fetch(request);   // everything else is a file, served as before
-  },
+  fetch(request, env, ctx) { return handle(request, env, ctx); },
 };

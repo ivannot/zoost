@@ -346,7 +346,16 @@ IT_WORDS = {6: 'sei', 7: 'sette', 8: 'otto', 9: 'nove', 10: 'dieci', 11: 'undici
 NUM = {8: ('eight', 'otto'), 9: ('nine', 'nove'), 10: ('ten', 'dieci'), 11: ('eleven', 'undici'),
        12: ('twelve', 'dodici'), 13: ('thirteen', 'tredici'), 14: ('fourteen', 'quattordici'),
        15: ('fifteen', 'quindici'), 16: ('sixteen', 'sedici'), 17: ('seventeen', 'diciassette'),
-       18: ('eighteen', 'diciotto'), 19: ('nineteen', 'diciannove'), 20: ('twenty', 'venti')}
+       18: ('eighteen', 'diciotto'), 19: ('nineteen', 'diciannove'), 20: ('twenty', 'venti'),
+       # Past twenty, and the reason is not that the number grew: `\btwenty\b` matches inside
+       # «twenty-one», because a hyphen is a word boundary - so the day a product shipped its
+       # twenty-first file, every page that had already been corrected was reported as still
+       # saying «twenty». The alternation is ordered longest-first, so naming the compound is
+       # what makes it win. A vocabulary that stops one short of the tree is a checker that
+       # reports the correction as the defect.
+       21: ('twenty-one', 'ventuno'), 22: ('twenty-two', 'ventidue'),
+       23: ('twenty-three', 'ventitre'), 24: ('twenty-four', 'ventiquattro'),
+       25: ('twenty-five', 'venticinque')}
 
 
 def translations_have_the_same_shape(findings: list) -> None:

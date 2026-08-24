@@ -388,6 +388,26 @@ commit that fixes the thing. **Assert the behaviour on real values, never the ex
 over the source is a photograph of a belief and can only confirm the belief is still spelled the same
 way.
 
+**One failure is enough to earn a check. Never two.** Said by the author, after the same defect
+class reached his screen twice in one day: a `const` arrow used above its declaration, and a backtick
+inside a comment inside a template literal. Both parse. Both die the moment the code runs. The first
+time, the check written for it covered **one** of the two products - and twelve hours later the
+second one arrived in the twin, in the same function, in the other panel. Waiting for a second
+instance is how a class becomes a habit, and the cost of the wait is paid by whoever is using the
+product, which is never the person who decided to wait.
+
+Two things follow, and the second is the one that actually holds. **When a check is written for a
+defect, walk the siblings before calling it done** - the other product, the other builder, the other
+surface - because the class does not know which file it landed in. And **a builder that produces a
+shipped artefact must be executed by something, not read**: a report, an export, a page. Nothing that
+reads source has an opinion about a template literal that ends early, and both of those defects were
+invisible to 900 tests and obvious to one run. `tools/probe.py` drives both panels in a real Chrome
+and fails on any error the page logs; it is in `tests/run.sh` for exactly this reason, and it caught
+the second defect on its first run **while the battery was green** - which is what «green» is worth
+when the thing that executes the code is not in it.
+
+**And where a check runs decides whether it runs at all.** `tests/run.sh` is `set -e`, so the order of the file is not a preference - it is which answers survive a red run. The browser probe was written because nothing that reads source can see a template literal that ended early, and it was put at the end: the day `imgcheck` went red for an unrelated reason, the run stopped there and a fourth one of those shipped. It runs third now, before everything that only reads, and a case derives the ordering from the file. **Put the check that executes the product before the checks that describe it.**
+
 **Prove a test can fail before trusting it, and prove it can pass.** Break the thing on purpose,
 confirm red, restore. Then confirm it is green on the state it is actually meant to allow: a gate
 that always refuses is not strict, it is broken, and it looks identical to a strict one until

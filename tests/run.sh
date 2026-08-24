@@ -52,6 +52,28 @@ echo "── unit: python ──"
 python3 tests/tools_test.py 2>&1 | tail -3
 
 echo
+echo "── driven in a browser ──"
+# **The battery was green while this was red, and that is how two export defects reached the author's
+# own screen in one day.** `srcBlock` was a `const` used above its declaration and this one was a
+# backtick inside a comment inside a template literal: both parse, both die the moment the builder
+# runs, and nothing that *reads* source has an opinion about either. The probe drives both panels
+# against the sample workspace in a real Chrome and fails on any error the page logs - it caught the
+# second one on the first run - but it lived in `prepare.sh`, which is the release routine. So the
+# suite everybody runs said «green» about code that could not execute.
+#
+# One failure is enough to earn a check; this one had two. It is here now, and where Chrome is not
+# installed it says so and passes, which is the only honest thing a probe can do on a machine it
+# cannot drive.
+#
+# **And it runs here, third, rather than last.** `set -e` ends the run at the first red, so a check
+# placed after the static ones is absent exactly when something is already wrong - which happened
+# the same day it was added: `imgcheck` was red because the site pictures were being re-rendered,
+# the run stopped there, and a third broken template literal shipped to the author's screen with
+# the probe never executed. An ordering is a claim about which answer you want first, and the
+# answer wanted first is «does the product still run».
+python3 tools/probe.py
+
+echo
 echo "── checks ──"
 python3 tools/twincheck.py | tail -1
 python3 tools/asynccheck.py | tail -1
@@ -67,6 +89,7 @@ python3 tools/sitemap.py --check | tail -1
 python3 tools/stamp.py --check | tail -1
 python3 tools/notescheck.py | tail -1
 python3 tools/langcheck.py | tail -1
+
 
 echo
 echo "── build ──"

@@ -18,6 +18,7 @@ apps/crm/export.js	PRODUCT_AUTHOR
 apps/crm/export.js	PRODUCT_NAME
 apps/crm/export.js	PRODUCT_URL
 apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
+apps/crm/export.js	REPORT_FILTER_JS
 apps/crm/export.js	String(a.id)
 apps/crm/export.js	String(a.name || '').toLowerCase()
 apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')

@@ -3295,16 +3295,32 @@ function fkText(viewId, colName) {
   ).join(', ');
 }
 
+/** When each part of this mirror was last read, per area - the line the other product's report has
+ *  carried since it existed. A report that says «exported today» while a third of it is two weeks old
+ *  is the half-truth this project refuses; the reader gets the fact and decides what it means.
+ *
+ *  The dates come from what the pull wrote beside the data, so an area nobody has pulled says so
+ *  rather than borrowing the newest one. */
+function analyticsFreshness() {
+  const day = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : 'never read');
+  const parts = [
+    ['Views', bound && bound.lastPull],
+    ['Structure', bound && bound.lastPull],
+    ['Lineage', deps && deps.pulledAt ? deps.pulledAt : (bound && bound.lastPull)],
+  ];
+  return parts.map(([what, iso]) => `${what} as of ${day(iso)}`).join(' \u00b7 ');
+}
+
 function exportSections(sc) {
   const m = viewById();
   const h = healthFindings();
   const out = [];
   if (sc.views) out.push({ id: 'views', title: 'Views', rows: views.map((v) => [v.name, v.type, v.folderName || '—', v.owner || '—', v.designModifiedAt ? shortDate(v.designModifiedAt) : (v.designModifiedText || '—'), shortDate(v.dataModifiedAt), v.system ? 'system' : '']),
-    head: ['View', 'Type', 'Folder', 'Owner', 'Design', 'Data', ''] });
+    head: ['View', 'Type', 'Folder', 'Owner', 'Design', 'Data', ''], links: [0] });
   if (sc.structure) out.push({ id: 'structure', title: 'Structure', tables: Object.entries(schema).map(([id, t]) => ({ id, ...t })) });
-  if (sc.relations) out.push({ id: 'relations', title: 'Relations', rows: relations.map((r) => [r.sourceName, r.targetName, r.relation]), head: ['From', 'To', 'Join'] });
+  if (sc.relations) out.push({ id: 'relations', title: 'Relations', rows: relations.map((r) => [r.sourceName, r.targetName, r.relation]), links: [0, 1], head: ['From', 'To', 'Join'] });
   if (sc.sql) out.push({ id: 'sql', title: 'Query table SQL' });
-  if (sc.lineage && deps) out.push({ id: 'lineage', title: 'Lineage', rows: views.filter((v) => deps[v.id]).map((v) => [v.name, String(deps[v.id].parents.length), String(deps[v.id].children.length), String(deps[v.id].dashboards.length)]), head: ['View', 'Reads from', 'Read by', 'On dashboards'] });
+  if (sc.lineage && deps) out.push({ id: 'lineage', title: 'Lineage', rows: views.filter((v) => deps[v.id]).map((v) => [v.name, String(deps[v.id].parents.length), String(deps[v.id].children.length), String(deps[v.id].dashboards.length)]), head: ['View', 'Reads from', 'Read by', 'On dashboards'], links: [0] });
   if (sc.health) out.push({ id: 'health', title: 'Health', h });
   return out;
 }
@@ -3312,20 +3328,42 @@ function exportSections(sc) {
 async function buildExportHtml(sc, op = beginWorkspaceOp()) {
   const secs = exportSections(sc);
   const esc2 = esc;
-  const toc = secs.map((x) => `<li><a href="#${x.id}">${esc2(x.title)}</a></li>`).join('');
-  const tbl = (head, rows) => `<table><thead><tr>${head.map((h2) => `<th>${esc2(h2)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc2(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  // The contents the shell draws, which is the one the other product has had all along: a card
+  // with a group per chapter and how much is in each. This was a flat two-column list of
+  // titles - it said how many chapters there are and nothing about how much is in them, which
+  // is the first question anybody opening somebody else's report actually has.
+  const toc = reportToc(secs.map((x) => ({
+    title: x.title,
+    count: x.rows ? x.rows.length : x.tables ? x.tables.length : undefined,
+    href: x.id,
+    note: `Go to ${x.title}`,
+  })));
+  // **A report about lineage you cannot click through is not a report about lineage.** The other
+  // product's report carries twenty internal anchors - a function to what it calls, to the module
+  // it reads, to the rule that fires it - and this one carried exactly one, the contents. Every
+  // view named anywhere in the document now points at where that view is described; a name that
+  // belongs to no view in this export stays plain text rather than becoming a link to nothing.
+  const vAnchor = (id) => 'v-' + String(id).replace(/[^\w.-]+/g, '_');
+  const byName = new Map(views.map((v) => [v.name, v.id]));
+  const vLink = (name) => (byName.has(name)
+    ? `<a href="#${escA(vAnchor(byName.get(name)))}">${esc2(name)}</a>`
+    : esc2(name));
+  // `links` names the columns that hold a view's name, so those cells become links and every
+  // other cell stays escaped text. Declared per table rather than guessed from the content: a
+  // column of owners must not turn into links because somebody is named like a view.
+  const tbl = (head, rows, links) => `<table class="ftbl"><thead><tr>${head.map((h2) => `<th>${esc2(h2)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr data-name="${escA(String(r[0] || '').toLowerCase())}">${r.map((c, i) => `<td${i ? '' : ' class="mono"'}>${links && links.includes(i) ? vLink(String(c)) : esc2(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   let body = '';
   for (const x of secs) {
     body += `<h2 id="${escA(x.id)}">${esc2(x.title)}</h2>`;
-    if (x.rows) body += tbl(x.head, x.rows);
-    else if (x.tables) body += x.tables.map((t) => `<h3>${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)]))).join('');
+    if (x.rows) body += tbl(x.head, x.rows, x.links);
+    else if (x.tables) body += x.tables.map((t) => `<h3 id="${escA(vAnchor(t.id))}">${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)]))).join('');
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
         // Skipping an unread query made the export silently smaller than the workspace: a reader
         // cannot tell a query that was dropped from one that never existed. The heading is always
         // there; what varies is whether the source or the reason sits under it.
         const st = await sqlReadState(v.id, op);
-        if (st.kind === 'unread') { body += `<h3>${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
+        if (st.kind === 'unread') { body += `<h3 id="${escA(vAnchor(v.id))}">${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
         // Highlighted, like the panel and like the CRM's own report, which has coloured its Deluge
         // since it existed. This one printed plain escaped text: the same query, in two places, one
         // of them readable - and the report is the copy that goes to somebody without the extension,
@@ -3334,7 +3372,7 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
         // reason it may be handed to innerHTML at all; the placeholder for «not read» is not SQL and
         // stays on `esc2`.
         const has = st.body != null && st.body.trim();
-        body += `<h3>${esc2(v.name)}</h3><pre class="${has ? 'sql' : 'note'}">`
+        body += `<h3 id="${escA(vAnchor(v.id))}">${esc2(v.name)}</h3><pre class="${has ? 'code' : 'note'}">`
           + `${has && window.highlightSql ? window.highlightSql(st.body) : esc2(sqlText(st.body))}</pre>`;
       }
     } else if (x.h) {
@@ -3342,45 +3380,30 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
       body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
         + `<p class="gap">Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.</p>`
         + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict - a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.</p>`
-        + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${esc2(v.name)} <i>${esc2(v.type)}</i></li>`).join('')}</ul>` : '')
-        + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${esc2(t.name)} <i>${esc2(t.kind)}</i></li>`).join('')}</ul>`
-        + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${esc2(v.name)}</li>`).join('')}</ul>`
+        + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${vLink(v.name)} <i>${esc2(v.type)}</i></li>`).join('')}</ul>` : '')
+        + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${vLink(t.name)} <i>${esc2(t.kind)}</i></li>`).join('')}</ul>`
+        + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${vLink(v.name)}</li>`).join('')}</ul>`
         + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} - ${esc2(f.error)}</li>`).join('')}</ul>` : '');
     }
   }
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost - ${esc2(bound.label || bound.name || bound.workspace)}</title><style>
-/* The same frame as the other product's report, because two reports from one maker that are shaped
-   differently are two products to whoever receives them. The accent stays per-product - blue there,
-   teal here, the colour each panel already wears - and everything that decides the *shape* is the
-   same: a sticky header band, a centred column, a footer band from edge to edge.
-   This document used to be a padded body with a max width and no bands at all, so its foot could not
-   span anything. Reported. No backticks in here: this stylesheet sits in a template literal. */
-:root{--ink:#1b2431;--muted:#6b7a90;--accent:#0e9488;--line:#e6ebf2}
-*{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:var(--ink);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;z-index:5}
-header h1{margin:0 0 4px;font-size:20px}
-main{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
-h2{margin:30px 0 8px;padding-top:8px;border-top:2px solid var(--line)} h3{margin:18px 0 6px;font-size:15px}
-small,i{color:var(--muted);font-weight:400;font-style:normal}
-table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12.5px;display:block;overflow-x:auto;background:#fff}
-th{background:#f3f6fa;text-align:left;padding:5px 8px;border-bottom:2px solid #dde4ee;white-space:nowrap}
-td{padding:4px 8px;border-bottom:1px solid #eef2f7;vertical-align:top}
-pre{background:#fff;border:1px solid #e3e9f2;border-radius:6px;padding:10px;overflow:auto;font-size:12px;white-space:pre-wrap}
-pre.sql{background:#0f1622;border-color:#0f1622;color:#cbd5e1;font:12.5px/1.55 ui-monospace,monospace;white-space:pre}
-.c-com{color:#5b6b82;font-style:italic}.c-str{color:#7ee0a6}.c-num{color:#e0a86b}.c-kw{color:#7aa2f7;font-weight:600}.c-type{color:#c792ea}.c-fn{color:#82d2ff}
-.meta{color:var(--muted);font-size:12.5px;font-family:ui-monospace,monospace} .gap{color:var(--muted);font-size:12.5px;border-left:3px solid var(--line);padding-left:10px}
-nav ul{columns:2;list-style:none;padding:0} nav a{color:var(--accent);text-decoration:none}
-footer{border-top:1px solid var(--line);background:#fff;padding:18px 20px 32px;color:var(--muted);font-size:12px}
-footer>div{max-width:1000px;margin:0 auto}
-footer a{color:var(--accent)}
-footer .legal{margin-top:6px;font-size:11px;line-height:1.5;opacity:.75;max-width:70ch}
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost - ${esc2(bound.label || bound.name || bound.workspace)}</title><style>${REPORT_CSS}
+:root{--accent:#0e9488}
+/* What only this report has. Everything else - the frame, the header, the index, the card, the
+   tables, the empty state, the foot - is in reportshell.js, byte-identical in both products. This
+   tail used to redefine table, th, td, pre and small as well, so the same tables were drawn by two
+   stylesheets and the two documents did not look alike however much markup they shared. A rule here
+   that the shell already has is a rule that makes them differ. */
+.gap{color:var(--muted);font-size:12.5px;border-left:3px solid var(--line);padding-left:10px}
 </style></head><body>
-<header><h1>${esc2(bound.label || bound.name || bound.workspace)}</h1>
-<div class="meta">${bound.label ? `Zoho Analytics workspace ${esc2(bound.name || '')} \u00b7 ` : 'Zoho Analytics workspace '}${esc2(bound.workspace)} · ${esc2(bound.origin || '')} · exported ${new Date().toISOString().slice(0, 10)} by ${esc2(PRODUCT_NAME)} v${esc2(chrome.runtime.getManifest().version)}</div>
-</header>
-<main><nav><ul>${toc}</ul></nav>
+${reportHead(esc2(bound.label || bound.name || bound.workspace),
+             [`${esc2(bound.label || bound.name || '')} \u00b7 ${esc2(bound.workspace)} \u00b7 ${views.length} views \u00b7 ${Object.keys(schema).length} tables \u00b7 ${relations.length} relations \u00b7 contents: ${esc2(SCOPE_KEYS.filter((k) => sc[k]).join(', ') || 'nothing')}${sc.sql ? '' : ' \u00b7 SQL excluded'}`,
+              `Data read from Zoho: ${esc2(analyticsFreshness())}`],
+             'Filter views, tables and columns\u2026',
+             { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version })}
+<main>${toc}
 ${body}</main>
-<footer><div>Generated by ${PRODUCT_URL ? `<a href="${escA(PRODUCT_URL)}">${esc2(PRODUCT_NAME)}</a>` : esc2(PRODUCT_NAME)} · Created by ${esc2(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${escA(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${escA(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div>Read-only mirror. Zoost never creates, edits or deletes anything in Zoho Analytics, and never reads record data.</div><div class="legal">${esc2(LEGAL_DISCLAIMER)}</div></footer>
+${reportFoot(PRODUCT_NAME, PRODUCT_URL)}
+<script>${REPORT_FILTER_JS}</script>
 </body></html>`;
 }
 
@@ -3422,6 +3445,9 @@ async function buildExportMarkdown(sc, op = beginWorkspaceOp()) {
       if (H.unread.length) out += `### Could not be read (${H.unread.length})\n\n` + H.unread.map((f) => `- ${(viewById().get(f.id) || {}).name || f.id} - ${f.error}`).join('\n') + '\n\n';
     }
   }
+  // The same line the HTML report's foot carries, and the same the other product's Markdown
+  // carries: what made this, and a link to it. One of the two used to say nothing at all.
+  out += `\n---\n\nGenerated by [${PRODUCT_NAME}](${PRODUCT_URL})\n`;
   return out;
 }
 

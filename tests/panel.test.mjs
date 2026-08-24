@@ -51,6 +51,7 @@ function pullEntry(app, fn) {
 }
 
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 /** A named function or const out of a graph window, wherever it now lives: everything both products
  *  compute identically and that touches no DOM moved into graphlogic.js. Still throws when neither
@@ -8805,7 +8806,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
   });
 
   test('the Markdown lists a function the pull could not download', () => {
-    const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
     const md = buildExportMarkdown(data(), { functions: true, code: true });
     assert.ok(md.includes('`ns.beta`'), 'a function in the index is missing from the report');
     assert.ok(/- Functions: 2 \(1 not downloaded/.test(md), `the count is not the org's: ${md.split('\n')[5]}`);
@@ -8813,14 +8814,14 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
   });
 
   test('a function with no source gets no empty code fence', () => {
-    const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
     const md = buildExportMarkdown(data(), { functions: true, code: true });
     assert.ok(md.includes('```deluge\ninfo "a";'), 'the downloaded function lost its source');
     assert.ok(!/```deluge\n\n?```/.test(md), 'an empty fence reads as a function with no body');
   });
 
   test('turning off the source keeps every function listed', () => {
-    const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
     const md = buildExportMarkdown(data(), { functions: true, code: false });
     assert.ok(!md.includes('```deluge'), 'source excluded and a fence was written anyway');
     assert.ok(md.includes('### ns.alpha') && md.includes('### ns.beta'), 'a function vanished with the source');
@@ -10922,6 +10923,7 @@ function liftRankedOver() {
 
 test('a size ranking states how many functions it could measure', () => {
   const globals = {
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
     SCOPE_DEFAULT: { functions: true, modules: true, workflows: true, schedules: true, connections: true,
                      actions: true, failures: true, health: true, code: true },
     SCOPE_KEYS: ['functions', 'modules', 'code'],
@@ -10949,7 +10951,7 @@ test('a size ranking states how many functions it could measure', () => {
   const data = { fns, mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [], conns: [],
                  fails: { at: null, usage: null, failures: [] }, acts: [], actUsers: new Map() };
 
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
   const md = buildExportMarkdown(data, { functions: true, code: true });
   assert.match(md, /## Size and outbound calls/,
     'the size chapter vanishes when a function cannot be measured, so «not measured» reads as «no size»');
@@ -11270,15 +11272,144 @@ test('analytics: the report colours SQL the way the panel does', () => {
 
   // And the report carries the token classes, or the highlighter emits spans nothing styles - the
   // failure that looks like nothing happening at all.
-  const css = js.slice(js.indexOf('<!doctype html>'), js.indexOf('</style>'));
+  // The stylesheet is the shell plus this product's own tail, and the token colours live in the
+  // shell - so read both, or the case asserts that a shared file's rules are missing from the file
+  // that no longer holds them.
+  const css = read('apps/analytics/reportshell.js')
+    + js.slice(js.indexOf('<!doctype html>'), js.indexOf('</style>'));
   for (const cls of [...new Set([...read('apps/analytics/highlight.js').matchAll(/class="(c-[a-z]+)"/g)].map((m) => m[1]))]) {
     assert.ok(css.includes('.' + cls),
               `the highlighter emits ${cls} and the report's stylesheet never defines it, so that `
               + 'token renders as ordinary text');
   }
-  assert.match(css, /pre\.sql\{[^}]*background/,
-               'the SQL block has no background of its own, so light-theme paper carries dark-theme '
-               + 'token colours and the reader gets an unreadable page');
+  // The SQL block is the shell's code block - the same one the other product's Deluge uses - so the
+  // rule to look for is that one. It had a `pre.sql` of its own, which is how the two products came
+  // to draw the same thing two ways; what the case is about is unchanged: dark-theme token colours
+  // need the dark ground they were chosen for.
+  assert.match(css, /pre\.code\{[^}]*background:#0f1622/,
+               'the code block has no dark ground, so light paper carries dark-theme token colours '
+               + 'and the reader gets an unreadable page');
+  assert.match(read('apps/analytics/sidepanel.js'), /<pre class="\$\{has \? 'code'/,
+               'the SQL is drawn in a block of its own again instead of the shared one');
+});
+
+
+// ---------------------------------------------------------------------------------------------
+// A report's title is its subject, and a shared header does not make that true by itself.
+//
+// Both reports draw their head with `reportHead` from the shared shell - and one passed the
+// workspace's own name while the other passed «Zoost - workbench for Zoho CRM - Export». So a reader
+// opening both saw one report about their org and one about the tool, from a function that was
+// supposed to have ended exactly that. Reported: «how can you say the template is one for all?»
+//
+// A shared function that accepts anything shares only its markup. What is asserted here is the thing
+// the function cannot enforce on its own: neither builder names the product in the heading. The
+// product is named once, in the foot.
+test('neither report titles itself with the product name', () => {
+  for (const [app, rel] of [['crm', 'apps/crm/export.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+    const js = read(rel);
+    // The heading is composed by the shell now, so what each builder decides is the *subject* it
+    // hands over - which is the thing that differed.
+    const at = js.indexOf('reportHead(');
+    assert.ok(at > 0, `${app}: the report does not use the shared header - the derivation broke`);
+    const h1 = js.slice(at, js.indexOf('\n', at));
+    assert.ok(!/PRODUCT_NAME/.test(h1),
+              `${app}: the report is titled after the tool that wrote it. The title is the org or the `
+              + 'workspace it is about; the tool is named in the foot');
+    // And it does name the subject, or the heading is a constant and the case above passes on a
+    // report that says «Export» to everybody.
+    assert.match(h1, /(ws|bound)\./,
+                 `${app}: the heading names nothing from the workspace, so every org gets the same one`);
+  }
+});
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Every script a panel loads is evaluated, in the order the page loads it, in one context.
+//
+// Three defects of one class reached the author's screen in a day and a half: `srcBlock`, a `const`
+// arrow used above its declaration; then a backtick inside a comment inside a template literal, which
+// ended `REPORT_CSS` early and turned the rest of the stylesheet into a tag call; then the same
+// backtick, in the same file, in the comment explaining the first one. All three parse. Nothing that
+// *reads* source has an opinion about any of them, and every one of them makes the file's top level
+// throw the moment a browser runs it.
+//
+// The browser probe catches them and needs Chrome. This does the same with `vm`: the list comes from
+// the page's own <script src> tags, in order, so a file added tomorrow is covered without anyone
+// remembering. The environment is a Proxy that answers anything - the point is not to simulate a
+// browser, it is that a file whose top level cannot even *evaluate* is broken regardless of what the
+// DOM would have given it.
+//
+// **What it does not reach, stated:** anything that only goes wrong when a function is *called*.
+// `srcBlock` was a const used above its declaration inside `buildExportHtml`, and this case evaluates
+// that file happily - the browser probe is what catches that half, and the two are not
+// interchangeable. This one costs milliseconds and needs no Chrome; that one needs Chrome and reaches
+// the rest.
+const anything = () => new Proxy(function () {}, {
+  // `then` is callable like everything else - a chain has to survive being written, and the callback
+  // never runs, which is the whole point: what is under test is the file's top level, not its work.
+  // `Symbol.toPrimitive` answers with an empty string, because a proxy put in a template literal has
+  // to coerce somehow; the iterator is a real empty generator, because destructuring is otherwise a
+  // type error before any of the file's own code has had a chance to be wrong.
+  get: (t, k) => (k === Symbol.toPrimitive ? () => ''
+    : k === Symbol.iterator ? function* () {}
+      : anything()),
+  apply: () => anything(),
+  construct: () => anything(),
+  set: () => true,
+  has: () => true,
+});
+
+test('every script the panels load evaluates on its own', () => {
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/sidepanel.html`);
+    const files = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+    // If the page stops naming its scripts, this case is measuring nothing and is the broken thing.
+    assert.ok(files.length > 3, `${app}: no <script src> found in sidepanel.html - this case cannot `
+                                + 'be checking anything, so it is the one that is wrong');
+    const ctx = vm.createContext(new Proxy({}, {
+      get: (t, k) => (k in t ? t[k] : (typeof k === 'string' ? anything() : undefined)),
+      set: (t, k, v) => { t[k] = v; return true; },
+      has: () => true,
+    }));
+    for (const f of files) {
+      const src = readFileSync(join(ROOT, 'apps', app, f), 'utf8');
+      assert.doesNotThrow(() => vm.runInContext(src, ctx, { filename: `apps/${app}/${f}` }),
+                          `apps/${app}/${f}: its top level throws when evaluated. A template literal `
+                          + 'that ended early is the one that keeps happening: it parses, and it '
+                          + 'makes the panel dead on arrival.');
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A jump landed under the sticky header, so the reader arrived a few lines into the section.
+//
+// Both reports have a band that stays at the top of the window. Following an anchor puts its target
+// at the top of the *window*, which is behind that band - so the heading you asked for is hidden and
+// the section appears to start in the middle. Reported on both. `.item` carried a 120px
+// `scroll-margin-top` and nothing else carried any, so chapters and per-view anchors landed wrong.
+//
+// A constant cannot be right: the two headers are different heights - one has a filter box and three
+// meta lines, the other three meta lines - and either gains a line the day somebody adds one. The
+// band measures itself at load and on resize and publishes the number as a custom property; the
+// stylesheet keeps a fallback for a reader with no script.
+test('every anchor target in a report clears the sticky header', () => {
+  for (const app of ['crm', 'analytics']) {
+    const shell = read(`apps/${app}/reportshell.js`);
+    assert.match(shell, /\[id\]\{scroll-margin-top:calc\(var\(--stick/,
+                 `${app}: only some targets clear the band, so the rest land behind it`);
+    assert.match(shell, /--stick', *h\.offsetHeight/,
+                 `${app}: the band's height is written down instead of measured, and the two headers `
+                 + 'are not the same height');
+    assert.match(shell, /addEventListener\('resize',stick\)/,
+                 `${app}: the height is measured once, so a window narrow enough to wrap the header `
+                 + 'goes back to landing wrong');
+    // And the fallback, for a reader with scripting off: a target that clears nothing is worse than
+    // one that clears an approximation.
+    assert.match(shell, /var\(--stick, *\d+px\)/, `${app}: no fallback when the script does not run`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -11293,61 +11424,27 @@ test('analytics: the report colours SQL the way the panel does', () => {
 // Derived from the stylesheets rather than compared as text: the two documents share the frame, and
 // the only things they are allowed to disagree on are the values of their own tokens.
 test('the two reports are the same shape', () => {
-  // The CRM keeps its stylesheet in a named constant and Analytics inline in the document; both are
-  // read, because what is being compared is the frame and not where it is stored.
-  const crm = sliceConst('apps/crm/export.js', 'EXPORT_CSS');
-  const ana = (() => {
-    const js = read('apps/analytics/sidepanel.js');
-    const at = js.indexOf('<!doctype html>');
-    assert.ok(at > 0, 'the Analytics report builds no document - the derivation broke');
-    const a = js.indexOf('<style>', at) + '<style>'.length;
-    return js.slice(a, js.indexOf('</style>', a));
-  })();
-  assert.ok(crm.length > 200 && ana.length > 200, 'a stylesheet did not lift');
+  // The strongest form this can take: the shape is **one file**, and the two products carry copies
+  // of it that are the same bytes. Comparing rendered rules was the previous version and it only ever
+  // caught what somebody had thought to list - which is how the two reports came to differ by a
+  // filter box, a grouped index, cards, nineteen anchors and three empty states while a case said
+  // «same shape» about five CSS rules.
+  const crm = readFileSync(join(ROOT, 'apps/crm/reportshell.js'));
+  const ana = readFileSync(join(ROOT, 'apps/analytics/reportshell.js'));
+  assert.ok(crm.length > 3000, 'the shared report shell did not lift - the derivation broke');
+  assert.deepEqual(crm, ana,
+    'apps/crm/reportshell.js and apps/analytics/reportshell.js differ - the shape of a report is one '
+    + 'file, and a second copy is a second place to drift');
 
-  // The frame, rule by rule. A report that loses one of these stops being the same document.
-  for (const rule of ['header{position:sticky', 'main{max-width:1000px', 'footer{border-top',
-                      'footer>div{max-width:1000px', 'body{margin:0']) {
-    for (const [name, sheet] of [['crm', crm], ['analytics', ana]]) {
-      assert.ok(sheet.replace(/\s+/g, ' ').includes(rule.replace(/\s+/g, ' ')),
-                `${name}: the report's frame has no «${rule}» - the two are different documents again`);
-    }
-  }
-  // And each keeps its own accent, which is the one difference that is deliberate.
-  const accent = (s) => (s.match(/--accent:\s*(#[0-9a-f]{3,8})/i) || [])[1];
-  assert.ok(accent(crm) && accent(ana), 'a report no longer names its accent as a token');
-  assert.notEqual(accent(crm), accent(ana),
-                  'the two reports wear the same accent - the products are told apart by colour, and '
-                  + 'a reader with both open should be able to say which is which');
+  // Each product still wears its own accent, or a reader with both reports open cannot tell them
+  // apart. It is the one thing the shell deliberately does not decide.
+  const accent = (rel) => (read(rel).match(/--accent:\s*(#[0-9a-f]{3,8})/i) || [])[1];
+  const a1 = accent('apps/crm/export.js'), a2 = accent('apps/analytics/sidepanel.js');
+  assert.ok(a1 && a2, 'a product no longer sets its own accent over the shared sheet');
+  assert.notEqual(a1, a2, 'both reports wear the same accent');
 });
 
-// ---------------------------------------------------------------------------------------------
-// Two reports, two footers, and one of them did not say what had made it.
-//
-// The CRM report's foot carries the attribution - «Generated by Zoost · Created by <author>», the
-// sponsor links - and the legal notice. The Analytics one carried a read-only sentence and the legal
-// notice, and **no attribution at all**: the file that leaves the machine, and is the whole reason
-// the export exists, did not name the product that wrote it. Neither had what the other had.
-// Reported as «I think the two footers differ», which they did, in the direction that matters.
-//
-// Derived from what the panels already declare rather than from a list of strings: whatever names,
-// authors and sponsor links a panel defines for itself, its report's foot has to carry. A third
-// product would be held to the same sentence without anyone adding it here.
-test('both reports say what made them, and carry the same notice', () => {
-  for (const [app, file] of [['crm', 'apps/crm/export.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
-    const js = read(file);
-    const foot = js.slice(js.indexOf('<footer>'), js.indexOf('</footer>'));
-    assert.ok(foot.length > 40, `${app}: no footer in the report at all - the derivation broke`);
-    for (const k of ['PRODUCT_NAME', 'PRODUCT_AUTHOR', 'SPONSOR_URL', 'KOFI_URL', 'LEGAL_DISCLAIMER']) {
-      assert.ok(foot.includes(k),
-                `${app}: the report's foot never uses ${k}, which the panel defines - the copy that `
-                + 'goes to somebody without the extension is the one that has to say who made it');
-    }
-    // The legal notice is a paragraph, not a run-on: it is set apart in both, or the reader gets one
-    // sentence of credit welded to eight lines of disclaimer.
-    assert.match(foot, /class="legal"/, `${app}: the disclaimer is not a block of its own`);
-  }
-});
+
 
 // ---------------------------------------------------------------------------------------------
 // One of a set that did not do what its siblings do.
@@ -11791,9 +11888,10 @@ test('crm: the exported report states how much of the org its graph covers', () 
     wfAnchor: (x) => `wf-${x}`, schAnchor: (x) => `sch-${x}`, connAnchor: (x) => `conn-${x}`,
     hl: (x) => String(x || ''), first: (x) => String(x || ''), params: () => '',
     EXPORT_CSS: '', sanitize: (x) => String(x || ''), KOFI_URL: '', SPONSOR_URL: '',
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
   };
   const build = (counts) => {
-    const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+    const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], { ...globals });
     const node = { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha',
                    calls: [], called_by: [], dead_suspect: true };
     return buildExportHtml([{ api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', node }],
@@ -11965,6 +12063,7 @@ test('crm: Settings can set every export scope the panel offers', () => {
 // runtime»), which is correct for what it is about and is why nothing caught it.
 test('crm: both reports carry the run counts and the credit reading', () => {
   const globals = {
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
     SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
     envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
     wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
@@ -11990,7 +12089,7 @@ test('crm: both reports carry the run counts and the credit reading', () => {
   };
   const scope = { functions: true, failures: true };
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml([], [], { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
   assert.match(html, /nightlyDigest/, 'the HTML report does not name the busiest functions the panel lists');
   assert.match(html, /412/, 'the HTML report drops the run counts');
@@ -11999,7 +12098,7 @@ test('crm: both reports carry the run counts and the credit reading', () => {
     'the run counts are in the report without the caveat the panel gives them - and a report is read ' +
     'without the panel beside it');
 
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
   const md = buildExportMarkdown({ fns: [], mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [],
                                    conns: [], fails, acts: [], actUsers: new Map() }, scope);
   assert.match(md, /nightlyDigest/, 'the Markdown report does not name the busiest functions');
@@ -12214,6 +12313,7 @@ test('the panel, the bridge and the hook share one vocabulary, not two lists', (
 // declaration, which no amount of reading the diff finds and one execution does.
 test('crm: both reports are produced with every chapter ticked and something in every list', () => {
   const globals = {
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
     SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
     envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
     wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
@@ -12259,14 +12359,14 @@ test('crm: both reports are produced with every chapter ticked and something in 
                 [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], health,
                 [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope];
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml(...args);
   for (const f of fns) assert.ok(html.includes(f.display_name), `${f.display_name} is not in the report`);
   assert.ok(html.includes('info &quot;x&quot;') || html.includes('info "x"'),
             'source was ticked and no source reached the document');
 
   // The Markdown twin takes the same data as one object - a different shape, same fixture.
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
   const md = buildExportMarkdown({ fns, mods, g: args[2], modRefs: {}, wfs: args[4], scheds: args[5],
                                    conns: args[6], fails: health, acts: args[8], actUsers: new Map() },
                                  scope);
@@ -12304,6 +12404,7 @@ test('crm: both reports are produced with every chapter ticked and something in 
 // two tables the contents carry, and the fixtures are one of everything and none of anything.
 test('crm: the export contents name the chapters the export has, in the order it has them', () => {
   const globals = {
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
     SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
     envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
     wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
@@ -12321,7 +12422,7 @@ test('crm: the export contents name the chapters the export has, in the order it
     MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
            hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
   };
-  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
 
   // Everything ticked in both runs: this is about the composition, not about the scope - a chapter
   // left out by the reader is left out of both halves by construction, and the interesting case is
@@ -12345,9 +12446,19 @@ test('crm: the export contents name the chapters the export has, in the order it
   // The claim above, made good rather than asserted: this exercises one product because only one
   // builds a contents index. A second one that started to would otherwise be covered by nothing and
   // nobody would know, which is the shape this whole grid is about.
+  // The index is drawn by the shared shell now - one file, carried by both products - so the claim
+  // this line makes is different and stronger: there is exactly **one** implementation of a contents
+  // index, and every copy of it is the same file. A second one appearing in a builder is the drift
+  // this whole shell exists to end.
+  // Nobody writes their own index any more. Both builders call `reportToc`, and the markup for a
+  // contents exists in one file - which is what stops the two from being two ideas about one thing.
   const withToc = shippedScripts().filter((rel) => read(rel).includes('class="toch"'));
-  assert.deepEqual(withToc, ['apps/crm/export.js'],
-    `these scripts write a contents index and this check reads one of them: ${withToc}`);
+  assert.deepEqual(withToc.sort(), ['apps/analytics/reportshell.js', 'apps/crm/reportshell.js'],
+    `a builder writes its own contents markup instead of calling reportToc: ${withToc}`);
+  for (const app of ['crm', 'analytics']) {
+    const rel = app === 'crm' ? 'apps/crm/export.js' : 'apps/analytics/sidepanel.js';
+    assert.match(read(rel), /reportToc\(/, `${app}: its report builds no contents at all`);
+  }
 
   for (const [what, build] of runs) {
     const html = build();
@@ -12396,7 +12507,7 @@ test('analytics: the export contents name the chapters in the order the document
   const globals = {
     window: win,
     chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
-    PRODUCT_NAME: 'Zoost', LEGAL_DISCLAIMER: 'x',
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', LEGAL_DISCLAIMER: 'x',
     bound: { workspace: 'w', name: 'W', label: '', origin: 'o' },
     views: [], schema: {}, relations: [], deps: null,
     esc: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
@@ -12475,6 +12586,7 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
   // angle bracket, and a name carrying one silently adds a column to somebody's table.
   const NASTY = '<script>alert(1)</script>"\'&|x';
   const globals = {
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
     SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
     envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
     wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
@@ -12500,7 +12612,7 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
   for (const k of ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules',
                    'actions', 'addresses', 'connections', 'failures', 'health']) scope[k] = true;
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml([], mods, { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
   assert.ok(html.includes('&lt;script&gt;'),
     'the hostile name never reached the report - the fixture is not exercising what it claims to');
@@ -12838,6 +12950,7 @@ test('crm: every area the panel reports on is an area the panel can record', asy
 
   const calls = [];
   const globals = {
+    chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
     // Deliberately minimal: `TAB` holds one tab, so an area that is admitted only because it is a
     // tab cannot hide an area that is admitted for no reason at all.
     TAB: { functions: { id: 'functions', label: 'Functions' } },

@@ -9,76 +9,11 @@
  */
 
 // ---------- export a self-contained, shareable HTML report ----------
-const EXPORT_CSS = `
-:root{--ink:#1f2937;--muted:#6b7280;--accent:#2563eb;--line:#e5e7eb}
-*{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:var(--ink);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;z-index:5}
-header h1{margin:0 0 4px;font-size:20px}.meta{color:var(--muted);font-size:13px;font-family:ui-monospace,monospace}
-.credit{margin-top:6px;color:#94a3b8;font-size:12px}.credit a{color:var(--accent)}
-#q{margin-top:10px;width:100%;max-width:520px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
-main{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
-h2{font-size:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:6px;margin:36px 0 10px}
-h3.grp{font:12px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:22px 0 8px}
-h3.grp .cnt{color:#9aa4b2}
-.item{border:1px solid var(--line);border-radius:10px;background:#fff;margin:10px 0;overflow:hidden}
-.ih{padding:9px 12px;border-bottom:1px solid var(--line);background:#fbfcfe;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.ih b{font-size:14px}.ih code{background:#eef1f5;padding:1px 6px;border-radius:5px;font-size:12px;color:#2563eb}
-.ih .gen{color:#8b5cf6;font:12px ui-monospace,monospace}
-.item{scroll-margin-top:120px}
-.refs{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;display:flex;flex-direction:column;gap:3px;background:#fcfdff}
-.refs a,.ftbl td.mono a{color:var(--accent);text-decoration:none}.refs a:hover,.ftbl td.mono a:hover{text-decoration:underline}
-.refs .none{color:#9aa4b2}
-.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;text-transform:uppercase}
-.badge.rest{background:#ede9fe;color:#6d28d9}.badge.no{background:#fef3c7;color:#92400e}
-pre.code{margin:0;padding:12px 14px;background:#0f1622;color:#cbd5e1;font:12.5px/1.55 ui-monospace,monospace;white-space:pre;overflow:auto}
-.c-com{color:#5b6b82;font-style:italic}.c-str{color:#7ee0a6}.c-num{color:#e0a86b}.c-kw{color:#7aa2f7;font-weight:600}.c-type{color:#c792ea}.c-fn{color:#82d2ff}
-table.ftbl{width:100%;border-collapse:collapse;font:12.5px ui-monospace,monospace}
-.ftbl th{background:#f6f8fb;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase}
-.ftbl td{padding:5px 10px;border-bottom:1px solid var(--line)}.ftbl td.mono{color:#2563eb}
-.toc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}
-.toc>h2{margin:0 0 8px;border:0;padding:0}
-.toch{font-size:13px;margin:14px 0 6px;color:var(--ink);text-transform:none;letter-spacing:0}
-.toctbl{width:100%;border-collapse:collapse;font:12.5px system-ui,-apple-system,sans-serif}
-.toctbl th{text-align:left;padding:5px 8px;border-bottom:2px solid var(--line);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
-.toctbl td{padding:4px 8px;border-bottom:1px solid var(--line)}
-.toctbl td.mono{font-family:ui-monospace,monospace;color:var(--muted);font-size:11.5px}
-.toctbl td.ct{text-align:center}
-.toctbl a{color:var(--accent);text-decoration:none}.toctbl a:hover{text-decoration:underline}
-.toctbl tbody tr:hover{background:#f6f8fb}
-.toctbl .none{color:#9aa4b2;text-align:center}
-.wfxcond{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;background:#fbfcff}
-.wfxc{color:#2563eb;font-size:11px;font-weight:600;margin-bottom:4px}
-.wfxcrit{font:12px ui-monospace,monospace;color:var(--ink);margin-bottom:4px}.wfxcrit i{color:var(--muted)}
-.wfxact{font-size:12px;margin:3px 0}.wfxact b{color:var(--muted);font-weight:600;margin-right:4px}
-.wfxact a{color:var(--accent);text-decoration:none}.wfxact a:hover{text-decoration:underline}
-.wfact-x{display:inline-block;background:#eef1f5;color:var(--muted);border-radius:5px;padding:1px 6px;margin:1px 3px 0 0;font-size:11px}
-.hxcov{font-size:12px;color:var(--muted);line-height:1.6;background:#f6f8fc;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px 0 14px}
-.hxsec{margin:12px 0}.hxsec h3{font-size:13px;margin:0 0 3px;display:flex;align-items:center;gap:8px}
-.hxn{font:11px ui-monospace,monospace;padding:1px 8px;border-radius:10px}
-.hxn.warn{background:#fdf0d5;color:#8a5a12}.hxn.bad{background:#fbe0e0;color:#b42318}.hxn.ok{background:#d9f3e6;color:#177a4a}
-.hxd{font-size:11.5px;color:var(--muted);margin:0 0 6px}
-/* Three paragraphs in this report carry class="note" - the withheld sender addresses, the freshness
-   of the failures reading - and the class was defined nowhere, so the lines meant to stand out
-   rendered as ordinary body text. The same defect as .k / .card / .note / b.ui on the site, and
-   csscheck cannot see it: this stylesheet is a template literal inside a .js file, which is also why
-   no backtick may appear in this comment. */
-.note{color:#8a5a00;background:#fff8e6;border:1px solid #e5c76b;border-radius:6px;padding:8px 10px;font-size:13px;margin:8px 0}
-.hxrow{padding:3px 8px;border:1px solid var(--line);border-radius:6px;margin:2px 0;font:12px ui-monospace,monospace}
-.hxrow .hxm{color:var(--muted);font-size:11px}
-.hxnone{font-size:11.5px;color:#177a4a;margin:0}
-.tochx{font-size:12px;margin:2px 0 6px}.tochx a{color:var(--accent);text-decoration:none}
-.empty{color:var(--muted)}
-/* A band across the page, like the header, with its text on the same column the body uses.
-   It was a centred 1000px block on the page background, so on a wide window it read as a
-   floating paragraph rather than the foot of the document. Reported.
-   No backticks in here: this stylesheet is a template literal, and one ends it. */
-footer{border-top:1px solid var(--line);background:#fff;padding:18px 20px 32px;color:var(--muted);font-size:12px}
-footer>div{max-width:1000px;margin:0 auto}
-
-tr.relrow.sys td{color:#9aa4b2;background:#fbfbfc}
-
-footer .legal{margin-top:6px;font-size:11px;line-height:1.5;opacity:.75;max-width:70ch}
-`;
+// The stylesheet, the header, the card, the empty state and the foot live in `reportshell.js`,
+// byte-identical in both products, because two reports from one maker that are shaped
+// differently are two products to whoever receives them. What stays here is this report's own
+// chapters. See that file for what the measurement was.
+const EXPORT_CSS = REPORT_CSS + ':root{--accent:#2563eb}';
 // The per-area dates, for the reports. A report that says "generated today" while a third of it is
 // four months old is the misleading half-truth this whole thread is about - so every report states
 // when each part was last read, whether or not anything is behind. The reader gets the fact; nobody
@@ -466,35 +401,38 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
           + '</tbody></table>'
         : '<p class="empty">Nothing had failed when this was read.</p>')
   ) : '';
-  const toc = `<nav class="toc"><h2>Contents</h2>`
-    + `<h3 class="toch">Functions (${fns.length})</h3>`
-    + `<table class="toctbl"><thead><tr><th>Function</th><th>API name</th><th>Namespace</th><th>REST</th><th>DL</th><th>Uses</th><th>Used by</th><th title="source lines">Lines</th><th title="invokeurl + Zoho service tasks">Calls</th></tr></thead><tbody>${fnRows.join('') || '<tr><td colspan="9" class="none">none</td></tr>'}</tbody></table>`
-    + `<h3 class="toch">Modules (${mods.length})</h3>`
-    + `<table class="toctbl"><thead><tr><th>Module</th><th>API name</th><th>Generated</th><th>Kind</th><th>Fields</th><th>Ref by</th></tr></thead><tbody>${modRows.join('') || '<tr><td colspan="6" class="none">none</td></tr>'}</tbody></table>`
-    // Relations sits here and not further down, and carries no condition, because both are
-    // properties of the chapter it points at: the document puts it third - `SCOPE_KEYS`' own
-    // order - and emits its heading whether or not there is anything in it, the same as
-    // Functions and Modules above. The contents said the other thing on both counts.
-    + `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue - related-list API names for Deluge</a></div>`
-    + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th><th title="Actions that do not run immediately">Scheduled</th><th>Last run</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
-    + (scheds.length ? `<h3 class="toch">Schedules (${scheds.length})</h3><table class="toctbl"><thead><tr><th>Schedule</th><th>Function</th><th>Frequency</th><th>Status</th></tr></thead><tbody>${schRows.join('')}</tbody></table>` : '')
-    + (acts.length ? `<h3 class="toch">Actions (${acts.length})</h3><div class="tochx"><a href="#actions">Notifications, field updates, tasks and webhooks - and which rules fire each</a></div>` : '')
-    + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue - connectors, status, and which functions use each</a></div>` : '')
-    + (failHtml ? `<h3 class="toch">Failures (${failRows.length})</h3><div class="tochx"><a href="#failures">What is breaking, as read on ${esc(fails.at ? new Date(fails.at).toLocaleDateString() : 'an unknown date')}</a></div>` : '')
-    + (scope.health ? `<h3 class="toch">Health <span class="cnt">${healthTotal}</span></h3><div class="tochx"><a href="#health">Orphans ${hOrph.length} \u00b7 Unresolved ${hUnres.length} \u00b7 Ambiguous ${hAmbig.length} \u00b7 Broken ${hBroken.length} \u00b7 Missing FK ${hFK.length}</a></div>` : '')
-    + `</nav>`;
+  // **An index, not a copy of the document.** This listed every row of every chapter - on a real org
+  // that is a hundred and fifty functions inside a box called «Contents», and then the Functions
+  // chapter repeating all of them underneath. Reported, in the only words that fit: there is a thing
+  // called contents and right below it there are the functions.
+  //
+  // A contents says what is in the document and how much of it, and gets you there in one click. The
+  // rows belong to the chapters. It is `reportToc` from the shared shell now, which is what the other
+  // product's report uses, so the two indexes are the same object rather than two ideas about one.
+  const toc = reportToc([
+    { title: 'Functions', count: fns.length, href: 'functions', note: 'Inventory, namespaces, cross-references' },
+    { title: 'Modules', count: mods.length, href: 'modules', note: 'Fields, types, lookups, picklists' },
+    { title: 'Relations', count: allRels.length, href: 'relations', note: 'Relation-first catalogue - related-list API names for Deluge' },
+    wfs.length ? { title: 'Workflows', count: wfs.length, href: 'workflows', note: 'Triggers, criteria, actions' } : null,
+    scheds.length ? { title: 'Schedules', count: scheds.length, href: 'schedules', note: 'Frequency, status, the function each runs' } : null,
+    acts.length ? { title: 'Actions', count: acts.length, href: 'actions', note: 'Notifications, field updates, tasks and webhooks - and which rules fire each' } : null,
+    conns.length ? { title: 'Connections', count: conns.length, href: 'connections', note: 'Connectors, status, and which functions use each' } : null,
+    failHtml ? { title: 'Failures', count: failRows.length, href: 'failures', note: `What is breaking, as read on ${esc(fails.at ? new Date(fails.at).toISOString().slice(0, 10) : 'the last reading')}` } : null,
+    scope.health ? { title: 'Health', count: healthTotal, href: 'health', note: `Orphans ${hOrph.length} \u00b7 Unresolved ${hUnres.length} \u00b7 Ambiguous ${hAmbig.length} \u00b7 Broken ${hBroken.length} \u00b7 Missing FK ${hFK.length}` } : null,
+  ].filter(Boolean));
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
     + `<title>${esc(PRODUCT_NAME)} - ${esc(ws.label || ws.instance || 'Export')}</title>`
     + `<meta name="author" content="${escA(PRODUCT_AUTHOR)}"><meta name="generator" content="${escA(PRODUCT_NAME)}"><meta name="description" content="Export of Zoho CRM Deluge functions and module schema.">${PRODUCT_URL ? `<link rel="canonical" href="${escA(PRODUCT_URL)}">` : ''}`
     + `<style>${EXPORT_CSS}</style></head><body>`
-    + `<header><h1>${esc(PRODUCT_NAME)} - Export</h1>`
-    + `<div class="meta">${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
-    + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
-    + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
+    + reportHead(esc(ws.label || ws.instance || 'Export'),
+                 [`${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}`,
+                  `Data read from Zoho: ${esc(freshnessLine())}`],
+                 'Filter functions & modules\u2026',
+                 { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version })
     + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
-    + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${escA(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${escA(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${escA(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
-    + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
+    + reportFoot(PRODUCT_NAME, PRODUCT_URL)
+    + `<script>${REPORT_FILTER_JS}</script></body></html>`;
 }
 
 async function loadExportData(op = beginWorkspaceOp()) {
@@ -829,10 +767,13 @@ function buildExportMarkdown(d, scope) {
       md += 'Nothing had failed when this was read.\n\n';
     }
   }
-  md += `\n---\n\n## About this file\n\nGenerated by **${PRODUCT_NAME}**${PRODUCT_URL ? ` (${PRODUCT_URL})` : ''}, created by ${PRODUCT_AUTHOR}.\n\n${LEGAL_DISCLAIMER}\n`;
+  // One line, the way the HTML report's foot is one line: what made this, and a link to it. The
+  // section that used to be here carried the author and the legal disclaimer as well, and the two
+  // formats of one export are not allowed to say different amounts about themselves.
+  md += `\n---\n\nGenerated by [${PRODUCT_NAME}](${PRODUCT_URL})\n`;
   // Derived from the chapters that were actually written. See the note beside CONTENTS.
   const chapters = [...md.matchAll(/(?:^|\n)## ([^\n(]+)/g)].map((m) => m[1].trim())
-    .filter((h) => h !== 'Index' && !/^About this file/.test(h));
+    .filter((h) => h !== 'Index');
   md = md.replace(CONTENTS, `- Contents: ${[...new Set(chapters)].join(', ') || 'nothing'}\n\n`);
   return md;
 }
