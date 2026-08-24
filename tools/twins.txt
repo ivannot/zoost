@@ -36,8 +36,8 @@ beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	655fb146539c	73de5bd0e49d	divergent
-buildExportMarkdown	ad47b797d821	fbf90f473b83	divergent
+buildExportHtml	d67c2353c9b8	7f27ffc288ff	divergent
+buildExportMarkdown	a15fa042450c	fbf90f473b83	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildReport	3de3b69b14b5	3de3b69b14b5	identical
@@ -210,8 +210,9 @@ renderRx	da8caf217c7f	da8caf217c7f	identical
 reportAbsent	140c532eaa58	140c532eaa58	identical
 reportFacts	991ceaf03121	24f523b42a89	divergent
 reportFoot	5369198eb387	5369198eb387	identical
-reportHead	3dfe0d0350f8	3dfe0d0350f8	identical
+reportHead	38270d601c35	38270d601c35	identical
 reportItem	147df4e7dedf	147df4e7dedf	identical
+reportMark	267dd72f6fe1	267dd72f6fe1	identical
 reportToc	bffb45a529c6	bffb45a529c6	identical
 requirePerm	8477c2cb408e	8477c2cb408e	identical
 resetView	601213423bbe	f67417c0398c	divergent

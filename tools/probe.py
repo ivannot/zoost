@@ -788,6 +788,30 @@ AN = """
       $('dback').click(); await wait(800);
       if (String(selectedId) !== String(a)) say('back from a link landed on ' + selectedId);
     }
+    // **Every internal link in the report lands somewhere.** A link that goes nowhere is worse than
+    // plain text: the reader clicks it, arrives at the same place, and concludes the document is
+    // broken. It happened - `#v-<id>` for every report and dashboard named in a table cell, because
+    // the link was decided by «this name is a view in the org» while the anchor exists only for the
+    // views that get a heading of their own. Reported from a real workspace with the dead link.
+    //
+    // Driven on the *real* builder against the sample, and across several scopes, because unticking
+    // a chapter is the second way to produce it: the anchors go and the links stay. The scopes are
+    // built from SCOPE_KEYS, so a chapter added tomorrow is exercised without anyone remembering.
+    const scopes = [Object.fromEntries(SCOPE_KEYS.map((k) => [k, true]))];
+    for (const off of SCOPE_KEYS) scopes.push(Object.assign({}, scopes[0], { [off]: false }));
+    let anchorsSeen = 0;
+    for (const sc of scopes) {
+      const doc = await buildExportHtml(sc);
+      const ids = new Set([...doc.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+      const hrefs = [...doc.matchAll(/href="#([^"]*)"/g)].map((m) => m[1]).filter(Boolean);
+      anchorsSeen += hrefs.length;
+      const dead = [...new Set(hrefs.filter((h) => !ids.has(h)))];
+      if (dead.length)
+        say(dead.length + ' link(s) point at nothing with scope ' + JSON.stringify(sc) + ', e.g. #' + dead[0]);
+    }
+    // If a report has no internal links at all, this loop proves nothing and is the broken thing.
+    if (!anchorsSeen) say('no internal links in any scope - this check is measuring nothing');
+
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """
@@ -931,6 +955,15 @@ PULL_AN = r"""
     if (/interrupted|could not|failed/i.test(line2)) say('the second pull ended on: ' + line2);
     if (JSON.parse(fs.read(base + '.pull-state.json') || '{}').state !== 'complete')
       say('the second pull left the marker at ' + JSON.parse(fs.read(base + '.pull-state.json') || '{}').state);
+    // 7. **A finished pull never leaves the panel on a busy line.** It did, and it was reported from
+    //    a real org: «Rebuilding the list…» is a busy status, and when there was nothing to append to
+    //    it nothing ever replaced it - so a pull that had completed sat on a spinner for ever. From
+    //    outside, a finished operation showing a spinner and a hung one are the same thing, which is
+    //    the one thing this panel is not allowed to be. Asserted as the property rather than as that
+    //    sentence: the class says «working», and a trailing ellipsis promises a next line.
+    if (document.getElementById('status').className === 'busy' || /\u2026$/.test(line2))
+      say('the second pull finished on a busy line: ' + line2);
+
     const after2 = fs.dump().filter((p) => p.startsWith(base));
     if (after2.length !== after.length)
       say('a second pull changed the file count from ' + after.length + ' to ' + after2.length);
@@ -1115,6 +1148,15 @@ PULL_CRM = r"""
     // And a source is the source, not an empty file with the right name.
     const one = after.find((p) => p.endsWith('.dg'));
     if (!(fs.read(one) || '').trim()) say(one + ' came out empty');
+
+    // 7. **A finished pull never leaves the panel on a busy line.** It did, and it was reported from
+    //    a real org: «Rebuilding the list…» is a busy status, and when there was nothing to append to
+    //    it nothing ever replaced it - so a pull that had completed sat on a spinner for ever. From
+    //    outside, a finished operation showing a spinner and a hung one are the same thing, which is
+    //    the one thing this panel is not allowed to be. Asserted as the property rather than as that
+    //    sentence: the class says «working», and a trailing ellipsis promises a next line.
+    if (document.getElementById('status').className === 'busy' || /\u2026$/.test($('stxt').textContent))
+      say('the pull finished on a busy line: ' + $('stxt').textContent);
     document.title = 'PULL OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """

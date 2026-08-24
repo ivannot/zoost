@@ -43,7 +43,7 @@ FILES = sorted(p for p in (ROOT / 'apps').rglob('*.js'))
 
 # `escQ` is the second of the two, for a value that has already been through `escHtml`: it encodes
 # the delimiters and nothing else, because encoding `&` twice is its own defect.
-ATTR_SAFE = re.compile(r'\b(escA|escQ)\s*\(')
+ATTR_SAFE = re.compile(r'\b(escA|escQ|escReportA)\s*\(')
 
 # ...and the name is not the property. This file's own docstring throws away a list of identifiers
 # «known to be ours» on the grounds that **an allow-list of names is a checklist wearing a script's
@@ -58,7 +58,11 @@ ATTR_SAFE = re.compile(r'\b(escA|escQ)\s*\(')
 # So the name is now a pointer to a definition, and the definition has to hold. What an attribute
 # escaper must encode is **both delimiters**: a value that meets `'` and passes through is unsafe the
 # day a single-quoted attribute is written, and nothing here would have said so.
-ESCAPER_DEF = re.compile(r'\b(?:const|let|var|function)\s+(escA|escQ)\s*=?\s*(?:\([^)]*\)|[\w$]+)\s*(?:=>)?'
+# `escReportA` is the report shell's own, and it was missing from this list - so twelve call sites
+# that *are* escaped sat in `tools/attrraw.txt` as raw ones. A ledger of things that are fine is
+# worse than no ledger: it is where a real one would hide. The name earns nothing by being here;
+# it is a pointer to a definition, and the definition is held to the same property as the others.
+ESCAPER_DEF = re.compile(r'\b(?:const|let|var|function)\s+(escA|escQ|escReportA)\s*=?\s*(?:\([^)]*\)|[\w$]+)\s*(?:=>)?'
                          r'(?P<body>[^\n]*)')
 # What it *emits*, not what characters appear in it. The first version of this looked for `"` and `'`
 # in the body and every escaper passed - including the weak one - because both characters are there as

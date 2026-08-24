@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:51e8b6f4b9108c9c -->
+<!-- translated-from: site/privacy.html sha256:417c6f09071d49ae -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -292,9 +292,11 @@
       shell di suite - <code>one.zoho.*</code> e <code>one.zohocloud.ca</code> per Zoho One,
       <code>crmplus.zoho.*</code> e <code>crmplus.zohocloud.ca</code> per Zoho CRM Plus - che non
       legge. Dentro una di quelle, il tuo Zoho CRM è una pagina come le altre su <code>crm.zoho.*</code>
-      in un frame suo, e quel frame è l'unica cosa con cui l'estensione parla. Gli host delle shell
-      sono elencati perché il pannello possa capire che la scheda su cui sei è Zoho e trovare quel
-      frame; dentro la shell non viene iniettato niente. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
+      in un frame suo, e quel frame è l'unica cosa che l'estensione legge. Gli host delle shell
+      sono elencati perché il pannello possa trovare quel frame. Trovarlo costa una riga che gira in
+      ogni frame della scheda, compreso quello della shell, e risponde con l'indirizzo di quel frame;
+      lì non viene letto altro e non viene mandato niente. Il ponte che legge davvero viene iniettato
+      solo nei frame su <code>crm.zoho.*</code>. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
       <code>analytics.zohocloud.ca</code>, e le stesse due shell per la stessa ragione: un workspace
       aperto dentro Zoho One o Zoho CRM Plus è un frame su <code>analytics.zoho.*</code>, ed è il
       frame quello che legge.

@@ -3345,9 +3345,26 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
   // belongs to no view in this export stays plain text rather than becoming a link to nothing.
   const vAnchor = (id) => 'v-' + String(id).replace(/[^\w.-]+/g, '_');
   const byName = new Map(views.map((v) => [v.name, v.id]));
-  const vLink = (name) => (byName.has(name)
-    ? `<a href="#${escA(vAnchor(byName.get(name)))}">${esc2(name)}</a>`
-    : esc2(name));
+  // **Which anchors this document will actually contain**, derived from `secs` - the same list the
+  // loop below draws from - rather than from the org. The first version linked any name that was a
+  // view, and a view is not a section: only tables and query tables get a heading of their own, so
+  // every report and dashboard named in a table cell or in a health list became `#v-<id>` pointing
+  // at nothing. Reported from a real workspace, with the dead link pasted in.
+  //
+  // It is the same shape as everything else today: one value stood for two things - «is in the org»
+  // and «is in this report» - and they part company as soon as a chapter is unticked, which is a
+  // second way to produce the identical defect. A link that goes nowhere is worse than plain text,
+  // because the reader clicks it and concludes the document is broken.
+  const anchored = new Set();
+  for (const x of secs) {
+    if (x.tables) for (const t of x.tables) anchored.add(vAnchor(t.id));
+    else if (x.id === 'sql') for (const v of views) if (v.type === 'QueryTable') anchored.add(vAnchor(v.id));
+  }
+  const vLink = (name) => {
+    const id = byName.get(name);
+    const a = id === undefined ? null : vAnchor(id);
+    return a && anchored.has(a) ? `<a href="#${escA(a)}">${esc2(name)}</a>` : esc2(name);
+  };
   // `links` names the columns that hold a view's name, so those cells become links and every
   // other cell stays escaped text. Declared per table rather than guessed from the content: a
   // column of owners must not turn into links because somebody is named like a view.
@@ -3380,8 +3397,8 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
       body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
         + `<p class="gap">Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.</p>`
         + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict - a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.</p>`
-        + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${vLink(v.name)} <i>${esc2(v.type)}</i></li>`).join('')}</ul>` : '')
-        + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${vLink(t.name)} <i>${esc2(t.kind)}</i></li>`).join('')}</ul>`
+        + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${vLink(v.name)}<span class="ty">${esc2(v.type)}</span></li>`).join('')}</ul>` : '')
+        + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${vLink(t.name)}<span class="ty">${esc2(t.kind)}</span></li>`).join('')}</ul>`
         + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${vLink(v.name)}</li>`).join('')}</ul>`
         + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} - ${esc2(f.error)}</li>`).join('')}</ul>` : '');
     }
@@ -3397,9 +3414,10 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
 </style></head><body>
 ${reportHead(esc2(bound.label || bound.name || bound.workspace),
              [`${esc2(bound.label || bound.name || '')} \u00b7 ${esc2(bound.workspace)} \u00b7 ${views.length} views \u00b7 ${Object.keys(schema).length} tables \u00b7 ${relations.length} relations \u00b7 contents: ${esc2(SCOPE_KEYS.filter((k) => sc[k]).join(', ') || 'nothing')}${sc.sql ? '' : ' \u00b7 SQL excluded'}`,
-              `Data read from Zoho: ${esc2(analyticsFreshness())}`],
-             'Filter views, tables and columns\u2026',
-             { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version })}
+              `Data read from Zoho Analytics: ${esc2(analyticsFreshness())}`],
+             'Filter - hides any row, entry or card that does not match\u2026',
+             // The tile of this product's own icon - see the CRM's report for why.
+             { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version, tile: '#be2a6b' })}
 <main>${toc}
 ${body}</main>
 ${reportFoot(PRODUCT_NAME, PRODUCT_URL)}

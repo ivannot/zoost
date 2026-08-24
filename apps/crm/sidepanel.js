@@ -4991,6 +4991,18 @@ async function pullEverything() {
   if (!op.current()) return;
   // The last area closes with its own line and then this runs - rebuilding a tree of thousands of
   // rows, which is the second place the panel looked stuck at the end of a pull.
+  //
+  // And then its own message became the third, which is what a real org found: «Rebuilding the
+  // list…» is a *busy* line, and when there was nothing to append to it - no refusal, nothing
+  // skipped - nothing ever replaced it. A pull that had finished sat on a spinner indefinitely,
+  // and from outside a finished pull and a hung one look the same, which is the one thing this
+  // panel is not allowed to do. The twin gets it right: Zoho Analytics ends on its own summary.
+  //
+  // So the summary the last area wrote is held across the rebuild and put back. The note is
+  // appended to *that* rather than to whatever the status happens to say by then - the same
+  // defect one line down, which read «Rebuilding the list… · Workflows skipped by your settings».
+  const summary = $('stxt').textContent;
+  const summaryKind = $('status').className;
   op.say('Rebuilding the list\u2026', 'busy');
   try { await rebuildActive(); } catch (_) {}
   renderTabs();                                   // a refusal discovered just now changes the set
@@ -4999,7 +5011,7 @@ async function pullEverything() {
   // whole org without saying so is a mirror you cannot trust.
   const note = forbiddenNote()
     + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '');
-  if (note) setStatus($('stxt').textContent + note, 'warn');
+  if (op.current()) setStatus(summary + note, note ? 'warn' : summaryKind);
   // In a finally, because the body above calls renderers and helpers that are not individually
   // guarded - one exception used to leave `pullBusy` true and the whole panel locked until reopen.
   } finally { setPullBusy(false); }

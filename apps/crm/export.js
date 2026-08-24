@@ -427,9 +427,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + `<style>${EXPORT_CSS}</style></head><body>`
     + reportHead(esc(ws.label || ws.instance || 'Export'),
                  [`${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}`,
-                  `Data read from Zoho: ${esc(freshnessLine())}`],
-                 'Filter functions & modules\u2026',
-                 { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version })
+                  `Data read from Zoho CRM: ${esc(freshnessLine())}`],
+                 'Filter - hides any row, entry or card that does not match\u2026',
+                 // The tile of this product's own icon, so the mark in the header is the one the
+                 // reader has in their toolbar. It is the only thing about the two headers that
+                 // differs, and it is the thing that says which export this is.
+                 { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version, tile: '#2563eb' })
     + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + reportFoot(PRODUCT_NAME, PRODUCT_URL)
     + `<script>${REPORT_FILTER_JS}</script></body></html>`;
@@ -580,7 +583,7 @@ function buildExportMarkdown(d, scope) {
   let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
-  md += `- Data read from Zoho: ${freshnessLine()}\n\n`;
+  md += `- Data read from Zoho CRM: ${freshnessLine()}\n\n`;
   // What is in this file, not what was ticked. The line listed the scope, and the scope includes
   // `health` - which this report has no chapter for at all. So a reader, and the assistant this file
   // is written for, were told the export covers an audit that is not in it. «Nothing in a report

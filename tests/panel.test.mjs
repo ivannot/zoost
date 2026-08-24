@@ -8783,7 +8783,11 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     bound: { instance: 'yourinstance', org: '1234567890', label: 'Acme', base: 'https://crm.zoho.eu' },
     envOf: () => 'eu', freshnessLine: () => 'just now',
     byField: (f) => (a, b) => String(a[f]).localeCompare(String(b[f])),
-    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    wfScheduled: () => ({ count: 0, delays: [] }),
+    // The real one, lifted from the panel. As a stub answering «false» it made every
+    // workflow-to-function cross-reference unreachable, so the report this case builds had no
+    // internal links to speak of and the anchor sweep below would have proved nothing.
+    isFnAction: (a) => a && (a.type === 'functions' || a.type === 'function'),
     moduleRefusal: () => '', actionKindLabel: (k) => k,
     actStale: () => false, actKept: () => false, actThin: () => false,
     _mdCell: (x) => String(x == null ? '' : x),
@@ -11384,6 +11388,64 @@ test('every script the panels load evaluates on its own', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// A link looks like a link, and nothing that is not one looks like it.
+//
+// Two halves, and both were wrong at once. The link styling was written per context - the reference
+// lines, the index, the workflow actions - so a link written anywhere else rendered as ordinary black
+// text; and the first column of every table was painted the accent colour whether or not its cell was
+// a link, so where the two met the colour said nothing at all. Reported in one sentence after the
+// dead links were removed: there is no telling what is clickable and what is not.
+test('what is clickable in a report looks clickable, and only that', () => {
+  for (const app of ['crm', 'analytics']) {
+    const css = read(`apps/${app}/reportshell.js`);
+    const main = css.match(/\bmain a\{([^}]*)\}/);
+    // If this rule has gone, the case is measuring nothing rather than passing.
+    assert.ok(main, `${app}: no \`main a\` rule - either link styling went back to being written per `
+                    + 'context, or this case is the broken one');
+    assert.match(main[1], /color:var\(--accent\)/, `${app}: links carry no colour of their own`);
+    assert.match(main[1], /text-decoration:underline/,
+                 `${app}: colour alone is the affordance, and a reader who does not see this colour `
+                 + 'has none');
+    // And the other half: no cell may borrow the colour that means «this is a link».
+    for (const [sel, decl] of [...css.matchAll(/([^{};\n\/][^{}\n]*)\{([^}]*)\}/g)]
+      .map((m) => [m[1].trim(), m[2]])) {
+      if (/\ba\b|::?(before|after|hover)|^\.credit|^footer/.test(sel)) continue;
+      assert.ok(!/color:var\(--accent\)/.test(decl),
+                `${app}: \`${sel}\` paints text the link colour without being a link`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The head, the body and the foot are one column.
+//
+// The band and the rule at the bottom span the window - that is what makes them a band - but their
+// *content* has to line up with the sections, or the title starts at the window's edge while the
+// first chapter begins 140px further in. The foot was given its column when that was reported; the
+// head kept its own padding and nobody compared them, which is how two rules meant to agree diverge.
+// Derived from the stylesheet rather than asserted as a number, so changing the column changes one
+// place and this still holds.
+test('the report is one column from the head to the foot', () => {
+  for (const app of ['crm', 'analytics']) {
+    const css = read(`apps/${app}/reportshell.js`);
+    const widths = {};
+    for (const sel of ['main', 'header>.hcol', 'footer>.fcol']) {
+      const m = css.match(new RegExp(sel.replace(/[.>]/g, (c) => '\\' + c) + '\\{([^}]*)\\}'));
+      // If a rule has gone, this case is comparing fewer things than it claims to and says so.
+      assert.ok(m, `${app}: no rule for \`${sel}\` in reportshell.js - either the frame changed or `
+                   + 'this case is the broken one');
+      const w = (m[1].match(/max-width:([^;]+)/) || [])[1];
+      assert.ok(w, `${app}: \`${sel}\` sets no max-width, so it cannot line up with anything`);
+      widths[sel] = w.trim();
+    }
+    const distinct = [...new Set(Object.values(widths))];
+    assert.equal(distinct.length, 1,
+                 `${app}: the head, the body and the foot are on different columns - `
+                 + JSON.stringify(widths));
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // A jump landed under the sticky header, so the reader arrived a few lines into the section.
 //
 // Both reports have a band that stays at the top of the window. Following an anchor puts its target
@@ -11891,7 +11953,7 @@ test('crm: the exported report states how much of the org its graph covers', () 
     chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
   };
   const build = (counts) => {
-    const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], { ...globals });
+    const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], { ...globals });
     const node = { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha',
                    calls: [], called_by: [], dead_suspect: true };
     return buildExportHtml([{ api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', node }],
@@ -12089,7 +12151,7 @@ test('crm: both reports carry the run counts and the credit reading', () => {
   };
   const scope = { functions: true, failures: true };
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml([], [], { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
   assert.match(html, /nightlyDigest/, 'the HTML report does not name the busiest functions the panel lists');
   assert.match(html, /412/, 'the HTML report drops the run counts');
@@ -12355,13 +12417,51 @@ test('crm: both reports are produced with every chapter ticked and something in 
   const health = { at: '2026-08-23T10:00:00Z', usage: { success: 9, failure: 1 }, runs: [],
                    failures: [{ name: 'f', count: 1, reason: 'r' }] };
   const args = [fns, mods, { nodes: { 'ns.alpha': node }, counts: {} }, {},
-                [{ id: '1', name: 'W', module: 'Contacts', actions: [] }], [{ id: '1', name: 'S' }],
+                [{ id: '1', name: 'W', module: 'Contacts', actions: [],
+                   detail: { conditions: [{ instant_actions: { actions: [{ type: 'functions', id: '9', name: 'Alpha' }] } }] } }],
+                [{ id: '1', name: 'S', function_id: '9', function_name: 'Alpha' }],
                 [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], health,
                 [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope];
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml(...args);
   for (const f of fns) assert.ok(html.includes(f.display_name), `${f.display_name} is not in the report`);
+
+  // **Every internal link lands somewhere, in every scope.** A link that goes nowhere is worse than
+  // plain text: the reader clicks it, stays where they are, and concludes the document is broken.
+  // Reported on the Zoho Analytics report, where a name that was a view in the org became a link to
+  // a heading only tables and query tables ever get. The CRM was measured across all thirteen scopes
+  // and is clean - so this is the guard that keeps it that way, and it is a property of the document
+  // rather than a list of the anchors anybody thought of.
+  //
+  // Unticking a chapter is the case that matters: the anchors go and the cross-references stay, and
+  // the fixture above carries a workflow whose action calls a function and a schedule that runs it
+  // so those references exist to dangle.
+  //
+  // **Stated rather than implied:** two plants were tried here - dropping the scope filter on the
+  // workflow data, and letting `fnLink` link any name - and neither made this report produce a dead
+  // anchor, because its cross-references are built from the same filtered lists that draw the
+  // chapters. So this is a guard on a property that currently holds, not a check proven by a
+  // failure. The one that was proven by a failure is in `tools/probe.py`, on the Zoho Analytics
+  // report, where the identical plant produces seventeen dead links.
+  const anchors = (doc) => {
+    const ids = new Set([...doc.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+    const hrefs = [...doc.matchAll(/href="#([^"]*)"/g)].map((m) => m[1]).filter(Boolean);
+    return { hrefs, dead: [...new Set(hrefs.filter((h) => !ids.has(h)))] };
+  };
+  let linksSeen = 0;
+  for (const off of [null, ...keys]) {
+    const sc = {}; for (const k of keys) sc[k] = k !== off;
+    const doc = off === null ? html : buildExportHtml(...args.slice(0, -1), sc);
+    const { hrefs, dead } = anchors(doc);
+    linksSeen += hrefs.length;
+    assert.deepEqual(dead, [], `with ${off === null ? 'everything ticked' : off + ' unticked'}, `
+                               + `${dead.length} link(s) point at no anchor in the document`);
+  }
+  // If the report carries no internal links at all, the sweep above is measuring nothing and this
+  // line is the thing that is broken.
+  assert.ok(linksSeen > 20, `only ${linksSeen} internal link(s) across every scope - the fixture is `
+                            + 'not producing cross-references, so the sweep proves nothing');
   assert.ok(html.includes('info &quot;x&quot;') || html.includes('info "x"'),
             'source was ticked and no source reached the document');
 
@@ -12422,7 +12522,7 @@ test('crm: the export contents name the chapters the export has, in the order it
     MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
            hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
   };
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
 
   // Everything ticked in both runs: this is about the composition, not about the scope - a chapter
   // left out by the reader is left out of both halves by construction, and the interesting case is
@@ -12612,7 +12712,7 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
   for (const k of ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules',
                    'actions', 'addresses', 'connections', 'failures', 'health']) scope[k] = true;
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml([], mods, { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
   assert.ok(html.includes('&lt;script&gt;'),
     'the hostile name never reached the report - the fixture is not exercising what it claims to');
