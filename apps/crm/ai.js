@@ -69,7 +69,7 @@ function friendlyError(e) {
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
-      + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
+      + 'Press \u21bb Refresh in the toolbar to grant it again, then run it again. Nothing was written.';
   }
   return MSG.errPrefix + m;
 }

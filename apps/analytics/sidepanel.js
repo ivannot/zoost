@@ -1195,7 +1195,15 @@ async function pullAll() {
       ? 'Pull was interrupted while writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
       : e && e.forbidden
       ? `Your Zoho Analytics role does not grant access to this workspace${e.status ? ` (Zoho Analytics answered ${e.status})` : ''}. Nothing was written - what is on disk is unchanged.`
-      : 'Pull failed: ' + (e.message || e));
+      // Through `friendlyError`, which exists for exactly this and was used on three paths, none of
+      // them the one that runs longest. A pull is minutes of network work, and Chrome lets the
+      // folder permission lapse while it runs: the last stage then threw
+      // `NotAllowedError: The request is not allowed by the user agent…` and the panel printed it
+      // whole - a platform sentence naming neither the folder nor the button that fixes it, at the
+      // end of a long wait. Reported from a real workspace, which is the only place the wait is
+      // long enough. Nothing was written when it happens here: the marker is the first thing the
+      // write stage does, so a refusal at that moment leaves the previous snapshot intact.
+      : 'Pull failed: ' + friendlyError(e));
     $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
   } finally {
@@ -1256,7 +1264,7 @@ async function pullOne(id) {
     if (interrupted) refuseIncompleteSnapshot();
     setBusy(false, interrupted
       ? `Could not finish writing «${v.name}». The mirror is blocked because its files describe two different moments - run Pull all to repair it.`
-      : `Could not re-read «${v.name}»: ` + (e.message || e));
+      : `Could not re-read «${v.name}»: ` + friendlyError(e));
     $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
   } finally { setPullBusy(false); }
@@ -1305,7 +1313,7 @@ async function retryFailed() {
     if (interrupted) refuseIncompleteSnapshot();
     setBusy(false, interrupted
       ? 'Retry could not finish writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
-      : 'Retry failed: ' + (e.message || e)); $('status').className = 'bad';
+      : 'Retry failed: ' + friendlyError(e)); $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
   } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
 }
@@ -2447,7 +2455,7 @@ function friendlyError(e) {
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
-      + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
+      + 'Press \u21bb Refresh in the toolbar to grant it again, then run it again. Nothing was written.';
   }
   return MSG.errPrefix + m;
 }

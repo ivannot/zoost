@@ -628,7 +628,11 @@ function pullFailMessage(area, e) {
     return `${tabLabel(area)}: your Zoho role does not grant access${e.status ? ` (Zoho answered ${e.status})` : ''}. `
       + 'Nothing was pulled for it, and the tab is hidden - Settings says why, and lets you check again.';
   }
-  return `${tabLabel(area)} pull error: ${(e && e.message) || 'unknown'}`;
+  // Through `friendlyError` for the same reason as the Analytics twin: a pull is minutes of
+  // network work and Chrome lets the folder permission lapse while it runs, so the last stage
+  // throws `NotAllowedError: The request is not allowed by the user agent…` and this printed it
+  // whole - a platform sentence naming neither the folder nor the button that fixes it.
+  return `${tabLabel(area)} pull error: ${friendlyError(e)}`;
 }
 
 // The two halves of a failed pull, always taken together: record what Zoho answered for the area,
