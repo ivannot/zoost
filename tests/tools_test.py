@@ -6794,5 +6794,110 @@ class TheGridCitesChecksThatExist(unittest.TestCase):
                           'either the capability is misfiled or the probe stopped seeing it')
 
 
+class CoverageMeasuresWhatTheRepositoryShips(unittest.TestCase):
+    """The denominator was written by hand, so it flattered the numerator it divided.
+
+    `subject()` was a list of globs - `apps/*/*.js`, `site/*.html`, a few more - and the report said
+    «70 shipped files, 0 opened by no check at all». Outside that list: `README.md`, `site/llms.txt`,
+    `site/_headers`, `site/sitemap.xml`, every Store submission input, the workflows and the release
+    tooling. **77 files of 147**, and a run that had read half the subject printed a full house.
+
+    It is derived now, from the things that actually decide: `build.sh` copies `apps/<app>/.` whole,
+    `site/.assetsignore` says what is published, a submission is built from everything under
+    `store/`, and a workflow or `build.sh` can turn a right tree into a wrong package. This case
+    re-derives the two large categories **by a cruder method than the tool uses** and compares - the
+    discipline this repository asks of anything that inspects a tree, applied to the tool whose whole
+    job is inspecting one.
+
+    It also holds the three measures apart. «Opened» counts a panel a checker read to find a product
+    name, which says nothing about the panel; «read by a tool that proves its own reach» is the
+    nearest this can get to «examined». They were one number, and being one is what made it flatter.
+
+    **The limits, stated.** It does not run the whole tool - `deadcode` alone is half a minute, and a
+    suite that takes that for one case is a suite people stop running. The single-run property is
+    proved on one cheap checker instead, which is where the defect was: two functions, two runs, two
+    minutes without a line of output.
+    """
+
+    def cov(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import coverage
+            return coverage
+        finally:
+            sys.path.pop(0)
+
+    def test_the_subject_is_what_ships_and_what_is_published(self):
+        cats = self.cov().subject()
+        got = {f.resolve() for v in cats.values() for f in v}
+        self.assertGreaterEqual(len(got), 120,
+                                f'the subject is {len(got)} files - it was 147 when this was written, '
+                                'and 70 when it was a hand-written list of globs')
+
+        # Crude re-derivation, on purpose: a second walk that knows nothing about how `subject()`
+        # groups things. Anything it finds and the tool does not is a hole in the denominator.
+        crude = set()
+        for f in (ROOT / 'apps').rglob('*'):
+            if f.is_file() and f.name != '.DS_Store':
+                crude.add(f.resolve())
+        ignored = {ln.strip() for ln in (ROOT / 'site/.assetsignore').read_text(encoding='utf-8').split('\n')
+                   if ln.strip() and not ln.startswith('#')}
+        for f in (ROOT / 'site').rglob('*'):
+            if f.is_file() and f.relative_to(ROOT / 'site').parts[0] not in ignored \
+                    and f.relative_to(ROOT / 'site').as_posix() not in ignored:
+                crude.add(f.resolve())
+        for f in (ROOT / 'store').rglob('*'):
+            if f.is_file():
+                crude.add(f.resolve())
+        for f in (ROOT / '.github/workflows').glob('*.yml'):
+            crude.add(f.resolve())
+        for name in ('README.md', 'build.sh', 'tools/release.sh'):
+            crude.add((ROOT / name).resolve())
+        missing = sorted(p.relative_to(ROOT).as_posix() for p in crude - got)
+        self.assertEqual(missing, [],
+                         f'{len(missing)} file(s) ship or are published and are outside the '
+                         f'denominator, so a coverage figure divides by less than the tree: {missing[:5]}')
+
+        # And nothing the platform is told not to publish is counted as published.
+        published = {f.resolve() for f in cats['site']}
+        for name in ignored:
+            p = (ROOT / 'site' / name).resolve()
+            self.assertNotIn(p, published,
+                             f'{name} is excluded from the upload by .assetsignore and is counted as '
+                             'published, so the denominator contains a file with no URL')
+
+    def test_the_three_measures_stay_three(self):
+        cov = self.cov()
+        src = (ROOT / 'tools/coverage.py').read_text(encoding='utf-8')
+        for key in ('repository_subject_files', 'files_opened_for_any_reason',
+                    'files_opened_by_a_self_auditing_checker', 'files_opened_by_nothing'):
+            self.assertIn(key, src,
+                          f'the report no longer separates «{key}» - «opened» and «examined» were one '
+                          'number once, and being one is what let it flatter')
+        self.assertFalse(hasattr(cov, 'touched_by'),
+                         'the two-run shape is back: reads and output were gathered by separate '
+                         'functions, so every checker ran twice')
+
+    def test_each_checker_is_run_once(self):
+        cov = self.cov()
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import csscheck
+        finally:
+            sys.path.pop(0)
+        calls = []
+        real, cov_checkers = csscheck.main, cov.CHECKERS
+        csscheck.main = lambda *a, **k: (calls.append(1), real(*a, **k))[1]
+        cov.CHECKERS = ['csscheck']
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                cov.main()
+        finally:
+            csscheck.main, cov.CHECKERS = real, cov_checkers
+        self.assertEqual(len(calls), 1,
+                         f'a checker ran {len(calls)} times for one report - it was two, which is why '
+                         'the tool took about two minutes and said nothing while it did')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
