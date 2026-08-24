@@ -290,12 +290,16 @@ def _browser_for(width: int, height: int, scale: float):
         with socket.socket() as s:                 # a free port, asked of the operating system
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
+        # `--no-sandbox` only where the sandbox cannot work. On a CI runner Chrome's own namespaces
+        # are usually unavailable and it dies before opening the port; on a desktop the sandbox is a
+        # real protection and stays on. Deciding by environment rather than always disabling it.
+        extra = ["--no-sandbox", "--disable-dev-shm-usage"] if os.environ.get("CI") else []
         proc = subprocess.Popen(
-            [chrome(), "--headless=new", "--disable-gpu", "--hide-scrollbars",
+            [chrome(), "--headless=new", "--disable-gpu", "--hide-scrollbars", *extra,
              f"--window-size={win_w},{win_h}", f"--force-device-scale-factor={scale}",
              f"--remote-debugging-port={port}", f"--user-data-dir={profile}", "about:blank"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        ws = _ws_url(port)
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        ws = _ws_url(port, proc)
         measured = subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, "--probe"],
                                   capture_output=True, text=True)
         if measured.returncode:
@@ -314,14 +318,34 @@ def _browser_for(width: int, height: int, scale: float):
     raise SystemExit(f"could not get a {width}x{height} viewport out of Chrome (last: {seen})")
 
 
-def _ws_url(port: int) -> str:
-    for _ in range(200):
+def _ws_url(port: int, proc=None) -> str:
+    """The debugging endpoint, once Chrome answers - or why it never did.
+
+    Two things were wrong with waiting ten seconds in silence. A cold machine is slower than a warm
+    one and a CI runner is the coldest there is, so the wait is thirty seconds now. And Chrome's own
+    stderr was sent to /dev/null, which turned every possible cause - no sandbox, no shared memory,
+    a profile it cannot write, a binary that is a wrapper around nothing - into one sentence that
+    named none of them. It cost a red run on GitHub whose log said only «Chrome did not open a
+    debugging port». What it says is the whole of what it knows.
+    """
+    for _ in range(600):
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=1) as r:
                 return json.load(r)["webSocketDebuggerUrl"]
         except Exception:                          # noqa: BLE001 - it is starting; ask again
+            if proc is not None and proc.poll() is not None:
+                break                              # it has exited; waiting out the rest proves nothing
             time.sleep(0.05)
-    raise SystemExit("Chrome did not open a debugging port")
+    said = ""
+    if proc is not None:
+        try:
+            proc.kill()
+            said = (proc.communicate(timeout=5)[1] or b"").decode("utf-8", "replace").strip()
+        except Exception:                          # noqa: BLE001 - a diagnosis is best-effort
+            said = ""
+    raise SystemExit("Chrome did not open a debugging port"
+                     + (f" - it exited saying:\n{said[-2000:]}" if said else
+                        " and said nothing on stderr - is this a real Chrome?"))
 
 
 def _browser_stop():
