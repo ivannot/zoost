@@ -30,12 +30,13 @@ aiUnlock	6e29500b5ee0	6a9f73479d87	divergent
 appRoot	7ce174166cab	7ce174166cab	identical
 applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
+askFrame	3dcad4e94815	fdb572847247	divergent
 askScope	d27f77a79c58	a599531ca679	divergent
 beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	023ed94d5bc3	5a3a689b2797	divergent
+buildExportHtml	023ed94d5bc3	0f058d0ea34d	divergent
 buildExportMarkdown	bec112444e2e	76cf76fadc28	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
@@ -60,7 +61,7 @@ dropWorkspaceState	9970afd3e184	167539fa76e8	divergent
 egoStat	7389bc350b28	7389bc350b28	identical
 emptyReason	f7a750117acd	c6461ab20713	divergent
 engineIncomplete	54560440576d	54560440576d	identical
-ensureBridge	d7215ec858e4	e7f9159cd83c	divergent
+ensureBridge	d7215ec858e4	ae54e773d1c0	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
 entitiesPresent	59df72b07997	59df72b07997	identical
 erApply	e2898a2b70d1	e2898a2b70d1	identical
@@ -121,6 +122,7 @@ fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	1e57d1af56a5	4b046384501d	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	e2fc432f4aa8	e2fc432f4aa8	identical
+goToZoho	44136fa355b3	f4f5c239f644	divergent
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	7753ba68b1be	c9709b0f9729	divergent
@@ -192,7 +194,7 @@ readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	08e31fb8e42d	165c0d67485e	divergent
+refreshContext	08e31fb8e42d	b1ed8fe54d22	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	4d6325a17da8	divergent
@@ -233,12 +235,12 @@ statCounts	df6998dd5891	df6998dd5891	identical
 statOf	ecb587322a1d	4b6573c2ec34	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
 stepSelection	01087cab90ac	060e86ed5417	divergent
-switchTab	147323632e4d	47a3038657d0	divergent
+switchTab	147323632e4d	07e791a9cd39	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 takeTheirs	d909b83865da	d909b83865da	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
-toBridge	692c8692eeff	93b7beed0330	divergent
+toBridge	692c8692eeff	ae1ca2903cfa	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	ffe8067dd5c3	70228434d9a2	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical

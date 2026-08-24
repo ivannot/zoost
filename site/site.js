@@ -14,6 +14,113 @@
   var years = now > FIRST_YEAR ? FIRST_YEAR + '–' + now : String(FIRST_YEAR);
   Array.prototype.forEach.call(document.querySelectorAll('.cyear'), function (el) { el.textContent = years; });
 
+  // Named, and passed by reference. A callback written in place is a scope
+  // `tools/asynccheck.py` cannot enter, and a check that cannot enter a scope says nothing about
+  // what happens in it - which is the difference between «there is nothing there» and «nobody
+  // looked». The chains below are unchanged; only their continuations have names.
+  function jsonOrNull(r) { return r.ok ? r.json() : null; }
+  function showVersions(d) {
+  // Thrown rather than returned, so the one place that words a failure is the one below. This
+  // read `return`, and the badge then simply did not appear: a reader cannot tell a page that
+  // carries no version block from one whose numbers could not be read, and the site's own rule
+  // is that a missing number is said and never left blank. Both siblings already did it - the
+  // /emergency box throws on the same line, and the report form words its own refusal - so this
+  // was one of three, in the same file as one of the other two.
+  if (!d) throw new Error('no answer');
+  fillDocsStamp(d);
+  if (!box) return;
+  // One row per product, four aligned columns. Every number here belongs to exactly one
+  // extension, so every number is inside a row that names it: with two products published, an
+  // unqualified "Web Store 0.13.8 · Latest tag v1.0.0" in a single run does not read as
+  // incomplete, it reads as being about whichever product you had in mind.
+  //
+  // The three are different questions and the labels have to keep them apart: what you can
+  // install today, what has been released and can be checked out and verified, and what is
+  // being built right now. "In development" is spelled out so it cannot be read as available.
+  var bits = [];
+  // Our products, named as ours. "Zoho CRM · Web Store 1.0.0" does not read as "the Zoost for
+  // Zoho CRM you can install is 1.0.0" - it reads as a statement about Zoho's product, and it
+  // is false: 1.0.0 is our version. A label that attributes a property has to name the thing
+  // the property belongs to. (A label that merely *selects* a platform - the nav buttons, the
+  // guide switcher - may say "Zoho CRM", because there you are choosing a platform.)
+  var prods = [
+    ['crm', 'Zoost CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
+    ['analytics', 'Zoost Analytics', d.analytics],
+  ];
+  prods.forEach(function (pr) {
+    var app = pr[0], name = pr[1], v = pr[2];
+    if (!v || (!v.store && !v.repo)) return;
+    // "none yet" rather than "unknown": for a product with no tag those are opposite claims -
+    // one says we failed to look, the other is a fact, and it is the fact RELEASES.md states.
+    //
+    // The tag is a link to its Release, where the archive, its SHA-256 and the two verification
+    // commands are. Not to the .zip: a footer that starts a download when clicked is a surprise,
+    // and the number beside the file is the point rather than the file. This is the one place
+    // the badge stops being a claim and becomes something the reader can check.
+    // Three answers to three different questions, in the order a version travels: what you can
+    // install today, what has been built and signed and can be downloaded now, what is being
+    // worked on. When the release is ahead of the Store - built, attested, waiting for review -
+    // that gap is stated rather than left to be worked out from two numbers. Someone curious can
+    // take the archive from the Release and try it before Google gets to it.
+    // The number, not the tag name. Every other figure in this badge is a version, and
+    // "crm-v1.9.0" beside "1.0.0" reads as two different kinds of thing - the reader has to
+    // work out that one of them contains the other. The tag is still where the link goes,
+    // because that is what identifies the release; it just is not what needs saying.
+    var rel = verOf(v.tag) || v.tag;
+    var tag = v.tag
+      ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(rel) + '</a>'
+      : '<i>' + t('none') + '</i>';
+    // Said only when it is known. "Submitted on 4 Aug - awaiting review" is a fact with a
+    // source: RELEASES.md records the date, and the reader can go and check the row. A tag that
+    // is ahead of the Store but has no such row has *not* been submitted as far as anyone can
+    // tell, and saying "submission pending" there would be asserting something we never
+    // measured - the same shape as every claim this project has had to walk back.
+    var p = v.pending;
+    var state = releaseState(v, d.cws === 'ok');
+    var ahead = state === 'quiet' ? '' : ' <i>' + t(state) + '</i>';
+    // What is actually in review, when that is not the newest tag. Without this the page said
+    // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review - every
+    // word true, the reader misled. Shown only when it adds a fact: newer than the Store, and
+    // not already the release line above.
+    // The state comes from the Chrome Web Store itself now, not from a row we typed after
+    // clicking Submit. That is what makes REJECTED sayable: from outside, a refused submission
+    // and a queued one look identical, so the badge used to promise "awaiting review" about a
+    // version Google had already turned down, indefinitely. An unknown state is not rendered
+    // rather than being folded into the nearest one we recognise.
+    var review = '';
+    var LBL = { PENDING_REVIEW: 'review', REJECTED: 'rejected', STAGED: 'staged' };
+    // Said only when it adds a fact. The release line above already reads "1.38.4, submitted 7
+    // Aug, awaiting review" when the newest tag is the one in the queue, and repeating it is how
+    // this line stopped being read. But that line can only ever express *awaiting* - so a
+    // rejected or approved-not-yet-published revision is new information even on the same
+    // version, and suppressing it there would hide the only state anyone needs to act on.
+    var repeats = p && p.state === 'PENDING_REVIEW' && p.version === verOf(v.tag);
+    if (p && p.version && LBL[p.state] && newer(p.version, v.store) && !repeats) {
+      review = '<span class="vitem"><b>' + t(LBL[p.state]) + '</b> ' + esc(p.version) + '</span>';
+    }
+    bits.push(
+      '<div class="vrow">' +
+        '<div class="vprod">' + esc(name) + '</div>' +
+        '<div class="vfacts">' +
+          '<span class="vitem"><b>' + t('store') + '</b> ' + store(v, d.storeAsOf) + '</span>' +
+          review +
+          '<span class="vitem"><b>' + t('release') + '</b> ' + tag + ahead + '</span>' +
+          '<span class="vitem"><b>' + t('dev') + '</b> ' + dev(app, v) + '</span>' +
+        '</div>' +
+      '</div>');
+  });
+  if (d.siteUpdated) {
+    var f = fmtDate(d.siteUpdated);
+    if (f) bits.push('<div class="vrow vsite"><span class="vitem"><b>' + t('updated') + '</b> ' + esc(f) + '</span></div>');
+  }
+  box.innerHTML = bits.join('');
+  box.classList.add('on');
+  }
+  function showAhead(d) {
+    if (!d) throw new Error('no answer');
+    renderAhead(d);
+  }
+
   // One request feeds two independent things: the footer badge and the guide's "covers" stamp.
   // Either may be absent on a given page, so neither is allowed to be the other's precondition.
   var REPO_URL = 'https://github.com/ivannot/zoost';
@@ -125,104 +232,8 @@
   }
 
   fetch('/api/versions', { headers: { accept: 'application/json' } })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
-      // Thrown rather than returned, so the one place that words a failure is the one below. This
-      // read `return`, and the badge then simply did not appear: a reader cannot tell a page that
-      // carries no version block from one whose numbers could not be read, and the site's own rule
-      // is that a missing number is said and never left blank. Both siblings already did it - the
-      // /emergency box throws on the same line, and the report form words its own refusal - so this
-      // was one of three, in the same file as one of the other two.
-      if (!d) throw new Error('no answer');
-      fillDocsStamp(d);
-      if (!box) return;
-      // One row per product, four aligned columns. Every number here belongs to exactly one
-      // extension, so every number is inside a row that names it: with two products published, an
-      // unqualified "Web Store 0.13.8 · Latest tag v1.0.0" in a single run does not read as
-      // incomplete, it reads as being about whichever product you had in mind.
-      //
-      // The three are different questions and the labels have to keep them apart: what you can
-      // install today, what has been released and can be checked out and verified, and what is
-      // being built right now. "In development" is spelled out so it cannot be read as available.
-      var bits = [];
-      // Our products, named as ours. "Zoho CRM · Web Store 1.0.0" does not read as "the Zoost for
-      // Zoho CRM you can install is 1.0.0" - it reads as a statement about Zoho's product, and it
-      // is false: 1.0.0 is our version. A label that attributes a property has to name the thing
-      // the property belongs to. (A label that merely *selects* a platform - the nav buttons, the
-      // guide switcher - may say "Zoho CRM", because there you are choosing a platform.)
-      var prods = [
-        ['crm', 'Zoost CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
-        ['analytics', 'Zoost Analytics', d.analytics],
-      ];
-      prods.forEach(function (pr) {
-        var app = pr[0], name = pr[1], v = pr[2];
-        if (!v || (!v.store && !v.repo)) return;
-        // "none yet" rather than "unknown": for a product with no tag those are opposite claims -
-        // one says we failed to look, the other is a fact, and it is the fact RELEASES.md states.
-        //
-        // The tag is a link to its Release, where the archive, its SHA-256 and the two verification
-        // commands are. Not to the .zip: a footer that starts a download when clicked is a surprise,
-        // and the number beside the file is the point rather than the file. This is the one place
-        // the badge stops being a claim and becomes something the reader can check.
-        // Three answers to three different questions, in the order a version travels: what you can
-        // install today, what has been built and signed and can be downloaded now, what is being
-        // worked on. When the release is ahead of the Store - built, attested, waiting for review -
-        // that gap is stated rather than left to be worked out from two numbers. Someone curious can
-        // take the archive from the Release and try it before Google gets to it.
-        // The number, not the tag name. Every other figure in this badge is a version, and
-        // "crm-v1.9.0" beside "1.0.0" reads as two different kinds of thing - the reader has to
-        // work out that one of them contains the other. The tag is still where the link goes,
-        // because that is what identifies the release; it just is not what needs saying.
-        var rel = verOf(v.tag) || v.tag;
-        var tag = v.tag
-          ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(rel) + '</a>'
-          : '<i>' + t('none') + '</i>';
-        // Said only when it is known. "Submitted on 4 Aug - awaiting review" is a fact with a
-        // source: RELEASES.md records the date, and the reader can go and check the row. A tag that
-        // is ahead of the Store but has no such row has *not* been submitted as far as anyone can
-        // tell, and saying "submission pending" there would be asserting something we never
-        // measured - the same shape as every claim this project has had to walk back.
-        var p = v.pending;
-        var state = releaseState(v, d.cws === 'ok');
-        var ahead = state === 'quiet' ? '' : ' <i>' + t(state) + '</i>';
-        // What is actually in review, when that is not the newest tag. Without this the page said
-        // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review - every
-        // word true, the reader misled. Shown only when it adds a fact: newer than the Store, and
-        // not already the release line above.
-        // The state comes from the Chrome Web Store itself now, not from a row we typed after
-        // clicking Submit. That is what makes REJECTED sayable: from outside, a refused submission
-        // and a queued one look identical, so the badge used to promise "awaiting review" about a
-        // version Google had already turned down, indefinitely. An unknown state is not rendered
-        // rather than being folded into the nearest one we recognise.
-        var review = '';
-        var LBL = { PENDING_REVIEW: 'review', REJECTED: 'rejected', STAGED: 'staged' };
-        // Said only when it adds a fact. The release line above already reads "1.38.4, submitted 7
-        // Aug, awaiting review" when the newest tag is the one in the queue, and repeating it is how
-        // this line stopped being read. But that line can only ever express *awaiting* - so a
-        // rejected or approved-not-yet-published revision is new information even on the same
-        // version, and suppressing it there would hide the only state anyone needs to act on.
-        var repeats = p && p.state === 'PENDING_REVIEW' && p.version === verOf(v.tag);
-        if (p && p.version && LBL[p.state] && newer(p.version, v.store) && !repeats) {
-          review = '<span class="vitem"><b>' + t(LBL[p.state]) + '</b> ' + esc(p.version) + '</span>';
-        }
-        bits.push(
-          '<div class="vrow">' +
-            '<div class="vprod">' + esc(name) + '</div>' +
-            '<div class="vfacts">' +
-              '<span class="vitem"><b>' + t('store') + '</b> ' + store(v, d.storeAsOf) + '</span>' +
-              review +
-              '<span class="vitem"><b>' + t('release') + '</b> ' + tag + ahead + '</span>' +
-              '<span class="vitem"><b>' + t('dev') + '</b> ' + dev(app, v) + '</span>' +
-            '</div>' +
-          '</div>');
-      });
-      if (d.siteUpdated) {
-        var f = fmtDate(d.siteUpdated);
-        if (f) bits.push('<div class="vrow vsite"><span class="vitem"><b>' + t('updated') + '</b> ' + esc(f) + '</span></div>');
-      }
-      box.innerHTML = bits.join('');
-      box.classList.add('on');
-    })
+    .then(jsonOrNull)
+    .then(showVersions)
     .catch(function () {
       // One quiet line, not a broken layout: the numbers are chrome on most pages, and what is
       // being refused here is the *silence*, not the modesty. It points where the answer actually
@@ -355,11 +366,8 @@
 
   if (aheadBox) {
     fetch('/api/ahead', { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (!d) throw new Error('no answer');
-        renderAhead(d);
-      })
+      .then(jsonOrNull)
+      .then(showAhead)
       .catch(function () {
         // The instructions on the page stay readable either way; this only stops the block claiming
         // to have checked something it did not, and points at where the answer actually is.

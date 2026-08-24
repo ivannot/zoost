@@ -149,7 +149,7 @@ It also uses tab access to navigate the current tab to a workspace URL the user 
 ## 9. Host permission justification (max 1000)
 
 ```
-The Zoho Analytics hosts declared in the manifest: the analytics.* domain of every Zoho data centre. The extension reads the workspace's structure from Zoho Analytics' own endpoints on whichever of them the user's account lives on. It cannot know which one in advance, and the set is exactly the regions Zoho runs, no wider.
+The Zoho Analytics hosts in the manifest: the analytics.* domain of every data centre, and the two suite shells. The extension reads the workspace's structure from Zoho Analytics' own endpoints, on whichever data centre the account is on - it cannot know which in advance. The shells are not read: they are named so the panel can find the frame with the workspace in it.
 
 The two AI providers, Anthropic and OpenAI, are needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to the provider the user chose; no other AI endpoint is configurable.
 

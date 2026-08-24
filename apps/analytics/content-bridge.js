@@ -411,7 +411,20 @@
     // chrome.runtime messaging, and String(e) would drop exactly the two facts the panel needs to
     // tell a refusal from a fault. Same boundary trap as everywhere else in this repository.
     const reply = (p) => { p.then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e.message || e), status: (e && e.status) || 0, forbidden: !!(e && e.forbidden) })); return true; };
-    if (msg?.cmd === 'context') { sendResponse(context()); return; }
+    // Only the frame that *is* the Analytics application answers for the tab: the right origin and a
+    // workspace resolved out of its own URL. This used to answer unconditionally, which was harmless
+    // while the content script ran in one frame per tab and is not any more: a suite shell puts
+    // several documents on this origin, and the first to reply would have spoken for all of them.
+    //
+    // Not a hypothetical. The CRM panel met exactly this - a template preview at a path whose segment
+    // after `crm` is the literal `html` answered «instance: html, org: null», and the panel drew a
+    // mismatch banner about an org the reader had never left. The gate goes in with the widening,
+    // not after it.
+    if (msg?.cmd === 'context') {
+      const c = context();
+      if (/^https:\/\/analytics\.zoho/.test(c.origin || '') && c.workspace) sendResponse(c);
+      return;
+    }
     if (msg?.cmd === 'workspaceInfo') return reply(workspaceInfo());
     if (msg?.cmd === 'listViews') return reply(listViews());
     if (msg?.cmd === 'workspaceErd') return reply(workspaceErd());

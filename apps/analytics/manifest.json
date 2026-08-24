@@ -28,6 +28,24 @@
     "https://analytics.zoho.sa/*",
     "https://analytics.zoho.uk/*",
     "https://analytics.zoho.ae/*",
+    "https://one.zoho.eu/*",
+    "https://one.zoho.com/*",
+    "https://one.zoho.in/*",
+    "https://one.zoho.com.au/*",
+    "https://one.zoho.jp/*",
+    "https://one.zohocloud.ca/*",
+    "https://one.zoho.sa/*",
+    "https://one.zoho.uk/*",
+    "https://one.zoho.ae/*",
+    "https://crmplus.zoho.eu/*",
+    "https://crmplus.zoho.com/*",
+    "https://crmplus.zoho.in/*",
+    "https://crmplus.zoho.com.au/*",
+    "https://crmplus.zoho.jp/*",
+    "https://crmplus.zohocloud.ca/*",
+    "https://crmplus.zoho.sa/*",
+    "https://crmplus.zoho.uk/*",
+    "https://crmplus.zoho.ae/*",
     "https://api.anthropic.com/*",
     "https://api.openai.com/*",
     "https://zoost.it/*"
@@ -70,6 +88,7 @@
       "js": [
         "content-bridge.js"
       ],
+      "all_frames": true,
       "run_at": "document_start",
       "world": "ISOLATED"
     }

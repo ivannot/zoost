@@ -35,6 +35,41 @@
     markEdited();
   });
 
+  // Named, and passed by reference. A callback written in place is a scope
+  // `tools/asynccheck.py` cannot enter, and a check that cannot enter a scope says nothing about
+  // what happens in it. The chain is unchanged; only its continuations have names.
+  //
+  // `withStatus` keeps the two facts the page needs together - whether the request succeeded and
+  // what came back - because `r.json()` is a second promise and the status is on the first.
+  // Awaited rather than chained, and it is the one place in this file that is not ES5. The two facts
+  // the page needs arrive on different promises - whether the request succeeded is on the response,
+  // what came back is on `r.json()` - and every way of carrying the first into the second with
+  // `.then` needs a continuation that remembers `r`, which is a closure written at the call site and
+  // therefore a scope the race check cannot enter. One `await` and there is nothing to carry.
+  async function withStatus(r) {
+    var j = await r.json();
+    return { ok: r.ok, j: j };
+  }
+  function said(res) {
+  if (res.ok && res.j && res.j.url) {
+    // The link is the receipt: the reader can see exactly what was published, and delete
+    // nothing - which is why they were asked to read it here rather than after the fact.
+    // The link is the only handle they will ever have: nothing here knows who sent this, so
+    // there is no notification to receive and no account to see a reply under. Said plainly,
+    // because a reader who assumes otherwise waits for an answer that cannot arrive.
+    msg.innerHTML = 'Sent. It is now <a href="' + encodeURI(res.j.url) + '">this issue</a>. Keep that '
+      + 'link: nothing here knows who you are, so there is no notification to come and no account to '
+      + 'see a reply under - opening it again is the only way back to what was said.';
+    $('send').style.display = 'none';
+    return;
+  }
+  $('send').disabled = false;
+  msg.textContent = (res.j && res.j.error)
+    ? res.j.error
+    : 'It could not be sent. You can paste the text into an issue yourself, or email it.';
+  if (window.turnstile) window.turnstile.reset();
+  }
+
   function toTrace() {
     hand = false;
     // The header's language link is a navigation, and a navigation loses the report - the panel
@@ -95,27 +130,7 @@
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ report: text, says: says, token: token, hand: hand,
         edited: !hand && original !== '' && text !== original.trim() }),
-    }).then(function (r) {
-      return r.json().then(function (j) { return { ok: r.ok, j: j }; });
-    }).then(function (res) {
-      if (res.ok && res.j && res.j.url) {
-        // The link is the receipt: the reader can see exactly what was published, and delete
-        // nothing - which is why they were asked to read it here rather than after the fact.
-        // The link is the only handle they will ever have: nothing here knows who sent this, so
-        // there is no notification to receive and no account to see a reply under. Said plainly,
-        // because a reader who assumes otherwise waits for an answer that cannot arrive.
-        msg.innerHTML = 'Sent. It is now <a href="' + encodeURI(res.j.url) + '">this issue</a>. Keep that '
-          + 'link: nothing here knows who you are, so there is no notification to come and no account to '
-          + 'see a reply under - opening it again is the only way back to what was said.';
-        $('send').style.display = 'none';
-        return;
-      }
-      $('send').disabled = false;
-      msg.textContent = (res.j && res.j.error)
-        ? res.j.error
-        : 'It could not be sent. You can paste the text into an issue yourself, or email it.';
-      if (window.turnstile) window.turnstile.reset();
-    }).catch(function () {
+    }).then(withStatus).then(said).catch(function () {
       $('send').disabled = false;
       msg.textContent = 'It could not be sent - the network refused. You can paste the text into an issue yourself, or email it.';
       if (window.turnstile) window.turnstile.reset();

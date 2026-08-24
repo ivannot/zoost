@@ -6967,7 +6967,7 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
 
     #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
     #: raises it, because a new scope written the old way is a finding on the day it is written.
-    CEILING = 40
+    CEILING = 33
 
     def ac(self):
         sys.path.insert(0, str(ROOT / 'tools'))

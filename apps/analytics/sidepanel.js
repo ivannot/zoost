@@ -38,9 +38,17 @@ const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of tr
 // should recognise, and a second list is a list that goes out of date. Zoho has more data centres
 // than the six that were written here - zoho.sa, zoho.uk and zoho.ae, each with a current
 // certificate and a live accounts service.
+// The suite shells are in it too. Inside Zoho One - and Zoho CRM Plus the same way - a workspace is
+// an ordinary Analytics page in a frame of its own and the *tab* is the shell, so a panel that only
+// recognises `analytics.*` refuses the tab before it can look inside it. The shells declare no
+// content script: they are named so the tab is recognised and its frames can be enumerated, and
+// everything after that happens in the Analytics document, as it does on a plain Analytics tab.
 const HOST_RE = new RegExp('^(' + (chrome.runtime.getManifest().host_permissions || [])
-  .filter((h) => h.startsWith('https://analytics.'))
+  .filter((h) => /^https:\/\/(analytics|one|crmplus)\./.test(h))
   .map((h) => h.replace(/\/\*$/, '').replace(/\./g, '\\.')).join('|') + ')\\/');
+// The Analytics application's own origin, which is where the bridge lives and the only thing this
+// panel ever speaks to. `HOST_RE` says «this tab is Zoho»; this says «this document is the app».
+const APP_HOST_RE = /^https:\/\/analytics\.zoho/;
 
 const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
@@ -774,12 +782,79 @@ async function analyticsTabId() {
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
   return a && HOST_RE.test(a.url || '') ? a.id : null;
 }
+/** Which of a tab's frames is the Analytics application, decided by asking them.
+ *
+ * A plain Analytics tab has one document and it is the app. A suite shell has several, and more than
+ * one can be on `analytics.zoho.<dc>` - so the frame is not chosen by position, it is **the one that
+ * answers**: the bridge replies only from that origin and only with a workspace resolved out of the
+ * page's own URL, so it selects itself. The CRM panel learnt this the expensive way, on a tab with
+ * thirteen frames and two candidates, where taking the first the enumeration returned meant being
+ * refused in a millisecond on every tick.
+ *
+ * `null` means «no Analytics document in this tab», which is a different fact from «it has one and
+ * our bridge is not in it yet» - `_afCandidates` carries that, because conflating the two is what
+ * stops the repair from ever running.
+ */
+let _afCandidates = { tabId: null, ids: [] };
+let _afFrame = { tabId: null, frameId: 0, ts: 0 };
+async function askFrame(tabId, frameId) {
+  try {
+    const r = await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, { frameId });
+    return { frameId, ok: !!(r && r.ok && r.workspace), why: !r ? 'declined' : r.ok ? 'ok' : 'refused' };
+  } catch (_) {
+    return { frameId, ok: false, why: 'no-listener' };
+  }
+}
+async function analyticsFrameId(tabId) {
+  const now = Date.now();
+  // Only a *found* frame is remembered. Recording a miss makes a transient absence last as long as
+  // the memo, and a shell rebuilding its iframe is exactly a transient absence.
+  if (_afFrame.tabId === tabId && _afFrame.frameId !== null && now - _afFrame.ts < 6000) return _afFrame.frameId;
+  let fid = null;
+  try {
+    const res = await chrome.scripting.executeScript({ target: { tabId, allFrames: true },
+                                                       func: () => ({ href: location.href, top: window === window.top }) });
+    const seen = (res || []).map((r) => ({ frameId: r.frameId, ...(r.result || {}) }));
+    const app = seen.filter((x) => APP_HOST_RE.test(x.href || ''));
+    _afCandidates = { tabId, ids: app.map((x) => x.frameId) };
+    const top = app.find((x) => x.top);
+    if (top) fid = top.frameId;
+    else if (app.length === 1) fid = app[0].frameId;
+    else if (app.length) {
+      const asked = await Promise.all(_afCandidates.ids.map((f) => askFrame(tabId, f)));
+      console.info(`[zoost] frames asked [${asked.map((x) => x.frameId + ':' + x.why).join(' ')}]`);
+      fid = (asked.find((x) => x.ok) || {}).frameId ?? null;
+    }
+  } catch (_) {
+    try {
+      const t = await chrome.tabs.get(tabId);
+      if (APP_HOST_RE.test((t && t.url) || '')) fid = 0;
+    } catch (_) {}
+  }
+  if (fid !== null) _afFrame = { tabId, frameId: fid, ts: now };
+  return fid;
+}
 async function ensureBridge(tabId) {
-  try { await chrome.tabs.sendMessage(tabId, { cmd: 'context' }); return true; }
+  const fid = await analyticsFrameId(tabId);
+  const to = fid === null ? {} : { frameId: fid };
+  try { await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, to); return true; }
   catch {
+    // Every Analytics-origin frame this tab has, not one of them: a shell builds several and only one
+    // is the application, so injecting into whichever came first leaves the one that *would* answer
+    // without a bridge. They are all on a host this extension declares a content script for.
+    const ids = _afCandidates.tabId === tabId ? _afCandidates.ids : (fid === null ? [] : [fid]);
+    if (!ids.length) return false;
     // The one recovery the "never click-and-hope" rule allows: re-inject a script we own, once.
-    try { await chrome.scripting.executeScript({ target: { tabId }, files: ['content-bridge.js'] }); await sleep(60); return true; }
-    catch { return false; }
+    try {
+      await chrome.scripting.executeScript({ target: { tabId, frameIds: ids }, files: ['content-bridge.js'] });
+      console.info(`[zoost] bridge injected into [${ids.join(' ')}]`);
+      await sleep(60);
+      _afFrame = { tabId: null, frameId: 0, ts: 0 };   // the lookup ran before any of this existed
+      return true;
+    } catch (e) {
+      console.info(`[zoost] bridge injection REFUSED for [${ids.join(' ')}]: ${(e && e.message) || e}`);
+      return false;
+    }
   }
 }
 async function toBridge(msg) {
@@ -813,7 +888,11 @@ async function toBridge(msg) {
   // bound elsewhere. Sending the binding would have the page refuse what the panel just allowed.
   const expected = (msg && msg.cmd !== 'context' && !aboutTab && bound)
     ? { workspace: bound.workspace, origin: bound.origin } : null;
-  const r = await chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg);
+  // The Analytics frame, like the context probe. A command addressed to the whole tab reaches the
+  // shell as well, and the bridge is not the only listener a page may have.
+  const afid = await analyticsFrameId(id);
+  const r = await chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg,
+                                          afid === null ? {} : { frameId: afid });
   if (!r) throw new Error('No answer from the Zoho Analytics page.');
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
   // bridge is thrown away one line after crossing the boundary - which is how "your role does not
@@ -885,8 +964,13 @@ async function refreshContext() {
   $('offoverlay').classList.remove('show');
   await ensureBridge(id);
   if (!current()) return;
+  const afid = await analyticsFrameId(id);
+  if (!current()) return;
   try {
-    const r = await chrome.tabs.sendMessage(id, { cmd: 'context' });
+    // The frame, when we know which one. Broadcasting to the tab worked while there was one document
+    // per tab; inside a shell it asks the shell as well, and «nobody answered» is then a statement
+    // about the wrong document.
+    const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }, afid === null ? {} : { frameId: afid });
     if (!current()) return;
     ctx = r && r.ok ? r : null;
   } catch (e) { if (!current()) return; ctx = null; _ctxErr = (e && e.message) || String(e); }
@@ -1012,12 +1096,36 @@ function viewUrl(id) {
 }
 const workspaceUrl = () => (bound && bound.origin && bound.workspace
   ? `${bound.origin}/workspace/${bound.workspace}` : homeUrl());
+/** Take the reader to a page of their Zoho Analytics, without taking their shell away.
+ *
+ * A tab is a tree of documents. On a plain Analytics tab there is one and it is the app; inside a
+ * suite shell the app is a frame and the *tab* is the shell, so navigating the tab throws away the
+ * shell the reader was working in. Frame 0 is the tab's own document, so this navigates the tab
+ * there and one path serves both. A refused injection falls back to the tab, which is where this
+ * started.
+ */
+async function goToZoho(url) {
+  const id = await analyticsTabId();
+  if (!id) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
+  const fid = await analyticsFrameId(id);
+  if (fid) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: id, frameIds: [fid] },
+                                             func: (u) => { location.href = u; }, args: [url] });
+      await chrome.tabs.update(id, { active: true });
+      return id;
+    } catch (_) { /* fall through to the tab */ }
+  }
+  await chrome.tabs.update(id, { url, active: true });
+  return id;
+}
 async function switchTab() {
   if (sampleRefuse()) return;
-  const id = await analyticsTabId();
-  const url = workspaceUrl();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
+  await goToZoho(workspaceUrl());
 }
+/** The way *in*, and deliberately the tab rather than a frame: this is the control for when there is
+ *  no context at all, and a reader who presses it is asking to go to Zoho Analytics, not to move a
+ *  frame inside a page they may not be on. The CRM's own home button is the same. */
 async function openZohoHome() {
   if (sampleRefuse()) return;
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -2128,7 +2236,12 @@ async function openDetail(id) {
   // whether or not the tab is on this workspace.
   const zurl = isSample() ? null : viewUrl(v.id);
   $('dzoho').style.display = zurl ? '' : 'none';
-  $('dzoho').onclick = () => { if (zurl) chrome.tabs.create({ url: zurl }); };
+  // Through `goToZoho`, like every other way this panel takes the reader to Zoho. It opened a new
+  // tab unconditionally - so from inside a suite shell «Open in Zoho» left the shell *and* the tab
+  // the reader was in, while the CRM's own «Open in Zoho» has always moved the tab they are on.
+  // Reported: «Analytics behaves differently from CRM». One of a set that did not do what its
+  // siblings do, which is the miss this repository asks to be caught by diffing against them.
+  $('dzoho').onclick = () => { if (zurl) goToZoho(zurl); };
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty - and
   // it says which silence it is, in a title, the way the ER button beside it has always done.
@@ -3236,24 +3349,38 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
     }
   }
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost - ${esc2(bound.label || bound.name || bound.workspace)}</title><style>
-body{font:14px/1.6 system-ui,sans-serif;color:#1b2431;background:#fff;margin:0;padding:28px;max-width:1100px}
-h1{margin:0 0 4px} h2{margin:30px 0 8px;padding-top:8px;border-top:2px solid #e6ebf2} h3{margin:18px 0 6px;font-size:15px}
-small,i{color:#6b7a90;font-weight:400;font-style:normal}
-table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12.5px;display:block;overflow-x:auto}
+/* The same frame as the other product's report, because two reports from one maker that are shaped
+   differently are two products to whoever receives them. The accent stays per-product - blue there,
+   teal here, the colour each panel already wears - and everything that decides the *shape* is the
+   same: a sticky header band, a centred column, a footer band from edge to edge.
+   This document used to be a padded body with a max width and no bands at all, so its foot could not
+   span anything. Reported. No backticks in here: this stylesheet sits in a template literal. */
+:root{--ink:#1b2431;--muted:#6b7a90;--accent:#0e9488;--line:#e6ebf2}
+*{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:var(--ink);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;z-index:5}
+header h1{margin:0 0 4px;font-size:20px}
+main{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
+h2{margin:30px 0 8px;padding-top:8px;border-top:2px solid var(--line)} h3{margin:18px 0 6px;font-size:15px}
+small,i{color:var(--muted);font-weight:400;font-style:normal}
+table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12.5px;display:block;overflow-x:auto;background:#fff}
 th{background:#f3f6fa;text-align:left;padding:5px 8px;border-bottom:2px solid #dde4ee;white-space:nowrap}
 td{padding:4px 8px;border-bottom:1px solid #eef2f7;vertical-align:top}
-pre{background:#f7f9fc;border:1px solid #e3e9f2;border-radius:6px;padding:10px;overflow:auto;font-size:12px;white-space:pre-wrap}
+pre{background:#fff;border:1px solid #e3e9f2;border-radius:6px;padding:10px;overflow:auto;font-size:12px;white-space:pre-wrap}
 pre.sql{background:#0f1622;border-color:#0f1622;color:#cbd5e1;font:12.5px/1.55 ui-monospace,monospace;white-space:pre}
 .c-com{color:#5b6b82;font-style:italic}.c-str{color:#7ee0a6}.c-num{color:#e0a86b}.c-kw{color:#7aa2f7;font-weight:600}.c-type{color:#c792ea}.c-fn{color:#82d2ff}
-.meta{color:#6b7a90;font-size:12.5px} .gap{color:#6b7a90;font-size:12.5px;border-left:3px solid #e6ebf2;padding-left:10px}
-nav ul{columns:2;list-style:none;padding:0} nav a{color:#0e9488;text-decoration:none}
-footer{margin-top:36px;padding-top:12px;border-top:1px solid #e6ebf2;color:#6b7a90;font-size:12px}
+.meta{color:var(--muted);font-size:12.5px;font-family:ui-monospace,monospace} .gap{color:var(--muted);font-size:12.5px;border-left:3px solid var(--line);padding-left:10px}
+nav ul{columns:2;list-style:none;padding:0} nav a{color:var(--accent);text-decoration:none}
+footer{border-top:1px solid var(--line);background:#fff;padding:18px 20px 32px;color:var(--muted);font-size:12px}
+footer>div{max-width:1000px;margin:0 auto}
+footer a{color:var(--accent)}
+footer .legal{margin-top:6px;font-size:11px;line-height:1.5;opacity:.75;max-width:70ch}
 </style></head><body>
-<h1>${esc2(bound.label || bound.name || bound.workspace)}</h1>
+<header><h1>${esc2(bound.label || bound.name || bound.workspace)}</h1>
 <div class="meta">${bound.label ? `Zoho Analytics workspace ${esc2(bound.name || '')} \u00b7 ` : 'Zoho Analytics workspace '}${esc2(bound.workspace)} · ${esc2(bound.origin || '')} · exported ${new Date().toISOString().slice(0, 10)} by ${esc2(PRODUCT_NAME)} v${esc2(chrome.runtime.getManifest().version)}</div>
-<nav><ul>${toc}</ul></nav>
-${body}
-<footer>Read-only mirror. Zoost never creates, edits or deletes anything in Zoho Analytics, and never reads record data.<br>${esc2(LEGAL_DISCLAIMER)}</footer>
+</header>
+<main><nav><ul>${toc}</ul></nav>
+${body}</main>
+<footer><div>Generated by ${PRODUCT_URL ? `<a href="${escA(PRODUCT_URL)}">${esc2(PRODUCT_NAME)}</a>` : esc2(PRODUCT_NAME)} · Created by ${esc2(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${escA(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${escA(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div>Read-only mirror. Zoost never creates, edits or deletes anything in Zoho Analytics, and never reads record data.</div><div class="legal">${esc2(LEGAL_DISCLAIMER)}</div></footer>
 </body></html>`;
 }
 

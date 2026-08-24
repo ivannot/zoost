@@ -72,6 +72,8 @@ apps/analytics/sidepanel.js	addSampleWorkspace	rootGranted
 apps/analytics/sidepanel.js	addSampleWorkspace	sampleBusy
 apps/analytics/sidepanel.js	addWorkspace	dir
 apps/analytics/sidepanel.js	aiExecTool	o
+apps/analytics/sidepanel.js	analyticsFrameId	_afCandidates
+apps/analytics/sidepanel.js	analyticsFrameId	_afFrame
 apps/analytics/sidepanel.js	delWorkspace	bound
 apps/analytics/sidepanel.js	delWorkspace	deps
 apps/analytics/sidepanel.js	delWorkspace	dir
@@ -81,6 +83,7 @@ apps/analytics/sidepanel.js	delWorkspace	schema
 apps/analytics/sidepanel.js	delWorkspace	selectedId
 apps/analytics/sidepanel.js	delWorkspace	sqls
 apps/analytics/sidepanel.js	delWorkspace	views
+apps/analytics/sidepanel.js	ensureBridge	_afFrame
 apps/analytics/sidepanel.js	grantRoot	rootGranted
 apps/analytics/sidepanel.js	listWorkspaces	rootGranted
 apps/analytics/sidepanel.js	loadScope	expScope
