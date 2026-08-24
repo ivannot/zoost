@@ -2594,17 +2594,27 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   else if (dashboards) omitted.push(`the ${dashList.length} dashboards`);
 
   if (!op.current()) throw new Error(WS_MOVED);
+  // One list, read by both readers, and the note counted against the ceiling. This used to
+  // **replace** `aiSeedOmitted` when the table list alone overflowed, while the note inside the
+  // index went on naming only what had been dropped before that - so the panel said «part of the
+  // table list» and the index said «the 30 reports and pivots», and the model was never told the one
+  // absence that changes its answers. It also appended the note *after* truncating, which put the
+  // seed back over the cap: measured at 4,222 against 4,000, with 700 tables.
+  //
+  // The CRM twin was corrected first and this was not, in a session about fixes that reach one half
+  // of a pair. Reported from outside, with that number.
+  if (out.length > cap) omitted.unshift('part of the table list - this workspace is larger than the index can hold');
   aiSeedOmitted = omitted;
-  if (out.length > cap) {          // even the tables alone overflow: an enormous workspace
-    aiSeedOmitted = [`part of the table list - this workspace is larger than the index can hold`];
-    out = aiTrunc(out, cap);
-  }
-  aiSeedTruncated = omitted.length > 0 || out.length >= cap;
-  if (omitted.length) {
-    out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and you can find them by name`
+  const note = omitted.length
+    ? `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and you can find them by name`
       + ` with list_views (it takes a name substring and a type) - do not assume a view is absent`
-      + ` because it is not in this index.\n`;
-  }
+      + ` because it is not in this index.\n`
+    : '';
+  // `aiTrunc` adds its own «(truncated)» marker, so the room to leave is the note and that.
+  const MARK = '\n\u2026 (truncated)'.length;
+  if (out.length + note.length > cap) out = aiTrunc(out, Math.max(0, cap - note.length - MARK));
+  out += note;
+  aiSeedTruncated = omitted.length > 0 || out.length >= cap;
   aiSeedSize = out.length;
   return out;
 }
