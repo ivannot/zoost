@@ -194,10 +194,10 @@ WHOLE_SURFACE = {
 CLOSED = {
     # The three new classes, where a plant was seen to fail first *today* - recorded rather than
     # re-derived tomorrow. Everything else in those three rows is open.
-    ("compose", "diagrams", "diagram"): ("tests/panel.test.mjs: diagram defaults saved in Settings are applied by either graph", "planted 2026-08-23"),
+    ("compose", "diagrams", "diagram"): ("tests/panel.test.mjs: crm: diagram defaults saved in Settings are applied by either graph", "planted 2026-08-23"),
     ("copy", "crm-panel", "export"):    ("tests/panel.test.mjs: a constant declared in two scripts of one product is not two lists", "planted 2026-08-23"),
-    ("compose", "crm-panel", "pull"):   ("tests/panel.test.mjs: every area the panel reports on is an area the panel can record", "planted 2026-08-24"),
-    ("compose", "crm-ai", "ai"):        ("tests/panel.test.mjs: what the index leaves out is said once, and inside the cap", "planted 2026-08-24"),
+    ("compose", "crm-panel", "pull"):   ("tests/panel.test.mjs: crm: every area the panel reports on is an area the panel can record", "planted 2026-08-24"),
+    ("compose", "crm-ai", "ai"):        ("tests/panel.test.mjs: what the index leaves out is said once, and inside the cap, in either product", "planted 2026-08-24"),
     ("compose", "worker", "publish"):   ("tests/worker.test.mjs: the other endpoint holds a complete answer for the full time too", "planted 2026-08-24"),
     ("compose", "tools", "publish"):    ("tests/tools_test.py: what decides a picture is what is hashed", "planted 2026-08-24"),
     ("fake", "options", "settings"):    ("tests/tools_test.py: the settings shot is of a product in use", "planted 2026-08-24"),
@@ -206,25 +206,25 @@ CLOSED = {
     ("fake", "crm-panel", "persist"):   ("tests/panel.test.mjs: a write the browser refuses forgets nothing, in either product", "planted 2026-08-24"),
     ("fake", "an-panel", "persist"):    ("tests/panel.test.mjs: a write the browser refuses forgets nothing, in either product", "planted 2026-08-24"),
     ("fake", "diagrams", "diagram"):    ("tests/panel.test.mjs: the diagram walks a graph that loops, and comes back", "planted 2026-08-24"),
-    ("fake", "crm-ai", "ai"):           ("tests/panel.test.mjs: the model stream is assembled by index, across whatever chunks arrive", "planted 2026-08-24"),
-    ("fake", "bridges", "pull"):        ("tests/panel.test.mjs: the bridge answers Zoho four ways, and none of them was ever tried", "planted 2026-08-24"),
+    ("fake", "crm-ai", "ai"):           ("tests/panel.test.mjs: crm: the model stream is assembled by index, across whatever chunks arrive", "planted 2026-08-24"),
+    ("fake", "bridges", "pull"):        ("tests/panel.test.mjs: crm: the bridge answers Zoho four ways, and none of them was ever tried", "planted 2026-08-24"),
     ("copy", "bridges", "pull"):        ("tests/tools_test.py: the two halves of live sync reach the same pages", "planted 2026-08-24"),
     ("copy", "an-panel", "export"):     ("tests/panel.test.mjs: every export scope has a box to untick it, and every box is a scope", "planted 2026-08-24"),
     ("copy", "crm-ai", "ai"):           ("tests/panel.test.mjs: a number the settings page offers is the number the panel uses", "planted 2026-08-24"),
     ("compose", "site", "publish"):     ("tests/worker.test.mjs: «updated» on a guide names that guide, through all three programs", "planted 2026-08-23"),
     ("copy", "diagrams", "diagram"):    ("tests/panel.test.mjs: the settings sliders start where the diagram starts, in both products", "planted 2026-08-23"),
-    ("fake", "crm-export", "export"):   ("tests/panel.test.mjs: the reports escape what came out of the org, with the escapers the page ships", "planted 2026-08-23"),
-    ("compose", "an-panel", "export"):  ("tests/panel.test.mjs: the analytics export contents name the chapters in the order the document has them", "planted 2026-08-23"),
-    ("compose", "crm-export", "export"): ("tests/panel.test.mjs: the export contents name the chapters the export has, in the order it has them", "planted 2026-08-23"),
+    ("fake", "crm-export", "export"):   ("tests/panel.test.mjs: crm: the reports escape what came out of the org, with the escapers the page ships", "planted 2026-08-23"),
+    ("compose", "an-panel", "export"):  ("tests/panel.test.mjs: analytics: the export contents name the chapters in the order the document has them", "planted 2026-08-23"),
+    ("compose", "crm-export", "export"): ("tests/panel.test.mjs: crm: the export contents name the chapters the export has, in the order it has them", "planted 2026-08-23"),
     ("compose", "bridges", "pull"):     ("tests/panel.test.mjs: the panel, the bridge and the hook share one vocabulary, not two lists", "planted 2026-08-23"),
     ("copy", "store", "publish"):       ("tests/tools_test.py: every permission is justified and every justification is asked for", "planted 2026-08-23"),
     ("copy", "site", "publish"):        ("tests/tools_test.py: the site names every assistant tool, and every tab where its siblings are", "planted 2026-08-23"),
-    ("copy", "options", "export"):      ("tests/panel.test.mjs: Settings can set every export scope the panel offers", "planted 2026-08-23"),
-    ("copy", "crm-export", "export"):   ("tests/panel.test.mjs: both reports carry the run counts and the credit reading", "planted 2026-08-23"),
+    ("copy", "options", "export"):      ("tests/panel.test.mjs: crm: Settings can set every export scope the panel offers", "planted 2026-08-23"),
+    ("copy", "crm-export", "export"):   ("tests/panel.test.mjs: crm: both reports carry the run counts and the credit reading", "planted 2026-08-23"),
     ("fake", "tools", "persist"):       ("tools/probe.py sends what the bridge sends; tests/panel.test.mjs builds the cache from it", "planted 2026-08-23"),
     ("await", "crm-panel", "*"):        ("tools/asynccheck.py + tools/asyncglobals.txt", "planted 2026-08-20"),
     ("await", "an-panel", "*"):         ("tools/asynccheck.py", "planted 2026-08-20"),
-    ("await", "options", "settings"):   ("tests/panel.test.mjs: an overtaken loader publishes nothing", "planted 2026-08-23"),
+    ("await", "options", "settings"):   ("tests/panel.test.mjs: an overtaken loader on the options page publishes nothing", "planted 2026-08-23"),
     ("await", "crm-export", "export"):  ("tests/tools_test.py: the export reads no panel state after an await", "planted 2026-08-23"),
     ("owner", "options", "settings"):   ("tests/panel.test.mjs: a refused save keeps the edits and says so", "planted 2026-08-23"),
     ("workspace", "crm-ai", "ai"):      ("tests/panel.test.mjs: every reader of the seed facts rebuilds the seed first", "planted 2026-08-23"),
@@ -236,12 +236,12 @@ CLOSED = {
     ("fastpath", "crm-export", "export"): ("tests/panel.test.mjs: a size ranking states how many functions it could measure", "planted 2026-08-23"),
     ("owner", "crm-export", "export"):  ("tests/panel.test.mjs: asking for the export scope twice never abandons the first question", "planted 2026-08-23"),
     ("fastpath", "options", "diagram"): ("tests/panel.test.mjs: a stored diagram setting outside a slider is saved as what is shown", "planted 2026-08-23"),
-    ("await", "tools", "persist"):      ("tests/tools_test.py: the probe says how many of its waits are bets; the ceiling moves only deliberately, in either direction", "planted 2026-08-23"),
+    ("await", "tools", "persist"):      ("tests/tools_test.py: TheProbeSaysHowMuchOfItIsGuessing", "planted 2026-08-23"),
     ("siblings", "store", "publish"):   ("tests/tools_test.py: both listings have the same numbered sections, and each number means the same field", "planted 2026-08-23"),
     ("claim", "options", "settings"):   ("tools/auditcheck.py now reads the shipped pages; tests/tools_test.py holds every one of them in the subject", "planted 2026-08-23"),
     ("claim", "diagrams", "diagram"):   ("tools/auditcheck.py now reads the MSG tables - what the product says, not what its markup holds", "planted 2026-08-23"),
-    ("owner", "crm-ai", "ai"):          ("tests/panel.test.mjs: a flag raised in a function is released whatever happens in it - every shipped script, either spelling", "planted 2026-08-23"),
-    ("fastpath", "diagrams", "diagram"): ("tests/graphview.test.mjs: a box folded away is still away after the drawing is laid out again", "planted 2026-08-23"),
+    ("owner", "crm-ai", "ai"):          ("tests/panel.test.mjs: a flag raised in a function is released whatever happens in it", "planted 2026-08-23"),
+    ("fastpath", "diagrams", "diagram"): ("tests/graphview.test.mjs: crm: the status breakdown stops counting a box that was folded away", "planted 2026-08-23"),
     ("owner", "diagrams", "diagram"):   ("tests/graphview.test.mjs: everything printing changes is put back afterwards", "planted 2026-08-23"),
     ("blindspot", "site", "*"):         ("tools/htmlcheck.py crude/careful position audit", "planted 2026-08-21"),
     ("blindspot", "tools", "*"):        ("tools/csscheck.py + featurecheck coverage audits", "planted 2026-08-22"),
@@ -274,29 +274,29 @@ CLOSED = {
     ("claim", "crm-panel", "publish"):  ("ditto - the same check reads both products", "planted 2026-08-22"),
     ("claim", "bridges", "pull"):       ("tools/auditcheck.py now reads docs/boundaries.md as outward prose", "planted 2026-08-22"),
     ("siblings", "bridges", "pull"):    ("tests/tools_test.py: every injected host is a permitted host", "planted 2026-08-22"),
-    ("silent", "bridges", "pull"):      ("tests/panel.test.mjs: every xRead flag starts false, is set, and is sent on", "planted 2026-08-22"),
+    ("silent", "bridges", "pull"):      ("tests/panel.test.mjs: every read the bridge reports on starts as «not read»", "planted 2026-08-22"),
     ("partial", "bridges", "pull"):     ("tests/panel.test.mjs: every paged walk has a ceiling and reports hitting it", "planted 2026-08-22"),
     ("await", "bridges", "*"):          ("tools/asynccheck.py now reads inside the IIFE; 787 of 789 functions", "planted 2026-08-22"),
     ("blindspot", "bridges", "*"):      ("ditto - the coverage is printed and held by tests/tools_test.py", "planted 2026-08-22"),
     ("workspace", "bridges", "pull"):   ("tests/panel.test.mjs: a memo belongs to the URL it was read at", "planted 2026-08-22"),
-    ("owner", "bridges", "pull"):       ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
+    ("owner", "bridges", "pull"):       ("tests/panel.test.mjs: a script re-injected into a page it already ran in can replace itself", "planted 2026-08-22"),
     ("fastpath", "bridges", "persist"): ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
     ("blindspot", "diagrams", "diagram"): ("tools/probe.py: the diagram window is driven and asserted, not only photographed", "planted 2026-08-23"),
-    ("workspace", "options", "settings"): ("tests/panel.test.mjs: a folder changed in Settings waits for the pull to finish", "planted 2026-08-23"),
+    ("workspace", "options", "settings"): ("tests/panel.test.mjs: a working folder changed in Settings waits for the pull to finish", "planted 2026-08-23"),
     ("partial", "options", "settings"): ("tests/panel.test.mjs: a failed read of aicfg refuses the write that would overwrite it", "planted 2026-08-23"),
-    ("blindspot", "crm-export", "export"): ("tests/tools_test.py: the exported report's content is ledgered; a new one is a finding", "planted 2026-08-23"),
+    ("blindspot", "crm-export", "export"): ("tests/tools_test.py: TheExportedReportsContentIsLedgered", "planted 2026-08-23"),
     ("blindspot", "an-panel", "pull"):  ("tests/tools_test.py: the probe prints how many controls it drove, and claims nothing wider", "planted 2026-08-23"),
-    ("blindspot", "crm-panel", "*"):    ("tests/panel.test.mjs: every id the panel reaches for is defined somewhere", "planted 2026-08-23"),
-    ("fastpath", "crm-ai", "ai"):       ("tests/panel.test.mjs: a cache read out of the graph is invalidated with the graph", "planted 2026-08-23"),
-    ("silent", "crm-ai", "ai"):         ("tests/panel.test.mjs: an overtaken load refuses instead of answering empty", "planted 2026-08-23"),
+    ("blindspot", "crm-panel", "*"):    ("tests/panel.test.mjs: every id the panel reaches for is defined somewhere in its app", "planted 2026-08-23"),
+    ("fastpath", "crm-ai", "ai"):       ("tests/panel.test.mjs: every cache read out of the graph is invalidated with the graph", "planted 2026-08-23"),
+    ("silent", "crm-ai", "ai"):         ("tests/panel.test.mjs: an overtaken load refuses rather than answering empty", "planted 2026-08-23"),
     ("partial", "crm-ai", "ai"):        ("tests/panel.test.mjs: «none» from the assistant says what it was measured over", "planted 2026-08-23"),
     ("siblings", "crm-ai", "ai"):       ("tests/panel.test.mjs: the prompt names the tools from the registry, never typed", "planted 2026-08-23"),
     ("silent", "store", "publish"):     ("tests/tools_test.py: auditcheck says which listing sections differ from what was pasted", "planted 2026-08-23"),
     ("blindspot", "store", "publish"):  ("tests/tools_test.py: the listing checker enforces §2 and prints what it skips", "planted 2026-08-23"),
-    ("blindspot", "options", "settings"): ("tests/panel.test.mjs: every setting Settings writes is read by something", "planted 2026-08-23"),
+    ("blindspot", "options", "settings"): ("tests/panel.test.mjs: every setting the options page writes is read by something", "planted 2026-08-23"),
     ("blindspot", "crm-ai", "ai"):      ("tests/panel.test.mjs: every declared CRM tool is run, and a fall-through is a finding", "planted 2026-08-23"),
-    ("workspace", "diagrams", "diagram"): ("tests/panel.test.mjs: the diagram names its workspace or says it cannot", "planted 2026-08-23"),
-    ("partial", "diagrams", "diagram"): ("tests/panel.test.mjs: «no caller» says it was measured over the mirror, not the org", "planted 2026-08-23"),
+    ("workspace", "diagrams", "diagram"): ("tests/panel.test.mjs: the diagram names its workspace, or says it cannot", "planted 2026-08-23"),
+    ("partial", "diagrams", "diagram"): ("tests/panel.test.mjs: every surface that states «no caller» says what it was measured over", "planted 2026-08-23"),
     ("workspace", "crm-export", "export"): ("tests/panel.test.mjs: a function that guards one status message guards them all", "planted 2026-08-23"),
     ("partial", "crm-export", "export"): ("tests/panel.test.mjs: an empty section says whether it was asked for", "planted 2026-08-23"),
     ("silent", "crm-export", "export"): ("tests/panel.test.mjs: both exports say which kind of missing source it is", "planted 2026-08-23"),
@@ -306,13 +306,13 @@ CLOSED = {
     ("silent", "tools", "persist"):     ("tests/tools_test.py: the sync stamp is written only when the copy happened", "planted 2026-08-23"),
     ("partial", "tools", "publish"):    ("tests/tools_test.py: the screenshot mirror deletes inside one product, never across", "planted 2026-08-23"),
     ("fastpath", "tools", "publish"):   ("tests/tools_test.py: the screenshot verdict is one sentence, taken from sources not bytes", "planted 2026-08-23"),
-    ("fastpath", "site", "publish"):    ("tests/worker.test.mjs: what site and Worker both compute is compared on real tags", "planted 2026-08-23"),
+    ("fastpath", "site", "publish"):    ("tests/worker.test.mjs: what the site and the Worker both compute, they compute alike", "planted 2026-08-23"),
     ("silent", "site", "publish"):      ("tests/worker.test.mjs: every fetch the site makes words its own failure", "planted 2026-08-23"),
     ("blindspot", "worker", "publish"): ("tests/tools_test.py: nothing shipped or served is outside asynccheck unannounced", "planted 2026-08-23"),
     ("claim", "worker", "publish"):     ("tests/worker.test.mjs: the upstream cost in the comment is measured, not typed", "planted 2026-08-23"),
-    ("silent", "worker", "publish"):    ("tests/worker.test.mjs: a 404 is «none» and any other failure is «unreadable», worded apart", "planted 2026-08-23"),
+    ("silent", "worker", "publish"):    ("tests/worker.test.mjs: a 404 is «there are none» and anything else is «I could not find out»", "planted 2026-08-23"),
     ("partial", "worker", "publish"):   ("tests/tools_test.py: a Store reading missing a product is refused, not published", "planted 2026-08-23"),
-    ("fastpath", "worker", "publish"):  ("tests/worker.test.mjs: every surface stating a Store version consults staleReading", "planted 2026-08-23"),
+    ("fastpath", "worker", "publish"):  ("tests/worker.test.mjs: every surface that shows the Store reading says when it is old", "planted 2026-08-23"),
     ("siblings", "options", "settings"): ("tests/panel.test.mjs: a preset keeps what the page cannot show", "planted 2026-08-22"),
     ("claim", "crm-ai", "ai"):          ("tests/panel.test.mjs: the passphrase field is emptied on both branches", "planted 2026-08-22"),
     ("siblings", "crm-export", "export"): ("tests/panel.test.mjs: both reports read every action field the panel shows", "planted 2026-08-22"),
@@ -384,9 +384,17 @@ def citations() -> list:
             out.append((ck, sk, cap, "exact" if ok else "MISSING", what))
         elif head.endswith("_test.py") and f.is_file():
             body = f.read_text(encoding="utf-8", errors="ignore")
-            words = [w for w in rest.split() if len(w) > 4][:6]
-            ok = words and all(w.strip(",.:;«»'\"") in body for w in words)
-            out.append((ck, sk, cap, "described" if ok else "MISSING", what))
+            # A Python case is a class, so the citation names the class - exact, the same as a Node
+            # title. «Described» was the first rule here and it is the weaker one: a paraphrase of a
+            # docstring resolves for as long as the words survive and says nothing about the class
+            # still being there. It is kept only for citations not yet repaired, and it is reported
+            # apart so the two are never read as one.
+            if f"class {rest}(" in body:
+                out.append((ck, sk, cap, "exact", what))
+            else:
+                words = [w for w in rest.split() if len(w) > 4][:6]
+                ok = words and all(w.strip(",.:;«»'\"") in body for w in words)
+                out.append((ck, sk, cap, "described" if ok else "MISSING", what))
         elif head.split()[0].endswith(".py") and (ROOT / head.split()[0]).is_file():
             out.append((ck, sk, cap, "checker", what))
         else:

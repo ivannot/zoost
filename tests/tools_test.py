@@ -6745,8 +6745,8 @@ class TheGridCitesChecksThatExist(unittest.TestCase):
     `tools/*.py` citation against the file existing - which is all it can say, and it says that
     rather than implying more.
 
-    **A ledger with a ceiling, and the direction is reported.** The 56 that do not resolve today are
-    not missing checks:
+    **A ledger with a ceiling, and the direction is reported.** 56 did not resolve when this was
+    written and 29 do now; none of the 27 repaired was a missing check:
     read, they are paraphrases - «an overtaken loader publishes nothing» against the real title «an
     overtaken loader on the options page publishes nothing». A description rots quietly where a title
     breaks loudly, which is the whole argument for recording the title. The ceiling comes down as
@@ -6754,7 +6754,7 @@ class TheGridCitesChecksThatExist(unittest.TestCase):
     a citation that rotted, or a resolver that started seeing more - is what the tool prints.
     """
 
-    CEILING = 56
+    CEILING = 29
 
     def test_the_unresolved_citations_only_shrink(self):
         sys.path.insert(0, str(ROOT / 'tools'))
