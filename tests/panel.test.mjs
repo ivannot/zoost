@@ -12425,6 +12425,7 @@ test('crm: the model stream is assembled by index, across whatever chunks arrive
   let seen = '';
   const g = {
     TextDecoder, JSON, Object, Array, String, Error, Promise, console,
+    AI_MAX_TOKENS: 16384,
     fetch: async () => ({ ok: true, body: bodyOf(stream, cuts.filter((c) => c > 0).sort((a, b) => a - b)) }),
   };
   const { aiStreamAnthropic } = load([
@@ -13011,4 +13012,110 @@ test('crm: a refused export default is said, and does not stop the export', asyn
   // And the ticks the reader chose are what the export receives, in both cases - the dialog's own
   // auto-cleared keys carry the previous value, which is the behaviour another case already holds.
   assert.equal(bad.stored.functions, true, 'the scope the reader ticked was lost on a refused write');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A model that reasons before answering opened a block this reader had never heard of.
+//
+// Reported from a real workspace, three times running: a question, a wait, and «(empty response)».
+// The HAR settles it, and it is not what either of us guessed. One content block, type **thinking**;
+// deltas `thinking_delta` and `signature_delta`; no text, no tool call; `stop_reason: max_tokens`;
+// **4,096 output tokens, every one of them thinking**. The input was 40,120 tokens, so the index sent
+// with each message - the first thing anyone suspects - was nowhere near it.
+//
+// Three defects in a row, and each hid the next:
+//
+//   - the reader mapped every non-`tool_use` block to `{ type: 'text', text: '' }`, so a thinking
+//     block became an empty text block, its deltas matched no branch, and it was dropped as empty;
+//   - the turn then said «(empty response)», which names neither the cause nor the remedy, on a call
+//     the reader has paid for - and `stop_reason` said `max_tokens` the whole time;
+//   - and the ceiling was 4096, written into the request when a model answered straight away, with
+//     no way for the reader to raise it.
+//
+// **The limits, stated.** It drives the reader and the loop on a stream shaped like the recorded one,
+// so it proves what the panel does with that answer, not what any model will send. The names of the
+// workspace in that recording belong to somebody's day job and are nowhere here - the fixture is a
+// thinking block and a stop reason, which is all that matters to the code.
+test('a turn that spends its whole budget thinking says so, in either product', async () => {
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name)
+    .filter((a) => shippedScripts().some((f) => f.startsWith(`apps/${a}/`)
+      && read(f).includes('async function aiStreamAnthropic')));
+  assert.ok(apps.length >= 2, `${apps.length} product(s) stream from Anthropic - the derivation broke`);
+
+  const sse = (events) => events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join('');
+  // Exactly the shape of the recorded failure: it thinks, it runs out, it says nothing else.
+  const allThinking = sse([
+    ['content_block_start', { index: 0, content_block: { type: 'thinking', thinking: '' } }],
+    ['content_block_delta', { index: 0, delta: { type: 'thinking_delta', thinking: 'weighing it up' } }],
+    ['content_block_delta', { index: 0, delta: { type: 'signature_delta', signature: 'x' } }],
+    ['content_block_stop', { index: 0 }],
+    ['message_delta', { delta: { stop_reason: 'max_tokens' } }],
+  ]);
+  // And the ordinary case: it thinks, then answers. The thinking must not reach the reader or the
+  // model, and the answer must arrive whole.
+  const thenAnswers = sse([
+    ['content_block_start', { index: 0, content_block: { type: 'thinking', thinking: '' } }],
+    ['content_block_delta', { index: 0, delta: { type: 'thinking_delta', thinking: 'weighing it up' } }],
+    ['content_block_stop', { index: 0 }],
+    ['content_block_start', { index: 1, content_block: { type: 'text' } }],
+    ['content_block_delta', { index: 1, delta: { type: 'text_delta', text: 'Yes - drop the join.' } }],
+    ['content_block_stop', { index: 1 }],
+    ['message_delta', { delta: { stop_reason: 'end_turn' } }],
+  ]);
+  const bodyOf = (text) => {
+    const enc = new TextEncoder(); let done = false;
+    return { getReader: () => ({ read: async () => (done ? { done: true } : (done = true, { value: enc.encode(text), done: false })) }) };
+  };
+
+  for (const app of apps) {
+    const rel = shippedScripts().find((f) => f.startsWith(`apps/${app}/`)
+      && read(f).includes('async function aiStreamAnthropic'));
+    const cap = Number(/const AI_MAX_TOKENS_DEFAULT = (\d+)/.exec(read(rel))[1]);
+    assert.ok(cap > 4096,
+      `id=${app}: the answer budget is ${cap}, which is the value that produced the empty reply - a `
+      + 'model that reasons first can spend all of it before writing anything');
+
+    const said = [];
+    let body = allThinking;
+    const g = {
+      TextDecoder, TextEncoder, JSON, Object, Array, String, Error, Promise, console,
+      AI_MAX_TOKENS: cap,
+      aiMessages: said, aiRenderMessages: () => {}, aiToolEvent: () => {},
+      aiExecTool: async () => '', beginWorkspaceOp: () => ({ current: () => true }),
+      $: () => ({ querySelectorAll: () => [], scrollTop: 0, scrollHeight: 0 }),
+      aiMarkdown: (t) => t,
+      fetch: async () => ({ ok: true, body: bodyOf(body) }),
+    };
+    const { aiStreamAnthropic, aiRunAnthropicAgent } = load([
+      sliceFn(rel, 'aiTrunc'), sliceFn(rel, 'aiStreamAnthropic'), sliceFn(rel, 'aiRunAnthropicAgent'),
+    ], g);
+
+    // The reader, first: a thinking block is not a text block, and it is not sent back to the model.
+    const out = await aiStreamAnthropic({ apiKey: 'k', model: 'm' }, [], 's', [], () => {});
+    assert.deepEqual(JSON.parse(JSON.stringify(out.content)), [],
+      `id=${app}: a thinking block came back as content - it would be shown, or sent to the model as text`);
+    assert.equal(out.thought, true, `id=${app}: the turn does not know it thought, so it cannot say so`);
+    assert.equal(out.stop_reason, 'max_tokens', `id=${app}: the stop reason was lost`);
+
+    // …and the loop says which of the two silences it was.
+    said.length = 0;
+    await aiRunAnthropicAgent({ apiKey: 'k', model: 'm' }, [], 's', [], 5);
+    assert.equal(said.length, 1, `id=${app}: the turn added ${said.length} message(s)`);
+    const msg = said[0].content;
+    assert.equal(/empty response/.test(msg), false,
+      `id=${app}: still «${msg}» - a sentence that names neither the cause nor the remedy`);
+    assert.match(msg, new RegExp(String(cap)),
+      `id=${app}: the message does not say what the budget was: «${msg}»`);
+    assert.match(msg, /reasoning|thinking/i,
+      `id=${app}: the message does not say the budget went on reasoning: «${msg}»`);
+    assert.match(msg, /Settings/,
+      `id=${app}: the message does not say where the reader can change it: «${msg}»`);
+
+    // The ordinary turn: the answer arrives, the thinking does not.
+    said.length = 0; body = thenAnswers;
+    const ok = await aiStreamAnthropic({ apiKey: 'k', model: 'm' }, [], 's', [], () => {});
+    assert.deepEqual(JSON.parse(JSON.stringify(ok.content)), [{ type: 'text', text: 'Yes - drop the join.' }],
+      `id=${app}: an answer that followed a thinking block did not arrive whole`);
+  }
 });

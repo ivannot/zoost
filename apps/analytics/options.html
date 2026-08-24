@@ -152,6 +152,13 @@
         20 is the default. Raise it for questions that span the whole workspace; lower it to cap what a single
         question can cost. It is a ceiling, not a target - most answers use two or three.</p>
     </div>
+    <div class="ctl">
+      <label><span class="lt">Answer budget</span><input type="number" id="ai_maxtokens" min="1024" max="64000" step="1024"></label>
+      <p class="note">Tokens one answer may cost. 16384 is the default. A model that reasons before
+        answering spends this on the reasoning too, and if it runs out there the reply arrives empty -
+        the panel says so and names this box. Raise it for questions that need a long answer; it is a
+        ceiling, and you are billed for what is used, not for what is allowed.</p>
+    </div>
     <div class="keyprot">
       <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> -
         it is stored encrypted, and you type the passphrase once per browser session</span></label>

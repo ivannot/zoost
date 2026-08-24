@@ -281,6 +281,7 @@ async function loadAi() {
   $('ai_a_model').value = cfg.anthropic.model; $('ai_a_key').value = cfg.anthropic.apiKey;
   $('ai_o_model').value = cfg.openai.model; $('ai_o_key').value = cfg.openai.apiKey;
   $('ai_maxiter').value = c.maxIter || 20;
+  $('ai_maxtokens').value = c.maxTokens || 16384;
   $('ai_seedcap').value = c.seedCap || 72000;
   // A key already protected shows as protected, with the field left empty: the passphrase is not
   // stored, so there is nothing to put back in it.
@@ -312,6 +313,7 @@ async function saveAi() {
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
     openai: { model: $('ai_o_model').value.trim(), apiKey: $('ai_o_key').value.trim() },
     maxIter: Math.max(1, Math.min(40, Number($('ai_maxiter').value) || 20)),
+    maxTokens: Math.max(1024, Math.min(64000, Number($('ai_maxtokens').value) || 16384)),
     seedCap: Math.max(4000, Math.min(400000, Number($('ai_seedcap').value) || 72000)),
   };
   const prev = await currentAi();

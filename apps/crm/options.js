@@ -309,6 +309,7 @@ async function loadAi() {
     anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
     openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}),
     maxIter: c.maxIter || 20,
+    maxTokens: c.maxTokens || 16384,
     shareAddresses: c.shareAddresses === true,
     seedCap: c.seedCap || 72000,
   };
@@ -319,6 +320,7 @@ async function loadAi() {
   $('ai_a_model').value = cfg.anthropic.model; $('ai_a_key').value = cfg.anthropic.apiKey;
   $('ai_o_model').value = cfg.openai.model; $('ai_o_key').value = cfg.openai.apiKey;
   $('ai_maxiter').value = cfg.maxIter;
+  $('ai_maxtokens').value = cfg.maxTokens;
   $('ai_addr').checked = !!cfg.shareAddresses;
   $('ai_seedcap').value = cfg.seedCap;
   // A key already protected shows as protected, with the field left empty: the passphrase is not
@@ -372,6 +374,7 @@ $('saveAi').onclick = async () => {
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
     openai: { model: $('ai_o_model').value.trim(), apiKey: $('ai_o_key').value.trim() },
     maxIter: Math.max(1, Math.min(40, parseInt($('ai_maxiter').value, 10) || 20)),
+    maxTokens: Math.max(1024, Math.min(64000, parseInt($('ai_maxtokens').value, 10) || 16384)),
     // Off unless the reader says otherwise, and the mirror keeps the address either way: what is
     // at stake here is whether it travels to a provider, not whether it is on disk.
     shareAddresses: $('ai_addr').checked,

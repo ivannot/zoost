@@ -2406,7 +2406,7 @@ let aiGen = 0;
 
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  const cfg = { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
+  const cfg = { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT, maxTokens: c.maxTokens || AI_MAX_TOKENS_DEFAULT };
   // A protected key is on disk as ciphertext only. The plaintext lives in chrome.storage.session for
   // as long as the browser runs, and is put back here so every caller downstream sees an ordinary key
   // and nothing else has to learn about the passphrase.
@@ -2561,6 +2561,15 @@ function aiStructureText(v) {
 // something must. Whatever is left out is *named as left out*, in the prompt itself, with what to
 // call instead - an index that is silently short is worse than one that is honestly partial.
 const AI_SEED_CAP_DEFAULT = 72000;
+// What one answer may cost, and it is the reader's to set. It was 4096, written here when a model
+// answered straight away - and a model that reasons first spends this on the reasoning: measured
+// from a real question, 4,096 output tokens, **every one of them thinking**, `stop_reason:
+// max_tokens`, and not a character of answer. The panel then said «(empty response)».
+//
+// 16384 because the failure is silent and the cost of the ceiling being too low is a wasted call,
+// while the cost of it being too high is only the tokens actually used. The number itself has not
+// been measured against a real workload here - it is a starting point, and it is in Settings.
+const AI_MAX_TOKENS_DEFAULT = 16384;
 let aiSeedSize = 0;                     // what the last index actually came to, shown in the chat
 
 async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
@@ -2818,14 +2827,30 @@ function aiMarkdown(src) {
 function aiToolArg(input) { try { const t = JSON.stringify(input || {}); return t.length > 60 ? t.slice(0, 57) + '…' : t; } catch (_) { return ''; } }
 function aiToolEvent(name, input) { aiMessages.push({ role: 'tool', content: `🔧 ${name}(${aiToolArg(input)})` }); aiRenderMessages(); }
 
+let AI_MAX_TOKENS = AI_MAX_TOKENS_DEFAULT;   // set from the saved config before each run
 async function aiStreamAnthropic(a, msgs, system, tools, onText) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': a.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: a.model, max_tokens: 4096, system, tools, messages: msgs, stream: true }) });
+  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': a.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: a.model, max_tokens: AI_MAX_TOKENS, system, tools, messages: msgs, stream: true }) });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${aiTrunc(await res.text(), 300)}`);
   const reader = res.body.getReader(); const dec = new TextDecoder();
   let buf = ''; const blocks = []; let stop_reason = null;
   const handle = (evt, data) => {
-    if (evt === 'content_block_start') { blocks[data.index] = data.content_block.type === 'tool_use' ? { type: 'tool_use', id: data.content_block.id, name: data.content_block.name, _json: '' } : { type: 'text', text: '' }; }
-    else if (evt === 'content_block_delta') { const b = blocks[data.index]; if (!b) return; if (data.delta.type === 'text_delta') { b.text += data.delta.text; onText && onText(data.delta.text); } else if (data.delta.type === 'input_json_delta') { b._json += data.delta.partial_json || ''; } }
+    // A block is text, a tool call, or **thinking** - and the third was being read as the first.
+    // A model that reasons before answering opens a `thinking` block, and this mapped every
+    // non-tool block to `{ type: 'text', text: '' }`; its `thinking_delta`s then matched no
+    // branch below, so the block stayed empty, was dropped as an empty text block, and the
+    // panel said «(empty response)». Measured from a HAR of a real question: one block, type
+    // `thinking`, deltas `thinking_delta` and `signature_delta`, no text and no tool_use.
+    //
+    // Kept rather than ignored, because what it costs is the thing to report: the whole answer
+    // budget can go into it, and a reader who is told «empty» learns nothing about that.
+    if (evt === 'content_block_start') {
+      const t = data.content_block.type;
+      blocks[data.index] = t === 'tool_use'
+        ? { type: 'tool_use', id: data.content_block.id, name: data.content_block.name, _json: '' }
+        : t === 'thinking' || t === 'redacted_thinking' ? { type: 'thinking' }
+        : { type: 'text', text: '' };
+    }
+    else if (evt === 'content_block_delta') { const b = blocks[data.index]; if (!b || b.type === 'thinking') return; if (data.delta.type === 'text_delta') { b.text += data.delta.text; onText && onText(data.delta.text); } else if (data.delta.type === 'input_json_delta') { b._json += data.delta.partial_json || ''; } }
     else if (evt === 'content_block_stop') { const b = blocks[data.index]; if (b && b.type === 'tool_use') { try { b.input = JSON.parse(b._json || '{}'); } catch (_) { b.input = {}; } delete b._json; } }
     else if (evt === 'message_delta') { if (data.delta && data.delta.stop_reason) stop_reason = data.delta.stop_reason; }
   };
@@ -2840,8 +2865,11 @@ async function aiStreamAnthropic(a, msgs, system, tools, onText) {
       if (evt && dataStr) { try { handle(evt, JSON.parse(dataStr)); } catch (_) {} }
     }
   }
-  const content = blocks.filter(Boolean).map((b) => b.type === 'tool_use' ? { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} } : { type: 'text', text: b.text }).filter((b) => b.type !== 'text' || (b.text && b.text.trim() !== ''));
-  return { content, stop_reason };
+  // Thinking never goes back to the model and is never shown; what it does is explain a turn that
+  // produced nothing else, so whether there was any is carried out of here.
+  const thought = blocks.some((b) => b && b.type === 'thinking');
+  const content = blocks.filter(Boolean).filter((b) => b.type !== 'thinking').map((b) => b.type === 'tool_use' ? { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} } : { type: 'text', text: b.text }).filter((b) => b.type !== 'text' || (b.text && b.text.trim() !== ''));
+  return { content, stop_reason, thought };
 }
 
 async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true, op = beginWorkspaceOp()) {
@@ -2853,11 +2881,25 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
       if (!bubble) { bubble = { role: 'assistant', content: '' }; aiMessages.push(bubble); aiRenderMessages(); const ns = $('aimsgs').querySelectorAll('.aimsg.assistant .aitext'); el = ns[ns.length - 1]; }
       bubble.content += t; if (el) { el.innerHTML = aiMarkdown(bubble.content); $('aimsgs').scrollTop = $('aimsgs').scrollHeight; }
     };
-    const { content, stop_reason } = await aiStreamAnthropic(a, msgs, system, tools, onText);
+    const { content, stop_reason, thought } = await aiStreamAnthropic(a, msgs, system, tools, onText);
     if (!current()) return;
     const toolUses = content.filter((b) => b.type === 'tool_use');
     if (stop_reason !== 'tool_use' || !toolUses.length) {
-      if (!bubble) { const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n'); aiMessages.push({ role: 'assistant', content: txt || '(empty response)' }); aiRenderMessages(); }
+      if (!bubble) {
+        const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+        // «(empty response)» was what a turn that hit its answer budget looked like, and it names
+        // neither the cause nor the remedy - on a call the reader has paid for. Measured from a
+        // HAR: `stop_reason: max_tokens`, 4,096 output tokens, every one of them thinking, and
+        // not one character of answer. The input was 40,120 tokens, so the index sent with each
+        // message was nowhere near the problem, which is the first thing anyone would suspect.
+        aiMessages.push({ role: 'assistant', content: txt || (stop_reason === 'max_tokens'
+          ? `The model reached its answer budget of ${AI_MAX_TOKENS} tokens`
+            + (thought ? ' while still reasoning, and never began the answer' : ' before finishing')
+            + '. Nothing was lost and nothing was written. Ask again - a narrower question costs'
+            + ' less of that budget - or raise **Answer budget** in Settings.'
+          : '(the model returned nothing at all - no answer, no reasoning and no tool call)') });
+        aiRenderMessages();
+      }
       return;
     }
     msgs.push({ role: 'assistant', content });
@@ -2950,6 +2992,8 @@ async function aiSend() {
         + (withTools ? 'Claude can still find them by name with its tools - the tables are always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific views by name.') });
       aiRenderMessages();
     }
+    // The reader's ceiling reaches the request here, once, before the loop that spends it.
+    AI_MAX_TOKENS = cfg.maxTokens || AI_MAX_TOKENS_DEFAULT;
     if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current, op);
     else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     if (!current()) return;
