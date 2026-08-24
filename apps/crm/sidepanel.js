@@ -5291,39 +5291,40 @@ $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One g
  *  setStatus() made while the health view is open is written where nobody can see it - which is why
  *  pressing Pull runtime looked as though nothing happened at all, refusal included. */
 function healthSay(text, cls) { const el = $('healthmsg'); if (el) { el.textContent = text || ''; el.className = cls || ''; } }
+async function pullHealthRuntimeNow() {
+  // A sample is not a mismatch, and saying so is the difference between an explanation and a wrong
+  // answer: there is no org behind it to re-read, and «the tab does not match» would send somebody
+  // switching tabs to fix something no tab can fix.
+  if (isSample()) { sampleRefuse(); healthSay(MSG.sampleNoOrg, 'warn'); return; }
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); healthSay(MSG.wrongTab, 'warn'); return; }
+  const b = $('healthpull'); b.disabled = true;
+  healthSay('Reading from Zoho\u2026');
+  // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
+  // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
+  // an outside scan: results of the workspace that was left, published into the one that arrived.
+  //
+  // Declared **before** the try, because the catch reads it. Inside, `catch` has a scope of its own
+  // and there is no other `op` in this file - so every error from this sequence was replaced by
+  // «op is not defined», thrown out of the handler that existed to report it: the health view stayed
+  // on «Reading from Zoho...» for good, the real reason was lost, and «Report this problem» carried
+  // the ReferenceError instead of the fault. Found by a review of this file.
+  const op = beginWorkspaceOp();
+  try {
+    await pullFailures();
+    if (!op.current()) return;
+    failIndex = null;                       // the file changed under it
+    const built = await buildHealth(op);
+    if (!op.current()) return;
+    healthData = built;
+    renderHealthView();
+    const fx = await failuresIndex(op);
+    if (!fx || !op.current()) return;   // overtaken: the runtime it read belongs to the workspace that was left
+    healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
+  } catch (e) { if (op.current()) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); } }
+  finally { b.disabled = false; }
+}
 async function pullHealthRuntime() {
-  return runPullAction(async () => {
-    // A sample is not a mismatch, and saying so is the difference between an explanation and a wrong
-    // answer: there is no org behind it to re-read, and «the tab does not match» would send somebody
-    // switching tabs to fix something no tab can fix.
-    if (isSample()) { sampleRefuse(); healthSay(MSG.sampleNoOrg, 'warn'); return; }
-    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); healthSay(MSG.wrongTab, 'warn'); return; }
-    const b = $('healthpull'); b.disabled = true;
-    healthSay('Reading from Zoho\u2026');
-    // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
-    // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
-    // an outside scan: results of the workspace that was left, published into the one that arrived.
-    //
-    // Declared **before** the try, because the catch reads it. Inside, `catch` has a scope of its own
-    // and there is no other `op` in this file - so every error from this sequence was replaced by
-    // «op is not defined», thrown out of the handler that existed to report it: the health view stayed
-    // on «Reading from Zoho...» for good, the real reason was lost, and «Report this problem» carried
-    // the ReferenceError instead of the fault. Found by a review of this file.
-    const op = beginWorkspaceOp();
-    try {
-      await pullFailures();
-      if (!op.current()) return;
-      failIndex = null;                       // the file changed under it
-      const built = await buildHealth(op);
-      if (!op.current()) return;
-      healthData = built;
-      renderHealthView();
-      const fx = await failuresIndex(op);
-      if (!fx || !op.current()) return;   // overtaken: the runtime it read belongs to the workspace that was left
-      healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
-    } catch (e) { if (op.current()) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); } }
-    finally { b.disabled = false; }
-  });
+  return runPullAction(() => pullHealthRuntimeNow());
 }
 $('healthpull').onclick = pullHealthRuntime;
 $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); dropFileCaches(); await rebuildActive();

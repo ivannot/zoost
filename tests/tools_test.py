@@ -6899,5 +6899,96 @@ class CoverageMeasuresWhatTheRepositoryShips(unittest.TestCase):
                          'the tool took about two minutes and said nothing while it did')
 
 
+class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
+    """`asynccheck` read function declarations and nothing else, and the cells said «closed».
+
+    118 awaits and 45 `.then()` callbacks sat outside any scope it enters - 40 in `apps/crm/options.js`
+    alone, 11 per diagram window, which is the whole of that surface. The tool said so honestly in its
+    headline, and the grid still recorded the panels' «await» cells as covered: an on/off value that
+    was not true of everything it stood for. That is the principle this repository now works to - if a
+    cell cannot be represented by one boolean, split it until each one can - and here the split is
+    between «read» and «not read», with the second holding most of the subject.
+
+    The way out was not a second parser. A parser is a dependency this project does not have, and the
+    two attempts at widening the line-based reader produced 636 findings and then 171, none of them
+    real. It is a **source convention** instead: every async scope the two extensions and the site
+    ship is a named function declaration, and a callback is a reference to one. Then the reader that
+    exists reaches all of it. `tools/asyncscopes.txt` is the migration list, and the ceiling below is
+    what makes «it goes to zero» a check rather than a sentence.
+
+    **The limits, stated.** The scanner is line-based like the rest of the file: it finds the shapes,
+    not their bodies. And `.then(fn)` is accepted on the strength of `fn` being a declaration on the
+    same page - which is exact, because the page's declarations are derived, but says nothing about
+    what that declaration does.
+    """
+
+    #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
+    #: raises it, because a new scope written the old way is a finding on the day it is written.
+    CEILING = 82
+
+    def ac(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import asynccheck
+            return asynccheck
+        finally:
+            sys.path.pop(0)
+
+    def test_the_migration_list_only_falls(self):
+        n = len(self.ac().scope_findings())
+        self.assertLessEqual(n, self.CEILING,
+                             f'{n} async scopes are not a named declaration, and the ceiling is '
+                             f'{self.CEILING}. A new one is a finding on the day it is written; if '
+                             'this rose because the scanner started seeing more, say which in the '
+                             'commit and lower it again by converting.')
+        if n < self.CEILING:
+            self.fail(f'{n} left, ceiling still {self.CEILING} - lower it in the same change, or the '
+                      'ground gained is given straight back')
+
+    def test_a_regex_literal_is_not_a_string(self):
+        # This is the defect that hid a third of the subject. `/[&<>"']/g` in each options page opened
+        # a string at its `"` and closed it at another one forty characters later, and every async
+        # arrow in between vanished - eleven of them in `apps/crm/options.js`, reported as a clean
+        # file. A blanker fails silently by definition: what it eats stops being visible to anything.
+        blanked = self.ac()._blank_non_code(
+            'const e = (s) => s.replace(/[&<>"\']/g, c => c);\n'
+            'el.onclick = async () => { await go(); };\n')
+        self.assertIn('async () =>', blanked,
+                      'a regular-expression literal containing a quote swallowed the code after it')
+        self.assertEqual(blanked.count('\n'), 2, 'blanking moved a line boundary')
+
+    def test_a_named_continuation_is_read_and_an_anonymous_one_is_not(self):
+        ac = self.ac()
+        src = 'function done() { cache = 1; }\nfunction go() { p().then(done); }\n'
+        tmp = ROOT / 'apps/crm/_scopes_probe.js'
+        tmp.write_text(src, encoding='utf-8')
+        try:
+            self.assertEqual(ac.unread_scopes('apps/crm/_scopes_probe.js'), [],
+                             '`.then(done)` is a reference to a declaration this tool reads, so it is '
+                             'not a scope it misses - that distinction is the whole convention')
+            tmp.write_text(src.replace('.then(done)', '.then(() => { cache = 1; })'), encoding='utf-8')
+            got = ac.unread_scopes('apps/crm/_scopes_probe.js')
+            self.assertEqual([s for _, _, s in got], ['.then() callback'],
+                             'an anonymous continuation is a scope nothing enters, and it has to be '
+                             'reported as one')
+        finally:
+            tmp.unlink()
+
+    def test_a_new_scope_written_the_old_way_is_a_finding(self):
+        # The gate itself, on a real file rather than on a pattern: the check must fail when somebody
+        # writes the old shape tomorrow, which is the only thing that makes a migration list finish.
+        f = ROOT / 'apps/crm/connections.js'
+        before = f.read_text(encoding='utf-8')
+        f.write_text(before + '\nconst planted = async () => { await Promise.resolve(); };\n',
+                     encoding='utf-8')
+        try:
+            out = subprocess.run([sys.executable, str(ROOT / 'tools/asynccheck.py')],
+                                 capture_output=True, text=True, cwd=str(ROOT))
+            self.assertEqual(out.returncode, 1, 'a new async arrow in a shipped file passed the gate')
+            self.assertIn('connections.js', out.stdout)
+        finally:
+            f.write_text(before, encoding='utf-8')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

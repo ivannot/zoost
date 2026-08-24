@@ -199,44 +199,45 @@ function renderModules() {
     });
   }
 }
-async function resyncModule(m) {
-  return runPullAction(async () => {
-    const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
-    if (mismatchRefuse()) return;
-    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return; }
-    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    setStatus(`Resyncing ${m.api_name}…`, 'busy');
-    const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
-    let mod = {}; try { mod = JSON.parse(await op.read(m.path)); } catch (_) {}
-    // Re-asking is the whole point of this dot, so the answer is recorded either way - a refusal
-    // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
-    // module Zoho has just described, which is the same class of lie in the other direction.
-    if (!r?.ok) {
-      if (isRefusal(r?.status)) {
-        mod.unreadable = { status: r.status, code: r.code || null, message: r.detail || r.error || 'no answer', at: new Date().toISOString() };
-        // The memory follows the file, never the other way round: with the write swallowed, the
-        // panel showed the new verdict, the disk kept the old one, and the next load put the old
-        // one back - a UI that told the truth for exactly one screenful. Same rule as below.
-        try { await op.write(m.path, JSON.stringify(mod, null, 2)); }
-        catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(`Could not save ${m.api_name}: ${(e && e.message) || e}`, 'bad'); return; }
-        if (!op.current()) return;
-        m.unreadable = mod.unreadable; m.error = false;
-        renderModules(); if (currentPath === m.path) openModule(m.path);
-        setStatus(`${m.api_name}: ${moduleRefusal(m.unreadable).text}`, 'warn');
-        return;
-      }
-      m.error = true; renderModules();
-      setStatus(`Resync of ${m.api_name} failed: ${r?.error || 'no answer'}`, 'warn');
+async function resyncModuleNow(m) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  if (mismatchRefuse()) return;
+  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return; }
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus(`Resyncing ${m.api_name}…`, 'busy');
+  const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
+  let mod = {}; try { mod = JSON.parse(await op.read(m.path)); } catch (_) {}
+  // Re-asking is the whole point of this dot, so the answer is recorded either way - a refusal
+  // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
+  // module Zoho has just described, which is the same class of lie in the other direction.
+  if (!r?.ok) {
+    if (isRefusal(r?.status)) {
+      mod.unreadable = { status: r.status, code: r.code || null, message: r.detail || r.error || 'no answer', at: new Date().toISOString() };
+      // The memory follows the file, never the other way round: with the write swallowed, the
+      // panel showed the new verdict, the disk kept the old one, and the next load put the old
+      // one back - a UI that told the truth for exactly one screenful. Same rule as below.
+      try { await op.write(m.path, JSON.stringify(mod, null, 2)); }
+      catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(`Could not save ${m.api_name}: ${(e && e.message) || e}`, 'bad'); return; }
+      if (!op.current()) return;
+      m.unreadable = mod.unreadable; m.error = false;
+      renderModules(); if (currentPath === m.path) openModule(m.path);
+      setStatus(`${m.api_name}: ${moduleRefusal(m.unreadable).text}`, 'warn');
       return;
     }
-    mod.fields = r.fields; delete mod.unreadable;
-    try { await op.write(m.path, JSON.stringify(mod, null, 2)); }
-    catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(`Could not save ${m.api_name}: ${(e && e.message) || e}`, 'bad'); return; }
-    if (!op.current()) return;
-    m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
-    renderModules(); if (currentPath === m.path) openModule(m.path);
-    setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
-  });
+    m.error = true; renderModules();
+    setStatus(`Resync of ${m.api_name} failed: ${r?.error || 'no answer'}`, 'warn');
+    return;
+  }
+  mod.fields = r.fields; delete mod.unreadable;
+  try { await op.write(m.path, JSON.stringify(mod, null, 2)); }
+  catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(`Could not save ${m.api_name}: ${(e && e.message) || e}`, 'bad'); return; }
+  if (!op.current()) return;
+  m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
+  renderModules(); if (currentPath === m.path) openModule(m.path);
+  setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
+}
+async function resyncModule(m) {
+  return runPullAction(() => resyncModuleNow(m));
 }
 /** The values of a picklist, on request and downwards. Laid out on one line - eight of them, then
  *  «…(+31)» - a module with long options made the fields table scroll sideways with no end, and a

@@ -79,12 +79,13 @@ function renderConnections() {
     tree.appendChild(el);
   });
 }
+async function refreshConnectionsNow() {
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus('Refreshing connections…', 'busy');
+  await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
+}
 async function refreshConnections() {
-  return runPullAction(async () => {
-    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    setStatus('Refreshing connections…', 'busy');
-    await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
-  });
+  return runPullAction(refreshConnectionsNow);
 }
 function openConnection(c) {
   previewLoad++;

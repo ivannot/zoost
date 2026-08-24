@@ -38,6 +38,18 @@ function sliceApp(app, name) {
   throw lastErr;
 }
 
+/** A pull entry is now one function or two: the wrapper that holds the flag, and the named body it
+ *  delegates to. `tools/asynccheck.py` reads function *declarations*, so an inline
+ *  `runPullAction(async () => {…})` was a scope nothing looked inside - 118 awaits and 45 `.then()`
+ *  callbacks across the panels were in that position while the grid recorded the cells as covered.
+ *  The convention is that every shipped async scope is a declaration; these cases follow the
+ *  delegation rather than asserting the old shape, which would have forbidden the fix. */
+function pullEntry(app, fn) {
+  const body = sliceApp(app, fn);
+  const m = body.match(/runPullAction\(\s*(?:\(\)\s*=>\s*)?(\w+)/);
+  return m && m[1] !== 'async' ? `${body}\n${sliceApp(app, m[1])}` : body;
+}
+
 import { join } from 'node:path';
 
 /** A named function or const out of a graph window, wherever it now lives: everything both products
@@ -4052,7 +4064,7 @@ for (const app of ['crm', 'analytics']) {
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
-           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOneNow',
+           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            'reconcileFunctions']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
@@ -4066,7 +4078,7 @@ for (const [app, fns] of [
       if (head > 0) reach.add(js.slice(head, js.indexOf('(', head)).split(' ').pop());
     }
     for (const fn of fns) {
-      const body = sliceApp(app, fn);
+      const body = pullEntry(app, fn);
       assert.ok(/if \(mismatchRefuse\(\)\) return/.test(body), `${fn} reaches Zoho without asking`);
     }
     // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
@@ -8174,7 +8186,9 @@ test('crm: every user entry that re-reads Zoho holds the pull flag for its whole
   const src = crmPanel();
   for (const fn of ['refreshSchedules', 'refreshActions', 'refreshConnections', 'resyncModule', 'pullHealthRuntime']) {
     const body = sliceApp('crm', fn);
-    assert.ok(/return runPullAction\(async \(\) => \{/.test(body),
+    // Either shape holds the flag for the whole span - the inline arrow, or the named body the
+    // wrapper delegates to. What is refused is re-reading Zoho outside the wrapper altogether.
+    assert.ok(/return runPullAction\((?:async \(\) => \{|\(\) => \w+\(|\w+\))/.test(body),
               `${fn} re-reads Zoho without blocking the selector or refusing a second pull`);
   }
   // The row clicks that download one item wrap at the click, because downloadOne is also called
@@ -8227,7 +8241,7 @@ test('crm: a failed graph build is never folded into a zero', () => {
 });
 
 test('crm: a module resync publishes only what it managed to write', () => {
-  const body = sliceApp('crm', 'resyncModule');
+  const body = pullEntry('crm', 'resyncModule');
   assert.ok(!/op\.write\([^)]*\); \} catch \(_\) \{\}/.test(body), 'a failed write is swallowed again');
   assert.equal((body.match(/Could not save/g) || []).length, 2,
                'one of the two write sites reports nothing when the disk refuses');
@@ -11682,6 +11696,85 @@ test('the panel, the bridge and the hook share one vocabulary, not two lists', (
 // ---------------------------------------------------------------------------------------------
 // The contents and the document are one list, and they were built twice.
 //
+// Every chapter ticked, and something in every list. Both reports were exercised with `fns: []` or
+// with `scope.code` absent, so **the branch that renders source had never been executed by anything**
+// - and it threw: `srcBlock` is a `const` arrow that was written 76 lines below the section that
+// calls it, which is its temporal dead zone. Every HTML export with source ticked - the default -
+// died on «Cannot access 'srcBlock' before initialization». Found by the author using the product.
+//
+// A fixture that cannot reach a branch proves nothing about that branch, and this file had four
+// callers of `buildExportHtml` and no way to tell that none of them reached this one. So: the scope
+// is **derived from the shipped list** rather than typed here, a function is present in all three of
+// the source states the builder distinguishes, and both reports are asked for a document.
+//
+// **The limits, stated.** It asserts the report is produced and carries each item, not that any
+// chapter is right - the cases above and below do that. Nothing here would catch a wrong sentence;
+// what it catches is the class that has now shipped once, a reference evaluated before its
+// declaration, which no amount of reading the diff finds and one execution does.
+test('crm: both reports are produced with every chapter ticked and something in every list', () => {
+  const globals = {
+    SCOPE_DEFAULT: {}, SCOPE_KEYS: [], bound: { instance: 'yourinstance' },
+    envOf: () => 'eu', freshnessLine: () => 'just now', byField: () => () => 0,
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k, firedBy: () => [],
+    actProv: () => '', actWhen: () => '', actStale: () => false, actKept: () => false,
+    actThin: () => false, _mdCell: (x) => String(x == null ? '' : x),
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', PRODUCT_AUTHOR: 'Ivan',
+    LEGAL_DISCLAIMER: 'x', SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '',
+    sanitize: (x) => String(x || ''), escHtml: (x) => String(x == null ? '' : x),
+    escA: (x) => String(x == null ? '' : x), esc: (x) => String(x == null ? '' : x),
+    hl: (x) => String(x || ''), first: (x) => String(x || ''), params: () => '',
+    fnAnchor: (x) => `fn-${x}`, modAnchor: (x) => `mod-${x}`, wfAnchor: (x) => `wf-${x}`,
+    schAnchor: (x) => `sch-${x}`, connAnchor: (x) => `conn-${x}`, FAIL_CAPPED: 'capped.',
+    MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
+           hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
+    // The builder's own `hl` asks the page for the highlighter and falls back to escaping. Without
+    // this the fixture cannot reach the source branch at all, which is how the branch stayed unrun.
+    window: {},
+  };
+
+  // Derived, so a chapter added tomorrow is exercised without anyone remembering to add it here.
+  const keys = JSON.parse(sliceConst('apps/crm/sidepanel.js', 'SCOPE_KEYS')
+    .replace(/^[^[]*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
+  assert.ok(keys.length >= 12 && keys.includes('code'), `SCOPE_KEYS did not lift: ${keys}`);
+  const scope = {};
+  for (const k of keys) scope[k] = true;
+
+  const node = { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha',
+                 calls: [], called_by: [], dead_suspect: false };
+  // The three states `srcBlock` distinguishes, all present: read, unreadable, never downloaded.
+  const fns = [
+    { api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', node, downloaded: true,
+      code: 'info "x";', stats: { lines: 1, codeLines: 1, chars: 9, apiCalls: 0 } },
+    { api_name: 'beta', display_name: 'Beta', namespace: 'ns', downloaded: true, code: null },
+    { api_name: 'gamma', display_name: 'Gamma', namespace: 'ns', downloaded: false },
+  ];
+  const mods = [{ api_name: 'Contacts', display_name: 'Contacts',
+                  related_lists: [{ api_name: 'Notes', module: 'Notes' }] }];
+  const health = { at: '2026-08-23T10:00:00Z', usage: { success: 9, failure: 1 }, runs: [],
+                   failures: [{ name: 'f', count: 1, reason: 'r' }] };
+  const args = [fns, mods, { nodes: { 'ns.alpha': node }, counts: {} }, {},
+                [{ id: '1', name: 'W', module: 'Contacts', actions: [] }], [{ id: '1', name: 'S' }],
+                [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], health,
+                [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope];
+
+  const { buildExportHtml } = load([sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const html = buildExportHtml(...args);
+  for (const f of fns) assert.ok(html.includes(f.display_name), `${f.display_name} is not in the report`);
+  assert.ok(html.includes('info &quot;x&quot;') || html.includes('info "x"'),
+            'source was ticked and no source reached the document');
+
+  // The Markdown twin takes the same data as one object - a different shape, same fixture.
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const md = buildExportMarkdown({ fns, mods, g: args[2], modRefs: {}, wfs: args[4], scheds: args[5],
+                                   conns: args[6], fails: health, acts: args[8], actUsers: new Map() },
+                                 scope);
+  // The Markdown names a function by its qualified api name, the HTML by its label - a difference
+  // between the two reports, not a defect: read off each rather than assumed the same.
+  for (const f of fns) assert.ok(md.includes(f.api_name), `${f.api_name} is not in the Markdown`);
+  assert.ok(md.includes('info "x"'), 'source was ticked and no source reached the Markdown');
+});
+
 // `buildExportHtml` writes a `<nav class="toc">` by hand and then writes the chapters by hand, each
 // with its own condition. Both halves were correct on their own and the composition was not:
 //

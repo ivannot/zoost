@@ -115,6 +115,12 @@ def _pages():
 
 PAGES = _pages()
 FILES = sorted({f for fs in PAGES.values() for f in fs})
+# Which files share a lexical scope with which - a `.then(fn)` in `ai.js` refers to a declaration in
+# `sidepanel.js`, because classic scripts on one page share one scope.
+PAGES_OF = {}
+for _fs in PAGES.values():
+    for _f in _fs:
+        PAGES_OF.setdefault(_f, set()).update(_fs)
 
 # A check that can stop the function before the write lands.
 GUARD = re.compile(r'op\.current\(\)|\bcurrent\(\)|sameWs\(|gen !== wsGen|gen === wsGen'
@@ -221,21 +227,6 @@ def functions(src):
         if end < 0:
             continue
         yield name, src[at:end], src[:at].count('\n') + 1
-    return
-    for m in re.finditer(r'(?m)^([ \t]*)(?:async\s+)?function\s+(\w+)\s*\(', src):
-        pad, name = m.group(1), m.group(2)
-        at = m.start() + len(pad)
-        line_end = src.find('\n', at)
-        first = src[at:line_end if line_end > 0 else len(src)]
-        if '{' in first and first.rstrip().endswith('}'):
-            yield name, first, src[:at].count('\n') + 1
-            continue
-        start = src.index('{', at)
-        end = src.find('\n' + pad + '}', start)
-        if end < 0:
-            continue
-        yield name, src[at:end], src[:at].count('\n') + 1
-
 
 def writes_in(code):
     """Every write to a name on this line, with whether its value comes from an `await`.
@@ -303,6 +294,156 @@ def findings(rel):
     return out
 
 
+SCOPES = os.path.join(ROOT, 'tools', 'asyncscopes.txt')
+
+# Every shape of async scope that is **not** a named function declaration, plus the other spelling of
+# a yield. Each is a place control leaves a function and the workspace can change underneath, and
+# each is a place `functions()` cannot enter - so a finding count from this tool is a statement about
+# the declarations and nothing else.
+#
+# The way out is not a second parser. It is a **source convention**: every async scope the two
+# extensions and the site ship is a named function declaration, and a callback is a reference to one.
+# Then the reader this tool already has reaches all of it, and the widening this file has twice made
+# wrong - 636 findings, then 171 - is not needed at all. It costs a name per callback and it makes
+# the code easier to read from a stack trace, which is the second reason to want it.
+#
+# `tools/asyncscopes.txt` is the migration list, not a set of exemptions: it holds what is still
+# written the old way, and **it goes to zero**. Anything not in it is a finding on the day it is
+# written.
+_SCOPE_SHAPES = (
+    ('async arrow', re.compile(r'\basync\s*\([^()]*\)\s*=>')),
+    ('async arrow', re.compile(r'\basync\s+\w+\s*=>')),
+    ('anonymous async function', re.compile(r'\basync\s+function\s*\(')),
+    ('async method', re.compile(r'(?m)^\s*async\s+\w+\s*\([^()]*\)\s*\{')),
+    ('.then() callback', re.compile(r'\.then\s*\(')),
+)
+# `.then(fn)` where `fn` is a declaration on the same page is not a scope this tool misses: control
+# leaves, and the continuation is something it reads. `.then(() => {…})` is. The distinction is the
+# whole convention in one line - a callback is a *reference* to a named function - so it is derived
+# from the page's own declarations rather than from a list of allowed names.
+_THEN_REF = re.compile(r'\.then\s*\(\s*(\w+)\s*[,)]')
+
+
+def _blank_non_code(src):
+    """Comments and string contents blanked, positions preserved.
+
+    A `.then(` inside a comment explaining why something is not a `.then(` is not a `.then(`, and
+    both exist in this subject. Position-preserving so a line number stays a line number - the same
+    thing `tests/slice.mjs` does on the Node side, and for the same reason."""
+    out, i, n = list(src), 0, len(src)
+    # A regular-expression literal is neither a comment nor a string and contains both. `/[&<>"']/g`
+    # in each options page opened a string at its `"` and closed it at a `"` forty characters later,
+    # and everything between - **every async arrow in `apps/crm/options.js`** - was blanked away. The
+    # scanner reported that file clean and it holds eleven of them. Found by asking why a file with
+    # eleven `async () =>` came back with none, which is the only reason it was found at all: a
+    # blanker fails silently by definition, since what it eats stops being visible to anything.
+    prev = ''
+
+    def _is_regex(at):
+        # By what precedes, not by a list: after a value (`)`, `]`, a name, a number) a slash is
+        # division; after an operator, a comma, a brace or nothing it opens a literal.
+        return prev == '' or prev in '(,=:[!&|?{};+-*%~^<>' or prev == 'return'
+
+    while i < n:
+        c = src[i]
+        if c == '/' and i + 1 < n and src[i + 1] not in '/*' and _is_regex(i):
+            j = i + 1
+            in_class = False
+            while j < n and src[j] != '\n':
+                if src[j] == '\\':
+                    j += 2
+                    continue
+                if src[j] == '[':
+                    in_class = True
+                elif src[j] == ']':
+                    in_class = False
+                elif src[j] == '/' and not in_class:
+                    break
+                j += 1
+            if j < n and src[j] == '/':
+                for k in range(i + 1, j):
+                    out[k] = ' '
+                prev = '/'
+                i = j + 1
+                continue
+        if c == '/' and i + 1 < n and src[i + 1] == '/':
+            while i < n and src[i] != '\n':
+                out[i] = ' '
+                i += 1
+        elif c == '/' and i + 1 < n and src[i + 1] == '*':
+            j = src.find('*/', i + 2)
+            j = n if j < 0 else j + 2
+            for k in range(i, j):
+                if src[k] != '\n':
+                    out[k] = ' '
+            i = j
+        elif c in '"\'`':
+            q, i = c, i + 1
+            while i < n and src[i] != q:
+                if src[i] == '\\':
+                    out[i] = ' '
+                    i += 1
+                    if i < n:
+                        out[i] = ' ' if src[i] != '\n' else '\n'
+                        i += 1
+                    continue
+                out[i] = ' ' if src[i] != '\n' else '\n'
+                i += 1
+            i += 1
+            prev = c
+        else:
+            if not c.isspace():
+                prev = c
+            i += 1
+    return ''.join(out)
+
+
+def unread_scopes(rel):
+    """Async scopes in one file that `functions()` cannot enter, with their line and shape.
+
+    A named declaration is excluded by construction: none of the shapes above matches
+    `async function name(`, because each requires what follows `async` to be a paren, an arrow
+    parameter, `function (` or a method head. Measured on the subject rather than argued - the sweep
+    in `tests/tools_test.py` asserts that no line of a converted file is reported."""
+    with open(os.path.join(ROOT, rel), encoding='utf-8') as fh:
+        src = fh.read()
+    code = _blank_non_code(src)
+    named = set()
+    for f in (PAGES_OF.get(rel) or [rel]):
+        with open(os.path.join(ROOT, f), encoding='utf-8') as fh:
+            named |= {n for n, _, _ in functions(fh.read())}
+    refs = {m.start() for m in _THEN_REF.finditer(code) if m.group(1) in named}
+    out = []
+    for shape, pat in _SCOPE_SHAPES:
+        for m in pat.finditer(code):
+            if shape == '.then() callback' and m.start() in refs:
+                continue
+            # `async function name(` reaches the method pattern through its own head. Excluded by
+            # what precedes, not by a list of names.
+            if shape == 'async method' and re.match(r'\s*async\s+function\b', m.group(0)):
+                continue
+            out.append((rel, code[:m.start()].count('\n') + 1, shape))
+    return sorted(out)
+
+
+def scope_findings():
+    out = []
+    for rel in FILES:
+        out.extend(unread_scopes(rel))
+    return out
+
+
+def read_scopes():
+    if not os.path.exists(SCOPES):
+        return set()
+    keep = set()
+    for line in open(SCOPES, encoding='utf-8'):
+        line = line.split('#')[0].strip()
+        if line:
+            keep.add(line)
+    return keep
+
+
 def read_ledger():
     if not os.path.exists(LEDGER):
         return set()
@@ -324,7 +465,35 @@ def main():
     keys = {f'{rel}\t{fn}\t{name}' for rel, fn, name, _, _ in found}
     known = read_ledger()
 
+    scopes = scope_findings()
+    # Keyed by «the Nth scope of this shape in this file», not by its line. A line number churns on
+    # every edit above it, and a ledger that churns is one nobody reads - the finding «line no longer
+    # matches» would arrive on changes that moved nothing. The count per shape is what has to not
+    # grow, and the line is printed beside it so the reader can go there.
+    scope_keys, scope_at, seen_shape = set(), {}, {}
+    for rel, line, shape in scopes:
+        n = seen_shape[(rel, shape)] = seen_shape.get((rel, shape), 0) + 1
+        k = f'{rel}\t{shape}\t{n}'
+        scope_keys.add(k)
+        scope_at[k] = line
+    known_scopes = read_scopes()
+
     if accept:
+        _sbefore = ledger_count(SCOPES)
+        sown = ['# Derived by tools/asynccheck.py - do not edit by hand; run it with --accept.',
+                '# Async scopes that are not a named function declaration, and .then() callbacks.',
+                '# This is a MIGRATION LIST and not a set of exemptions: every line is a place this',
+                '# tool cannot enter, so its findings say nothing about what happens there. It goes',
+                '# to zero. A line is removed by converting the scope to a named declaration and a',
+                '# reference to it - never by widening what counts as read.']
+        skept = ledger_keep(SCOPES, sown)
+        with open(SCOPES, 'w', encoding='utf-8') as fh:
+            for line in sown + skept:
+                fh.write(line + '\n')
+            for k in sorted(scope_keys, key=lambda k: (k.split('\t')[0], k.split('\t')[1],
+                                                       int(k.split('\t')[2]))):
+                fh.write(k + '\n')
+        print(ledger_delta(f'asynccheck: {os.path.relpath(SCOPES, ROOT)}', _sbefore, ledger_count(SCOPES)))
         _before = ledger_count(LEDGER)
         own = ['# Derived by tools/asynccheck.py - do not edit by hand; run it with --accept.',
                '# Each line is a global written after an await with no check between the two.',
@@ -345,13 +514,26 @@ def main():
 
     new = sorted(k for k in keys if k not in known)
     gone = sorted(k for k in known if k not in keys)
+    # The gate the convention needs. A scope written the old way tomorrow is a finding on the day it
+    # is written; one already in the migration list is not, and the list shrinks as they are
+    # converted. A line in the list that no longer matches is a finding too - it means the scope
+    # moved, and a stale entry would exempt whatever now stands at that line.
+    snew = sorted(k for k in scope_keys if k not in known_scopes)
+    sgone = sorted(k for k in known_scopes if k not in scope_keys)
+    for k in snew:
+        rel, shape, _n = k.split('\t')
+        print(f'  {rel}:{scope_at[k]}  {shape} - every async scope shipped here is a named function '
+              f'declaration, because that is the only shape this tool can read')
+    for k in sgone:
+        print(f'  migration list entry no longer matches anything: {k.replace(chr(9), " · ")}'
+              f' - a scope was converted; run --accept in the same change')
     for rel, fn, name, line, text in sorted(found):
         if f'{rel}\t{fn}\t{name}' in new:
             print(f'  {rel}:{line}  {fn}() writes `{name}` after an await with nothing asked in between')
             print(f'      {text}')
     for k in gone:
         print(f'  ledger line no longer matches anything: {k.replace(chr(9), " · ")}')
-    n = len(new) + len(gone)
+    n = len(new) + len(gone) + len(snew) + len(sgone)
     # The denominator, which this tool printed for nobody: how much of its own subject it read. It
     # said «20 files» and read 0 of the 32 functions in one content bridge and 0 of the 19 in the
     # other - the two files that do the authenticated fetching - because both are wrapped in an IIFE
@@ -411,6 +593,8 @@ def main():
     for rel, k in sorted(worst.items(), key=lambda kv: -kv[1])[:5]:
         print(f'    unread: {rel}  {k} await(s) outside any declaration')
 
+    print(f'    {len(scope_keys)} async scope(s) are not a named declaration and are on the '
+          f'migration list in {os.path.relpath(SCOPES, ROOT)}; it goes to zero.')
     print(f'\n{n} finding(s). {read} function(s) read of {crude} declared '
           f'({crude - read} nested inside another, whose state is local); '
           f'{len(keys)} global write(s) after an await, {len(known)} recorded as read.')

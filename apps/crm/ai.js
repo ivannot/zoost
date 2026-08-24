@@ -815,11 +815,13 @@ async function aiCall(cfg, messages, system) {
   const o = cfg.openai;
   const base = OPENAI_BASE;   // fixed: the manifest only grants host access to this endpoint
   const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
-  const post = async (limitField) => fetch(base + '/chat/completions', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${o.apiKey}` },
-    body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: 4096 }),
-  });
+  async function post(limitField) {
+    return fetch(base + '/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${o.apiKey}` },
+      body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: 4096 }),
+    });
+  }
   // Older chat models want `max_tokens`; newer OpenAI models reject it and require
   // `max_completion_tokens`. Try the classic field, then retry once on that specific complaint.
   let res = await post('max_tokens');
@@ -975,7 +977,7 @@ function toggleAI() {
   if (!dir) return;
   closeHealth();   // one panel at a time
   $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open'); aiEngineChrome(); aiRenderMessages();
-  aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
+  aiEnsureFiles().then(aiContextLabel);   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
 function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it - switching workspace does it too, because the old thread was about another org.')) return; clearConversationState(); }

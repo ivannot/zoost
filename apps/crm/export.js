@@ -110,6 +110,22 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const hl = (c) => (window.highlightDeluge ? window.highlightDeluge(c, codeResolve) : esc(c));
   const fnApiSet = new Set(fns.map((f) => f.api_name));
   const fnLink = (api) => (api && fnApiSet.has(api)) ? `<a href="#${fnAnchor(api)}">${esc(api)}</a>` : esc(api || '?');
+
+
+  // What goes where the source would be. `code === null` is «there was nothing to read»; `''` is a
+  // file that is there and is empty, which is a fact about the function and not a failure.
+  //
+  // **Declared above its first use, and that is the whole of it.** It was written 76 lines *below*
+  // the function section that calls it, and a `const` is in its temporal dead zone until the line
+  // that declares it runs - so every HTML export with source ticked died on «Cannot access
+  // 'srcBlock' before initialization», which is the default scope. A function *declaration* is
+  // hoisted and would not have done this; an arrow assigned to a const is not, and looks identical.
+  const srcBlock = (f) => (
+    !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
+      : f.code === null || f.code === undefined
+        ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
+        : `<pre class="code">${hl(f.code)}</pre>`);
+
   const nodeByApi = {}; if (g && g.nodes) Object.values(g.nodes).forEach((n) => { if (n.api_name) nodeByApi[n.api_name] = n; });
   const apiOf = (id) => (g && g.nodes[id] && g.nodes[id].api_name) || null;
   // workflow <-> function wiring
@@ -237,13 +253,6 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     ? `<p class="empty">No ${what}.</p>`
     : `<p class="empty">Not included in this export - ${what} were unticked when it was made.</p>`);
 
-  // What goes where the source would be. `code === null` is «there was nothing to read»; `''` is a
-  // file that is there and is empty, which is a fact about the function and not a failure.
-  const srcBlock = (f) => (
-    !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
-      : f.code === null || f.code === undefined
-        ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
-        : `<pre class="code">${hl(f.code)}</pre>`);
 
   const relRowHtml = (r) => `<tr class="relrow${r.sys ? ' sys' : ''}" data-name="${escA(((r.api || '') + ' ' + (r.label || '') + ' ' + (r.parent || '') + ' ' + (r.child || '')).toLowerCase())}">`
     + `<td class="mono"><b>${esc(r.api)}</b></td><td>${esc(r.label)}</td>`

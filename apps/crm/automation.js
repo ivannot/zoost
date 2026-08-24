@@ -67,21 +67,31 @@ function renderSchedules() {
     });
   });
 }
+// The status dot's own action, named: it awaits a pull and then rewrites the row it belongs to, which
+// is a write after a yield and therefore exactly what `tools/asynccheck.py` is for. As a `.then()`
+// arrow it was a scope the tool could not enter.
+async function wfDotClick(ev, e) {
+  ev.stopPropagation();
+  await runPullAction(() => downloadOneWf(e));
+  updateRow(e); updateMissingButton();
+}
+
+async function refreshSchedulesNow() {
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus('Refreshing schedules\u2026', 'busy');
+  // The pull owns the message, like its three siblings. This wrote «N schedules.» in green
+  // afterwards, unconditionally - and `pullSchedules` never throws: a partial list from Zoho, a
+  // role that refuses, no Zoho tab, an environment mismatch, a folder permission denied are six
+  // early returns, each of which sets its own line and comes back here to be painted over. The
+  // count was the length of the list *already in memory*, since the new one is only installed on
+  // success, so it read as «refreshed, 12 schedules» over a refresh that did not happen.
+  //
+  // And `setStatus` calls `showEmergency(false)`, so the green line also closed the «Report this
+  // problem» banner that the failure had just raised.
+  await pullSchedules();
+}
 async function refreshSchedules() {
-  return runPullAction(async () => {
-    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    setStatus('Refreshing schedules\u2026', 'busy');
-    // The pull owns the message, like its three siblings. This wrote «N schedules.» in green
-    // afterwards, unconditionally - and `pullSchedules` never throws: a partial list from Zoho, a
-    // role that refuses, no Zoho tab, an environment mismatch, a folder permission denied are six
-    // early returns, each of which sets its own line and comes back here to be painted over. The
-    // count was the length of the list *already in memory*, since the new one is only installed on
-    // success, so it read as «refreshed, 12 schedules» over a refresh that did not happen.
-    //
-    // And `setStatus` calls `showEmergency(false)`, so the green line also closed the «Report this
-    // problem» banner that the failure had just raised.
-    await pullSchedules();
-  });
+  return runPullAction(refreshSchedulesNow);
 }
 async function openSchedule(e) {
   previewLoad++;
@@ -228,7 +238,7 @@ function renderWorkflows() {
             + (e.schedDelays && e.schedDelays.length ? ' - after ' + e.schedDelays.join(', ') : ''))}">⏱ ${e.sched}</span>`
         : '';
       el.innerHTML = `<span class="st ${stCls}" title="${escA(wfTitle)}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${schedBadge}${e.active ? '' : '<span class="wfoff">off</span>'}`;
-      el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); runPullAction(() => downloadOneWf(e)).then(() => { updateRow(e); updateMissingButton(); }); };
+      el.querySelector('.st').onclick = (ev) => wfDotClick(ev, e);
       el.onclick = () => openWorkflow(e);
       tree.appendChild(el);
     });
@@ -617,12 +627,13 @@ function renderActions() {
     tree.appendChild(el);
   });
 }
+async function refreshActionsNow() {
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus('Refreshing automation actions\u2026', 'busy');
+  await pullActions();
+}
 async function refreshActions() {
-  return runPullAction(async () => {
-    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    setStatus('Refreshing automation actions\u2026', 'busy');
-    await pullActions();
-  });
+  return runPullAction(refreshActionsNow);
 }
 /** One mapped field of a task, rendered from what it is rather than from what Zoho called it.
  *

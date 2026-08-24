@@ -5,7 +5,7 @@
 addSampleWorkspace	354dce527925	da2e4f395fc9	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
 aiBuildSeed	a0ab5d3c236a	260d3c14a906	divergent
-aiCall	1b3b8118b614	8952517e2a80	divergent
+aiCall	3eb02256d69b	9ecc6bf28f4c	divergent
 aiCap	113394dc8123	113394dc8123	identical
 aiClear	bc37da0fa783	edbcc54cb5ca	divergent
 aiContextLabel	6b65dd4c3db5	9e759687172d	divergent
@@ -35,7 +35,7 @@ beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	dbcd581f4fb3	1ebef045c187	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	f013b2b06293	4d67279b5a1a	divergent
+buildExportHtml	023ed94d5bc3	4d67279b5a1a	divergent
 buildExportMarkdown	bec112444e2e	76cf76fadc28	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
@@ -203,6 +203,7 @@ saveKeys	647ec30fc72a	647ec30fc72a	identical
 scopeFromUI	3a730daf94e4	c83939bc53c4	divergent
 scopeToUI	f35c4710f682	13ff88ae9736	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical
+seedShortcuts	a2eedf0c5050	a2eedf0c5050	identical
 select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	4f2534e0811c	4f2534e0811c	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
@@ -225,7 +226,7 @@ syncLockRow	1c6f4d354382	1c6f4d354382	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	692c8692eeff	93b7beed0330	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
-toggleAI	8780db5203e0	e7a00b84968a	divergent
+toggleAI	ffe8067dd5c3	70228434d9a2	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical
 tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
 updateDepthUI	77a910d07585	77a910d07585	identical

@@ -15,10 +15,13 @@ function rxDefaults() {
     { name: 'Zoho ID', pattern: '\\b\\d{18}\\b' },
   ];
 }
-chrome.runtime.onInstalled.addListener(async () => {
+// Named, and passed by reference. Every async scope shipped here is a function declaration - it is
+// the only shape `tools/asynccheck.py` can enter, so an arrow is a scope nothing looks inside.
+async function seedShortcuts() {
   try {
     const st = await chrome.storage.local.get('rxShortcuts');
     if (st.rxShortcuts === undefined) await chrome.storage.local.set({ rxShortcuts: rxDefaults() });
   } catch (_) {}
-});
+}
+chrome.runtime.onInstalled.addListener(seedShortcuts);
 

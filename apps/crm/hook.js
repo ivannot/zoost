@@ -69,7 +69,11 @@
   };
 
   const origFetch = window.fetch;
-  window.fetch = async function (...args) {
+  // A declaration rather than an anonymous expression, for the reason the whole convention exists:
+  // `tools/asynccheck.py` reads declarations, so this body - the one that watches every request the
+  // page makes - was a scope nothing looked inside. `this` still comes from the call site, which an
+  // arrow would have broken and a declaration does not.
+  async function hookedFetch(...args) {
     const res = await origFetch.apply(this, args);
     try {
       const req = args[0];
@@ -79,7 +83,8 @@
       if (k) notify(k[0], k[1]);
     } catch (_) {}
     return res;
-  };
+  }
+  window.fetch = hookedFetch;
 
   const XO = XMLHttpRequest.prototype.open;
   const XS = XMLHttpRequest.prototype.send;
