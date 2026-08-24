@@ -325,7 +325,9 @@ function showEmergency(on) { for (const id of ['emerg', 'repopen', 'repdismiss']
 
 // ---------- filesystem ----------
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
-const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
+async function hasPerm(h) {
+  return (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
+}
 // Chrome drops the folder permission between sessions, so anything that is about to write has to
 // ask first - under a real click, which every caller of this is. Without it the first write throws
 // `NotAllowedError: The request is not allowed by the user agent…`, which names neither the folder
@@ -403,7 +405,7 @@ function beginWorkspaceOp() {
   // the same object is current again, so an operation from before the round trip passed a check that
   // compares handles while `current()` said false. Asked on both sides of the await.
   const guard = () => { if (!current()) throw new Error(WS_MOVED); };
-  const through = async (fn) => { guard(); const v = await fn(); guard(); return v; };
+  async function through(fn) { guard(); const v = await fn(); guard(); return v; }
   return {
     root, gen, current,
     read: (p) => through(() => readFileAt(root, p)),
@@ -492,7 +494,9 @@ const writeJson = (rel, o, op) => (op ? op.write(rel, JSON.stringify(o, null, 2)
 // in it. The CRM learnt this twice; this side inherits the lesson rather than the bug.
 // The op reaches here because `.zoost.json` is the file that says which workspace this folder
 // mirrors. Optional, so the render paths that mean the folder on screen are unchanged.
-const patchCfg = async (o, op) => writeJson(CFG, Object.assign({}, await readJson(CFG, {}, op), o), op);
+async function patchCfg(o, op) {
+  return writeJson(CFG, Object.assign({}, await readJson(CFG, {}, op), o), op);
+}
 // Filenames are derived from Zoho's names, so anything a filesystem dislikes has to go. The id is
 // appended because two views in different folders may legitimately share a name.
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
@@ -3597,10 +3601,11 @@ async function writeSampleWorkspace() {
   } catch (e) { status('Could not write the sample: ' + e.message, 'bad'); }
 }
 $('wsdel').onclick = delWorkspace;
-$('ws').onchange = async () => {
+async function onWs() {
   if (workspaceChangeRefuse()) return;
   const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w);
-};
+}
+$('ws').onchange = onWs;
 $('pull').onclick = pullAll;
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
@@ -3799,7 +3804,7 @@ $('find').oninput = () => {
   if (searchMode === 'sql') { clearTimeout(_sqlSearchT); _sqlSearchT = setTimeout(render, 220); }
   else render();
 };
-$('smode').onclick = async () => {
+async function onSmode() {
   const op = beginWorkspaceOp();
   searchMode = searchMode === 'name' ? 'sql' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';
@@ -3813,7 +3818,8 @@ $('smode').onclick = async () => {
   if (searchMode === 'sql' && !(await ensureSqlCache(op))) return;
   if (!op.current()) return;
   render();
-};
+}
+$('smode').onclick = onSmode;
 $('rxmode').onclick = () => {
   regexMode = !regexMode;
   $('rxmode').classList.toggle('on', regexMode);
@@ -3964,12 +3970,15 @@ document.querySelectorAll('.dtab').forEach((b) => {
 // except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
 // chat. The two panels excluded different subsets of those and neither list was wrong, which is how
 // a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
-document.addEventListener('click', async (e) => {
+// Named, like every async scope this project ships: `tools/asynccheck.py` reads function
+// declarations, so an inline callback is a scope nothing looks inside.
+async function regrantOnAnyClick(e) {
   if (!root || rootGranted) return;
   const t = e.target;
   if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
-}, true);
+}
+document.addEventListener('click', regrantOnAnyClick, true);
 
 // resizable split - the CRM's, down to the stored height
 let dragY = false;
@@ -4054,7 +4063,7 @@ async function aiEngineWord() {
 // sending is. The one thing it did cost is now stated on the site: opening the page is an ordinary
 // visit to zoost.it, which a reader who changes their mind on the panel side never made.
 $('repdismiss').onclick = () => showEmergency(false);
-$('repopen').onclick = async () => {
+async function onRepopen() {
   reportText = buildReport(reportFacts(lastThrown, await aiEngineWord()));
   const text = reportText;
   try {
@@ -4081,7 +4090,8 @@ $('repopen').onclick = async () => {
   } catch (_) {
     setReportFallback();
   }
-};
+}
+$('repopen').onclick = onRepopen;
 // If the tab cannot be opened or written to, say so and leave the reader somewhere to go - a silent
 // bail here is a button that looks like it worked.
 function setReportFallback() {

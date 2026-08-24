@@ -32,7 +32,7 @@ applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
 askScope	d27f77a79c58	a599531ca679	divergent
 beginLoad	090fe6a5aab2	090fe6a5aab2	identical
-beginWorkspaceOp	dbcd581f4fb3	1ebef045c187	divergent
+beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
 buildExportHtml	023ed94d5bc3	4d67279b5a1a	divergent
@@ -123,6 +123,7 @@ friendlyError	e2fc432f4aa8	e2fc432f4aa8	identical
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	7753ba68b1be	c9709b0f9729	divergent
+hasPerm	b2ad51545bd5	b2ad51545bd5	identical
 hueFor	14a512e6b267	14a512e6b267	identical
 init	95aac20a6c5c	a0881b200043	divergent
 initPositions	523e3eabcde3	523e3eabcde3	identical
@@ -161,6 +162,7 @@ noteStep	9c9fb28465ba	9c9fb28465ba	identical
 onAiengine	db42c8c059e5	55f96961b339	divergent
 onSaveLay	632ebb161980	ec35c06238e1	divergent
 onSaveRx	974e36827c7e	974e36827c7e	identical
+onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	1d9967844be3	1d9967844be3	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	1ccc9b2b0408	0c5941e396f4	divergent
@@ -176,6 +178,7 @@ panelInert	bc169e70b382	bc169e70b382	identical
 parseArrangement	6ad270723301	6ad270723301	identical
 pass	56e18c27fc90	4bb92032e77b	divergent
 passKind	684df355a097	bdf6d02817df	divergent
+patchCfg	36bf3c3c0b3e	022f4520707e	divergent
 pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	f7f5b59cd421	3f6e88e32e8d	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
@@ -187,6 +190,7 @@ redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	a6185d0cf57a	6a4b34ab0325	divergent
+regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	65b6796a1174	479e5c41dd33	divergent
 rememberActive	b905c9b77414	b905c9b77414	identical

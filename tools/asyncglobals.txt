@@ -13,6 +13,13 @@
 #   for one workspace and nothing else runs while it loads, so there is no second operation for a
 #   guard to distinguish it from. DATA, N, ids, erP, drawMax, curFocus, egoDepth.
 #
+#   `onWsdel` in the CRM panel - the delete of the selected workspace. `currentPath = null` and the
+#   preview closing land after the folder has been removed; a workspace switched to meanwhile would
+#   have its preview closed, which is cosmetic and is followed by `loadWorkspaces()` anyway. Named
+#   here because the guard at the top of the function is checked once, before the awaits, which is
+#   the shape this repository records as protecting the first effect only - it happens not to matter
+#   at this site, and that is a judgement rather than a property.
+#
 #   `onAiengine` / `onSaveAi` in either options page - **the settings page has no workspace**. It
 #   holds no folder handle and no org, so the class this check is about - a value published into a
 #   workspace that has since changed - has nothing to be wrong about here. Each write takes the
@@ -106,6 +113,7 @@ apps/crm/sidepanel.js	loadWorkspaces	dir
 apps/crm/sidepanel.js	loadWorkspaces	root
 apps/crm/sidepanel.js	loadWorkspaces	rootGranted
 apps/crm/sidepanel.js	loadWorkspaces	wsList
+apps/crm/sidepanel.js	onWsdel	currentPath
 apps/crm/sidepanel.js	openFile	currentPath
 apps/crm/sidepanel.js	openRxMenu	regexMode
 apps/crm/sidepanel.js	openWorkflow	currentPath

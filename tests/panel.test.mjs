@@ -871,7 +871,17 @@ test('every writer of .zoost.json merges', () => {
     const body = src.replace(/^\s*\/\/.*$/gm, '');
     const whole = [...body.matchAll(/\bwrite(Cfg|Json)\(\s*(CFG\s*,)?/g)]
       .filter((m) => m[1] === 'Cfg' || (m[2] || '').includes('CFG'))
-      .filter((m) => !body.slice(Math.max(0, m.index - 40), m.index).includes('patchCfg'));
+      // Its own declaration is not a call site. `const writeCfg = async (o, op) =>` did not put a
+      // paren after the name and `async function writeCfg(o, op)` does, so the day the helper became
+      // a declaration the sweep reported the definition as a whole-object write.
+      .filter((m) => !/function\s+$/.test(body.slice(Math.max(0, m.index - 10), m.index)))
+      // Inside `patchCfg` itself, which *is* the merge. It used to be «somewhere in the 40
+      // characters behind», which was the arrow's own `const patchCfg = async (…) => writeCfg(…)`;
+      // as a declaration the name sits on the line above and 40 characters no longer reach it. Ask
+      // which declaration the write is in instead - the same answer, derived rather than measured
+      // in characters.
+      .filter((m) => (body.lastIndexOf('function patchCfg', m.index) < 0)
+                     || body.indexOf('\n}', body.lastIndexOf('function patchCfg', m.index)) < m.index);
     assert.equal(whole.length, 0,
       `${app}/sidepanel.js: ${whole.length} whole-object write(s) to .zoost.json — use patchCfg, or the next field added to that file is silently dropped`);
   }
@@ -1911,11 +1921,15 @@ test('the click-anywhere shortcut exists on both, and stays out of the same plac
   // Saying it in the message is only honest if it is true, and it was true on both — with *different*
   // exclusion lists, neither of them wrong, which is how a divergence survives: both looked
   // deliberate. It is the union now.
+  // The handler by name, not by the shape of its attachment. It used to be sliced from
+  // `document.addEventListener('click', async` to the next `}, true);` - which stopped matching the
+  // day the callback became a named declaration, and would have stopped matching again at the next
+  // reshuffle. `sliceFn` cuts the body and nothing else.
   const guards = ['crm', 'analytics'].map((app) => {
     const src = read(`apps/${app}/sidepanel.js`);
-    const i = src.indexOf("document.addEventListener('click', async");
-    assert.ok(i > 0, `${app}: nothing re-grants on a stray click`);
-    return src.slice(i, src.indexOf('}, true);', i));
+    assert.match(src, /document\.addEventListener\('click', regrantOnAnyClick, true\)/,
+                 `${app}: nothing re-grants on a stray click`);
+    return sliceFn(`apps/${app}/sidepanel.js`, 'regrantOnAnyClick');
   });
   for (const [i, g] of guards.entries()) {
     for (const sel of ['#wsroot', '#pfoot', '.dlg', '#aiview', '#offoverlay']) {
@@ -4511,7 +4525,7 @@ for (const app of ['crm', 'analytics']) {
     for (const app of ['crm', 'analytics']) {
       const src = read(`apps/${app}/sidepanel.js`);
       assert.ok(!/zoost\.it\/report#/.test(src), 'why=' + app + ' still puts the report in a URL');
-      assert.ok(/chrome\.scripting\.executeScript/.test(src.slice(src.indexOf("$('repopen').onclick"))),
+      assert.ok(/chrome\.scripting\.executeScript/.test(handlerOf(`apps/${app}/sidepanel.js`, 'repopen')),
         'why=' + app + ' does not put the text into the page it opened');
       const mf = JSON.parse(read(`apps/${app}/manifest.json`));
       assert.ok(mf.host_permissions.includes('https://zoost.it/*'),
@@ -4526,7 +4540,7 @@ for (const app of ['crm', 'analytics']) {
     // is the part a careless change breaks silently: the injection simply never fires.
     for (const app of ['crm', 'analytics']) {
       const src = read(`apps/${app}/sidepanel.js`);
-      const block = src.slice(src.indexOf("$('repopen').onclick"), src.indexOf('function setReportFallback'));
+      const block = handlerOf(`apps/${app}/sidepanel.js`, 'repopen');
       assert.ok(/chrome\.windows\.create/.test(block), 'why=' + app + ' opens the report in a tab');
       assert.ok(!/chrome\.tabs\.create/.test(block), 'why=' + app + ' still opens a tab');
       assert.ok(/win\.tabs\[0\]/.test(block),
@@ -4616,7 +4630,7 @@ for (const app of ['crm', 'analytics']) {
         assert.ok(!html.includes(`id="${id}"`), `why=${app} still has the dialog element ${id}`);
         assert.ok(!js.includes(`'${id}'`), `why=${app} still wires ${id}`);
       }
-      const block = js.slice(js.indexOf("$('repopen').onclick"), js.indexOf('function setReportFallback'));
+      const block = handlerOf(`apps/${app}/sidepanel.js`, 'repopen');
       assert.ok(/buildReport\(reportFacts\(/.test(block),
         `why=${app} does not build the report where the page is opened`);
     }
@@ -4761,11 +4775,11 @@ for (const app of ['crm', 'analytics']) {
     // search for text that does not exist.
     for (const app of ['crm', 'analytics']) {
       const panel = read(`apps/${app}/sidepanel.js`);
-      const h = panel.slice(panel.indexOf("$('rxmode').onclick"), panel.indexOf("$('rxpick').onclick"));
+      const h = handlerOf(`apps/${app}/sidepanel.js`, 'rxmode');
       assert.ok(/if \(!regexMode\) \$\('find'\)\.value = '';/.test(h),
         'why=' + app + ' keeps the pattern as a literal search when the toggle goes off');
       // The same rule on the other way out of full-text: the in: switch back to names.
-      const sm = panel.slice(panel.indexOf("$('smode').onclick"), panel.indexOf("$('rxmode').onclick"));
+      const sm = handlerOf(`apps/${app}/sidepanel.js`, 'smode');
       assert.ok(/&& regexMode\) \{ regexMode = false; \$\('rxmode'\)\.classList\.remove\('on'\); \$\('find'\)\.value = ''; \}/.test(sm),
         'why=' + app + ' carries the pattern into the name search when the scope switch leaves full-text');
     }
@@ -6905,7 +6919,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       assert.ok(!/await readCfg\(\)/.test(body),
                 `${name} validates whichever folder is global now, not the workspace it captured`);
     }
-    assert.match(src, /const patchCfg[\s\S]{0,180}op \? await opReadCfg\(op\) : await readCfg\(\)/,
+    assert.match(sliceFn('apps/crm/sidepanel.js', 'patchCfg'),
+                 /op \? await opReadCfg\(op\) : await readCfg\(\)/,
                  'patchCfg writes through an op but merges from the global workspace');
     for (const loader of ['loadActionsIndex', 'loadConnectionsIndex']) {
       const at = src.indexOf(`async function ${loader}`);
@@ -7437,8 +7452,12 @@ for (const app of ['crm', 'analytics']) {
     // operation from before the round trip wrote while `current()` said false.
     assert.ok(/const guard = \(\) => \{ if \(!current\(\)\) throw new Error\(WS_MOVED\); \};/.test(b),
               'the op hands its I/O straight to the file writer, which only compares handles');
-    assert.ok(/const through = async \(fn\) => \{ guard\(\); const v = await fn\(\); guard\(\); return v; \};/.test(b),
-              'the workspace is checked on one side of the await only');
+    // The shape, not the spelling: it guards, awaits, guards. It was an arrow with a `const`
+    // binding and is a declaration now - which is the convention every shipped async scope follows,
+    // because `tools/asynccheck.py` reads declarations - and an assertion on the old text would have
+    // forbidden the fix rather than checked the behaviour.
+    assert.match(b, /function through\(fn\) \{ guard\(\); const v = await fn\(\); guard\(\); return v; \}/,
+                 'the workspace is checked on one side of the await only');
   });
 
   test(`${app}: every function that writes carries an op`, () => {
@@ -8105,11 +8124,10 @@ for (const app of ['crm', 'analytics']) {
     const add = app === 'crm' ? 'addWorkspaceForTab' : 'addWorkspace';
     assert.ok(/workspaceChangeRefuse\(\)/.test(sliceFn(`apps/${app}/sidepanel.js`, add)), `${add} bypasses the pull lock`);
     const remove = app === 'crm'
-      ? src.slice(src.indexOf("$('wsdel').onclick"), src.indexOf('\n};', src.indexOf("$('wsdel').onclick")) + 3)
+      ? handlerOf('apps/crm/sidepanel.js', 'wsdel')
       : sliceFn('apps/analytics/sidepanel.js', 'delWorkspace');
     assert.ok(/workspaceChangeRefuse\(\)/.test(remove), 'Remove workspace bypasses the pull lock');
-    const handlerAt = src.indexOf("$('ws').onchange");
-    const handler = src.slice(handlerAt, src.indexOf('\n};', handlerAt) + 3);
+    const handler = handlerOf(`apps/${app}/sidepanel.js`, 'ws');
     assert.ok(/workspaceChangeRefuse\(\)/.test(handler), 'a forged change event bypasses the lock');
   });
 }
@@ -13065,9 +13083,9 @@ test('no shipped script wraps an un-awaited promise in a try that cannot catch i
 // and not that it is visible; the panel's own status machinery is covered where it lives.
 test('crm: a refused export default is said, and does not stop the export', async () => {
   const src = read('apps/crm/sidepanel.js');
-  const at = src.indexOf("$('expgo').onclick");
-  assert.ok(at > 0, 'the export dialog has no confirm button - the derivation broke');
-  const body = src.slice(src.indexOf('{', at), src.indexOf('\n};', at) + 2);
+  // By the control it belongs to: `handlerOf` throws when nothing is attached, which is the
+  // «derivation broke» this used to assert by hand, and it reads the body whichever shape it is in.
+  const body = handlerOf('apps/crm/sidepanel.js', 'expgo');
 
   const run = async (setter) => {
     const said = [];
@@ -13083,7 +13101,10 @@ test('crm: a refused export default is said, and does not stop the export', asyn
       chrome: { storage: { local: { set: setter } } },
     };
     vm.createContext(ctx);
-    await vm.runInContext(`(async () => ${body})()`, ctx);
+    // The declaration, then a call to it. It used to be a block wrapped in `(async () => …)()`,
+    // which is what the handler was; it is a named function now and running it as itself is both
+    // shorter and closer to what the panel does.
+    await vm.runInContext(`${body}\nonExpgo()`, ctx);
     return { said, resolved, stored: ctx.expScope };
   };
 

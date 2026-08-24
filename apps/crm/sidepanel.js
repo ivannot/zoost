@@ -913,7 +913,9 @@ async function dirFor(parts, create, root = dir) {
   return d;
 }
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
-const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
+async function hasPerm(h) {
+  return (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
+}
 // The guard every pull, graph and export opens with. It throws rather than returning false, so the
 // caller's own `catch` writes the message: the nine sites that used it were already a `try` block
 // each, and a helper that returned a boolean would have left the `throw` copied at all nine.
@@ -941,7 +943,7 @@ function beginWorkspaceOp() {
   // said false. Both halves, both sides of the await - the workspace can move while the browser is
   // inside `createWritable()` as easily as between two calls.
   const guard = () => { if (!current()) throw new Error(WS_MOVED); };
-  const through = async (fn) => { guard(); const v = await fn(); guard(); return v; };
+  async function through(fn) { guard(); const v = await fn(); guard(); return v; }
   return {
     root, gen, current,
     read: (p) => through(() => readFileAt(root, p)),
@@ -977,20 +979,27 @@ async function* walk(d, prefix = '') {
     if (h.kind === 'directory') yield* walk(h, prefix + name + '/'); else yield prefix + name;
   }
 }
-const readCfg = async () => { try { return JSON.parse(await readFile(CFG)); } catch { return null; } };
+async function readCfg() {
+  try { return JSON.parse(await readFile(CFG)); } catch { return null; }
+}
 // The same read, through an operation's own workspace. `.zoost.json` is the file that says which org
 // a folder mirrors, so a pull that reads it out of whichever folder is on screen can publish the
 // other one's identity as its own.
-const opReadCfg = async (op) => { try { return JSON.parse(await op.read(CFG)); } catch { return null; } };
-const writeCfg = async (o, op) => (op ? op.write(CFG, JSON.stringify(o, null, 2)) : writeFile(CFG, JSON.stringify(o, null, 2)));
+async function opReadCfg(op) {
+  try { return JSON.parse(await op.read(CFG)); } catch { return null; }
+}
+async function writeCfg(o, op) {
+  return op ? op.write(CFG, JSON.stringify(o, null, 2)) : writeFile(CFG, JSON.stringify(o, null, 2));
+}
 // Merge rather than replace. `.zoost.json` now holds more than the binding - the access verdicts
 // below live there too - and a whole-object write from any one writer silently drops what the others
 // put in it. This is the `cacheBinding` trap in CLAUDE.md, arriving a second time with a new field.
 // The op reaches here because `.zoost.json` is the file that says which org this folder mirrors:
 // written into the wrong one, two workspaces answer to the same id and only a hand edit separates
 // them again. It is optional, so the render paths that mean the folder on screen are unchanged.
-const patchCfg = async (o, op) => writeCfg(Object.assign({},
-  (op ? await opReadCfg(op) : await readCfg()) || {}, o), op);
+async function patchCfg(o, op) {
+  return writeCfg(Object.assign({}, (op ? await opReadCfg(op) : await readCfg()) || {}, o), op);
+}
 
 // ---------- tabs ----------
 //
@@ -4463,12 +4472,15 @@ $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
 // except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
 // chat. The two panels excluded different subsets of those and neither list was wrong, which is how
 // a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
-document.addEventListener('click', async (e) => {
+// Named, like every async scope this project ships: `tools/asynccheck.py` reads function
+// declarations, so an inline callback is a scope nothing looks inside.
+async function regrantOnAnyClick(e) {
   if (!root || rootGranted) return;
   const t = e.target;
   if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
-}, true);
+}
+document.addEventListener('click', regrantOnAnyClick, true);
 /** What the workspace list shows, and what it must never stop showing.
  *
  * The label is a convenience; the identity is the org or workspace id. So the label is displayed and
@@ -4534,11 +4546,16 @@ $('wssample').onclick = () => addSampleWorkspace();
 // One call for both copies of the button: addSampleWorkspace() decides whether there is one to
 // open or one to write, so the two cannot disagree and neither can act on a stale label.
 $('offsample').onclick = () => addSampleWorkspace();
-$('ws').onchange = async () => {
+// Named, like every async scope this project ships: `tools/asynccheck.py` reads function
+// declarations, so an inline callback is a scope nothing looks inside.
+async function onWs() {
   if (workspaceChangeRefuse()) return;
   const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true);
-};
-$('wsdel').onclick = async () => {
+}
+$('ws').onchange = onWs;
+// Named, like every async scope this project ships: `tools/asynccheck.py` reads function
+// declarations, so an inline callback is a scope nothing looks inside.
+async function onWsdel() {
   if (workspaceChangeRefuse()) return;
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;
   if (!confirm(`Delete the folder \u00ab${w.name}\u00bb and everything in it?\n\nThis removes the local mirror only - nothing in Zoho CRM is touched. You can pull it again at any time.`)) return;
@@ -4553,7 +4570,8 @@ $('wsdel').onclick = async () => {
     setStatus(`Removed \u00ab${w.name}\u00bb.`, 'ok');
     await loadWorkspaces();
   } catch (e) { setStatus('Remove failed: ' + e.message, 'warn'); }
-};
+}
+$('wsdel').onclick = onWsdel;
 
 // ---------- view mode (Functions / Modules) ----------
 // What you typed in Find belongs to the list you typed it in. It used to belong to the panel, so
@@ -5244,7 +5262,9 @@ $('about').onclick = showAbout; $('aboutx').onclick = closeAbout; $('aboutok').o
 $('expx').onclick = () => closeScope(false); $('expcancel').onclick = () => closeScope(false);
 // Persist what the user chose, not what staleness cleared on their behalf. A box they left
 // untouched keeps whatever Settings said; one they re-ticked is theirs and is remembered.
-$('expgo').onclick = async () => {
+// Named, like every async scope this project ships: `tools/asynccheck.py` reads function
+// declarations, so an inline callback is a scope nothing looks inside.
+async function onExpgo() {
   scopeFromUI();
   const keep = Object.assign({}, dlgScope);
   dlgAutoCleared.forEach((k) => { keep[k] = expScope[k]; });
@@ -5259,7 +5279,8 @@ $('expgo').onclick = async () => {
   catch (e) { setStatus(`This export runs with what you ticked; the browser refused to remember it as `
     + `the default (${(e && e.message) || 'no reason given'}).`, 'warn'); }
   closeScope(true);
-};
+}
+$('expgo').onclick = onExpgo;
 $('pspFull').onclick = () => { dlgScope = Object.assign({}, SCOPE_FULL); dlgAutoCleared.clear(); scopeToUI(); };
 $('pspSafe').onclick = () => { dlgScope = Object.assign({}, SCOPE_SAFE); dlgAutoCleared.clear(); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });

@@ -4438,15 +4438,27 @@ class AsyncCheckReadsWhatItOpens(unittest.TestCase):
         self.assertFalse(self.a._iife('// c\nlet x = 1;\n(function () {})();'))
 
     def test_almost_every_declared_function_is_read(self):
+        # A count was the first version of this - «no more than five unread» - and it aged into a
+        # number nobody could check: the day two more legitimate nested helpers appeared it failed,
+        # and the only way to satisfy it was to raise a ceiling with no argument behind it. What is
+        # actually meant is a *property*: a declaration at a file's own top level is read, and one
+        # nested inside another function is not, because its state is local. Name the exceptions
+        # instead of counting them, and the case says what it wants.
         read = crude = 0
+        unread = []
         for rel in self.a.FILES:
             src = (ROOT / rel).read_text(encoding='utf-8')
-            read += len(list(self.a.functions(src)))
-            crude += len(re.findall(r'(?m)^[ \t]*(?:async\s+)?function\s+\w+\s*\(', src))
+            got = {n for n, _, _ in self.a.functions(src)}
+            read += len(got)
+            for m in re.finditer(r'(?m)^([ \t]*)(?:async\s+)?function\s+(\w+)\s*\(', src):
+                crude += 1
+                if m.group(2) not in got:
+                    unread.append((rel, m.group(2), len(m.group(1))))
         self.assertGreater(crude, 700, 'the crude sweep found almost nothing - it is not sweeping')
-        self.assertLessEqual(crude - read, 5,
-                             f'{crude - read} declared functions go unread; only the ones nested inside '
-                             f'another are meant to, and there are two of those')
+        flat = [(r, n) for r, n, indent in unread if indent == 0]
+        self.assertEqual(flat, [],
+                         f'these are declared at a file\'s own top level and this tool never enters '
+                         f'them, so nothing it prints is about them: {flat}')
 
 
 class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
@@ -6927,7 +6939,7 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
 
     #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
     #: raises it, because a new scope written the old way is a finding on the day it is written.
-    CEILING = 65
+    CEILING = 61
 
     def ac(self):
         sys.path.insert(0, str(ROOT / 'tools'))

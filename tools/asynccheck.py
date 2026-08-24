@@ -334,26 +334,42 @@ def _blank_non_code(src):
 
     A `.then(` inside a comment explaining why something is not a `.then(` is not a `.then(`, and
     both exist in this subject. Position-preserving so a line number stays a line number - the same
-    thing `tests/slice.mjs` does on the Node side, and for the same reason."""
-    out, i, n = list(src), 0, len(src)
-    # A regular-expression literal is neither a comment nor a string and contains both. `/[&<>"']/g`
-    # in each options page opened a string at its `"` and closed it at a `"` forty characters later,
-    # and everything between - **every async arrow in `apps/crm/options.js`** - was blanked away. The
-    # scanner reported that file clean and it holds eleven of them. Found by asking why a file with
-    # eleven `async () =>` came back with none, which is the only reason it was found at all: a
-    # blanker fails silently by definition, since what it eats stops being visible to anything.
-    prev = ''
+    thing `tests/slice.mjs` does on the Node side, and for the same reason.
 
-    def _is_regex(at):
-        # By what precedes, not by a list: after a value (`)`, `]`, a name, a number) a slash is
-        # division; after an operator, a comma, a brace or nothing it opens a literal.
-        return prev == '' or prev in '(,=:[!&|?{};+-*%~^<>' or prev == 'return'
+    Three things in JavaScript look like a string and are not one, and each of them desynchronised
+    this function until it was measured against the whole subject rather than reasoned about:
+
+      * A **regular-expression literal** containing a quote. `/[&<>"']/g` in each options page opened
+        a string at its `"` and closed it forty characters later, and every async arrow in between
+        vanished - eleven of them in `apps/crm/options.js`, reported as a clean file. Which of `/`
+        divides and which opens a literal is decided by what precedes, not by a list.
+      * A **template literal's interpolation is code**, so a backtick inside it closes nothing:
+        `` `a ${x ? `b` : `c`} d` `` has five backticks and one string. Read as flat, the third one
+        opened a template that ran fifteen lines and swallowed nine comments and a handler.
+      * A **nested template** inside that interpolation, which is the same problem one level down and
+        is why this is a stack rather than a flag.
+
+    A blanker fails silently by definition - what it eats stops being visible to anything, including
+    to whoever reads its output looking for holes - so the case in `tests/tools_test.py` asserts on
+    all three shapes rather than on the tree being clean today."""
+    out, i, n = list(src), 0, len(src)
+    prev = ''
+    stack = []          # 'tpl' for a template whose interpolation we are inside
+
+    def blank(a, b):
+        for k in range(a, b):
+            if src[k] != '\n':
+                out[k] = ' '
+
+    def is_regex():
+        # After a value (`)`, `]`, a name, a number) a slash divides; after an operator, a comma, a
+        # brace or nothing it opens a literal.
+        return prev == '' or prev in '(,=:[!&|?{};+-*%~^<>'
 
     while i < n:
         c = src[i]
-        if c == '/' and i + 1 < n and src[i + 1] not in '/*' and _is_regex(i):
-            j = i + 1
-            in_class = False
+        if c == '/' and i + 1 < n and src[i + 1] not in '/*' and is_regex():
+            j, in_class = i + 1, False
             while j < n and src[j] != '\n':
                 if src[j] == '\\':
                     j += 2
@@ -366,42 +382,72 @@ def _blank_non_code(src):
                     break
                 j += 1
             if j < n and src[j] == '/':
-                for k in range(i + 1, j):
-                    out[k] = ' '
-                prev = '/'
-                i = j + 1
+                blank(i + 1, j)
+                prev, i = '/', j + 1
                 continue
         if c == '/' and i + 1 < n and src[i + 1] == '/':
-            while i < n and src[i] != '\n':
-                out[i] = ' '
-                i += 1
+            j = src.find('\n', i)
+            j = n if j < 0 else j
+            blank(i, j)
+            i = j
         elif c == '/' and i + 1 < n and src[i + 1] == '*':
             j = src.find('*/', i + 2)
             j = n if j < 0 else j + 2
-            for k in range(i, j):
-                if src[k] != '\n':
-                    out[k] = ' '
+            blank(i, j)
             i = j
-        elif c in '"\'`':
-            q, i = c, i + 1
-            while i < n and src[i] != q:
-                if src[i] == '\\':
-                    out[i] = ' '
-                    i += 1
-                    if i < n:
-                        out[i] = ' ' if src[i] != '\n' else '\n'
-                        i += 1
+        elif c in '"\'':
+            q, j = c, i + 1
+            while j < n and src[j] != q:
+                j += 2 if src[j] == '\\' else 1
+            blank(i + 1, min(j, n))
+            prev, i = q, j + 1
+        elif c == '`':
+            # The text is blanked; each `${…}` is left as code and pushed, so a backtick inside it
+            # opens a *new* template rather than closing this one.
+            j = i + 1
+            while j < n:
+                if src[j] == '\\':
+                    j += 2
                     continue
-                out[i] = ' ' if src[i] != '\n' else '\n'
-                i += 1
-            i += 1
-            prev = c
+                if src[j] == '`':
+                    break
+                if src[j] == '$' and j + 1 < n and src[j + 1] == '{':
+                    stack.append('tpl')
+                    blank(i + 1, j)
+                    prev, i = '{', j + 2
+                    break
+                j += 1
+            else:
+                j = n
+            if i <= j and (j >= n or src[j] == '`'):
+                blank(i + 1, min(j, n))
+                prev, i = '`', j + 1
+        elif c == '}' and stack:
+            # Back into the template this interpolation belongs to.
+            stack.pop()
+            j = i + 1
+            while j < n:
+                if src[j] == '\\':
+                    j += 2
+                    continue
+                if src[j] == '`':
+                    break
+                if src[j] == '$' and j + 1 < n and src[j + 1] == '{':
+                    stack.append('tpl')
+                    blank(i + 1, j)
+                    prev, i = '{', j + 2
+                    break
+                j += 1
+            else:
+                j = n
+            if i <= j and (j >= n or src[j] == '`'):
+                blank(i + 1, min(j, n))
+                prev, i = '`', j + 1
         else:
             if not c.isspace():
                 prev = c
             i += 1
     return ''.join(out)
-
 
 def unread_scopes(rel):
     """Async scopes in one file that `functions()` cannot enter, with their line and shape.
