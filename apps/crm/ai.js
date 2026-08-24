@@ -748,8 +748,20 @@ async function aiStreamAnthropic(a, msgs, system, tools, onText) {
       if (evt && dataStr) { try { handle(evt, JSON.parse(dataStr)); } catch (_) {} }
     }
   }
-  // Thinking never goes back to the model and is never shown; what it does is explain a turn that
-  // produced nothing else, so whether there was any is carried out of here.
+  // Thinking is not shown and is not sent back, and the second half is measured rather than
+  // assumed. The recorded conversation shows two assistant turns of `tool_use` with no
+  // thinking block in what we sent, five messages deep, answered 200 - so the API accepts a
+  // turn whose reasoning was dropped, at least while `thinking` is not requested, and this
+  // panel never requests it.
+  //
+  // **What is not established**: Anthropic documents that with extended thinking *enabled*
+  // over tool use the thinking blocks have to be passed back. We do not enable it and get
+  // one anyway. Sending them back untested could break the thing that currently works, so it
+  // is left as it is and written down here instead of being guessed at - the boundary this
+  // rests on, in our own voice rather than found later in a stack trace.
+  //
+  // What it does carry out is *whether* there was any, because that is what explains a turn
+  // that produced nothing else.
   const thought = blocks.some((b) => b && b.type === 'thinking');
   const content = blocks.filter(Boolean).filter((b) => b.type !== 'thinking').map((b) => b.type === 'tool_use' ? { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} } : { type: 'text', text: b.text }).filter((b) => b.type !== 'text' || (b.text && b.text.trim() !== ''));
   return { content, stop_reason, thought };
