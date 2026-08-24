@@ -67,7 +67,13 @@ table.ftbl{width:100%;border-collapse:collapse;font:12.5px ui-monospace,monospac
 .hxrow .hxm{color:var(--muted);font-size:11px}
 .hxnone{font-size:11.5px;color:#177a4a;margin:0}
 .tochx{font-size:12px;margin:2px 0 6px}.tochx a{color:var(--accent);text-decoration:none}
-.empty{color:var(--muted)}footer{max-width:1000px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12px}
+.empty{color:var(--muted)}
+/* A band across the page, like the header, with its text on the same column the body uses.
+   It was a centred 1000px block on the page background, so on a wide window it read as a
+   floating paragraph rather than the foot of the document. Reported.
+   No backticks in here: this stylesheet is a template literal, and one ends it. */
+footer{border-top:1px solid var(--line);background:#fff;padding:18px 20px 32px;color:var(--muted);font-size:12px}
+footer>div{max-width:1000px;margin:0 auto}
 
 tr.relrow.sys td{color:#9aa4b2;background:#fbfbfc}
 

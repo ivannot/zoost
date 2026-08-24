@@ -5,9 +5,13 @@
 // patterns typed here as well, so adding a data centre meant remembering this file - and Zoho has
 // more of them than either list had: zoho.sa, zoho.uk and zoho.ae answer exactly as the six did,
 // with current certificates and a live accounts service each.
+// `crmplus` is here for the same reason `one` is, and does the same nothing: it is a suite shell,
+// the CRM inside it is an iframe on `crm.zoho.<dc>`, and **neither shell declares a content script**.
+// Naming the host is only what lets the panel see that this tab is Zoho at all and enumerate its
+// frames; everything after that happens in the CRM document, as it does on a plain CRM tab.
 const ZOHO_MATCHES = (chrome.runtime.getManifest().host_permissions || [])
-  .filter((h) => /^https:\/\/(crm|crmsandbox|one)\./.test(h));
-const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox)?|one)\.zoho/;
+  .filter((h) => /^https:\/\/(crm|crmsandbox|crmplus|one)\./.test(h));
+const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox|plus)?|one)\.zoho/;
 const envOf = (origin) => /crmsandbox\./.test(origin || '') ? 'sandbox' : 'prod';
 const CFG = '.zoost.json';
 const NS = ['standalone', 'automation', 'button', 'schedule', 'validation_rule'];
@@ -1149,7 +1153,50 @@ async function activeZohoTabId() {
 //
 // So only a *found* frame is remembered. A miss costs one `executeScript` on the next poll, which is
 // what it cost before anything was cached at all, and it cannot outlive the moment that produced it.
+/** Which of several same-origin candidates is the CRM application, decided by asking them.
+ *
+ * A suite shell puts more than one document on `crm.zoho.<dc>` in the same tab - measured: two of
+ * thirteen - and only one of them is the application the bridge lives in. Nothing about the order the
+ * frame list comes back in says which. So each candidate is asked the one question whose answer is
+ * self-validating: `context` is refused by the bridge unless the origin is CRM *and* an instance
+ * resolved, so a frame that answers is the frame.
+ *
+ * All at once rather than in turn: they are cheap, they are bounded by the message channel itself,
+ * and asking six frames one after another would put the panel's own poll behind them. A frame with
+ * no listener rejects immediately - measured at 1ms - so the wait is the real one's round trip.
+ *
+ * `null` when none answers, which is the honest answer and the one `crmFrameId` records as a miss.
+ */
+async function answeringFrame(tabId, frameIds) {
+  const asked = await Promise.all(frameIds.map((frameId) => askFrame(tabId, frameId)));
+  console.info(`[zoost] frames asked [${asked.map((x) => x.frameId + ':' + x.why).join(' ')}]`);
+  const ok = asked.find((x) => x && x.ok);
+  return ok ? ok.frameId : null;
+}
+async function askFrame(tabId, frameId) {
+  try {
+    const r = await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, { frameId });
+    // Four answers, not two, and the difference is the whole diagnosis. `no-listener` means the
+    // bridge is not in that frame and injecting is the repair; `declined` means it is there and the
+    // frame is not the application; `half` means it named itself without an org, which is the shape
+    // that produced a *wrong* identity rather than none. Reported as one word - «not ready» - for all
+    // of them, which is why three attempts at this bug went to three different causes.
+    return { frameId, ok: !!(r && r.ok && r.instance && r.org),
+             why: !r ? 'declined' : r.ok ? (r.instance && r.org ? 'ok' : 'half') : 'refused' };
+  } catch (_) {
+    return { frameId, ok: false, why: 'no-listener' };
+  }
+}
+// The CRM-origin frames this tab has, whether or not any of them answered. **`null` from
+// `crmFrameId` means two different things** and `ensureBridge` has to tell them apart: «this tab has
+// no CRM document, so nothing here is ours to inject into» - the Zoho One page itself, which
+// `privacy.html` says we do not read - and «it has CRM documents and none of them has our bridge
+// yet», which is exactly when injecting is the right act. Conflating the two is a defect I wrote
+// this afternoon and the instrument found within the hour: with several CRM frames and none
+// answering, the panel stopped injecting and could never come alive, on a tab whose CRM was there.
+let _crmCandidates = { tabId: null, ids: [] };
 let _crmFrame = { tabId: null, frameId: 0, ts: 0 };
+let _crmFrameSeen = '(not enumerated)';
 async function crmFrameId(tabId) {
   const now = Date.now();
   if (_crmFrame.tabId === tabId && _crmFrame.frameId !== null && now - _crmFrame.ts < 6000) return _crmFrame.frameId;
@@ -1158,7 +1205,29 @@ async function crmFrameId(tabId) {
     const res = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, func: () => ({ href: location.href, top: window === window.top }) });
     const seen = (res || []).map((r) => ({ frameId: r.frameId, ...(r.result || {}) }));
     const crm = seen.filter((x) => /^https:\/\/crm(sandbox)?\.zoho/.test(x.href || ''));
-    if (crm.length) { const top = crm.find((x) => x.top); fid = (top || crm[0]).frameId; }
+    // **More than one frame can be on the CRM's origin, and choosing by position chose wrong.**
+    // Measured on a real Zoho One tab: thirteen frames, two of them `crm.zoho.<dc>`, and this took
+    // `crm[0]` - the first the enumeration happened to return. It was the wrong one; the panel asked
+    // it and was refused in a millisecond, every tick, which is «Zoho tab (not ready)» on a tab whose
+    // CRM was right there. The shell builds several frames and the order they come back in is not a
+    // fact about which of them is the application.
+    //
+    // So the frame is not *chosen*, it is the one that **answers**. The bridge already refuses every
+    // origin that is not CRM and every document with no instance resolved, so it selects itself -
+    // there is no rule here about which position is the right one, which is the only kind of answer
+    // this project accepts. The top frame is still preferred when there is one, because a plain CRM
+    // tab has exactly that and asking it is a round trip nobody needs.
+    const top = crm.find((x) => x.top);
+    _crmCandidates = { tabId, ids: crm.map((x) => x.frameId) };
+    if (top) fid = top.frameId;
+    else if (crm.length === 1) fid = crm[0].frameId;
+    else if (crm.length) fid = await answeringFrame(tabId, _crmCandidates.ids);
+    // What was actually there, in the order it was seen. An intermittent report is a *sequence*, and
+    // this repository has paid for the lesson that sampling at chosen instants is not measuring: five
+    // changes were made to a scroll bug before anybody wrote down what happened in what order, and
+    // every one of them was wrong. One line per enumeration, hosts only - no path, because a path
+    // carries a portal name and a record id and this line ends up pasted into a chat.
+    _crmFrameSeen = seen.map((x) => `${x.frameId}:${(x.href || '').split('/').slice(0, 3).join('/')}`).join(' ');
   } catch (_) {
     // The enumeration is the thing that failed, not the tab. A CRM tab's own document is frame 0,
     // and that is the only case where guessing it is not a guess.
@@ -1187,13 +1256,31 @@ async function ensureBridge(tabId) {
   const to = fid === null ? {} : { frameId: fid };
   try { await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, to); return true; }
   catch {
+    // Every CRM-origin frame this tab has, not one of them. A shell builds several and only one is
+    // the application; injecting into the one that happened to come first left the others without a
+    // bridge, so the frame that *would* have answered never could. They are all on a host this
+    // extension declares a content script for, so this is the declaration being applied rather than
+    // a reach into anything new - and a frame that is not the application is refused by the bridge
+    // itself, which is what makes «ask them all» safe.
+    const ids = _crmCandidates.tabId === tabId ? _crmCandidates.ids : (fid === null ? [] : [fid]);
     // No CRM frame in this tab: nothing here is ours to inject into. See `crmFrameId`.
-    if (fid === null) return false;
+    if (!ids.length) return false;
     try {
-      await chrome.scripting.executeScript({ target: { tabId, frameIds: [fid] }, world: 'MAIN', files: ['hook.js'] });
-      await chrome.scripting.executeScript({ target: { tabId, frameIds: [fid] }, files: ['content-bridge.js'] });
-      await sleep(60); return true;
-    } catch { return false; }
+      await chrome.scripting.executeScript({ target: { tabId, frameIds: ids }, world: 'MAIN', files: ['hook.js'] });
+      await chrome.scripting.executeScript({ target: { tabId, frameIds: ids }, files: ['content-bridge.js'] });
+      console.info(`[zoost] bridge injected into [${ids.join(' ')}]`);
+      await sleep(60);
+      // The lookup was made before any of this existed, so its answer - very likely `null` - is about
+      // a tab that has since changed. Forget it and let the next caller ask the frames that are now
+      // listening; remembering it is the «cache repeats a failure» defect one level up.
+      _crmFrame = { tabId: null, frameId: 0, ts: 0 };
+      return true;
+    } catch (e) {
+      // A refused injection said nothing at all, and «nothing happened» and «Chrome refused» look the
+      // same from the panel: both end as «not ready». The message is what tells them apart.
+      console.info(`[zoost] bridge injection REFUSED for [${ids.join(' ')}]: ${(e && e.message) || e}`);
+      return false;
+    }
   }
 }
 async function toBridge(msg) {
@@ -1227,6 +1314,7 @@ async function waitTabComplete(id, timeout = 9000) {
 
 // ---------- context bar + off-zoho overlay ----------
 let contextLoad = 0;
+let _ctxErr = null;
 async function refreshContext() {
   const mine = ++contextLoad;
   const current = () => mine === contextLoad;
@@ -1253,6 +1341,7 @@ async function refreshContext() {
   if (!current()) return;
   const cfid = await crmFrameId(activeId);
   if (!current()) return;
+  const _t0 = Date.now();
   // A Zoho One tab with no CRM frame in it has nothing to read, and asking would mean naming a frame
   // that is not there. Same answer as a tab that did not reply - no context - and it **falls through**
   // rather than returning: the line below is what puts «Zoho tab (not ready)» on screen, and a return
@@ -1262,7 +1351,20 @@ async function refreshContext() {
     const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, cfid === null ? {} : { frameId: cfid });
     if (!current()) return;
     lastCtx = r?.ok ? r : null;
-  } catch (_) { if (!current()) return; lastCtx = null; }
+  } catch (e) { if (!current()) return; lastCtx = null; _ctxErr = (e && e.message) || String(e); }
+  // No instance name: this line is written to be pasted into a chat, and the instance is the
+  // customer's own portal. Whether it answered is the whole diagnostic value; who answered is not.
+  // `info` and not `debug`: Chrome's console hides the Verbose level by default, so an instrument
+  // written with `console.debug` is one the person reproducing the fault cannot see. An instrument
+  // nobody can read is not an instrument.
+  // The sequence, one line per tick, in the order things happened. «Not ready» is a *state the panel
+  // arrives at*, and until now the only record of arriving at it was the words on screen - which say
+  // that it happened and nothing about why. Whoever reads this next has the tab, the frames that
+  // were there, the frame we asked, and what the answer was.
+  console.info(`[zoost] ctx tab=${activeId} frames=[${_crmFrameSeen}] asked=${cfid === null ? 'any' : cfid}`
+    + ` -> ${lastCtx ? 'ok' : 'NOT READY' + (_ctxErr ? ' (' + _ctxErr + ')' : '')}`
+    + ` ${Date.now() - _t0}ms`);
+  _ctxErr = null;
   if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; blockZoho(true); updateWsButtons(); return; }
   // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by

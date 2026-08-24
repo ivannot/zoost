@@ -858,6 +858,7 @@ function sampleRefuse() {
 }
 
 let contextLoad = 0;
+let _ctxErr = null;
 async function refreshContext() {
   const mine = ++contextLoad;
   const current = () => mine === contextLoad;
@@ -888,7 +889,15 @@ async function refreshContext() {
     const r = await chrome.tabs.sendMessage(id, { cmd: 'context' });
     if (!current()) return;
     ctx = r && r.ok ? r : null;
-  } catch (_) { if (!current()) return; ctx = null; }
+  } catch (e) { if (!current()) return; ctx = null; _ctxErr = (e && e.message) || String(e); }
+
+  // The sequence, one line per tick, in the order things happened - the same record the CRM panel
+  // keeps. «Not ready» is a state the panel *arrives at*, and the only account of arriving at it was
+  // the words on screen, which say that it happened and nothing about why. No path is printed: a
+  // path carries a workspace name and this line ends up pasted into a chat.
+  console.info(`[zoost] ctx tab=${id} -> ${ctx ? (ctx.workspace ? 'ok' : 'ok, no workspace open') : 'NOT READY'
+    + (_ctxErr ? ' (' + _ctxErr + ')' : '')}`);
+  _ctxErr = null;
 
   if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Zoho Analytics tab (not ready - reload it)'; bnd.innerHTML = localLbl; }
   else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Zoho Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
@@ -3204,7 +3213,16 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
         // there; what varies is whether the source or the reason sits under it.
         const st = await sqlReadState(v.id, op);
         if (st.kind === 'unread') { body += `<h3>${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
-        body += `<h3>${esc2(v.name)}</h3><pre>${esc2(sqlText(st.body))}</pre>`;
+        // Highlighted, like the panel and like the CRM's own report, which has coloured its Deluge
+        // since it existed. This one printed plain escaped text: the same query, in two places, one
+        // of them readable - and the report is the copy that goes to somebody without the extension,
+        // so it is the one that could least afford to be the lesser of the two.
+        // `highlightSql` tokenises the raw text and escapes every piece itself, which is the only
+        // reason it may be handed to innerHTML at all; the placeholder for «not read» is not SQL and
+        // stays on `esc2`.
+        const has = st.body != null && st.body.trim();
+        body += `<h3>${esc2(v.name)}</h3><pre class="${has ? 'sql' : 'note'}">`
+          + `${has && window.highlightSql ? window.highlightSql(st.body) : esc2(sqlText(st.body))}</pre>`;
       }
     } else if (x.h) {
       const H = x.h;
@@ -3225,6 +3243,8 @@ table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12.5px;display:
 th{background:#f3f6fa;text-align:left;padding:5px 8px;border-bottom:2px solid #dde4ee;white-space:nowrap}
 td{padding:4px 8px;border-bottom:1px solid #eef2f7;vertical-align:top}
 pre{background:#f7f9fc;border:1px solid #e3e9f2;border-radius:6px;padding:10px;overflow:auto;font-size:12px;white-space:pre-wrap}
+pre.sql{background:#0f1622;border-color:#0f1622;color:#cbd5e1;font:12.5px/1.55 ui-monospace,monospace;white-space:pre}
+.c-com{color:#5b6b82;font-style:italic}.c-str{color:#7ee0a6}.c-num{color:#e0a86b}.c-kw{color:#7aa2f7;font-weight:600}.c-type{color:#c792ea}.c-fn{color:#82d2ff}
 .meta{color:#6b7a90;font-size:12.5px} .gap{color:#6b7a90;font-size:12.5px;border-left:3px solid #e6ebf2;padding-left:10px}
 nav ul{columns:2;list-style:none;padding:0} nav a{color:#0e9488;text-decoration:none}
 footer{margin-top:36px;padding-top:12px;border-top:1px solid #e6ebf2;color:#6b7a90;font-size:12px}

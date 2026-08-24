@@ -816,7 +816,18 @@
   const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
     forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null });
 
-    if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) - skips wrapper service frames
+    // Only the real CRM application frame answers: CRM origin, an instance, **and an org**. The org
+    // was not required, and that let a second frame speak for the tab. A suite shell puts several
+    // documents on this origin - a template preview among them, at a path whose segment after `crm`
+    // is the literal `html` - and `instanceName()` reads that segment, so it answered «instance:
+    // html, org: null» and the panel drew «Zoho tab «html» (org null) does not match your
+    // workspace»: not a refusal, a **wrong identity**, and a mismatch banner about an org the reader
+    // never left. Measured on a real Zoho One tab, from the banner itself.
+    //
+    // The org is the right thing to require, and not one more name to exclude: it is read from the
+    // page's own `crmZgid`, which only the application has, and the whole mismatch guard compares
+    // orgs - so a context without one could never match anything and was never an identity.
+    if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance && c.org) sendResponse(c); return; }
     // One reply for every command, which is the shape the Analytics bridge has had from the start.
     // Here each line carried its own `.then(...).catch(fail(...))` - eleven copies of one chain,
     // eleven scopes `tools/asynccheck.py` cannot enter, and eleven chances to write the eleventh

@@ -974,7 +974,7 @@ function versionsRun() {
     sliceConst('site/_worker.js', 'UA'), sliceConst('site/_worker.js', 'IS_VERSION'),
     sliceConst('site/_worker.js', 'TTL'), sliceConst('site/_worker.js', 'TTL_PARTIAL'),
     sliceConst('site/_worker.js', 'timeout'), sliceConst('site/_worker.js', 'listing'),
-    sliceConst('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'CACHE_KEY'),
+    sliceFn('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'CACHE_KEY'),
     sliceConst('site/_worker.js', 'isNewer'), sliceFn('site/_worker.js', 'cmpVer'),
     sliceFn('site/_worker.js', 'pickLatestTag'), sliceFn('site/_worker.js', 'tagsFeed'),
     sliceFn('site/_worker.js', 'latestTag'), sliceFn('site/_worker.js', 'repoVersion'),
@@ -1200,7 +1200,7 @@ function versionsTtl(reading) {
     sliceConst('site/_worker.js', 'UA'), sliceConst('site/_worker.js', 'IS_VERSION'),
     sliceConst('site/_worker.js', 'TTL'), sliceConst('site/_worker.js', 'TTL_PARTIAL'),
     sliceConst('site/_worker.js', 'timeout'), sliceConst('site/_worker.js', 'listing'),
-    sliceConst('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'CACHE_KEY'),
+    sliceFn('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'CACHE_KEY'),
     sliceConst('site/_worker.js', 'isNewer'), sliceFn('site/_worker.js', 'cmpVer'),
     sliceFn('site/_worker.js', 'pickLatestTag'), sliceFn('site/_worker.js', 'tagsFeed'),
     sliceFn('site/_worker.js', 'latestTag'), sliceFn('site/_worker.js', 'repoVersion'),
@@ -1363,12 +1363,15 @@ function aheadTtl(reading, answers) {
     sliceConst('site/_worker.js', 'UA'), sliceConst('site/_worker.js', 'IS_VERSION'),
     sliceConst('site/_worker.js', 'TTL'), sliceConst('site/_worker.js', 'TTL_PARTIAL'),
     sliceConst('site/_worker.js', 'timeout'), sliceConst('site/_worker.js', 'listing'),
-    sliceConst('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'AHEAD_KEY'),
+    sliceFn('site/_worker.js', 'settled'), sliceConst('site/_worker.js', 'AHEAD_KEY'),
     sliceConst('site/_worker.js', 'isNewer'), sliceFn('site/_worker.js', 'cmpVer'),
     sliceFn('site/_worker.js', 'verOf'), sliceFn('site/_worker.js', 'pickLatestTag'),
     sliceFn('site/_worker.js', 'tagsAhead'), sliceFn('site/_worker.js', 'tagsFeed'),
     sliceFn('site/_worker.js', 'whatsnew'), sliceFn('site/_worker.js', 'storeStatus'),
-    sliceFn('site/_worker.js', 'ahead'),
+    // `ahead` used to carry its per-product half as an arrow closing over its own locals; that half
+    // is a declaration taking what it needs as arguments now, because a scope the race check cannot
+    // enter is one its findings say nothing about. Two pieces to lift instead of one.
+    sliceFn('site/_worker.js', 'aheadBlock'), sliceFn('site/_worker.js', 'ahead'),
   ], {
     AbortSignal: { timeout: () => null }, Request, Response, URL, Promise, isNaN, JSON, Date,
     caches: { default: { match: async () => null, put: async () => {} } },

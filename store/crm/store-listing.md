@@ -171,7 +171,7 @@ The extension does not read browsing history, does not enumerate tabs unrelated 
 ```
 Three groups, all strictly necessary.
 
-1. The Zoho CRM hosts: the crm.* and crmsandbox.* domain of every Zoho data centre, plus the matching one.* hosts. On the first two the extension calls the Zoho CRM API, with the user's existing session, to read their own Deluge functions and configuration. The one.* hosts it does not read - they only tell the panel which org a Zoho One tab belongs to. Several domains is not a wider scope: Zoho runs one data centre per region.
+1. The Zoho CRM hosts in the manifest: Zoho CRM and its sandbox in every Zoho data centre, and the two suite shells. There the extension calls the Zoho CRM API, with the user's existing session, to read their own Deluge functions and configuration. The shells are not read: they are named so the panel can find the frame that holds the org. Several domains is not a wider scope: Zoho runs one data centre per region.
 
 2. Anthropic and OpenAI, needed only by the optional AI assistant, and only after the user enters their own API key. The request goes straight from the browser to that provider; no other AI endpoint is configurable.
 

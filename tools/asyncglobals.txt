@@ -13,6 +13,12 @@
 #   for one workspace and nothing else runs while it loads, so there is no second operation for a
 #   guard to distinguish it from. DATA, N, ids, erP, drawMax, curFocus, egoDepth.
 #
+#   `_crmFrameSeen` in `crmFrameId` - the instrument's own line, written after the enumeration it
+#   describes. It is a *record of what just happened*, not state anybody acts on, and a later
+#   enumeration overwriting an earlier one is the record doing its job. Named here because a write
+#   after an await is a write after an await, and an instrument is not exempt from the check it
+#   exists to feed.
+#
 #   `onWsdel` in the CRM panel - the delete of the selected workspace. `currentPath = null` and the
 #   preview closing land after the folder has been removed; a workspace switched to meanwhile would
 #   have its preview closed, which is cosmetic and is followed by `loadWorkspaces()` anyway. Named
@@ -103,7 +109,10 @@ apps/crm/options.js	saveKeys	dirty
 apps/crm/options.js	saveKeys	ownWrite
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
+apps/crm/sidepanel.js	crmFrameId	_crmCandidates
 apps/crm/sidepanel.js	crmFrameId	_crmFrame
+apps/crm/sidepanel.js	crmFrameId	_crmFrameSeen
+apps/crm/sidepanel.js	ensureBridge	_crmFrame
 apps/crm/sidepanel.js	filterByConnection	connFilterSet
 apps/crm/sidepanel.js	filterByConnection	connectionFilter
 apps/crm/sidepanel.js	grantRoot	rootGranted

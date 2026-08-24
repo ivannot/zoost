@@ -251,7 +251,12 @@ async function lastChanged(path) {
   return d && !isNaN(Date.parse(d)) ? d : null;   // shape guard: must be a real timestamp
 }
 
-const settled = (p) => p.then((v) => v).catch(() => null);
+// A promise that answers `null` instead of rejecting. Awaited rather than chained: every async
+// scope this project ships is a named function declaration, because `tools/asynccheck.py` reads
+// declarations and a `.then()` callback is a scope it cannot enter.
+async function settled(p) {
+  try { return await p; } catch (_) { return null; }
+}
 
 // The cache key carries a version marker, and it must be bumped whenever the payload's shape
 // changes. The key deliberately ignores the query string — otherwise anyone could fill the cache
@@ -391,6 +396,37 @@ async function versions(request, env, ctx) {
 // renders that as «nobody could ask» rather than as either answer.
 const AHEAD_KEY = '/api/ahead?v=3';  // bumped: each ahead entry gained notesWhy
 
+// One product's half of `/api/ahead`. At the file's own top level and taking what it needs as
+// arguments, rather than an arrow closing over `ahead`'s locals: `tools/asynccheck.py` reads
+// function declarations, and a scope it cannot enter is one its findings say nothing about.
+async function aheadBlock(app, s, xml) {
+  const c = s[app];
+  const store = c && c.published ? c.published.version : null;
+  const list = xml ? tagsAhead(xml, app, store) : [];
+  const notes = await Promise.all(list.map((t) => settled(whatsnew(app, t.version))));
+  return {
+    store,
+    latest: xml ? verOf(pickLatestTag(xml, app)) : null,
+    // The same shape `/api/versions` uses, so a reader of one file is not learning two vocabularies
+    // for the same fact.
+    pending: c && c.submitted && c.submitted.version
+      ? { version: c.submitted.version, state: c.submitted.state } : null,
+    ahead: list.map((t, i) => ({
+      version: t.version,
+      tag: t.tag,
+      // Built rather than looked up: this is the name `build.sh` gives the archive and the name the
+      // release workflow uploads, and it is the file the attestation was signed over. A second
+      // request to find out a URL we already know would be a second thing to fail.
+      zip: `https://github.com/${REPO}/releases/download/${t.tag}/zoost-${app}-${t.version}-store.zip`,
+      notes: notes[i] && notes[i].text ? notes[i].text : null,
+      // Which of the two absences this is. `settled()` turns a throw into null, so null here is
+      // «could not find out» and `{none:true}` is «there are none» - the page says a different
+      // sentence for each, and the cache below holds only the first one briefly.
+      notesWhy: notes[i] ? (notes[i].text ? 'ok' : 'none') : 'unreadable',
+    })),
+    url: listing(app),
+  };
+}
 async function ahead(request, env, ctx) {
   const cache = caches.default;
   const key = new Request(new URL(AHEAD_KEY, request.url).toString(), { method: 'GET' });
@@ -401,36 +437,7 @@ async function ahead(request, env, ctx) {
   const [store, xml] = await Promise.all([settled(storeStatus(env)), settled(tagsFeed())]);
   const s = store || { crm: null, analytics: null, cws: 'unreadable', asOf: null };
 
-  const block = async (app) => {
-    const c = s[app];
-    const store = c && c.published ? c.published.version : null;
-    const list = xml ? tagsAhead(xml, app, store) : [];
-    const notes = await Promise.all(list.map((t) => settled(whatsnew(app, t.version))));
-    return {
-      store,
-      latest: xml ? verOf(pickLatestTag(xml, app)) : null,
-      // The same shape `/api/versions` uses, so a reader of one file is not learning two vocabularies
-      // for the same fact.
-      pending: c && c.submitted && c.submitted.version
-        ? { version: c.submitted.version, state: c.submitted.state } : null,
-      ahead: list.map((t, i) => ({
-        version: t.version,
-        tag: t.tag,
-        // Built rather than looked up: this is the name `build.sh` gives the archive and the name the
-        // release workflow uploads, and it is the file the attestation was signed over. A second
-        // request to find out a URL we already know would be a second thing to fail.
-        zip: `https://github.com/${REPO}/releases/download/${t.tag}/zoost-${app}-${t.version}-store.zip`,
-        notes: notes[i] && notes[i].text ? notes[i].text : null,
-        // Which of the two absences this is. `settled()` turns a throw into null, so null here is
-        // «could not find out» and `{none:true}` is «there are none» - the page says a different
-        // sentence for each, and the cache below holds only the first one briefly.
-        notesWhy: notes[i] ? (notes[i].text ? 'ok' : 'none') : 'unreadable',
-      })),
-      url: listing(app),
-    };
-  };
-
-  const [crm, analytics] = await Promise.all([block('crm'), block('analytics')]);
+  const [crm, analytics] = await Promise.all([aheadBlock('crm', s, xml), aheadBlock('analytics', s, xml)]);
 
   // A note that failed to fetch is cached for a minute, not an hour: an empty changelog beside a
   // version somebody is deciding about is exactly the answer not worth holding on to. It used to be

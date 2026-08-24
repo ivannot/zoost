@@ -48,6 +48,15 @@
     "https://one.zoho.sa/*",
     "https://one.zoho.uk/*",
     "https://one.zoho.ae/*",
+    "https://crmplus.zoho.eu/*",
+    "https://crmplus.zoho.com/*",
+    "https://crmplus.zoho.in/*",
+    "https://crmplus.zoho.com.au/*",
+    "https://crmplus.zoho.jp/*",
+    "https://crmplus.zohocloud.ca/*",
+    "https://crmplus.zoho.sa/*",
+    "https://crmplus.zoho.uk/*",
+    "https://crmplus.zoho.ae/*",
     "https://zoost.it/*"
   ],
   "background": {

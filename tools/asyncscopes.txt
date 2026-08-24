@@ -36,8 +36,6 @@ apps/crm/sidepanel.js	async arrow	8
 apps/crm/sidepanel.js	async arrow	9
 site/_worker.js	.then() callback	1
 site/_worker.js	.then() callback	2
-site/_worker.js	.then() callback	3
-site/_worker.js	async arrow	1
 site/_worker.js	async method	1
 site/report.js	.then() callback	1
 site/report.js	.then() callback	2

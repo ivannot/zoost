@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:95f66f30fc88bc52 -->
+<!-- translated-from: site/privacy.html sha256:e0805d3b1cfe51ec -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -288,9 +288,13 @@
       per sbaglio contro una sandbox.</li>
     <li>Accesso agli host dei domini Zoho che ogni estensione legge. Il workbench per Zoho CRM elenca
       <code>crm.zoho.*</code> e <code>crmsandbox.zoho.*</code>, con le loro controparti
-      <code>crm.zohocloud.ca</code> e <code>crmsandbox.zohocloud.ca</code>. Elenca anche
-      <code>one.zoho.*</code> e <code>one.zohocloud.ca</code>, che non legge: ci sono soltanto perché
-      il pannello possa capire che la scheda su cui sei appartiene a Zoho One e di quale org si tratta. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
+      <code>crm.zohocloud.ca</code> e <code>crmsandbox.zohocloud.ca</code>. Elenca anche le due
+      shell di suite - <code>one.zoho.*</code> e <code>one.zohocloud.ca</code> per Zoho One,
+      <code>crmplus.zoho.*</code> e <code>crmplus.zohocloud.ca</code> per Zoho CRM Plus - che non
+      legge. Dentro una di quelle, il tuo Zoho CRM è una pagina come le altre su <code>crm.zoho.*</code>
+      in un frame suo, e quel frame è l'unica cosa con cui l'estensione parla. Gli host delle shell
+      sono elencati perché il pannello possa capire che la scheda su cui sei è Zoho e trovare quel
+      frame; dentro la shell non viene iniettato niente. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
       <code>analytics.zohocloud.ca</code>.
       <br><br>Entrambe elencano <b>nove</b> data center ciascuna, compresi quello saudita, quello
       britannico e quello emiratino: un account può trovarsi su uno qualsiasi di essi, e su quello che

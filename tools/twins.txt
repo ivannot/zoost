@@ -35,7 +35,7 @@ beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	023ed94d5bc3	4d67279b5a1a	divergent
+buildExportHtml	023ed94d5bc3	5a3a689b2797	divergent
 buildExportMarkdown	bec112444e2e	76cf76fadc28	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
@@ -60,7 +60,7 @@ dropWorkspaceState	9970afd3e184	167539fa76e8	divergent
 egoStat	7389bc350b28	7389bc350b28	identical
 emptyReason	f7a750117acd	c6461ab20713	divergent
 engineIncomplete	54560440576d	54560440576d	identical
-ensureBridge	a35079849aae	e7f9159cd83c	divergent
+ensureBridge	d7215ec858e4	e7f9159cd83c	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
 entitiesPresent	59df72b07997	59df72b07997	identical
 erApply	e2898a2b70d1	e2898a2b70d1	identical
@@ -192,7 +192,7 @@ readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	1c80a2350505	6a4b34ab0325	divergent
+refreshContext	08e31fb8e42d	165c0d67485e	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	4d6325a17da8	divergent

@@ -11223,7 +11223,8 @@ test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the 
       },
     };
     vm.createContext(ctx);
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
+                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
                      sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
                      sliceFn('apps/crm/sidepanel.js', 'goToZoho')].join('\n'), ctx);
     return { ctx, acted };
@@ -11248,6 +11249,189 @@ test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the 
   assert.deepEqual(plain.acted.map((a) => a.what), ['tab'],
                    'on a tab whose own document is the CRM it did something other than navigate it');
   assert.equal(plain.acted[0].url, URL_, 'it navigated the tab somewhere else');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The same query, in two places, and only one of them readable.
+//
+// The Analytics panel colours a query table's SQL through `window.highlightSql`. Its **report**
+// printed `<pre>` with escaped plain text - while the CRM's report has coloured its Deluge since it
+// existed. So the two products' exports differed on the one thing an export is for, and the copy
+// that goes to somebody *without* the extension was the lesser of the two. Reported.
+//
+// Derived rather than named: whatever the panel uses to render code, the report uses too. A future
+// third surface that renders SQL is covered by the same sentence.
+test('analytics: the report colours SQL the way the panel does', () => {
+  const js = read('apps/analytics/sidepanel.js');
+  const uses = [...js.matchAll(/window\.highlightSql/g)].length;
+  assert.ok(uses >= 2,
+            `only ${uses} place renders SQL through the highlighter - the panel had it and the `
+            + 'report did not, which is the defect this holds');
+
+  // And the report carries the token classes, or the highlighter emits spans nothing styles - the
+  // failure that looks like nothing happening at all.
+  const css = js.slice(js.indexOf('<!doctype html>'), js.indexOf('</style>'));
+  for (const cls of [...new Set([...read('apps/analytics/highlight.js').matchAll(/class="(c-[a-z]+)"/g)].map((m) => m[1]))]) {
+    assert.ok(css.includes('.' + cls),
+              `the highlighter emits ${cls} and the report's stylesheet never defines it, so that `
+              + 'token renders as ordinary text');
+  }
+  assert.match(css, /pre\.sql\{[^}]*background/,
+               'the SQL block has no background of its own, so light-theme paper carries dark-theme '
+               + 'token colours and the reader gets an unreadable page');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A frame that names itself without an org is not an identity, and it produced a wrong one.
+//
+// A suite shell puts several documents on the CRM's origin. One of them is a template preview, at a
+// path whose segment after `crm` is the literal `html` - and `instanceName()` reads exactly that
+// segment. So it answered «instance: html, org: null», the panel believed it, and drew
+//
+//   Zoho tab «html» (org null) ≠ local workspace «…» (org 20078114174)
+//
+// which is not a refusal but a **wrong identity**: a mismatch banner about an org the reader never
+// left, on a tab that was showing their own CRM. Measured from the banner itself on a real Zoho One
+// tab, after two earlier defects on the same surface had been fixed.
+//
+// The org is the right requirement rather than one more name to exclude. It is read from the page's
+// own `crmZgid`, which only the application carries, and the whole mismatch guard compares orgs - so
+// a context without one could never have matched anything and was never an identity to begin with.
+test('crm: the bridge answers for the tab only with an instance and an org', () => {
+  const bridge = read('apps/crm/content-bridge.js');
+  const line = bridge.split('\n').find((l) => l.includes("msg?.cmd === 'context'"));
+  assert.ok(line, 'the context command is gone from the dispatcher - the derivation broke');
+  assert.match(line, /c\.instance && c\.org/,
+               'a frame may still speak for the tab with a name and no org, which is how «html» did');
+
+  // And the panel does not settle for half an answer either, wherever it asks.
+  const ask = sliceFn('apps/crm/sidepanel.js', 'askFrame');
+  assert.match(ask, /r\.instance && r\.org/,
+               'the panel accepts a frame that named itself without an org');
+});
+
+// Run rather than read, on the shape that was measured: `instanceName` finds a segment, `orgId` finds
+// nothing, and the tab must not be spoken for.
+test('crm: a preview frame whose path segment looks like an instance names nobody', () => {
+  const mk = (href, html) => {
+    const ctx = {
+      location: { pathname: new URL(href).pathname, origin: new URL(href).origin, href },
+      document: { documentElement: { innerHTML: html } },
+      RegExp, JSON, console,
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceFn('apps/crm/content-bridge.js', 'instanceName'),
+                     sliceConst('apps/crm/content-bridge.js', '_org'),
+                     sliceFn('apps/crm/content-bridge.js', 'memoValid'),
+                     sliceFn('apps/crm/content-bridge.js', 'orgId')].join('\n'), ctx);
+    return ctx;
+  };
+  const preview = mk('https://crm.zoho.eu/crm/html/EmailTemplates/preview', '<html><body>nothing</body></html>');
+  assert.equal(vm.runInContext('instanceName()', preview), 'html',
+               'the path no longer yields the segment that caused this - the fixture has aged');
+  assert.equal(vm.runInContext('orgId()', preview), null,
+               'a frame with no crmZgid in it produced an org, so the requirement below proves nothing');
+
+  const app = mk('https://crm.zoho.eu/crm/yourinstance/tab/Contacts',
+                 '<html><script>var crmZgid = "1234567890";</script></html>');
+  assert.equal(vm.runInContext('instanceName()', app), 'yourinstance');
+  assert.equal(vm.runInContext('orgId()', app), '1234567890',
+               'the application frame cannot answer either, so requiring an org would refuse everything');
+});
+
+// ---------------------------------------------------------------------------------------------
+// More than one frame can be on the CRM's origin, and choosing by position chose wrong.
+//
+// Measured on a real Zoho One tab, by the instrument this panel now keeps: **thirteen frames, two of
+// them `crm.zoho.<dc>`**, and the frame lookup took `crm[0]` - the first the enumeration happened to
+// return. It was the wrong one. The panel asked it and was refused in a millisecond, on every tick,
+// which is «Zoho tab (not ready)» on a tab whose CRM was right there.
+//
+//   frames=[0:one.zoho.eu 1201:about:blank … 1203:crm.zoho.eu 1125:one.zoho.eu 1124:crm.zoho.eu …]
+//   asked=1203 -> NOT READY 1ms
+//
+// The shell builds several frames and the order they come back in is not a fact about which of them
+// is the application. So the frame is not chosen, it is **the one that answers**: `context` is
+// refused by the bridge unless the origin is CRM and an instance resolved, so it selects itself.
+// There is no rule here about which position is right, which is the only kind of answer this
+// project accepts - the alternative was a heuristic about somebody else's frame ordering.
+//
+// Driven on the shape that was measured: two candidates, the second one live.
+test('crm: with two frames on the CRM origin, the one that answers is the one used', async () => {
+  const mk = (live) => {
+    const asked = [];
+    const ctx = {
+      Date, Promise, Error, console, RegExp,
+      chrome: {
+        tabs: {
+          get: async () => ({ url: 'https://one.zoho.eu/home' }),
+          sendMessage: async (_id, _msg, to) => {
+            asked.push(to.frameId);
+            if (to.frameId !== live) throw new Error('Could not establish connection');
+            return { ok: true, instance: 'yourinstance', org: '1234567890' };
+          },
+        },
+        scripting: {
+          executeScript: async () => ([
+            { frameId: 0, result: { href: 'https://one.zoho.eu/home', top: true } },
+            { frameId: 1203, result: { href: 'https://crm.zoho.eu/crm/x/tab/A', top: false } },
+            { frameId: 1124, result: { href: 'https://crm.zoho.eu/crm/x/tab/B', top: false } },
+          ]),
+        },
+      },
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
+                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+                     sliceConst('apps/crm/sidepanel.js', '_crmFrameSeen'),
+                     sliceFn('apps/crm/sidepanel.js', 'askFrame'),
+                     sliceFn('apps/crm/sidepanel.js', 'answeringFrame'),
+                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
+    return { ctx, asked };
+  };
+
+  // The live frame is the *second* candidate - the case that was failing, because the first is the
+  // one a positional rule picks.
+  const late = mk(1124);
+  assert.equal(await vm.runInContext('crmFrameId(7)', late.ctx), 1124,
+               'it took the first candidate the enumeration returned rather than the one that answers');
+  assert.deepEqual(late.asked.sort(), [1124, 1203], 'it did not ask both candidates');
+
+  // And the first, so this is not a rule that always prefers the last: a guard that gets one case
+  // right by accident is not a guard.
+  const early = mk(1203);
+  assert.equal(await vm.runInContext('crmFrameId(7)', early.ctx), 1203,
+               'it cannot find a live frame that happens to come first');
+
+  // Nobody answers: `null`, which `crmFrameId` records as a miss and does not remember.
+  const dead = mk(-1);
+  assert.equal(await vm.runInContext('crmFrameId(7)', dead.ctx), null,
+               'with no frame answering it named one anyway, which is the guess this replaced');
+});
+
+// A tab whose own document is the CRM still costs no round trip: the top frame is preferred, because
+// a plain CRM tab has exactly that and asking it would be a message nobody needs.
+test('crm: a plain CRM tab is answered from the frame list, without asking anybody', async () => {
+  const asked = [];
+  const ctx = {
+    Date, Promise, Error, console, RegExp,
+    chrome: {
+      tabs: { get: async () => ({ url: 'https://crm.zoho.eu/crm/x/tab/A' }),
+              sendMessage: async (_i, _m, to) => { asked.push(to.frameId); return { ok: true, instance: 'x' }; } },
+      scripting: {
+        executeScript: async () => ([{ frameId: 0, result: { href: 'https://crm.zoho.eu/crm/x/tab/A', top: true } }]),
+      },
+    },
+  };
+  vm.createContext(ctx);
+  vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
+                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+                   sliceConst('apps/crm/sidepanel.js', '_crmFrameSeen'),
+                   sliceFn('apps/crm/sidepanel.js', 'askFrame'),
+                   sliceFn('apps/crm/sidepanel.js', 'answeringFrame'),
+                   sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
+  assert.equal(await vm.runInContext('crmFrameId(7)', ctx), 0, 'the tab\'s own document was not used');
+  assert.deepEqual(asked, [], 'it asked a frame it did not need to ask');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -11283,7 +11467,8 @@ test('crm: the frame lookup remembers where the CRM is, never that it could not 
       },
     };
     vm.createContext(ctx);
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
+                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
                      sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
     return { ctx, enumerations, put: (h) => { hrefs = h; } };
   };
@@ -11347,7 +11532,8 @@ test('crm: a tab with no Zoho CRM frame is not injected into', async () => {
       },
     };
     vm.createContext(ctx);
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
+                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
                      sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
                      sliceFn('apps/crm/sidepanel.js', 'ensureBridge')].join('\n'), ctx);
     // A fresh tab id per case: the six-second memo would otherwise answer for the previous one.
