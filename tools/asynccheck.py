@@ -209,7 +209,11 @@ def functions(src):
     # module state: 171 findings, none of them real. A widening has to be measured.
     wrapped = _iife(src)
     top = r'^[ \t]{2}' if wrapped else r'^'
-    for m in re.finditer(r'(?m)' + top + r'((?:async\s+)?)function\s+(\w+)\s*\(', src):
+    # `function*` too. A generator is a declaration like any other, and both panels walk the folder
+    # with one - `async function* walk(d)`, whose whole body is awaits against the file system.
+    # The pattern required a space after `function`, so those two were the only awaits in the
+    # tree this tool could not see, and the crude counter above is what found them.
+    for m in re.finditer(r'(?m)' + top + r'((?:async\s+)?)function\s*\*?\s*(\w+)\s*\(', src):
         pad = '  ' if wrapped else ''
         name = m.group(2)
         at = m.start() + len(pad)
@@ -591,7 +595,7 @@ def main():
     # and this looked for declarations at column zero. `tests/slice.mjs` learnt that on this exact
     # file. The rule CLAUDE.md states for anything that inspects a tree: print the count of things
     # inspected, and derive the denominator by a cruder method than the check itself.
-    crude = sum(len(re.findall(r'(?m)^[ \t]*(?:async\s+)?function\s+\w+\s*\(',
+    crude = sum(len(re.findall(r'(?m)^[ \t]*(?:async\s+)?function\s*\*?\s*\w+\s*\(',
                                open(os.path.join(ROOT, rel), encoding='utf-8').read()))
                 for rel in FILES)
     # The two it does not read are `setFolded` in each graph window: declared inside another
@@ -630,10 +634,22 @@ def main():
     seen = unseen = thens = 0
     worst = {}
     for rel in FILES:
-        src_ = open(os.path.join(ROOT, rel), encoding='utf-8').read()
-        thens += len(re.findall(r'\.then\s*\(', src_))
+        raw = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+        # **On the blanked copy, both sides.** This counted the word `await` in the raw file, so every
+        # comment that *talks* about an await - and the ones explaining these conversions talk about
+        # little else - was counted as an await nobody reads. It printed «10 NOT read» beside a
+        # migration list at zero, which is the two-numbers-disagreeing shape this repository refuses;
+        # the code was right and the counter was wrong, in the safe direction, which is the direction
+        # that hides things. A crude denominator may be crude; it may not count prose.
+        src_ = _blank_non_code(raw)
+        # `.then(fn)` where `fn` is a declaration on this page is read - that is the convention the
+        # ledger enforces - so counting every `.then(` here reported the ones that comply as if they
+        # did not.
+        named = {n for n, _, _ in functions(raw)}
+        thens += sum(1 for m in re.finditer(r'\.then\s*\(\s*(\w*)', src_) if m.group(1) not in named)
         total = len(re.findall(r'\bawait\s', src_))
-        inside = sum(len(re.findall(r'\bawait\s', body)) for _, body, _ in functions(src_))
+        inside = sum(len(re.findall(r'\bawait\s', _blank_non_code(body)))
+                     for _, body, _ in functions(raw))
         seen += inside
         unseen += max(0, total - inside)
         if total - inside > 0:

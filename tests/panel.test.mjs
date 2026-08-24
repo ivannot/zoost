@@ -4083,7 +4083,9 @@ for (const app of ['crm', 'analytics']) {
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
-           'reconcileFunctions']],
+           // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
+           // `reconcileNow` is what reaches Zoho, which is what has to refuse.
+           'reconcileNow']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
@@ -4686,7 +4688,10 @@ for (const app of ['crm', 'analytics']) {
       'why=the Settings page saves two entries that search identically');
     for (const app of ['crm', 'analytics']) {
       const panel = read(`apps/${app}/sidepanel.js`);
-      const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"));
+      // The save is `saveSearchPattern` now, a declaration of its own, so the slice takes both:
+      // reading only the menu would silently stop covering the three rules below it.
+      const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"))
+        + sliceFn(`apps/${app}/sidepanel.js`, 'saveSearchPattern');
       assert.ok(/items\.find\(\(x\) => x\.pattern === rawQ\)/.test(m),
         'why=' + app + ' menu re-offers Save for a pattern the list already holds');
       assert.ok(/already saved as/.test(m),
@@ -4792,7 +4797,10 @@ for (const app of ['crm', 'analytics']) {
   test('the menu saves only what it could: a parsing pattern, onto a list that was read', () => {
     for (const app of ['crm', 'analytics']) {
       const panel = read(`apps/${app}/sidepanel.js`);
-      const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"));
+      // The save is `saveSearchPattern` now, a declaration of its own - see the note above the twin
+      // of this slice further up. Reading only the menu would silently stop covering it.
+      const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"))
+        + sliceFn(`apps/${app}/sidepanel.js`, 'saveSearchPattern');
       assert.ok(/const savable = list !== null && regexMode && rawQ && !!rxCompile\(rawQ\)\.re/.test(m),
         'why=' + app + ' offers Save over an unread list, or for a pattern that does not parse');
       assert.ok(/x\.name\.trim\(\)\.toLowerCase\(\) === name\.toLowerCase\(\)/.test(m),
@@ -5807,7 +5815,11 @@ test('code is shown the same way in both products: lines as written, box scrolls
 // «the panel is slow» turned out to be the instrument. It is indexed now.)
 {
   const src = crmPanel();
-  const load = src.slice(src.indexOf('async function rebuildTree'), src.indexOf('async function attachFnStats'));
+  // The per-file work is `refineRowFromMeta` now, a declaration of its own rather than an
+  // `async (mp) => {}` inside a `map` - so the slice takes both, or every rule below about what
+  // happens per file would quietly stop being checked while still passing.
+  const load = src.slice(src.indexOf('async function rebuildTree'), src.indexOf('async function attachFnStats'))
+    + sliceFn('apps/crm/sidepanel.js', 'refineRowFromMeta');
 
   test('the index is read before anything is drawn, and the metas after', () => {
     const idxAt = load.indexOf("op.read('functions/index.json')");
@@ -6047,7 +6059,8 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // again - which is exactly why it survived until somebody asked how the two writers interleave.
     // The merge now lives in the one writer, so this is where it is checked - and the producers must
     // not carry their own copy of it, or there would be two merge bases again.
-    const q = fn('updateMetaIndex');
+    // Both halves: the writer queues, and `mergeIntoMetaIndex` is the queued work.
+    const q = fn('updateMetaIndex') + fn('mergeIntoMetaIndex');
     assert.ok(/prev\.files/.test(q), 'the single writer does not read what is already there');
     for (const name of ['saveMetaIndex', 'saveGraphFacts']) {
       assert.ok(!/readFile\(META_INDEX\)/.test(fn(name)), `${name} reads the summary itself again`);
@@ -6076,14 +6089,19 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   });
 
   test('the merge base is read inside the queue, not before it', () => {
-    const q = fn('updateMetaIndex');
-    const readAt = q.indexOf('op.read(META_INDEX)');
-    const chainAt = q.indexOf('_metaIndexWrites.then');
-    // The op is taken *outside* the chain, where the caller still means this workspace - the work
+    // The queue is `await after` at the top of the queued work, and the merge base is read after it.
+    // This was written against `_metaIndexWrites.then(...)`; the shape changed when the callback
+    // became a declaration and the property did not, which is the difference between reading a photo
+    // of the code and reading what it does.
+    const w = fn('updateMetaIndex'), merge = fn('mergeIntoMetaIndex');
+    const readAt = merge.indexOf('op.read(META_INDEX)');
+    const queueAt = merge.indexOf('await after');
+    // The op is taken *outside* the queued work, where the caller still means this workspace - it
     // runs later, so reading `dir` inside it would write one org's summary into the next.
-    assert.ok(q.indexOf('beginWorkspaceOp()') < chainAt, 'the queued work picks its folder when its turn comes');
-    assert.ok(chainAt >= 0 && readAt > chainAt,
-              'the summary is read outside the chain, so two mutators can share a stale base');
+    assert.ok(w.indexOf('beginWorkspaceOp()') < w.indexOf('mergeIntoMetaIndex('),
+              'the queued work picks its folder when its turn comes');
+    assert.ok(queueAt >= 0 && readAt > queueAt,
+              'the summary is read outside the queue, so two mutators can share a stale base');
   });
 
   test('neither producer writes the other half', () => {
@@ -6262,7 +6280,9 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // The queue's own variable comes from the source too: a test that declares its own would be
     // testing its copy of the mechanism rather than the mechanism.
     const { saveMetaIndex, saveGraphFacts } = load(
-      [sliceConst(FILE, '_metaIndexWrites'), sliceFn(FILE, 'updateMetaIndex'),
+      [sliceConst(FILE, '_metaIndexWrites'), sliceFn(FILE, 'settled'),
+       sliceFn(FILE, 'mergeIntoMetaIndex'),
+       sliceFn(FILE, 'updateMetaIndex'),
        sliceFn(FILE, 'saveMetaIndex'), sliceFn(FILE, 'saveGraphFacts')], env);
     const a = () => saveMetaIndex(['functions/standalone/build.meta.json']);
     const b = () => saveGraphFacts(NODES, GRAPH);
@@ -6466,7 +6486,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(!/__zoostLast/.test(hook), 'the hook is collapsing notices again');
     const panel = crmPanel();
     assert.ok(/reconcileFunctions\(\)/.test(panel), 'nothing reconciles');
-    const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
+    const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')))
+      + sliceFn('apps/crm/sidepanel.js', 'reconcileNow');
     assert.ok(/if \(reconciling\) \{ reconcileAgain = true; return reconciling; \}/.test(fn),
               'two notices start two reconciliations, or the second is forgotten');
     assert.ok(fn.indexOf('reconciling = (async') < fn.indexOf('await'), 'the promise is stored after the first await');
@@ -6539,7 +6560,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // authority. Raised by an outside review, and it was right.
 {
   const panel = crmPanel();
-  const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
+  const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')))
+    + sliceFn('apps/crm/sidepanel.js', 'reconcileNow');
 
   test('nothing is removed on the word of a message from the page', () => {
     assert.ok(/listFunctions/.test(fn), 'it does not ask Zoho what exists');
@@ -6600,7 +6622,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   for (const [name, start] of [['reconcileFunctions', 'function reconcileFunctions'], ['pullAll', 'async function pullAll']]) {
     test(`${name} removes nothing from a list that stopped early`, () => {
-      const fn = panel.slice(panel.indexOf(start), panel.indexOf('\n}', panel.indexOf(start)));
+      const fn = panel.slice(panel.indexOf(start), panel.indexOf('\n}', panel.indexOf(start)))
+        + (name === 'reconcileFunctions' ? sliceFn('apps/crm/sidepanel.js', 'reconcileNow') : '');
       const guard = fn.indexOf('r.capped');
       assert.ok(guard > 0, 'the truncation is never read');
       for (const danger of ['pruneFunction', 'removeFile', "writeFile('functions/index.json'"]) {
@@ -6621,7 +6644,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // forgotten while the index had already been rewritten without it, so nothing would ever look again.
 {
   const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
+  // `reconcileFunctions` is wiring now and `reconcileNow` is the round; asking for the first and
+  // getting only the wiring is how a check goes quiet without failing.
+  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)))
+    + (n.includes('reconcileFunctions') ? sliceFn('apps/crm/sidepanel.js', 'reconcileNow') : '');
 
   // Run, not read. These four were assertions about the text of syncOne(), and they went red the day
   // the trailing read moved one function along - a true statement about where a line sits, which is
@@ -6637,7 +6663,9 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     ctx.Math = Math;
     vm.createContext(ctx);
     for (const n of ['syncing', 'SYNC_MAX', 'syncBusy']) vm.runInContext(sliceConst('apps/crm/sidepanel.js', n), ctx);
-    for (const n of ['syncOne', 'syncPump']) vm.runInContext(sliceFn('apps/crm/sidepanel.js', n), ctx);
+    // `runSyncSlot` is the slot's own work - two `.then()` callbacks until the race checker asked
+    // to read them - and without it the pump would run with nothing to free its slots.
+    for (const n of ['syncOne', 'syncPump', 'runSyncSlot']) vm.runInContext(sliceFn('apps/crm/sidepanel.js', n), ctx);
     return ctx;
   };
   const settle = () => new Promise((r) => setTimeout(r, 0));
@@ -6728,7 +6756,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // object, or a different workspace - so it is captured before the first await and compared after.
 {
   const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
+  // As above: the wiring is `reconcileFunctions` and the round is `reconcileNow`, so a slice of
+  // the first alone would read past the checks and pass while checking nothing.
+  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)))
+    + (n.includes('reconcileFunctions') ? sliceFn('apps/crm/sidepanel.js', 'reconcileNow') : '');
 
   test('an answer is not written into a workspace you have left', () => {
     // Two mechanisms did this - a captured handle here, a captured generation in the pulls - and
@@ -6737,7 +6768,11 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       const body = fn(name);
       assert.ok(/const op = beginWorkspaceOp\(\);/.test(body), `${name} does not remember which folder it started in`);
       assert.ok(/!op\.current\(\)/.test(body), `${name} never checks the folder is still the same`);
-      assert.ok(body.indexOf('const op = beginWorkspaceOp();') < body.indexOf('await '),
+      // The folder is taken before anything is awaited. `fn()` glues the wiring to the round it
+      // hands off to, so the first `await` in the glued text can belong to the round - the claim is
+      // about the *wiring*, which is where the op is taken, so it is read there.
+      const wiring = body.slice(0, body.indexOf('async function ') + 1 || undefined);
+      assert.ok(wiring.indexOf('const op = beginWorkspaceOp();') < (wiring.indexOf('await ') + 1 || Infinity),
                 `${name} captures the folder after its first await`);
     }
   });
@@ -7671,12 +7706,31 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
   });
 
   for (const app of ['crm', 'analytics']) {
-    test(`${app}: what is remembered as open is what is on screen`, () => {
+    test(`${app}: what is remembered as open is what is on screen`, async () => {
       const src = read(`apps/${app}/sidepanel.js`);
-      const r = sliceFn(`apps/${app}/sidepanel.js`, 'rememberActive');
-      assert.ok(/gen === wsGen \? window\.idbHandle\.set\(key, id\) : undefined/.test(r),
-                'a slow selection still writes itself over a faster one that came after it');
-      assert.ok(/_activeWsWrites = _activeWsWrites\.then/.test(r), 'the writes are not ordered');
+      // Run rather than read. This used to assert the *expression* - `gen === wsGen ? set(...)` -
+      // which is a photograph of a belief and went stale the day the chain became a declaration,
+      // while the behaviour it was written for never changed. What matters is two facts: a write
+      // whose selection has been overtaken does not happen, and the writes stay in order.
+      const wrote = [];
+      const g = { wsGen: 1, window: { idbHandle: { set: (k, v) => { wrote.push([k, v]); return Promise.resolve(); } } } };
+      const { writeActiveWhenStillCurrent } = load(
+        [sliceFn(`apps/${app}/sidepanel.js`, 'writeActiveWhenStillCurrent')], g);
+      // The selection that is still current writes; the one overtaken by a later selection does not.
+      await writeActiveWhenStillCurrent('k', 'still-current', 1, Promise.resolve());
+      g.wsGen = 2;
+      await writeActiveWhenStillCurrent('k', 'overtaken', 1, Promise.resolve());
+      assert.deepEqual(wrote, [['k', 'still-current']],
+                       'a slow selection still writes itself over a faster one that came after it');
+      // And they are ordered: the second waits for the promise it was handed.
+      const order = [];
+      let release;
+      const first = new Promise((r) => { release = r; });
+      const queued = writeActiveWhenStillCurrent('k', 'second', 2, first.then(() => order.push('first')));
+      release();
+      await queued;
+      order.push('second');
+      assert.deepEqual(order, ['first', 'second'], 'the writes are not ordered');
       assert.ok(/await rememberActive\(/.test(src), 'the selection does not go through it');
       assert.ok(/await rememberActive\([^\n]*\);\n\s*if \(!op\.current\(\)\) return;/.test(src),
                 'a selection that was overtaken carries on setting up the panel');
@@ -8846,10 +8900,11 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
   const src = crmPanel();
 
   test('what to prune is read from this workspace’s index, not from the list on screen', () => {
-    const at = src.indexOf('function reconcileFunctions()');
-    assert.ok(at > 0, 'reconcileFunctions() is gone - renamed, or no longer a declaration');
-    // Not the first column-zero brace: this function wraps its work in an IIFE, so that lands inside
-    // it. The next top-level `function` keyword is the honest end.
+    const at = src.indexOf('async function reconcileNow(');
+    assert.ok(at > 0, 'reconcileNow() is gone - renamed, or no longer a declaration');
+    // The round used to be an async IIFE inside `reconcileFunctions`, which is why this slice was
+    // written to skip past a brace at column zero. It is a declaration of its own now, so its end is
+    // the next top-level `function` keyword and nothing has to be stepped over.
     const fn = src.slice(at, src.indexOf('\nfunction ', at + 10));
     assert.ok(/const gone = prev\.filter/.test(fn), 'the prune is derived from memory again');
     assert.ok(fn.indexOf("op.read('functions/index.json')") < fn.indexOf('const gone'),
@@ -10663,10 +10718,14 @@ test('a working folder changed in Settings waits for the pull to finish', () => 
     .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
     .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
 
-  // Derived: every call that rebuilds the workspace list from inside the storage listener.
+  // Derived: every call that rebuilds the workspace list from what the options page changed. The
+  // listener is one line now and `applySettingsChange` is the work - an `async (ch, area) => {}` was
+  // a scope the race checker could not enter, and this is the function it most needed to read.
   const at = src.indexOf('chrome.storage.onChanged.addListener');
   assert.ok(at > 0, 'the panel no longer listens for changes made outside it');
-  const listener = src.slice(at, src.indexOf('\n});', at));
+  const listener = sliceFn('apps/crm/sidepanel.js', 'applySettingsChange')
+    .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+    .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
   const rebuilds = [...listener.matchAll(/\bloadWorkspaces\(\)/g)];
   assert.ok(rebuilds.length >= 1, 'nothing in the listener rebuilds the list - the derivation broke');
   for (const r of rebuilds) {

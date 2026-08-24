@@ -4,29 +4,3 @@
 # tool cannot enter, so its findings say nothing about what happens there. It goes
 # to zero. A line is removed by converting the scope to a named declaration and a
 # reference to it - never by widening what counts as read.
-apps/analytics/sidepanel.js	.then() callback	1
-apps/analytics/sidepanel.js	.then() callback	2
-apps/analytics/sidepanel.js	.then() callback	3
-apps/analytics/sidepanel.js	async arrow	1
-apps/analytics/sidepanel.js	async arrow	2
-apps/analytics/sidepanel.js	async arrow	3
-apps/crm/sidepanel.js	.then() callback	1
-apps/crm/sidepanel.js	.then() callback	2
-apps/crm/sidepanel.js	.then() callback	3
-apps/crm/sidepanel.js	.then() callback	4
-apps/crm/sidepanel.js	.then() callback	5
-apps/crm/sidepanel.js	.then() callback	6
-apps/crm/sidepanel.js	.then() callback	7
-apps/crm/sidepanel.js	.then() callback	8
-apps/crm/sidepanel.js	.then() callback	9
-apps/crm/sidepanel.js	.then() callback	10
-apps/crm/sidepanel.js	.then() callback	11
-apps/crm/sidepanel.js	async arrow	1
-apps/crm/sidepanel.js	async arrow	2
-apps/crm/sidepanel.js	async arrow	3
-apps/crm/sidepanel.js	async arrow	4
-apps/crm/sidepanel.js	async arrow	5
-apps/crm/sidepanel.js	async arrow	6
-apps/crm/sidepanel.js	async arrow	7
-apps/crm/sidepanel.js	async arrow	8
-apps/crm/sidepanel.js	async arrow	9

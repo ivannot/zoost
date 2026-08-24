@@ -167,13 +167,14 @@ noteStep	9c9fb28465ba	9c9fb28465ba	identical
 onAiengine	db42c8c059e5	55f96961b339	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
+onRepopen	8d02dae13933	8d02dae13933	identical
 onSaveLay	632ebb161980	ec35c06238e1	divergent
 onSaveRx	974e36827c7e	974e36827c7e	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	1d9967844be3	1d9967844be3	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	1ccc9b2b0408	0c5941e396f4	divergent
-openRxMenu	cdc4b8f98ab9	4e4329e39c5e	divergent
+openRxMenu	f5c90a637572	70c41ed10480	divergent
 openSchemaGraph	040b78cc9838	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2382b4f61123	ccaa6b79d370	divergent
@@ -193,6 +194,7 @@ publishGraph	4a835674f38b	6bce18c95fec	divergent
 pullAll	97e829488969	e56766fa859d	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
+readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
@@ -200,7 +202,7 @@ refreshContext	08e31fb8e42d	b1ed8fe54d22	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	4d6325a17da8	divergent
-rememberActive	b905c9b77414	b905c9b77414	identical
+rememberActive	74f9a0e0cbc6	74f9a0e0cbc6	identical
 removeFileAt	d6514d26b3e4	1b045eb72889	divergent
 renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b47086e0e791	divergent
@@ -223,6 +225,8 @@ rxDefaults	b63f0be3e4f9	b63f0be3e4f9	identical
 rxProblems	5927f3cfe8d2	5927f3cfe8d2	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
 saveKeys	647ec30fc72a	647ec30fc72a	identical
+saveSearchPattern	593f956d7d95	593f956d7d95	identical
+sayWhereTheReportWent	2075390ad7f5	604b8164ad60	divergent
 scopeFromUI	3a730daf94e4	c83939bc53c4	divergent
 scopeToUI	f35c4710f682	13ff88ae9736	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical
@@ -232,7 +236,7 @@ serializeArrangement	4f2534e0811c	4f2534e0811c	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
 setFocus	a8444d56b280	fbd29419ae8c	divergent
 setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent
-setReportFallback	7b6d69cc86e4	c283abccb13e	divergent
+setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	d4c0689d8483	d3b3a7dc9b69	divergent
@@ -264,6 +268,7 @@ wireAsideFold	f549a11bd896	f549a11bd896	identical
 wireForget	aec6f1b54698	aec6f1b54698	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
 workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
+writeActiveWhenStillCurrent	5d27a20f05b3	5d27a20f05b3	identical
 writeFileAt	d6a3e4360b80	d6a3e4360b80	identical
 writeSampleWorkspace	61cba1747bc9	e42d55f49ab8	divergent
 wsLine	bdc9638a609d	bdc9638a609d	identical

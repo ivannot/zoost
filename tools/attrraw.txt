@@ -5,7 +5,7 @@
 97a1176ce268894d  apps/analytics/graphview.js:336: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:342: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 68f3feec399e35c4  apps/analytics/graphview.js:1462: class="${lk}" is not attribute-escaped
-218d6dfd58005ebf  apps/analytics/sidepanel.js:3030: class="${m.role}" is not attribute-escaped
+218d6dfd58005ebf  apps/analytics/sidepanel.js:3039: class="${m.role}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:844: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:238: class="${stCls}" is not attribute-escaped
 a1753a7e13b0ab15  apps/crm/export.js:51: href="${fnAnchor(api)}" is not attribute-escaped
@@ -41,4 +41,4 @@ b07595ae0886b91b  apps/crm/sidepanel.js:1444: title="${(st.chars / 1024).toFixed
 bb8f8240f2601514  apps/crm/sidepanel.js:1445: title="${st.zoho}" is not attribute-escaped
 536777999679a23a  apps/crm/sidepanel.js:1445: title="${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}" is not attribute-escaped
 1fdcc594d1fcf9e2  apps/crm/sidepanel.js:1446: class="${stCls}" is not attribute-escaped
-1d15fc75d8adb2f2  apps/crm/sidepanel.js:2395: class="${kind}" is not attribute-escaped
+1d15fc75d8adb2f2  apps/crm/sidepanel.js:2439: class="${kind}" is not attribute-escaped

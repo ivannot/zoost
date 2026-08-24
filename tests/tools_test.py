@@ -5666,12 +5666,16 @@ class AsyncCheckSaysWhatItDoesNotRead(unittest.TestCase):
         out = self.run_it().stdout
         seen, unseen = self.numbers(out)
         self.assertGreater(seen, 500, 'the tool reads almost nothing - the derivation broke')
-        self.assertGreater(unseen, 0,
-                           'nothing is reported unread, which was the false claim this replaced - '
-                           'if the arrow bodies really are covered now, this test should be deleted '
-                           'and the docstring with it')
-        self.assertIn('unread:', out, 'the unread awaits are counted and their files not named, so '
-                                      'nobody can tell whether the gap matters')
+        # **It is zero now, and that is a fact rather than a silence.** This used to require the
+        # number to be *above* zero, because reporting none was the false claim it replaced - and it
+        # said so in its own message: if the gap is ever really closed, change this. It is closed:
+        # every async scope in the tree is a named declaration, so there is nothing outside one to
+        # read. What proves the counter still works is the case below, which plants the shape and
+        # requires the number to move - a zero that cannot rise would be the same silence again.
+        self.assertEqual(unseen, 0,
+                         f'{unseen} await(s) are outside every declaration. The convention is that '
+                         'every async scope is one, so this is either a new scope written the old '
+                         'way or a shape the reader has stopped recognising:\n' + out)
 
     def test_an_await_outside_a_declaration_is_counted_as_unread(self):
         # Run it, on a real file. The plant *writes* the shape the tool cannot enter rather than
@@ -6967,7 +6971,7 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
 
     #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
     #: raises it, because a new scope written the old way is a finding on the day it is written.
-    CEILING = 26
+    CEILING = 0
 
     def ac(self):
         sys.path.insert(0, str(ROOT / 'tools'))

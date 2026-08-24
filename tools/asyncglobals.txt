@@ -91,6 +91,7 @@ apps/analytics/sidepanel.js	navTo	navReplaying
 apps/analytics/sidepanel.js	openRxMenu	regexMode
 apps/analytics/sidepanel.js	pickRoot	root
 apps/analytics/sidepanel.js	pickRoot	rootGranted
+apps/analytics/sidepanel.js	readRememberedSample	sampleWsKnown
 apps/analytics/sidepanel.js	refreshWorkspaces	bound
 apps/analytics/sidepanel.js	refreshWorkspaces	dir
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
@@ -112,6 +113,9 @@ apps/crm/options.js	saveKeys	dirty
 apps/crm/options.js	saveKeys	ownWrite
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
+apps/crm/sidepanel.js	applySettingsChange	pendingRootReload
+apps/crm/sidepanel.js	applySettingsChange	root
+apps/crm/sidepanel.js	applySettingsChange	zohoDc
 apps/crm/sidepanel.js	crmFrameId	_crmCandidates
 apps/crm/sidepanel.js	crmFrameId	_crmFrame
 apps/crm/sidepanel.js	crmFrameId	_crmFrameSeen
@@ -133,12 +137,12 @@ apps/crm/sidepanel.js	pickRoot	root
 apps/crm/sidepanel.js	pickRoot	rootGranted
 apps/crm/sidepanel.js	pullAll	currentPath
 apps/crm/sidepanel.js	pullFailures	failIndex
+apps/crm/sidepanel.js	readRememberedSample	sampleWsKnown
 apps/crm/sidepanel.js	rebuildTree	aiConnCache
 apps/crm/sidepanel.js	rebuildTree	graphCache
 apps/crm/sidepanel.js	rebuildTree	moduleFilesCache
-apps/crm/sidepanel.js	reconcileFunctions	failedRemovals
-apps/crm/sidepanel.js	reconcileFunctions	pendingAfterPull
-apps/crm/sidepanel.js	reconcileFunctions	reconcileAgain
-apps/crm/sidepanel.js	reconcileFunctions	reconciling
+apps/crm/sidepanel.js	reconcileNow	failedRemovals
+apps/crm/sidepanel.js	reconcileNow	pendingAfterPull
 apps/crm/sidepanel.js	reveal	_revealListener
-apps/crm/sidepanel.js	updateMetaIndex	_metaIndexWrites
+apps/crm/sidepanel.js	runSyncSlot	syncAgain
+apps/crm/sidepanel.js	runSyncSlot	syncing

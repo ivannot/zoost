@@ -1470,10 +1470,26 @@ function fnRowEl(e) {
   const lineSlot = `<span class="rest rfl"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${st ? st.lines + 'L' : ''}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
   el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${restSlot}${nsSlot}${lineSlot}${callSlot}`;
-  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); runPullAction(() => downloadOne(e)).then(() => { updateRow(e); updateMissingButton(); }); };
-  el.onclick = () => { if (e.downloaded) openFromTree(e.path); else runPullAction(() => downloadOne(e)).then(() => { updateRow(e); updateMissingButton(); }); };
+  // Both go through a declaration, because a `.then(cb)` is a scope the race checker cannot enter -
+  // and this callback redraws a row after an await, which is the exact shape it exists to look at.
+  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); void fetchThenRedrawRow(e); };
+  el.onclick = () => { if (e.downloaded) openFromTree(e.path); else void fetchThenRedrawRow(e); };
   return el;
 }
+
+/** Fetch one function's source, then bring its row and the «missing» count up to date.
+ *
+ * The redraw is deliberately unguarded and always runs: `updateRow` writes into the element it was
+ * given, which either is still in the document or is not, and `updateMissingButton` re-reads the
+ * tree it finds. A guard here would have to name a workspace, and the row already carries the only
+ * identity that matters - itself.
+ */
+async function fetchThenRedrawRow(e) {
+  await runPullAction(() => downloadOne(e));
+  updateRow(e);
+  updateMissingButton();
+}
+
 // Sorting by a number answers a different question from browsing by namespace, so a numeric sort
 // drops the grouping and goes flat, highest first. Descending only: these are "which are the big
 // ones" questions, and an ascending list of the smallest functions answers nothing anyone asks.
@@ -1556,6 +1572,46 @@ function renderTree() {
 // is still reading tranches; without a token the two interleave and the older one writes its rows
 // over the newer one's.
 let treeLoad = 0;
+
+
+/** Fold one sidecar into the row the index already drew, or leave that row as it was.
+ *
+ * A declaration and not an `async (mp) => {}` inside a `map`, which is a scope the race checker
+ * cannot enter - and every line here writes into the panel's picture of a workspace after an await.
+ * Everything it touches is passed in: `op` owns the folder, and the three maps belong to the pass
+ * that built them, so a second load starting underneath this one cannot have its rows refined by it.
+ */
+async function refineRowFromMeta(mp, op, byPath, byId, index) {
+  try {
+    const meta = JSON.parse(await op.read(mp));
+    const dg = mp.replace(/\.meta\.json$/, '.dg');
+    // By path, then by id - both from a Map. The second lookup used to be a `treeData.find()`,
+    // which is linear, and it fires exactly when the two disagree: a file whose name the index
+    // does not predict. On a workspace of five thousand that turned the load into twenty-five
+    // million comparisons - forty seconds of them - while a hundred functions never noticed.
+    // Measured on a generated org, which is the only place a cliff like that shows up before a
+    // user finds it.
+    const row = byPath.get(dg) || byId.get(String(meta.id));
+    if (!row) return;
+    // Found by id at another path: the function was renamed in Zoho, so the file on disk is the
+    // *old* pair. Marking it downloaded - which this did - meant the new path was never fetched
+    // and the old pair never pruned (its id is still live, so the pull's prune keeps it).
+    row.pathChanged = row.path !== dg;
+    row.previousPath = row.pathChanged ? dg : null;
+    row.downloaded = !row.pathChanged;
+    // Three reasons to re-fetch, each its own fact: an older sidecar schema, a rename, and a
+    // source that changed in Zoho while nobody was watching - the list's `updatedTime` against
+    // the sidecar's. Absence on either side is not a measurement and marks nothing.
+    row.stale = row.pathChanged || (meta.sv || 0) < META_SV
+      || movedInZoho(row.listUpdated, meta.listUpdated);
+    row.fetchedAgainst = meta.listUpdated || null;
+    row.updatedTime = meta.updatedTime || null;
+    row.namespace = meta.nameSpace || row.namespace;
+    if (meta.display_name) row.display_name = meta.display_name;
+    const known = index.get(String(meta.id));
+    if (known) { known.category = meta.category; known.source = meta.source; known.name = meta.name; }
+  } catch (_) { /* a meta that will not parse leaves its row as the index described it */ }
+}
 
 async function rebuildTree() {
   // Before anything that can yield. Whether another task could actually clear these marks in the
@@ -1663,37 +1719,7 @@ async function rebuildTree() {
   for (let i = 0; i < metaPathsToRead.length; i += TRANCHE) {
     if (!current()) return;
     const batch = metaPathsToRead.slice(i, i + TRANCHE);
-    await Promise.all(batch.map(async (mp) => {
-      try {
-        const meta = JSON.parse(await op.read(mp));
-        const dg = mp.replace(/\.meta\.json$/, '.dg');
-        // By path, then by id - both from a Map. The second lookup used to be a `treeData.find()`,
-        // which is linear, and it fires exactly when the two disagree: a file whose name the index
-        // does not predict. On a workspace of five thousand that turned the load into twenty-five
-        // million comparisons - forty seconds of them - while a hundred functions never noticed.
-        // Measured on a generated org, which is the only place a cliff like that shows up before a
-        // user finds it.
-        const row = byPath.get(dg) || byId.get(String(meta.id));
-        if (!row) return;
-        // Found by id at another path: the function was renamed in Zoho, so the file on disk is the
-        // *old* pair. Marking it downloaded - which this did - meant the new path was never fetched
-        // and the old pair never pruned (its id is still live, so the pull's prune keeps it).
-        row.pathChanged = row.path !== dg;
-        row.previousPath = row.pathChanged ? dg : null;
-        row.downloaded = !row.pathChanged;
-        // Three reasons to re-fetch, each its own fact: an older sidecar schema, a rename, and a
-        // source that changed in Zoho while nobody was watching - the list's `updatedTime` against
-        // the sidecar's. Absence on either side is not a measurement and marks nothing.
-        row.stale = row.pathChanged || (meta.sv || 0) < META_SV
-          || movedInZoho(row.listUpdated, meta.listUpdated);
-        row.fetchedAgainst = meta.listUpdated || null;
-        row.updatedTime = meta.updatedTime || null;
-        row.namespace = meta.nameSpace || row.namespace;
-        if (meta.display_name) row.display_name = meta.display_name;
-        const known = index.get(String(meta.id));
-        if (known) { known.category = meta.category; known.source = meta.source; known.name = meta.name; }
-      } catch (_) { /* a meta that will not parse leaves its row as the index described it */ }
-    }));
+    await Promise.all(batch.map((mp) => refineRowFromMeta(mp, op, byPath, byId, index)));
     done += batch.length;
     if (!current()) return;
     // Redrawing after every tranche is what a first version did, and on five thousand rows it cost
@@ -1740,27 +1766,46 @@ async function rebuildTree() {
  *  No lock, no version field, no retry: a promise chain is enough because the contention is between
  *  two known callers in one document, not between processes.
  */
+/** The queued half of `updateMetaIndex`: read the file as it stands, merge, write it back.
+ *
+ * A declaration rather than the `.then(async () => {})` this used to be. The chain is the thing that
+ * makes the summary correct against its second writer, and it was the one part of it nothing could
+ * read - three awaits and a merge, inside a callback. `after` is the queue it waits behind and `op`
+ * is the workspace the caller meant, both passed in for the same reason: by the time this runs, the
+ * folder on screen may be another one.
+ */
+async function mergeIntoMetaIndex(after, mutate, op) {
+  await after;
+  let files = {};
+  try {
+    const prev = JSON.parse(await op.read(META_INDEX));
+    if (prev && prev.v === SUMMARY_V && prev.files) files = prev.files;
+  } catch (_) {}
+  await mutate(files);
+  await op.write(META_INDEX, JSON.stringify({ v: SUMMARY_V, sv: META_SV, files }, null, 2));
+  return true;
+}
+/** Wait for a job and swallow its outcome, so the next queued write is not cancelled by this one.
+ *
+ * `job.then(() => {}, () => {})` said the same thing in two callbacks nothing could read. Naming it
+ * also names the intent, which the two empty arrows did not: what is being discarded here is the
+ * *result*, not the error - the caller still gets the real one.
+ */
+async function settled(job) {
+  try { await job; } catch (_) { /* the caller receives it; the queue only needs to carry on */ }
+}
 let _metaIndexWrites = Promise.resolve();
 function updateMetaIndex(mutate, suppliedOp = null) {
   // The queue is what makes this correct against the other writer, and it is also what made it write
   // into the wrong folder: work handed to it runs *later*, so `dir` inside is whatever is on screen
   // by the time its turn comes. The workspace is taken here, where the caller still means it.
   const op = suppliedOp || beginWorkspaceOp();
-  const job = _metaIndexWrites.then(async () => {
-    let files = {};
-    try {
-      const prev = JSON.parse(await op.read(META_INDEX));
-      if (prev && prev.v === SUMMARY_V && prev.files) files = prev.files;
-    } catch (_) {}
-    await mutate(files);
-    await op.write(META_INDEX, JSON.stringify({ v: SUMMARY_V, sv: META_SV, files }, null, 2));
-    return true;
-  });
+  const job = mergeIntoMetaIndex(_metaIndexWrites, mutate, op);
   // The queue must survive a failure - the next caller is a different write and has done nothing
   // wrong - and the *caller* must not. It used to swallow the error here, so both savers went on to
   // clear their dirty marks over a write that had been refused: the file was old and nothing on the
   // next load would re-read it. The queue takes the caught version, the caller takes the real one.
-  _metaIndexWrites = job.then(() => {}, () => {});
+  _metaIndexWrites = settled(job);
   return job.catch(() => false);
 }
 
@@ -2741,13 +2786,16 @@ async function reveal(fn) {
   // later) we still open the function; if they "Cancel", nothing is forced.
   setStatus(MSG.openingFns, 'busy');
   let sawLoading = false, handled = false;
-  const listener = async (tid, info) => {
+  // The listener itself does no waiting: an `async (tid, info) => {}` is a scope the race checker
+  // cannot enter, and what it awaited - the list settling, then the filter - is the part worth
+  // reading. It stays an arrow because it closes over the two flags and over its own name, which is
+  // how it removes itself; the work it hands off is a declaration.
+  const listener = (tid, info) => {
     if (tid !== id || handled) return;
     if (info.status === 'loading') sawLoading = true;
-    if (info.status === 'complete' && sawLoading) {
-      handled = true; chrome.tabs.onUpdated.removeListener(listener); _revealListener = null;
-      await listReadyWait(id); await doFilter(id, fn, nice);
-    }
+    if (info.status !== 'complete' || !sawLoading) return;
+    handled = true; chrome.tabs.onUpdated.removeListener(listener); _revealListener = null;
+    void filterWhenListSettles(id, fn, nice);
   };
   _revealListener = listener;
   chrome.tabs.onUpdated.addListener(listener);
@@ -2761,6 +2809,13 @@ async function reveal(fn) {
   }, 3500);
   setTimeout(() => { if (!handled) { handled = true; chrome.tabs.onUpdated.removeListener(listener); if (_revealListener === listener) _revealListener = null; } }, 60000);
 }
+
+/** Wait for Zoho's functions list to settle after a reload, then filter it to one function. */
+async function filterWhenListSettles(id, fn, nice) {
+  await listReadyWait(id);
+  await doFilter(id, fn, nice);
+}
+
 async function revealFromPreview(action) {
   if (currentPath && currentPath.startsWith('workflows/')) { await openWorkflowInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }
   if (currentPath && currentPath.startsWith('actions/')) { const a = actionData.find((x) => x.path === currentPath); if (a) await openActionInZoho(a); return; }
@@ -3295,20 +3350,7 @@ async function openRxMenu() {
   });
   const sv = menu.querySelector('[data-save]');
   if (sv) {
-    const doSave = async () => {
-      const name = $('rxsavename').value.trim();
-      // The same rules the Settings page enforces, refused with the reason in place.
-      if (!name) { $('rxsaveerr').textContent = 'A pattern needs a name.'; return; }
-      if (items.some((x) => x.name.trim().toLowerCase() === name.toLowerCase())) {
-        $('rxsaveerr').textContent = `"${name}" is already taken - the menu could not tell them apart.`;
-        return;
-      }
-      const dupP = items.find((x) => x.pattern === rawQ);
-      if (dupP) { $('rxsaveerr').textContent = `This pattern is already saved as "${dupP.name}".`; return; }
-      try { await chrome.storage.local.set({ rxShortcuts: [...items, { name, pattern: rawQ }] }); }
-      catch (_) { $('rxsaveerr').textContent = 'Could not write the list - try from Settings.'; return; }
-      openRxMenu();   // re-read and redraw: the new entry appearing in the list is the confirmation
-    };
+    const doSave = () => saveSearchPattern(items, rawQ);
     sv.onclick = doSave;
     $('rxsavename').onkeydown = (e) => {
       // The panel's own shortcuts stay out of the input; Escape still bubbles to close the menu.
@@ -3322,6 +3364,29 @@ async function openRxMenu() {
   menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
   menu.classList.add('show');
 }
+
+/** Save the pattern in the box under a name, or say why it cannot be saved.
+ *
+ * A declaration rather than an `= async () => {}`, which is a scope the race checker cannot enter -
+ * and there is an await in the middle of it. `items` is carried in rather than read again: it is the
+ * list the menu was drawn from, and the whole point of the two checks above the write is that they
+ * are about *that* list.
+ */
+async function saveSearchPattern(items, rawQ) {
+  const name = $('rxsavename').value.trim();
+  // The same rules the Settings page enforces, refused with the reason in place.
+  if (!name) { $('rxsaveerr').textContent = 'A pattern needs a name.'; return; }
+  if (items.some((x) => x.name.trim().toLowerCase() === name.toLowerCase())) {
+    $('rxsaveerr').textContent = `"${name}" is already taken - the menu could not tell them apart.`;
+    return;
+  }
+  const dupP = items.find((x) => x.pattern === rawQ);
+  if (dupP) { $('rxsaveerr').textContent = `This pattern is already saved as "${dupP.name}".`; return; }
+  try { await chrome.storage.local.set({ rxShortcuts: [...items, { name, pattern: rawQ }] }); }
+  catch (_) { $('rxsaveerr').textContent = 'Could not write the list - try from Settings.'; return; }
+  openRxMenu();   // re-read and redraw: the new entry appearing in the list is the confirmation
+}
+
 $('rxpick').onclick = (ev) => {
   ev.stopPropagation();
   const menu = $('rxmenu');
@@ -3426,6 +3491,18 @@ function markLine(line, re, escFn) {
   return out + escFn(line.slice(last));
 }
 
+
+/** Read one function's source into the map being built, or leave it out.
+ *
+ * A declaration rather than an `async (e) => {}` inside a `map`: the checker cannot enter one, and a
+ * read that fails silently is the shape this repository has already paid for twice. It stays silent
+ * here on purpose - the map is «what could be read», the search says how many it holds, and a file
+ * that has gone since the tree was drawn is not an error to report.
+ */
+async function readSourceInto(m, e, op) {
+  try { m.set(e.id, await op.read(e.path)); } catch (_) {}
+}
+
 /** Every source, once. Searching text means having read it - there is no index that spares this, and
  *  writing one would be a second answer to «what does this function say» that could disagree with the
  *  file. What can be spared is the *waiting*: the reads happen in tranches with a yield between them,
@@ -3442,9 +3519,7 @@ async function getCodeCache(op = beginWorkspaceOp()) {
   const rows = treeData.filter((e) => e.downloaded);
   const TRANCHE = 120;
   for (let i = 0; i < rows.length; i += TRANCHE) {
-    await Promise.all(rows.slice(i, i + TRANCHE).map(async (e) => {
-      try { m.set(e.id, await op.read(e.path)); } catch (_) {}
-    }));
+    await Promise.all(rows.slice(i, i + TRANCHE).map((e) => readSourceInto(m, e, op)));
     if (rows.length > TRANCHE) {
       op.say(`Reading sources ${Math.min(i + TRANCHE, rows.length)}/${rows.length}\u2026`, 'busy');
       await new Promise((r) => setTimeout(r, 0));
@@ -3744,6 +3819,12 @@ async function openGraph() {
 // declarations land in the same shared scope they always had; only the file changed.
 
 // ---------- save-sync ----------
+
+/** Build the graph the diagram window asked for and hand it back through the message port. */
+async function sendGraphWhenBuilt(kind, token, sendResponse) {
+  sendResponse(await buildGraphFor(kind, token));
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'saved') syncOne(msg.id);
   // A deletion and a creation both mean «the list has changed»; neither is trusted with what
@@ -3753,7 +3834,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'pullProgress' && pullActive) setStatus(`Pulling… ${msg.done}/${msg.total}`, 'busy');
   // The diagram window asking for the other drawing. It has no folder access of its own - by design,
   // and it stays that way - so the graph is built here and left in storage for it to reload from.
-  if (msg?.type === 'graphSwitch') { buildGraphFor(msg.kind, msg.token).then(sendResponse); return true; }
+  // Through a declaration: `.then(sendResponse)` is a scope nothing can read, and what it carries
+  // is a whole graph built after an await.
+  if (msg?.type === 'graphSwitch') { void sendGraphWhenBuilt(msg.kind, msg.token, sendResponse); return true; }
 });
 async function buildGraphFor(kind, token) {
   const op = beginWorkspaceOp(), ws = graphIdentity();
@@ -3814,6 +3897,75 @@ function endPull() {
   // tab over walked straight past it. Deferred here, like the live-sync notice above, rather than
   // refused: the folder has already changed in storage and this panel cannot un-change it.
 }
+
+/** One round of «has anything changed in Zoho», from the checks to the tree.
+ *
+ * A declaration rather than the `(async () => {})()` it used to be: an async IIFE is a scope the race
+ * checker cannot enter, and this is the longest sequence of awaits in the panel - permission, then
+ * context, then a list from Zoho, then writes into the folder. `op` is passed in because the caller
+ * took it when it still meant this workspace.
+ */
+async function reconcileNow(op) {
+  if (mismatchRefuse()) return;
+  if (!dir) { setStatus(MSG.noWorkspaceHere, 'warn'); return; }
+  if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+  await refreshContext();
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  // A pull is already doing this and more. Re-running until it finishes would be a tight loop of
+  // permission and context checks during the most expensive thing this panel does - measured at
+  // five entries in one probe - so the notice is left for the pull to consume when it ends, and
+  // this round simply stops. The flag is deliberately *not* re-armed here.
+  if (pullActive) { pendingAfterPull = true; return; }
+  try {
+    setStatus('Something changed in Zoho - checking\u2026', 'busy');
+    const r = await toBridge({ cmd: 'listFunctions' });
+    if (!op.current()) return;           // the answer describes the workspace we were in, not this one
+    if (!r?.ok) throw bridgeError(r, 'list failed');
+    // A list that stopped early is not a statement about what exists: it is a statement about how
+    // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
+    // functions that are still in Zoho - the worst thing this product could do, and reachable on
+    // any org past the paging limit by an ordinary create. Raised by an outside review.
+    if (r.capped) {
+      await rebuildTree();
+      setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
+      return;
+    }
+    const live = new Set((r.entries || []).map((e) => String(e.id)));
+    // What the mirror said *before* this answer replaces it, read from disk. It used to be
+    // `treeData`, which is module state written only by `rebuildTree()` - and `rebuildTree()` runs
+    // only while the Functions tab is the one on screen. So on any other tab, switching workspace
+    // left `treeData` describing the workspace before: `gone` became «every downloaded function of
+    // A» (ids of two orgs never intersect), and each was removed by relative path from **B's**
+    // folder, announced as «Deleted in Zoho». A production/sandbox pair collides on nearly every
+    // `functions/<namespace>/<api_name>.dg` there is.
+    //
+    // The sixth question this repository asks of every function - what survives a change of
+    // workspace - answered for the two globals nobody had added to `dropWorkspaceState`. They are
+    // dropped there now as well, but the real fix is this one: a destructive act reads the folder
+    // it is about to act on, never a memory of some folder.
+    let prev = [];
+    try { const t = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(t)) prev = t; } catch (_) {}
+    if (!op.current()) return;
+    await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
+    // Pruned from what Zoho says, never from what the page said.
+    // Whatever a previous round could not finish removing, before anything else.
+    // Try the removal again rather than asking whether the file is there: a read that fails for
+    // any other reason would otherwise be taken for «already gone» and the entry dropped.
+    // `removeFile` on something absent throws NotFound, which *is* the answer we wanted.
+    for (const p of [...failedRemovals]) {
+      if (!op.current()) return;
+      try { await op.remove(p); failedRemovals.delete(p); }
+      catch (e) { if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p); }
+    }
+    const gone = prev.filter((e) => !live.has(String(e.id)));
+    let failed = 0;
+    for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id, e) ? 0 : 1; }
+    await rebuildTree();
+    await downloadMissing();
+    if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
+  } catch (e) { setStatus('Could not check with Zoho: ' + errText(e), 'warn'); }
+}
+
 function reconcileFunctions() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   // Single-flight is not enough on its own: a create or a delete arriving *while* the list is being
@@ -3821,66 +3973,7 @@ function reconcileFunctions() {
   // says «done» about a state that predates it. So a notice during a run is remembered and answered
   // by one more round afterwards - which also covers the notice that arrives while a pull is busy.
   if (reconciling) { reconcileAgain = true; return reconciling; }
-  reconciling = (async () => {
-    if (mismatchRefuse()) return;
-    if (!dir) { setStatus(MSG.noWorkspaceHere, 'warn'); return; }
-    if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-    await refreshContext();
-    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    // A pull is already doing this and more. Re-running until it finishes would be a tight loop of
-    // permission and context checks during the most expensive thing this panel does - measured at
-    // five entries in one probe - so the notice is left for the pull to consume when it ends, and
-    // this round simply stops. The flag is deliberately *not* re-armed here.
-    if (pullActive) { pendingAfterPull = true; return; }
-    try {
-      setStatus('Something changed in Zoho - checking\u2026', 'busy');
-      const r = await toBridge({ cmd: 'listFunctions' });
-      if (!op.current()) return;           // the answer describes the workspace we were in, not this one
-      if (!r?.ok) throw bridgeError(r, 'list failed');
-      // A list that stopped early is not a statement about what exists: it is a statement about how
-      // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
-      // functions that are still in Zoho - the worst thing this product could do, and reachable on
-      // any org past the paging limit by an ordinary create. Raised by an outside review.
-      if (r.capped) {
-        await rebuildTree();
-        setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
-        return;
-      }
-      const live = new Set((r.entries || []).map((e) => String(e.id)));
-      // What the mirror said *before* this answer replaces it, read from disk. It used to be
-      // `treeData`, which is module state written only by `rebuildTree()` - and `rebuildTree()` runs
-      // only while the Functions tab is the one on screen. So on any other tab, switching workspace
-      // left `treeData` describing the workspace before: `gone` became «every downloaded function of
-      // A» (ids of two orgs never intersect), and each was removed by relative path from **B's**
-      // folder, announced as «Deleted in Zoho». A production/sandbox pair collides on nearly every
-      // `functions/<namespace>/<api_name>.dg` there is.
-      //
-      // The sixth question this repository asks of every function - what survives a change of
-      // workspace - answered for the two globals nobody had added to `dropWorkspaceState`. They are
-      // dropped there now as well, but the real fix is this one: a destructive act reads the folder
-      // it is about to act on, never a memory of some folder.
-      let prev = [];
-      try { const t = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(t)) prev = t; } catch (_) {}
-      if (!op.current()) return;
-      await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
-      // Pruned from what Zoho says, never from what the page said.
-      // Whatever a previous round could not finish removing, before anything else.
-      // Try the removal again rather than asking whether the file is there: a read that fails for
-      // any other reason would otherwise be taken for «already gone» and the entry dropped.
-      // `removeFile` on something absent throws NotFound, which *is* the answer we wanted.
-      for (const p of [...failedRemovals]) {
-        if (!op.current()) return;
-        try { await op.remove(p); failedRemovals.delete(p); }
-        catch (e) { if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p); }
-      }
-      const gone = prev.filter((e) => !live.has(String(e.id)));
-      let failed = 0;
-      for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id, e) ? 0 : 1; }
-      await rebuildTree();
-      await downloadMissing();
-      if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
-    } catch (e) { setStatus('Could not check with Zoho: ' + errText(e), 'warn'); }
-  })().finally(() => {
+  reconciling = reconcileNow(op).finally(() => {
     reconciling = null;
     if (reconcileAgain) { reconcileAgain = false; reconcileFunctions(); }
   });
@@ -3994,19 +4087,30 @@ function syncOne(id) {
   syncPump();
   return p;
 }
+
+/** One slot of the sync pump: read the function, then free the slot whatever happened.
+ *
+ * Two `.then()` callbacks before this, neither of them readable by the race checker, and what they
+ * held is the bookkeeping that decides whether the pump ever runs again - a slot that is not freed
+ * is a slot occupied for the rest of the session. The failure itself is reported by `syncOneNow`;
+ * what must not happen here is stopping.
+ */
+async function runSyncSlot(key, done) {
+  try { await syncOneNow(key); } catch (_) { /* reported there; the pump must carry on regardless */ }
+  syncBusy--;
+  syncing.delete(key);
+  done();
+  if (syncAgain.delete(key)) syncOne(key);
+  syncPump();
+}
+
 function syncPump() {
   while (syncBusy < SYNC_MAX && syncQueue.length) {
     const { key, done } = syncQueue.shift();
     syncBusy++;
     // The read's own failure is reported by syncOneNow; here it must not stop the pump, or one
     // rejected read would leave a slot occupied for the rest of the session.
-    Promise.resolve().then(() => syncOneNow(key)).catch(() => {}).then(() => {
-      syncBusy--;
-      syncing.delete(key);
-      done();
-      if (syncAgain.delete(key)) syncOne(key);
-      syncPump();
-    });
+    void runSyncSlot(key, done);
   }
 }
 
@@ -4220,9 +4324,17 @@ let sampleWsKnown = null;
 // never its rejection. What is remembered here is a cache of a fact the folder already holds -
 // `knownSample()` prefers the live workspace list and falls back to this - so losing it degrades
 // to «not looked yet», which is a state the panel already draws honestly. Nothing to report.
-chrome.storage.local.get('sampleWs')
-  .then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); })
-  .catch(() => {});
+// A declaration rather than a `.then(cb)`: the callback writes a module-level variable after an
+// await, which is the one shape `tools/asynccheck.py` exists to look at - and inside a callback it
+// could not look at it at all. Nothing guards it because nothing has to: the value is a cache of a
+// fact the folder holds, and the startup read cannot be overtaken by anything that reads it.
+async function readRememberedSample() {
+  let v;
+  try { v = await chrome.storage.local.get('sampleWs'); } catch (_) { return; }
+  sampleWsKnown = (v && v.sampleWs) || null;
+  updateSampleButtons();
+}
+void readRememberedSample();
 function noteSampleWs(id) {
   sampleWsKnown = id || null;
   void chrome.storage.local.set({ sampleWs: sampleWsKnown }).catch(() => {});   // see the read above
@@ -4452,8 +4564,17 @@ function resetView() {
 // the second and reopened on the first. The write is queued and the queued work asks whether it is
 // still the current selection: what is persisted is what is on screen, not what finished last.
 let _activeWsWrites = Promise.resolve();
+// The queued work is a declaration and not a `.then(cb)`, because a callback is a scope the race
+// checker cannot enter - and this one is *about* a race: it asks, after the queue has drained, whether
+// the selection it was queued for is still the one on screen. A check like that is exactly what has
+// to be readable.
+async function writeActiveWhenStillCurrent(key, id, gen, after) {
+  await after;
+  if (gen !== wsGen) return;                     // another selection overtook this one; it owns the key
+  await window.idbHandle.set(key, id);
+}
 function rememberActive(key, id, gen) {
-  _activeWsWrites = _activeWsWrites.then(() => (gen === wsGen ? window.idbHandle.set(key, id) : undefined));
+  _activeWsWrites = writeActiveWhenStillCurrent(key, id, gen, _activeWsWrites);
   return _activeWsWrites;
 }
 async function activate(w, viaGesture) {
@@ -5401,40 +5522,49 @@ function openFunctionFromWorkflow(id, name) {
   setMode('functions'); openFromTree(ent.path);
 }
 
+
+/** Pick up what the options page changed, without a manual refresh.
+ *
+ * A declaration rather than an `async (ch, area) => {}` handed to the listener: the checker cannot
+ * enter one, and this reads the folder handle and the scope and then writes both into the panel -
+ * the shape that has cost this repository six identical defects.
+ */
+async function applySettingsChange(ch, area) {
+  if (area !== 'local') return;
+  if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
+  if (ch.tabPrefs) {
+    await loadTabPrefs();
+    // Hiding the tab you are standing on has to take you off it. `renderTabs()` gives the tab you
+    // are *on* a segment even when it is hidden - which is right for a jump, where a health row
+    // lands you on a hidden list and a row with no segment reads as the panel having lost its
+    // place - and wrong for this, where you have just said «remove that one» about the thing in
+    // front of you. So two tabs turned off in Settings left one gone and one still there, and the
+    // difference was which one you happened to be looking at. Reported exactly that way.
+    if (viewMode && isHiddenByUser(viewMode)) {
+      const next = visibleTabs()[0];
+      if (next) setMode(next);            // setMode renders the row itself
+      else renderTabs();                  // every tab hidden: the row says so
+    } else renderTabs();
+  }
+  if (ch.zohoDc) zohoDc = ch.zohoDc.newValue || zohoDc;
+  if (!ch.settingsStamp) return;
+  await loadScope();
+  aiEngineChrome();
+  const prevRoot = root; root = await window.idbHandle.get('rootDir');
+  if (root === prevRoot && dir) { updateWsButtons(); return; }
+  if (pullActive) { pendingRootReload = true; setStatus(MSG.rootLater, 'warn'); return; }
+  // Not while a pull is writing. Rebuilding the list sets `dir`, and every `op.write` still in
+  // flight then throws WS_MOVED - which is *silent* by design, since a pull's status is guarded
+  // by `current()`. So the pull would stop half-way and say nothing, from a click in another tab.
+  await loadWorkspaces();
+}
+
 // ---------- boot + tab reactivity ----------
 $('opts').onclick = () => openSettings();
 $('help').href = DOCS_URL;
 // The options page is a separate document: pick up its changes without a manual refresh.
 try {
-  chrome.storage.onChanged.addListener(async (ch, area) => {
-    if (area !== 'local') return;
-    if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
-    if (ch.tabPrefs) {
-      await loadTabPrefs();
-      // Hiding the tab you are standing on has to take you off it. `renderTabs()` gives the tab you
-      // are *on* a segment even when it is hidden - which is right for a jump, where a health row
-      // lands you on a hidden list and a row with no segment reads as the panel having lost its
-      // place - and wrong for this, where you have just said «remove that one» about the thing in
-      // front of you. So two tabs turned off in Settings left one gone and one still there, and the
-      // difference was which one you happened to be looking at. Reported exactly that way.
-      if (viewMode && isHiddenByUser(viewMode)) {
-        const next = visibleTabs()[0];
-        if (next) setMode(next);            // setMode renders the row itself
-        else renderTabs();                  // every tab hidden: the row says so
-      } else renderTabs();
-    }
-    if (ch.zohoDc) zohoDc = ch.zohoDc.newValue || zohoDc;
-    if (!ch.settingsStamp) return;
-    await loadScope();
-    aiEngineChrome();
-    const prevRoot = root; root = await window.idbHandle.get('rootDir');
-    if (root === prevRoot && dir) { updateWsButtons(); return; }
-    if (pullActive) { pendingRootReload = true; setStatus(MSG.rootLater, 'warn'); return; }
-    // Not while a pull is writing. Rebuilding the list sets `dir`, and every `op.write` still in
-    // flight then throws WS_MOVED - which is *silent* by design, since a pull's status is guarded
-    // by `current()`. So the pull would stop half-way and say nothing, from a click in another tab.
-    await loadWorkspaces();
-  });
+  chrome.storage.onChanged.addListener((ch, area) => { void applySettingsChange(ch, area); });
   // Belt and braces: the options page lives in another tab, so re-read on focus as well.
   window.addEventListener('focus', () => { aiEngineChrome(); });
 } catch (_) {}
@@ -5528,17 +5658,35 @@ async function pullHealthRuntime() {
   return runPullAction(() => pullHealthRuntimeNow());
 }
 $('healthpull').onclick = pullHealthRuntime;
-$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); dropFileCaches(); await rebuildActive();
+
+/** ↻ Refresh: distrust everything on disk, read it again, and retry what a removal could not finish.
+ *
+ * A declaration rather than an `= async () => {}` written into the wiring line - the checker cannot
+ * enter one, and this awaits four things in a row and redraws the panel from each.
+ */
+async function onRefresh() {
+  if (root && !rootGranted) { await grantRoot(); return; }
+  distrustEverything(); dropFileCaches(); await rebuildActive();
   // The message that reports a removal it could not finish says «click Refresh», so Refresh has
   // to be the thing that tries again - a remedy naming a control that does something else is
   // worse than no remedy, because the reader does it and believes it worked.
-  if (failedRemovals.size) await reconcileFunctions(); };
+  if (failedRemovals.size) await reconcileFunctions();
+}
+
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = onRefresh;
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;
 $('aiinput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); aiSend(); } });
 buildTypeChips();
-chrome.storage.local.get('previewH').then((r) => { if (r?.previewH) $('preview').style.height = r.previewH; });
+// A declaration, because a `.then(cb)` is a scope nothing can read - and small as it is, this one
+// writes into the layout after an await.
+async function restorePreviewHeight() {
+  let r;
+  try { r = await chrome.storage.local.get('previewH'); } catch (_) { return; }
+  if (r?.previewH) $('preview').style.height = r.previewH;
+}
+void restorePreviewHeight();
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_t, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 loadWorkspaces();
@@ -5605,7 +5753,12 @@ async function aiEngineWord() {
 // sending is. The one thing it did cost is now stated on the site: opening the page is an ordinary
 // visit to zoost.it, which a reader who changes their mind on the panel side never made.
 $('repdismiss').onclick = () => showEmergency(false);
-$('repopen').onclick = async () => {
+/** Open the report in a window of its own and write the text into it.
+ *
+ * A declaration rather than an `= async () => {}`, which is a scope the race checker cannot enter -
+ * and the first thing it does is write `reportText`, a module-level value, after an await.
+ */
+async function onRepopen() {
   reportText = buildReport(reportFacts(lastThrown, await aiEngineWord()));
   const text = reportText;
   try {
@@ -5632,7 +5785,8 @@ $('repopen').onclick = async () => {
   } catch (_) {
     setReportFallback();
   }
-};
+}
+$('repopen').onclick = onRepopen;
 // If the tab cannot be opened or written to, say so and leave the reader somewhere to go - a silent
 // bail here is a button that looks like it worked.
 function setReportFallback() {
@@ -5640,8 +5794,16 @@ function setReportFallback() {
   // true. It used to be printed unconditionally beside a `try` that could not catch the
   // write's rejection - so a refused clipboard was announced as a successful one, on the one
   // path whose whole purpose is to leave the reader somewhere to go.
-  navigator.clipboard.writeText(reportText).then(
-    () => setStatus('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn'),
-    () => setStatus('Could not open the report page, and the clipboard was refused too. The report is in the panel above - select it and copy it by hand.', 'bad'),
-  );
+  void sayWhereTheReportWent();
+}
+// Awaited rather than chained: a `.then(ok, no)` is two scopes nothing can read, and both of them
+// write the line the reader acts on.
+async function sayWhereTheReportWent() {
+  try {
+    await navigator.clipboard.writeText(reportText);
+  } catch (_) {
+    setStatus('Could not open the report page, and the clipboard was refused too. The report is in the panel above - select it and copy it by hand.', 'bad');
+    return;
+  }
+  setStatus('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
 }

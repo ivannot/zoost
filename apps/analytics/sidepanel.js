@@ -676,8 +676,17 @@ function resetView() {
 // the second and reopened on the first. The write is queued and the queued work asks whether it is
 // still the current selection: what is persisted is what is on screen, not what finished last.
 let _activeWsWrites = Promise.resolve();
+// The queued work is a declaration and not a `.then(cb)`, because a callback is a scope the race
+// checker cannot enter - and this one is *about* a race: it asks, after the queue has drained, whether
+// the selection it was queued for is still the one on screen. A check like that is exactly what has
+// to be readable.
+async function writeActiveWhenStillCurrent(key, id, gen, after) {
+  await after;
+  if (gen !== wsGen) return;                     // another selection overtook this one; it owns the key
+  await window.idbHandle.set(key, id);
+}
 function rememberActive(key, id, gen) {
-  _activeWsWrites = _activeWsWrites.then(() => (gen === wsGen ? window.idbHandle.set(key, id) : undefined));
+  _activeWsWrites = writeActiveWhenStillCurrent(key, id, gen, _activeWsWrites);
   return _activeWsWrites;
 }
 async function selectWorkspace(w) {
@@ -3693,9 +3702,17 @@ let sampleWsKnown = null;
 // never its rejection. What is remembered here is a cache of a fact the folder already holds -
 // `knownSample()` prefers the live workspace list and falls back to this - so losing it degrades
 // to «not looked yet», which is a state the panel already draws honestly. Nothing to report.
-chrome.storage.local.get('sampleWs')
-  .then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); })
-  .catch(() => {});
+// A declaration rather than a `.then(cb)`: the callback writes a module-level variable after an
+// await, which is the one shape `tools/asynccheck.py` exists to look at - and inside a callback it
+// could not look at it at all. Nothing guards it because nothing has to: the value is a cache of a
+// fact the folder holds, and the startup read cannot be overtaken by anything that reads it.
+async function readRememberedSample() {
+  let v;
+  try { v = await chrome.storage.local.get('sampleWs'); } catch (_) { return; }
+  sampleWsKnown = (v && v.sampleWs) || null;
+  updateSampleButtons();
+}
+void readRememberedSample();
 function noteSampleWs(id) {
   sampleWsKnown = id || null;
   void chrome.storage.local.set({ sampleWs: sampleWsKnown }).catch(() => {});   // see the read above
@@ -4031,6 +4048,28 @@ async function loadRxShortcuts() {
       : [];
   } catch (_) { return null; }   // null, not []: a read that failed is not an empty list
 }
+/** Save the pattern in the box under a name, or say why it cannot be saved.
+ *
+ * A declaration rather than an `= async () => {}`, which is a scope the race checker cannot enter -
+ * and there is an await in the middle of it. `items` is carried in rather than read again: it is the
+ * list the menu was drawn from, and the whole point of the two checks above the write is that they
+ * are about *that* list. Written the same way in the other product.
+ */
+async function saveSearchPattern(items, rawQ) {
+  const name = $('rxsavename').value.trim();
+  // The same rules the Settings page enforces, refused with the reason in place.
+  if (!name) { $('rxsaveerr').textContent = 'A pattern needs a name.'; return; }
+  if (items.some((x) => x.name.trim().toLowerCase() === name.toLowerCase())) {
+    $('rxsaveerr').textContent = `"${name}" is already taken - the menu could not tell them apart.`;
+    return;
+  }
+  const dupP = items.find((x) => x.pattern === rawQ);
+  if (dupP) { $('rxsaveerr').textContent = `This pattern is already saved as "${dupP.name}".`; return; }
+  try { await chrome.storage.local.set({ rxShortcuts: [...items, { name, pattern: rawQ }] }); }
+  catch (_) { $('rxsaveerr').textContent = 'Could not write the list - try from Settings.'; return; }
+  openRxMenu();   // re-read and redraw: the new entry appearing in the list is the confirmation
+}
+
 async function openRxMenu() {
   const menu = $('rxmenu');
   const list = await loadRxShortcuts();
@@ -4067,20 +4106,7 @@ async function openRxMenu() {
   });
   const sv = menu.querySelector('[data-save]');
   if (sv) {
-    const doSave = async () => {
-      const name = $('rxsavename').value.trim();
-      // The same rules the Settings page enforces, refused with the reason in place.
-      if (!name) { $('rxsaveerr').textContent = 'A pattern needs a name.'; return; }
-      if (items.some((x) => x.name.trim().toLowerCase() === name.toLowerCase())) {
-        $('rxsaveerr').textContent = `"${name}" is already taken - the menu could not tell them apart.`;
-        return;
-      }
-      const dupP = items.find((x) => x.pattern === rawQ);
-      if (dupP) { $('rxsaveerr').textContent = `This pattern is already saved as "${dupP.name}".`; return; }
-      try { await chrome.storage.local.set({ rxShortcuts: [...items, { name, pattern: rawQ }] }); }
-      catch (_) { $('rxsaveerr').textContent = 'Could not write the list - try from Settings.'; return; }
-      openRxMenu();   // re-read and redraw: the new entry appearing in the list is the confirmation
-    };
+    const doSave = () => saveSearchPattern(items, rawQ);
     sv.onclick = doSave;
     $('rxsavename').onkeydown = (e) => {
       // The panel's own shortcuts stay out of the input; Escape still bubbles to close the menu.
@@ -4147,15 +4173,24 @@ $('scrim').onclick = () => { closeAbout(); closeScope(false); };
 // Closing the pane does not forget where you have been: reopening anything continues the chain.
 $('dclose').onclick = () => { detailLoad++; $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; updateNav(); render(); };
 document.querySelectorAll('.dtab').forEach((b) => {
-  b.onclick = async () => {
-    if (b.disabled) return;
-    const mine = ++detailLoad, op = beginWorkspaceOp();
-    detailTab = b.dataset.tab;
-    document.querySelectorAll('.dtab').forEach((x) => x.classList.toggle('active', x === b));
-    const v = viewById().get(selectedId);
-    if (v) { await renderDetail(v, mine, op); if (detailCurrent(mine, op)) resetDetailScroll(); }   // a different tab is different content too
-  };
+  b.onclick = () => void showDetailTab(b);
 });
+
+/** Switch the detail pane to the tab that was clicked, and draw it for the selected view.
+ *
+ * A declaration rather than an `= async () => {}`: the checker cannot enter one, and this awaits a
+ * render and then touches the scroll position - which belongs to whatever is selected by then, which
+ * is why `mine` and `op` are taken before the await and asked about after it.
+ */
+async function showDetailTab(b) {
+  if (b.disabled) return;
+  const mine = ++detailLoad, op = beginWorkspaceOp();
+  detailTab = b.dataset.tab;
+  document.querySelectorAll('.dtab').forEach((x) => x.classList.toggle('active', x === b));
+  const v = viewById().get(selectedId);
+  if (v) { await renderDetail(v, mine, op); if (detailCurrent(mine, op)) resetDetailScroll(); }   // a different tab is different content too
+}
+
 // A stored folder handle loses its permission between sessions and can only be re-granted from a
 // user gesture. Any click in the panel counts, so the first thing the user does restores access -
 // except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
@@ -4191,10 +4226,16 @@ chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 window.addEventListener('focus', () => refreshContext());
 
-(async () => {
+/** Everything the panel has to read before it can draw itself, in the order it needs it.
+ *
+ * An async IIFE is a scope `tools/asynccheck.py` cannot enter, and this one is the whole startup:
+ * four reads, each writing into the panel. A declaration, called on the next line.
+ */
+async function boot() {
   try { const r = await chrome.storage.local.get('detailH'); if (r && r.detailH) $('detail').style.height = r.detailH; } catch (_) {}
   await loadScope(); await loadZohoDc(); await restoreRoot(); await refreshContext();
-})();
+}
+void boot();
 $('help').href = DOCS_URL;   // set here, not in the markup - same as the CRM panel
 
 // What the report is allowed to know, gathered in one place so a reader can see the whole of it at
@@ -4290,8 +4331,16 @@ function setReportFallback() {
   // true. It used to be printed unconditionally beside a `try` that could not catch the
   // write's rejection - so a refused clipboard was announced as a successful one, on the one
   // path whose whole purpose is to leave the reader somewhere to go.
-  navigator.clipboard.writeText(reportText).then(
-    () => status('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn'),
-    () => status('Could not open the report page, and the clipboard was refused too. The report is in the panel above - select it and copy it by hand.', 'bad'),
-  );
+  void sayWhereTheReportWent();
+}
+// Awaited rather than chained: a `.then(ok, no)` is two scopes nothing can read, and both of them
+// write the line the reader acts on.
+async function sayWhereTheReportWent() {
+  try {
+    await navigator.clipboard.writeText(reportText);
+  } catch (_) {
+    status('Could not open the report page, and the clipboard was refused too. The report is in the panel above - select it and copy it by hand.', 'bad');
+    return;
+  }
+  status('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
 }
