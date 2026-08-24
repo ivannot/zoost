@@ -1097,9 +1097,33 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
                          r"|getElementById|querySelector|addEventListener|createElement")
         wins = {a: twincheck.functions((ROOT / 'apps' / a / 'graphview.js').read_text(encoding='utf-8'))
                 for a in ('crm', 'analytics')}
+
+        def touches_page(fns):
+            """Names that reach the page, directly or through another function of the same window.
+
+            Directly was the whole test, and it under-read: `onErArrSave` writes nothing itself and
+            calls `erHint`, which writes the window's own hint line. It came out as «identical and
+            touching no page», so the case asked for it to be moved into the DOM-free shared file -
+            where `erHint`, `erIds` and `curView` do not exist. **A one-level heuristic answers a
+            transitive question**, and the fix is the closure rather than a wider pattern: reach is
+            what is being asked about, so compute reach.
+            """
+            hits = {n for n, body in fns.items() if DOM.search(body)}
+            changed = True
+            while changed:
+                changed = False
+                for n, body in fns.items():
+                    if n in hits:
+                        continue
+                    if any(re.search(r'(?<![.\w])%s\s*\(' % re.escape(h), body) for h in hits):
+                        hits.add(n)
+                        changed = True
+            return hits
+
+        page = touches_page(wins['crm']) | touches_page(wins['analytics'])
         shared = set(wins['crm']) & set(wins['analytics'])
         stragglers = sorted(n for n in shared
-                            if wins['crm'][n] == wins['analytics'][n] and not DOM.search(wins['crm'][n]))
+                            if wins['crm'][n] == wins['analytics'][n] and n not in page)
         self.assertEqual(stragglers, [],
                          'these are identical in both windows and touch no page, so they belong in '
                          'graphlogic.js where one edit serves both: ' + ', '.join(stragglers))
@@ -3296,7 +3320,11 @@ class APartialListNeverLooksLikeACensus(unittest.TestCase):
         panel = '\n'.join(f.read_text(encoding='utf-8')
                           for f in sorted((ROOT / 'apps' / 'crm').glob('*.js')))
         cmds = []
-        for m in re.finditer(r"msg\?\.cmd === '(\w+)'\) \{ (\w+)\(", bridge):
+        # Both shapes the dispatcher has worn: eleven copies of `{ fn().then(…) }`, and the single
+        # `return reply(fn(…))` that replaced them. Reading only the first meant the derivation
+        # produced *nothing* the day the bridge was tidied, and `assertTrue(cmds)` is what caught it -
+        # which is the reason that line is there and not a formality.
+        for m in re.finditer(r"msg\?\.cmd === '(\w+)'\)\s*(?:\{\s*)?(?:return\s+reply\()?(\w+)\(", bridge):
             cmd, fn = m.group(1), m.group(2)
             body = re.search(r'\n  async function ' + fn + r'\(.*?\n  \}', bridge, re.S)
             if body and 'capped' in body.group(0):
@@ -6939,7 +6967,7 @@ class EveryAsyncScopeShippedIsSomethingTheCheckerCanEnter(unittest.TestCase):
 
     #: What is still written the old way. It may only fall - a conversion lowers it, and nothing
     #: raises it, because a new scope written the old way is a finding on the day it is written.
-    CEILING = 61
+    CEILING = 42
 
     def ac(self):
         sys.path.insert(0, str(ROOT / 'tools'))

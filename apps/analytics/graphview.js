@@ -517,6 +517,15 @@ function relPass(r) {
   const q = relQ.toLowerCase();
   return [r.fromName, r.col, r.toName, r.toCol, r.join].some((x) => (x || '').toLowerCase().includes(q));
 }
+// «Copy, then say so on the control for a moment», in one place. It was written four times across
+// the two diagram windows - two shapes of the same three lines - and every copy was a `.then()`
+// callback, which is a scope `tools/asynccheck.py` cannot enter. Awaited here, so it is one.
+async function copyAndFlash(el, text) {
+  try { await navigator.clipboard.writeText(text); } catch (_) { return; }
+  const old = el.textContent;
+  el.textContent = 'copied \u2713';
+  setTimeout(() => { el.textContent = old; }, 900);
+}
 function relRender() {
   if (!RELS.length) buildRels();
   const rows = RELS.filter(relPass);
@@ -545,10 +554,7 @@ function relRender() {
       <td><span class="snip" data-copy="${escA(r.join || '')}" title="Click to copy">${esc(r.join || '')}</span></td>
     </tr>`).join('')}</tbody></table>`;
   $('relwrap').querySelectorAll('[data-copy]').forEach((el) => (el.onclick = () => {
-    navigator.clipboard.writeText(el.dataset.copy).then(() => {
-      const old = el.textContent; el.textContent = 'copied \u2713';
-      setTimeout(() => { el.textContent = old; }, 900);
-    }).catch(() => {});
+    copyAndFlash(el, el.dataset.copy);
   }));
   $('relwrap').querySelectorAll('[data-mod]').forEach((el) => (el.onclick = () => {
     const id = el.dataset.mod; if (!N[id]) return;
@@ -1072,9 +1078,7 @@ function erPickCard() {
     wire(cb2, () => ({ set: erWouldGo(b, a, erHiddenSet()), first: a, back: false }));
   }
   const sn = $('erpicksnip');
-  if (sn) sn.onclick = () => navigator.clipboard.writeText(snip).then(() => {
-    const t = sn.textContent; sn.textContent = 'copied \u2713'; setTimeout(() => { sn.textContent = t; }, 900);
-  }).catch(() => {});
+  if (sn) sn.onclick = () => copyAndFlash(sn, snip);
 }
 function erFieldsFor(n) {
   if (erEmph === 'relations') return [];   // the box is only a label; the edges carry the information
@@ -2180,7 +2184,7 @@ const APP = (chrome.runtime.getManifest().name || '').replace(/[^a-z]/gi, '').to
 // readings - one arranged for a presentation, one for chasing a problem - and the filename is the
 // whole of that versioning. Nothing inside the file carries a title, so renaming one can never
 // break it.
-$('erArrSave').onclick = async () => {
+async function onErArrSave() {
   if (curView !== 'er' || !erIds.length) return;
   const st = erArrState();
   const text = serializeArrangement(st);
@@ -2194,9 +2198,10 @@ $('erArrSave').onclick = async () => {
     if (e && e.name === 'AbortError') return;
     erHint(friendlyArrError(e));
   }
-};
+}
+$('erArrSave').onclick = onErArrSave;
 const friendlyArrError = (e) => (e && e.message ? e.message : String(e));
-$('erArrLoad').onclick = async () => {
+async function onErArrLoad() {
   if (curView !== 'er') return;
   let text;
   try {
@@ -2209,7 +2214,8 @@ $('erArrLoad').onclick = async () => {
   const read = parseArrangement(text, drawMax);
   if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs, true); return; }
   erApplyArrangement(read.file);
-};
+}
+$('erArrLoad').onclick = onErArrLoad;
 // The graph is the truth, the file is an intention applied to it, and every disagreement resolves in
 // favour of the graph with the loss named. Refusals first, because a file from another kind of
 // diagram does not degrade - it means nothing.

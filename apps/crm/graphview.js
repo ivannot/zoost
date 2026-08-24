@@ -657,6 +657,15 @@ function relPass(r) {
   const q = relQ.toLowerCase();
   return [r.api, r.label, r.parent, r.child, r.via].some((x) => (x || '').toLowerCase().includes(q));
 }
+// «Copy, then say so on the control for a moment», in one place. It was written four times across
+// the two diagram windows - two shapes of the same three lines - and every copy was a `.then()`
+// callback, which is a scope `tools/asynccheck.py` cannot enter. Awaited here, so it is one.
+async function copyAndFlash(el, text) {
+  try { await navigator.clipboard.writeText(text); } catch (_) { return; }
+  const old = el.textContent;
+  el.textContent = 'copied \u2713';
+  setTimeout(() => { el.textContent = old; }, 900);
+}
 function relRender() {
   if (!RELS.length) buildRels();
   const calls = DATA.kind !== 'schema';
@@ -704,10 +713,7 @@ function relRender() {
     </tr>`).join('')}</tbody></table>`;
   }
   $('relwrap').querySelectorAll('[data-copy]').forEach((el) => (el.onclick = () => {
-    navigator.clipboard.writeText(el.dataset.copy).then(() => {
-      const old = el.textContent; el.textContent = 'copied \u2713';
-      setTimeout(() => { el.textContent = old; }, 900);
-    }).catch(() => {});
+    copyAndFlash(el, el.dataset.copy);
   }));
   $('relwrap').querySelectorAll('[data-mod]').forEach((el) => (el.onclick = () => {
     const id = el.dataset.mod; if (!N[id]) return;
@@ -749,12 +755,10 @@ function buildRelChips() {
 // ego set, the focus, the chips, the canvas - was computed from the graph that is being replaced,
 // and re-deriving them one by one is exactly the kind of half-migrated state this project keeps
 // getting bitten by. A reload costs one frame and cannot leave a stale half behind.
-function wireSubject() {
-  const box = document.getElementById('subj');
-  if (!box) return;
-  const here = DATA.kind === 'schema' ? 'schema' : 'calls';
-  [...box.children].forEach((el) => el.setAttribute('aria-selected', el.dataset.k === here));
-  box.onclick = async (e) => {
+// Named, and at the file's own top level: it awaits the panel and then writes into the page it
+// started on. A declaration nested inside another is a local, which is neither what this is nor
+// what `tools/asynccheck.py` reads.
+async function switchGraphKind(e, here) {
     const el = e.target.closest('span[data-k]');
     if (!el || el.dataset.k === here) return;
     const was = $('statline').innerHTML;
@@ -771,7 +775,13 @@ function wireSubject() {
         + '\n\nThe Zoost side panel builds the graph - it holds the working folder, this window does not.'
         + '\nOpen the panel in a Zoho CRM tab, make sure the folder is granted, then try again.');
     }
-  };
+}
+function wireSubject() {
+  const box = document.getElementById('subj');
+  if (!box) return;
+  const here = DATA.kind === 'schema' ? 'schema' : 'calls';
+  [...box.children].forEach((el) => el.setAttribute('aria-selected', el.dataset.k === here));
+  box.onclick = (e) => switchGraphKind(e, here);
 }
 
 // ---------------- The list, folded away ----------------
@@ -1401,9 +1411,7 @@ function erPickCard() {
     wire(cb2, () => ({ set: erWouldGo(b, a, erHiddenSet()), first: a, back: false }));
   }
   const sn = $('erpicksnip');
-  if (sn) sn.onclick = () => navigator.clipboard.writeText(snip).then(() => {
-    const t = sn.textContent; sn.textContent = 'copied \u2713'; setTimeout(() => { sn.textContent = t; }, 900);
-  }).catch(() => {});
+  if (sn) sn.onclick = () => copyAndFlash(sn, snip);
 }
 // A function's box lists what it calls, the way a module's box lists its fields. The engine draws
 // rows of {api_name, data_type, lookup}, so the calls are expressed in that shape rather than the
@@ -2539,7 +2547,7 @@ const APP = (chrome.runtime.getManifest().name || '').replace(/[^a-z]/gi, '').to
 // readings - one arranged for a presentation, one for chasing a problem - and the filename is the
 // whole of that versioning. Nothing inside the file carries a title, so renaming one can never
 // break it.
-$('erArrSave').onclick = async () => {
+async function onErArrSave() {
   if (curView !== 'er' || !erIds.length) return;
   const st = erArrState();
   const text = serializeArrangement(st);
@@ -2553,9 +2561,10 @@ $('erArrSave').onclick = async () => {
     if (e && e.name === 'AbortError') return;
     erHint(friendlyArrError(e));
   }
-};
+}
+$('erArrSave').onclick = onErArrSave;
 const friendlyArrError = (e) => (e && e.message ? e.message : String(e));
-$('erArrLoad').onclick = async () => {
+async function onErArrLoad() {
   if (curView !== 'er') return;
   let text;
   try {
@@ -2568,7 +2577,8 @@ $('erArrLoad').onclick = async () => {
   const read = parseArrangement(text, drawMax);
   if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs, true); return; }
   erApplyArrangement(read.file);
-};
+}
+$('erArrLoad').onclick = onErArrLoad;
 // The graph is the truth, the file is an intention applied to it, and every disagreement resolves in
 // favour of the graph with the loss named. Refusals first, because a file from another kind of
 // diagram does not degrade - it means nothing.

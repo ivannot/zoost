@@ -817,17 +817,22 @@
     forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null });
 
     if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) - skips wrapper service frames
-    if (msg?.cmd === 'listFunctions') { listFunctions().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'listWorkflows') { listWorkflows().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'fetchWorkflow') { fetchWorkflow(msg.id).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'workflowUsage') { workflowUsage(msg.id, msg.from, msg.till).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'listSchedules') { listSchedules().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'fetchModuleFields') { fetchModuleFields(msg.apiName).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'fetchOne') { fetchOne(msg.id, msg.category, msg.source).then((file) => sendResponse({ ok: true, file })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'pullFailures') { pullFailures().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'pullActions') { pullActions().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
-    if (msg?.cmd === 'pullConnections') { pullConnections().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    // One reply for every command, which is the shape the Analytics bridge has had from the start.
+    // Here each line carried its own `.then(...).catch(fail(...))` - eleven copies of one chain,
+    // eleven scopes `tools/asynccheck.py` cannot enter, and eleven chances to write the eleventh
+    // one differently from the other ten.
+    const reply = (p, shape) => { p.then((r) => sendResponse(shape ? shape(r) : { ok: true, ...r })).catch(fail(sendResponse)); return true; };
+    if (msg?.cmd === 'listFunctions') return reply(listFunctions());
+    if (msg?.cmd === 'listWorkflows') return reply(listWorkflows());
+    if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));
+    if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
+    if (msg?.cmd === 'listSchedules') return reply(listSchedules());
+    if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));
+    if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source), (file) => ({ ok: true, file }));
+    if (msg?.cmd === 'pullModules') return reply(pullModules());
+    if (msg?.cmd === 'pullFailures') return reply(pullFailures());
+    if (msg?.cmd === 'pullActions') return reply(pullActions());
+    if (msg?.cmd === 'pullConnections') return reply(pullConnections());
     if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
     if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }
   });

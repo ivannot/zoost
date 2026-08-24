@@ -52,6 +52,7 @@ closeScope	b272bb357c1c	d0fa6743ab69	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	11d7d721e357	11d7d721e357	identical
+copyAndFlash	000329334ecb	000329334ecb	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
@@ -92,7 +93,7 @@ erNotDrawn	03bd5983b5cf	03bd5983b5cf	identical
 erPaint	be54da6d2d7f	be54da6d2d7f	identical
 erParamsToUI	4fcd92a95216	4fcd92a95216	identical
 erPick	1abe2d6a2c51	1abe2d6a2c51	identical
-erPickCard	6e172af64b88	02e5c971b706	divergent
+erPickCard	9189cd8fcbd5	b3d370dc5dd7	divergent
 erPinnedNow	25cc3096d8fd	25cc3096d8fd	identical
 erReach	f5456fd28a60	f5456fd28a60	identical
 erRender	ca365eb7051e	cd799080aed2	divergent
@@ -160,6 +161,8 @@ noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 onAiengine	db42c8c059e5	55f96961b339	divergent
+onErArrLoad	de811d13f0e2	de811d13f0e2	identical
+onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
 onSaveLay	632ebb161980	ec35c06238e1	divergent
 onSaveRx	974e36827c7e	974e36827c7e	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
@@ -192,7 +195,7 @@ refRow	854405aca965	947afeea3b64	divergent
 refreshContext	a6185d0cf57a	6a4b34ab0325	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
-relRender	65b6796a1174	479e5c41dd33	divergent
+relRender	8c0a3634bad0	4d6325a17da8	divergent
 rememberActive	b905c9b77414	b905c9b77414	identical
 removeFileAt	d6514d26b3e4	1b045eb72889	divergent
 renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent

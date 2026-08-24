@@ -1434,7 +1434,10 @@ test('the diagram window can change subject, and says why when it cannot', async
     URLSearchParams,
     alert: (m) => { alerted = m; },
   };
-  const { wireSubject } = load([gfn('crm', 'wireSubject')], ctx);
+  // Two declarations now, not one: the click handler is named and lives at the file's top level,
+  // because `tools/asynccheck.py` reads declarations and an inline `async (e) => {…}` is a scope it
+  // cannot enter. The case drives the same path either way - it wires, then clicks.
+  const { wireSubject } = load([gfn('crm', 'switchGraphKind'), gfn('crm', 'wireSubject')], ctx);
   wireSubject();
   assert.equal(seg.map((x) => x.sel).join(' '), 'true false', 'the segment does not mark what is on screen');
 
@@ -9089,7 +9092,10 @@ for (const app of ['crm', 'analytics']) {
   const whole = () => {
     const src = read('apps/crm/content-bridge.js');
     const out = new Set();
-    for (const m of src.matchAll(/msg\?\.cmd === '(\w+)'\) \{ (\w+)\(/g)) {
+    // Both shapes the dispatcher has worn: eleven copies of `{ fn().then(…) }` and the single
+    // `return reply(fn(…))` that replaced them. Reading only the first derived *nothing* the day it
+    // was tidied - which the `safe.size >= 3` line below caught, and is why it is there.
+    for (const m of src.matchAll(/msg\?\.cmd === '(\w+)'\)\s*(?:\{\s*)?(?:return\s+reply\()?(\w+)\(/g)) {
       const at = src.indexOf(`async function ${m[2]}(`);
       if (at < 0) continue;
       if (!/capped/.test(src.slice(at, src.indexOf('\n  }', at)))) out.add(m[1]);
