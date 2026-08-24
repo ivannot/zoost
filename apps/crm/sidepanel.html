@@ -436,7 +436,10 @@
   .rlbl.remote{background:#1e3a5f;color:#8ec5ff}
   .rlbl.local{background:#2a2140;color:#c9b3ff}
   body.zoho-blocked .st{opacity:.3;pointer-events:none}
-  body.zoho-blocked #pvreveal, body.zoho-blocked #pvfind{opacity:.4;pointer-events:none}
+  /* By the mark `blockZoho()` puts on them, not by their ids: this rule named two controls and
+     a third - «Functions page» - was in no list at all, so it stayed live while the rest went
+     dead. One list in the script decides; this only says what blocked looks like. */
+  .zblocked{opacity:.4;pointer-events:none}
 
   /* The callers, as chips on their own line: a comma-separated list of names reads as prose
      while the reader is scanning for one of them. Same chip as everywhere else a function is

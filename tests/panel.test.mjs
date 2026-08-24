@@ -7387,13 +7387,21 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // did nothing. The flag says whether anything still holds it; the argument says only what one caller
 // wanted, which is exactly the distinction the counter was introduced to make.
 test('a nested release leaves the buttons off while anything still holds the pull', () => {
+  // `blockZoho` is lifted too, not stubbed: it is the one place a Zoho-bound control is turned on
+  // or off, and stubbing it would leave this case asserting about a mechanism the panel no longer
+  // uses. It marks with a class as well as with `disabled`, because two of the five controls are
+  // spans - which is how «Find» went dead while «Functions page» stayed live.
   const ctx = { pullDepth: 0, pullBusy: false, dir: {}, disabled: {}, ZOHO_BTNS: ['pullall', 'pullone'],
                 updateWsButtons() {},
-                $: (id) => (ctx.disabled[id] = ctx.disabled[id] || { set disabled(v) { ctx.disabled[id + ':v'] = v; },
-                                                                    get disabled() { return ctx.disabled[id + ':v']; } }),
+                document: { body: { classList: { toggle() {} } } },
+                $: (id) => (ctx.disabled[id] = ctx.disabled[id] || {
+                  classList: { toggle() {} },
+                  set disabled(v) { ctx.disabled[id + ':v'] = v; },
+                  get disabled() { return ctx.disabled[id + ':v']; } }),
                 zohoReady: () => true, navOpenNow: () => false, Math };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'setPullBusy'), ctx);
+  vm.runInContext([sliceFn('apps/crm/sidepanel.js', 'blockZoho'),
+                   sliceFn('apps/crm/sidepanel.js', 'setPullBusy')].join('\n'), ctx);
   vm.runInContext('setPullBusy(true); setPullBusy(true); setPullBusy(false);', ctx);
   assert.equal(ctx.pullBusy, true, 'the flag itself stopped counting its holders');
   for (const b of ctx.ZOHO_BTNS)
@@ -11123,6 +11131,180 @@ test('the diagram sliders mean the same thing in Settings and in the window', ()
         `window, so one of them clamps a stored value the other considers ordinary`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// One list, one mechanism, and nothing outside it.
+//
+// The panel had **three** ways of turning a Zoho-bound control off. `ZOHO_BTNS` held the two Pulls
+// and was applied by setting `disabled`. A rule in the stylesheet greyed `#pvreveal` and `#pvfind` by
+// id, because those two are spans and a span has no `disabled`. And `#funcs` - «Functions page» - was
+// in neither, so when the context dropped it stayed live and answered «Unknown target» if pressed: a
+// control that is enabled and cannot work.
+//
+// Reported from a real Zoho One org, in the shape three lists produce: «Find is disabled and
+// Functions page is not». Not a missing name - a missing *place* for the name to go.
+//
+// What is asserted is the property that keeps it from coming back, not the membership of the list:
+// there is one list, one function applies it, and nothing else turns those controls on or off. The
+// membership itself is a judgement - `gozoho` navigates to Zoho and is deliberately usable with no
+// context at all, because it is the way back when there is none - and a derivation that tried to
+// settle it by walking the call graph pulls in eighteen controls including the workspace picker.
+// **A check that fires on correct code is one people learn to ignore**, so this checks the mechanism
+// and says here, in as many words, that the list is read by a person.
+test('crm: every Zoho-bound control is blocked in one place, and nowhere else', () => {
+  const js = read('apps/crm/sidepanel.js');
+  const html = read('apps/crm/sidepanel.html');
+
+  const list = sliceConst('apps/crm/sidepanel.js', 'ZOHO_BTNS');
+  const ids = [...list.matchAll(/'(\w+)'/g)].map((m) => m[1]);
+  assert.ok(ids.length >= 5, `ZOHO_BTNS lifted as ${ids.length} entries - the derivation broke`);
+  for (const id of ids) assert.ok(html.includes(`id="${id}"`), `ZOHO_BTNS names ${id}, which is not a control`);
+
+  // The mechanism: `blockZoho` marks and disables. Both, because two of the five are spans - the
+  // half that was in the stylesheet only.
+  const fn = sliceFn('apps/crm/sidepanel.js', 'blockZoho');
+  assert.match(fn, /ZOHO_BTNS\.forEach/, 'blockZoho does not walk the list it exists to apply');
+  assert.match(fn, /'disabled' in el/, 'it sets disabled on elements that have no such property');
+  assert.match(fn, /classList\.toggle\('zblocked'/,
+               'the two spans cannot be disabled, so the mark is the only thing that reaches them');
+
+  // Nothing else turns them on or off. This is the defect: a second mechanism nobody has to keep in
+  // step with the first, and a third that is simply absent for one control.
+  const others = [...js.matchAll(/ZOHO_BTNS\.forEach/g)].length;
+  assert.equal(others, 1,
+               `${others} places walk ZOHO_BTNS - it is applied in one, or the next control added is `
+               + 'in one of them and not the others, which is exactly what happened');
+
+  // And the stylesheet names no control by id under the blocked state: it says what blocked *looks*
+  // like, and the script decides who is blocked.
+  const named = [...html.matchAll(/body\.zoho-blocked\s+#(\w+)/g)].map((m) => m[1]);
+  assert.deepEqual(named, [],
+                   `the stylesheet still turns ${named.join(', ')} off by id - add a control and the `
+                   + 'rule does not know about it');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A tab is a tree of documents, and the panel was navigating the wrong one.
+//
+// Inside a suite shell - Zoho One, and CRM Plus the same way - the CRM is an iframe on
+// `crm.zoho.<dc>` and the *tab* is the shell. Thirteen call sites said «take this TAB to this
+// address». On a plain CRM tab that is right; inside a shell it throws away the shell the reader was
+// working in. Reported from a real Zoho One org.
+//
+// The address was never wrong, which is what made this safe: hovering a module link inside the shell
+// shows `https://crm.zoho.<dc>/crm/<portal>/tab/<Module>` - absolute, on the CRM's own origin,
+// character for character what `openModulePage` builds. Zoho publishes that entry point itself.
+//
+// Run rather than read, on both shapes, because the whole point is that one code path serves them.
+test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the tab is the CRM', async () => {
+  const mk = (frames) => {
+    const acted = [];
+    const ctx = {
+      Date, Promise, Error, console, RegExp,
+      zohoTabId: async () => 42,
+      chrome: {
+        tabs: {
+          get: async () => ({ url: frames[0] }),
+          update: async (id, o) => { acted.push({ what: 'tab', id, ...o }); },
+          create: async (o) => { acted.push({ what: 'create', ...o }); return { id: 99 }; },
+        },
+        scripting: {
+          // `frameIds` is a property of `target`, not of the call. The first version of this stub
+          // read `o.frameIds`, which is undefined either way, so both calls looked like the
+          // enumeration and the navigation was never recorded - a stub that answers the wrong
+          // question makes the code under test look broken.
+          executeScript: async (o) => {
+            if (!o.target.frameIds) return frames.map((href, i) => ({ frameId: i, result: { href, top: i === 0 } }));
+            acted.push({ what: 'frame', frameId: o.target.frameIds[0], url: o.args[0] });
+            return [];
+          },
+        },
+      },
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
+                     sliceFn('apps/crm/sidepanel.js', 'goToZoho')].join('\n'), ctx);
+    return { ctx, acted };
+  };
+
+  const URL_ = 'https://crm.zoho.eu/crm/x/tab/Contacts';
+
+  // Inside a shell: the CRM is frame 1, and the shell must still be there afterwards.
+  const shell = mk(['https://one.zoho.eu/zohoone/x/home', 'https://crm.zoho.eu/crm/x/tab/Deals']);
+  await vm.runInContext(`goToZoho(${JSON.stringify(URL_)})`, shell.ctx);
+  const moved = shell.acted.filter((a) => a.what === 'frame');
+  assert.deepEqual(moved.map((a) => [a.frameId, a.url]), [[1, URL_]],
+                   'the CRM frame was not the thing that moved - inside a shell that means the '
+                   + 'reader lost the shell they were working in');
+  assert.equal(shell.acted.some((a) => a.what === 'tab' && a.url), false,
+               'it navigated the tab as well, which is the defect with an extra step');
+
+  // A plain CRM tab: frame 0 is the tab's own document, so this is a tab navigation and there is
+  // only one code path. A guard that never takes this branch would pass the case above and be useless.
+  const plain = mk(['https://crm.zoho.eu/crm/x/tab/Deals']);
+  await vm.runInContext(`goToZoho(${JSON.stringify(URL_)})`, plain.ctx);
+  assert.deepEqual(plain.acted.map((a) => a.what), ['tab'],
+                   'on a tab whose own document is the CRM it did something other than navigate it');
+  assert.equal(plain.acted[0].url, URL_, 'it navigated the tab somewhere else');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A cache repeats an answer. This one repeated a failure, and that is what «randomly» meant.
+//
+// `crmFrameId` memoises the frame lookup for six seconds so the five-second context poll does not
+// enumerate a tab's frames on every tick. The first version stored a **miss** on the same terms. A
+// Zoho One page is a single-page application: while the shell creates or replaces the CRM iframe, an
+// enumeration landing in that instant finds no CRM document - and «this tab has no CRM frame» was
+// then true for six seconds about a tab that had one. The panel showed «Zoho tab (not ready)», the
+// Zoho-bound controls went dead, and it happened at intervals nobody could predict.
+//
+// Reported from a real Zoho One org, in the word this repository treats as an instruction to go and
+// look: the button was disabled «randomly». It was not random - it was the beat between a six-second
+// memo and a five-second poll.
+//
+// Driven rather than read: the sequence is planted - one tab, an enumeration that comes back empty,
+// then one that has the frame - and what is asserted is that the second call *looks again*.
+test('crm: the frame lookup remembers where the CRM is, never that it could not find it', async () => {
+  const mk = () => {
+    let hrefs = ['https://one.zoho.com/home'];
+    const enumerations = [];
+    const ctx = {
+      Date, Promise, Error, console, RegExp,
+      chrome: {
+        tabs: { get: async () => ({ url: 'https://one.zoho.com/home' }) },
+        scripting: {
+          executeScript: async () => {
+            enumerations.push(hrefs.slice());
+            return hrefs.map((href, i) => ({ frameId: i, result: { href, top: i === 0 } }));
+          },
+        },
+      },
+    };
+    vm.createContext(ctx);
+    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
+    return { ctx, enumerations, put: (h) => { hrefs = h; } };
+  };
+
+  const { ctx, enumerations, put } = mk();
+  const first = await vm.runInContext('crmFrameId(7)', ctx);
+  assert.equal(first, null, 'a tab with no CRM frame answered with one');
+
+  // The shell finishes building its iframe, well inside the six-second memo.
+  put(['https://one.zoho.com/home', 'https://crm.zoho.eu/crm/x/tab/Contacts']);
+  const second = await vm.runInContext('crmFrameId(7)', ctx);
+  assert.equal(enumerations.length, 2,
+               'the miss was cached: the second call answered from memory and never looked again, '
+               + 'which is «Zoho tab (not ready)» for as long as the memo lasts');
+  assert.equal(second, 1, 'it looked again and still did not find the frame that is there');
+
+  // And the other half, which is what makes the first mean something: a *hit* is still remembered,
+  // or this is not a cache at all and the poll enumerates every five seconds for ever.
+  const third = await vm.runInContext('crmFrameId(7)', ctx);
+  assert.equal(enumerations.length, 2, 'a frame it had already found was looked up again');
+  assert.equal(third, 1, 'the remembered frame came back wrong');
 });
 
 // ---------------------------------------------------------------------------------------------

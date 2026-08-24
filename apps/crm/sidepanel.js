@@ -28,9 +28,28 @@ const FN_NAMES = ['api_name', 'display_name', 'name'];   // every name a functio
 // reader, because `refreshContext` runs on a five-second poll and used to name `pull` by hand while
 // this list already knew there were two: the per-type Pull stayed enabled through an environment
 // mismatch and failed at the click instead, which is the one-of-a-set miss this repository keeps
-// recording. Anything Zoho-bound goes in ZOHO_BTNS and is disabled in one place.
+// recording. Anything Zoho-bound goes in ZOHO_BTNS and is blocked in one place.
 const LOCAL_BTNS = ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
-const ZOHO_BTNS = ['pull', 'pullone'];
+// **Three lists, and a control in none of them.** `ZOHO_BTNS` held the two Pulls and was applied by
+// setting `disabled`; a rule in the stylesheet greyed `#pvreveal` and `#pvfind` by id, because those
+// two are spans and a span has no `disabled`; and `#funcs` - «Functions page» - was in neither, so it
+// stayed live while everything else went dead and answered «Unknown target» when pressed, which is a
+// control that is enabled and cannot work. Reported from a real Zoho One org, as «Find is disabled
+// and Functions page is not», which is exactly what those three lists say.
+//
+// One list now, and it is applied by `blockZoho()` rather than by two mechanisms that have to be
+// remembered together: `disabled` where the element has it, and a class in every case, so the
+// stylesheet stops naming controls one by one and a control added tomorrow inherits both.
+const ZOHO_BTNS = ['pull', 'pullone', 'funcs', 'pvreveal', 'pvfind'];
+function blockZoho(on) {
+  document.body.classList.toggle('zoho-blocked', on);
+  ZOHO_BTNS.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    if ('disabled' in el) el.disabled = on;
+    el.classList.toggle('zblocked', on);
+  });
+}
 // A workspace of invented data, written by «+ Sample» rather than pulled. It is an ordinary
 // workspace in every other respect - the same list, the same walks, the same exports - and there is
 // no demo *mode* anywhere: an `if (demo)` branch in rendering code is how invented data eventually
@@ -1119,10 +1138,21 @@ async function activeZohoTabId() {
  * at. The one case that still answers 0 is the honest one: the enumeration itself failed, and the
  * tab's own top frame is CRM.
  */
+// **A cache repeats an answer; this one was repeating a failure.** The lookup is memoised for six
+// seconds so the five-second poll does not enumerate a tab's frames every time - and the first
+// version stored `null` on the same terms. A Zoho One page is a single-page application: while the
+// shell is creating or replacing the CRM iframe, an enumeration that lands in that instant finds no
+// CRM frame, and «there is no CRM frame here» was then true for six seconds over a tab that had one.
+// The panel showed «Zoho tab (not ready)» for a cycle, at intervals nobody could predict - reported
+// from a real Zoho One org as the button being disabled «randomly», which is the word this
+// repository treats as an instruction to go and look rather than to guess.
+//
+// So only a *found* frame is remembered. A miss costs one `executeScript` on the next poll, which is
+// what it cost before anything was cached at all, and it cannot outlive the moment that produced it.
 let _crmFrame = { tabId: null, frameId: 0, ts: 0 };
 async function crmFrameId(tabId) {
   const now = Date.now();
-  if (_crmFrame.tabId === tabId && now - _crmFrame.ts < 6000) return _crmFrame.frameId;
+  if (_crmFrame.tabId === tabId && _crmFrame.frameId !== null && now - _crmFrame.ts < 6000) return _crmFrame.frameId;
   let fid = null;
   try {
     const res = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, func: () => ({ href: location.href, top: window === window.top }) });
@@ -1137,7 +1167,8 @@ async function crmFrameId(tabId) {
       if (/^https:\/\/crm(sandbox)?\.zoho/.test((t && t.url) || '')) fid = 0;
     } catch (_) {}
   }
-  _crmFrame = { tabId, frameId: fid, ts: now };
+  // Only a hit is remembered. Recording the miss is what made a transient absence last six seconds.
+  if (fid !== null) _crmFrame = { tabId, frameId: fid, ts: now };
   return fid;
 }
 /** Speak to the bridge, and put it there if it is not.
@@ -1214,7 +1245,7 @@ async function refreshContext() {
     $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
     ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho tab';
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
-    document.body.classList.add('zoho-blocked'); ZOHO_BTNS.forEach((b) => ($(b).disabled = true));
+    blockZoho(true);
     return;
   }
   $('offoverlay').classList.remove('show');
@@ -1232,7 +1263,7 @@ async function refreshContext() {
     if (!current()) return;
     lastCtx = r?.ok ? r : null;
   } catch (_) { if (!current()) return; lastCtx = null; }
-  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; document.body.classList.add('zoho-blocked'); ZOHO_BTNS.forEach((b) => ($(b).disabled = true)); updateWsButtons(); return; }
+  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; blockZoho(true); updateWsButtons(); return; }
   // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
   // side implying a relationship - reported as «switching to the test org leaves ZOHO TAB on the
@@ -1281,8 +1312,8 @@ async function refreshContext() {
     else { sw.textContent = `Create workspace for \u00ab${lastCtx.instance || '?'}\u00bb`; sw.onclick = () => addWorkspaceForTab(); }
   }
   // inhibit all Zoho-bound operations unless the active tab matches the workspace (tab-navigation stays allowed)
-  document.body.classList.toggle('zoho-blocked', !zohoReady());
-  ZOHO_BTNS.forEach((b) => ($(b).disabled = pullBusy || !zohoReady() || !dir || navOpenNow()));   // a pull in progress - or the history view - keeps them disabled even as the 5s refresh runs
+  blockZoho(!zohoReady());
+  blockZoho(pullBusy || !zohoReady() || !dir || navOpenNow());   // a pull in progress - or the history view - keeps them blocked even as the 5s refresh runs
   updateWsButtons();
 }
 function guardOk() {
@@ -2429,11 +2460,51 @@ function homeUrl() {
   // from a workspace that already knows it is one.
   return `https://crm.${dc}/crm/ShowHomePage.do`;
 }
+/** Take the reader to a page of their Zoho CRM, without taking their shell away.
+ *
+ * **A tab is a tree of documents, and we were navigating the wrong one.** On a plain CRM tab there is
+ * one document and it is the CRM. Inside a suite shell - Zoho One, and CRM Plus the same way - the
+ * CRM is an iframe on `crm.zoho.<dc>` and the *tab* is the shell. Thirteen call sites said «take this
+ * TAB to this address», which is right in the first case and, in the second, throws away the shell
+ * the reader was working in and lands them on a bare CRM.
+ *
+ * The address itself was never the problem, and that is worth stating because it is what made this
+ * safe to fix: hovering a module link inside the shell shows
+ * `https://crm.zoho.<dc>/crm/<portal>/tab/<Module>` in the status bar - absolute, on the CRM's own
+ * origin, character for character what `openModulePage` builds. **Zoho publishes that entry point
+ * itself**, so nothing here is guessed about somebody else's router, which is the thing this project
+ * refuses to do. We move the frame the bridge already talks to, which is what clicking that link does.
+ *
+ * On a plain CRM tab the CRM frame *is* the tab's document - frame 0 - so this navigates the tab and
+ * one code path serves both. A tab with no CRM frame at all falls back to navigating the tab, which
+ * is where it started; in that state the Zoho-bound controls are blocked anyway.
+ *
+ * Returns the tab id, or null when there was nothing to move.
+ */
+async function goToZoho(url, opts = {}) {
+  if (opts.newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
+  let id = await zohoTabId();
+  if (!id) { const t = await chrome.tabs.create({ url, active: opts.active !== false }); return t.id; }
+  const fid = await crmFrameId(id);
+  // Frame 0 is the tab's own document: moving it and moving the tab are the same act, and
+  // `chrome.tabs.update` is the one that also raises the tab.
+  if (fid) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: id, frameIds: [fid] },
+                                             func: (u) => { location.href = u; }, args: [url] });
+      if (opts.active !== false) await chrome.tabs.update(id, { active: true });
+      return id;
+    } catch (_) {
+      // A refused injection is not a reason to do nothing: fall through to the tab, which is the
+      // behaviour every one of these call sites had before.
+    }
+  }
+  await chrome.tabs.update(id, { url, active: opts.active !== false });
+  return id;
+}
 async function openZohoHome() {
   if (sampleRefuse()) return;
-  const url = homeUrl();
-  let id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
+  await goToZoho(homeUrl());
 }
 // Zoho's own page for one automation action. The paths were read off the address bar rather than
 // guessed - `settings/alerts/<id>`, `settings/field-updates/<id>`, `settings/tasks/<id>`,
@@ -2457,8 +2528,7 @@ function templateUrl(a) {
 async function openZohoAt(url, what) {
   if (sampleRefuse()) return;
   if (!url) { setStatus(MSG.noActionTarget, 'warn'); return; }
-  const id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
+  await goToZoho(url);
   setStatus(`Opened \u00ab${what}\u00bb in Zoho.`, 'ok');
 }
 async function openActionInZoho(a) { await openZohoAt(actionUrl(a), a.name || a.id); }
@@ -2467,27 +2537,21 @@ async function openModulePage(genName, navigable, label) {
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !genName) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  const url = `${base}/crm/${inst}/tab/${genName}`;
-  let id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
+  await goToZoho(`${base}/crm/${inst}/tab/${genName}`);
   setStatus(`Opened \u00ab${genName}\u00bb in Zoho.`, 'ok');
 }
 async function openModuleLayouts(gen) {
   if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  const url = `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
-  let id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
+  await goToZoho(`${base}/crm/${inst}/settings/modules/${gen}/layouts`);
   setStatus(`Opened ${gen} layouts in Zoho.`, 'ok');
 }
 async function openModuleLayout(gen, layoutId) {
   if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  const url = layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
-  let id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
+  await goToZoho(layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`);
   setStatus(layoutId ? 'Opened the layout in Zoho.' : `Opened ${gen} layouts in Zoho.`, 'ok');
 }
 function moduleNavigable(m) {
@@ -2507,6 +2571,9 @@ async function switchTab() {
   // Same Zoho account (prod <-> sandbox on the same data center) shares an SSO session: just navigate, no logout.
   const dc = (b) => (b || '').replace(/:\/\/(crm|crmsandbox)\./, '://');
   const sameAccount = dc(curBase) === dc(bound.base) && envOf(curBase) !== envOf(bound.base);
+  // The tab, not the frame, and both branches of this function mean it. Ending a session is not a
+  // navigation inside somebody's shell: a logout in an iframe leaves the shell around it holding a
+  // session that no longer exists. `goToZoho` is for going to a *page*.
   if (sameAccount) {
     if (id) await chrome.tabs.update(id, { url: targetHome, active: true }); else await chrome.tabs.create({ url: targetHome, active: true });
     return;
@@ -2523,10 +2590,7 @@ async function openTargetZoho(newTab) {
   if (sampleRefuse()) return null;   // null, not undefined: the caller reads it as "no tab id"
   const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
   if (!url) { setStatus('Unknown target - pull this workspace once, or open Zoho manually.', 'warn'); return null; }
-  if (newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
-  let id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else { const t = await chrome.tabs.create({ url }); id = t.id; }
-  return id;
+  return goToZoho(url, { newTab });
 }
 $('funcs').onclick = () => openTargetZoho(false);
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
@@ -2564,7 +2628,10 @@ async function reveal(fn) {
   const same = url && tab && (tab.url || '').split('#')[0].split('?')[0] === url.split('#')[0].split('?')[0];
   if (!same) {
     setStatus(MSG.openingFns, 'busy');
-    if (url) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.reload(id);
+    // The frame, like everywhere else. `waitTabComplete` then returns at once - the tab did not
+    // move - and the wait that was always doing the work is `listReadyWait`, which polls the bridge
+    // for the search box inside that very frame.
+    if (url) await goToZoho(url); else await chrome.tabs.reload(id);
     await sleep(400); await waitTabComplete(id); await listReadyWait(id); await doFilter(id, fn, nice); return;
   }
   // Same URL -> reload the list, but open the target only AFTER a real reload completes.
@@ -3989,7 +4056,7 @@ async function readJsonIn(h, name) { const fh = await h.getFileHandle(name); ret
 // `pullone` was the one nothing else covered.
 function setEnabled(on) {
   LOCAL_BTNS.forEach((b) => ($(b).disabled = !on));
-  ZOHO_BTNS.forEach((b) => ($(b).disabled = !on || isSample()));
+  blockZoho(!on || isSample());
 }
 
 // Re-granting access to a folder we already know must NOT reopen the file picker: a lapsed
@@ -4745,7 +4812,7 @@ function setPullBusy(b) {
   // `pullBusy`, not `b`: with the depth counter, the argument says what this caller wants and the
   // flag says whether anything else still holds it. Reading the argument put the buttons back on
   // while a pull was running - a click that looks available and then does nothing.
-  ZOHO_BTNS.forEach((x) => ($(x).disabled = pullBusy || !zohoReady() || !dir || navOpenNow()));
+  blockZoho(pullBusy || !zohoReady() || !dir || navOpenNow());
   updateWsButtons();
 }
 function workspaceChangeRefuse() {
@@ -5089,8 +5156,7 @@ async function openWorkflowInZoho(id) {
   const ws = bound || {};
   if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding - pull first.', 'warn'); return; }
   const url = `${ws.base}/crm/${ws.instance}/settings/workflow-rules/${id}`;
-  let tid = await zohoTabId();
-  try { if (tid) await chrome.tabs.update(tid, { url, active: true }); else await chrome.tabs.create({ url }); setStatus('Opened workflow in Zoho.', 'ok'); }
+  try { await goToZoho(url); setStatus('Opened workflow in Zoho.', 'ok'); }
   catch (e) { setStatus('Could not open: ' + e.message, 'warn'); }
 }
 async function openWorkflow(e) {
