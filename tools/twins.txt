@@ -155,9 +155,9 @@ navShow	2421299e7e5a	e6f5d13b2ae9	divergent
 navTo	34dc8391f4a8	7e4b2c83f68b	divergent
 navWhen	6d2200ac5636	6d2200ac5636	identical
 noFocusHere	3e2039406c53	721f572314ba	divergent
-noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
+noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
-openExternal	9d884c69b151	9d884c69b151	identical
+openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	1ccc9b2b0408	0c5941e396f4	divergent
 openRxMenu	cdc4b8f98ab9	4e4329e39c5e	divergent
 openSchemaGraph	040b78cc9838	0e79eab584fe	divergent
@@ -208,7 +208,7 @@ serializeArrangement	4f2534e0811c	4f2534e0811c	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
 setFocus	a8444d56b280	fbd29419ae8c	divergent
 setPullBusy	14aabfcaebc3	ce2ae8471a4f	divergent
-setReportFallback	f9d85a9ab235	7ef979cd431d	divergent
+setReportFallback	7b6d69cc86e4	c283abccb13e	divergent
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	d4c0689d8483	d3b3a7dc9b69	divergent

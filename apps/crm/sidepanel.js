@@ -384,11 +384,16 @@ function openExternal(url) {
   try {
     chrome.tabs.query({ url }, (found) => {
       const t = found && found[0];
-      if (t) { chrome.windows.update(t.windowId, { focused: true }); chrome.tabs.update(t.id, { active: true }); return; }
-      chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 });
+      // Best-effort and said so: focusing or opening a window is a courtesy, the outer catch
+      // already falls back, and a rejection here costs the reader nothing. Declared with a
+      // `.catch()` because an unhandled rejection is an omission and a written one is a
+      // decision - the `try` around this could never have caught it, being a callback.
+      if (t) { void chrome.windows.update(t.windowId, { focused: true }).catch(() => {});
+        void chrome.tabs.update(t.id, { active: true }).catch(() => {}); return; }
+      void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
     });
   } catch (_) {
-    try { chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }); } catch (__) {}
+    void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
   }
 }
 document.addEventListener('click', (e) => {
@@ -550,10 +555,13 @@ async function loadAccess(op = beginWorkspaceOp()) {
 // It carries the workspace's name so the settings page can say which org the verdicts belong to,
 // rather than implying they are universal.
 function publishAccess() {
-  try {
-    const w = (wsList || []).find((x) => x.id === activeWsId);
-    chrome.storage.local.set({ tabAccessView: { ws: (w && w.name) || null, access: tabAccess } });
-  } catch (_) {}
+  // A copy for the settings page to read; the authority is `.zoost.json` in the workspace, and the
+  // page re-reads on change. So a refused write leaves that page showing what it last saw, which is
+  // the state it draws whenever it has not been told - not a wrong claim, an old one. Best-effort,
+  // and declared: the `try` around this caught nothing, the call not being awaited.
+  const w = (wsList || []).find((x) => x.id === activeWsId);
+  void chrome.storage.local.set({ tabAccessView: { ws: (w && w.name) || null, access: tabAccess } })
+    .catch(() => {});
 }
 
 // A bridge reply is a plain object, so rebuilding an Error from it drops `forbidden` unless it is
@@ -2347,7 +2355,10 @@ window.addEventListener('mousemove', (e) => {
   if (!dragY) return; const r = $('main').getBoundingClientRect();
   let h = Math.max(120, Math.min(r.height - 80, r.bottom - e.clientY)); $('preview').style.height = h + 'px';
 });
-window.addEventListener('mouseup', () => { if (dragY) { dragY = false; document.body.style.userSelect = ''; chrome.storage.local.set({ previewH: $('preview').style.height }); } });
+// The height is cosmetic and its write is best-effort **by declaration**: a refusal costs the
+// reader a drag next session and nothing else, so it is not worth a sentence - but an unhandled
+// rejection is not a decision, it is an omission, so the intent is written where it happens.
+window.addEventListener('mouseup', () => { if (dragY) { dragY = false; document.body.style.userSelect = ''; void chrome.storage.local.set({ previewH: $('preview').style.height }).catch(() => {}); } });
 
 // ---------- reveal (auto-navigate to Functions page, then filter) ----------
 function functionsUrl() {
@@ -4022,10 +4033,17 @@ async function pickRoot() {
 // chrome.storage.local, for a surface that cannot reach the folder. The folder stays the authority -
 // this is only ever read into a label, and the *action* re-checks after granting.
 let sampleWsKnown = null;
-try { chrome.storage.local.get('sampleWs').then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); }); } catch (_) {}
+// Best-effort, and **declared** rather than wrapped in a `try` that cannot catch it: a synchronous
+// try/catch around an un-awaited promise catches only a throw while the promise is being made,
+// never its rejection. What is remembered here is a cache of a fact the folder already holds -
+// `knownSample()` prefers the live workspace list and falls back to this - so losing it degrades
+// to «not looked yet», which is a state the panel already draws honestly. Nothing to report.
+chrome.storage.local.get('sampleWs')
+  .then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); })
+  .catch(() => {});
 function noteSampleWs(id) {
   sampleWsKnown = id || null;
-  try { chrome.storage.local.set({ sampleWs: sampleWsKnown }); } catch (_) {}
+  void chrome.storage.local.set({ sampleWs: sampleWsKnown }).catch(() => {});   // see the read above
 }
 /** The one the panel can act on, or - when the folder is not readable yet - the one it remembers. */
 function knownSample() {
@@ -5222,12 +5240,20 @@ $('about').onclick = showAbout; $('aboutx').onclick = closeAbout; $('aboutok').o
 $('expx').onclick = () => closeScope(false); $('expcancel').onclick = () => closeScope(false);
 // Persist what the user chose, not what staleness cleared on their behalf. A box they left
 // untouched keeps whatever Settings said; one they re-ticked is theirs and is remembered.
-$('expgo').onclick = () => {
+$('expgo').onclick = async () => {
   scopeFromUI();
   const keep = Object.assign({}, dlgScope);
   dlgAutoCleared.forEach((k) => { keep[k] = expScope[k]; });
   expScope = keep;
-  try { chrome.storage.local.set({ exportScope: expScope }); } catch (_) {}
+  // Awaited, and a refusal is said. What is stored here is where the dialog **starts next time** -
+  // not the scope of the export about to run, which travels through `closeScope(true)` - so a
+  // refused write must not stop the export the reader just asked for. It must not be silent either:
+  // this is a choice they made by hand, and the old `try { … } catch (_) {}` around an un-awaited
+  // promise caught nothing at all, so the panel closed the dialog claiming a save that never
+  // happened and the next session opened it back at the old ticks.
+  try { await chrome.storage.local.set({ exportScope: expScope }); }
+  catch (e) { setStatus(`This export runs with what you ticked; the browser refused to remember it as `
+    + `the default (${(e && e.message) || 'no reason given'}).`, 'warn'); }
   closeScope(true);
 };
 $('pspFull').onclick = () => { dlgScope = Object.assign({}, SCOPE_FULL); dlgAutoCleared.clear(); scopeToUI(); };
@@ -5404,6 +5430,12 @@ $('repopen').onclick = async () => {
 // If the tab cannot be opened or written to, say so and leave the reader somewhere to go - a silent
 // bail here is a button that looks like it worked.
 function setReportFallback() {
-  try { navigator.clipboard.writeText(reportText); } catch (_) {}
-  setStatus('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
+  // The sentence below is a claim about the clipboard, so it waits to find out whether it is
+  // true. It used to be printed unconditionally beside a `try` that could not catch the
+  // write's rejection - so a refused clipboard was announced as a successful one, on the one
+  // path whose whole purpose is to leave the reader somewhere to go.
+  navigator.clipboard.writeText(reportText).then(
+    () => setStatus('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn'),
+    () => setStatus('Could not open the report page, and the clipboard was refused too. The report is in the panel above - select it and copy it by hand.', 'bad'),
+  );
 }

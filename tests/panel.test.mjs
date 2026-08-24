@@ -12859,3 +12859,156 @@ test('what the index leaves out is said once, and inside the cap, in either prod
       `id=${app}: the panel is told something was left out when everything fitted`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// A `try` around a promise nobody awaits catches nothing, and reads as if it did.
+//
+// `try { chrome.storage.local.set({ … }); } catch (_) {}` catches only a throw raised while the
+// promise is being *created*. A rejected write - the browser refusing, the extension context gone,
+// the quota reached - lands nowhere: the value in memory has already changed, the panel carries on as
+// though it saved, and the next session finds the old one. Five sites had this shape across the two
+// panels, and the one that mattered closed the export dialog claiming a default it had not stored.
+//
+// The three answers are not the same, and that is the point of reading each one rather than applying
+// a rule to all five:
+//
+//   - the **export default** is a choice the reader made by hand, so it is awaited and a refusal is
+//     said - but it does not stop the export, because what failed is where the dialog starts *next*
+//     time and not the scope of the run they just asked for;
+//   - the **sample-workspace label** is a cache of a fact the folder already holds, and `knownSample()`
+//     falls back to reading the folder, so losing it degrades to a state the panel already draws
+//     honestly. Best-effort, declared;
+//   - a **dragged height** is cosmetic. Best-effort, declared.
+//
+// «Declared» means `.catch(() => {})` at the site, not a `try` that cannot fire: an unhandled
+// rejection is an omission, a written `.catch()` is a decision.
+//
+// The check derives what is asynchronous **from the file itself**: any call the file awaits somewhere
+// is a promise everywhere in that file. So no list of API names is written here, and a storage or
+// handle API this project starts using tomorrow enters the check the first time somebody awaits it.
+//
+// **The limits, stated.** It reads a `try` block's own text, so a call reached through a variable or
+// a helper is invisible to it - a false negative rather than a false pass. It says nothing about
+// `.then()` chains outside a `try`; those are unhandled rejections and belong to the async-scope work,
+// not here. The count of awaited call shapes it learnt is asserted, so a file that stopped awaiting
+// anything would be a finding about this check rather than a quiet pass.
+test('no shipped script wraps an un-awaited promise in a try that cannot catch it', () => {
+  const findings = [];
+  let learnt = 0;
+  for (const rel of shippedScripts()) {
+    const src = read(rel);
+    // What this file itself treats as asynchronous: `await a.b.c(` teaches `a.b.c(`.
+    const async_ = new Set([...src.matchAll(/await\s+((?:\w+\.)+\w+)\s*\(/g)].map((m) => m[1]));
+    if (!async_.size) continue;
+    learnt += async_.size;
+    // Every `try {` and the text up to its matching close, by brace depth on the scanned source so a
+    // brace inside a string or a comment cannot end a block early.
+    const scan = blankNonCode(src);
+    for (const m of scan.matchAll(/\btry\s*\{/g)) {
+      let depth = 0, i = m.index + m[0].length - 1;
+      for (; i < scan.length; i++) {
+        if (scan[i] === '{') depth++;
+        else if (scan[i] === '}') { depth--; if (!depth) break; }
+      }
+      const body = src.slice(m.index, i + 1);
+      for (const call of async_) {
+        const at = body.indexOf(call + '(');
+        if (at < 0) continue;
+        // Awaited, returned or handed on is fine - what is not is being left to reject alone.
+        // Awaited, returned or handed on is fine - what is not is being left to reject alone. The
+        // `await` need not be adjacent: `JSON.parse(await (op ? op.read(rel) : readFile(rel)))` has
+        // two parentheses and a ternary between the two, and the first version of this check called
+        // that unhandled. So the window back to the previous statement boundary is what is read.
+        const win = body.slice(0, at);
+        const stmt = Math.max(win.lastIndexOf(';'), win.lastIndexOf('{'), win.lastIndexOf('}'));
+        const before = win.slice(stmt + 1);
+        if (/\b(await|return|yield)\b/.test(before)) continue;
+        if (/\.(then|catch)\s*\(\s*$/.test(before)) continue;
+        // The callback form of a Chrome API returns nothing, so there is no rejection to lose. The
+        // first version of this check did not know that and reported `chrome.tabs.query({url}, cb)`
+        // - correct code, flagged. A check that fires on what is right gets ignored, which is worse
+        // than one that misses: the argument list is walked to its close and a trailing function is
+        // what tells the two forms apart.
+        let d = 0, j = at + call.length, args = '';
+        for (; j < body.length; j++) {
+          if (body[j] === '(') d++;
+          else if (body[j] === ')') { d--; if (!d) break; }
+          if (d >= 1) args += body[j];
+        }
+        if (/(?:\([^()]*\)|\w+)\s*=>\s*[\s\S]*$|\bfunction\b[\s\S]*$/.test(args.trimEnd().slice(-Math.min(args.length, 400)))
+            && /(?:=>|\})\s*$/.test(args.trimEnd())) continue;
+        // …and a handler written **after** the call, which the window before it cannot see. The
+        // second false positive this check produced: `executeScript({…})\n  .catch(() => {})` is a
+        // decision already taken, and reporting it would have had somebody delete a correct line.
+        if (/^\s*\.\s*(then|catch|finally)\s*\(/.test(body.slice(j + 1))) continue;
+        const line = src.slice(0, m.index).split('\n').length;
+        findings.push(`${rel}:${line} - try { … ${call}(…) … } catch: the call is not awaited, so the `
+          + 'catch runs only if making the promise throws. A rejection lands nowhere and the panel '
+          + 'carries on as though it succeeded');
+      }
+    }
+  }
+  assert.ok(learnt >= 20, `only ${learnt} awaited call shape(s) learnt from the shipped scripts - the derivation broke`);
+  assert.deepEqual(findings, [], 'a catch that cannot fire:\n  ' + findings.join('\n  '));
+});
+
+// ---------------------------------------------------------------------------------------------
+// A refused write does not close the dialog on a claim it cannot make.
+//
+// The structural check above proves no `try` is left where it cannot fire. This proves the one site
+// where the difference is visible to a reader: pressing **Export** stores the ticks as the default
+// for next time and then closes. With the write refused, the old code closed exactly the same way -
+// the promise rejected into nothing - and the next session opened the dialog at the old ticks with
+// nobody having been told.
+//
+// It also pins the half that is easy to get wrong in the other direction: the export **still runs**.
+// What failed is where the dialog starts next time, not the scope of the run just asked for, and
+// blocking that would punish the reader for a preference that did not persist.
+//
+// **The limits, stated.** It drives the click handler with a storage that rejects, and reads what the
+// panel said and what it resolved with. It does not draw anything, so it proves the sentence exists
+// and not that it is visible; the panel's own status machinery is covered where it lives.
+test('crm: a refused export default is said, and does not stop the export', async () => {
+  const src = read('apps/crm/sidepanel.js');
+  const at = src.indexOf("$('expgo').onclick");
+  assert.ok(at > 0, 'the export dialog has no confirm button - the derivation broke');
+  const body = src.slice(src.indexOf('{', at), src.indexOf('\n};', at) + 2);
+
+  const run = async (setter) => {
+    const said = [];
+    let resolved;
+    const ctx = {
+      Object, Promise, JSON, console,
+      scopeFromUI: () => {},
+      dlgScope: { functions: true, code: false },
+      dlgAutoCleared: new Set(['code']),
+      expScope: { functions: false, code: true },
+      closeScope: (ok) => { resolved = ok; },
+      setStatus: (t, k) => said.push([t, k]),
+      chrome: { storage: { local: { set: setter } } },
+    };
+    vm.createContext(ctx);
+    await vm.runInContext(`(async () => ${body})()`, ctx);
+    return { said, resolved, stored: ctx.expScope };
+  };
+
+  const ok = await run(async () => {});
+  assert.equal(ok.resolved, true, 'a saved default no longer lets the export run');
+  assert.deepEqual(ok.said, [], 'a write that worked said something anyway');
+
+  const bad = await run(async () => { throw new Error('the browser refused the write'); });
+  assert.equal(bad.resolved, true,
+    'a refused **default** stopped the export - what failed is where the dialog starts next time, '
+    + 'not the scope of the run the reader just asked for');
+  assert.equal(bad.said.length, 1,
+    `the panel said ${bad.said.length} thing(s) about a write that never happened - it closed the `
+    + 'dialog claiming a default it does not have');
+  assert.match(bad.said[0][0], /refused/,
+    `the sentence does not say what went wrong: «${bad.said[0][0]}»`);
+  assert.ok(['warn', 'bad'].includes(bad.said[0][1]),
+    `a refused write was reported as «${bad.said[0][1]}»`);
+
+  // And the ticks the reader chose are what the export receives, in both cases - the dialog's own
+  // auto-cleared keys carry the previous value, which is the behaviour another case already holds.
+  assert.equal(bad.stored.functions, true, 'the scope the reader ticked was lost on a refused write');
+});

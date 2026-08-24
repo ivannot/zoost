@@ -100,11 +100,16 @@ function openExternal(url) {
   try {
     chrome.tabs.query({ url }, (found) => {
       const t = found && found[0];
-      if (t) { chrome.windows.update(t.windowId, { focused: true }); chrome.tabs.update(t.id, { active: true }); return; }
-      chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 });
+      // Best-effort and said so: focusing or opening a window is a courtesy, the outer catch
+      // already falls back, and a rejection here costs the reader nothing. Declared with a
+      // `.catch()` because an unhandled rejection is an omission and a written one is a
+      // decision - the `try` around this could never have caught it, being a callback.
+      if (t) { void chrome.windows.update(t.windowId, { focused: true }).catch(() => {});
+        void chrome.tabs.update(t.id, { active: true }).catch(() => {}); return; }
+      void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
     });
   } catch (_) {
-    try { chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }); } catch (__) {}
+    void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
   }
 }
 document.addEventListener('click', (e) => {
@@ -3422,10 +3427,17 @@ $('offsample').onclick = () => addSampleWorkspace();
 // chrome.storage.local, for a surface that cannot reach the folder. The folder stays the authority -
 // this is only ever read into a label, and the *action* re-checks after granting.
 let sampleWsKnown = null;
-try { chrome.storage.local.get('sampleWs').then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); }); } catch (_) {}
+// Best-effort, and **declared** rather than wrapped in a `try` that cannot catch it: a synchronous
+// try/catch around an un-awaited promise catches only a throw while the promise is being made,
+// never its rejection. What is remembered here is a cache of a fact the folder already holds -
+// `knownSample()` prefers the live workspace list and falls back to this - so losing it degrades
+// to «not looked yet», which is a state the panel already draws honestly. Nothing to report.
+chrome.storage.local.get('sampleWs')
+  .then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); })
+  .catch(() => {});
 function noteSampleWs(id) {
   sampleWsKnown = id || null;
-  try { chrome.storage.local.set({ sampleWs: sampleWsKnown }); } catch (_) {}
+  void chrome.storage.local.set({ sampleWs: sampleWsKnown }).catch(() => {});   // see the read above
 }
 /** The one the panel can act on, or - when the folder is not readable yet - the one it remembers. */
 function knownSample() {
@@ -3905,7 +3917,8 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => {
   if (!dragY) return;
   dragY = false; document.body.style.userSelect = '';
-  try { chrome.storage.local.set({ detailH: $('detail').style.height }); } catch (_) {}
+  // Cosmetic, and best-effort by declaration - see the CRM twin's note on the same write.
+  void chrome.storage.local.set({ detailH: $('detail').style.height }).catch(() => {});
 });
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
@@ -4006,6 +4019,12 @@ $('repopen').onclick = async () => {
 // If the tab cannot be opened or written to, say so and leave the reader somewhere to go - a silent
 // bail here is a button that looks like it worked.
 function setReportFallback() {
-  try { navigator.clipboard.writeText(reportText); } catch (_) {}
-  status('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
+  // The sentence below is a claim about the clipboard, so it waits to find out whether it is
+  // true. It used to be printed unconditionally beside a `try` that could not catch the
+  // write's rejection - so a refused clipboard was announced as a successful one, on the one
+  // path whose whole purpose is to leave the reader somewhere to go.
+  navigator.clipboard.writeText(reportText).then(
+    () => status('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn'),
+    () => status('Could not open the report page, and the clipboard was refused too. The report is in the panel above - select it and copy it by hand.', 'bad'),
+  );
 }
