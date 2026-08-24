@@ -5101,7 +5101,9 @@ class TheGridSaysHowFarAlongItIs(unittest.TestCase):
         # Not a second opinion: the same two values the report's own headline states. A subject that
         # could disagree with the grid it comes from would be worse than none.
         left, out = self.open_cells()
-        head = re.search(r'(\d+) real\.', out)
+        # «real cells» since the unit became (class, surface, capability) - the headline says what a
+        # cell now is, and this reads the same words rather than a shape it used to have.
+        head = re.search(r'(\d+) real cells?\.', out)
         closed = re.search(r'(\d+) closed by a plant', out)
         self.assertTrue(head and closed, out)
         self.assertEqual(int(head.group(1)) - int(closed.group(1)), left,
@@ -6729,6 +6731,67 @@ class WhatDecidesAPictureIsWhatIsHashed(unittest.TestCase):
             'renderers()', body[at:body.index('\n\n\n', at)],
             'source_digest no longer reads the derived set, so this check is watching a helper '
             'nothing uses')
+
+
+class TheGridCitesChecksThatExist(unittest.TestCase):
+    """`CLOSED` is a table maintained by hand, and nothing proved its citations still name anything.
+
+    A cell is closed by naming the check that closes it. That name was never resolved against the
+    tree, so a renamed test left the grid asserting a cover nobody could find - the exact failure
+    this grid exists to refuse, in the grid itself. Reported from outside.
+
+    Resolved now, as far as each kind can be: a `.test.mjs` citation is matched against the literal
+    `test('…')` titles in that file, a Python one against the words of its own description, and a
+    `tools/*.py` citation against the file existing - which is all it can say, and it says that
+    rather than implying more.
+
+    **A ledger with a ceiling, and the direction is reported.** The 56 that do not resolve today are
+    not missing checks:
+    read, they are paraphrases - «an overtaken loader publishes nothing» against the real title «an
+    overtaken loader on the options page publishes nothing». A description rots quietly where a title
+    breaks loudly, which is the whole argument for recording the title. The ceiling comes down as
+    they are repaired; a run that pushes it up is a finding, and which of the two reasons it was -
+    a citation that rotted, or a resolver that started seeing more - is what the tool prints.
+    """
+
+    CEILING = 56
+
+    def test_the_unresolved_citations_only_shrink(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import matrix
+        finally:
+            sys.path.pop(0)
+        cited = matrix.citations()
+        self.assertGreaterEqual(len(cited), 100,
+                                f'{len(cited)} citation(s) read - the derivation broke')
+        loose = [c for c in cited if c[3] in ('MISSING', 'unresolved')]
+        self.assertLessEqual(
+            len(loose), self.CEILING,
+            f'{len(loose)} citations do not resolve, against a ceiling of {self.CEILING}. A cell '
+            f'whose check cannot be found is a cell nobody can verify: {[c[4][:60] for c in loose[:3]]}')
+        # And every citation that does resolve must resolve *exactly* where an exact match is
+        # possible - a `.test.mjs` title either is one or is not, so «described» is not an answer there.
+        for ck, sk, cap, how, what in cited:
+            if what.split(':')[0].endswith('.test.mjs'):
+                self.assertIn(how, ('exact', 'MISSING'),
+                              f'({ck}, {sk}, {cap}) resolved a Node title as «{how}»')
+
+    def test_every_closed_cell_names_a_capability_its_surface_has(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import matrix
+        finally:
+            sys.path.pop(0)
+        for (ck, sk, cap) in matrix.CLOSED:
+            if cap == '*':
+                self.assertIn((ck, sk), matrix.WHOLE_SURFACE,
+                              f'({ck}, {sk}) claims the whole surface and says nowhere why it is exhaustive')
+                continue
+            have = matrix.capabilities_of(sk)
+            self.assertIn(cap, have,
+                          f'({ck}, {sk}) is closed for «{cap}» and that surface implements {have} - '
+                          'either the capability is misfiled or the probe stopped seeing it')
 
 
 if __name__ == '__main__':
