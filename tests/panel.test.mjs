@@ -11609,6 +11609,88 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// The CRM's diagram window draws two subjects, and an arc means a different thing in each.
+//
+// The Schema graph draws modules and related lists; the Wiring graph reuses the same drawing for
+// functions and calls. Three surfaces spoke only the first language. Clicking an arc between two
+// functions produced «(no related list recorded)», «on <callee> returns <caller>» - which also
+// reverses the arrowhead it sits under, since an edge of the call graph is `a.calls` - and the
+// arrangement report counted «relations» over a graph that has none.
+//
+// Driven on the same fixture with only `DATA.kind` changed, which is the whole claim: one window,
+// two subjects, and nothing said about one of them while looking at the other.
+test('an arc on the call graph is described as a call, not as a related list', () => {
+  const G = 'apps/crm/graphview.js';
+  const body = { innerHTML: '', insertAdjacentHTML(_, h) { this.innerHTML += h; } };
+  const card = { classList: { add() {}, remove() {} } };
+  const els = { erpick: card, erpickbody: body, erpickcut: null, erpickcut2: null, erpicksnip: null };
+  const ctx = { Set, Map, Object, Array, Number, String, Math, console,
+                N: { fn1: { id: 'fn1', name: 'sendInvoice', calls: ['fn2'], called_by: [] },
+                     fn2: { id: 'fn2', name: 'formatTotal', calls: [], called_by: ['fn1', 'fn3'] } },
+                DATA: { kind: 'calls' }, nameMode: 'api',
+                erSelEdge: 'fn1\u0000fn2', erCut: new Map(),
+                $: (id) => els[id] || null, esc: (x) => String(x), ekey: (a, b) => `${a}\u0000${b}`,
+                erHiddenSet: () => new Set(), erWouldGo: () => new Set(), erWouldShow: () => 0,
+                erWouldShowSet: () => new Set(), erToggleCut: () => {}, erTipText: () => '',
+                erTipOn: () => {}, erTipHide: () => {}, erFlag: () => {}, copyAndFlash: () => {},
+                MSG: { cutDo: (n) => `Hide ${n}`, cutUndo: () => 'Show' } };
+    const m = load([sliceConst(G, 'label'), sliceFn(G, 'erPickCard')], ctx);
+  m.erPickCard();
+  const said = body.innerHTML;
+
+  assert.doesNotMatch(said, /related list/i,
+                      `the card for a call between two functions says «${said.slice(0, 140)}». There is no related `
+                      + 'list on a call graph, and reporting its absence is a fact about the wrong data model.');
+  assert.doesNotMatch(said, /getRelatedRecords/,
+                      'the card offers a Deluge snippet for reading a related list, over a diagram of calls');
+  assert.match(said, /sendInvoice/, `the card never names the caller: ${said.slice(0, 140)}`);
+  assert.match(said, /formatTotal/, `the card never names the callee: ${said.slice(0, 140)}`);
+  // The direction, stated rather than implied: the edge is `fn1.calls`, so fn1 is the one calling.
+  assert.ok(said.indexOf('sendInvoice') < said.indexOf('calls'),
+            `the card reads «${said.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)}» - the `
+            + 'caller has to come before the verb, or the arc is described backwards.');
+
+  // The same window on its other subject still says the schema things.
+  ctx.DATA.kind = 'schema';
+  // The related list lives on the module the arc points at - it is what makes the reverse direction
+  // reachable - so it goes on Contacts and names Deals. Putting it on Deals is the mistake this
+  // fixture made first, and the card said «(no related list recorded)» about a pair that has one.
+  ctx.N = { Contacts: { id: 'Contacts', name: 'Contacts', calls: [], called_by: [], fields: [],
+                        related_lists: [{ module: 'Deals', api_name: 'Deals' }] },
+            Deals: { id: 'Deals', name: 'Deals', calls: [], called_by: [],
+                     fields: [{ api_name: 'Contact_Name', lookup: 'Contacts' }], related_lists: [] } };
+  ctx.erSelEdge = 'Deals\u0000Contacts';
+  body.innerHTML = '';
+  m.erPickCard();
+  assert.match(body.innerHTML, /getRelatedRecords/,
+               `the schema card lost its snippet: ${body.innerHTML.slice(0, 160)}`);
+
+  // The pointer tooltip, which is the third surface and the one that was contradicting the picture:
+  // an edge of the call graph is `a.calls`, and it was drawing the schema's «b -> a» over it.
+  const tip = load([sliceConst(G, 'erArcTip')], ctx);
+  ctx.DATA.kind = 'calls';
+  ctx.N = { fn1: { id: 'fn1', name: 'sendInvoice', calls: ['fn2'], called_by: [] },
+            fn2: { id: 'fn2', name: 'formatTotal', calls: [], called_by: ['fn1', 'fn3'] } };
+  assert.equal(tip.erArcTip('fn1', 'fn2'), 'sendInvoice \u2192 formatTotal',
+               `the arc between two functions is described as «${tip.erArcTip('fn1', 'fn2')}». The edge is `
+               + 'fn1.calls, so anything else points the wrong way or shows an id nobody can read.');
+  ctx.DATA.kind = 'schema';
+  ctx.N = { Deals: { id: 'Deals', name: 'Deals' }, Contacts: { id: 'Contacts', name: 'Contacts' } };
+  assert.equal(tip.erArcTip('Deals', 'Contacts'), 'Contacts \u2192 Deals',
+               'on the schema the arc is a related list, reachable on the module it points at');
+
+  // And the word for an arc comes from the subject, not from the file it was written in.
+  const noun = load([sliceConst(G, 'NOUN'), sliceConst(G, 'MSG')],
+                    { DATA: ctx.DATA, Math, String, Object });
+  ctx.DATA.kind = 'schema';
+  assert.match(noun.MSG.arrArcs(2), /lookups/,
+               `on the schema an arc is a lookup, and the report said «${noun.MSG.arrArcs(2)}»`);
+  ctx.DATA.kind = 'calls';
+  assert.match(noun.MSG.arrArcs(2), /links/,
+               `on the call graph the report still says «${noun.MSG.arrArcs(2)}» - a graph of functions has no relations`);
+});
+
+// ---------------------------------------------------------------------------------------------
 // Loading an arrangement reports on the drawing it produced, and says which relations moved.
 //
 // Two defects, and the second hid the first for as long as both existed. The report was written

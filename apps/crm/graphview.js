@@ -22,11 +22,15 @@ const MSG = {
     + (stale ? ` \u00b7 ${stale} in the file ${stale === 1 ? 'is' : 'are'} gone from this diagram` : ''),
   // Every id still matches and the relationships do not: the insidious one, because the line above
   // would report a clean load and say nothing about the thing worth knowing. A number, not a grade.
-  arrArcs: (d) => ` \u00b7 the diagram has ${Math.abs(d)} ${Math.abs(d) === 1 ? 'relation' : 'relations'} `
+  // Through `NOUN()`, because this window draws two subjects and an arc is a lookup on one of them
+  // and a call on the other. Written out as «relation» it said so about a call graph too - the same
+  // class as the pick card below it, which described a related list over a diagram of functions.
+  // The Analytics twin keeps the word: that window has one subject, and no `NOUN()` to ask.
+  arrArcs: (d) => ` \u00b7 the diagram has ${Math.abs(d)} ${Math.abs(d) === 1 ? NOUN().e1 : NOUN().e} `
     + (d > 0 ? 'more' : 'fewer') + ' than when this was saved',
   // The other half of the same case, and the one a count can never reach: one relation gone and one
   // added is the same number. Said as two numbers, because «changed» is a verdict and these are not.
-  arrArcsSwapped: (gone, added) => ` \u00b7 ${gone} ${gone === 1 ? 'relation is' : 'relations are'} no longer `
+  arrArcsSwapped: (gone, added) => ` \u00b7 ${gone} ${gone === 1 ? `${NOUN().e1} is` : `${NOUN().e} are`} no longer `
     + `on the diagram and ${added} ${added === 1 ? 'is' : 'are'} new since this was saved`,
   // Naming the workspace it came from, because «nothing here matches» is true and is not the
   // reason. Reported: saved one arrangement, changed workspace, loaded it, and nothing said
@@ -1390,20 +1394,48 @@ function erTipHide() { clearTimeout(_tipT); const tip = $('ertip'); if (tip) tip
  *
  *  The hint reports what actually moved rather than what was promised: the promise is written on the
  *  control the reader just pressed, and a difference between the two is a defect he is entitled to see. */
+/** What an arc says when the pointer rests on it - and it is not the same sentence on both subjects.
+ *
+ * On the schema an arc is a related list: reachable on B, returning A, so «b -> a» is the fact and
+ * the ids read as module names. An edge of the call graph is `a.calls`, so the same string turned it
+ * round - a tooltip contradicting the arrowhead it was attached to - and there the ids are numbers,
+ * which is nothing to read, so that side is labelled.
+ *
+ * Named rather than inline because it is a rule and not a string: `erRender` is 200 lines and
+ * nothing can reach inside it, so the direction was stated where no test could ask about it.
+ */
+const erArcTip = (a, b) => (DATA.kind === 'schema'
+  ? `${b} \u2192 ${a}`
+  : `${label(N[a])} \u2192 ${label(N[b])}`);
 function erPickCard() {
   const card = $('erpick');
   if (!erSelEdge) { card.classList.remove('on'); return; }
   const [a, b] = erSelEdge.split('\u0000');
   if (!N[a] || !N[b]) { card.classList.remove('on'); return; }
-  const flds = (N[a].fields || []).filter((f) => f.lookup === b).map((f) => f.api_name);
-  const rl = ((N[b].related_lists) || []).filter((r) => r.module === a);
-  const head = rl.length ? rl[0].api_name : '(no related list recorded)';
+  // **This window draws two subjects and the card described one of them.** On the schema an arc is a
+  // related list, and every line below is about that: the list's API name, the lookup that
+  // materialises it, the `getRelatedRecords` call that reads it. The Wiring graph reuses the same
+  // drawing for calls, where a node has no `fields` and no `related_lists` at all - so clicking an
+  // arc between two functions produced «(no related list recorded)», «on <callee> returns <caller>»,
+  // and no snippet. Three statements, all of them about a data model that is not on screen, and the
+  // middle one reversed the arrow it sits under.
+  const schema = DATA.kind === 'schema';
+  const flds = schema ? (N[a].fields || []).filter((f) => f.lookup === b).map((f) => f.api_name) : [];
+  const rl = schema ? ((N[b].related_lists) || []).filter((r) => r.module === a) : [];
+  const head = schema ? (rl.length ? rl[0].api_name : '(no related list recorded)') : label(N[b]);
   const snip = rl.length ? `zoho.crm.getRelatedRecords("${rl[0].api_name}", "${b}", recordId);` : '';
-  $('erpickbody').innerHTML =
-    `<div class="pk1">${esc(head)}</div>`
-    + `<div class="pk2">on <b>${esc(b)}</b> \u2192 returns <b>${esc(a)}</b>${flds.length ? ` \u00b7 via lookup <b>${esc(flds.join(' / '))}</b>` : ''}</div>`
-    + (snip ? `<div class="pksnip" id="erpicksnip" title="Click to copy">${esc(snip)}</div>` : '')
-    + (rl.length > 1 ? `<div class="pkalt">also: ${rl.slice(1).map((r) => esc(r.api_name)).join(' \u00b7 ')}</div>` : '');
+  const callers = (N[b].called_by || []).length;
+  $('erpickbody').innerHTML = schema
+    ? `<div class="pk1">${esc(head)}</div>`
+      + `<div class="pk2">on <b>${esc(b)}</b> \u2192 returns <b>${esc(a)}</b>${flds.length ? ` \u00b7 via lookup <b>${esc(flds.join(' / '))}</b>` : ''}</div>`
+      + (snip ? `<div class="pksnip" id="erpicksnip" title="Click to copy">${esc(snip)}</div>` : '')
+      + (rl.length > 1 ? `<div class="pkalt">also: ${rl.slice(1).map((r) => esc(r.api_name)).join(' \u00b7 ')}</div>` : '')
+    // A call, in the direction the edge was built - `n.calls` - and a number rather than a reading of
+    // it. No snippet: how a Deluge function reaches another one depends on where it lives, and this
+    // window does not know that, so it says nothing instead of guessing a line to copy.
+    : `<div class="pk1">${esc(head)}</div>`
+      + `<div class="pk2"><b>${esc(label(N[a]))}</b> calls it \u00b7 `
+      + `<b>${callers}</b> ${callers === 1 ? 'caller' : 'callers'} in all</div>`;
   // The same two removals the circles on the arc offer, from the same computation and in the same
   // words: the card is where the reader arrives having clicked the arc to read what it *is*, and
   // having to go back out to the drawing to act on it would be the control living away from its
@@ -1912,7 +1944,7 @@ function erRender() {
     hit.setAttribute('fill', 'none'); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '14');
     hit.addEventListener('click', (ev) => { if (erDragged) return; ev.stopPropagation(); erPick(a, b); });
     const ht = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    ht.textContent = `${b} \u2192 ${a}`; hit.appendChild(ht);
+    ht.textContent = erArcTip(a, b); hit.appendChild(ht);
     svg.appendChild(hit);
 
     const fld = (N[a].fields || []).find((f) => f.lookup === b);
