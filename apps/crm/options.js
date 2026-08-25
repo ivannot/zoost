@@ -43,6 +43,16 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 const SCOPE_SV = 2;
 const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
+// **What an export contains when nobody has chosen yet - and it is not «everything».** The panel
+// starts from this; this page started from `SCOPE_FULL`, which has `code: true`. So a reader who had
+// never opened the export dialog came here and was shown «Deluge source code» already ticked, over a
+// stored preference where it is off - and pressing Save once wrote it as chosen, stamped with the
+// schema version, which is exactly what stops the panel's one-shot migration from ever turning it
+// off again. The site, the README and section 4.3 of the privacy page all say the sensitive half is
+// opt-in; this page was opting the reader in on their behalf and calling it their setting.
+//
+// Byte-identical to the panel's own constant, and a case holds the two in step.
+const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { code: false, sv: SCOPE_SV });
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
 const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
@@ -479,7 +489,7 @@ async function onSaveAi() {
 $('saveAi').onclick = onSaveAi;
 
 // ---------- export scope ----------
-let scope = Object.assign({}, SCOPE_FULL);
+let scope = Object.assign({}, SCOPE_DEFAULT);
 // True until a read succeeds, so a page that never learnt what is stored cannot write over it. Same
 // flag, same reason, as the saved-patterns list further down.
 let scopeLoadFailed = false;
@@ -504,7 +514,7 @@ async function loadScope() {
   // other three loaders on this page did not.
   try {
     const r = await chrome.storage.local.get('exportScope');
-    if (current() && r.exportScope) scope = Object.assign({}, SCOPE_FULL, r.exportScope);
+    if (current() && r.exportScope) scope = Object.assign({}, SCOPE_DEFAULT, r.exportScope);
     scopeLoadFailed = false;
   } catch (_) { if (current()) scopeLoadFailed = true; }
   if (!current()) return;

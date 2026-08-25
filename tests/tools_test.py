@@ -3362,19 +3362,44 @@ class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
                       'the privacy policy no longer makes the promise this test keeps')
 
     def test_the_first_export_does_not_carry_it(self):
+        """**Both writers of the preference, not only the panel.**
+
+        This read `sidepanel.js` and nothing else, and its second assertion - «nothing initialises a
+        scope from SCOPE_FULL any more» - would have failed on `options.js` from the day it was
+        written. The settings page is the other writer: it started from SCOPE_FULL, drew «Deluge
+        source code» ticked over a stored preference where it is off, and one press of Save wrote that
+        as chosen and stamped it with the schema version - which is precisely what stops the panel's
+        one-shot migration from ever turning it off again. A check whose subject is one file, over a
+        preference two files write, is a check with a hole the size of the other file.
+        """
         for app, key in self.SENSITIVE.items():
-            src = (ROOT / 'apps' / app / 'sidepanel.js').read_text(encoding='utf-8')
+            for name in ('sidepanel.js', 'options.js'):
+                self._one(ROOT / 'apps' / app / name, app, key, name)
+
+    def _one(self, path, app, key, name):
+            if not path.exists():
+                return
+            src = path.read_text(encoding='utf-8')
+            # Only a file that holds the preference is asked about it: the Analytics settings page has
+            # no export section at all, and requiring a default there would be a check about a screen
+            # that does not exist. The subject is «every file that builds a scope», derived by whether
+            # it names SCOPE_FULL, not a list of file names.
+            if 'SCOPE_FULL' not in src:
+                return
             m = re.search(r'const SCOPE_DEFAULT = Object\.assign\(\{\}, SCOPE_FULL, \{([^}]*)\}\)', src)
-            self.assertIsNotNone(m, f'{app}: there is no SCOPE_DEFAULT, so the scope starts from SCOPE_FULL')
+            self.assertIsNotNone(m, f'{app}/{name}: there is no SCOPE_DEFAULT, so the scope starts from SCOPE_FULL')
             self.assertRegex(m.group(1), rf'{key}:\s*false',
-                             f'{app}: {key} is not turned off in the default export scope')
+                             f'{app}/{name}: {key} is not turned off in the default export scope')
             # and nothing initialises a scope from SCOPE_FULL any more - the whole point is that an
             # omitted key must not mean «include the sensitive section».
             for line in src.splitlines():
                 code = line.split('//')[0]
                 if 'Object.assign({}, SCOPE_FULL' in code and 'SCOPE_DEFAULT =' not in code:
-                    self.assertIn('pspFull', code,
-                                  f'{app}: a scope is built from SCOPE_FULL outside the «Full» button: {line.strip()[:90]}')
+                    # `pspFull` in the panel, `scFull` on the settings page: the «Everything» button,
+                    # which is the one place a reader asks for the sensitive half by pressing it.
+                    self.assertTrue('pspFull' in code or 'scFull' in code,
+                                    f'{app}/{name}: a scope is built from SCOPE_FULL outside the '
+                                    f'«Everything» button: {line.strip()[:90]}')
 
 
 class AnItalianPageDoesNotSendYouToTheEnglishOne(unittest.TestCase):
