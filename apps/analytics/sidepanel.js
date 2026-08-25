@@ -54,6 +54,15 @@ const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
 const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "foreign" content
 const CFG = '.zoost.json';
+// **The blast radius, said once.** It was written three times in the CRM and nowhere at all in
+// Analytics, and the three did not agree: one said the permission lasts «permanently», which is
+// not true of a stored handle - Chrome drops it between sessions, which is why both panels have a
+// re-grant path. A warning that overstates is read once and discounted afterwards. Same sentence
+// in both products and on the settings page, held by a test that strips the markup and compares.
+const BLAST_RADIUS = 'Zoost will hold read and write access to everything inside that folder, for as long '
+  + 'as the browser keeps the permission. A dedicated folder is strongly recommended - not your home or '
+  + 'Documents.';
+
 // The pull's own commit marker: `writing` from the first byte of a full pull to its last, `complete`
 // after. A mirror mid-write is five files from two moments; the loader refuses it rather than
 // presenting it as one. Partial writers (a single re-read, a retry) do not touch it - they replace
@@ -535,6 +544,18 @@ async function pickRoot() {
   try {
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'zoost-root' });
     if (!(await ensurePerm(h))) { status('Permission to the folder was not granted.', 'bad'); return; }
+    // The count the CRM twin has always made and this side never did: a folder full of things that
+    // are not workspaces is almost always somebody's Documents, and the permission covers all of it.
+    // Capped at 80 entries because the answer is «this looks like the wrong folder», not a census.
+    let foreign = 0, seen = 0;
+    for await (const e of h.values()) {
+      if (++seen > 80) break;
+      if (e.kind !== 'directory') { foreign++; continue; }
+      if (APP_DIRS.includes(e.name)) continue;                      // a product folder - our own layout
+      try { await e.getFileHandle(CFG); } catch (_) { foreign++; }  // a workspace from the older flat layout
+    }
+    if (foreign > 6 && !confirm(`\u00ab${h.name}\u00bb already contains ${foreign} items that are not Zoost workspaces.\n\n`
+      + `${BLAST_RADIUS}\n\nUse this folder anyway?`)) return;
     root = h; rootGranted = true; await window.idbHandle.set('rootDir', h);
     await refreshWorkspaces();
     status(`Working folder: \u00ab${h.name}\u00bb`, 'ok');

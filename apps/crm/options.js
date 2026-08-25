@@ -47,6 +47,15 @@ const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true,
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
 const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
 const CFG_FILE = '.zoost.json';
+// **The blast radius, said once.** It was written three times in the CRM and nowhere at all in
+// Analytics, and the three did not agree: one said the permission lasts «permanently», which is
+// not true of a stored handle - Chrome drops it between sessions, which is why both panels have a
+// re-grant path. A warning that overstates is read once and discounted afterwards. Same sentence
+// in both products and on the settings page, held by a test that strips the markup and compares.
+const BLAST_RADIUS = 'Zoost will hold read and write access to everything inside that folder, for as long '
+  + 'as the browser keeps the permission. A dedicated folder is strongly recommended - not your home or '
+  + 'Documents.';
+
 
 let toastT = null;
 function toast(msg, bad) {
@@ -78,7 +87,7 @@ async function onPickRoot() {
       try { await e.getFileHandle(CFG_FILE); } catch (_) { foreign++; }
     }
     if (foreign > 6 && !confirm(`«${h.name}» already contains ${foreign} items that are not Zoost workspaces.\n\n`
-      + 'Zoost will hold read/write access to everything inside it. A dedicated folder is strongly recommended.\n\nUse this folder anyway?')) return;
+      + `${BLAST_RADIUS}\n\nUse this folder anyway?`)) return;
     await window.idbHandle.set('rootDir', h);
     await stamp(); await showRoot();
     toast('Working folder set. Reopen the side panel to see the workspaces.');

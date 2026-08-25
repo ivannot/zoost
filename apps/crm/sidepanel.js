@@ -4265,6 +4265,15 @@ async function syncOneNow(id) {
 // each `.zoost.json`, so renaming a Zoho portal (or the folder) never orphans a workspace.
 const APP_DIR = 'crm';                       // this app's subfolder
 const APP_DIRS = ['crm', 'analytics'];       // known product folders - not "foreign" content
+// **The blast radius, said once.** It was written three times in the CRM and nowhere at all in
+// Analytics, and the three did not agree: one said the permission lasts «permanently», which is
+// not true of a stored handle - Chrome drops it between sessions, which is why both panels have a
+// re-grant path. A warning that overstates is read once and discounted afterwards. Same sentence
+// in both products and on the settings page, held by a test that strips the markup and compares.
+const BLAST_RADIUS = 'Zoost will hold read and write access to everything inside that folder, for as long '
+  + 'as the browser keeps the permission. A dedicated folder is strongly recommended - not your home or '
+  + 'Documents.';
+
 let root = null, rootGranted = false;
 // True when the workspace on screen still has the pre-1.13 folders. Nothing reads them - it is
 // there so the empty state can name the real reason instead of saying «nothing pulled yet» about
@@ -4410,7 +4419,7 @@ async function pickRoot() {
       try { await e.getFileHandle(CFG); } catch (_) { foreign++; }   // a workspace from the older flat layout
     }
     if (foreign > 6 && !confirm(`\u00ab${h.name}\u00bb already contains ${foreign} items that are not Zoost workspaces.\n\n`
-      + `Zoost will hold read/write access to everything inside it, permanently. A dedicated folder is strongly recommended.\n\nUse this folder anyway?`)) return;
+      + `${BLAST_RADIUS}\n\nUse this folder anyway?`)) return;
     root = h; rootGranted = true; await window.idbHandle.set('rootDir', h);
     setStatus(`Working folder: \u00ab${h.name}\u00bb`, 'ok');
     await loadWorkspaces();

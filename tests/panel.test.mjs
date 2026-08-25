@@ -11609,6 +11609,57 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// The folder warning says the same thing everywhere it is said, and does not overstate.
+//
+// Choosing a working folder grants read and write over everything below it, which is the largest
+// thing either product asks of anyone. It was written three times in the CRM - a box on the settings
+// page, a confirm on that page, a confirm in the panel - and nowhere at all in Analytics, whose
+// panel picked a folder with no warning of any kind. The three did not agree either: the panel's
+// said the permission is held «permanently», and it is not - Chrome drops a stored handle between
+// sessions, which is why both panels have a re-grant path. A warning that overstates is read once
+// and discounted from then on.
+//
+// Derived, not enumerated: every shipped script that declares BLAST_RADIUS is compared against every
+// other, and the settings page's box is compared with its markup stripped - so a fourth place
+// stating it is held to the same words, and a product that stops stating it at all is a finding.
+test('the folder warning is one sentence, in every place either product says it', () => {
+  const decls = new Map();
+  for (const app of ['crm', 'analytics']) {
+    for (const f of readdirSync(`${ROOT}/apps/${app}`)) {
+      if (!f.endsWith('.js')) continue;
+      const rel = `apps/${app}/${f}`;
+      if (!/const BLAST_RADIUS\s*=/.test(read(rel))) continue;
+      const { BLAST_RADIUS } = load([sliceConst(rel, 'BLAST_RADIUS')], {});
+      decls.set(rel, BLAST_RADIUS);
+    }
+  }
+  assert.ok([...decls.keys()].some((k) => k.startsWith('apps/crm/')),
+            'the CRM states the blast radius nowhere - it grants read and write over the whole folder');
+  assert.ok([...decls.keys()].some((k) => k.startsWith('apps/analytics/')),
+            'Analytics states the blast radius nowhere - it grants read and write over the whole folder');
+
+  const [first, ...rest] = [...decls.entries()];
+  for (const [rel, text] of rest) {
+    assert.equal(text, first[1],
+                 `${rel} words the folder warning differently from ${first[0]}. Two warnings about the same `
+                 + 'permission that do not match is how «permanently» survived in one of three copies.');
+  }
+  for (const [rel, text] of decls) {
+    assert.doesNotMatch(text, /permanent/i,
+                        `${rel} calls the permission permanent. A stored handle loses it between sessions - `
+                        + 'both panels have a re-grant path for exactly that.');
+  }
+
+  // The settings page says it in markup, because it bolds the part that matters. Same words.
+  const html = read('apps/crm/options.html');
+  const box = /<div class="warnbox" id="blastbox">([\s\S]*?)<\/div>/.exec(html);
+  assert.ok(box, 'apps/crm/options.html no longer carries #blastbox - the warning left the page it is read on');
+  const shown = box[1].replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).join(' ');
+  assert.equal(shown, first[1],
+               'the warning box on the CRM settings page has drifted from the sentence the scripts use.');
+});
+
+// ---------------------------------------------------------------------------------------------
 // A write from elsewhere never silently reloads a section that has unsaved edits in it - and «has
 // edits» is a question about the section, not about the key that happened to change.
 //
