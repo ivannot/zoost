@@ -22,10 +22,17 @@ set -euo pipefail
 PYOUT=$(mktemp)
 NODEOUT=$(mktemp)
 trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
-# What must still run. They move in one direction: a fall is a finding, a rise is a line to
-# change in the same commit as the cases that caused it.
-NODE_FLOOR=922
-PY_FLOOR=395
+# **What runs, exactly - not a floor under it.** These were `-ge` bounds, and a bound with slack in
+# it stops measuring the thing it is named for: 939 node cases ran against a floor of 922 and 402
+# python against 395, so seventeen and seven could have stopped running with the battery still green.
+# The comment above them already said «a rise is a line to change in the same commit as the cases
+# that caused it», and nothing made that true.
+#
+# Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
+# stopped running, a rise is cases somebody added and the number is the place they record it. The
+# failure says which of the two happened, because they are not the same news.
+NODE_EXPECTED=942
+PY_EXPECTED=401
 cd "$(dirname "$0")/.."
 
 # The machine that runs this is not the machine the extensions are loaded on: Chrome there reads
@@ -61,9 +68,15 @@ node --test --test-reporter=spec tests/*.test.mjs | tee "$NODEOUT"
 # The spec reporter writes «ℹ tests N», the tap one «# tests N`»; match the number after the word
 # rather than the decoration in front of it, so changing reporter does not silently stop the floor.
 NODE_RAN=$(sed -nE 's/^[^0-9]*tests ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
-[ "${NODE_RAN:-0}" -ge "$NODE_FLOOR" ] || {
-  echo "  the node suite ran ${NODE_RAN:-no} case(s), against a floor of $NODE_FLOOR - cases stopped" >&2
-  echo "  running, or were removed. If that was deliberate, lower the floor in the same commit." >&2
+[ "${NODE_RAN:-0}" -eq "$NODE_EXPECTED" ] || {
+  if [ "${NODE_RAN:-0}" -lt "$NODE_EXPECTED" ]; then
+    echo "  the node suite ran ${NODE_RAN:-no} case(s) and $NODE_EXPECTED were expected - cases stopped" >&2
+    echo "  running, or were removed. A loop that stopped expanding loses cases without losing a line" >&2
+    echo "  of source, which is what this number is here to notice." >&2
+  else
+    echo "  the node suite ran ${NODE_RAN} case(s), up from $NODE_EXPECTED - raise NODE_EXPECTED in the" >&2
+    echo "  same commit as the cases that were added. This is the reminder, not a failure of the code." >&2
+  fi
   exit 1
 }
 
@@ -81,8 +94,14 @@ echo "── unit: python ──"
 python3 tests/tools_test.py > "$PYOUT" 2>&1 || { cat "$PYOUT"; exit 1; }
 grep -E '^(Ran [0-9]+ tests?|OK|FAILED)' "$PYOUT" || echo "  (tests/tools_test.py printed no summary - it did not run to the end)"
 PY_RAN=$(sed -nE 's/^Ran ([0-9]+) tests?.*/\1/p' "$PYOUT" | tail -1)
-[ "${PY_RAN:-0}" -ge "$PY_FLOOR" ] || {
-  echo "  the python suite ran ${PY_RAN:-no} case(s), against a floor of $PY_FLOOR." >&2
+[ "${PY_RAN:-0}" -eq "$PY_EXPECTED" ] || {
+  if [ "${PY_RAN:-0}" -lt "$PY_EXPECTED" ]; then
+    echo "  the python suite ran ${PY_RAN:-no} case(s) and $PY_EXPECTED were expected - a file stopped" >&2
+    echo "  being collected, or cases were removed." >&2
+  else
+    echo "  the python suite ran ${PY_RAN} case(s), up from $PY_EXPECTED - raise PY_EXPECTED in the same" >&2
+    echo "  commit as the cases that were added." >&2
+  fi
   exit 1
 }
 # The cases' own printing, which is what the rest of this block is for. `|| true` because a run whose
