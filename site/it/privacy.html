@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:1eea7312629947b0 -->
+<!-- translated-from: site/privacy.html sha256:cd7dba48d7e89772 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -49,7 +49,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">24 agosto 2026</span></p>
+  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">25 agosto 2026</span></p>
 
   <p class="note" data-it-only><b>La versione inglese è quella che fa fede.</b> Questa è una
     traduzione fedele, offerta perché il documento sia leggibile da chi deve approvarne l'uso in
@@ -276,15 +276,18 @@
   <p>Le due estensioni chiedono gli stessi quattro permessi API - <code>sidePanel</code>,
     <code>storage</code>, <code>scripting</code> e <code>tabs</code> - per le stesse ragioni.
     Differiscono soltanto per quali host possono raggiungere: quella per Zoho CRM elenca i data center
-    di Zoho CRM e delle sandbox e quelli di Zoho One, quella per Zoho Analytics elenca i data center di
-    Zoho Analytics. Tutte e due elencano <code>api.anthropic.com</code> e <code>api.openai.com</code>,
+    di Zoho CRM e delle sandbox, quella per Zoho Analytics quelli di Zoho Analytics, ed <em>entrambe</em>
+    elencano le due shell di suite - Zoho One e Zoho CRM Plus - che nessuna delle due legge. Tutte e
+    due elencano <code>api.anthropic.com</code> e <code>api.openai.com</code>,
     usati soltanto dall'assistente facoltativo e soltanto se lo configuri.</p>
   <ul>
     <li><code>sidePanel</code> - l'interfaccia dell'estensione è un pannello laterale di Chrome.</li>
     <li><code>storage</code> - per tenere le tue impostazioni, come descritto sopra.</li>
     <li><code>scripting</code> - per iniettare lo script ponte che parla con l'API di Zoho usando la tua
-      sessione, e il gancio che si accorge quando salvi una funzione perché la copia locale possa
-      seguire.</li>
+      sessione; in Zoost CRM anche il gancio che si accorge quando salvi una funzione, perché la copia
+      locale possa seguire. Gli altri usi - trovare il frame che contiene la tua org, aprirci dentro
+      una pagina Zoho che hai chiesto, e compilare la pagina della segnalazione - sono descritti nei
+      punti sugli host qui sotto.</li>
     <li><code>tabs</code> - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics,
       appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato
       per sbaglio contro una sandbox.</li>

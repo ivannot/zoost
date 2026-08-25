@@ -4477,9 +4477,18 @@ async function addWorkspaceForTab() {
     const base = await appRoot(true);
     if (!base) { setStatus(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
     const h = await base.getDirectoryHandle(name, { create: true });
+    // **A folder that already exists keeps what is in it.** `{create: true}` returns the existing
+    // folder, and this then truncated its `.zoost.json` and wrote three fields - so pressing
+    // «+ Workspace» on a folder that was already a workspace threw away the label the reader had
+    // given it, when it was last pulled, whether it is the sample, and the whole per-area record of
+    // what the Zoho role refused. Every other writer of this file merges through `patchCfg`; this
+    // was the one that replaced, which is the lost-update trap `docs/decisions.md` records twice.
+    let prev = {};
+    try { prev = JSON.parse(await (await (await h.getFileHandle(CFG)).getFile()).text()) || {}; } catch (_) {}
     const fh = await h.getFileHandle(CFG, { create: true });
     const w = await fh.createWritable();
-    await w.write(JSON.stringify({ org: ctx.org, base: ctx.origin, instance: ctx.instance }, null, 2));
+    await w.write(JSON.stringify(Object.assign({}, prev,
+      { org: ctx.org, base: ctx.origin, instance: ctx.instance }), null, 2));
     await w.close();
     await window.idbHandle.set('activeWs', 'org:' + ctx.org);
     setStatus(`Workspace ready: ${name} - Pull to fill it.`, 'ok');
@@ -4703,9 +4712,18 @@ function updateWsButtons() {
   // stays visible and says what is missing.
   const known = (wsList || []).some((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
   add.hidden = known;
-  add.disabled = pullBusy || !root || !lastCtx || !lastCtx.org;
+  // **And it may not be pressed while the list is empty for a reason that is not «there is none».**
+  // `wsList` is empty whenever Chrome has dropped the folder permission - which is every browser
+  // restart - so «no workspace for this org» was being answered from a list that had not been read.
+  // The sample button beside it already carries `rootGranted` for exactly this, and the Analytics
+  // twin states the rule: grant first, then decide, because deciding before that is deciding on a
+  // list that is empty for an unrelated reason.
+  add.disabled = pullBusy || !root || !rootGranted || !lastCtx || !lastCtx.org;
   add.textContent = (lastCtx && lastCtx.instance) ? `+ ${lastCtx.instance}` : '+ Workspace';
+  // Why it is grey, as every other blocked control in this panel says it - and the folder comes
+  // first, because it is the one the reader can act on with a single click anywhere in the panel.
   add.title = !root ? 'Set the working folder first'
+    : !rootGranted ? `Grant access to ${root.name} first - the workspaces in it have not been read`
     : !lastCtx ? 'Open a Zoho CRM tab first'
     : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
   // Absent once one exists, and the overlay's copy says which of the two it will do. Both are

@@ -11455,6 +11455,56 @@ test('every script the panels load evaluates on its own', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// A module whose fields could not be read keeps the answer that is already on disk.
+//
+// When `/settings/fields` fails, the bridge never attempts layouts or related lists either, so the
+// module arrives with three empty lists - and the pull wrote that over the module file. Gone: the
+// fields, the lookup targets, the layout summary, and the related-list API names, which this project
+// calls the single most valuable thing it surfaces. Under «Modules pull complete», in green.
+//
+// The layout *file* beside it was already protected by this exact argument, with the reason written
+// above it. The file holding the fields was not - which is what «walk the siblings» means when the
+// sibling is one line away.
+test('a module whose fields could not be read is left as it was', async () => {
+  const disk = { 'modules/Contacts.json': JSON.stringify({
+    api_name: 'Contacts', module_name: 'Contacts', generated_type: 'default',
+    fields: [{ api_name: 'Email' }, { api_name: 'Phone' }],
+    related_lists: [{ api_name: 'Notes' }], layouts: [{ id: '1', name: 'Standard' }],
+  }) };
+  const wrote = [];
+  const g = {
+    console, JSON, Object, Array, Set, Promise, sanitize: (x) => String(x || ''),
+    setStatus: () => {}, mismatchRefuse: () => false, requirePerm: async () => {},
+    getContext: async () => ({ org: '1', origin: 'https://crm.zoho.eu', instance: 'i' }),
+    opReadCfg: async () => ({}), noteAccess: async () => {}, notePullFailure: async () => {},
+    endPull: () => {}, bridgeError: (r, m) => new Error(m), MSG: { noTab: 'no tab' },
+    isModuleFile: () => false, walk: async function* () {}, envOf: () => 'prod',
+    WS_MOVED: 'moved', pullActive: false,
+    beginWorkspaceOp: () => ({ current: () => true, root: {},
+      read: async (rel) => { if (!(rel in disk)) throw new Error('no such file'); return disk[rel]; },
+      write: async (rel, body) => { wrote.push(rel); disk[rel] = body; },
+      remove: async () => {}, say: () => {} }),
+    // The failure this is about: fields unread, so the bridge sends three empty lists and says so.
+    toBridge: async () => ({ ok: true, modules: [{
+      api_name: 'Contacts', module_name: 'Contacts', generated_type: 'default',
+      fields: [], related_lists: [], layouts: [], fields_read: false, layouts_read: false,
+      related_read: false, unreadable: null }] }),
+  };
+  const { pullModules } = load([sliceFn('apps/crm/modules.js', 'pullModules')], g);
+  await pullModules();
+  const after = JSON.parse(disk['modules/Contacts.json']);
+  assert.equal(after.fields.length, 2,
+               `the module file was replaced by the failed read: ${after.fields.length} field(s) left`);
+  assert.equal(after.related_lists.length, 1, 'the related-list API names were lost');
+  assert.ok(!wrote.includes('modules/Contacts.json'),
+            'the module file was rewritten from a read that returned nothing');
+  // And the index still names it, or the mirror disagrees with itself: file on disk, module absent.
+  const idx = JSON.parse(disk['modules/index.json'] || '[]');
+  assert.equal(idx.length, 1, `the index names ${idx.length} module(s) while one file is on disk`);
+  assert.equal(idx[0].fields, 2, 'the index row was rebuilt from the empty answer');
+});
+
+// ---------------------------------------------------------------------------------------------
 // A folder's name is data, wherever it came from.
 //
 // The workspace selector interpolated `root.name` into markup in two places, so a directory called
@@ -11571,17 +11621,50 @@ test('the answer budget reaches the request, in both products', async () => {
   }
 });
 
-test('an answer cut off by the budget says so, in both products', () => {
+test('an answer cut off by the budget says so, in both products', async () => {
+  // **Run, not read.** The first version of this asserted that the marker's *text* appears in the
+  // agent loop - which it did, in the CRM, inside the streaming callback where `stop_reason` is not
+  // yet declared. Every Anthropic answer in that panel threw on its second chunk and the case stayed
+  // green, because a regex over source cannot see *where* a line sits. The defect was the position.
+  //
+  // So the loop is executed against a stream that delivers two chunks and then stops at the budget,
+  // and what is asserted is the message the reader ends up with.
   for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
-    // The streaming path: the marker must go on the message the reader is looking at, not only on
-    // the empty case.
-    // The marker lives in the agent loop, which is what holds the bubble - `aiStreamAnthropic`
-              // only fetches and parses. Naming the wrong function is how a check reads a body that
-              // could never contain what it is looking for.
-    const src = sliceFn(file, 'aiRunAnthropicAgent');
-    assert.ok(/bubble && stop_reason === 'max_tokens'/.test(src),
-              `${app}: a reply that starts and then hits the budget is left looking finished`);
-    // And the other engine's equivalent, which returns rather than streams.
+    const said = [];
+    const g = {
+      console, Promise, JSON, AI_MAX_TOKENS: 16384,
+      aiMessages: said, aiRenderMessages: () => {},
+      // The loop takes the workspace it began in; nothing here reads a folder, so the stub only has
+      // to answer «still the same one» - which is the question the real op answers.
+      beginWorkspaceOp: () => ({ current: () => true, read: async () => '', write: async () => {} }),
+      setStatus: () => {}, status: () => {},
+      aiMarkdown: (x) => x,
+      // Enough of an element for the loop to paint into; what is asserted is the message it wrote,
+      // never the DOM.
+      $: () => ({ scrollTop: 0, scrollHeight: 0, lastElementChild: null, innerHTML: '',
+                  querySelectorAll: () => [], querySelector: () => null,
+                  classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+                  style: {}, appendChild() {}, textContent: '' }),
+      // Two chunks and a budget stop: the shape that produced the error, and the shape the marker is for.
+      aiStreamAnthropic: async (a, msgs, system, tools, onText) => {
+        onText('The first half of an answer');
+        onText(' that stops mid-');
+        return { content: [{ type: 'text', text: 'x' }], stop_reason: 'max_tokens', thought: false };
+      },
+    };
+    const { aiRunAnthropicAgent } = load([sliceFn(file, 'aiRunAnthropicAgent')], g);
+    await aiRunAnthropicAgent({}, [{ role: 'user', content: 'q' }], null, [], 3);
+    const last = said[said.length - 1];
+    // If the loop wrote nothing, the harness is what is broken - say so rather than passing.
+    assert.ok(last && last.content, `${app}: the agent loop produced no message at all`);
+    assert.match(last.content, /Cut off here/,
+                 `${app}: an answer that started and then hit the budget was left looking finished: `
+                 + `«${String(last.content).slice(0, 80)}»`);
+  }
+});
+
+test('the other engine says so too, in both products', () => {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
     const call = sliceFn(file, 'aiCall');
     assert.ok(/txt && c && c\.finish_reason === 'length'/.test(call),
               `${app}: a truncated OpenAI answer is returned as if it were whole`);

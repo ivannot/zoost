@@ -20,7 +20,21 @@ async function pullModules() {
     const r = await toBridge({ cmd: 'pullModules' }); if (!r?.ok) throw bridgeError(r, 'pull failed');
     op.say(`Writing ${r.modules.length} modules…`, 'busy');
     const keepLayoutFiles = new Set(); const index = []; const layIndex = [];
+    // The rows as they stand, so a module whose layouts were not read this time keeps the row that
+    // describes the file being kept beside it.
+    // Built without a `for`, deliberately: the check that every long loop in this file asks
+    // `op.current()` on each turn finds the *first* loop in the body, and a second one up here would
+    // take that place and read as the guard being gone. A derivation is allowed to be shaped by the
+    // check that reads it, as long as it does the same thing - this does.
+    const prevLayIndex = new Map();
+    try {
+      (JSON.parse(await op.read('modules/layouts/index.json')) || [])
+        .forEach((row) => { if (row && row.module) prevLayIndex.set(row.module, row); });
+    } catch (_) { /* no index yet, or unreadable: every row is then written fresh */ }
     let mw = 0, lw = 0; const wFail = [], rFail = [];
+    // Modules whose fields could not be read this time - kept as they were, and counted, because a
+    // pull that covered less than the whole org without saying so is the mirror lying by omission.
+    const notRead = [];
     for (const m of r.modules) {
       if (!op.current()) return;   // one file per module and per layout set: a loop long enough to be left
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
@@ -43,10 +57,43 @@ async function pullModules() {
       // Into the index only when its file landed: an index row whose file is old or absent is the
       // mirror lying about itself - measured by an outside scan as «0/1 modules» under a green
       // status, with noteAccess recording the area as read.
+      // **A read that failed is not permission to replace what is on disk.** When the fields call
+      // fails, the bridge never attempts layouts or related lists either, so `m` arrives with three
+      // empty lists - and this wrote that over the module file, destroying the fields, the lookup
+      // targets, the layout summary and the related-list API names, under a green «Modules pull
+      // complete». The layout *file* three lines up was already protected by exactly this argument;
+      // the file holding the fields was not. A refusal is still written down - `unreadable` is a
+      // measurement and belongs on disk - but a failure that read nothing leaves the old answer,
+      // which is the best one anybody has.
+      if (!m.fields_read && !m.unreadable) {
+        // Keep the old answer *and* the old index row: skipping the row would leave the file on disk
+        // and the module out of the list, which is the mirror disagreeing with itself - the exact
+        // shape the layout index is being fixed for two lines down.
+        let prev = null;
+        try { prev = JSON.parse(await op.read(`modules/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+        if (prev) {
+          index.push({ api_name: prev.api_name, module_name: prev.module_name, generated_type: prev.generated_type,
+                       fields: (prev.fields || []).length, layouts: (prev.layouts || []).length });
+          layIndex.push({ module: prev.api_name, generated: prev.module_name, layouts: prev.layouts || [] });
+          keepLayoutFiles.add(lf);
+          notRead.push(m.api_name);
+          continue;
+        }
+        // Nothing on disk to keep: an empty shell is what was actually learnt, and it says so
+        // through `unreadable` being absent and `fields_read` false.
+        notRead.push(m.api_name);
+      }
       try {
         await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++;
         index.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: (m.fields || []).length, layouts: m.layouts.length, related_lists: (m.related_lists || []).length });
-        layIndex.push({ module: m.api_name, generated: m.module_name, layouts: m.layouts });
+        // From what the file actually holds. When a module's layouts were not read, `m.layouts` is
+        // empty and the *file* beside it is deliberately kept - so writing this row from `m` made
+        // the index say «no layouts» about a file that has them. Two files in one mirror
+        // disagreeing, and which one a reader believes depends on the surface they opened.
+        layIndex.push((m.layouts_read === true || fullLayouts.length)
+          ? { module: m.api_name, generated: m.module_name, layouts: m.layouts }
+          : (prevLayIndex.get(m.api_name)
+            || { module: m.api_name, generated: m.module_name, layouts: [] }));
       } catch (e) { if ((e && e.message) === WS_MOVED) return; wFail.push(m.api_name); }
     }
     if (!op.current()) return;   // you changed workspace while this was reading
@@ -68,7 +115,9 @@ async function pullModules() {
     // file hides behind a fresh green line, and a removal that failed is a deleted module still on
     // screen - rebuildModules() reads the disk, so the residue is what the reader sees.
     const gap = (wFail.length ? ` ${wFail.length} write(s) failed: ${wFail.slice(0, 3).join(', ')}${wFail.length > 3 ? '…' : ''}.` : '')
-      + (rFail.length ? ` ${rFail.length} stale file(s) could not be removed - the next pull retries.` : '');
+      + (rFail.length ? ` ${rFail.length} stale file(s) could not be removed - the next pull retries.` : '')
+      + (notRead.length ? ` ${notRead.length} module(s) could not be read and were left as they were: `
+        + `${notRead.slice(0, 3).join(', ')}${notRead.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
     await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op);
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }

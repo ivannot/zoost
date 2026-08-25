@@ -52,6 +52,9 @@ def pages():
 
 
 def main() -> int:
+    publishing = '--publishing' in sys.argv
+    # Said, never swallowed: what is deferred is the refusal, not the report.
+    notes = []
     findings = []
     rendered = {s[0] for s in shots.SHOTS + shots.PANELS + shots.OPTIONS}
     published = {p.stem for p in IMG.glob("*.webp")}
@@ -72,10 +75,21 @@ def main() -> int:
                 seen.add(app)
             elif not got:
                 findings.append(f"{key}: nothing records what it was rendered from")
+        # **Stale pictures are a finding at publication, and a note the rest of the time.**
+        #
+        # Rendering the set costs about seven minutes and, in a day of panel work, produces 28 files
+        # that are byte-identical to the ones already there - so every commit that touched `apps/`
+        # was paying that to keep this line green, and the answer «run siteimg» was being given to
+        # somebody who had changed a comment. What the site shows has to be the product *when the
+        # site is published*; between one release and the next it is not a defect, it is a queue.
+        #
+        # So the fact is printed either way - the state is never hidden - and it only refuses under
+        # `--publishing`, which `tools/prepare.sh` passes as step zero of the release routine, after
+        # it has rendered. Asked for by the author, on the day the cost was measured.
         for app in sorted(seen):
-            findings.append(f"{app}: the panel or its fixture has changed since these images were "
-                            f"rendered - run python3 tools/siteimg.py so the site shows the product "
-                            f"as it is now")
+            line = (f"{app}: the panel or its fixture has changed since these images were rendered - "
+                    f"run python3 tools/siteimg.py so the site shows the product as it is now")
+            (findings if publishing else notes).append(line)
 
     # The card gets a block of its own rather than a row in the loop above, because it is not a shot
     # of a panel: it has no app, no click script, and what it is a picture of is a template plus the
@@ -182,6 +196,8 @@ def main() -> int:
             findings.append(f"{rel} has {n} screenshot(s) and {other} has {per_page[other]} - "
                             f"a reader who switches language meets a different product")
 
+    for n in notes:
+        print("  " + n + " (a note here; a finding under --publishing)")
     for f in findings:
         print("  " + f)
     total = sum(p.stat().st_size for p in IMG.glob("*.webp")) + (card.stat().st_size if card.exists() else 0)

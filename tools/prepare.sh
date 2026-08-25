@@ -35,6 +35,9 @@ step 'the panels, driven — what a unit test cannot see: a click, a key, the st
 python3 tools/probe.py
 
 step 'images again — the derived checks, now that the pages are stamped'
-python3 tools/imgcheck.py
+# `--publishing`: this is the one moment a picture older than the panel is a defect rather than a
+# queue. The battery prints the same fact and does not refuse, because rendering the set costs seven
+# minutes and a day of panel work would spend it over and over on files that come out identical.
+python3 tools/imgcheck.py --publishing
 
 printf '\n\033[1mReady to commit.\033[0m auditcheck runs after the push, and release.sh runs it for you.\n'

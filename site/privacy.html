@@ -48,7 +48,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">24 August 2026</span></p>
+  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">25 August 2026</span></p>
 
   <div class="box">
     <h2 class="h3">The short version</h2>
@@ -268,15 +268,18 @@
   <p>Both extensions request the same four API permissions - <code>sidePanel</code>,
     <code>storage</code>, <code>scripting</code> and <code>tabs</code> - for the same reasons. They
     differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data
-    centres <em>and</em> the Zoho One data centres, the Zoho Analytics one lists the Zoho Analytics data
-    centres. Both list
+    centres, the Zoho Analytics one the Zoho Analytics data centres, and <em>both</em> list the two
+    suite shells - Zoho One and Zoho CRM Plus - which neither of them reads. Both list
     <code>api.anthropic.com</code> and <code>api.openai.com</code>, used only by the optional
     assistant and only if you configure it.</p>
   <ul>
     <li><code>sidePanel</code> - the extension's interface is a Chrome side panel.</li>
     <li><code>storage</code> - to keep your settings, as described above.</li>
     <li><code>scripting</code> - to inject the bridge script that talks to the Zoho API using your
-      session, and the hook that notices when you save a function so the local copy can follow.</li>
+      session; in Zoost CRM also the hook that notices when you save a function, so the local copy
+      can follow. Its other uses - finding which frame holds your org, opening a Zoho page you asked
+      for inside that frame, and filling in the report page - are described in the host bullets
+      below.</li>
     <li><code>tabs</code> - to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
     <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>, with their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts. It also lists the two suite shells - <code>one.zoho.*</code> and <code>one.zohocloud.ca</code> for Zoho One, <code>crmplus.zoho.*</code> and <code>crmplus.zohocloud.ca</code> for Zoho CRM Plus - which it does <b>not</b> read. Inside either of those, your Zoho CRM is an ordinary page on <code>crm.zoho.*</code> in a frame of its own, and that frame is the only thing the extension reads. The shell hosts are named so the panel can find that frame at all. Locating it costs one line that runs in every frame of the tab, including the shell's own, and answers with that frame's address; nothing else is read there and nothing is sent. The bridge that does the reading is injected only into the frames on <code>crm.zoho.*</code>. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>, and the same two shells for the same reason - a workspace opened inside Zoho One or Zoho CRM Plus is a frame on <code>analytics.zoho.*</code>, and the frame is what it reads.

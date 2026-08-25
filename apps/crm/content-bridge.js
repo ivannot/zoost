@@ -419,6 +419,12 @@
         // it may act on, «not read» is not.
         layouts_read: layoutsRead,
         related_read: relatedRead,
+        // **Whether the fields were read at all**, which is the fact everything else here depends on:
+        // when this call fails, layouts and related lists are never even attempted, so the module
+        // arrives with three empty lists and nothing on it said which of «none» and «not read» that
+        // was. The panel needs it before it decides to overwrite what is on disk. Same distinction
+        // as the two flags above, on the one read that gates them.
+        fields_read: fieldsOk,
         // null when the module read fine. Present only when Zoho refused, and then it is the whole
         // reason the three lists below are empty.
         unreadable,

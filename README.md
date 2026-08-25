@@ -7,7 +7,8 @@ what *you* have built inside that product into plain local files you can put und
 then layers navigation, diagrams, search, which functions read and write each module, a health
 audit that states its own blind spots, exports
 and an optional AI
-assistant on top of that mirror. None of them calls an endpoint that writes. Everything runs in
+assistant on top of that mirror. None of them calls a Zoho endpoint that changes anything - the
+one POST either makes computes an ER model and is named on the nerd page. Everything runs in
 your browser.
 
 | | What it mirrors | |
@@ -376,7 +377,7 @@ Both land in your workspace folder, so they're versioned with your Git.
 - The **AI assistant is optional**. When enabled, code/schema context and your prompts are sent
   **directly to the LLM provider you configure**, using **your** API key (stored locally). No
   analytics, no ads, no remote code (all scripts are bundled). See
-  `../publishing/Zoho-CRM-Deluge-IDE-privacy-policy.md`.
+  [the privacy policy](https://zoost.it/privacy).
 
 ---
 
@@ -473,7 +474,10 @@ accepts no liability for any loss, damage or data issue arising from its use, an
 obligation to provide support, maintenance or fixes.
 
 Zoost reads from the Zoho CRM instance you are already signed in to and writes to a local folder
-you choose. It has no server of its own and sends nothing anywhere. **Exports are a different
+you choose. Nothing about your org passes through a server of ours. Two things leave the machine,
+and only when you send them: what you ask the optional AI assistant, which goes straight to the
+provider you configured with your own key, and a problem report you have read in full and pressed
+Send on at zoost.it, where it becomes a public GitHub issue. **Exports are a different
 matter**: the export dialog lets you choose what a file may contain (source code is opt-in and
 flagged). Deciding what leaves your machine, and where it goes, is your responsibility and that
 of the organisation whose data it is.

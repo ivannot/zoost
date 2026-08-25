@@ -772,15 +772,6 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
     let bubble = null, el = null;
     const onText = (t) => {
       if (!current()) return;
-      // **A half answer is not an answer, and it looked exactly like one.** The explanation below
-      // only fires when *nothing* was streamed; when the model starts writing and then reaches the
-      // budget, the reader was left with a paragraph that stops mid-sentence and no way to tell that
-      // from a model that had finished. The marker goes on the message the reader is looking at.
-      if (bubble && stop_reason === 'max_tokens') {
-        bubble.content += `\n\n---\n*Cut off here: the model reached its answer budget of ${AI_MAX_TOKENS} tokens.`
-          + ' Ask a narrower question, or raise **Answer budget** in Settings.*';
-        aiRenderMessages();
-      }
       if (!bubble) { bubble = { role: 'assistant', content: '' }; aiMessages.push(bubble); aiRenderMessages(); const ns = $('aimsgs').querySelectorAll('.aimsg.assistant .aitext'); el = ns[ns.length - 1]; }
       bubble.content += t; if (el) { el.innerHTML = aiMarkdown(bubble.content); $('aimsgs').scrollTop = $('aimsgs').scrollHeight; }
     };
@@ -788,6 +779,22 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
     if (!current()) return;
     const toolUses = content.filter((b) => b.type === 'tool_use');
     if (stop_reason !== 'tool_use' || !toolUses.length) {
+      // **A half answer is not an answer, and it looked exactly like one.** The explanation below
+      // only fires when *nothing* was streamed; when the model starts writing and then reaches the
+      // budget, the reader is left with a paragraph that stops mid-sentence and no way to tell that
+      // from a model that had finished. The marker goes on the message the reader is looking at.
+      //
+      // **Here, and not inside `onText`.** Put there first - the replace hit the first `if (!bubble)`
+      // in the file, which is the streaming callback - and `stop_reason` is destructured from the
+      // await *below* that callback, so reading it while the stream is still arriving is a temporal
+      // dead zone: the first chunk survives on the short circuit and the second one throws. Every
+      // Anthropic answer in this panel died after one fragment. The twin had it in the right place,
+      // which is what made the diff look symmetrical.
+      if (bubble && stop_reason === 'max_tokens') {
+        bubble.content += `\n\n---\n*Cut off here: the model reached its answer budget of ${AI_MAX_TOKENS} tokens.`
+          + ' Ask a narrower question, or raise **Answer budget** in Settings.*';
+        aiRenderMessages();
+      }
       if (!bubble) {
         const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
         // «(empty response)» was what a turn that hit its answer budget looked like, and it names

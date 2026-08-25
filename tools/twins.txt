@@ -19,7 +19,7 @@ aiLocked	2f50d3d07bfc	2f50d3d07bfc	identical
 aiMarkdown	3f691b1cef40	f064613e3b42	divergent
 aiNeedCurrent	ab3dfc884fd4	ab3dfc884fd4	identical
 aiRenderMessages	b54eb6aee3bd	4894fcbf36e3	divergent
-aiRunAnthropicAgent	c48d13fd1ddb	d2c7dcbe718a	divergent
+aiRunAnthropicAgent	d2c7dcbe718a	d2c7dcbe718a	identical
 aiSend	e63ce50571b6	00cb1ed36b9d	divergent
 aiShowLock	a2c4e5d92320	a2c4e5d92320	identical
 aiStreamAnthropic	afbe2cf1862f	afbe2cf1862f	identical

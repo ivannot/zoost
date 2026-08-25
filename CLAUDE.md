@@ -481,6 +481,8 @@ runs `tests/run.sh` on every push to `main`; the local rule stands and is no lon
 standing. Reported from outside, twice in two days, which is the argument for the workflow rather than
 for more care.
 
+**Rendering the site's pictures is a step of publication, not of every commit.** `python3 tools/siteimg.py` costs about seven minutes and, in a day of panel work, writes 28 files that are byte-identical to the ones already there - the stamp moves because a *source* moved, not because a pixel did. `imgcheck` therefore **prints** «older than the panel» in the battery and **refuses** it only under `--publishing`, which `tools/prepare.sh` passes as step 0 of the release routine, after it has rendered. So: do not re-render to make the battery green; render when a release is being cut, or when you have changed something you want to *look at*. Asked for on 25 August 2026, after a night of paying it on every commit.
+
 **A change worth keeping → a commit.** Do not batch unrelated work into one commit. Commit it yourself
 rather than proposing a message and waiting — the rule that only Ivan decides what goes in a commit
 message is about *attribution*, which stays absent, not about a review gate on the wording.

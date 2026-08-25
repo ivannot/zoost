@@ -7080,51 +7080,97 @@ class TheOnlyCheckThatExecutesTheProduct(unittest.TestCase):
 
 
 class TheSuiteCountsItself(unittest.TestCase):
-    """How many cases there are, compared against something.
+    """That `tests/run.sh` compares the counts its two suites report - not that it counts them here.
 
-    Reported from outside: `tests/run.sh` took the last three lines of this file's output, and the
-    cases' own printing had grown past unittest's summary - so «Ran 391 tests / OK» fell off the
-    bottom and the suite stopped saying how much it had run. The run script prints the verdict and
-    the count by name now.
+    Reported from outside, twice, and the second report was right about the first fix. `tail -3` had
+    stopped showing «Ran N tests / OK» because the cases' own printing grew past it: that was a
+    visibility hole and it is closed. The floor written beside it was the wrong instrument. It counted
+    *declarations*, and cases here expand at run time - 811 `test(` in the node files against 918
+    executed - so a fixture dropped from a loop shrinks the run without changing a line of source,
+    which is precisely the shrinkage a floor is for. The python half compared `n * 3` against 391 and
+    could not have failed short of losing two thirds of the file.
 
-    That fixes the *seeing*. This is the other half, and it is the one this repository has already
-    paid for: six cases once sat below `unittest.main()` and never ran while the suite said OK, and
-    the lesson recorded then was that **a number nobody compares against anything is not evidence**.
-    A count that is visible and unchecked falls from 391 to 380 in silence.
-
-    **Counted, not run.** The first version of this executed the suite from inside the suite, which
-    is a recursion that never ends - written, run, and killed. Counting the declarations is the
-    cruder method, which is what a denominator is supposed to be: it cannot tell you a case *passed*,
-    only that it is still there to run, and that is exactly the question.
-
-    The floors move in one direction on purpose: cases are added here and removed only deliberately,
-    so a fall is a finding and a rise is a line to change in the same commit.
+    So the floors live in `tests/run.sh`, where the numbers the suites *print* are, and this case
+    checks that the script still consumes them. What is asserted here is the mechanism, because the
+    numbers themselves are asserted by the script on every run.
     """
 
-    #: Raise them when cases are added; a fall means something stopped being declared.
-    PYTHON_FLOOR = 391
-    NODE_FLOOR = 811
+    def script(self):
+        return (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
 
-    def test_the_python_suite_did_not_quietly_shrink(self):
-        n = len(re.findall(r'(?m)^\s+def test_\w+\s*\(', (ROOT / 'tests' / 'tools_test.py').read_text(encoding='utf-8')))
-        # Parameterised cases mean the declarations are fewer than the cases that run; what matters is
-        # that the number cannot fall without somebody saying so.
-        self.assertGreaterEqual(n, 1, 'no test declarations found at all - this case is the broken one')
-        self.assertGreaterEqual(n * 3, self.PYTHON_FLOOR,
-                                f'{n} declarations against a floor of {self.PYTHON_FLOOR} cases - cases '
-                                'were removed, or a class stopped being collected.')
+    def test_the_run_script_compares_both_counts(self):
+        s = self.script()
+        for name, summary in (('NODE_FLOOR', '# tests'), ('PY_FLOOR', 'Ran ')):
+            self.assertIn(name, s, f'{name} is gone - the suite no longer holds itself to a size')
+            self.assertIn(summary, s, f'nothing reads the «{summary}» line the suite prints, so the '
+                                      f'floor beside {name} is compared against nothing')
+        self.assertRegex(s, r'NODE_RAN.*-ge.*NODE_FLOOR|-ge "\$NODE_FLOOR"',
+                         'the node count is read and never compared')
+        self.assertRegex(s, r'PY_RAN.*-ge.*PY_FLOOR|-ge "\$PY_FLOOR"',
+                         'the python count is read and never compared')
 
-    def test_the_node_suite_did_not_quietly_shrink(self):
-        n = 0
+    def test_the_floors_are_not_below_what_runs_today(self):
+        # A floor under the current size is a floor that cannot fire. Read from the script, compared
+        # against a count taken here - the two numbers have to come from different places or this is
+        # the check reading its own answer.
+        s = self.script()
+        floors = {k: int(re.search(rf'^{k}=(\d+)', s, re.M).group(1)) for k in ('NODE_FLOOR', 'PY_FLOOR')}
+        declared = 0
         for f in sorted((ROOT / 'tests').glob('*.test.mjs')):
-            n += len(re.findall(r"(?m)^\s*test\(", f.read_text(encoding='utf-8')))
-        self.assertGreaterEqual(n, self.NODE_FLOOR,
-                                f'{n} node case(s) declared, against a floor of {self.NODE_FLOOR}. '
-                                'If cases were deliberately removed, lower the floor in the same commit '
-                                'and say why.')
-        if n > self.NODE_FLOOR + 40:
-            self.fail(f'{n} node case(s) declared, floor still {self.NODE_FLOOR} - raise it, or the '
-                      'ground gained is given straight back')
+            declared += len(re.findall(r'(?m)^\s*test\(', f.read_text(encoding='utf-8')))
+        self.assertGreater(floors['NODE_FLOOR'], declared,
+                           f"NODE_FLOOR is {floors['NODE_FLOOR']} and {declared} cases are declared "
+                           'in source - a floor at or below the declaration count cannot notice a '
+                           'loop that stopped expanding')
+        self.assertGreaterEqual(floors['PY_FLOOR'], 300, 'PY_FLOOR has been lowered past the point of '
+                                                         'measuring anything')
+
+
+
+class ImagesAreAGateOnlyWhenPublishing(unittest.TestCase):
+    """Where «these pictures are older than the panel» refuses, and where it only says so.
+
+    Rendering the site's 28 screenshots takes about seven minutes, and in a day of panel work every
+    one of them comes out byte-identical - the stamp moves because a *source* moved, not because a
+    pixel did. Holding the battery to it meant paying that on every commit that touched `apps/`, and
+    telling somebody who had edited a comment to go and re-render the product. Asked for by the
+    author, on the day the cost was measured: **the site has to show the product when the site is
+    published; between one release and the next, a stale picture is a queue.**
+
+    What is not deferred is the *fact*: `imgcheck` prints the same line either way, so the state is
+    never hidden - only the refusal moves, to `--publishing`, which `tools/prepare.sh` passes as step
+    zero of the release routine, after it has rendered.
+    """
+
+    def run_it(self, *args, stale=False):
+        stamp = ROOT / 'tools' / 'imgstamp.json'
+        orig = stamp.read_text(encoding='utf-8')
+        if stale:
+            d = json.loads(orig)
+            d[next(iter(d))]['from'] = 'stale-on-purpose'
+            stamp.write_text(json.dumps(d, indent=2), encoding='utf-8')
+        try:
+            return subprocess.run([sys.executable, str(ROOT / 'tools' / 'imgcheck.py'), *args],
+                                  cwd=ROOT, capture_output=True, text=True)
+        finally:
+            stamp.write_text(orig, encoding='utf-8')
+
+    def test_a_stale_stamp_is_a_note_in_the_battery_and_a_finding_when_publishing(self):
+        note = self.run_it(stale=True)
+        self.assertEqual(note.returncode, 0,
+                         'the battery refuses a stale picture again - that is seven minutes on every '
+                         f'commit that touches apps/:\n{note.stdout}')
+        self.assertIn('has changed since these images were rendered', note.stdout,
+                      f'the battery no longer says the pictures are behind:\n{note.stdout}')
+        gate = self.run_it('--publishing', stale=True)
+        self.assertEqual(gate.returncode, 1,
+                         f'a release would publish pictures older than the panel:\n{gate.stdout}')
+
+    def test_the_release_routine_passes_the_flag(self):
+        prep = (ROOT / 'tools' / 'prepare.sh').read_text(encoding='utf-8')
+        self.assertRegex(prep, r'imgcheck\.py --publishing',
+                         'prepare.sh runs imgcheck without --publishing, so nothing refuses a stale '
+                         'picture at the one moment it matters')
 
 
 if __name__ == '__main__':
