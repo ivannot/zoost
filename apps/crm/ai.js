@@ -399,22 +399,47 @@ function connectionForModel(c) {
   return {
     name: c.name || '', label: c.label || '',
     connector: c.connector || '', connector_label: c.connectorLabel || '',
-    connected: c.connected !== false,
+    // **Three states, not two.** `connected !== false` folded `null` into «connected», and `null` is
+    // what `connections.js` writes for a connection functions reference and the catalogue does not
+    // have - the broken one, drawn as broken in the tab the reader has just clicked. So selecting it
+    // and asking «is this working?» was answered «yes», while `get_connection` one tool over says
+    // «referenced by functions but NOT in the catalogue»: two surfaces of one assistant contradicting
+    // each other, and the one that speaks unasked was the wrong one.
+    status: c.missing ? 'referenced by functions but not in the catalogue'
+      : c.connected === false ? 'configured but not connected'
+      : c.connected === true ? 'connected' : 'not recorded by this pull',
     scopes: c.scopes || [],
+    // The most useful fact about a selected connection, and it was in the row: dropping it made the
+    // projection safe and the answer worse.
+    used_by: (c.uses || []).slice(),
   };
 }
+/** **Written against the object it is actually given**, which the first version was not.
+ *
+ * It read `fields`, `related_lists`, `singular_label`, `creatable`, `editable`, `deletable` and
+ * `api_supported` - the shape of the module *file*. What `aiFocus` hands it is a `moduleData` row
+ * (`apps/crm/modules.js`), which has none of them. So `!!undefined` told the model this module
+ * cannot be created, edited or deleted, `undefined !== false` told it the API supports it, and the
+ * two arrays arrived empty: four facts invented about every module in the org, and «unknown shown as
+ * a zero», which this project forbids by name. The name went with them - the row calls it `label` -
+ * so the heading read «Support Tickets» and the block under it said `""`.
+ *
+ * Counts rather than the arrays, because the row holds counts and `get_module` is one call away for
+ * the fields themselves - and because `fields[]` carries ids, `custom` and `mandatory`, which no
+ * disclosure names. The layout names are not sent for the same reason they never were.
+ */
 function moduleRowForModel(m) {
   return {
-    api_name: m.api_name || '', singular_label: m.singular_label || '', plural_label: m.plural_label || '',
-    generated_type: m.generated_type || '', unreadable: !!m.unreadable,
-    viewable: !!m.viewable, creatable: !!m.creatable, editable: !!m.editable, deletable: !!m.deletable,
-    api_supported: m.api_supported !== false,
-    fields: m.fields || [],
-    related_lists: m.related_lists || [],
-    // The layout names a module carries are not in section 4.2, and a module row is the only place
-    // they reach the provider. Held back rather than declared: the question the assistant answers
-    // about a module is its shape, and a layout name adds nothing to that.
-    layouts_count: (m.layouts || []).length,
+    api_name: m.api_name || '',
+    label: m.label || '',
+    generated_type: m.generated_type || '',
+    custom: !!m.custom,
+    unreadable: !!m.unreadable,
+    viewable: !!m.viewable,
+    // `null`, never `0`: a row that never carried the count is not a module with no fields.
+    field_count: m.fieldCount === undefined ? null : m.fieldCount,
+    lookup_count: m.lookupCount === undefined ? null : m.lookupCount,
+    layout_count: (m.layouts || []).length,
   };
 }
 /** What an automation action looks like to the assistant - named field by field.

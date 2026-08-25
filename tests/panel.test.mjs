@@ -992,9 +992,16 @@ test('no focus block hands over a stored row whole', async () => {
     connection: { path: 'connections/books', name: 'books', label: 'Books API', connector: 'c',
                   connectorLabel: 'C', connected: true, scopes: ['s'],
                   id: SENT('id'), createdBy: SENT('createdBy') },
-    module: { path: 'modules/Contacts.json', api_name: 'Contacts', label: 'Contacts', fields: [],
-              related_lists: [], layouts: [{ id: SENT('layout_id'), name: SENT('layout_name') }],
-              id: SENT('id'), module_name: SENT('module_name') },
+    // **The row the panel actually builds**, not one invented here. The first version of this fixture
+    // gave the projection a module *file* - `fields`, `related_lists` - and the projection was
+    // written against that file too, so the two agreed with each other and the case confirmed the
+    // defect instead of catching it: what `aiFocus` hands over is a `moduleData` row, which carries
+    // `label`, `fieldCount`, `lookupCount` and `layouts` and none of the rest. Every key below is one
+    // `apps/crm/modules.js` writes.
+    module: { path: 'modules/Contacts.json', api_name: 'Contacts', gen: 'Contacts', label: 'Contacts',
+              custom: false, generated_type: '', fieldCount: 10, lookupCount: 2, layoutCount: 1,
+              layouts: [{ id: SENT('layout_id'), name: SENT('layout_name') }],
+              viewable: true, navigable: true, unreadable: null },
   };
   const outs = {
     schedule: await looking('schedules/9', { __sc: [rows.schedule] }),
@@ -1010,8 +1017,37 @@ test('no focus block hands over a stored row whole', async () => {
   }
   // The substance still travels, or the projection has simply broken the feature.
   assert.match(outs.connection, /Books API/, 'a connection loses the label the reader selected it by');
+  // **A connection the catalogue does not have is not «connected».** `connected !== false` folded
+  // `null` - what `connections.js` writes for one that functions reference and the catalogue lacks,
+  // the broken row the reader has just clicked - into yes. `get_connection` says the true thing one
+  // tool over, so the assistant contradicted itself and the surface that speaks unasked was the
+  // wrong one.
+  const missing = await looking('connections/gone', {
+    __cn: [{ path: 'connections/gone', name: 'gone', label: 'gone', connector: null,
+             connected: null, scopes: [], missing: true, uses: ['ns.caller'] }] });
+  assert.doesNotMatch(missing, /"status": ?"connected"/,
+                      `a connection Zoho does not have is reported as connected: ${missing.slice(0, 220)}`);
+  assert.match(missing, /not in the catalogue/,
+               `it says ${missing.slice(0, 220)} - the reader clicked a row drawn as broken`);
+  assert.match(missing, /ns\.caller/, 'which functions use it is the question a selected connection asks');
   assert.match(outs.schedule, /nightly/, 'a schedule loses the function it runs, which is the whole question');
   assert.match(outs.module, /Contacts/, 'a module loses its own name');
+  // **And nothing is invented about it.** The projection read seven keys the row does not carry, so
+  // `!!undefined` told the model this module cannot be created, edited or deleted and
+  // `undefined !== false` told it the API supports it - four facts asserted about every module in
+  // the org - while `fields` and `related_lists` arrived as empty arrays, which is «unknown shown as
+  // a zero». A count the row does carry is reported; a count it does not is `null`.
+  const mod = JSON.parse(outs.module.slice(outs.module.indexOf('{'), outs.module.lastIndexOf('}') + 1));
+  for (const k of ['creatable', 'editable', 'deletable', 'api_supported', 'fields', 'related_lists']) {
+    assert.ok(!(k in mod), `the module block asserts «${k}», which the row it was built from never had`);
+  }
+  assert.equal(mod.field_count, 10, `the field count reads ${JSON.stringify(mod.field_count)} - the row said 10`);
+  assert.equal(mod.label, 'Contacts', 'the module name is dropped, so the block under the heading is nameless');
+  const { moduleRowForModel } = load([sliceFn('apps/crm/ai.js', 'moduleRowForModel')], { Object, Array, String });
+  const unknown = moduleRowForModel({ api_name: 'X', label: 'X' });
+  assert.equal(unknown.field_count, null,
+               `a row with no count reported ${JSON.stringify(unknown.field_count)} instead of «not recorded» - `
+               + 'a module nobody counted is not a module with no fields');
 
   // A workflow is Zoho's object rather than one this product composes, so what it does travels and
   // the trade is stated in the projection: an unnamed key is lost, never leaked.

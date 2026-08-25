@@ -265,6 +265,19 @@
     // deluge runtime would accept the next attempt - a remedy chosen without knowing which of two
     // explanations was true, said so in its own comment, and measured not to work. It now fetches the
     // token the page itself uses; the retry sends that instead of the cookie.
+    //
+    // **The memo is dropped first, and the answer is whether a token was actually fetched.** Without
+    // that this returned `true` on a memo it had not refreshed: the second refusal in one page's life
+    // re-sent a byte-identical request and the message said «still refused after a refresh» about a
+    // refresh nobody had made - the exact class of false diagnostic this branch exists to end.
+    // Measured, both halves.
+    //
+    // It also matters beyond the retry. `_pageCsrf` outranks every cookie for both families and was
+    // cleared only by a change of URL, so a token Zoho rotated while the tab sat still was pinned for
+    // the life of that page and *every* area's pull failed, not only the deluge one. Reading the
+    // cookie fresh on each request used to make that self-correcting; dropping the memo on a refusal
+    // is what puts that back.
+    _pageCsrf = null;
     if (await pageCsrfToken()) return true;
     try {
       const r = await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
