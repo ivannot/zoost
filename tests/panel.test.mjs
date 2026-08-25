@@ -6625,12 +6625,60 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(!/pruneFunction\(msg/.test(dispatch), 'a message still names what to delete');
   });
 
-  test('a half-removed function is not reported as removed', () => {
+  test('a half-removed function is not reported as removed', async () => {
     // Both files, the index row: any of them can fail, and saying «removed from the mirror» over a
     // file still on disk is a lie the next open exposes.
-    const prune = panel.slice(panel.indexOf('async function pruneFunction'), panel.indexOf('\n}', panel.indexOf('async function pruneFunction')));
-    assert.ok(/whole = false/.test(prune), 'a failure to remove is swallowed');
-    assert.ok(/return whole/.test(prune), 'the caller cannot tell whether it worked');
+    //
+    // **Driven, because the three lines this used to be were a photograph of a belief.** They read
+    // `/whole = false/`, `/return whole/` and `/could not be fully removed/` off the source, and the
+    // first of those is satisfied by the words appearing anywhere at all - in a comment, in a branch
+    // that never runs, in a second function pasted in below. A regex over source can only confirm
+    // that a belief is still spelled the same way; what has to hold is that a refused removal comes
+    // back as `false`, with the path kept for the retry, and no "removed from the mirror" said.
+    const drive = async (failOn) => {
+      const said = [];
+      const removed = [];
+      const files = { 'functions/index.json': JSON.stringify([{ id: 7 }, { id: 8 }]) };
+      const el = () => ({ classList: { add() {}, remove() {}, toggle() {} } });
+      const ctx = { console, Object, JSON, String, Array, Set, Map, Promise, RegExp,
+                    index: new Map([['7', { path: 'functions/ns/fn.dg' }]]),
+                    treeData: [{ id: 7, path: 'functions/ns/fn.dg' }],
+                    currentPath: null, failedRemovals: new Set(), sanitize: (x) => x, $: el,
+                    renderTree: () => {}, updateMissingButton: () => {},
+                    setStatus: (t, k) => said.push([String(t), k]),
+                    beginWorkspaceOp: () => ({
+                      current: () => true,
+                      remove: async (path) => {
+                        if (path === failOn) { const e = new Error('denied'); e.name = 'NotAllowedError'; throw e; }
+                        removed.push(path);
+                      },
+                      read: async (path) => files[path],
+                      write: async (path, v) => { files[path] = v; },
+                    }) };
+      const m = load([sliceFn('apps/crm/sidepanel.js', 'pruneFunction')], ctx);
+      const whole = await m.pruneFunction(7);
+      return { whole, said, removed, queued: [...ctx.failedRemovals], files };
+    };
+
+    const ok = await drive(null);
+    assert.equal(ok.whole, true, 'a removal that succeeded twice over is reported as partial');
+    assert.deepEqual(ok.removed, ['functions/ns/fn.dg', 'functions/ns/fn.meta.json'],
+                     `only ${JSON.stringify(ok.removed)} was removed - the metadata outlives the source`);
+    assert.match(ok.said[0][0], /removed from the mirror/, 'a clean removal says nothing');
+    assert.deepEqual(JSON.parse(ok.files['functions/index.json']), [{ id: 8 }],
+                     'the index still carries the row of a function that has gone');
+
+    for (const failed of ['functions/ns/fn.dg', 'functions/ns/fn.meta.json']) {
+      const half = await drive(failed);
+      assert.equal(half.whole, false,
+                   `${failed} could not be removed and pruneFunction returned true - the caller has `
+                   + 'no way to know, and the index has already been rewritten without it.');
+      assert.deepEqual(half.queued, [failed],
+                       `the path that failed is ${JSON.stringify(half.queued)} - a failure nobody kept `
+                       + 'is a file nothing will come back to, because the index no longer mentions it.');
+      assert.deepEqual(half.said, [],
+                       `it said ${JSON.stringify(half.said)} over a file still on disk`);
+    }
     assert.ok(/could not be fully removed/.test(fn), 'a partial removal is never reported');
   });
 }
@@ -6675,19 +6723,59 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // exists.
 {
   const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-  for (const [name, start] of [['reconcileFunctions', 'function reconcileFunctions'], ['pullAll', 'async function pullAll']]) {
-    test(`${name} removes nothing from a list that stopped early`, () => {
-      const fn = panel.slice(panel.indexOf(start), panel.indexOf('\n}', panel.indexOf(start)))
-        + (name === 'reconcileFunctions' ? sliceFn('apps/crm/sidepanel.js', 'reconcileNow') : '');
-      const guard = fn.indexOf('r.capped');
-      assert.ok(guard > 0, 'the truncation is never read');
-      for (const danger of ['pruneFunction', 'removeFile', "writeFile('functions/index.json'"]) {
-        const at = fn.indexOf(danger);
-        if (at > 0) assert.ok(guard < at, `${danger} runs before the truncation is checked`);
-      }
-      assert.ok(/nothing was removed/.test(fn), 'the reader is not told that nothing was removed');
-    });
-  }
+  // **Driven, not measured by where the words sit.** This used to compare `fn.indexOf('r.capped')`
+  // against the position of `pruneFunction`, which asks whether one string is written above another
+  // and answers yes for a mention in a comment, an assignment to an unused variable, or a branch
+  // that returns nothing. The property is not «the check appears first»; it is that a truncated
+  // answer prunes nothing, leaves the index alone and says so.
+  test('reconcileFunctions removes nothing from a list that stopped early', async () => {
+    const drive = async (capped) => {
+      const said = [];
+      const pruned = [];
+      const files = { 'functions/index.json': JSON.stringify([{ id: 1 }, { id: 2 }, { id: 3 }]) };
+      const ctx = { console, Object, JSON, String, Array, Set, Map, Promise, RegExp,
+                    dir: {}, pullActive: false, pendingAfterPull: false, failedRemovals: new Set(),
+                    mismatchRefuse: () => false, hasPerm: async () => true, refreshContext: async () => {},
+                    guardOk: () => true,
+                    MSG: { noWorkspaceHere: 'no ws', folder: 'folder', wrongTab: 'wrong tab' },
+                    setStatus: (t, k) => said.push([String(t), k]),
+                    // One of three is returned, so a reader that trusts the answer prunes two.
+                    toBridge: async () => ({ ok: true, capped, total: 3, entries: [{ id: 1 }] }),
+                    bridgeError: () => new Error('list failed'), errText: (e) => String(e && e.message),
+                    rebuildTree: async () => {}, downloadMissing: async () => {},
+                    pruneFunction: async (id) => { pruned.push(id); return true; } };
+      const m = load([sliceFn('apps/crm/sidepanel.js', 'reconcileNow')], ctx);
+      await m.reconcileNow({ current: () => true, read: async (f) => files[f],
+                             write: async (f, v) => { files[f] = v; }, remove: async () => {} });
+      return { said, pruned, index: JSON.parse(files['functions/index.json']) };
+    };
+
+    // The fixture has to be able to go wrong, or a clean answer is a clean answer about nothing:
+    // with a whole list the same two functions are removed and the index is rewritten.
+    const whole = await drive(false);
+    assert.deepEqual(whole.pruned, [2, 3],
+                     `a complete list pruned ${JSON.stringify(whole.pruned)} - the fixture cannot `
+                     + 'reach the act this case is about, so the truncated run below proves nothing');
+    assert.deepEqual(whole.index, [{ id: 1 }], 'a complete list did not become the index');
+
+    const cut = await drive(true);
+    assert.deepEqual(cut.pruned, [],
+                     `Zoho stopped after one of three and ${JSON.stringify(cut.pruned)} were removed. `
+                     + 'They are still in Zoho: a partial list is a statement about the reading.');
+    assert.deepEqual(cut.index, [{ id: 1 }, { id: 2 }, { id: 3 }],
+                     'the partial list was written as the index, so the next round cannot see what is missing');
+    assert.match(cut.said[cut.said.length - 1][0], /nothing was removed/,
+                 `it ended on «${cut.said[cut.said.length - 1][0]}» - the reader is not told that the `
+                 + 'list was short and that nothing was acted on.');
+  });
+
+  // The pull is driven for real, in a browser, by `tools/probe.py` - twice, once serving a whole
+  // list and once a truncated one - which is why it is not lifted here. What is checked in this file
+  // is the sentence, because a guard that returns silently is indistinguishable from a working one.
+  test('pullAll says a short list was short', () => {
+    const fn = panel.slice(panel.indexOf('async function pullAll'), panel.indexOf('\n}', panel.indexOf('async function pullAll')));
+    assert.ok(/nothing was removed/.test(fn), 'the reader is not told that nothing was removed');
+  });
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -7197,8 +7197,16 @@ class TheSuiteCountsItself(unittest.TestCase):
     could not have failed short of losing two thirds of the file.
 
     So the floors live in `tests/run.sh`, where the numbers the suites *print* are, and this case
-    checks that the script still consumes them. What is asserted here is the mechanism, because the
-    numbers themselves are asserted by the script on every run.
+    checks that the script still consumes them.
+
+    **And then this class promised a measurement it did not make.** «What is asserted here is the
+    mechanism, because the numbers themselves are asserted by the script on every run» was true of
+    the script and false of the two assertions underneath it: one compared `PY_FLOOR` against a
+    literal 300 against a suite of four hundred, and the other compared `NODE_FLOOR` against a
+    declaration count its own paragraph had just called the wrong instrument. The python half is
+    measured properly now - every case there is a `def test_` and none expands, so the declaration
+    count is the run count - and the node half says in its own docstring that it is a lower bound
+    and where the real comparison happens.
     """
 
     def script(self):
@@ -7215,21 +7223,57 @@ class TheSuiteCountsItself(unittest.TestCase):
         self.assertRegex(s, r'PY_RAN.*-ge.*PY_FLOOR|-ge "\$PY_FLOOR"',
                          'the python count is read and never compared')
 
-    def test_the_floors_are_not_below_what_runs_today(self):
-        # A floor under the current size is a floor that cannot fire. Read from the script, compared
-        # against a count taken here - the two numbers have to come from different places or this is
-        # the check reading its own answer.
+    def _floors(self):
         s = self.script()
-        floors = {k: int(re.search(rf'^{k}=(\d+)', s, re.M).group(1)) for k in ('NODE_FLOOR', 'PY_FLOOR')}
+        return {k: int(re.search(rf'^{k}=(\d+)', s, re.M).group(1)) for k in ('NODE_FLOOR', 'PY_FLOOR')}
+
+    def test_the_python_floor_is_within_reach_of_what_python_runs(self):
+        """**«PY_FLOOR >= 300» measured nothing, and this case promised that it did.**
+
+        Three hundred was a number typed in a second place. The suite runs four hundred and one
+        cases, so it could have lost a quarter of them and still passed - and the docstring above it
+        said the floors are what stop the suite shrinking. A check that cannot fail short of a
+        catastrophe is not a floor, it is a decoration in the shape of one.
+
+        Here the python half can be measured exactly, and cheaply: every case is a `def test_`
+        method and none of them expands at run time, so the declaration count *is* the run count.
+        The floor is held within a stated distance of it - close enough to notice a file that
+        stopped being collected, loose enough that adding cases does not fail the suite that adds
+        them.
+        """
+        methods = 0
+        for f in sorted((ROOT / 'tests').glob('*.py')):
+            methods += len(re.findall(r'(?m)^\s*def test_\w+', f.read_text(encoding='utf-8')))
+        self.assertGreater(methods, 0, 'no python cases found at all - the sweep broke')
+        floor = self._floors()['PY_FLOOR']
+        self.assertLessEqual(floor, methods,
+                             f'PY_FLOOR is {floor} and only {methods} python cases exist - the suite '
+                             f'cannot reach its own floor and every run fails')
+        self.assertGreaterEqual(floor, methods - 25,
+                                f'PY_FLOOR is {floor} against {methods} cases that exist: {methods - floor} '
+                                f'could stop being collected without a word. Raise it in the same '
+                                f'change as the cases that were added.')
+
+    def test_the_node_floor_is_above_the_declaration_count(self):
+        """A lower bound, and it is one on purpose - stated, because it used to read as a measure.
+
+        Node cases expand at run time: loops over both products, over every fixture, over every
+        shipped page. So the declaration count is *below* what runs and a floor above it is the only
+        thing derivable without running the suite, which is the battery's job and not this case's.
+        What that catches is the shrinkage that matters most - a fixture dropped from a loop, a
+        product removed from a `for` - because those lose executions without losing a line of source.
+        What it cannot catch is the floor drifting far below the real count; `tests/run.sh` compares
+        against the number the run actually printed, every run, and that is where the measurement is.
+        """
         declared = 0
         for f in sorted((ROOT / 'tests').glob('*.test.mjs')):
             declared += len(re.findall(r'(?m)^\s*test\(', f.read_text(encoding='utf-8')))
-        self.assertGreater(floors['NODE_FLOOR'], declared,
-                           f"NODE_FLOOR is {floors['NODE_FLOOR']} and {declared} cases are declared "
-                           'in source - a floor at or below the declaration count cannot notice a '
-                           'loop that stopped expanding')
-        self.assertGreaterEqual(floors['PY_FLOOR'], 300, 'PY_FLOOR has been lowered past the point of '
-                                                         'measuring anything')
+        self.assertGreater(declared, 0, 'no node cases found at all - the sweep broke')
+        floor = self._floors()['NODE_FLOOR']
+        self.assertGreater(floor, declared,
+                           f'NODE_FLOOR is {floor} and {declared} cases are declared in source - a '
+                           'floor at or below the declaration count cannot notice a loop that '
+                           'stopped expanding')
 
 
 
