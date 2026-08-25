@@ -119,8 +119,10 @@
     stops with a precise message instead of trying something and hoping.</p>
   <p>This is why Zoost CRM's function <b>Go to</b> was removed in 1.1.0: it drove Zoho's editor by
     clicking a localised "Edit function" label, looped ten times, and then failed with the wrong
-    message. <b>Find in Zoho</b> replaced it - it navigates by constructed URL and filters the list
-    deterministically, and the last, language-dependent click is yours.</p>
+    message. <b>Functions in Zoho</b> replaced it - it navigates by constructed URL, and the last,
+    language-dependent click is yours. It filled their search box for a while, which was the single
+    exception this rule carried; Zoho began addressing that page by URL and the exception went with it,
+    so nothing is written into Zoho at all now.</p>
   <p>The exceptions are narrow, deliberate and written down: a bounded wait for a known element after
     a navigation, one retry on a genuinely transient failure (network, 429, 5xx and never a
     deterministic 4xx), and recovery by an action that was <em>measured</em> to work - the first

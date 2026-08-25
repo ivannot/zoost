@@ -157,7 +157,6 @@ apps/crm/sidepanel.js	rebuildTree	unreadableMetas
 apps/crm/sidepanel.js	reconcileNow	failedRemovals
 apps/crm/sidepanel.js	reconcileNow	pendingAfterPull
 apps/crm/sidepanel.js	refineRowFromMeta	unreadableMetas
-apps/crm/sidepanel.js	reveal	_revealListener
 apps/crm/sidepanel.js	runSyncSlot	syncAgain
 apps/crm/sidepanel.js	runSyncSlot	syncBusy
 apps/crm/sidepanel.js	runSyncSlot	syncing

@@ -561,21 +561,20 @@
   // independent class selector. We do not fall back to matching the placeholder text: that is
   // localized, and guessing from it is exactly the "try and hope" this tool refuses. If Zoho
   // renames this class, Find stops and says so - it does not improvise.
-  function findSearchInput() {
-    return document.querySelector('input.searchBar');
-  }
-  function setSearch(input, term) {
-    input.focus();
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-    setter.call(input, term);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: term.slice(-1) || 'a' }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-  function fillSearch(name) {
-    const input = findSearchInput(); if (!input) return { ok: false, reason: 'search input not found' };
-    const term = String(name).slice(0, 20); setSearch(input, term); return { ok: true, term };
-  }
+  // **The one thing Zoost wrote into Zoho lived here, and it is gone.**
+  //
+  // `Find` filled the functions list's search box: `focus()`, the native value setter, and three
+  // synthetic events - a scripted interaction with a DOM contract belonging to somebody else, kept
+  // as the single stated exception to the first non-negotiable. Zoho is building a new functions
+  // interface addressed by URL, so the exception stopped being necessary: the panel navigates to the
+  // list and stops. A reader on the old interface sees the list, which is where the typing landed
+  // them anyway; a reader on the new one sees whatever that URL resolves to.
+  //
+  // Deliberately *not* replaced by a deep link. The new interface addresses a function by an id from
+  // its own module, and the id this product holds is that record's `dependent_id` - measured across
+  // fifteen functions present in two captures of one org, fifteen out of fifteen. Sending the id we
+  // have would address the wrong function or none. Until that mapping is pulled, the certain thing
+  // is the list.
   // The old "open the function in the Zoho editor" path lived here. It drove Zoho's DOM: it found
   // the row by matching text/attributes, fired synthetic pointer/mouse click chains on several
   // ancestors hoping a framework handler would catch, waited for a popup, then clicked a link
@@ -974,8 +973,6 @@
     if (msg?.cmd === 'pullFailures') return reply(pullFailures());
     if (msg?.cmd === 'pullActions') return reply(pullActions());
     if (msg?.cmd === 'pullConnections') return reply(pullConnections());
-    if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
-    if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }
   });
 
   console.debug('[zoost] bridge active on', BASE, '· instance', instanceName(), '· org', orgId());

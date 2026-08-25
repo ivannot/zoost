@@ -328,7 +328,8 @@ environments.
 **Preview** (resizable)
 - Functions: highlighted code, line numbers, a **Called by** bar, clickable custom-function calls,
   a history (◂ ▸ ⋯) over everything you have opened,
-  and **Find in Zoho ↗** (filters the Zoho functions list to it; you open it from Zoho's own ⋯ menu).
+  and **Functions in Zoho ↗** (opens Zoho's own functions page - it does not drive their interface,
+  and since Zoho began addressing that page by URL it no longer types anything into their search box).
   It also lists the **connections** the function uses (click one to filter the tree to every function
   that uses it) and its last-modified author and date.
 - Modules: the fields table, **Records ↗** and **Layouts ↗** (for viewable modules).

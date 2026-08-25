@@ -303,6 +303,9 @@ const MSG = {
   rereadErr: 'Could not re-read: ',
   namePrefix: 'Name: ',
   openingFns: 'Opening Functions list…',
+  // Said by the toolbar button and by the one in a function's preview, which is why it has a
+  // name: two copies of a sentence are two sentences waiting to drift apart.
+  noTarget: 'Unknown target - pull this workspace once, or open Zoho manually.',
   findInCode: 'Find inside the code\u2026',
   findByName: 'Find by name…',
   // The health audit is drawn twice - the panel's view and the HTML export - and the titles are the
@@ -2228,7 +2231,7 @@ async function openFile(path, line = null, byClick = false) {
   // the moment the reader changed tab.
   currentPath = path; navHere(path.split('/').pop()); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
-  $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
+  $('pvfind').style.display = ''; $('pvfind').textContent = 'Functions in Zoho \u2197'; $('pvfind').title = 'Open Zoho\u0027s own functions page. It no longer types this name into their search box: the newer functions interface is addressed by URL, and this product does not script somebody else\u0027s page.'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
   const trow = treeData.find((x) => x.path === path);
   if (trow) navNames({ display: trow.display_name, api: trow.api_name });
@@ -2824,7 +2827,7 @@ async function switchTab() {
 async function openTargetZoho(newTab) {
   if (sampleRefuse()) return null;   // null, not undefined: the caller reads it as "no tab id"
   const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
-  if (!url) { setStatus('Unknown target - pull this workspace once, or open Zoho manually.', 'warn'); return null; }
+  if (!url) { setStatus(MSG.noTarget, 'warn'); return null; }
   return goToZoho(url, { newTab });
 }
 $('funcs').onclick = () => openTargetZoho(false);
@@ -2833,76 +2836,42 @@ $('funcs').onclick = () => openTargetZoho(false);
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
 $('gozoho').onclick = () => openZohoHome();
 $('mmgo').onclick = () => switchTab();   // mismatch: log out current session and land on the workspace's org (current tab)
-async function listReady(id) {
-  try { await ensureBridge(id); const r = await chrome.tabs.sendMessage(id, { cmd: 'listReady' }); return !!(r && r.ready); } catch { return false; }
-}
-let _revealListener = null;
-async function listReadyWait(id, tries = 24) { for (let k = 0; k < tries && !(await listReady(id)); k++) await sleep(250); }
+
+
+
 // Find = fill the Zoho functions-list search box with this function's name. We wait (bounded, in
 // reveal) for the search box to exist - a known, language-independent element - then fill it ONCE.
 // If it is not there, we STOP and say exactly that, instead of retrying an action we are not sure of.
-async function doFilter(id, fn, nice) {
-  await ensureBridge(id);
-  if (!(await listReady(id))) { setStatus('Couldn\'t find the Zoho functions search box - is the Functions list open?', 'warn'); return; }
-  try {
-    const r = await chrome.tabs.sendMessage(id, { cmd: 'fillSearch', name: fn.name || fn.apiName });
-    if (r && r.ok) { setStatus(`Filtered "${r.term}\u2026" - open "${nice}" from Zoho\'s \u22ef menu.`, 'ok'); return; }
-    setStatus('Couldn\'t fill the Zoho search box.', 'warn');
-  } catch (e) { setStatus('Couldn\'t reach the Zoho functions list: ' + e.message, 'warn'); }
-}
+
 // Navigate to the Zoho Functions list (deterministic URL) and pre-filter it to `fn` (Find). The
 // only DOM touch left is filling the class-selected search box; there is no click-and-hope here.
+/** Take the reader to their functions in Zoho, and stop there.
+ *
+ * **This used to type into Zoho's own search box** - the single exception the first non-negotiable
+ * carried, and the last thing this product wrote into somebody else's page: `focus()`, the native
+ * value setter, three synthetic events. Zoho is building a functions interface addressed by URL,
+ * which makes the exception unnecessary, so the panel navigates and lets their page decide what to
+ * show. A reader on the old interface lands on the list, which is exactly where the typing left them
+ * anyway; a reader on the new one gets whatever that address resolves to.
+ *
+ * **No deep link to the one function, and that is a limit rather than an oversight.** The new
+ * interface addresses a function by an id from its own module, and the id this product holds is that
+ * record's `dependent_id` - measured across the fifteen functions present in two captures of one
+ * org, fifteen of fifteen. Sending the id we have would address the wrong function, or none. Until
+ * that mapping is pulled the certain thing is the list, and the certain thing is what ships.
+ */
 async function reveal(fn) {
   if (sampleRefuse()) return;
-  const nice = fn.displayName || fn.name || fn.apiName;
+  const url = functionsUrl();
+  if (!url) { setStatus(MSG.noTarget, 'warn'); return; }
   let id = await zohoTabId();
   if (!id) { id = await openTargetZoho(false); if (!id) return; }
-  if (_revealListener) { chrome.tabs.onUpdated.removeListener(_revealListener); _revealListener = null; }
-  const url = functionsUrl();
-  let tab = null; try { tab = await chrome.tabs.get(id); } catch (_) {}
-  const same = url && tab && (tab.url || '').split('#')[0].split('?')[0] === url.split('#')[0].split('?')[0];
-  if (!same) {
-    setStatus(MSG.openingFns, 'busy');
-    // The frame, like everywhere else. `waitTabComplete` then returns at once - the tab did not
-    // move - and the wait that was always doing the work is `listReadyWait`, which polls the bridge
-    // for the search box inside that very frame.
-    if (url) await goToZoho(url); else await chrome.tabs.reload(id);
-    await sleep(400); await waitTabComplete(id); await listReadyWait(id); await doFilter(id, fn, nice); return;
-  }
-  // Same URL -> reload the list, but open the target only AFTER a real reload completes.
-  // Handles Zoho's native "unsaved changes" dialog: if the user picks "Reload" (even seconds
-  // later) we still open the function; if they "Cancel", nothing is forced.
   setStatus(MSG.openingFns, 'busy');
-  let sawLoading = false, handled = false;
-  // The listener itself does no waiting: an `async (tid, info) => {}` is a scope the race checker
-  // cannot enter, and what it awaited - the list settling, then the filter - is the part worth
-  // reading. It stays an arrow because it closes over the two flags and over its own name, which is
-  // how it removes itself; the work it hands off is a declaration.
-  const listener = (tid, info) => {
-    if (tid !== id || handled) return;
-    if (info.status === 'loading') sawLoading = true;
-    if (info.status !== 'complete' || !sawLoading) return;
-    handled = true; chrome.tabs.onUpdated.removeListener(listener); _revealListener = null;
-    void filterWhenListSettles(id, fn, nice);
-  };
-  _revealListener = listener;
-  chrome.tabs.onUpdated.addListener(listener);
-  chrome.tabs.reload(id).catch(() => {});
-  setTimeout(() => {
-    if (!sawLoading && !handled) {
-      const msg = 'If you kept unsaved changes, save them and click Go to again.';
-      setStatus(msg, 'warn');
-      setTimeout(() => { if ($('stxt').textContent === msg) setStatus('', ''); }, 5000);
-    }
-  }, 3500);
-  setTimeout(() => { if (!handled) { handled = true; chrome.tabs.onUpdated.removeListener(listener); if (_revealListener === listener) _revealListener = null; } }, 60000);
+  await goToZoho(url);
+  setStatus(`Zoho\u0027s functions are open - look for \u00ab${fn.displayName || fn.name || fn.apiName}\u00bb.`, 'ok');
 }
 
-/** Wait for Zoho's functions list to settle after a reload, then filter it to one function. */
-async function filterWhenListSettles(id, fn, nice) {
-  await listReadyWait(id);
-  await doFilter(id, fn, nice);
-}
+
 
 async function revealFromPreview(action) {
   if (currentPath && currentPath.startsWith('workflows/')) { await openWorkflowInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }

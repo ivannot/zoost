@@ -166,6 +166,56 @@ test('a refused deluge call is retried with the token the page itself uses', asy
                + 'deluge prefix, which is what Zoho\u0027s own successful request carries.');
 });
 
+// ---------------------------------------------------------------------------------------------
+// Nothing either product injects into a Zoho page writes to it.
+//
+// The first non-negotiable is «no write path to Zoho», and it carried one stated exception for as
+// long as this product has existed: `Find` filled the functions list's search box - `focus()`, the
+// native value setter, three synthetic events - because there was no address that took a reader to a
+// function. Zoho is building a functions interface addressed by URL, so the exception stopped being
+// necessary and it is gone. Nothing is written into Zoho now, and the store listing says exactly
+// that, with no «except».
+//
+// Which makes it worth a check rather than a sentence: the exception was removed because a better
+// path appeared, and the next time one is missing the same shortcut will look reasonable again. The
+// scripts swept are the ones that run *inside somebody else's page* - the bridges and the hooks -
+// derived from the manifests rather than named here, so a third one added tomorrow is included.
+test('nothing injected into a Zoho page writes into it', () => {
+  // Every script either manifest injects: content scripts, and anything the panel injects by name.
+  const injected = new Set();
+  for (const app of ['crm', 'analytics']) {
+    const man = JSON.parse(read(`apps/${app}/manifest.json`));
+    for (const cs of man.content_scripts || []) for (const f of cs.js || []) injected.add(`apps/${app}/${f}`);
+    for (const res of man.web_accessible_resources || []) for (const f of res.resources || []) {
+      if (f.endsWith('.js')) injected.add(`apps/${app}/${f}`);
+    }
+  }
+  assert.ok(injected.size >= 2, `only ${injected.size} injected script(s) found - the derivation broke`);
+
+  // The vocabulary of writing into a page one does not own. Reading is not listed: the bridges query
+  // the DOM constantly and that is the whole of how they work.
+  const WRITES = [
+    [/\bdispatchEvent\s*\(/, 'dispatches a synthetic event'],
+    [/new\s+(?:Keyboard|Mouse|Pointer|Input)Event\s*\(/, 'builds a synthetic input event'],
+    [/HTMLInputElement\.prototype/, 'reaches for the native value setter'],
+    [/\.focus\s*\(\s*\)/, 'moves the focus in their page'],
+    [/\.click\s*\(\s*\)/, 'clicks something for the reader'],
+  ];
+  const found = [];
+  for (const rel of [...injected].sort()) {
+    let src;
+    try { src = read(rel); } catch (_) { continue; }
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n')
+      .filter((l) => !l.trim().startsWith('//')).join('\n');
+    for (const [rx, what] of WRITES) if (rx.test(code)) found.push(`${rel} ${what}`);
+  }
+  assert.deepEqual(found, [],
+                   `the first non-negotiable is «no write path to Zoho» and these write into their page: `
+                   + `${found.join('; ')}. The one exception that ever existed - filling the functions `
+                   + 'search box - was removed when Zoho gave that page an address; if a new one is being '
+                   + 'added, it belongs in the manifest justification and in both listings first.');
+});
+
 // ---------- CRM: which cookie carries which CSRF token ----------
 
 // The context is kept, not only what `load` hands back: `lastCsrfFrom` is a `let` the function
