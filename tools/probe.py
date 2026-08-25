@@ -1305,9 +1305,14 @@ PULL_CRM = r"""
     }
     if (!Object.keys(src).length) say('the fixture has no functions to serve');
 
+    // `capped` is a *variable* here, not a literal. Fixing it at false made the branch this pull's
+    // guard exists for unreachable in the one thing that executes the code - the same shape as the
+    // stub that answered «no action is ever a function action» and quietly emptied a sweep. The
+    // truncated case is driven below, after the ordinary one.
+    let serveCapped = false;
     window.__bridge = {
       listFunctions: () => ({ ok: true, total: fxIndex.length, readable: fxIndex.length, skipped: 0,
-                              capped: false, entries: fxIndex }),
+                              capped: serveCapped, entries: fxIndex }),
       fetchOne: (m) => (src[String(m.id)] ? { ok: true, file: src[String(m.id)] }
                                           : { ok: false, error: 'no such function: ' + m.id }),
     };
@@ -1352,6 +1357,31 @@ PULL_CRM = r"""
     //    sentence: the class says «working», and a trailing ellipsis promises a next line.
     if (document.getElementById('status').className === 'busy' || /\u2026$/.test($('stxt').textContent))
       say('the pull finished on a busy line: ' + $('stxt').textContent);
+
+    // **And the same pull over a list Zoho stopped early.** This is the one branch that decides
+    // whether the mirror may delete, and nothing had ever executed it: the stub answered «not
+    // truncated» always. A truncated list must not prune, and the panel must say so rather than
+    // presenting a short list as the org.
+    const beforeCap = fs.dump().filter((p) => p.startsWith(base)).length;
+    // Every status line this pull writes, in order - the sequence, not a sample at a chosen instant.
+    const said = [];
+    const stEl = $('stxt');
+    const stObs = new MutationObserver(() => { const t = stEl.textContent; if (said[said.length - 1] !== t) said.push(t); });
+    stObs.observe(stEl, { childList: true, characterData: true, subtree: true });
+    serveCapped = true;
+    await pullAll();
+    await until(() => !pullBusy, 'the pull over a truncated list never finished', 20000);
+    await settle('the panel never redrew after the truncated pull');
+    const afterCap = fs.dump().filter((p) => p.startsWith(base)).length;
+    if (afterCap < beforeCap)
+      say(`a truncated list deleted ${beforeCap - afterCap} file(s) - a partial answer pruned the mirror`);
+    stObs.disconnect();
+    const cls = document.getElementById('status').className;
+    if (!/more|stopped|partial|not everything|list stopped/i.test($('stxt').textContent) && cls !== 'warn')
+      say(`a truncated list was reported as a complete one: «${$('stxt').textContent}» [${cls}]`
+          + ' | said, in order: ' + JSON.stringify(said.slice(-6)));
+    serveCapped = false;
+
     document.title = 'PULL OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """

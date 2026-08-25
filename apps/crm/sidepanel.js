@@ -3632,8 +3632,14 @@ async function pullAll() {
     // Same rule as the reconciler, and here it was worse: the truncation was reported *after* the
     // pruning had already run, so the warning described files that were already gone.
     if (r.capped) {
+      // **Said after the rebuild, because the rebuild speaks too.** The sentence went first and
+      // `rebuildTree` then closed with «120 functions (120 downloaded).» in green - so a census that
+      // had stopped early was handed to the reader as the whole org, which is the one thing a mirror
+      // may never do. Nothing was pruned, and that part was right; what was lost was the telling.
+      // Measured by driving the pull with a truncated list and recording the status line in order.
+      await rebuildTree();
       setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
-      await rebuildTree(); endPull(); return;
+      endPull(); return;
     }
     await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho

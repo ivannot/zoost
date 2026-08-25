@@ -358,9 +358,27 @@ test('crm: a webhook URL reaches the model as a host and nothing else', () => {
   // Not a URL we can parse is not a URL we can redact.
   assert.equal(webhookForModel('httpX://%%%/not-a-url'), '(webhook address withheld)');
   assert.equal(webhookForModel(null), '');
+  // **Both call sites, by what they produce.** This checked one of the two, and by photographing the
+  // spelling it used to have - so replacing `webhookForModel(shown.url)` with `String(shown.url)` in
+  // the focus block sent a whole Slack posting credential to the model with the battery green. The
+  // question is not «is this line still written that way», it is «can a token get out», so both
+  // sites are derived and every one of them is required to redact.
   const src = read('apps/crm/ai.js');
-  assert.ok(!/a\.kind === 'webhooks' \? ` \$\{a\.method \|\| ''\} \$\{a\.url/.test(src),
-    'the tool still sends the whole URL');
+  const SECRET = 'https://hooks.slack.com/services/T00000000/B00000000/8f3aSECRETTOKEN';
+  // Whole lines: the call that redacts wraps the value, so matching from the value to the end of the
+  // line reads the closing bracket and calls it unredacted - which is what the first version did.
+  const sites = src.split('\n')
+    .filter((l) => /\b(a|shown)\.url\b/.test(l))
+    .filter((l) => !/^\s*(\/\/|\*)/.test(l));
+  assert.ok(sites.length >= 2, `only ${sites.length} place(s) in this file put a webhook URL anywhere `
+                               + '- the derivation has stopped finding them');
+  for (const line of sites) {
+    assert.match(line, /webhookForModel\(/,
+                 `a webhook URL is used without redaction: ${line.trim().slice(0, 90)}`);
+  }
+  // And the property itself, on the value the helper returns: no token survives it.
+  assert.ok(!webhookForModel(SECRET).includes('8f3aSECRETTOKEN'),
+            'the redaction lets the posting credential through');
 });
 
 test('crm: the sender-sharing switch is read when it is used, not cached with the workspace', () => {
@@ -790,14 +808,40 @@ test('a non-http scheme is left entirely alone', () => {
 
 // ---------- attribute escaping ----------
 
-const { escA } = load([sliceConst('apps/crm/sidepanel.js', 'escA')]);
+// **Every copy, in both products, found rather than named.** This lifted `escA` from one file of the
+// eight that define one, so the Analytics copy could be changed to pass a quote through and the whole
+// battery stayed green - `htmlcheck` went on printing «Attributes are escaped», because it trusts the
+// *name* and reads the definition it was pointed at. Eight definitions, one property, derived here so
+// a ninth written tomorrow is held to it by existing.
+const attributeEscapers = () => {
+  const out = [];
+  for (const app of ['crm', 'analytics']) {
+    for (const f of readdirSync(`${ROOT}/apps/${app}`)) {
+      if (!f.endsWith('.js')) continue;
+      const rel = `apps/${app}/${f}`;
+      for (const name of ['escA', 'escQ']) {
+        if (!new RegExp(`(?:const|let|var|function)\\s+${name}\\b`).test(read(rel))) continue;
+        out.push([rel, name, load([sliceConst(rel, name)])[name]]);
+      }
+    }
+  }
+  return out;
+};
 
-test('a quote cannot close the attribute it sits in', () => {
-  // The documented trap, found again by an outside review: escHtml() escapes & < > and not quotes,
-  // so a name from Zoho containing a quote ends the attribute and whatever follows becomes markup.
-  assert.ok(!escA('x" onerror=alert(1)').includes('"'));
-  assert.ok(!escA("x' onerror=alert(1)").includes("'"));
+test('a quote cannot close the attribute it sits in - every escaper, both products', () => {
+  const found = attributeEscapers();
+  // If the derivation finds nothing, it is the derivation that is broken, not the tree.
+  assert.ok(found.length >= 6, `only ${found.length} attribute escaper(s) found across both products`);
+  for (const [rel, name, fn] of found) {
+    // The documented trap, found again by an outside review: escHtml() escapes & < > and not quotes,
+    // so a name from Zoho containing a quote ends the attribute and whatever follows becomes markup.
+    assert.ok(typeof fn === 'function', `${rel}: ${name} did not lift`);
+    assert.ok(!fn('x" onerror=alert(1)').includes('"'), `${rel}: ${name} lets a double quote through`);
+    assert.ok(!fn("x' onerror=alert(1)").includes("'"), `${rel}: ${name} lets an apostrophe through`);
+  }
 });
+
+const { escA } = load([sliceConst('apps/crm/sidepanel.js', 'escA')]);
 
 test('a tag does not survive', () => {
   assert.equal(escA('<img src=x>'), '&lt;img src=x&gt;');
@@ -6490,7 +6534,14 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       + sliceFn('apps/crm/sidepanel.js', 'reconcileNow');
     assert.ok(/if \(reconciling\) \{ reconcileAgain = true; return reconciling; \}/.test(fn),
               'two notices start two reconciliations, or the second is forgotten');
-    assert.ok(fn.indexOf('reconciling = (async') < fn.indexOf('await'), 'the promise is stored after the first await');
+    // The promise is stored before anything is awaited, so a second notice arriving mid-flight finds
+    // it. Anchored on the wiring as it is written now - `reconciling = (async` was the shape before
+    // the round became a declaration, and an anchor that matches nothing makes the comparison
+    // `-1 < something`, which is true whatever the code does.
+    const at = fn.indexOf('reconciling = reconcileNow(');
+    assert.ok(at > 0, 'the single-flight promise is no longer stored here - this case has stopped '
+                      + 'reading the code it is about');
+    assert.ok(at < fn.indexOf('await'), 'the promise is stored after the first await');
   });
 
   test('a newer hook replaces an older one instead of bowing out', () => {
@@ -6864,6 +6915,16 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       assert.ok(bound, `a 200-a-page walk near line ${i + 1} has no page ceiling at all: it walks ` +
                        `until Zoho stops answering, and says nothing when it gives up`);
       assert.equal(bound[0], 'MAX_PAGES_WIDE', `a 200-a-page walk near line ${i + 1} uses the narrow bound`);
+      // **And what that name is worth.** The bound was checked by name and never by value, so raising
+      // it from 40 to 400 - eighty thousand rows on a 200-a-page walk, which is verbatim the defect
+      // this repository records - left the whole battery green. A ceiling nobody measures is a
+      // variable. The two numbers are read from the bridge itself, so this stays true if they move
+      // for a reason; what it refuses is a wide walk that can pull more rows than a person would
+      // wait for.
+      const wideN = +(/const MAX_PAGES_WIDE = (\d+)/.exec(bridge.join('\n')) || [])[1];
+      assert.ok(wideN >= 1, 'MAX_PAGES_WIDE is no longer a literal in the bridge - this cannot measure it');
+      assert.ok(wideN * 200 <= 20000,
+                `MAX_PAGES_WIDE is ${wideN}: a wide walk may fetch ${wideN * 200} rows before it stops`);
       // And hitting the ceiling is reported, *on the line that hits it*. Looking for `capped`
       // anywhere in the fourteen was satisfied by the `let capped = false` above - so removing the
       // report from the ceiling itself passed. The partial list this repository refuses to prune
@@ -7028,9 +7089,20 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/m\.layouts_read !== true/.test(fn), 'a module Zoho could not answer for is pruned anyway');
     assert.ok(/keepLayoutFiles\.has\(p\)/.test(fn), 'the prune does not consult what must be kept');
     // A write that failed keeps the old file: it is still the best answer anybody has.
-    const write = fn.indexOf('await writeFile(lf');
-    const keep = fn.indexOf('keepLayoutFiles.add(lf)', write);
-    assert.ok(keep > write, 'the file is only kept when the write succeeded');
+    //
+    // **Anchored on what the code says now.** This looked for `await writeFile(lf`, which moved to
+    // `op.write(lf, …)` long ago, so `indexOf` was -1 and `keep > -1` held for any answer at all -
+    // the file could be marked kept *before* the write, or the success branch removed entirely, and
+    // this passed. A missing anchor is not a passing test; it is a test that stopped reading.
+    // Inside the branch that writes, and nowhere else: `keepLayoutFiles.add(lf)` is written three
+    // times in this function - once after the write, once for a module whose layouts were not read,
+    // once for one whose fields were not - so «the next one after the write» finds a later branch and
+    // holds however the first is arranged. The branch is sliced, then read.
+    const branch = fn.slice(fn.indexOf('if (fullLayouts.length) {'), fn.indexOf('} else if (m.layouts_read'));
+    assert.ok(branch.includes('op.write(lf'), 'the layout file is no longer written in this branch - '
+                                              + 'this case has stopped reading the code it is about');
+    assert.ok(branch.indexOf('keepLayoutFiles.add(lf)') > branch.indexOf('op.write(lf'),
+              'the file is only kept when the write succeeded');
     assert.ok(!/liveLayoutFiles/.test(fn), 'the old set, built from writes, is still deciding');
   });
 
@@ -11452,6 +11524,42 @@ test('every script the panels load evaluates on its own', () => {
                           + 'makes the panel dead on arrival.');
     }
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Every paginated walk in a bridge can say it stopped early.
+//
+// The panel's guards against a partial list are covered from several directions - «nothing deletes on
+// the word of a list that may have stopped early», «a partial list never replaces an index». Every
+// one of them reads the *consumer*. Nobody read the producer: deleting `capped = true` from the
+// functions walk left the whole battery green, and that is the one walk whose truncation decides
+// what gets deleted from the mirror. The probe cannot see it either - its bridge stub answers
+// `capped: false`, so the branch is unreachable in the only thing that executes the code.
+//
+// Derived: a loop with a page ceiling has to set the flag when it hits it. The ceiling is what makes
+// a walk stoppable; the flag is what makes stopping sayable.
+test('a walk that can stop early says so, in both bridges', () => {
+  let ceilings = 0;
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/content-bridge.js`;
+    const src = read(rel).split('\n');
+    for (let i = 0; i < src.length; i++) {
+      if (!/\bMAX_PAGES(_WIDE)?\b/.test(src[i])) continue;
+      if (/^\s*(\/\/|\*)/.test(src[i]) || /const MAX_PAGES/.test(src[i])) continue;
+      ceilings += 1;
+      // The line that hits the ceiling, and the two after it: the break and whatever it sets.
+      const here = src.slice(i, i + 3).join('\n');
+      // Either spelling: a boolean for a walk that is one list, a push for one that walks several
+      // kinds and has to say *which* stopped. What is refused is a ceiling that records nothing -
+      // and the window is the ceiling line and the two after it, never the whole loop, because
+      // `let capped = false` above would satisfy a looser search.
+      assert.match(here, /capped\b[^=\n]*(=\s*true|\.push\()/,
+                   `${rel}:${i + 1}: this walk stops at its page ceiling and says nothing - the list `
+                   + 'it returns is indistinguishable from a complete one');
+    }
+  }
+  // If no ceiling is found the derivation has broken, not the bridges.
+  assert.ok(ceilings >= 3, `only ${ceilings} page ceiling(s) found across both bridges`);
 });
 
 // ---------------------------------------------------------------------------------------------
