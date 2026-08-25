@@ -122,13 +122,26 @@
     drepn: ['drecn'],                                          // deluge runtime
     crmcsrfparam: ['CT_CSRF_TOKEN', 'crmcsr', 'CSRF_TOKEN'],   // CRM APIs
   };
+  // **Where the last token came from.** A 400 INVALID_CSRF_TOKEN is the same three words whether the
+  // deluge cookie was missing, stale, or present and rejected - and those are three different
+  // problems with three different answers. The fallback below is a *guess by design*: it sends the
+  // CRM family's token to the deluge runtime because before the two diverged that was usually right.
+  // When a request fails, which of the two it actually sent is the first thing anybody needs, and
+  // until now nothing recorded it. Written where the choice is made, read where the failure is
+  // reported - never inferred from the prefix, which is the trap this file already carries a note
+  // about (`drepn` the header, `drecn` the cookie, one letter apart and neither derivable).
+  let lastCsrfFrom = null;
   function csrfToken(csrfPrefix) {
     const names = CSRF_COOKIES[csrfPrefix || 'crmcsrfparam'] || CSRF_COOKIES.crmcsrfparam;
-    for (const n of names) { const v = cookie(n); if (v) return v; }
+    for (const n of names) { const v = cookie(n); if (v) { lastCsrfFrom = n; return v; } }
     // Fall back to the other family rather than sending nothing: an empty token is a guaranteed 400,
     // and before this split the shared value was right often enough to be worth trying.
-    for (const n of CSRF_COOKIES.crmcsrfparam.concat(CSRF_COOKIES.drepn)) { const v = cookie(n); if (v) return v; }
-    try { const el = document.getElementById('token'); if (el && el.value) return el.value; } catch (_) {}
+    for (const n of CSRF_COOKIES.crmcsrfparam.concat(CSRF_COOKIES.drepn)) {
+      const v = cookie(n);
+      if (v) { lastCsrfFrom = n + ' (fallback - not this family\u0027s own cookie)'; return v; }
+    }
+    try { const el = document.getElementById('token'); if (el && el.value) { lastCsrfFrom = '#token in the page'; return el.value; } } catch (_) {}
+    lastCsrfFrom = 'nowhere - no CSRF cookie was readable';
     return '';
   }
   function headers(csrfPrefix) {
@@ -185,10 +198,15 @@
   // we are after the side effect, and a user whose role refuses that endpoint is no worse off than
   // before. If the second attempt fails the original error is what the user sees.
   async function warmDeluge() {
+    // Its own result is still not acted on - the side effect is the point, and a role that cannot
+    // reach this endpoint is no worse off for having asked. What is returned is whether the primer
+    // itself got an answer, so a second refusal can say whether it was ever primed at all. That
+    // distinction is the difference between «the token is wrong» and «the session is not there».
     try {
-      await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
+      const r = await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
         { headers: headers(), credentials: 'include' });
-    } catch (_) {}
+      return r.ok;
+    } catch (_) { return false; }
   }
   // «Zoho said none» and «Zoho answered something this code does not recognise» are two different
   // facts, and `(resp.workflow_rules || [])` turned the second into the first: a response whose shape
@@ -240,8 +258,26 @@
     if (res.ok) return res.json();
     const { message, code } = await errorDetail(res);
     if (!retried && csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
-      await warmDeluge();
-      return api(path, csrfPrefix, true);
+      // Whether the primer worked is worth carrying: it is swallowed on purpose - we are after a
+      // side effect and a role that refuses that endpoint is no worse off - but if it *also* failed,
+      // the retry below was sent under exactly the conditions that had just been refused, and the
+      // second failure is not a second piece of evidence.
+      const primed = await warmDeluge();
+      return api(path, csrfPrefix, primed ? true : 'unprimed');
+    }
+    // **The same three words for three different problems.** «400 INVALID_CSRF_TOKEN» is what you
+    // get whether the deluge cookie was missing, stale, or present and rejected, and each of those
+    // is a different thing to do next. The recovery above was written for one cause and measured
+    // against it - the first `/deluge/` call after a fresh login - on the stated premise that «Pull
+    // all never shows this, functions run first». A Pull all showed it, so that premise is now known
+    // to be incomplete and the remaining cause is unidentified. Nothing is guessed here: what the
+    // request actually carried is reported, so the next occurrence arrives as evidence instead of as
+    // three words that fit every explanation.
+    if (csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
+      throw apiError(res.status, path,
+        `${message} - the token was read from ${lastCsrfFrom}`
+        + (retried === 'unprimed' ? ', and the Zoho CRM call made to refresh it failed too' : ', and it was still refused after a refresh'),
+        code);
     }
     throw apiError(res.status, path, message, code);
   }

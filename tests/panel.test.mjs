@@ -110,10 +110,14 @@ test('an apostrophe inside a double-quoted string does not open a string', () =>
 
 // ---------- CRM: which cookie carries which CSRF token ----------
 
+// The context is kept, not only what `load` hands back: `lastCsrfFrom` is a `let` the function
+// writes on every call, and a name read off the returned object is the value it had at load time -
+// which is `undefined`, for ever, however the code behaves. The live one lives in the context.
+const csrfCtx = { cookie: (n) => globalThis.__jar[n], document: { getElementById: () => null } };
 const csrf = load([
   sliceConst('apps/crm/content-bridge.js', 'CSRF_COOKIES'),
   sliceFn('apps/crm/content-bridge.js', 'csrfToken'),
-], { cookie: (n) => globalThis.__jar[n], document: { getElementById: () => null } });
+], csrfCtx);
 
 function withJar(jar, fn) { globalThis.__jar = jar; try { return fn(); } finally { delete globalThis.__jar; } }
 
@@ -141,6 +145,47 @@ test('a missing cookie degrades to the other family rather than sending an empty
 
 test('no cookies at all yields an empty string, not a crash', () => {
   withJar({}, () => assert.equal(csrf.csrfToken('drepn'), ''));
+});
+
+// ---------------------------------------------------------------------------------------------
+// «400 INVALID_CSRF_TOKEN» is the same three words for three different problems, and the panel said
+// only the three words.
+//
+// The deluge cookie missing, the deluge cookie stale, or a token sent from the other family and
+// rejected: each is a different thing to do next, and the message fitted all of them equally. The
+// recovery this file carries was written for one of those causes and measured against it - the first
+// `/deluge/` call after a fresh login - on the stated premise that «Pull all never shows this,
+// functions run first». A Pull all on a real org showed it, so the premise is incomplete and the
+// remaining cause is not identified. Nothing has been guessed in answer: what the request actually
+// carried is now reported, so the next occurrence is evidence.
+test('a refused CSRF token says which cookie it came from', () => {
+  // The deluge family's own cookie, present and used: named, so a refusal here means the token is
+  // stale or the session is not there - not that the wrong one was sent.
+  withJar({ drecn: 'D', CT_CSRF_TOKEN: 'C' }, () => {
+    csrf.csrfToken('drepn');
+    assert.equal(csrfCtx.lastCsrfFrom, 'drecn',
+                 `the source was recorded as ${JSON.stringify(csrfCtx.lastCsrfFrom)} - a failure cannot `
+                 + 'say whether the right cookie was even used');
+  });
+
+  // The fallback, which is a guess by design and has to announce itself as one. This is the shape
+  // that produced the report: a request refused while carrying the other family's token.
+  withJar({ CT_CSRF_TOKEN: 'C' }, () => {
+    csrf.csrfToken('drepn');
+    assert.match(csrfCtx.lastCsrfFrom, /^CT_CSRF_TOKEN/,
+                 `the fallback recorded ${JSON.stringify(csrfCtx.lastCsrfFrom)} instead of the cookie it took`);
+    assert.match(csrfCtx.lastCsrfFrom, /fallback/,
+                 'the fallback does not say it is one, so a reader takes a guess for the real thing');
+  });
+
+  // And the case that is not a wrong token at all: nothing readable. Sending an empty string is a
+  // guaranteed 400, and «the token was read from nowhere» is the one answer that names it.
+  withJar({}, () => {
+    csrf.csrfToken('drepn');
+    assert.match(csrfCtx.lastCsrfFrom, /nowhere/,
+                 `with no cookie at all the source reads ${JSON.stringify(csrfCtx.lastCsrfFrom)} - an empty `
+                 + 'token is refused exactly like a wrong one, and the two need telling apart');
+  });
 });
 
 test('an unknown prefix falls back to the CRM family rather than throwing', () => {
@@ -14605,8 +14650,14 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
   const g = {
     BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console,
     headers: () => ({}),
-    warmDeluge: async () => { warmed++; },
+    // Its answer is what tells a second refusal whether the primer ever got through, so it is
+    // stubbed as succeeding here - the unprimed path is asserted below on its own.
+    warmDeluge: async () => { warmed++; return true; },
     fetch: async () => answers.shift(),
+    // Where the token came from. Not the subject here, and it has to be present: `api` puts it in
+    // the sentence a refused deluge call throws, and a free reference would have made every one of
+    // those throw a ReferenceError instead - which is what happened on the first attempt.
+    lastCsrfFrom: 'drecn',
   };
   const { api, NO_CONTENT } = load([
     sliceConst('apps/crm/content-bridge.js', 'NO_CONTENT'),
@@ -14639,9 +14690,31 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
   // genuinely transient failure, never a retry loop against an assumption.»
   answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
   answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
-  await assert.rejects(() => api('/deluge/api/connections', 'drepn'),
-    (e) => e.status === 400, 'a second refusal is retried again - that is a loop against an assumption');
+  await assert.rejects(() => api('/deluge/api/connections', 'drepn'), (e) => {
+    assert.equal(e.status, 400, 'a second refusal is retried again - that is a loop against an assumption');
+    // **And it says what it sent.** «400 INVALID_CSRF_TOKEN» is the same three words whether the
+    // deluge cookie was missing, stale, or the other family's token was sent in its place, and each
+    // of those is a different thing to do next. Reported from a real org against a Pull all, which
+    // the recovery above was written on the premise could never reach this state.
+    assert.match(e.message, /token was read from drecn/,
+                 `the refusal reads «${e.message}» - it names neither the cookie it used nor whether `
+                 + 'that cookie was the deluge family\u0027s own');
+    assert.match(e.message, /still refused after a refresh/,
+                 `the refusal reads «${e.message}» - a reader cannot tell the primer ran at all`);
+    return true;
+  });
   assert.equal(warmed, 2, 'the retry warmed more than once for one call');
+
+  // The other half: the primer itself refused, so the retry went out under the conditions that had
+  // just been rejected and its failure is not a second piece of evidence.
+  g.warmDeluge = async () => { warmed++; return false; };
+  answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
+  answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
+  await assert.rejects(() => api('/deluge/api/connections', 'drepn'), (e) => {
+    assert.match(e.message, /the Zoho CRM call made to refresh it failed too/,
+                 `the refusal reads «${e.message}» - it claims a refresh happened when it did not`);
+    return true;
+  });
 
   // anything else: thrown, with what Zoho said and what it called it, kept apart.
   answers.push({ status: 403, ok: false,
