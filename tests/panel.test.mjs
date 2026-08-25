@@ -12813,6 +12813,75 @@ test('the folder warning is one sentence, in every place either product says it'
 });
 
 // ---------------------------------------------------------------------------------------------
+// An ordinary edit does not make a section impossible to save.
+//
+// **This shipped, and it shipped from the fix for the opposite defect.** `markDirty` cancels the read
+// in flight so a reload cannot overwrite what the reader is typing - and it recorded the cancellation
+// unconditionally. There is usually no read in flight: `markDirty` runs on every `input`, every
+// preset, every reorder, every delete. So one keystroke after a perfectly good load turned the flag
+// from «read» to «cancelled», and every Save from then on refused, saying the stored value could not
+// be read. Which had not happened, and which reloading did not cure, because the next keystroke did
+// it again. Four sections across the two products, made unsaveable by being used.
+//
+// Nothing saw it because nothing drove the pair. The cases either side of this one drive `markDirty`
+// with a loader, or a Save with a flag set by hand; the wiring between them - edit, then Save - was
+// the one thing neither of them touched, and it is where the defect was.
+test('an edit then a Save writes, in every section of both settings pages', async () => {
+  for (const [app, saver, flag, seed] of [['crm', 'onSaveScope', 'scopeLoadFailed', {}],
+                                          ['crm', 'onSaveTabs', 'tabsLoadFailed', {}],
+                                          ['crm', 'onSaveRx', 'rxLoadFailed', {}],
+                                          ['analytics', 'onSaveRx', 'rxLoadFailed', {}]]) {
+    const rel = `apps/${app}/options.js`;
+    const writes = [];
+    const said = [];
+    const el = () => ({ value: '', checked: false, textContent: '', style: {}, dataset: {},
+                        classList: { add() {}, remove() {}, toggle() {} },
+                        querySelectorAll: () => [], querySelector: () => null, focus() {}, select() {} });
+    const g = Object.assign({ console, Object, Set, Map, Array, String, Promise, JSON, Number,
+                              dirty: new Set(), _loadSeq: {}, $: () => el(),
+                              SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
+                              TAB_IDS: ['functions'], tabOrderCur: ['functions'], tabHiddenCur: [], tabNoPullCur: [],
+                              scope: {}, scopeFromUI: () => {}, rxCur: [{ name: 'a', pattern: 'b' }],
+                              rxProblems: () => null, renderRx: () => {}, renderTabs: () => {},
+                              SCOPE_SV: 2, MSG: { readFailed: 'read failed' },
+                              toast: (t) => said.push(String(t)),
+                              saveKeys: async (o) => { writes.push(o); return true; },
+                              stamp: async () => {},
+                              loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
+                              loadTabs: async () => {}, loadLay: async () => {}, loadRx: async () => {} }, seed);
+    // The state a finished page is in: every read published, every flag clear.
+    g.scopeLoadFailed = false; g.tabsLoadFailed = false; g.rxLoadFailed = false;
+
+    const m = load([sliceConst(rel, 'SECTIONS'), sliceConst(rel, 'LOAD_FLAG'),
+                    sliceFn(rel, 'markLoadCancelled'), sliceFn(rel, 'loadState'),
+                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'),
+                    sliceFn(rel, saver)], g);
+
+    const section = saver === 'onSaveRx' ? 'rxShortcuts' : saver === 'onSaveTabs' ? 'tabPrefs' : 'exportScope';
+    m.markDirty(section);
+    await m[saver]();
+
+    assert.equal(writes.length, 1,
+                 `${app}/${saver}: an ordinary edit and then Save wrote ${writes.length} time(s) and said `
+                 + `${JSON.stringify(said)}. The edit cancelled a read that was not happening, and the `
+                 + 'section cannot be saved again for the life of the page.');
+
+    // And the ordering the cancellation is actually for: a read still in flight, an edit, then Save -
+    // which must refuse, and say the reason that happened.
+    writes.length = 0; said.length = 0;
+    g[flag] = 'loading';
+    m.markDirty(section);
+    assert.equal(g[flag], 'cancelled', `${app}/${saver}: a read in flight was not recorded as cancelled`);
+    await m[saver]();
+    assert.equal(writes.length, 0,
+                 `${app}/${saver}: the page was still reading and Save wrote anyway - over a form the `
+                 + 'reader has never been shown the stored value in');
+    assert.match(said.join(' '), /still loading|could not be read|reload/i,
+                 `${app}/${saver}: it refused and said ${JSON.stringify(said)}`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // A read that was cancelled has learnt nothing, and nothing that follows may pretend otherwise.
 //
 // `beginLoad` was written on a contract: an older read must not publish, **because a newer read

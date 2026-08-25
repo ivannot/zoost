@@ -512,6 +512,7 @@ function scopeFromUI() {
   scopeToUI();
 }
 async function loadScope() {
+  scopeLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
   const current = beginLoad('exportScope');
   // **A read that failed is not «nothing is stored».** This swallowed it and drew the built-in
   // defaults, which look exactly like a stored preference - and Save then wrote them over the real
@@ -749,6 +750,7 @@ function move(id, d) {
   renderTabs();
 }
 async function loadTabs() {
+  tabsLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
   const current = beginLoad('tabPrefs');
   try {
     const st = await chrome.storage.local.get(['tabPrefs', 'tabAccessView']);
@@ -893,6 +895,7 @@ function beginLoad(key) {
   return () => mine === _loadSeq[key];
 }
 async function loadRx() {
+  rxLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
   const current = beginLoad('rxShortcuts');
   try {
     const st = await chrome.storage.local.get('rxShortcuts');
@@ -913,7 +916,7 @@ $('rxRestore').onclick = () => {
   renderRx(); markDirty('rxShortcuts');
 };
 async function onSaveRx() {
-  if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
+  if (rxLoadFailed) { toast(loadState(rxLoadFailed), true); return; }
   const bad = rxProblems(rxCur);
   if (bad) { toast(bad, true); return; }
   // No settingsStamp here: the panel reads this list fresh every time the menu opens, so there is
@@ -952,16 +955,28 @@ function wasOwn(key) {
   if (t && Date.now() - t < 3000) { ownWrite.delete(key); return true; }
   return false;
 }
-// Which flag belongs to which section, so a cancellation lands on the one the reader was in.
+// Which flag belongs to which section, read as well as written - because a cancellation may only
+// touch a load that is actually in flight.
 const LOAD_FLAG = {
-  exportScope: (v) => { scopeLoadFailed = v; },
-  tabPrefs: (v) => { tabsLoadFailed = v; },
-  tabAccessView: (v) => { tabsLoadFailed = v; },
-  rxShortcuts: (v) => { rxLoadFailed = v; },
+  exportScope: { get: () => scopeLoadFailed, set: (v) => { scopeLoadFailed = v; } },
+  tabPrefs: { get: () => tabsLoadFailed, set: (v) => { tabsLoadFailed = v; } },
+  tabAccessView: { get: () => tabsLoadFailed, set: (v) => { tabsLoadFailed = v; } },
+  rxShortcuts: { get: () => rxLoadFailed, set: (v) => { rxLoadFailed = v; } },
 };
+/** A read that was thrown away, recorded - **and only if there was one.**
+ *
+ * This wrote «cancelled» unconditionally, and `markDirty` calls it on every edit: an `input`, a
+ * preset, a reorder, a delete. So after a perfectly good load, one ordinary keystroke turned the
+ * flag from `false` to «cancelled» and every Save from then on refused, saying the stored value
+ * could not be read - which had not happened, and which reloading did not cure, because the next
+ * edit did it again. Four sections across both products, unsaveable by using them.
+ *
+ * Introduced by the fix for the opposite defect, hours earlier, and reported from outside within
+ * the day. The state a read is in has to be *asked*, not assumed from the fact that somebody typed.
+ */
 function markLoadCancelled(key) {
-  const set = LOAD_FLAG[key];
-  if (set) set('cancelled');
+  const flag = LOAD_FLAG[key];
+  if (flag && flag.get() === 'loading') flag.set('cancelled');
 }
 /** Why a section cannot be saved over, in the reader's words.
  *
@@ -976,6 +991,8 @@ function loadState(flag) {
   if (!flag) return null;
   if (flag === 'cancelled') return 'This page was still loading when you changed something, so what is '
     + 'on screen is not what is stored. Reload the page, then make the change again.';
+  if (flag === 'loading') return 'This page is still reading your stored settings. Nothing was saved - '
+    + 'give it a moment and try again.';
   if (flag === 'never') return 'This page never finished reading your stored settings, so nothing was '
     + 'saved. Reload the page.';
   return MSG.readFailed;
