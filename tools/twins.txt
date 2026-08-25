@@ -101,7 +101,7 @@ erRender	ca365eb7051e	cd799080aed2	divergent
 erResize	772c4f787802	772c4f787802	identical
 erSaveParams	1e7bbd6e4b26	c7d049ed3cc9	divergent
 erShow	6b499465c3c1	c8da0ea26cae	divergent
-erShowMaybeHeavy	83bf018787f9	eff332d42700	divergent
+erShowMaybeHeavy	9ccced5c0d1f	eff332d42700	divergent
 erSideCounts	db98efc90a5c	db98efc90a5c	identical
 erSideOf	6e1b8c05f694	6e1b8c05f694	identical
 erSizeArrows	611785d05d5f	611785d05d5f	identical

@@ -913,7 +913,7 @@ function erShowMaybeHeavy() {
   // thousand nodes down to twenty still flashed a spinner over work that takes a few milliseconds.
   const n = erVisibleIds().length;
   if (!erLaidOut && n >= SPIN_NODES) {
-    runHeavy($('v-er'), `Laying out ${n} NOUN().n\u2026`, erShow);
+    runHeavy($('v-er'), `Laying out ${n} ${NOUN().n}\u2026`, erShow);
   } else requestAnimationFrame(erShow);
 }
 

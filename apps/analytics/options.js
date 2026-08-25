@@ -20,6 +20,9 @@ const PRODUCT_AUTHOR = 'Ivan Notaristefano';
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
   saveFailed: 'Could not save: ',
+  // A read that failed is not «nothing is stored»: the one write on this page that can destroy a key
+  // the user cannot recover has to refuse rather than merge onto an empty answer.
+  readFailed: 'Could not read what is already stored, so nothing was saved - reload this page and try again.',
 };
 // The two engines under the names the user chose them by. Written out as a ternary at each site
 // until the duplicate-message check found the pair - two copies of one mapping, which is how a
@@ -316,7 +319,16 @@ async function saveAi() {
     maxTokens: Math.max(1024, Math.min(64000, Number($('ai_maxtokens').value) || 16384)),
     seedCap: Math.max(4000, Math.min(400000, Number($('ai_seedcap').value) || 72000)),
   };
-  const prev = await currentAi();
+  // **The merge base for the keys, read the way a write is allowed to read.** This used `currentAi`,
+  // which swallows a failed read and answers «nothing is stored» - and that answer is
+  // indistinguishable from the truth. On the one write on this page that can destroy a secret the
+  // user cannot recover, a rejected read meant `mergeKeys` had nothing to carry, and unticking the
+  // passphrase saved an empty key over the ciphertext without ever asking for the passphrase. The
+  // helper written for exactly this rule was already used by the two cheap writers on this page and
+  // not by the expensive one.
+  let prev;
+  try { const c = await readCfgForWrite(); prev = { anthropic: c.anthropic || {}, openai: c.openai || {} }; }
+  catch (_) { toast(MSG.readFailed, true); return; }
   const wantLock = $('ai_lock').checked;
   const pass = $('ai_pass').value;
   const cur = $('ai_passcur').value;

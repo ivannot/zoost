@@ -8,7 +8,7 @@ then layers navigation, diagrams, search, which functions read and write each mo
 audit that states its own blind spots, exports
 and an optional AI
 assistant on top of that mirror. None of them calls a Zoho endpoint that changes anything - the
-one POST either makes computes an ER model and is named on the nerd page. Everything runs in
+one POST it makes computes an ER model and is named on the nerd page. Everything runs in
 your browser.
 
 | | What it mirrors | |

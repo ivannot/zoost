@@ -24,8 +24,8 @@ NODEOUT=$(mktemp)
 trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
 # What must still run. They move in one direction: a fall is a finding, a rise is a line to
 # change in the same commit as the cases that caused it.
-NODE_FLOOR=918
-PY_FLOOR=393
+NODE_FLOOR=922
+PY_FLOOR=395
 cd "$(dirname "$0")/.."
 
 # The machine that runs this is not the machine the extensions are loaded on: Chrome there reads

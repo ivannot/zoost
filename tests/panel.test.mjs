@@ -11527,6 +11527,48 @@ test('every script the panels load evaluates on its own', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// The spinner over a heavy layout says what it is laying out.
+//
+// It said «Laying out 200 NOUN().n…» - the source expression, as text, in front of the reader. I put
+// it there myself, rewriting the function to take a callback out again, and nothing noticed: the
+// browser probe's fixtures are all under the threshold that enters this branch, so the only path
+// that builds that string is never taken, and the `runHeavy` unit case passes its own label in.
+//
+// Driven at the threshold and one below it, so both the entry and the non-entry are asserted.
+test('the layout spinner names what it is laying out, in both products', () => {
+  for (const [app, noun] of [['crm', /function|module/i], ['analytics', /table/i]]) {
+    const file = `apps/${app}/graphview.js`;
+    for (const [n, heavy] of [[200, true], [199, false]]) {
+      let label = null, rafs = 0;
+      const g = {
+        console, Set, Object,
+        SPIN_NODES: 200, erLaidOut: false,
+        erVisibleIds: () => Array.from({ length: n }, (_, i) => `id${i}`),
+        erShow: () => {},
+        NOUN: () => ({ n: app === 'crm' ? 'functions' : 'tables' }),
+        $: () => ({}),
+        runHeavy: (el, text) => { label = text; },
+        requestAnimationFrame: () => { rafs += 1; },
+      };
+      const { erShowMaybeHeavy } = load([sliceFn(file, 'erShowMaybeHeavy')], g);
+      erShowMaybeHeavy();
+      if (!heavy) {
+        assert.equal(label, null, `${app}: a ${n}-box layout flashed a spinner it does not need`);
+        assert.equal(rafs, 1, `${app}: a light layout did not draw`);
+        continue;
+      }
+      // If nothing was captured the harness is what is broken, not the product.
+      assert.ok(label, `${app}: a ${n}-box layout entered no heavy path - the threshold moved and this `
+                       + 'case is measuring nothing');
+      assert.ok(label.includes(String(n)), `${app}: the spinner does not say how many: «${label}»`);
+      assert.match(label, noun, `${app}: the spinner does not name what it is laying out: «${label}»`);
+      assert.ok(!/\$\{|\bNOUN\b|\(\)\./.test(label),
+                `${app}: the spinner shows a piece of the source: «${label}»`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // Every paginated walk in a bridge can say it stopped early.
 //
 // The panel's guards against a partial list are covered from several directions - «nothing deletes on
