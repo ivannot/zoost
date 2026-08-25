@@ -315,7 +315,12 @@ async function pullConnections() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling connections…', 'busy');
     const r = await toBridge({ cmd: 'pullConnections' });
-    if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
+    // **Through the shared path, so what the bridge said about *why* survives.** This wrote the
+    // message straight onto the status line, which threw away `r.diag` - the cookie the token came
+    // from, its shape, the cookies the page had - and, because `setStatus` hides the emergency
+    // button, took away the way to report it. `pullConnections` is the only call in the product that
+    // can produce that diagnostic, so «it is carried» and «nothing carries it» were the same thing.
+    if (!r?.ok) { await notePullFailure('connections', bridgeError(r, 'connections pull failed'), op); return; }
     if (!op.current()) return;   // you changed workspace while this was reading
     await op.write('connections/index.json', JSON.stringify(r.connections || [], null, 2));
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do

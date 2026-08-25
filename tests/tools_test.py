@@ -6002,9 +6002,13 @@ class NobodyParksACase(unittest.TestCase):
     """
 
     def test_no_python_case_is_parked_in_the_source(self):
+        # `skipIf`, `skipUnless` and `expectedFailure` too: `(skip|expectedFailure)\b` cannot match
+        # `skipIf`, because there is no word boundary between `skip` and `If` - so
+        # `@unittest.skipIf(True, 'parked while I look at something else')` walked straight past the
+        # rule written to stop exactly that. A decorator is a park whatever it is called.
         for f in sorted((ROOT / 'tests').glob('*.py')):
             src = f.read_text(encoding='utf-8')
-            for m in re.finditer(r'(?m)^\s*@unittest\.(skip|expectedFailure)\b.*$', src):
+            for m in re.finditer(r'(?m)^\s*@unittest\.(?:skip\w*|expectedFailure)\b.*$', src):
                 line = src[:m.start()].count('\n') + 1
                 self.fail(f'{f.name}:{line} parks a case in the source: {m.group(0).strip()[:70]}. '
                           f'It is counted as run by tests/run.sh and executed by nothing. An '
@@ -6013,10 +6017,20 @@ class NobodyParksACase(unittest.TestCase):
     def test_no_node_case_is_parked_in_the_source(self):
         for f in sorted((ROOT / 'tests').glob('*.test.mjs')):
             src = f.read_text(encoding='utf-8')
-            for m in re.finditer(r'(?m)^\s*(?:test|it)\([^\n]*\{\s*(skip|todo)\s*:', src):
+            # **`test.todo` is the one that hurt.** It runs the case, lets it *fail*, counts it in
+            # `tests N`, reports zero failures and zero skipped, and exits 0 - so a broken product
+            # with the whole battery green. `test.skip` and `it.skip` do the same to the count. And
+            # the options object is matched wherever it sits, because `{ skip: … }` written on its
+            # own line was invisible to a pattern that wanted it on the first one.
+            for m in re.finditer(r'(?m)^\s*(?:test|it)(?:\.(?:skip|todo|only))?\(', src):
+                head = src[m.start():m.start() + 400]
+                if not re.match(r'^\s*(?:test|it)\.(?:skip|todo|only)\(', head) \
+                        and not re.search(r'\{[^}]*\b(?:skip|todo|only)\s*:', head):
+                    continue
                 line = src[:m.start()].count('\n') + 1
-                self.fail(f'{f.name}:{line} parks a case: {m.group(0).strip()[:70]}. Node counts it in '
-                          f'«tests N», so the exact number in tests/run.sh cannot notice it.')
+                self.fail(f'{f.name}:{line} parks a case: {head.splitlines()[0].strip()[:70]}. Node '
+                          f'counts it in «tests N» - and `todo` also runs it, lets it fail and still '
+                          f'exits 0 - so the exact number in tests/run.sh cannot notice it.')
 
     def test_every_runtime_skip_says_why(self):
         # The other half: a gate with no reason is indistinguishable from a park, in the one place a

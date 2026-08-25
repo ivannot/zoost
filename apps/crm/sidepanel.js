@@ -716,6 +716,9 @@ async function notePullFailure(area, e, op) {
   // verdict belongs to the folder we left and cannot be written to it, and the sentence would name
   // an area of an org the reader is no longer looking at. It stops, quietly.
   if (op && !op.current()) return;
+  // What a report opened from here will be about. Handled failures never reached `lastThrown`,
+  // and this is the only place they can.
+  noteThrown(e);
   await noteAccess(area, e, op);
   setStatus(pullFailMessage(area, e), 'bad');
   // A role refusal is not a platform change and no release will fix it, so the pointer would be
@@ -840,7 +843,7 @@ function showAbout() {
     // twin's wording is the one that survived that argument, so this is the twin's wording with this
     // product's own nouns - and both now name the report page, which neither did.
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
-    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and their Deluge source, module and field names including the values inside a picklist, workflow and schedule names, what an automation action does - the field it writes and the value, the email template it sends, a webhook's method and host - the name Zoho records as having last changed a function or a connection and when, connection names with their connectors and scopes, and what Zoho reports about failed runs - are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and their Deluge source, module and field names including the values inside a picklist, workflow and schedule names, what an automation action does - the field it writes and the value, the fields a task fills in, the email template it sends, a webhook's method and host - the name Zoho records as having last changed a function or a connection and when, connection names with their connectors and scopes, and what Zoho reports about failed runs - are sent directly from your browser to the provider you configured, and to no one else. `
     + `Records are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine, except a problem report you write, read in full and send yourself. `
     + `Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
   $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
@@ -5907,7 +5910,13 @@ function reportFacts(err, ai) {
 // to hand - and without this the report was *only* the status buffer, which is the half that has to
 // be redacted hardest and the half that says least. Two listeners, no call-site changes: an uncaught
 // error and a rejected promise are exactly the failures worth a stack.
+// **The error the report describes, and it used to be only the ones nobody caught.** `lastThrown` was
+// written by `error` and `unhandledrejection` alone, so every failure this panel *handles* - which is
+// all of them, that is what `notePullFailure` is for - was invisible to the report. The one failure
+// that carries a diagnostic worth having, a refused deluge call, is handled by definition: being
+// handled is why the report button appears at all.
 let lastThrown = null;
+function noteThrown(e) { if (e instanceof Error) lastThrown = e; }
 window.addEventListener('error', (e) => { if (e && e.error) lastThrown = e.error; });
 window.addEventListener('unhandledrejection', (e) => { if (e && e.reason instanceof Error) lastThrown = e.reason; });
 let reportText = '';

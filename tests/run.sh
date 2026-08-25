@@ -80,6 +80,16 @@ NODE_RAN=$(sed -nE 's/^[^0-9]*tests ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
 NODE_SKIPPED=$(sed -nE 's/^[^0-9]*skipped ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
 [ "${NODE_SKIPPED:-0}" -eq 0 ] && echo "  no node case is skipped." \
   || echo "  ${NODE_SKIPPED} node case(s) skipped - they are inside the count above, so it cannot notice them."
+# **`todo` is worse than `skip` and had no line at all.** A case marked todo still *runs*, is allowed
+# to *fail*, is counted in `tests N`, and the runner exits 0 - so a broken product passes the whole
+# battery in silence. Demonstrated: `statLinks` made to answer with the org's total and its case
+# marked todo, everything green. Refused outright: there is no environment that makes a case todo.
+NODE_TODO=$(sed -nE 's/^[^0-9]*todo ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
+[ "${NODE_TODO:-0}" -eq 0 ] || {
+  echo "  ${NODE_TODO} node case(s) are marked todo. A todo case runs, is allowed to fail, and the" >&2
+  echo "  runner still exits 0 - which is a broken product with a green battery." >&2
+  exit 1
+}
 
 [ "${NODE_RAN:-0}" -eq "$NODE_EXPECTED" ] || {
   if [ "${NODE_RAN:-0}" -lt "$NODE_EXPECTED" ]; then
@@ -110,7 +120,16 @@ PY_RAN=$(sed -nE 's/^Ran ([0-9]+) tests?.*/\1/p' "$PYOUT" | tail -1)
 # Same on this side, and this is where the lesson arrived: two cases skip on GitHub's runner - no
 # Chrome, a shallow clone - and refusing them turned a correct run red. Said, so the number above is
 # read knowing what is inside it.
-PY_SKIPPED=$(sed -nE 's/^OK \(skipped=([0-9]+)\)$/\1/p' "$PYOUT" | tail -1)
+# Any «OK (…)» tail, not only a bare `skipped=N`: a run with an expected failure prints
+# `OK (skipped=1, expected failures=1)` and the exact pattern matched nothing at all, so the script
+# said «no python case is skipped» over a run that had skipped one.
+PY_SKIPPED=$(sed -nE 's/^OK \(.*skipped=([0-9]+).*\)$/\1/p' "$PYOUT" | tail -1)
+PY_XFAIL=$(sed -nE 's/^OK \(.*expected failures=([0-9]+).*\)$/\1/p' "$PYOUT" | tail -1)
+[ "${PY_XFAIL:-0}" -eq 0 ] || {
+  echo "  ${PY_XFAIL} python case(s) are expected failures - a case allowed to fail is a case not" >&2
+  echo "  holding anything, and «Ran ${PY_RAN}» counts it as run." >&2
+  exit 1
+}
 [ "${PY_SKIPPED:-0}" -eq 0 ] && echo "  no python case is skipped." \
   || echo "  ${PY_SKIPPED} python case(s) skipped - «Ran ${PY_RAN}» counts them; the reasons are in the file."
 

@@ -498,7 +498,7 @@ let scope = Object.assign({}, SCOPE_DEFAULT);
 // because a newer one will». `invalidateSectionLoads` broke that contract - it cancels a read with
 // nothing queued behind it - so an edit made while the page is still starting up leaves the form
 // showing the markup's own empty state, and Save writes that over the reader's preference.
-let scopeLoadFailed = true;
+let scopeLoadFailed = 'never';
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!scope[k]; });
   $('sc_code').disabled = !scope.functions;
@@ -525,7 +525,7 @@ async function loadScope() {
     if (!current()) return;
     if (r.exportScope) scope = Object.assign({}, SCOPE_DEFAULT, r.exportScope);
     scopeLoadFailed = false;
-  } catch (_) { if (current()) scopeLoadFailed = true; }
+  } catch (_) { if (current()) scopeLoadFailed = 'failed'; }
   if (!current()) return;
   scopeToUI();
 }
@@ -552,7 +552,7 @@ $('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scop
 $('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); markDirty('exportScope'); };
 async function onSaveScope() {
   // Nothing is written over a preference this page never managed to read.
-  if (scopeLoadFailed) { toast('The stored defaults could not be read, so nothing was saved - reload this page.', true); return; }
+  if (scopeLoadFailed) { toast(loadState(scopeLoadFailed), true); return; }
   scopeFromUI();
   // Stamped, like every other writer of this preference. Without it the panel reads what this page
   // saved as a scope from before the source-code default changed, applies its one-shot migration and
@@ -669,7 +669,7 @@ const TAB_DEFS = window.ZOOST_TABS;   // one registry, in tabs.js - see the note
 const TAB_IDS = TAB_DEFS.map((t) => t.id);
 // True until a read succeeds, so a page that never learnt the stored order cannot write the
 // built-in one over it - the same flag, and the same reason, as the export defaults above.
-let tabsLoadFailed = true;
+let tabsLoadFailed = 'never';
 let tabOrderCur = TAB_IDS.slice();
 let tabHiddenCur = [];
 let tabNoPullCur = [];
@@ -762,12 +762,12 @@ async function loadTabs() {
     }
     if (st && st.tabAccessView) tabAccessCur = st.tabAccessView;
     tabsLoadFailed = false;
-  } catch (_) { if (current()) tabsLoadFailed = true; }
+  } catch (_) { if (current()) tabsLoadFailed = 'failed'; }
   renderTabs();
 }
 async function onSaveTabs() {
   // Nothing is written over an order this page never managed to read.
-  if (tabsLoadFailed) { toast(MSG.readFailed, true); return; }
+  if (tabsLoadFailed) { toast(loadState(tabsLoadFailed), true); return; }
   if (!await saveKeys({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } })) return;
   await stamp();
   toast('Tabs saved.');
@@ -855,10 +855,10 @@ let rxCur = [];
 // A read that threw is not an empty list: rendering the two the same would let Save write [] over
 // a list that still exists - absent data authorising a destructive act, the exact class the pull
 // already refuses. The flag gates the save and names the state instead.
-let rxLoadFailed = true;
+let rxLoadFailed = 'never';
 function renderRx() {
   if (rxLoadFailed) {
-    $('rxlist').innerHTML = '<p class="sub"><b>The stored list could not be read.</b> Nothing is shown and nothing can be saved over it - reload this page to try again.</p>';
+    $('rxlist').innerHTML = `<p class="sub"><b>Nothing is shown here, and nothing can be saved over it.</b> ${escA(loadState(rxLoadFailed))}</p>`;
     $('rxRestore').style.display = 'none';
     return;
   }
@@ -901,7 +901,7 @@ async function loadRx() {
       ? st.rxShortcuts.map((x) => ({ name: String((x && x.name) || ''), pattern: String((x && x.pattern) || '') }))
       : [];
     rxLoadFailed = false;
-  } catch (_) { if (!current()) return; rxCur = []; rxLoadFailed = true; }
+  } catch (_) { if (!current()) return; rxCur = []; rxLoadFailed = 'failed'; }
   renderRx();
 }
 $('rxAdd').onclick = () => { rxCur.push({ name: '', pattern: '' }); renderRx(); markDirty('rxShortcuts'); };
@@ -952,6 +952,34 @@ function wasOwn(key) {
   if (t && Date.now() - t < 3000) { ownWrite.delete(key); return true; }
   return false;
 }
+// Which flag belongs to which section, so a cancellation lands on the one the reader was in.
+const LOAD_FLAG = {
+  exportScope: (v) => { scopeLoadFailed = v; },
+  tabPrefs: (v) => { tabsLoadFailed = v; },
+  tabAccessView: (v) => { tabsLoadFailed = v; },
+  rxShortcuts: (v) => { rxLoadFailed = v; },
+};
+function markLoadCancelled(key) {
+  const set = LOAD_FLAG[key];
+  if (set) set('cancelled');
+}
+/** Why a section cannot be saved over, in the reader's words.
+ *
+ * **Three answers, not two, because a read can now be cancelled.** These flags were booleans - «did a
+ * read fail» - and `invalidateSectionLoads` created a third outcome: a read that completed and was
+ * thrown away because the reader typed while it was in flight. Left as «failed» it said the browser
+ * had refused, which had not happened, and nothing ever re-read - so the section was unsaveable for
+ * the rest of that page's life with the wrong cause on screen. The window is a click during
+ * `init()`, which is the one moment somebody impatient is most likely to click.
+ */
+function loadState(flag) {
+  if (!flag) return null;
+  if (flag === 'cancelled') return 'This page was still loading when you changed something, so what is '
+    + 'on screen is not what is stored. Reload the page, then make the change again.';
+  if (flag === 'never') return 'This page never finished reading your stored settings, so nothing was '
+    + 'saved. Reload the page.';
+  return MSG.readFailed;
+}
 /** A reader's edit is newer than every read already in flight for that section.
  *
  * `beginLoad` tells one loader from a later loader, and `otherWindowChanged` asks whether the
@@ -976,6 +1004,9 @@ function invalidateSectionLoads(key) {
   for (const [peer, sec] of Object.entries(SECTIONS)) {
     if (sec.reload === mine) _loadSeq[peer] = (_loadSeq[peer] || 0) + 1;
   }
+  // The read that was in flight is now nobody's: it will not publish, and nothing is queued to take
+  // its place. Recorded as what it is, so the refusal afterwards names the cause that happened.
+  markLoadCancelled(key);
 }
 function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); }
 

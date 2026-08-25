@@ -289,11 +289,17 @@
     // is what puts that back.
     _pageCsrf = null;
     if (await pageCsrfToken()) return true;
+    // **And the old primer's 200 is not a refresh.** `pageCsrfToken` answers null on four paths - no
+    // instance, a refused read, a body with no `csrfToken`, a network throw - and this then fell
+    // through to the call that makes an ordinary CRM request and hopes. Its `r.ok` means «the primer
+    // got a reply», which was being read as «a token was fetched», so the retry re-sent the same
+    // cookie and the reader was told it had been refused after a refresh. That is the false
+    // diagnostic this whole branch exists to end, surviving in the half the first fix did not cover.
     try {
-      const r = await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
+      await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
         { headers: headers(), credentials: 'include' });
-      return r.ok;
-    } catch (_) { return false; }
+    } catch (_) { /* the side effect is the point; its own answer says nothing about the token */ }
+    return false;
   }
   // «Zoho said none» and «Zoho answered something this code does not recognise» are two different
   // facts, and `(resp.workflow_rules || [])` turned the second into the first: a response whose shape

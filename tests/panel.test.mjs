@@ -196,7 +196,7 @@ test('an automation action is projected for the provider, not handed over whole'
 
   const NAMED = new Set(['kind', 'name', 'module', 'module_label', 'associated', 'field', 'field_label',
                          'field_type', 'value', 'value_kind', 'method', 'url', 'from_type', 'from_name',
-                         'from_address', 'template', 'notify']);
+                         'from_address', 'template', 'notify', 'mappings']);
   const secret = fields.filter((f) => !NAMED.has(f));
   assert.ok(secret.includes('created_by') && secret.includes('modified_by'),
             `the two person-carrying fields are not in the unnamed set (${secret.join(', ')}) - this case `
@@ -3760,12 +3760,18 @@ test('a failed pull records and reports through one helper', () => {
     'a pull failure still records and reports by hand - call notePullFailure(area, e)');
   assert.ok(/async function notePullFailure\(area, e, op\)/.test(src), 'the CRM lost notePullFailure()');
   // The op reaches the record, or a refusal in one org is written into another org's `.zoost.json`.
-  assert.equal((src.match(/await notePullFailure\('\w+', e, op\)/g) || []).length,
+  // The property is «the op reaches the record», not «the error is spelled `e`»: the connections
+  // pull hands it `bridgeError(r, …)` in place, because that is where a bridge reply becomes an
+  // Error, and the first spelling of this counted that as a call with no workspace.
+  assert.equal((src.match(/await notePullFailure\('\w+',[\s\S]*?, op\)/g) || []).length,
                (src.match(/await notePullFailure\(/g) || []).length,
                'a pull reports its failure without saying which workspace it belonged to');
-  // Eight since the automation actions joined: every pull is one of these, and a new one that
-  // forgot the helper would show up here as a count that did not move.
-  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 8,
+  // Nine since the connections pull joined them. It reported by hand - straight onto the status
+  // line - which threw away what the bridge had said about *why* and, because `setStatus` hides the
+  // emergency button, took away the way to report it: the one failure in the product that carries a
+  // diagnostic was the one that could not be reported. Every pull is one of these, and a new one
+  // that forgot the helper shows up here as a count that did not move.
+  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 9,
     'a pull failure site stopped going through notePullFailure()');
   // the helper must keep the order: the verdict is on disk before the sentence is on screen
   const body = src.slice(src.indexOf('async function notePullFailure'), src.indexOf('\n}', src.indexOf('async function notePullFailure')));
@@ -3915,7 +3921,11 @@ test('notePullFailure() records the verdict before it says anything', async () =
   // next pull skips on and what Settings explains. Reporting first and failing to record would leave
   // a tab that vanished with nothing behind it saying why.
   const order = [];
-  const { notePullFailure } = load([sliceFn('apps/crm/sidepanel.js', 'notePullFailure')], {
+  // `noteThrown` too: a handled failure is the only kind this panel has, and it is where one becomes
+  // the error a problem report describes. Stubbing it would hide whether that still happens.
+  const { notePullFailure } = load([sliceConst('apps/crm/sidepanel.js', 'lastThrown'),
+                                    sliceFn('apps/crm/sidepanel.js', 'noteThrown'),
+                                    sliceFn('apps/crm/sidepanel.js', 'notePullFailure')], {
     noteAccess: async (a, e) => { await null; order.push(['noteAccess', a, e.message]); },
     pullFailMessage: (a, e) => `${a} pull error: ${e.message}`,
     setStatus: (t, c) => order.push(['setStatus', t, c]),
@@ -3952,7 +3962,11 @@ test('a role refusal does not point at /emergency', async () => {
   // to a page that cannot help, which is the «wrong missing thing» this project already has a rule
   // about. Every other failure is «Zoho did not answer the way this expects», and that is its case.
   const seen = [];
-  const { notePullFailure } = load([sliceFn('apps/crm/sidepanel.js', 'notePullFailure')], {
+  // `noteThrown` too: a handled failure is the only kind this panel has, and it is where one becomes
+  // the error a problem report describes. Stubbing it would hide whether that still happens.
+  const { notePullFailure } = load([sliceConst('apps/crm/sidepanel.js', 'lastThrown'),
+                                    sliceFn('apps/crm/sidepanel.js', 'noteThrown'),
+                                    sliceFn('apps/crm/sidepanel.js', 'notePullFailure')], {
     noteAccess: async () => { await null; },
     pullFailMessage: () => 'refused',
     setStatus: () => {},
@@ -5241,7 +5255,10 @@ for (const app of ['crm', 'analytics']) {
       assert.ok(/catch \(_\) \{ return null; \}/.test(panel),
         'why=' + app + ' panel turns a failed storage read into \u00abno saved patterns\u00bb');
       const opts = read(`apps/${app}/options.js`);
-      assert.ok(/let rxLoadFailed = true;/.test(opts),
+      // «never», not `true`: the flag holds *why* now, because a read that the reader cancelled by
+      // typing is neither «read» nor «the browser refused», and saying the wrong one of those left
+      // the section unsaveable with a cause that had not happened.
+      assert.ok(/let rxLoadFailed = 'never';/.test(opts),
         'why=' + app + ' options can save over a list that was never read');
       assert.ok(/if \(rxLoadFailed\)/.test(handlerOf(`apps/${app}/options.js`, 'saveRx')),
         'why=' + app + ' Save does not ask whether the load succeeded');
@@ -7873,7 +7890,11 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       'the action detail': /actKept\(a\) \|\| \(!\(a\.mappings \|\| \[\]\)\.length/,
       'the HTML export': /a\.kind === 'tasks' && actKept\(a\) \? esc\(KEPT_DETAIL\)/,
       'the Markdown export': /a\.kind === 'tasks' && actKept\(a\) \? KEPT_DETAIL/,
-      'the assistant': /a\.kind === 'tasks' && actKept\(a\) \? ` - \$\{KEPT_DETAIL\}`/,
+      // The assistant says it in its own words rather than by reusing the panel's constant: that
+      // sentence ends «the field mappings **below**», which is true in the detail pane and false in
+      // a JSON block and in a one-line entry, neither of which has a below. Held on the fact -
+      // «what is listed came from an earlier reading» - not on the spelling.
+      'the assistant': /actKept\(a\)[^\n]*what is listed is what the last pull that could read it saw/,
     })) assert.ok(re.test(panel), `${what} shows inherited mappings as if this pull had read them`);
   });
 
@@ -12260,11 +12281,32 @@ test('a refused token reaches the problem report as facts, not as prose', () => 
   const REL = 'apps/crm/sidepanel.js';
   const m = load([sliceFn(REL, 'redact'), sliceFn(REL, 'redactHard'), sliceFn(REL, 'buildReport')],
                  { String, Object, Number });
+
+  // And the one call that can produce a diagnostic goes through the helper that records it - the
+  // property the fixture above cannot show, because a fixture is not a call site.
+  const auto = read('apps/crm/automation.js');
+  assert.match(auto, /cmd: 'pullConnections' \}\);[\s\S]{0,900}?notePullFailure\(/,
+               'the connections pull reports by hand again, so `diag` is dropped at the one place it '
+               + 'exists and the emergency button is hidden by the same call');
+  // **The diagnostic is produced by the product here, not typed into the fixture.** A fixture that
+  // carries `diag` already can pass while nothing in the product can make one - and that was the
+  // state: the only call that produces one reported by hand onto the status line, so `bridgeError`
+  // was never reached, `lastThrown` never written, and the report button hidden by the same call.
+  // «It is carried» and «nothing carries it» were the same thing.
+  const bridgeReply = { ok: false, error: '400 - INVALID_CSRF_TOKEN', status: 400,
+                        diag: { what: 'csrf', from: 'CT_CSRF_TOKEN (fallback)', shape: "128 chars, no '='",
+                                cookies: ['CT_CSRF_TOKEN', 'crmcsr', 'iamcsr'] } };
+  const made = load([sliceFn(REL, 'bridgeError')], { Error, MSG: { staleBridge: 'stale' } });
+  const err = made.bridgeError(bridgeReply, 'connections pull failed');
+  assert.ok(err.diag, 'bridgeError drops what the bridge said about why, so no report can carry it');
+
+  const seen = load([sliceConst(REL, 'lastThrown'), sliceFn(REL, 'noteThrown')], { Error });
+  seen.noteThrown(err);
+
   const facts = { product: 'Zoost', version: '1.0.0', browser: 'Chrome 151', tab: 'functions',
                   search: 'names', counts: {}, refused: [], steps: [],
-                  message: "400 - INVALID_CSRF_TOKEN - the token was read from CT_CSRF_TOKEN (128 chars, no '=')",
-                  diag: { what: 'csrf', from: 'CT_CSRF_TOKEN (fallback)', shape: "128 chars, no '='",
-                          cookies: ['CT_CSRF_TOKEN', 'crmcsr', 'iamcsr'] } };
+                  message: err.message,
+                  diag: err.diag };
   const out = m.buildReport(facts);
 
   // The prose half is destroyed, and that is correct - this asserts it, so nobody restores the
@@ -12757,13 +12799,17 @@ test('a cancelled read leaves the page saying it has not read', async () => {
     const rel = `apps/${app}/options.js`;
     const src = read(rel);
 
-    const flags = [...src.matchAll(/^let (\w*LoadFailed) = (\w+);/gm)];
+    // **Three answers, not two.** These were booleans, and a read that is *cancelled* - the reader
+    // typed while it was in flight - is neither «read» nor «the browser refused». Left as failed it
+    // named a cause that had not happened, and nothing re-reads, so the section stayed unsaveable
+    // for the life of the page with the wrong sentence on it.
+    const flags = [...src.matchAll(/^let (\w*LoadFailed) = ('?\w+'?);/gm)];
     assert.ok(flags.length, `${app}: no *LoadFailed flag declared - this case has lost its subject`);
     for (const [, name, init] of flags) {
-      assert.equal(init, 'true',
-                   `${app}: ${name} starts ${init}, so the page claims to have read the stored value `
-                   + 'before it has read anything. A read can now be cancelled with nothing queued to '
-                   + 'replace it, and then Save writes the built-in defaults over the reader\u0027s.');
+      assert.equal(init, "'never'",
+                   `${app}: ${name} starts ${init}. Until a read publishes, the page has not read the `
+                   + 'stored value, and «never» is what says so - a boolean cannot tell that from a '
+                   + 'read the reader cancelled, and the two need different sentences.');
     }
 
     // Every loader draws only while it is current. The check is the *last* thing each one does:
@@ -12808,7 +12854,11 @@ test('typing during a reload keeps what was typed, and says the two have parted'
               loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
               loadRx: async () => {}, loadLay: async () => {},
               chrome: { storage: { local: { get: async () => { await held; return { tabPrefs: { order: ['modules'], hidden: [] } }; } } } } };
+  // `markLoadCancelled` too: a cancelled read records *why* it did not publish, and the refusal a
+  // Save gives afterwards is built from that. Stubbing it would answer for the thing under test one
+  // function over.
   const m = load([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'), sliceConst(rel, 'SECTIONS'),
+                  sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'markLoadCancelled'),
                   sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'invalidateSectionLoads'),
                   sliceFn(rel, 'markDirty'), sliceFn(rel, 'loadTabs'),
                   sliceFn(rel, 'otherWindowChanged')], g);

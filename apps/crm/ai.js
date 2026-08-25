@@ -239,6 +239,16 @@ function aiModuleText(m) {
   // will reason about why a module has none, and the answer is that nobody was ever allowed to look.
   const ref = moduleRefusal(m.unreadable);
   if (ref) return `Module ${m.api_name}\nNOT DESCRIBED BY ZOHO. ${ref.text}\nDo not infer its fields, layouts or relations from anywhere else - they were never read.\n`;
+  // **Two states, not one.** The refusal above is the 4xx - Zoho answering «no» - and the branch was
+  // written as though that were the only way a module can arrive without fields. It is not: a 5xx or
+  // a dropped connection leaves `fields_read: false` with no refusal, and with nothing on disk to
+  // keep the module is written as an empty shell. This then handed the model an empty table, and its
+  // own comment two lines up says what happens next: an assistant given a module with no fields will
+  // explain why a module has none, and the answer is that nobody managed to look.
+  if (m.fields_read === false) {
+    return `Module ${m.api_name}\nFIELDS NOT READ. The last pull could not read this module's fields - `
+      + `Zoho did not refuse, the read failed - so nothing here says what it has. Do not infer them.\n`;
+  }
   let s = `Module ${m.api_name}\n| Field | API name | Type | Lookup | Picklist |\n`;
   (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${_pick(f.picklist, 15, (x) => x)} |\n`; });
   return s;
@@ -283,7 +293,8 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   // above draws for a module Zoho itself refused.
   const modBad = mods._unreadable ? ` - ${mods._unreadable} file(s) in the workspace could not be read`
     : '';
-  const modules = `\n## Modules (${mk.length}${modBad})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
+  const modules = `\n## Modules (${mk.length}${modBad})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]'
+      : (mods[k] && mods[k].fields_read === false) ? ' [fields not read by the last pull - not «it has none»]' : '')).join('\n') + '\n';
 
   const conns = await aiLoadConnections(op);
   const connections = conns.length
@@ -436,9 +447,18 @@ function moduleRowForModel(m) {
     custom: !!m.custom,
     unreadable: !!m.unreadable,
     viewable: !!m.viewable,
-    // `null`, never `0`: a row that never carried the count is not a module with no fields.
-    field_count: m.fieldCount === undefined ? null : m.fieldCount,
-    lookup_count: m.lookupCount === undefined ? null : m.lookupCount,
+    // **`null`, never `0`** - and the `undefined` this used to test was the wrong question. It was
+    // written for the module *file*, where the key can be absent; the row this is handed always
+    // carries a number, because the row builder writes `(m.fields || []).length`. So a module whose
+    // fields Zoho failed to return - a 5xx, a dropped connection, nothing on disk to keep - is
+    // written as an empty shell with `fields_read: false` and no `unreadable`, and reached the
+    // provider as «zero fields, zero lookups», flatly. «Unknown shown as a zero», in the same
+    // function it was already fixed in once.
+    //
+    // The row carries the pull's own answer now, and this asks that instead of asking a shape.
+    fields_read: m.fieldsRead !== false,
+    field_count: m.fieldsRead === false ? null : (m.fieldCount === undefined ? null : m.fieldCount),
+    lookup_count: m.fieldsRead === false ? null : (m.lookupCount === undefined ? null : m.lookupCount),
     layout_count: (m.layouts || []).length,
   };
 }
@@ -488,7 +508,18 @@ function actionForModel(a, fired, addresses) {
   }
   if (a.kind === 'tasks') {
     out.notify = !!a.notify;
-    if (actKept(a)) out.detail = KEPT_DETAIL;
+    // **What the task actually creates.** `mappings` - subject, due date, owner, priority, status -
+    // is on the row, drawn in the panel and in both exports, and reached no AI surface at all: a
+    // reader could select a task action, ask what it does, and be answered about nothing while the
+    // sibling kind one branch up sends the field it writes and the value. One of a set treated
+    // differently, and no tool could recover it. Section 4.2 covers it under what an automation
+    // action does, which is the same sentence that carries a field update's value.
+    out.creates = (Array.isArray(a.mappings) ? a.mappings : [])
+      .map((x) => ({ field: (x && (x.field || x.api_name)) || '', value: x && x.value }));
+    // The two sentences are the panel's, and one of them says «the field mappings **below**», which
+    // is true in the detail pane and false in a JSON block that has no below. Said here in the words
+    // that are true here.
+    if (actKept(a)) out.detail = 'Zoho did not answer for this one when it was pulled - what «creates» holds is what the last pull that could read it saw';
     else if (actThin(a)) out.detail = MISS_DETAIL;
   }
   return out;
@@ -814,7 +845,9 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
         : a.kind === 'email_notifications'
           ? ` template ${(a.template && a.template.name) || '?'}${acts.addresses && a.from_address ? ', from ' + a.from_address : a.from_type ? ', from ' + (a.from_type === 'user' ? 'a user address' : 'an organisation address') : ''}`
           : a.kind === 'webhooks' ? ` ${a.method || ''} ${webhookForModel(a.url)}`
-          : a.kind === 'tasks' && actKept(a) ? ` - ${KEPT_DETAIL}`
+          : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}`
+          : a.kind === 'tasks' ? `${(a.mappings || []).length ? ' creates ' + (a.mappings || []).map((x) => `${x.field || x.api_name || '?'} <- ${x.value === undefined ? '' : x.value}`).join(', ') : ''}`
+            + (actKept(a) ? ' - Zoho did not answer for this one when it was pulled; what is listed is what the last pull that could read it saw' : '')
           : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}` : '';
       return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;
     });
