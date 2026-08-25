@@ -19,6 +19,8 @@
 #     (see slice.mjs), which proves the logic and not the wiring. A correct function called from the
 #     wrong place still passes here.
 set -euo pipefail
+PYOUT=$(mktemp)
+trap 'rm -f "$PYOUT"' EXIT
 cd "$(dirname "$0")/.."
 
 # The machine that runs this is not the machine the extensions are loaded on: Chrome there reads
@@ -49,7 +51,18 @@ node --test --test-reporter=spec tests/*.test.mjs
 
 echo
 echo "── unit: python ──"
-python3 tests/tools_test.py 2>&1 | tail -3
+# **The lines that say what happened, not the last three whatever they are.** `tail -3` was written
+# when unittest's summary *was* the tail; work printed by the cases themselves - the store fields
+# measuring their own ceilings - then arrived after it, and «Ran 391 tests / OK» fell off the bottom.
+# A red run still fails the suite, so this was never a correctness hole; it is the one where a count
+# nobody can see is a count nobody compares, which is how six cases that never ran said OK.
+#
+# So: the verdict and the count, then whatever the cases wanted to say, and nothing chosen by
+# position. If unittest's summary ever stops being printed, `grep -c` finds nothing and this prints
+# a line saying the report is missing rather than saying nothing at all.
+python3 tests/tools_test.py > "$PYOUT" 2>&1 || { cat "$PYOUT"; exit 1; }
+grep -E '^(Ran [0-9]+ tests?|OK|FAILED)' "$PYOUT" || echo "  (tests/tools_test.py printed no summary - it did not run to the end)"
+grep -vE '^(Ran [0-9]+ tests?|OK|FAILED|-+$|\.*$|$)' "$PYOUT" | tail -5
 
 echo
 echo "── driven in a browser ──"

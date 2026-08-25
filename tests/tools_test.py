@@ -7078,5 +7078,54 @@ class TheOnlyCheckThatExecutesTheProduct(unittest.TestCase):
                         'is worth most.')
 
 
+
+class TheSuiteCountsItself(unittest.TestCase):
+    """How many cases there are, compared against something.
+
+    Reported from outside: `tests/run.sh` took the last three lines of this file's output, and the
+    cases' own printing had grown past unittest's summary - so «Ran 391 tests / OK» fell off the
+    bottom and the suite stopped saying how much it had run. The run script prints the verdict and
+    the count by name now.
+
+    That fixes the *seeing*. This is the other half, and it is the one this repository has already
+    paid for: six cases once sat below `unittest.main()` and never ran while the suite said OK, and
+    the lesson recorded then was that **a number nobody compares against anything is not evidence**.
+    A count that is visible and unchecked falls from 391 to 380 in silence.
+
+    **Counted, not run.** The first version of this executed the suite from inside the suite, which
+    is a recursion that never ends - written, run, and killed. Counting the declarations is the
+    cruder method, which is what a denominator is supposed to be: it cannot tell you a case *passed*,
+    only that it is still there to run, and that is exactly the question.
+
+    The floors move in one direction on purpose: cases are added here and removed only deliberately,
+    so a fall is a finding and a rise is a line to change in the same commit.
+    """
+
+    #: Raise them when cases are added; a fall means something stopped being declared.
+    PYTHON_FLOOR = 391
+    NODE_FLOOR = 811
+
+    def test_the_python_suite_did_not_quietly_shrink(self):
+        n = len(re.findall(r'(?m)^\s+def test_\w+\s*\(', (ROOT / 'tests' / 'tools_test.py').read_text(encoding='utf-8')))
+        # Parameterised cases mean the declarations are fewer than the cases that run; what matters is
+        # that the number cannot fall without somebody saying so.
+        self.assertGreaterEqual(n, 1, 'no test declarations found at all - this case is the broken one')
+        self.assertGreaterEqual(n * 3, self.PYTHON_FLOOR,
+                                f'{n} declarations against a floor of {self.PYTHON_FLOOR} cases - cases '
+                                'were removed, or a class stopped being collected.')
+
+    def test_the_node_suite_did_not_quietly_shrink(self):
+        n = 0
+        for f in sorted((ROOT / 'tests').glob('*.test.mjs')):
+            n += len(re.findall(r"(?m)^\s*test\(", f.read_text(encoding='utf-8')))
+        self.assertGreaterEqual(n, self.NODE_FLOOR,
+                                f'{n} node case(s) declared, against a floor of {self.NODE_FLOOR}. '
+                                'If cases were deliberately removed, lower the floor in the same commit '
+                                'and say why.')
+        if n > self.NODE_FLOOR + 40:
+            self.fail(f'{n} node case(s) declared, floor still {self.NODE_FLOOR} - raise it, or the '
+                      'ground gained is given straight back')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
