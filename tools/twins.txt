@@ -133,6 +133,7 @@ hasPerm	b2ad51545bd5	b2ad51545bd5	identical
 hueFor	14a512e6b267	14a512e6b267	identical
 init	95aac20a6c5c	15c9a8e91f96	divergent
 initPositions	523e3eabcde3	523e3eabcde3	identical
+invalidateSectionLoads	d8359b9b9c99	d8359b9b9c99	identical
 isZohoUrl	de8efd3b2761	de8efd3b2761	identical
 jitter	5fedc5f24739	5fedc5f24739	identical
 kindGroups	a1c66b47c0ce	531c4dd794d1	divergent
@@ -148,7 +149,7 @@ loadRxShortcuts	0c1fc69cd664	0c1fc69cd664	identical
 loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
 loadZohoDc	83d8c8288511	83d8c8288511	identical
 loseLock	0da0b6793922	0da0b6793922	identical
-markDirty	e539acbb45b6	e539acbb45b6	identical
+markDirty	666865408d67	666865408d67	identical
 markEngine	073f8c57884a	e2cfadb5389c	divergent
 markEngineOptions	6d0ea3340c88	6d0ea3340c88	identical
 markLine	0f20de90a8ec	0f20de90a8ec	identical
@@ -181,7 +182,7 @@ openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2382b4f61123	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
-otherWindowChanged	443a086335bf	443a086335bf	identical
+otherWindowChanged	b3c64046f555	b3c64046f555	identical
 paintFindMarks	5b967953a498	5b967953a498	identical
 panelInert	bc169e70b382	bc169e70b382	identical
 parseArrangement	f856b10b45f8	f856b10b45f8	identical
@@ -249,7 +250,7 @@ stepSelection	01087cab90ac	060e86ed5417	divergent
 switchTab	147323632e4d	07e791a9cd39	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
-takeTheirs	d909b83865da	d909b83865da	identical
+takeTheirs	86800d889112	86800d889112	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	692c8692eeff	ae1ca2903cfa	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent

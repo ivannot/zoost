@@ -937,7 +937,32 @@ function wasOwn(key) {
   if (t && Date.now() - t < 3000) { ownWrite.delete(key); return true; }
   return false;
 }
-function markDirty(key) { dirty.add(key); }
+/** A reader's edit is newer than every read already in flight for that section.
+ *
+ * `beginLoad` tells one loader from a later loader, and `otherWindowChanged` asks whether the
+ * section is dirty *before* it awaits. Neither covers the third ordering: an external write starts a
+ * read while the form is clean, the reader types, and the read then publishes over what they typed -
+ * measured by holding the read open and typing into it. The page was left saying «unsaved changes»
+ * about a form the changes had already disappeared from, with no conflict box, because the box is
+ * decided before the await too.
+ *
+ * Bumping the sequence is what a later loader does, so an edit does the same thing: the read in
+ * flight stops being current and returns without drawing.
+ *
+ * Every key that shares the reload is bumped, and that half is **belt and braces rather than
+ * load-bearing today** - said, because a check cannot show it. Each reload opens its read under one
+ * key (`loadTabs` under `tabPrefs`, `loadLay` under `erParams`), so bumping the edited key alone
+ * would be enough right now, and a plant that narrows this to one key does not go red. It is written
+ * wide because the pair exists for `dirtyPeer` one function up: the day a reload begins under the
+ * other key of its section, the narrow version is wrong and nothing would have said so.
+ */
+function invalidateSectionLoads(key) {
+  const mine = SECTIONS[key] && SECTIONS[key].reload;
+  for (const [peer, sec] of Object.entries(SECTIONS)) {
+    if (sec.reload === mine) _loadSeq[peer] = (_loadSeq[peer] || 0) + 1;
+  }
+}
+function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); }
 
 /** One key, one write, and every mark that describes the outcome moved by the write that happened.
  *
@@ -1009,7 +1034,13 @@ function conflictBox(key, on) {
 async function takeTheirs(key) {
   dirty.delete(key);
   await SECTIONS[key].reload();
-  conflictBox(key, false);
+  // **The same window, through the other door.** A reader who presses «Take theirs» and then types
+  // while the read is still in flight was having the box closed over a form that had unsaved edits in
+  // it again - and the read itself no longer draws, because typing invalidated it. So the question is
+  // asked after the await rather than assumed before it: the box closes when there is nothing left to
+  // decide, and stays when there is.
+  const late = dirtyPeer(key);
+  if (late) conflictBox(late, true); else conflictBox(key, false);
 }
 // Any edit inside a section marks it. Attached to the section rather than to each control, so a
 // field added later is covered without anyone remembering - the reorder arrows are clicks and not
@@ -1029,7 +1060,15 @@ async function otherWindowChanged(ch, area) {
     if (!ch[key] || wasOwn(key)) continue;
     const peer = dirtyPeer(key);
     if (peer) conflictBox(peer, true);                   // your edits stand; you decide
-    else { try { await SECTIONS[key].reload(); } catch (_) {} }   // nothing to lose: just catch up
+    else {
+      try { await SECTIONS[key].reload(); } catch (_) {}
+      // **Asked again, because the answer above is from before the await.** An edit that arrived
+      // while the read was in flight has already stopped that read from drawing - see
+      // `invalidateSectionLoads` - so what is left is telling the reader their form and the disk have
+      // parted company, which is the whole job of the box.
+      const late = dirtyPeer(key);
+      if (late) conflictBox(late, true);
+    }   // nothing to lose: just catch up
   }
 }
 try {

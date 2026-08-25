@@ -12410,6 +12410,54 @@ test('the folder warning is one sentence, in every place either product says it'
 });
 
 // ---------------------------------------------------------------------------------------------
+// An edit that begins after a reload has started still wins.
+//
+// Two orderings were covered: the section already dirty when the external write arrives, and one
+// loader overtaken by a later one. The third was not - an external write starts a read while the
+// form is clean, the reader types, and the read publishes over what they typed. Reproduced by
+// holding the storage read open: the form was redrawn from disk, `dirty` still said there were
+// unsaved edits, and no conflict box was raised, because the box is decided before the await too.
+//
+// Driven with the *real* loader. A stub that redraws unconditionally answers for the mechanism under
+// test - the first attempt at this used one, and reported the reload as still drawing when it no
+// longer does.
+test('typing during a reload keeps what was typed, and says the two have parted', async () => {
+  const rel = 'apps/crm/options.js';
+  let release;
+  const held = new Promise((r) => { release = r; });
+  const boxed = [];
+  let drew = 0;
+  const g = { console, Object, Set, Map, Date, Array, String, Promise,
+              dirty: new Set(), wasOwn: () => false,
+              conflictBox: (k, on) => boxed.push([k, on]),
+              SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
+              TAB_IDS: ['functions', 'modules'],
+              tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabAccessCur: {}, tabsLoadFailed: false,
+              renderTabs: () => { drew++; },
+              loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
+              loadRx: async () => {}, loadLay: async () => {},
+              chrome: { storage: { local: { get: async () => { await held; return { tabPrefs: { order: ['modules'], hidden: [] } }; } } } } };
+  const m = load([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'), sliceConst(rel, 'SECTIONS'),
+                  sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'invalidateSectionLoads'),
+                  sliceFn(rel, 'markDirty'), sliceFn(rel, 'loadTabs'),
+                  sliceFn(rel, 'otherWindowChanged')], g);
+
+  const arriving = m.otherWindowChanged({ tabPrefs: {} }, 'local');
+  const drewBefore = drew;
+  m.markDirty('tabPrefs');          // the reader types while the read is in flight
+  release();
+  await arriving;
+
+  assert.equal(drew, drewBefore,
+               'the section was redrawn from disk after the reader had already started typing into it - '
+               + 'the read was in flight when they did, and nothing stopped it publishing');
+  assert.deepEqual([...g.dirty], ['tabPrefs'], 'the edit stopped being recorded as unsaved');
+  assert.deepEqual(boxed, [['tabPrefs', true]],
+                   `the conflict box was ${JSON.stringify(boxed)} - the page is saying «unsaved changes» `
+                   + 'about a form it has just been told disagrees with the disk, and offering nothing');
+});
+
+// ---------------------------------------------------------------------------------------------
 // A write from elsewhere never silently reloads a section that has unsaved edits in it - and «has
 // edits» is a question about the section, not about the key that happened to change.
 //
