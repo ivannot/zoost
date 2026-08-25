@@ -145,8 +145,10 @@ apps/crm/sidepanel.js	rebuildTree	aiConnCache
 apps/crm/sidepanel.js	rebuildTree	graphCache
 apps/crm/sidepanel.js	rebuildTree	moduleFilesCache
 apps/crm/sidepanel.js	rebuildTree	treeLoad
+apps/crm/sidepanel.js	rebuildTree	unreadableMetas
 apps/crm/sidepanel.js	reconcileNow	failedRemovals
 apps/crm/sidepanel.js	reconcileNow	pendingAfterPull
+apps/crm/sidepanel.js	refineRowFromMeta	unreadableMetas
 apps/crm/sidepanel.js	reveal	_revealListener
 apps/crm/sidepanel.js	runSyncSlot	syncAgain
 apps/crm/sidepanel.js	runSyncSlot	syncBusy

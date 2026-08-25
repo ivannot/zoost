@@ -3295,8 +3295,12 @@ const SCOPE_SAFE = { views: true, structure: true, relations: true, sql: false, 
 // The same promise as the CRM's, kept the same way: §4.3 of the privacy policy names «the SQL of your
 // query tables» as the sensitive half of an Analytics export, so it starts unticked. Everything else
 // stays on.
-const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { sql: false });
+// Which build wrote a stored preference - declared before the default that stamps itself with it,
+// because a `const` used above its declaration throws at load. See the twin for the defect this
+// closes: only the *reader* was writing the stamp, so ticking the sensitive section and exporting
+// wrote a scope with none, and the next load read that as pre-migration and turned it back off.
 const SCOPE_SV = 2;
+const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { sql: false, sv: SCOPE_SV });
 let expScope = Object.assign({}, SCOPE_DEFAULT);
 // What the dialog is editing right now, kept apart from the stored preference for the reason the twin
 // records: this dialog saves what you leave it with, so editing the stored value in place meant

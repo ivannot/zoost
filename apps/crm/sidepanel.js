@@ -495,13 +495,24 @@ const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'wor
 // disagrees with itself. Found by a review; `tests/panel.test.mjs` now holds the three in step.
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
+// Which build wrote a stored preference. Declared *here*, above the default that stamps itself with
+// it: a `const` used before its declaration is a temporal dead zone, and putting the stamp on
+// `SCOPE_DEFAULT` while this sat forty lines below made the whole panel throw at load. Caught by the
+// case that evaluates every shipped script - which exists because this class has shipped twice.
+const SCOPE_SV = 2;
 // **The sensitive section starts unticked, and that is a promise being kept rather than a taste.**
 // The site, the README and §4.3 of the privacy policy all say the same thing - «the sensitive part is
 // opt-in and flagged when selected» - and this line said the opposite: the first export a person ever
 // made arrived with the whole Deluge source in it unless they noticed and cleared it. Found by an
 // assistant reading the repository against the site, which is the check the front page now hands out.
 // Everything else stays on: what is being defended is the source code, not the export's usefulness.
-const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { code: false });
+// **The stamp travels with the value.** `sv` says which build wrote a stored preference, and only the
+// *reader* was writing it: so ticking the source code, exporting, and reopening turned it back off -
+// the export wrote a scope with no stamp, and the next load read that as a preference from before the
+// default changed and applied the one-shot migration again. Measured, in that order. Every object
+// derived from this default now carries the stamp, and the migration still fires on a genuinely old
+// value because it reads what was *stored*, not what was merged.
+const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { code: false, sv: SCOPE_SV });
 let expScope = Object.assign({}, SCOPE_DEFAULT);
 // What the dialog is editing right now, and which of its boxes were cleared *for* the user because
 // the data behind them is behind. Kept apart from expScope for one reason: the export dialog saves
@@ -519,7 +530,6 @@ let dlgAutoCleared = new Set();
 //
 // Migration that deletes itself, as this repository asks: when nobody can still be carrying an
 // unstamped scope, the three lines go and nothing else has to change.
-const SCOPE_SV = 2;
 async function loadScope() {
   try {
     const st = await chrome.storage.local.get('exportScope');
@@ -853,6 +863,9 @@ function switchDirtyWorkspace(nextRoot) {
 // absent for one pass, which re-reads every meta and every source from disk, and the flag is put
 // down when the tree load that honoured it finishes - not before, or a second load started in the
 // middle would trust what the first has not yet rewritten.
+// The sidecars this load could not open. Emptied by the load that fills it, and reported by the
+// line that closes it: «read» and «could not read» are two facts and the second was silent.
+let unreadableMetas = [];
 let distrustSummary = false;
 function distrustEverything() {
   distrustSummary = true;
@@ -1616,7 +1629,14 @@ async function refineRowFromMeta(mp, op, byPath, byId, index) {
     if (meta.display_name) row.display_name = meta.display_name;
     const known = index.get(String(meta.id));
     if (known) { known.category = meta.category; known.source = meta.source; known.name = meta.name; }
-  } catch (_) { /* a meta that will not parse leaves its row as the index described it */ }
+  } catch (e) {
+    // A meta that will not parse leaves its row as the index described it - and **the failure is
+    // counted**, because it used to be swallowed whole: with every read failing (a file locked by a
+    // sync client, an I/O error) the tree drew 120 rows all marked «in workspace» and the status line
+    // closed green with «120 functions (120 downloaded)». A mirror that cannot be read is not a
+    // healthy one, and the twin has said so by name since it existed.
+    unreadableMetas.push(mp);
+  }
 }
 
 async function rebuildTree() {
@@ -1629,6 +1649,8 @@ async function rebuildTree() {
   if (!(await ensurePerm(op.root))) { op.say(MSG.folder, 'warn'); return; }
   const mine = ++treeLoad;
   const current = () => mine === treeLoad && op.current();
+  // This load's own tally of what it could not open - emptied here, read by the line that closes it.
+  unreadableMetas = [];
   op.say(MSG.loadingTree, 'busy');
   graphCache = null; moduleFilesCache = null; aiConnCache = null;
   const _cfg = await opReadCfg(op); if (_cfg && current()) bound = _cfg; await cacheBinding(bound);
@@ -1745,8 +1767,18 @@ async function rebuildTree() {
   // the summary back, so the next load may believe it again.
   distrustSummary = false;
   const dl = treeData.filter((e) => e.downloaded).length;
+  // **What could not be read is part of the answer.** Every sidecar that failed to open used to be
+  // swallowed one by one, so a mirror the browser could not read at all closed on «120 functions
+  // (120 downloaded).» in green - the rows drawn from file names alone, every one marked as present.
+  // A count is a measurement of what was read; saying it without saying what was not is the mirror
+  // lying by omission. The twin names the file and what the browser called it, and has since it
+  // existed.
   setStatus(`${treeData.length} functions (${dl} downloaded).`
-    + (statsDeferred() ? ' Size and call counts appear when the diagram, the audit or a code search builds the map.' : ''), 'ok');
+    + (unreadableMetas.length
+      ? ` ${unreadableMetas.length} file(s) could not be read - what they hold is not in this list.`
+      : '')
+    + (statsDeferred() ? ' Size and call counts appear when the diagram, the audit or a code search builds the map.' : ''),
+  unreadableMetas.length ? 'warn' : 'ok');
   await refreshContext();
 }
 
@@ -4803,9 +4835,16 @@ async function loadWorkspaces() {
     } catch (_) {}
     selPlaceholder(sel, `${root.name}/${APP_DIR} - no workspaces yet`);
     switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
-    setStatus(stray
-      ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
-      : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
+    // **Not over a folder that could not be read.** The catch above works out the true sentence -
+    // \u00abCould not read \u00ab\u2026\u00bb: NotFoundError. Click the folder button\u00bb - and this wrote \u00abOpen your Zoho
+    // CRM tab, then click + to create its workspace\u00bb on top of it, with that + disabled and the tree
+    // below saying a third thing. An empty list has two causes and only one of them is \u00abthere are
+    // none\u00bb; the other has already been said, precisely, by whoever discovered it.
+    if (rootGranted) {
+      setStatus(stray
+        ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
+        : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
+    }
     // Same hole as the Analytics twin, found there: this return never reaches the line below that
     // refreshes the remembered sample id «including to null». Delete the sample when it is the only
     // workspace and the id stays in storage, so the button that offers to write one is hidden for

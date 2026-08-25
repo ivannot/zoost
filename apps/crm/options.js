@@ -38,6 +38,9 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 // most - what a rule fires, the address it sends as, what is failing - could be set in the dialog
 // every time and never as a default. The page also drew nine checkboxes, so the gap was invisible
 // on screen: it looked like the whole set.
+// The panel's stamp, kept in step by a case: this page writes the same preference and must say
+// which build wrote it, or the panel's one-shot migration fires over a fresh choice.
+const SCOPE_SV = 2;
 const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
@@ -501,7 +504,14 @@ SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFro
 $('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); };
 $('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); };
 async function onSaveScope() {
- scopeFromUI(); if (!await saveKeys({ exportScope: scope })) return; await stamp(); toast('Export defaults saved.'); 
+  scopeFromUI();
+  // Stamped, like every other writer of this preference. Without it the panel reads what this page
+  // saved as a scope from before the source-code default changed, applies its one-shot migration and
+  // turns the source code back off - so the first «Save defaults» a person ever pressed undid the box
+  // they had just ticked. `SCOPE_SV` is the panel's constant; the case below holds the two in step.
+  if (!await saveKeys({ exportScope: Object.assign({}, scope, { sv: SCOPE_SV }) })) return;
+  await stamp();
+  toast('Export defaults saved.');
 }
 $('saveScope').onclick = onSaveScope;
 

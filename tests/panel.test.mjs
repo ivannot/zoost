@@ -5898,8 +5898,12 @@ test('code is shown the same way in both products: lines as written, box scrolls
     // its own status over it in the same turn: written for large orgs, and no large org saw it.
     const at = src.indexOf('async function attachFnStats');
     assert.ok(!/setStatus/.test(src.slice(at, at + 200)), 'the explanation is set where it is overwritten');
-    assert.ok(/functions \(\$\{dl\} downloaded\)\.`\s*\n?\s*\+ \(statsDeferred\(\)/.test(src),
-              'the load\'s own status line does not carry it');
+    // Both on the one call that closes the load. The clause about files that could not be read now
+    // sits between them, so «immediately after» is no longer the property - «in the same sentence» is.
+    const close = src.slice(src.indexOf('functions (${dl} downloaded).'));
+    const call = close.slice(0, close.indexOf(');') + 2);
+    assert.match(call, /statsDeferred\(\)/,
+                 'the load\'s own status line does not carry it');
   });
 
   test('the metas are read in tranches, with a yield between them', () => {
@@ -11523,6 +11527,89 @@ test('every script the panels load evaluates on its own', () => {
                           + 'that ended early is the one that keeps happening: it parses, and it '
                           + 'makes the panel dead on arrival.');
     }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A folder that could not be read is not a folder with no workspaces in it.
+//
+// The catch works out the true sentence - «Could not read «sample/crm»: NotFoundError. Click the
+// folder button» - and the empty-list branch below it then wrote «Open your Zoho CRM tab, then click
+// + to create its workspace» on top, with that + disabled and the tree saying a third thing. Three
+// surfaces, three stories, and the only true one was the one thrown away. Observed by driving the
+// function with a folder whose enumeration throws.
+test('crm: a folder that cannot be read says so, and nothing writes over it', async () => {
+  const drive = async (granted) => {
+    const said = [];
+    const g = {
+      console, Object, Promise, Set, JSON,
+      root: { name: 'sample', values: async function* () { throw new Error('NotFoundError'); } },
+      rootGranted: granted, wsList: [], APP_DIR: 'crm', APP_DIRS: ['crm', 'analytics'], CFG: '.zoost.json',
+      $: () => ({}), sel: {}, selPlaceholder: () => {}, switchDirtyWorkspace: () => {}, forgetDirs: () => {},
+      setEnabled: () => {}, updateWsButtons: () => {}, byWsLabel: () => 0, readJsonIn: async () => null,
+      setStatus: (t, c) => said.push([String(t), c]), dir: null,
+      hasPerm: async () => granted, ensurePerm: async () => granted, renderBlocked: () => {},
+      appRoot: async () => ({ name: 'crm', values: async function* () { throw new Error('NotFoundError'); } }),
+      dropWorkspaceState: () => {}, renderTabs: () => {}, activate: async () => {},
+      window: { idbHandle: { get: async () => null, set: async () => {} } },
+      emptyReason: () => '', renderTree: () => {}, refreshContext: async () => {},
+    };
+    const { loadWorkspaces } = load([sliceFn('apps/crm/sidepanel.js', 'loadWorkspaces')], g);
+    try { await loadWorkspaces(); } catch (_) { /* the stub is not a panel; what is asserted is what it said */ }
+    return said;
+  };
+
+  const unreadable = await drive(true);
+  // If nothing was said at all the harness is what is broken, not the panel.
+  assert.ok(unreadable.length, 'the panel said nothing about a folder it could not read');
+  const last = unreadable[unreadable.length - 1][0];
+  assert.match(last, /Could not read/,
+               `the last thing the reader is told about an unreadable folder is «${last.slice(0, 70)}»`);
+  assert.ok(!/click \+ to create/i.test(last),
+            'the panel ends on «create a workspace» about a folder it could not open');
+
+  // And the other cause of an empty list, which has its own sentence and must keep it.
+  const notGranted = await drive(false);
+  assert.match(notGranted[notGranted.length - 1][0], /Grant access/,
+               'a folder whose permission has lapsed is not told to create a workspace');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Whoever writes the export preference stamps it, and the two files agree on the stamp.
+//
+// `sv` says which build wrote a stored scope, and the panel's one-shot migration turns the sensitive
+// section off when it does not recognise it. Only the *reader* was writing the stamp - so ticking the
+// source code, exporting and reopening turned it back off, and the first «Save defaults» ever pressed
+// on the settings page did the same. Measured in that order, both paths.
+test('every writer of the export scope stamps it, and the two products agree', () => {
+  const sv = {};
+  for (const [rel, name] of [['apps/crm/sidepanel.js', 'crm panel'], ['apps/crm/options.js', 'crm settings'],
+                             ['apps/analytics/sidepanel.js', 'analytics panel']]) {
+    const src = read(rel);
+    const m = /const SCOPE_SV = (\d+);/.exec(src);
+    assert.ok(m, `${name}: SCOPE_SV is gone from ${rel} - the stamp cannot be written`);
+    sv[rel] = +m[1];
+    // Declared before anything that reads it: a `const` used above its declaration throws at load,
+    // which is how stamping the default killed the panel for one commit.
+    const use = src.indexOf('sv: SCOPE_SV');
+    if (use > 0) assert.ok(src.indexOf('const SCOPE_SV') < use,
+                           `${name}: SCOPE_SV is used above its declaration - the panel throws at load`);
+  }
+  const distinct = [...new Set(Object.values(sv))];
+  assert.equal(distinct.length, 1, `the products disagree about the stamp: ${JSON.stringify(sv)}`);
+
+  // And the property, run: a scope that goes out of the panel carries the stamp, so the migration
+  // cannot fire over a choice the reader just made.
+  for (const [app, sensitive] of [['crm', 'code'], ['analytics', 'sql']]) {
+    const keys = JSON.parse(sliceConst(`apps/${app}/sidepanel.js`, 'SCOPE_KEYS')
+      .replace(/^[^[]*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
+    const full = Object.fromEntries(keys.map((k) => [k, true]));
+    const { SCOPE_DEFAULT } = load([sliceConst(`apps/${app}/sidepanel.js`, 'SCOPE_SV'),
+                                    sliceConst(`apps/${app}/sidepanel.js`, 'SCOPE_DEFAULT')],
+                                   { SCOPE_FULL: full, Object });
+    assert.equal(SCOPE_DEFAULT.sv, distinct[0], `${app}: the default scope carries no stamp`);
+    assert.equal(SCOPE_DEFAULT[sensitive], false,
+                 `${app}: «${sensitive}» is on by default - the promise is that it is opt-in`);
   }
 });
 
