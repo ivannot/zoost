@@ -8929,7 +8929,10 @@ test('crm: the module index names only files that landed', () => {
   // «0/1 modules» under a green line, with noteAccess recording the area as read: the index row was
   // pushed whether or not its file was written, so the mirror described files it did not have.
   const body = sliceApp('crm', 'pullModules');
-  const tryAt = body.indexOf('await op.write(`modules/${sanitize(m.api_name');
+  // The write of `m` - the module as this pull read it. There is a second write of the same path
+  // above it, in the branch that carries a *refused* module's previous file forward, and that one
+  // pushes its index row from what is on disk rather than from `m`, so it is a different subject.
+  const tryAt = body.indexOf('JSON.stringify(m, null, 2)');
   const pushAt = body.indexOf("index.push({ api_name: m.api_name");
   assert.ok(tryAt > 0 && pushAt > tryAt, 'the index row is pushed before (or without) its write');
   // In the same try: a push that merely comes later is a push that also runs when the write threw.
@@ -9350,7 +9353,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     // The census is required now: these two cases called it with two arguments, which is the shape
     // the data loss had. An empty census here is the honest fixture - this case is about what the
     // *index* keeps - and it is passed explicitly rather than defaulted.
-    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, []);
+    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, [], {});
     assert.equal(failed, 0, 'a successful cleanup does not report its result to the pull');
     assert.deepEqual(removed.sort(), ['sql/deleted.sql', 'sql/renamed-old.sql'],
                      'a deleted or renamed query leaves its file behind with no map naming it');
@@ -9364,7 +9367,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
       walk: async function* () { yield 'sql/old.sql'; }, Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
-    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, []);
+    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, [], {});
     assert.equal(failed, 1, 'the caller cannot know cleanup was incomplete');
     assert.equal(said.length, 1);
     assert.equal(said[0][1], 'warn');
@@ -9882,10 +9885,33 @@ for (const app of ['crm', 'analytics']) {
     const decl = src.match(/^async function pruneSql\s*\(([^)]*)\)/m);
     assert.ok(decl, 'pruneSql() is gone - renamed, or no longer a declaration');
     const params = decl[1].split(',').length;
-    const calls = [...src.matchAll(/pruneSql\(([^)]*)\)/g)].filter((c) => !c[0].startsWith('pruneSql(index, op, census'));
+    // **Counted with the brackets, not to the first `)`.** `[^)]*` stopped inside
+    // `views.filter((v) => …)`, so it read three arguments out of a call that had three and then out
+    // of a call that had four - passing by coincidence in the first case and failing in the second
+    // for a reason that had nothing to do with the call.
+    const argsAt = (from) => {
+      let depth = 0, out = '';
+      for (let i = from; i < src.length; i++) {
+        const ch = src[i];
+        if (ch === '(') { depth++; if (depth === 1) continue; }
+        if (ch === ')') { depth--; if (!depth) return out; }
+        out += ch;
+      }
+      return out;
+    };
+    const topLevelCommas = (t) => {
+      let depth = 0, n = 1;
+      for (const ch of t) {
+        if ('([{'.includes(ch)) depth++;
+        else if (')]}'.includes(ch)) depth--;
+        else if (ch === ',' && !depth) n++;
+      }
+      return n;
+    };
+    const calls = [...src.matchAll(/pruneSql\(/g)].filter((c) => !/async function pruneSql\($/.test(src.slice(0, c.index + 9)));
     assert.ok(calls.length >= 1, 'pruneSql() is never called - drop it, or the check is looking in the wrong file');
     for (const c of calls) {
-      const given = c[1].split(',').length;
+      const given = topLevelCommas(argsAt(c.index + 8));
       assert.equal(given, params,
         `pruneSql is declared with ${params} parameters and called with ${given}: the census is what ` +
         `keeps a query table's .sql file when its SQL could not be read this time`);
@@ -16613,4 +16639,96 @@ test('a panel that offers a report has recorded the error it is about', () => {
                      `${app}: ${orphan.length} place(s) put the report button on screen without recording `
                      + 'what went wrong, so the report they open describes nothing');
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A module Zoho refuses to describe keeps what was captured before the refusal.
+//
+// «I will not describe this module» is not «this module has no fields», and the difference is the
+// whole of what the mirror holds about it. The guard read `!m.fields_read && !m.unreadable`, so the
+// branch that preserves the file was skipped exactly on a refusal - the commonest way a module stops
+// being readable - and an empty shell went over the fields, their lookup targets, the layout summary
+// and the related lists, under «Modules pull complete: 1/1 modules» in green. The ⊘ dot on the row
+// handles the same event by keeping everything and adding `unreadable`: one event, two paths, and
+// the destructive one ran on every Pull all.
+test('a refused module is not emptied by the pull that was refused', async () => {
+  const rel = 'apps/crm/modules.js';
+  const PREV = { api_name: 'Contacts', module_name: 'Contacts',
+                 fields: [{ api_name: 'Email' }, { api_name: 'Phone' }, { api_name: 'Account_Name', lookup: { module: 'Accounts' } }],
+                 layouts: [{ id: '1', name: 'Standard', visible: true, sections: 4 }],
+                 related_lists: [{ api_name: 'Deals' }, { api_name: 'Notes' }] };
+  const run = async (unreadable) => {
+    const disk = new Map([['modules/Contacts.json', JSON.stringify(PREV)]]);
+    const status = [];
+    const op = { root: {}, current: () => true, say: (t, k) => status.push([k, t]),
+                 read: async (p) => { if (!disk.has(p)) throw new Error('ENOENT'); return disk.get(p); },
+                 write: async (p, t) => { disk.set(p, t); },
+                 remove: async (p) => { disk.delete(p); } };
+    const mod = { api_name: 'Contacts', module_name: 'Contacts', fields: [], layouts: [], related_lists: [],
+                  fields_read: false, layouts_read: false, unreadable };
+    const g = { console, Object, Set, Map, Array, JSON, String, Number, Date, Promise, Boolean,
+                beginWorkspaceOp: () => op, mismatchRefuse: () => false, requirePerm: async () => {},
+                getContext: async () => ({ org: '1', origin: 'https://crm.zoho.eu', instance: 'yourinstance' }),
+                opReadCfg: async () => ({}), setStatus: (t, k) => status.push([k, t]),
+                toBridge: async () => ({ ok: true, modules: [mod] }),
+                bridgeError: (r, m) => new Error(m), envOf: () => 'x', MSG: {},
+                sanitize: (x) => x,
+                isModuleFile: (x) => /^modules\/[^/]+\.json$/.test(x) && x !== 'modules/index.json',
+                isLayoutFile: (x) => x.startsWith('modules/layouts/') && x !== 'modules/layouts/index.json',
+                walk: async function* () { for (const k of [...disk.keys()]) yield k; },
+                rebuildModules: async () => {}, noteAccess: async () => {},
+                notePullFailure: async (a, e) => status.push(['bad', String(e)]),
+                endPull: () => {}, pullActive: false, WS_MOVED: 'moved' };
+    const m = load([sliceFn(rel, 'pullModules')], g);
+    await m.pullModules();
+    return { file: JSON.parse(disk.get('modules/Contacts.json') || '{}'), last: status.at(-1) };
+  };
+
+  const refused = await run({ status: 400, code: 'INVALID_MODULE', message: 'hidden module' });
+  assert.equal(refused.file.fields.length, 3,
+               'a refusal emptied the module file - three fields, their lookup targets and the layout '
+               + 'summary are gone from the mirror, and in a tracked workspace that lands as a deletion');
+  assert.equal(refused.file.related_lists.length, 2, 'the related lists went with them');
+  assert.ok(refused.file.unreadable, 'the refusal itself was not written down - it is a measurement and belongs on disk');
+  assert.equal(refused.last[0], 'warn',
+               `the pull ended «${refused.last[1]}» - a module the org can no longer describe came out as a clean pull`);
+
+  const flaky = await run(null);            // a 429 or a network failure: the other half of the branch
+  assert.equal(flaky.file.fields.length, 3, 'a read that failed without a refusal replaced the file');
+  assert.equal(flaky.file.unreadable, undefined, 'a failure that read nothing was recorded as a refusal');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A query table renamed in Zoho keeps the SQL captured under its old name.
+//
+// The stem carries the view's name, so the keep-set protects it under the name it has *now*: rename
+// it in Zoho, then have that one SQL read fail on the next pull, and the file on disk sits under the
+// old stem with nothing keeping it. Nothing is written in its place either, because the read failed -
+// so the workspace ends with no SQL at all for a query table that still exists.
+test('a renamed query table does not lose the SQL captured under its old name', async () => {
+  const rel = 'apps/analytics/sidepanel.js';
+  const prev = { 11: { stem: 'Alpha-11' }, 22: { stem: 'Beta-22' } };
+  const run = async (census, index) => {
+    const disk = new Set(['sql/Alpha-11.sql', 'sql/Beta-22.sql']);
+    const op = { root: {}, current: () => true, say: () => {}, remove: async (p) => { disk.delete(p); } };
+    const g = { console, Object, Set, Array, JSON, String, Error, WS_MOVED: 'moved',
+                walk: async function* () { for (const p of [...disk]) yield p; },
+                stemOf: (name, id) => `${name}-${id}` };
+    const m = load([sliceFn(rel, 'pruneSql')], g);
+    await m.pruneSql(index, op, census, prev);
+    return disk;
+  };
+  const read = { 11: { stem: 'Alpha-11' } };               // only Alpha's SQL came back this pull
+
+  const renamed = await run([{ id: '11', name: 'Alpha' }, { id: '22', name: 'Gamma' }], read);
+  assert.ok(renamed.has('sql/Beta-22.sql'),
+            'the only capture of that query table SQL was removed because Zoho now calls it '
+            + 'something else, and the failed read wrote nothing in its place');
+
+  const same = await run([{ id: '11', name: 'Alpha' }, { id: '22', name: 'Beta' }], read);
+  assert.ok(same.has('sql/Beta-22.sql'), 'a failed read alone now loses the file - the census stopped protecting it');
+
+  const gone = await run([{ id: '11', name: 'Alpha' }], read);
+  assert.ok(!gone.has('sql/Beta-22.sql'),
+            'a view Zoho no longer has kept its file - the prune refuses everything and is not a prune');
 });

@@ -35,6 +35,9 @@ async function pullModules() {
     // Modules whose fields could not be read this time - kept as they were, and counted, because a
     // pull that covered less than the whole org without saying so is the mirror lying by omission.
     const notRead = [];
+    // Refused is its own word, because it is its own thing to do next: the role, or the ⊘ dot on
+    // the row. Counted in neither list, a refusal came out as a clean pull.
+    const refused = [];
     for (const m of r.modules) {
       if (!op.current()) return;   // one file per module and per layout set: a loop long enough to be left
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
@@ -65,23 +68,38 @@ async function pullModules() {
       // the file holding the fields was not. A refusal is still written down - `unreadable` is a
       // measurement and belongs on disk - but a failure that read nothing leaves the old answer,
       // which is the best one anybody has.
-      if (!m.fields_read && !m.unreadable) {
+      // **And a refusal is read no differently.** The line above used to end `&& !m.unreadable`, so
+      // the branch that preserves the file was skipped exactly when Zoho had *refused* to describe
+      // the module - which is the commonest way a module stops being readable - and the empty shell
+      // went over three fields, their lookup targets, the layout summary and the related lists,
+      // under «Modules pull complete: 1/1 modules» in green. `resyncModuleNow`, the ⊘ dot on the
+      // row, handles the same refusal by reading the file, adding `unreadable` and keeping
+      // everything: one event, two paths, and the destructive one ran on every Pull all. Both are
+      // measurements and both are kept - «Zoho would not describe this» does not mean «this has no
+      // fields», and the layout file two lines up has been protected by that argument all along.
+      if (!m.fields_read) {
         // Keep the old answer *and* the old index row: skipping the row would leave the file on disk
         // and the module out of the list, which is the mirror disagreeing with itself - the exact
         // shape the layout index is being fixed for two lines down.
         let prev = null;
         try { prev = JSON.parse(await op.read(`modules/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
         if (prev) {
+          if (m.unreadable) {
+            prev.unreadable = m.unreadable;   // dated today, on the file that keeps what was captured
+            try { await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(prev, null, 2)); }
+            catch (e) { if ((e && e.message) === WS_MOVED) return; wFail.push(m.api_name); }
+          }
           index.push({ api_name: prev.api_name, module_name: prev.module_name, generated_type: prev.generated_type,
-                       fields: (prev.fields || []).length, layouts: (prev.layouts || []).length });
+                       fields: (prev.fields || []).length, layouts: (prev.layouts || []).length,
+                       related_lists: (prev.related_lists || []).length });
           layIndex.push({ module: prev.api_name, generated: prev.module_name, layouts: prev.layouts || [] });
           keepLayoutFiles.add(lf);
-          notRead.push(m.api_name);
+          (m.unreadable ? refused : notRead).push(m.api_name);
           continue;
         }
         // Nothing on disk to keep: an empty shell is what was actually learnt, and it says so
-        // through `unreadable` being absent and `fields_read` false.
-        notRead.push(m.api_name);
+        // through `unreadable` and `fields_read` both.
+        (m.unreadable ? refused : notRead).push(m.api_name);
       }
       try {
         await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++;
@@ -117,7 +135,9 @@ async function pullModules() {
     const gap = (wFail.length ? ` ${wFail.length} write(s) failed: ${wFail.slice(0, 3).join(', ')}${wFail.length > 3 ? '…' : ''}.` : '')
       + (rFail.length ? ` ${rFail.length} stale file(s) could not be removed - the next pull retries.` : '')
       + (notRead.length ? ` ${notRead.length} module(s) could not be read and were left as they were: `
-        + `${notRead.slice(0, 3).join(', ')}${notRead.length > 3 ? '…' : ''}.` : '');
+        + `${notRead.slice(0, 3).join(', ')}${notRead.length > 3 ? '…' : ''}.` : '')
+      + (refused.length ? ` ${refused.length} module(s) Zoho would not describe - what was captured before is kept: `
+        + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
     await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op);
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
