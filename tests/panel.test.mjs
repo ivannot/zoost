@@ -11609,6 +11609,124 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// Loading an arrangement reports on the drawing it produced, and says which relations moved.
+//
+// Two defects, and the second hid the first for as long as both existed. The report was written
+// before the draw it had just scheduled, so `erVisibleIds()` still held the set from before the file
+// was applied and the arcs were compared against the wrong diagram. And `erShow` ends with «kept N
+// of M» - exactly the state an applied arrangement leaves the drawing in - so the sentence was
+// overwritten a frame later and nobody ever read the wrong number.
+//
+// The third is what the number itself could not say. The count exists to catch the case the note on
+// `MSG.arrArcs` describes - every box still matches and the relations do not - and it misses half of
+// it: one relation gone and one added is the same count, so a picture that had changed shape was
+// reported as a clean restore. The file records the pairs now, additively, and an older file without
+// them still gets the count.
+test('an arrangement reports the drawing it produced, not the one it replaced', () => {
+  for (const app of ['crm', 'analytics']) {
+    const L = `apps/${app}/graphlogic.js`;
+    const hints = [];
+    const pending = [];
+    const flush = () => { while (pending.length) pending.shift()(); };
+    let drawn = false;
+    const ctx = {
+      Set, Map, Object, Array, Number, String, console, JSON,
+      APP: 'zoostapp', DATA: { kind: 'schema', workspace: { instance: 'ws', org: '1' } },
+      curFocus: null, egoDepth: 1, erEmph: 'relations', nameMode: 'api',
+      erIds: ['a', 'b', 'c'], erPos: { a: { x: 0, y: 0 }, b: { x: 0, y: 0 }, c: { x: 0, y: 0 } },
+      erHeld: {}, erArranged: false, erPinOnly: null, erRaised: new Map(), erRaiseN: 0, erCut: new Map(),
+      erLaidOut: true, edgesA: [['a', 'b'], ['b', 'c']],
+      ekey: (a, b) => `${a} ${b}`,
+      // Before the draw the diagram holds two boxes and one arc; after it, three and two. A report
+      // built too early reads the first, which is the whole defect stated as a fixture.
+      erVisibleIds: () => (drawn ? ['a', 'b', 'c'] : ['a', 'b']),
+      edgesAmong: (list) => { const s = new Set(list); return ctx.edgesA.filter(([a, b]) => s.has(a) && s.has(b)); },
+      // Deferred, because the real one schedules the draw and returns - which is the whole defect:
+      // a stub that draws synchronously would let the old code pass by accident.
+      erShowMaybeHeavy: (after) => { pending.push(() => { drawn = true; hints.push(['kept 2 of 3', false]); if (after) after(); }); },
+      erFit: () => {},
+      erHint: (t, bad) => hints.push([String(t), !!bad]),
+      erArrWorkspace: () => 'ws/1',
+      matchArrangement: () => ({ matched: ['a', 'b', 'c'], fresh: [], stale: [], pinned: [] }),
+      MSG: { arrLoaded: (m) => `loaded ${m}`, arrOtherWorkspace: () => ' elsewhere', arrFolds: (n) => ` folds ${n}`,
+             arrArcs: (d) => ` count-delta ${d}`, arrArcsSwapped: (g, a2) => ` gone ${g} added ${a2}`,
+             arrOtherProduct: 'other product', arrWrongKind: () => 'other kind', arrNothingMatched: 'nothing',
+             arrWrongWorkspace: () => 'other workspace' },
+    };
+    const m = load([sliceFn(L, 'erApplyArrangement')], ctx);
+    const file = { app: 'zoostapp', kind: 'schema', workspace: 'ws/1',
+                   positions: { a: { x: 1, y: 1 }, b: { x: 2, y: 2 }, c: { x: 3, y: 3 } },
+                   folds: [], arcs: 2, arcIds: [['a', 'b'], ['a', 'c']] };
+    m.erApplyArrangement(file);
+    flush();
+
+    assert.ok(hints.length >= 2, `${app}: the load said ${JSON.stringify(hints)} - the draw's own line is missing`);
+    const last = hints[hints.length - 1];
+    assert.match(last[0], /^loaded /,
+                 `${app}: the last thing on screen after loading an arrangement is «${last[0]}». The report `
+                 + 'about the file is written before the draw and overwritten by it, so nobody reads it.');
+    assert.match(last[0], /gone 1 added 1/,
+                 `${app}: the report said «${last[0]}». The file was saved with two relations and the diagram `
+                 + 'has two - a different two. A count cannot see that, which is why the pairs are recorded.');
+    assert.equal(last[1], true, `${app}: a diagram whose relations have changed under a saved arrangement is `
+                                + 'not a clean load, and the report is not flagged as one.');
+
+    // An older file, saved before the pairs existed, still gets the weaker answer rather than none.
+    hints.length = 0; drawn = false;
+    ctx.erHeld = {}; ctx.erCut = new Map(); ctx.erRaised = new Map();
+    m.erApplyArrangement(Object.assign({}, file, { arcIds: undefined, arcs: 5 }));
+    flush();
+    assert.match(hints[hints.length - 1][0], /count-delta -3/,
+                 `${app}: a file with no recorded pairs said «${hints[hints.length - 1][0]}». It has five and the `
+                 + 'diagram has two, counted after the draw - three fewer.');
+
+    // And the pairs have to survive the file, which is the half the report above cannot see: a state
+    // that stops recording them, or a serializer that drops them, reads back as an older file and
+    // silently returns everyone to counting. Written and read by the shipped pair, not by hand.
+    const W = { a: { x: 1.4, y: 2.6 }, b: { x: 3, y: 4 } };
+    const st = { app: 'zoostapp', kind: 'schema', workspace: 'ws/1', focus: '', depth: 1,
+                 emphasis: 'relations', names: 'api', arcs: 1, arcIds: [['a', 'b']],
+                 positions: W, moved: ['a'], folds: [], savedAt: '2026-01-01T00:00:00.000Z' };
+    const io = load([sliceConst(`apps/${app}/graphview.js`, 'ARR_V'),
+                     sliceFn(L, 'serializeArrangement'), sliceFn(L, 'parseArrangement')],
+                    { JSON, Object, Array, Number, Set, Math, String });
+    const text = io.serializeArrangement(st);
+    assert.doesNotMatch(text, /\u0000/, `${app}: the arrangement file carries a NUL byte - see the note on folds`);
+    const back = io.parseArrangement(text, 0);
+    assert.ok(back.ok, `${app}: the file this product writes does not read back: ${JSON.stringify(back)}`);
+    assert.deepEqual(back.file.arcIds, [['a', 'b']],
+                     `${app}: the relations did not survive the round trip - got ${JSON.stringify(back.file.arcIds)}. `
+                     + 'A file without them falls back to counting, quietly and for ever.');
+    // Absent is not empty. A diagram saved with no relation on it is a fact; a file written before
+    // the pairs existed is a gap, and reading the two the same way warns about nothing.
+    const aged = JSON.parse(text); delete aged.arc_ids;
+    const older = io.parseArrangement(JSON.stringify(aged), 0);
+    assert.equal(older.file.arcIds, null, `${app}: a file with no arc_ids reads as one with none on the diagram`);
+    const none = io.parseArrangement(io.serializeArrangement(Object.assign({}, st, { arcIds: [] })), 0);
+    assert.deepEqual(none.file.arcIds, [], `${app}: a diagram saved with no relations reads as an older file`);
+
+    // And the state that feeds all of that has to record them in the first place. Same source as the
+    // count beside it - what is on the drawing, never what was last laid out.
+    const sctx = { Set, Map, Object, Array, Date, String,
+                   APP: 'zoostapp', DATA: { kind: 'schema', workspace: { instance: 'ws', org: '1' } },
+                   curFocus: '', egoDepth: 1, erEmph: 'relations', nameMode: 'api',
+                   erIds: ['a', 'b'], erPos: { a: { x: 1, y: 2 }, b: { x: 3, y: 4 } },
+                   erCut: new Map(), erRaised: new Map(),
+                   erVisibleIds: () => ['a', 'b'],
+                   edgesAmong: () => [['a', 'b']],
+                   erArrWorkspace: () => 'ws/1' };
+    const { erArrState } = load([sliceFn(L, 'erArrState')], sctx);
+    const state = erArrState();
+    // Compared as text: the arrays are built inside the vm, so they carry that realm's prototype and
+    // a deep comparison fails on where they were made rather than on what is in them.
+    assert.equal(JSON.stringify(state.arcIds), '[["a","b"]]',
+                 `${app}: the saved state records ${JSON.stringify(state.arcIds)} for its relations. Without `
+                 + 'the pairs every file written from now on is an older file, and the load goes back to counting.');
+    assert.equal(state.arcs, 1, `${app}: the count and the pairs have come apart in the state that writes both`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // With the diagram on screen, the line above it counts the diagram.
 //
 // The header line sits above all three views and used to count the Explorer's set - what passes the

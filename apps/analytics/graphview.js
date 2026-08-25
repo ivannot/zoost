@@ -24,6 +24,10 @@ const MSG = {
   // would report a clean load and say nothing about the thing worth knowing. A number, not a grade.
   arrArcs: (d) => ` \u00b7 the diagram has ${Math.abs(d)} ${Math.abs(d) === 1 ? 'relation' : 'relations'} `
     + (d > 0 ? 'more' : 'fewer') + ' than when this was saved',
+  // The other half of the same case, and the one a count can never reach: one relation gone and one
+  // added is the same number. Said as two numbers, because «changed» is a verdict and these are not.
+  arrArcsSwapped: (gone, added) => ` \u00b7 ${gone} ${gone === 1 ? 'relation is' : 'relations are'} no longer `
+    + `on the diagram and ${added} ${added === 1 ? 'is' : 'are'} new since this was saved`,
   // Naming the workspace it came from, because «nothing here matches» is true and is not the
   // reason. Reported: saved one arrangement, changed workspace, loaded it, and nothing said
   // the file belonged somewhere else - which is the one fact the file actually carries.
@@ -683,11 +687,17 @@ function showView(v) {
 // Whether the work about to happen is worth saying something about. erShow's cost is in erLayout,
 // and erLayout only runs when the layout is stale - so a second visit to the tab is instant and
 // must not flash anything. Counted on what is about to be laid out, not on how big the workspace is.
-function erShowMaybeHeavy() {
+// `after` runs when the drawing exists, which is the only moment a report about it can be true.
+// Applying an arrangement counted its arcs before this had drawn anything - so the number came from
+// the diagram as it was *before* the file was applied - and then wrote a sentence that `erShow`
+// overwrote a frame later with «kept N of M», which is exactly the state an applied arrangement is
+// in. Two defects, and the second hid the first: nobody ever read the wrong number.
+function erShowMaybeHeavy(after) {
   const n = erVisibleIds().length;
+  const draw = after ? () => { erShow(); after(); } : erShow;
   if (!erLaidOut && n >= SPIN_NODES) {
-    runHeavy($('v-er'), `Laying out ${n} tables\u2026`, erShow);
-  } else requestAnimationFrame(erShow);
+    runHeavy($('v-er'), `Laying out ${n} tables\u2026`, draw);
+  } else requestAnimationFrame(draw);
 }
 
 // ---------------- layout state (born in the removed Visual canvas view; the boxed diagram

@@ -66,10 +66,10 @@ ensureBridge	d7215ec858e4	ae54e773d1c0	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
 entitiesPresent	59df72b07997	59df72b07997	identical
 erApply	e2898a2b70d1	e2898a2b70d1	identical
-erApplyArrangement	337ff7fec71b	337ff7fec71b	identical
+erApplyArrangement	6046250354f1	6046250354f1	identical
 erApplyParams	855ddbf1dd6a	855ddbf1dd6a	identical
 erArrName	fb4966beb8b1	fb4966beb8b1	identical
-erArrState	2d920c575dfa	2d920c575dfa	identical
+erArrState	d543872c9ba4	d543872c9ba4	identical
 erArrWorkspace	ed1ae517ed23	ed1ae517ed23	identical
 erBoxSize	8c14e5e7a495	526fb395f85a	divergent
 erBoxUnder	5c23351d063a	5c23351d063a	identical
@@ -102,7 +102,7 @@ erRender	ca365eb7051e	cd799080aed2	divergent
 erResize	772c4f787802	772c4f787802	identical
 erSaveParams	1e7bbd6e4b26	c7d049ed3cc9	divergent
 erShow	6b499465c3c1	c8da0ea26cae	divergent
-erShowMaybeHeavy	9ccced5c0d1f	eff332d42700	divergent
+erShowMaybeHeavy	04f7443c42bc	62807b6c683b	divergent
 erSideCounts	db98efc90a5c	db98efc90a5c	identical
 erSideOf	6e1b8c05f694	6e1b8c05f694	identical
 erSizeArrows	611785d05d5f	611785d05d5f	identical
@@ -184,7 +184,7 @@ orphanedByFilter	e72e15998354	6d10f2be0633	divergent
 otherWindowChanged	443a086335bf	443a086335bf	identical
 paintFindMarks	5b967953a498	5b967953a498	identical
 panelInert	bc169e70b382	bc169e70b382	identical
-parseArrangement	6ad270723301	6ad270723301	identical
+parseArrangement	f856b10b45f8	f856b10b45f8	identical
 pass	56e18c27fc90	4bb92032e77b	divergent
 passKind	684df355a097	bdf6d02817df	divergent
 patchCfg	36bf3c3c0b3e	022f4520707e	divergent
@@ -231,7 +231,7 @@ scopeToUI	f35c4710f682	c63391d26a9d	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical
 seedShortcuts	a2eedf0c5050	a2eedf0c5050	identical
 select	a415fad61600	e1eca3d924a3	divergent
-serializeArrangement	4f2534e0811c	4f2534e0811c	identical
+serializeArrangement	f1130b960701	f1130b960701	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
 setFocus	a8444d56b280	fbd29419ae8c	divergent
 setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent

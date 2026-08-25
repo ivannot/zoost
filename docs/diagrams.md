@@ -449,6 +449,17 @@ side is work and it used to die with the window. The coherence objection is answ
 rather than assuming - a loaded file names the workspace it was saved from, and loading it over a
 different one is refused with both names in the message.
 
+**The report is written when the drawing exists, and it names which relations moved rather than how
+many.** Two defects sat here together, and the second hid the first: the sentence was composed
+before the draw the load had just scheduled, so it counted the diagram as it was *before* the file
+was applied - and `erShow` ends with «kept N of M», which is exactly the state an applied
+arrangement leaves the drawing in, so it was overwritten a frame later and nobody read the wrong
+number. `erShowMaybeHeavy` takes a continuation now and the report runs inside it. The third was in
+the file: a count of arcs cannot see one relation gone and one added, which is precisely the case
+the comparison exists for, so the file records the **pairs** as well. Additively - an older file
+carries none and still gets the count, and `null` is kept distinct from `[]` because a diagram saved
+with no relation on it is a fact and a file that never recorded them is a gap.
+
 **An arrangement is kept across a re-layout, not defended against one - and the first attempt is worth
 recording because it was reported as a bug within the hour.** Refusing a re-layout was tried, in one
 place, in `erShow`. It is downstream of the controls: by the time it fires, the chip that asked has

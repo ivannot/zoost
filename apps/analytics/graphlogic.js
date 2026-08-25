@@ -621,6 +621,9 @@ function serializeArrangement(st) {
   const ids = Object.keys(st.positions || {}).sort();
   const pos = ids.map((id) => `    ${q(id)}: [${Math.round(st.positions[id].x)}, ${Math.round(st.positions[id].y)}, ${moved.has(id) ? 1 : 0}]`);
   const folds = (st.folds || []).map((f) => `    [${q(f[0])}, ${q(f[1])}, ${q(f[2])}]`).sort();
+  // A pair per line and sorted, like the folds above and for the same two reasons: the file stays
+  // diffable, and two saves of an unchanged diagram are the same bytes.
+  const arcIds = (st.arcIds || []).map((e) => `    [${q(e[0])}, ${q(e[1])}]`).sort();
   const wrap = (lines) => (lines.length ? '\n' + lines.join(',\n') + '\n  ' : '');
   return [
     '{',
@@ -633,6 +636,7 @@ function serializeArrangement(st) {
       + `"emphasis": ${q(st.emphasis || '')}, "names": ${q(st.names || '')}, "arcs": ${st.arcs | 0}},`,
     `  "positions": {${wrap(pos)}},`,
     `  "folds": [${wrap(folds)}],`,
+    `  "arc_ids": [${wrap(arcIds)}],`,
     `  "saved_at": ${q(st.savedAt || '')}`,
     '}',
     '',
@@ -665,6 +669,12 @@ function parseArrangement(text, cap) {
   const ctx = (o.context && typeof o.context === 'object') ? o.context : {};
   const folds = Array.isArray(o.folds) ? o.folds.filter((f) => Array.isArray(f) && f.length === 3
     && f.every((s) => typeof s === 'string')) : [];
+  // `null` and not `[]`: absent means an older file that never recorded them, and the load falls
+  // back to comparing counts. An empty array means a diagram saved with no relation on it, which is
+  // a fact and not a gap - reading the two the same way would warn about nothing, for ever.
+  const arcIds = Array.isArray(o.arc_ids)
+    ? o.arc_ids.filter((e) => Array.isArray(e) && e.length === 2 && e.every((s) => typeof s === 'string'))
+    : null;
   return { ok: true, file: {
     v: o.v | 0,
     app: typeof o.app === 'string' ? o.app : '',
@@ -676,7 +686,7 @@ function parseArrangement(text, cap) {
     names: typeof ctx.names === 'string' ? ctx.names : '',
     arcs: Number.isFinite(ctx.arcs) ? ctx.arcs | 0 : 0,
     savedAt: typeof o.saved_at === 'string' ? o.saved_at : '',
-    positions, moved, folds,
+    positions, moved, folds, arcIds,
   } };
 }
 
@@ -769,7 +779,14 @@ function erArrState() {
     // a fold taken after that layout leaves it behind, so saving straight after folding recorded
     // 22 arcs over a drawing with 12 - measured. The load compares against this number, so the
     // two sides have to mean the same thing or one of them warns about nothing.
+    //
+    // **And which arcs, not only how many.** The count was written to catch the insidious case the
+    // note on `MSG.arrArcs` describes - every box still matches and the relations do not - and it
+    // misses exactly half of it: one relation gone and one added is the same number, so the load
+    // reported a clean restore over a picture that had changed shape. The pairs are additive, an
+    // older file simply has none, and the count stays for those.
     arcs: edgesAmong(erVisibleIds()).length,
+    arcIds: edgesAmong(erVisibleIds()).map(([a, b]) => [a, b]),
     positions: pos, moved: [...erRaised.keys()], folds,
     savedAt: new Date().toISOString(),
   };
@@ -820,22 +837,31 @@ function erApplyArrangement(file) {
     erCut.set(ekey(a, b), away);
   });
   erLaidOut = false;
-  erShowMaybeHeavy();
-  // Framed, not restored: where the reader was looking is not part of what they built, but a drawing
-  // they cannot see is not an arrangement either.
-  erFit();
-  // The same set the file recorded - see `erArrState`.
-  //
-  // **This is still measured one frame early**, and it is left that way deliberately: the draw this
-  // schedules has not run yet, so `erVisibleIds()` is the set from before the file was applied. The
-  // obvious repair - run this from a callback after the draw - was written, measured, and did not
-  // work: the callback never fired in the harness, and the sentence is overwritten a frame later by
-  // the fold hint regardless, so nobody reads this message at all. Two defects, one of them hiding
-  // the other; recorded in docs/findings rather than half-fixed here.
-  const arcs = edgesAmong(erVisibleIds()).length;
-  const lost = m.stale.length || foldsLost || elsewhere || (file.arcs && arcs !== file.arcs);
-  erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
-    + (elsewhere ? MSG.arrOtherWorkspace(fileWs) : '')
-    + (foldsLost ? MSG.arrFolds(foldsLost) : '')
-    + (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : ''), !!lost);
+  // **The report waits for the drawing it is about.** It used to be written here, before the draw
+  // this schedules had run, so `erVisibleIds()` still held the set from before the file was applied
+  // and the arc comparison was against the wrong diagram. And it was overwritten a frame later:
+  // `erShow` ends with «kept N of M», which is exactly the state an applied arrangement leaves the
+  // drawing in, so nobody ever read the wrong number. Two defects, the second hiding the first.
+  erShowMaybeHeavy(() => {
+    // Framed, not restored: where the reader was looking is not part of what they built, but a
+    // drawing they cannot see is not an arrangement either.
+    erFit();
+    // The same set the file recorded - see `erArrState`. By pair where the file has them, by count
+    // where it does not: a file written before the pairs existed still gets the weaker answer rather
+    // than none.
+    const here = edgesAmong(erVisibleIds());
+    const arcs = here.length;
+    const nowKeys = new Set(here.map(([a, b]) => ekey(a, b)));
+    const wasKeys = file.arcIds ? new Set(file.arcIds.map(([a, b]) => ekey(a, b))) : null;
+    const gone = wasKeys ? [...wasKeys].filter((k) => !nowKeys.has(k)).length : 0;
+    const added = wasKeys ? [...nowKeys].filter((k) => !wasKeys.has(k)).length : 0;
+    const arcNote = wasKeys
+      ? (gone || added ? MSG.arrArcsSwapped(gone, added) : '')
+      : (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : '');
+    const lost = m.stale.length || foldsLost || elsewhere || !!arcNote;
+    erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
+      + (elsewhere ? MSG.arrOtherWorkspace(fileWs) : '')
+      + (foldsLost ? MSG.arrFolds(foldsLost) : '')
+      + arcNote, !!lost);
+  });
 }
