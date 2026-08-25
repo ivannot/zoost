@@ -702,10 +702,14 @@ function runLoadAi(app, stored) {
     chrome: { storage: { local: { get: async () => ({ aicfg: stored }) }, session: { remove: async () => {} } } },
     console, Object, Array, JSON, Set, Map, String, Number, Boolean, Promise, Date, Math, RegExp, Error,
     window: {}, setTimeout, clearTimeout,
+    // Nothing unsaved in these scenarios, so the read is entitled to publish; and «Forget» marks
+    // the section like any other edit, which is held next door rather than here.
+    dirtyPeer: () => undefined, markDirty: () => {},
   });
   // Everything loadAi needs, lifted whole. If one of these is renamed the slice throws rather than
   // quietly proving less.
-  const pieces = ['aiForget', 'aiStored', 'aiLockStored', 'aiPassChanging', 'prevEngine', '_loadSeq'];
+  const pieces = ['aiForget', 'aiStored', 'aiLockStored', 'aiPassChanging', 'prevEngine', '_loadSeq',
+                  'aiLoadFailed'];
   for (const name of pieces) {
     const m = src.match(new RegExp(`^(?:const|let)\\s+${name}\\s*=[^\\n]*$`, 'm'));
     if (m) vm.runInContext(m[0], ctx);

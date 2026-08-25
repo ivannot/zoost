@@ -32,7 +32,7 @@ applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
 askFrame	3dcad4e94815	fdb572847247	divergent
 askScope	d27f77a79c58	5a0012715e71	divergent
-beginLoad	090fe6a5aab2	090fe6a5aab2	identical
+beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
@@ -141,9 +141,9 @@ knownSample	459c41b78d33	e5b6c71b1533	divergent
 layToUI	d3151f0c87f6	d3151f0c87f6	identical
 layoutZoneHtml	c3b79caff8de	59b769693ab7	divergent
 linkedUnderFilter	c56b421e0c46	c56b421e0c46	identical
-loadAi	455d281af62e	7bc464b9c8e0	divergent
+loadAi	79d95a10c739	7d2baef0d524	divergent
 loadDc	e9df03bb1506	b21659f28f25	divergent
-loadLay	f674e9803fba	f674e9803fba	identical
+loadLay	46c90678e1d2	46c90678e1d2	identical
 loadRx	db6b4a2453f7	db6b4a2453f7	identical
 loadRxShortcuts	0c1fc69cd664	0c1fc69cd664	identical
 loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
@@ -172,7 +172,7 @@ onAiengine	db42c8c059e5	55f96961b339	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
 onRepopen	8d02dae13933	8d02dae13933	identical
-onSaveLay	3ed188b2b5d8	645de8a1e993	divergent
+onSaveLay	48b6df2e2daf	e03553b7d70d	divergent
 onSaveRx	e2ea4089a719	e2ea4089a719	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	1d9967844be3	1d9967844be3	identical
@@ -252,7 +252,7 @@ stepSelection	01087cab90ac	060e86ed5417	divergent
 switchTab	147323632e4d	07e791a9cd39	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
-takeTheirs	86800d889112	86800d889112	identical
+takeTheirs	d8cd038b9a71	d8cd038b9a71	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	692c8692eeff	ae1ca2903cfa	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
@@ -267,7 +267,7 @@ updateScopeUI	df33d4b78b99	75ff890b9278	divergent
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical
 wasOwn	137c94652f18	137c94652f18	identical
 wireAsideFold	f549a11bd896	f549a11bd896	identical
-wireForget	aec6f1b54698	aec6f1b54698	identical
+wireForget	b03a0a24ed6f	b03a0a24ed6f	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
 workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
 writeActiveWhenStillCurrent	5d27a20f05b3	5d27a20f05b3	identical

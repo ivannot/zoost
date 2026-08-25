@@ -11398,6 +11398,7 @@ test('an overtaken loader on the options page publishes nothing', async () => {
       chrome: { storage: { local: { get: () => answers[call++] } } },
       renderRx: () => {},
       rxCur: null, rxLoadFailed: false,
+      dirtyPeer: () => undefined,   // nothing unsaved in this scenario: a read may publish
     };
     vm.createContext(ctx);
     vm.runInContext([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'), sliceFn(rel, 'loadRx')].join('\n'), ctx);
@@ -11777,7 +11778,8 @@ test('a stored diagram setting outside a slider is saved as what is shown', asyn
       $: el, LAY_CTL: [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],
                        ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']],
       LAY_DEFAULT: { margin: 36, spread: 42, gap: 8, fs: 10, sub: true },
-      DRAW_MAX_DEFAULT: 800, lay: null, drawMax: 800,
+      DRAW_MAX_DEFAULT: 800, lay: null, drawMax: 800, layLoadFailed: false,
+      dirtyPeer: () => undefined,   // nothing unsaved in this scenario: a read may publish
       chrome: { storage: { local: { get: async (k) => (k === 'erParams'
         ? { erParams: { current: { margin: 9999, spread: 42, gap: 8, fs: 10, sub: true } } }
         : { erDrawMax: 800 }) } } },
@@ -13148,6 +13150,7 @@ test('a settings page does not announce success over an AI engine that cannot ru
                           hidden: true, classList: { add() {}, remove() {}, toggle() {} }, focus() {}, select() {} });
     const g = { console, Object, Math, Number, JSON, Promise, Set, Date, Array, String,
                 $: el, toast: (t, bad) => said.push([String(t), !!bad]), MSG: { readFailed: 'READFAIL' },
+                aiLoadFailed: false,   // the read succeeded; the refusal under test is about the form
                 saveKeys: async () => true, stamp: async () => {}, loadAi: async () => {},
                 readCfgForWrite: async () => ({ anthropic: {}, openai: {} }),
                 mergeKeys: async () => {}, engineLabel: (e) => e, aiForget: new Set(), aiPassChanging: false,
@@ -14260,6 +14263,7 @@ test('crm: diagram defaults saved in Settings are applied by either graph', asyn
     saveKeys: async (o) => { Object.assign(stored, JSON.parse(JSON.stringify(o))); return true; },
     stamp: async () => {}, toast: () => {},
     chrome: { storage: { local: { get: async () => JSON.parse(JSON.stringify(stored)) } } },
+    layLoadFailed: false,   // the read succeeded, which is what lets this Save write at all
   };
   vm.createContext(ctx);
   // The handler by the control it belongs to, and run as itself. It used to be sliced out of the
@@ -16355,5 +16359,120 @@ test('a turn that spends its whole budget thinking says so, in either product', 
     const ok = await aiStreamAnthropic({ apiKey: 'k', model: 'm' }, [], 's', [], () => {});
     assert.deepEqual(JSON.parse(JSON.stringify(ok.content)), [{ type: 'text', text: 'Yes - drop the join.' }],
       `id=${app}: an answer that followed a thinking block did not arrive whole`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Every section that can be saved records whether its read succeeded - derived from the page's own
+// table of sections, not from a list written here.
+//
+// `LOAD_FLAG` had four entries and `SECTIONS` had seven. The three missing ones were the AI settings
+// and the two diagram keys, and they were missing in both products: their Save handlers had nothing
+// to consult, so a Save pressed before the read published - or after a rejected one - wrote the
+// blank form over the stored engine, both model names and three budgets, and the built-in sliders
+// and ceiling over the stored ones, each announcing success. Named individually this case would
+// have listed the four that already worked.
+test('every settings section has a load flag', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const g = { console, Object, Set, SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram' };
+    for (const n of [...read(rel).matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1])) g[n] = async () => {};
+    const m = load([sliceConst(rel, 'SECTIONS'), sliceConst(rel, 'LOAD_FLAG')], g);
+    const missing = Object.keys(m.SECTIONS).filter((k) => !m.LOAD_FLAG[k] && k !== 'zohoDc');
+    assert.deepEqual(missing, [],
+                     `${app}: ${missing.join(', ')} can be saved and has no load flag - a Save before the `
+                     + 'read published will write the built-in defaults over what is stored and say it saved');
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A Save refuses when the read did not publish, and goes through when it did.
+//
+// Both halves on purpose: a guard that always refuses is not strict, it is broken, and it looks
+// exactly like a strict one. Driven through the shipped handlers, because the defect was that the
+// handler consulted nothing - a check reading the source for the word would have to guess which
+// word.
+test('a Save refuses over an unread section and works over a read one', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const writes = [];
+    const g = { console, Object, Set, Array, Number, Math, JSON, Boolean, String,
+                MSG: { readFailed: 'read failed' }, toast: () => {},
+                saveKeys: async (o) => { writes.push(...Object.keys(o)); return true; },
+                stamp: async () => {}, markEngine: () => {}, mergeKeys: (a) => a,
+                readCfgForWrite: async () => ({}), engineLabel: () => 'x', aiForget: new Set(),
+                loadAi: async () => {}, layToUI: () => {}, erPreview: () => {},
+                LAY_CTL: [], LAY_DEFAULT: {}, lay: {}, drawMax: 800,
+                chrome: { storage: { local: { get: async () => ({}), set: async () => {} } } },
+                $: () => ({ value: '', checked: false, min: '0', max: '9999', style: {}, placeholder: '' }) };
+    const savers = app === 'crm' ? [['onSaveLay', 'erParams'], ['onSaveAi', 'aicfg']]
+                                 : [['onSaveLay', 'erParams'], ['saveAi', 'aicfg']];
+    const m = load([sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'loadState'),
+                    ...savers.map(([n]) => sliceFn(rel, n))], g);
+    for (const [fn, key] of savers) {
+      writes.length = 0;
+      m.LOAD_FLAG[key].set('never');
+      await m[fn]();
+      assert.deepEqual(writes, [], `${app}: ${fn} wrote ${writes.join('+')} over a section it never read`);
+      m.LOAD_FLAG[key].set(false);
+      await m[fn]();
+      assert.ok(writes.length, `${app}: ${fn} saved nothing after a successful read - the guard refuses everything`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A read does not publish over an edit that was already there when it started.
+//
+// `markDirty` cancels the reads *in flight*, which is every read it can see; one that begins a
+// moment later passed the sequence test and wrote the stored value straight over what had just been
+// typed - silently, leaving the section marked dirty, so the next Save wrote back the value the
+// reader had replaced. The ordering is not the reader's to control: the reload is started by a write
+// in another window.
+test('a read that finds an unsaved edit cancels itself', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const g = { console, Object, Set, Array, SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram' };
+    for (const n of [...read(rel).matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1])) g[n] = async () => {};
+    const m = load([sliceConst(rel, '_loadSeq'), sliceConst(rel, 'dirty'), sliceConst(rel, 'SECTIONS'),
+                    sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'markLoadCancelled'),
+                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'),
+                    sliceFn(rel, 'beginLoad')], g);
+
+    m.LOAD_FLAG.erParams.set('loading');
+    assert.equal(m.beginLoad('erParams')(), true, `${app}: a read published nothing with no edit pending`);
+
+    m.dirty.clear();
+    m.markDirty('erDrawMax');                 // the sibling key of the same section
+    m.LOAD_FLAG.erParams.set('loading');
+    assert.equal(m.beginLoad('erParams')(), false,
+                 `${app}: the read published over an edit made before it began - the edit is gone and `
+                 + 'the section is still marked unsaved, so Save will write the old value back');
+    assert.equal(m.LOAD_FLAG.erParams.get(), 'cancelled',
+                 `${app}: the read did not publish and did not say why, so Save cannot explain itself`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// «Forget» is an unsaved edit like any other.
+//
+// It was not recorded as one, so an `aicfg` write from another window took the silent catch-up
+// branch, reloaded the section, and dropped the pending removal - after which Save said «AI settings
+// saved.» with the key still stored. Of everything on that page it is the one action whose reader is
+// entitled to be told the truth about what happened.
+test('pressing Forget marks the AI section unsaved', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const marked = [];
+    const els = {};
+    const el = (id) => (els[id] = els[id] || { value: 'x', placeholder: '', onclick: null });
+    const g = { console, Set, Object, String, $: el, markEngine: () => {},
+                markDirty: (k) => marked.push(k), aiForget: new Set() };
+    const m = load([sliceFn(rel, 'wireForget')], g);
+    m.wireForget('anthropic', 'ai_a_key', 'ai_a_model');
+    el('ai_a_forget').onclick();
+    assert.deepEqual(marked, ['aicfg'],
+                     `${app}: Forget left the section clean, so a write from another window reloads it, `
+                     + 'the removal is dropped, and Save then reports success with the key still stored');
   }
 });

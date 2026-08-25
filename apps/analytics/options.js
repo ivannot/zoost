@@ -111,6 +111,11 @@ function wireForget(prov, keyId, modelId) {
     $(keyId).value = ''; $(modelId).value = '';
     $(keyId).placeholder = 'will be removed when you save';
     $(modelId).placeholder = 'will be removed when you save';
+    // A pending removal is an unsaved edit like any other. Without this an `aicfg` write from
+    // another window silently reloaded the section, dropped the pending removal, and Save then
+    // said «AI settings saved.» with the key still stored - the one thing a reader pressing
+    // Forget wants to be told the truth about.
+    markDirty('aicfg');
     markEngine();
   };
 }
@@ -261,6 +266,7 @@ function showForget(prov, stored) {
 }
 
 async function loadAi() {
+  aiLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
   // Reading for *display* keeps its fallback - an empty form renders and nothing is lost. What it
   // must not do is stay quiet: Save writes the form back whole, so a reader who cannot tell «nothing
   // is stored yet» from «I could not read what is stored» saves the empty one over their key.
@@ -270,6 +276,7 @@ async function loadAi() {
   catch (_) {
     toast('Could not read your saved AI settings - what is shown below is not what is stored. '
       + 'Reload this page before saving, or Save will overwrite it.', true);
+    aiLoadFailed = 'failed';
   }
   if (!current()) return;   // an older read must not fill the form
   const cfg = {
@@ -301,6 +308,7 @@ async function loadAi() {
   wireForget('anthropic', 'ai_a_key', 'ai_a_model'); wireForget('openai', 'ai_o_key', 'ai_o_model');
   aiLockStored = !!(cfg.anthropic.apiKeyEnc || cfg.openai.apiKeyEnc);
   $('ai_lock').checked = aiLockStored;
+  if (aiLoadFailed === 'loading') aiLoadFailed = false;
   syncLockRow(); markEngineOptions(); markEngine();
 }
 // A selector that changes a *mode* saves on change, not behind a Save button - the same rule as the
@@ -311,6 +319,7 @@ function markEngine() {
   $('provOpenai').classList.toggle('on', e === 'openai');
 }
 async function saveAi() {
+  if (aiLoadFailed) { toast(loadState(aiLoadFailed), true); return; }
   const cfg = {
     active: $('aiengine').value,
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
@@ -430,6 +439,7 @@ $('pDrawMax').addEventListener('input', () => {
 // had just applied disappeared while they were looking at it.
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
 async function onSaveLay() {
+  if (layLoadFailed) { toast(loadState(layLoadFailed), true); return; }
   // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
   // writes it when the reader changes Emphasis in there. Replacing the object threw it away.
   // **Read inside a guard, because this is a merge and a merge needs its base.** Unguarded, a
@@ -445,6 +455,7 @@ async function onSaveLay() {
 }
 $('saveLay').onclick = onSaveLay;
 async function loadLay() {
+  layLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
   const current = beginLoad('erParams');
   // Clamped to each control's own bounds, the way the ceiling below already was. Without it the
   // page shows one number and saves another: `layToUI` puts the stored value into a range input,
@@ -463,18 +474,19 @@ async function loadLay() {
         if (Number.isFinite(lo) && Number.isFinite(hi) && Number.isFinite(lay[k])) lay[k] = Math.min(hi, Math.max(lo, lay[k]));
       });
     }
-  } catch (_) {}
+  } catch (_) { layLoadFailed = 'failed'; }
   try {
     const r = await chrome.storage.local.get('erDrawMax');
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
     if (current() && Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
-  } catch (_) {}
+  } catch (_) { layLoadFailed = 'failed'; }
   // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
   // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
   // second read discarded, `layToUI()` paints the built-in ceiling into the box and a Save writes it
   // over whatever was stored. A read that was overtaken, or cancelled because the reader started
   // typing, has nothing to publish.
   if (!current()) return;
+  if (layLoadFailed === 'loading') layLoadFailed = false;
   layToUI();
 }
 
@@ -578,6 +590,14 @@ let rxCur = [];
 // A read that threw is not an empty list: rendering the two the same would let Save write [] over
 // a list that still exists - absent data authorising a destructive act, the exact class the pull
 // already refuses. The flag gates the save and names the state instead.
+// **Every section that can be saved has one.** The two that did not - the AI settings and the
+// diagram defaults - were the two whose Save had no guard, and they lost data for it: a Save
+// pressed or provoked before their read published wrote the empty form over a stored engine,
+// two model names and three budgets, and the built-in sliders and ceiling over the stored ones,
+// each announcing success. The other four refuse. «Which sections have a flag» is not a
+// judgement call: it is every section a Save can write.
+let aiLoadFailed = 'never';
+let layLoadFailed = 'never';
 let rxLoadFailed = 'never';
 function renderRx() {
   if (rxLoadFailed) {
@@ -613,7 +633,19 @@ function renderRx() {
 const _loadSeq = {};
 function beginLoad(key) {
   const mine = (_loadSeq[key] = (_loadSeq[key] || 0) + 1);
-  return () => mine === _loadSeq[key];
+  // **An edit made before this read started is still an edit.** `markDirty` cancels the loads
+  // that are *in flight*, which is every load it can see; a read that begins a moment later is
+  // current by that test and publishes the stored value straight over what the reader has just
+  // typed - silently, and leaving the section marked dirty, so Save then writes back the value
+  // they had replaced. The ordering is not theirs to control: the reload is started by a write
+  // in another window. So a read asks the same question at the end, and a read that finds an
+  // unsaved edit cancels itself rather than winning the race.
+  return () => {
+    if (mine !== _loadSeq[key]) return false;
+    if (!dirtyPeer(key)) return true;
+    markLoadCancelled(key);
+    return false;
+  };
 }
 async function loadRx() {
   rxLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
@@ -667,6 +699,9 @@ function wasOwn(key) {
 // touch a load that is actually in flight.
 const LOAD_FLAG = {
   rxShortcuts: { get: () => rxLoadFailed, set: (v) => { rxLoadFailed = v; } },
+  aicfg: { get: () => aiLoadFailed, set: (v) => { aiLoadFailed = v; } },
+  erParams: { get: () => layLoadFailed, set: (v) => { layLoadFailed = v; } },
+  erDrawMax: { get: () => layLoadFailed, set: (v) => { layLoadFailed = v; } },
 };
 /** A read that was thrown away, recorded - **and only if there was one.**
  *
@@ -800,7 +835,11 @@ function conflictBox(key, on) {
 // edited in between, which is precisely what `tools/asynccheck.py` is for and precisely what an
 // inline arrow hides from it.
 async function takeTheirs(key) {
-  dirty.delete(key);
+  // Every unsaved edit in this section, not the one the box happens to name: the two tab keys
+  // share a reload, so clearing one leaves the section dirty - and a section with an unsaved
+  // edit is exactly what a read now refuses to overwrite, which would make «Take theirs» the
+  // one button that does nothing.
+  Object.keys(SECTIONS).forEach((k) => { if (SECTIONS[k].reload === SECTIONS[key].reload) dirty.delete(k); });
   await SECTIONS[key].reload();
   // **The same window, through the other door.** A reader who presses «Take theirs» and then types
   // while the read is still in flight was having the box closed over a form that had unsaved edits in

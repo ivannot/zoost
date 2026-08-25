@@ -63,6 +63,7 @@ apps/analytics/graphview.js	init	drawMax
 apps/analytics/graphview.js	init	egoDepth
 apps/analytics/graphview.js	init	erP
 apps/analytics/graphview.js	init	ids
+apps/analytics/options.js	loadAi	aiLoadFailed
 apps/analytics/options.js	loseLock	aiPassChanging
 apps/analytics/options.js	onAiengine	prevEngine
 apps/analytics/options.js	saveAi	aiPassChanging
@@ -117,6 +118,7 @@ apps/crm/graphview.js	init	ids
 apps/crm/modules.js	openModule	currentPath
 apps/crm/modules.js	pullModules	index
 apps/crm/modules.js	rebuildModules	moduleLoad
+apps/crm/options.js	loadAi	aiLoadFailed
 apps/crm/options.js	loseLock	aiPassChanging
 apps/crm/options.js	onAiengine	prevEngine
 apps/crm/options.js	onSaveAi	aiPassChanging
