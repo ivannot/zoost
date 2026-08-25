@@ -278,6 +278,14 @@ test('nothing injected into a Zoho page writes into it', () => {
     [/\brequestSubmit\s*\(|\.submit\s*\(\s*\)/, 'submits one of their forms'],
     [/\.innerHTML\s*=|\.outerHTML\s*=|insertAdjacentHTML\s*\(/, 'writes markup into their page'],
     [/\bappendChild\s*\(|\breplaceChild\s*\(|\bremoveChild\s*\(|\.remove\s*\(\s*\)/, 'changes their DOM tree'],
+    // The direct siblings of the four above, each of which walked past the first version: `append`,
+    // `prepend`, `replaceWith`, `insertBefore`, `after`, `before`. A denylist is only as wide as
+    // somebody remembered - the sentence above says so - but a spelling one line away from a listed
+    // one is not «somebody remembered», it is an oversight.
+    [/\.(?:append|prepend|replaceWith|before|after)\s*\(|\binsertBefore\s*\(/, 'changes their DOM tree'],
+    [/\.textContent\s*=|\.innerText\s*=|\.nodeValue\s*=/, 'writes text into their page'],
+    [/\.classList\.(?:add|remove|toggle|replace)\s*\(/, 'changes a class in their page'],
+    [/\.style\.[\w-]+\s*=|\.style\.setProperty\s*\(/, 'restyles their page'],
   ];
   const found = [];
   for (const rel of [...injected].sort()) {
@@ -287,9 +295,14 @@ test('nothing injected into a Zoho page writes into it', () => {
     // so a note at the end of a line of code stayed - and in a file whose comments are this dense,
     // and on this subject, «Find used to call .focus() on their search box» is a line somebody
     // writes. Planted exactly that and the battery went red over a comment.
+    // Comments *and* strings. The stripper handled the first and not the second, so
+    // `const NOTE = 'It never calls .focus() or .click() on anything in your page.'` - which is
+    // the sentence this project writes about this subject - failed the battery. Quoted runs are
+    // blanked before the sweep, keeping the quotes so nothing else shifts.
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n')
       .map((l) => l.replace(/(^|[^:'"\`\\])\/\/.*$/, '$1'))
-      .join('\n');
+      .join('\n')
+      .replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, (q) => q[0] + q[0]);
     for (const [rx, what] of WRITES) if (rx.test(code)) found.push(`${rel} ${what}`);
   }
   assert.deepEqual(found, [],
@@ -12350,12 +12363,28 @@ test('nothing says a Zoho page opened when the navigation was refused', () => {
       const says = /set?[sS]tatus\(\s*[^)]*'ok'/.test(after) || /status\([^)]*'ok'/.test(after);
       if (!says) continue;
       seen++;
-      // The property is «the answer is used», and the shape that throws it away is a bare statement:
-      // a line that is nothing but the call. Anything else - an `if`, an assignment, a `return`, a
-      // conditional - has it in hand.
-      const discarded = body.split('\n')
-        .filter((l) => /^\s*(await\s+)?goToZoho\(/.test(l))
-        .map((l) => l.trim().slice(0, 60));
+      // The property is «the answer is used», and the first spelling of this asked whether the *line*
+      // was nothing but the call - so `try { await goToZoho(url); setStatus(…, 'ok'); }`, which is
+      // the shape one real caller already had, passed on a formatting choice. What throws the answer
+      // away is a call whose result nothing receives: read what comes immediately before it.
+      const discarded = [];
+      for (const m of body.matchAll(/(.{0,32})\bawait goToZoho\(/g)) {
+        const before = m[1].replace(/\s+$/, '');
+        // Branched on directly - `if (`, `?`, `&&`, `return` - is in hand.
+        if (/[(?:&|!]$|\breturn$/.test(before)) continue;
+        // Assigned is not, by itself: `const opened = await goToZoho(url); setStatus(…, 'ok')` has
+        // the answer in a variable nobody reads, which is the same lie with a name on it. The name
+        // has to reach a guard before the success line does.
+        const named = /(?:const|let|var)\s+([\w$]+)\s*=$/.exec(before);
+        if (named) {
+          const after = body.slice(m.index);
+          const guard = new RegExp(`if\\s*\\(\\s*!?\\s*${named[1]}\\b`);
+          const ok = after.search(/set?[sS]tatus\([^)]*'ok'|status\([^)]*'ok'/);
+          const at = after.search(guard);
+          if (at >= 0 && (ok < 0 || at < ok)) continue;
+        }
+        discarded.push((before + 'await goToZoho(').trim().slice(-52));
+      }
       assert.deepEqual(discarded, [],
                        `${app}: ${n}() calls goToZoho and then says a page opened, without looking at `
                        + `what it answered: ${JSON.stringify(discarded)}. It answers null when the `
@@ -12405,9 +12434,13 @@ test('picking a working folder says so before reading it, in both panels', async
     const m = load([sliceFn(rel, 'pickRoot')], g);
     await m.pickRoot();
 
-    const said = seq.findIndex((x) => x.includes('Working folder'));
+    // **The last time it is said, not the first.** Saying it before the read *and* again after it
+    // paints over the diagnosis exactly as the original defect did, and a check that takes the first
+    // occurrence passes on it - the line before the read makes it true and the line after it makes
+    // it false, and only the second one is on screen.
+    const said = seq.map((x, i) => (x.includes('Working folder') ? i : -1)).filter((i) => i >= 0).pop();
     const readAt = seq.indexOf('read the folder');
-    assert.ok(said >= 0, `${app}: the handler never said which folder was chosen - it did ${JSON.stringify(seq)}`);
+    assert.ok(said !== undefined, `${app}: the handler never said which folder was chosen - it did ${JSON.stringify(seq)}`);
     assert.ok(readAt >= 0, `${app}: the handler never read the folder - it did ${JSON.stringify(seq)}`);
     assert.ok(said < readAt,
               `${app}: it did ${JSON.stringify(seq)}. «Working folder» lands after the folder is read, `
@@ -12814,14 +12847,36 @@ test('a cancelled read leaves the page saying it has not read', async () => {
 
     // Every loader draws only while it is current. The check is the *last* thing each one does:
     // publishing after a cancelled read is what turns «nothing to draw» into «draw the empty form».
+    // **Every loader, not the ones whose drawing this recognises.** The first spelling looked for
+    // `ToUI()` or `render` and `continue`d when it found neither - so it examined five of the CRM's
+    // six loaders and three of the Analytics four, and `loadDc` was outside it in both. `loadDc`
+    // publishes with `$('zohoDc').value = …`, which is a draw by any reading, and deleting its guard
+    // left this green. A loader that writes into the page after its read is the subject; how it
+    // spells the writing is not.
     for (const m of src.matchAll(/^async function (load[A-Z]\w*)\s*\(/gm)) {
-      const body = sliceFn(rel, m[1]);
-      const draw = Math.max(body.lastIndexOf('ToUI()'), body.lastIndexOf('render'));
-      if (draw < 0) continue;
-      const guard = body.lastIndexOf('if (!current()) return;', draw);
-      assert.ok(guard > 0,
-                `${app}: ${m[1]}() draws with no «if (!current()) return;» before it, so a read the `
-                + 'reader cancelled by typing still paints the form - with whatever the markup holds.');
+      // Comments stripped first, and that is not tidiness: the very first run of this matched
+      // `layToUI()` inside a comment that *explains* the guard, and reported the function as
+      // unguarded. A check reading its own subject's prose, the fifth time today.
+      const body = sliceFn(rel, m[1]).replace(/\/\*[\s\S]*?\*\//g, '')
+        .split('\n').map((l) => l.replace(/(^|[^:'"`\\])\/\/.*$/, '$1')).join('\n');
+      const publishes = /\w+ToUI\(\)|render[A-Z]\w*\(\)|\$\([^)]*\)\.(?:value|textContent|innerHTML|checked)\s*=/g;
+      const all = [...body.matchAll(publishes)].map((x) => x.index);
+      assert.ok(all.length,
+                `${app}: ${m[1]}() reads and never publishes anything - either it is dead, or this `
+                + 'case has stopped recognising how a loader draws, which is how it came to be '
+                + 'examining five loaders out of six.');
+      // **Between the await and the drawing**, not «before the first thing it draws». `loadDc` fills
+      // its option list from the manifest before it reads anything - that is not from the read and
+      // cannot be stale - and requiring a guard in front of it reported a correct function. What has
+      // to be guarded is what the *read* produces.
+      const wait = body.indexOf('await ');
+      const after = all.filter((i) => i > wait);
+      if (wait < 0 || !after.length) continue;
+      const guard = body.slice(wait, after[after.length - 1]).search(/if \(!current\(\)\)\s*\{?\s*return/);
+      assert.ok(guard >= 0,
+                `${app}: ${m[1]}() draws after its read with no «if (!current()) return» in between, so `
+                + 'a read the reader cancelled by typing still paints the form - with whatever the '
+                + 'markup holds.');
     }
   }
 });
