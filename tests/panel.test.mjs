@@ -11534,6 +11534,39 @@ test('every script the panels load evaluates on its own', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// A workspace the panel can no longer read is not still on screen.
+//
+// `dir` and `bound` were cleared and the model was not, so the list went on drawing every view of a
+// folder that had gone - with the diagram, the audit, the assistant and both exports still enabled,
+// because they gate on `views.length`. You could export a workspace the panel could not open. The
+// twin blanks its tree and switches its local controls off in the same state.
+test('analytics: a folder that cannot be read leaves nothing of it on screen', async () => {
+  const el = () => ({ innerHTML: '', value: '', textContent: '', title: '', disabled: false,
+                      classList: { toggle() {}, add() {}, remove() {} }, style: {} });
+  const g = {
+    console, Object, Promise, Array,
+    root: { name: 'sample' }, rootGranted: true, wsList: [],
+    views: [{ id: 1 }, { id: 2 }], folders: [{}], schema: { a: 1 }, relations: [1], sqls: { x: 1 },
+    deps: {}, viewsPulledAt: '2026-01-01', dir: {}, bound: { workspace: '9' },
+    listWorkspaces: async () => [], noteSampleWs: () => {}, forgetDirs: () => {}, render: () => {},
+    updateButtons: () => {}, $: () => el(), esc: (x) => x, escA: (x) => x, status: () => {},
+    APP_DIR: 'analytics', byWsLabel: () => 0, selPlaceholder: () => {}, emptyReason: () => '',
+    window: { idbHandle: { get: async () => null, set: async () => {} } },
+    wsOptionTitle: () => '', wsOptionText: () => '', selectWorkspace: async () => {},
+    hasPerm: async () => true, appRoot: async () => ({}),
+  };
+  const { refreshWorkspaces } = load([sliceFn('apps/analytics/sidepanel.js', 'refreshWorkspaces')], g);
+  await refreshWorkspaces();
+  // Every projection of the workspace, not just the two that were being cleared: what is left on
+  // screen is what the enabled controls read.
+  assert.equal(g.views.length, 0, `${g.views.length} view(s) of a folder that could not be read are still listed`);
+  assert.equal(Object.keys(g.schema).length, 0, 'the schema of the departed workspace is still in memory');
+  assert.equal(g.relations.length, 0, 'its relations are still in memory');
+  assert.equal(g.deps, null, 'its lineage is still in memory');
+  assert.equal(g.dir, null, 'the folder handle survived');
+});
+
+// ---------------------------------------------------------------------------------------------
 // What a control promises, and what it says when it cannot keep the promise.
 //
 // Three things a reader meets before anything else, all of them wrong in the CRM and right in the

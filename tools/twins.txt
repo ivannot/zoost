@@ -188,10 +188,10 @@ pass	56e18c27fc90	4bb92032e77b	divergent
 passKind	684df355a097	bdf6d02817df	divergent
 patchCfg	36bf3c3c0b3e	022f4520707e	divergent
 pdfTitle	f485a3c63451	7f605af98241	divergent
-pickRoot	f7f5b59cd421	3f6e88e32e8d	divergent
+pickRoot	4348843d71c2	3f6e88e32e8d	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	1c8bec5fff43	e56766fa859d	divergent
+pullAll	7bac2f653c83	e56766fa859d	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical

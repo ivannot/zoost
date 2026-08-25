@@ -3732,11 +3732,12 @@ async function pullAll() {
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
-    // The page loop has a ceiling like every other one here, and unlike every other one it was not
-    // being said: the bridge returned `capped` and nothing read it, so a list that stopped early
-    // looked exactly like a census. That is the one thing a mirror may never do, and it was
-    // introduced the day the ceiling was - reported by an assistant reading the repository.
-    if (r.capped) setStatus($('stxt').textContent + ` \u00b7 list stopped at ${r.total} - there are more functions in Zoho`, 'warn');
+    // **The truncation is said where it is discovered, and this line is gone.** It sat here because
+    // the ceiling had been introduced without anybody reading `capped` at all - the right complaint,
+    // fixed in the wrong place: the branch that handles a truncated list returns three hundred lines
+    // above, so nothing could ever reach this. Two warnings about one fact, one of them unreachable,
+    // is worse than one - it reads as cover that is not there. The live one refuses to prune and says
+    // so after the tree is drawn, which is where a reader is looking.
     await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op);
   } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
@@ -4411,7 +4412,12 @@ async function pickRoot() {
     root = h; rootGranted = true; await window.idbHandle.set('rootDir', h);
     setStatus(`Working folder: \u00ab${h.name}\u00bb`, 'ok');
     await loadWorkspaces();
-  } catch (e) { if (e?.name !== 'AbortError') setStatus('Working folder: ' + e.message, 'warn'); }
+  // **A refusal does not open with the words of the success.** Both lines began «Working folder: »,
+  // so a browser that said no read as one that had said yes until you got to the middle of the
+  // sentence - and the platform's own words arrived raw, without going through `friendlyError` like
+  // every other failure in this panel. The twin says «Could not open that folder: …» and marks it
+  // `bad`; this is that.
+  } catch (e) { if (e?.name !== 'AbortError') setStatus('Could not open that folder: ' + friendlyError(e), 'bad'); }
 }
 
 /** Write the sample workspace into the working folder, then open it.

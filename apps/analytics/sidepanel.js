@@ -640,6 +640,12 @@ async function refreshWorkspaces() {
     // was added: the remembered id exists precisely because an unreadable folder cannot tell a
     // sample apart from no sample, which is what its own comment says, from four reports.
     if (rootGranted) noteSampleWs(null);
+    // **And the workspace that is gone goes with it.** `dir` and `bound` were cleared and the model
+    // was not, so the list went on drawing all 39 views of a folder the panel could no longer read -
+    // with the diagram, the audit, the assistant and both exports still enabled, because they gate on
+    // `views.length`. You could export a workspace that is not there. The twin blanks its tree and
+    // switches its six local controls off in this same state.
+    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; viewsPulledAt = null;
     dir = null; bound = null; forgetDirs(); render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');

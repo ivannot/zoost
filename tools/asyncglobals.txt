@@ -95,7 +95,14 @@ apps/analytics/sidepanel.js	pickRoot	root
 apps/analytics/sidepanel.js	pickRoot	rootGranted
 apps/analytics/sidepanel.js	readRememberedSample	sampleWsKnown
 apps/analytics/sidepanel.js	refreshWorkspaces	bound
+apps/analytics/sidepanel.js	refreshWorkspaces	deps
 apps/analytics/sidepanel.js	refreshWorkspaces	dir
+apps/analytics/sidepanel.js	refreshWorkspaces	folders
+apps/analytics/sidepanel.js	refreshWorkspaces	relations
+apps/analytics/sidepanel.js	refreshWorkspaces	schema
+apps/analytics/sidepanel.js	refreshWorkspaces	sqls
+apps/analytics/sidepanel.js	refreshWorkspaces	views
+apps/analytics/sidepanel.js	refreshWorkspaces	viewsPulledAt
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
