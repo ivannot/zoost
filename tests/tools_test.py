@@ -5854,6 +5854,55 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
                          'the counter counts prose about waiting as waiting, so its number says '
                          'nothing about what the probe actually does')
 
+    def probe(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('probe_ready', ROOT / 'tools' / 'probe.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_nothing_is_clicked_before_the_thing_it_needs_has_arrived(self):
+        """A click on a control the product hides until its data lands neither throws nor works.
+
+        The worst shape a step in a driver can have, and the ER scenario had it: it opened by
+        clicking the diagram tab, which carries `display:none` until the graph arrives. Early, the
+        click did nothing, `settle` returned on a document quiet for its own reasons, and the run
+        failed three lines later saying «the fixture draws 0 boxes» - which reads as a bad fixture.
+        It passed whenever the browser was already warm, and that was the whole of «intermittent».
+        """
+        late, pages, hidden = self.probe().clicks_before_ready()
+        self.assertGreater(pages, 0, 'no shipped page was read - the denominator is empty')
+        self.assertGreater(hidden, 0,
+                           'no control in either product is hidden in its markup any more, so this '
+                           'check has no subject and is passing over nothing')
+        self.assertEqual(late, [], '; '.join(late))
+
+    def test_it_can_see_an_unguarded_click(self):
+        # A clean answer proves nothing until the subject has been made dirty on purpose. The plant
+        # is the defect as it was: the ER scenario clicking the diagram tab first thing.
+        src = ROOT / 'tools' / 'probe.py'
+        keep = src.read_text(encoding='utf-8')
+        old = """    const ertab = () => document.querySelector('.tab[data-v="er"]');"""
+        self.assertIn(old, keep, 'the ER scenario no longer opens the way this plant expects')
+        try:
+            src.write_text(keep.replace(old, """    document.querySelector('#ertab').click();
+    const ertab = () => document.querySelector('.tab[data-v="er"]');""", 1), encoding='utf-8')
+            late, _, _ = self.probe().clicks_before_ready()
+        finally:
+            src.write_text(keep, encoding='utf-8')
+        self.assertTrue(any('ER' in x for x in late),
+                        'a scenario clicking a hidden control first thing was not reported, so the '
+                        'clean answer above is a clean answer about nothing')
+
+    def test_a_click_inside_a_helper_is_judged_where_the_helper_is_called(self):
+        # It was judged where the helper is *written*, and both panel scenarios declare theirs at
+        # the top - so the check invented two findings about clicks that run several settles later.
+        # A checker measuring itself, which is where three findings in a row have come from here.
+        late, _, _ = self.probe().clicks_before_ready()
+        self.assertFalse(any('navtab' in x for x in late),
+                         'the check reports the panel scenarios for a click inside a helper they '
+                         'declare early and call late')
+
 
 class BothListingsHaveTheSameShape(unittest.TestCase):
     """Two listings, one submission process: a section in one is a section in the other.

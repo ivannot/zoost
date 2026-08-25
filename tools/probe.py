@@ -1187,7 +1187,16 @@ ER = """
     await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
   };
   (async () => {
-    document.querySelector('.tab[data-v="er"]').click();
+    // **Nothing is clicked before something has waited for it.** The ER tab is in the markup from
+    // the first paint and hidden until the graph arrives, so clicking it early neither throws nor
+    // works: `settle` then returns on a document that has gone quiet for its own reasons, and the
+    // run failed at «the fixture draws 0 boxes» - which reads as a bad fixture and is a race. It
+    // passed whenever the browser was already warm, and that is the whole of what «intermittent»
+    // was here. The wait names the thing that never happened instead.
+    const ertab = () => document.querySelector('.tab[data-v="er"]');
+    await until(() => ertab() && ertab().style.display !== 'none',
+                'the diagram window never received a graph - the ER tab stayed hidden', 8000);
+    ertab().click();
     await settle('the ER view never drew');
     const badge = () => parseInt(($('ertabn') || {}).textContent || '0', 10) || 0;
     const line = () => {
@@ -1442,6 +1451,66 @@ def waits() -> tuple:
     return (bare, cond)
 
 
+def clicks_before_ready() -> list:
+    """Clicks on a control the product keeps hidden until its data arrives, with nothing waited for.
+
+    **A click on a hidden element neither throws nor works**, which is the worst shape a step in a
+    driver can have. The ER scenario opened by clicking the diagram tab; that tab carries
+    `display:none` in the markup and is shown when the graph lands, so an early click did nothing,
+    `settle` then returned on a document that had gone quiet for its own reasons, and the run failed
+    three lines later saying «the fixture draws 0 boxes» - which reads as a bad fixture. It passed
+    whenever the browser was already warm, and that is the whole of what «intermittent» was here.
+
+    Both halves are derived. Which controls are hidden comes from the shipped markup, not from a
+    list here; which clicks are unguarded comes from the scenario text before each `.click(`. The
+    blind spot, stated: an element hidden by a stylesheet rather than by an inline style is not
+    seen, and neither is a scenario that reaches the page some other way - dispatching an event,
+    setting a value.
+    """
+    import ast
+    import re
+    root = pathlib.Path(__file__).resolve().parent.parent
+    hidden = set()
+    pages = 0
+    for html in sorted(root.glob("apps/*/*.html")):
+        pages += 1
+        for m in re.finditer(r"<[^>]*\bid=\"([\w-]+)\"[^>]*>", html.read_text(encoding="utf-8")):
+            if re.search(r"style=\"[^\"]*display\s*:\s*none", m.group(0)):
+                hidden.add(m.group(1))
+    tree = ast.parse(pathlib.Path(__file__).read_text(encoding="utf-8"))
+    late = []
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+            continue
+        body = node.value.value
+        if not isinstance(body, str) or "const wait =" not in body:
+            continue
+        name = node.targets[0].id if isinstance(node.targets[0], ast.Name) else "?"
+        start = body.find("(async () => {")
+        run = body[start:] if start >= 0 else body
+        for m in re.finditer(r"\$\('([\w-]+)'\)[^\n]*\.click\(|querySelector\(([^)]*)\)[^\n]*\.click\(", run):
+            sel = m.group(1) or m.group(2) or ""
+            ids = {sel} | {x for x in re.findall(r"[\w-]+", sel)}
+            if not (ids & hidden):
+                continue
+            # **A click inside a helper happens where the helper is called**, not where it is
+            # written, and both scenarios of the panel declare theirs at the top. Read literally
+            # this reported them for a click that runs several settles later - a checker inventing
+            # two findings, which is the class this repository catches by measuring its own tools.
+            # So when the click sits inside a `const <name> = async` declaration, the moment asked
+            # about is that helper's first call site.
+            when = m.start()
+            decl = run.rfind("const ", 0, m.start())
+            head_decl = run[decl:m.start()] if decl >= 0 else ""
+            fn = re.match(r"const (\w+) = async", head_decl)
+            if fn:
+                call = run.find(f"{fn.group(1)}()", decl + len(head_decl))
+                when = call if call >= 0 else m.start()
+            head = run[:when]
+            if "await until(" not in head and "await settle(" not in head:
+                late.append(f"{name}: clicks {sel.strip()} before waiting for anything")
+    return late, pages, len(hidden)
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -1483,8 +1552,16 @@ def main() -> int:
     print(f"probe: {cond} of {bare + cond} waits are for a condition; {bare} are sleeps "
           f"(5 of them the polling step inside `until`) - a sleep is a bet about how long the "
           f"panel takes.", flush=True)
+    # The other bet, and the one that does not throw when it loses: clicking a control the product
+    # keeps hidden until its data has arrived. The denominator is the markup's, not a list here.
+    late, pages, hidden = clicks_before_ready()
+    print(f"probe: {hidden} control(s) across {pages} shipped page(s) are hidden until their data "
+          f"lands; every click on one is preceded by a condition.", flush=True)
+    for line in late:
+        print(f"probe: {line} - a click on a hidden control does nothing and says nothing, so the "
+              f"run fails later about something else, and passes whenever the browser is warm.", flush=True)
     print("probe: the scripted paths above ran without throwing.", flush=True)
-    return 0
+    return 1 if late else 0
 
 
 if __name__ == "__main__":
