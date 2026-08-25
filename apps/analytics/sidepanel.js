@@ -3712,7 +3712,7 @@ function showAbout() {
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${esc(PRODUCT_LICENSE)}</a> · © 2026 ${esc(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
-    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs - view and column names, relations, and the SQL of your query tables - are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs - view and column names, the folder and description of a view, the name Zoho records as its owner, relations, and the SQL of your query tables - are sent directly from your browser to the provider you configured, and to no one else. `
     + `Rows are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine, except a problem report you write, read in full and send yourself.</div>`;
   $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
 }

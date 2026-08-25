@@ -215,10 +215,13 @@
     <h4>Read this before enabling the assistant</h4>
     <p>The AI assistant is off by default and requires you to enter your own API key. Once enabled, the
       content it needs to answer you is sent directly from your browser to the provider you selected,
-      Anthropic or OpenAI. For Zoost CRM that content is <b>Deluge source code</b>, module schemas,
-      workflow definitions, schedules, automation actions (their names, kinds, the field an update writes
+      Anthropic or OpenAI. For Zoost CRM that content is <b>Deluge source code</b>, module schemas - field
+      labels, API names, data types, which field looks up which module, and <b>the values inside a
+      picklist</b>, which are your own vocabulary and not Zoho's - workflow definitions, schedules,
+      automation actions (their names, kinds, the field an update writes
       and the value it writes, and a webhook's method and host - never its path
-      or its query string, either of which can be the whole of a posting credential), connection names and their connectors (never their secrets or tokens,
+      or its query string, either of which can be the whole of a posting credential), connection names, their connectors, whether Zoho reports each as connected,
+      and <b>the scopes each one was granted</b> (never their secrets or tokens,
       which Zoost never reads), what Zoho reports about <b>failed executions</b> - function names, Zoho's
       own reason text, run counts and credit usage - the name Zoho records against a function or a
       connection as having last changed it, and your questions. Sender addresses on an email action are
@@ -226,8 +229,10 @@
       the assistant sends: the extension is granted network access to those two origins, to your Zoho
       product and to <code>zoost.it</code> - which receives nothing except a problem report you have
       written, read in full and sent yourself, from the page the panel opens in front of you.</p>
-    <p>For <b>Zoost Analytics</b> the same applies to a different set: view names, column names and
-      data types, the relations between tables, the dependency graph, and the <b>SQL of your query
+    <p>For <b>Zoost Analytics</b> the same applies to a different set: view names and what kind of view each is, the folder each one
+      sits in, its description, column names and
+      data types, the relations between tables, the dependency graph, when a view's design and its data
+      were last changed, <b>the name Zoho records as the owner of a view</b> - which is a person - and the <b>SQL of your query
       tables</b>. It can never send the rows inside a table, because it never reads them - so the assistant
       knows your workspace's structure and never its values.</p>
     <p>That provider then processes the data under <b>its own</b> terms and privacy policy, not this one.

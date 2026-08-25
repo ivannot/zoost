@@ -5904,6 +5904,63 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
                          'declare early and call late')
 
 
+class WhatTheAssistantSendsIsDeclared(unittest.TestCase):
+    """The privacy page enumerates, and an enumeration kept by hand is one that drifts.
+
+    Section 4.2 listed the categories from memory. Analytics was sending the folder a view sits in,
+    its description, the two dates Zoho records against it and - the one that matters - the name
+    Zoho keeps as its owner, which is a person, while the page said «view names, column names and
+    data types, the relations, the dependency graph and the SQL». The CRM was sending the values
+    inside a picklist, which are the reader's own vocabulary and not Zoho's, and the scopes granted
+    to each connection. Nobody was wrong on the day it was written; the code moved and the sentence
+    did not.
+
+    `tools/aidatacheck.py` derives the fields from the answer builders and `tools/aisends.txt` says
+    where each is declared on the page. Its limits are in its docstring rather than here.
+    """
+
+    def check(self, argv=()):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('aidata', ROOT / 'tools' / 'aidatacheck.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_every_field_the_assistant_sends_has_a_row(self):
+        mod = self.check()
+        sent = {(app, k) for app, ks in mod.sent().items() for k in ks}
+        self.assertGreater(len(sent), 20,
+                           'the scan found almost nothing - the answer builders have moved and this '
+                           'is passing over an empty set')
+        missing = sorted(sent - set(mod.ledger()))
+        self.assertEqual(missing, [], f'sent and undeclared: {missing}')
+
+    def test_a_row_for_something_nothing_sends_is_a_finding(self):
+        # A policy that over-declares describes a product that does not exist, which is its own kind
+        # of wrong. Planted, because a clean answer proves nothing until the subject is made dirty.
+        led = ROOT / 'tools' / 'aisends.txt'
+        keep = led.read_text(encoding='utf-8')
+        try:
+            led.write_text(keep + 'crm\tsecret_token\tnothing sends this\n', encoding='utf-8')
+            mod = self.check()
+            sent = {(app, k) for app, ks in mod.sent().items() for k in ks}
+            self.assertIn(('crm', 'secret_token'), set(mod.ledger()) - sent,
+                          'a ledger row for a field nothing emits is not reported')
+        finally:
+            led.write_text(keep, encoding='utf-8')
+
+    def test_it_reads_fields_and_not_prose(self):
+        # It did read prose: «in the 24 hours before that: ${n}» and «Total in workspace: ${n}» went
+        # into the ledger as fields of the answer. A checker inventing subjects is the class this
+        # repository catches by measuring its own tools.
+        mod = self.check()
+        sent = {k for ks in mod.sent().values() for k in ks}
+        for word in ('that', 'workspace'):
+            self.assertNotIn(word, sent,
+                             f'«{word}» is a word in a sentence, not a field of an answer - the '
+                             f'pattern has stopped anchoring to the start of a line')
+
+
 class BothListingsHaveTheSameShape(unittest.TestCase):
     """Two listings, one submission process: a section in one is a section in the other.
 

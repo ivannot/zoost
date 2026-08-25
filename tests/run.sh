@@ -116,6 +116,7 @@ echo "── checks ──"
 python3 tools/twincheck.py | tail -1
 python3 tools/asynccheck.py | tail -1
 python3 tools/sitecheck.py | tail -1
+python3 tools/aidatacheck.py | tail -1
 python3 tools/samplecheck.py | tail -1
 python3 tools/csscheck.py | tail -1
 python3 tools/namecheck.py | tail -1

@@ -820,7 +820,7 @@ function showAbout() {
     // twin's wording is the one that survived that argument, so this is the twin's wording with this
     // product's own nouns - and both now name the report page, which neither did.
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
-    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and their Deluge source, module and field names, workflow and schedule names - are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and their Deluge source, module and field names including the values inside a picklist, workflow, schedule and automation-action names, connection names with their connectors and scopes, and what Zoho reports about failed runs - are sent directly from your browser to the provider you configured, and to no one else. `
     + `Records are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine, except a problem report you write, read in full and send yourself. `
     + `Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
   $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');

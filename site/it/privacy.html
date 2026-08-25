@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:cd7dba48d7e89772 -->
+<!-- translated-from: site/privacy.html sha256:b6e5c93cc22db978 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -220,11 +220,14 @@
     <p>L'assistente AI è disattivato di default e richiede che tu inserisca una chiave API tua. Una
       volta attivato, il contenuto che gli serve per risponderti viene mandato direttamente dal tuo
       browser al provider che hai scelto, Anthropic oppure OpenAI. Per Zoost CRM quel contenuto è
-      <b>codice sorgente Deluge</b>, schemi dei moduli, definizioni dei workflow, schedulazioni, azioni di
+      <b>codice sorgente Deluge</b>, schemi dei moduli - etichette dei campi, nomi API, tipi di dato, quale
+      campo fa lookup su quale modulo e <b>i valori dentro una picklist</b>, che sono vocabolario tuo e non
+      di Zoho - definizioni dei workflow, schedulazioni, azioni di
       automazione (nome, tipo, il campo che un aggiornamento scrive e il valore che ci scrive, e di un
       webhook il metodo e l'host - mai il percorso ne' la query string, che possono
       contenere per intero una credenziale di pubblicazione),
-      nomi delle connessioni e loro connettori (mai i segreti o i token, che Zoost non legge mai), quello
+      nomi delle connessioni, loro connettori, se Zoho le riporta come connesse e <b>gli scope concessi a ciascuna</b> (mai i segreti o i
+      token, che Zoost non legge mai), quello
       che Zoho riporta sulle <b>esecuzioni fallite</b> - nomi delle funzioni, il testo del motivo scritto
       da Zoho, numero di esecuzioni e crediti consumati - il nome che Zoho registra come ultimo ad aver
       modificato una funzione o una connessione, e le tue domande. Gli indirizzi mittente di un'azione
@@ -232,8 +235,11 @@
       destinazione è possibile per quello che manda l'assistente: all'estensione è concesso l'accesso di rete
       a quelle due origini, al tuo prodotto Zoho e a <code>zoost.it</code> - che non riceve nulla tranne una
       segnalazione che hai scritto, letto per intero e mandato tu, dalla pagina che il pannello ti apre davanti.</p>
-    <p>Per <b>Zoost Analytics</b> vale lo stesso con un insieme diverso: nomi delle viste, nomi e tipi
-      delle colonne, relazioni fra tabelle, grafo delle dipendenze, e <b>l'SQL delle tue query table</b>.
+    <p>Per <b>Zoost Analytics</b> vale lo stesso con un insieme diverso: nomi delle viste e di che tipo e' ciascuna, la cartella in
+      cui stanno, la loro descrizione, nomi e tipi
+      delle colonne, relazioni fra tabelle, grafo delle dipendenze, quando il disegno di una vista e i suoi
+      dati sono stati cambiati l'ultima volta, <b>il nome che Zoho registra come proprietario di una
+      vista</b> - che è una persona - e <b>l'SQL delle tue query table</b>.
       Non può mai mandare le righe dentro una tabella, perché non le legge mai: quindi l'assistente
       conosce la struttura del tuo workspace e mai i suoi valori.</p>
     <p>Quel provider tratta poi i dati secondo i propri termini e la propria privacy policy, non secondo

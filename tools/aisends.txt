@@ -1,0 +1,50 @@
+# What the assistant sends, and where the privacy page says so.
+#
+# Derived by tools/aidatacheck.py: one row per field a tool interpolates into an
+# answer - app, field, and the words in section 4.2 of site/privacy.html that cover
+# it. The third column is written by hand on purpose, because it is a claim about a
+# page and deriving it would only prove the file agrees with itself; `--accept`
+# carries it forward, and fills a new row with UNNAMED, which is a finding until
+# somebody reads the page and replaces it.
+# One row per field a tool interpolates into an answer: app, field, and the words in
+# section 4.2 of site/privacy.html that cover it. Written by hand on purpose - the third
+# column is a claim about a page, and deriving it would only prove the file agrees with
+# itself. `--accept` fills a new row with UNNAMED, which is a finding until somebody
+# reads the page and replaces it.
+# Derived by tools/aidatacheck.py - an edit by hand here is overwritten by the next
+# `--accept`, except the third column, which is carried forward.
+
+analytics	built_on	the dependency graph
+analytics	data_changed	when a view's design and its data were last changed
+analytics	description	its description
+analytics	design_changed	when a view's design and its data were last changed
+analytics	folder	the folder each one sits in
+analytics	on_dashboards	the dependency graph
+analytics	owner	the name Zoho records as the owner of a view - which is a person
+analytics	read_by	the dependency graph
+analytics	reads_from	the dependency graph
+analytics	system_table	what kind of view each is (the flag Zoho sets on a table it made itself)
+analytics	type	what kind of view each is
+crm	api_name	module schemas - API names
+crm	called_by	Deluge source code (who calls what is read out of it)
+crm	calls	Deluge source code (who calls what is read out of it)
+crm	connection	connection names
+crm	connections	connection names
+crm	connector	their connectors
+crm	created_by	the name Zoho records against a function or a connection as having last changed it
+crm	functions	Deluge source code (the index of function names)
+crm	instant_actions	workflow definitions
+crm	label	module schemas - field labels
+crm	last_executed	workflow definitions
+crm	module	module schemas
+crm	module_not_determinable_in	Deluge source code (which module a call works on, read out of it)
+crm	outbound_calls	Deluge source code (counted in it)
+crm	reads_modules	Deluge source code (which modules it touches, read out of it)
+crm	returns	Deluge source code (read out of it)
+crm	scheduled_actions	workflow definitions
+crm	scopes	the scopes each one was granted
+crm	size	Deluge source code (its length)
+crm	status	whether Zoho reports each as connected
+crm	trigger	workflow definitions
+crm	used_in	workflow definitions, schedules (the places a function is attached to)
+crm	writes_modules	Deluge source code (which modules it touches, read out of it)
