@@ -366,13 +366,22 @@
       // is not, everything sent is a guess and no refresh can help. A name is not a credential and no
       // value is read, so the answer can travel in the message the reader is already pasting, instead
       // of costing them a console and me another day of theories.
-      let jar = '';
-      try { jar = document.cookie.split('; ').map((c) => c.split('=')[0]).filter(Boolean).sort().join(' '); } catch (_) {}
-      throw apiError(res.status, path,
+      let jar = [];
+      try { jar = document.cookie.split('; ').map((c) => c.split('=')[0]).filter(Boolean).sort(); } catch (_) {}
+      const e = apiError(res.status, path,
         `${message} - the token was read from ${lastCsrfFrom} (${lastCsrfShape || 'no value'})`
-        + `; cookies on this page: ${jar || '(none readable)'}`
+        + `; cookies on this page: ${jar.join(' ') || '(none readable)'}`
         + (retried === 'unprimed' ? ', and the Zoho CRM call made to refresh it failed too' : ', and it was still refused after a refresh'),
         code);
+      // **The same three facts, carried as fields rather than as prose.** The sentence above is
+      // written to be read on the status line; it does not survive the problem report, which is the
+      // one place the reader was being asked to send it from. `redactHard` turns
+      // `INVALID_CSRF_TOKEN` and every cookie name into `<name>` and eats the shape as a quotation -
+      // correctly, since its whole job is to destroy things that look like identifiers. So the
+      // report prints these instead, and they are safe by construction: two names, a count and a
+      // list of names, and no value of any of them.
+      e.diag = { what: 'csrf', from: lastCsrfFrom, shape: lastCsrfShape, cookies: jar };
+      throw e;
     }
     throw apiError(res.status, path, message, code);
   }
@@ -961,8 +970,11 @@
     send(shape ? shape(r) : { ok: true, ...r });
   }
 
+  // `diag` crosses with the rest: a property hung on an Error does not survive `sendResponse`, so
+  // anything the panel needs has to be named here. It carries names and counts, never a value.
   const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
-    forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null });
+    forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null,
+    diag: (e && e.diag) || null });
 
     // Only the real CRM application frame answers: CRM origin, an instance, **and an org**. The org
     // was not required, and that let a second frame speak for the tab. A suite shell puts several

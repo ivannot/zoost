@@ -12244,6 +12244,46 @@ test('the call graph header counts the links on the drawing', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// The one diagnostic added to be pasted into a problem report survives the problem report.
+//
+// A refused deluge call names the cookie that supplied the token, that token's length and whether it
+// carries an `=`, and the cookies on the page - added because «400 INVALID_CSRF_TOKEN» is three
+// words that fit every explanation, and stated in its own comment to be useful because «the answer
+// can travel in the message the reader is already pasting». It could not: `redactHard` turns
+// `INVALID_CSRF_TOKEN` and every cookie name into `<name>` and reads «128 chars, no '='» as a
+// quotation - correctly, since destroying anything shaped like an identifier is its whole job.
+//
+// So the same three facts cross as fields and are printed as fields. Safe without redaction by
+// construction: two names, a length, and a list of cookie names, and no value of any cookie is read
+// anywhere on that path.
+test('a refused token reaches the problem report as facts, not as prose', () => {
+  const REL = 'apps/crm/sidepanel.js';
+  const m = load([sliceFn(REL, 'redact'), sliceFn(REL, 'redactHard'), sliceFn(REL, 'buildReport')],
+                 { String, Object, Number });
+  const facts = { product: 'Zoost', version: '1.0.0', browser: 'Chrome 151', tab: 'functions',
+                  search: 'names', counts: {}, refused: [], steps: [],
+                  message: "400 - INVALID_CSRF_TOKEN - the token was read from CT_CSRF_TOKEN (128 chars, no '=')",
+                  diag: { what: 'csrf', from: 'CT_CSRF_TOKEN (fallback)', shape: "128 chars, no '='",
+                          cookies: ['CT_CSRF_TOKEN', 'crmcsr', 'iamcsr'] } };
+  const out = m.buildReport(facts);
+
+  // The prose half is destroyed, and that is correct - this asserts it, so nobody restores the
+  // sentence and believes it travels.
+  const said = out.slice(out.indexOf('what happened'), out.indexOf('state'));
+  assert.doesNotMatch(said, /INVALID_CSRF_TOKEN/,
+                      'the redactor stopped destroying an identifier in the message, which is its job');
+
+  assert.match(out, /csrf: token from CT_CSRF_TOKEN/,
+               `the report does not carry which cookie supplied the token:\n${out}`);
+  assert.match(out, /128 chars/, 'the report does not carry the token\u0027s shape');
+  assert.match(out, /crmcsr iamcsr/, 'the report does not carry the cookies the page had');
+
+  // And nothing is invented when there is nothing to say.
+  const quiet = m.buildReport(Object.assign({}, facts, { diag: null }));
+  assert.doesNotMatch(quiet, /csrf:/, 'a report with no diagnostic prints an empty one');
+});
+
+// ---------------------------------------------------------------------------------------------
 // A refusal to navigate is not followed by a line saying it worked.
 //
 // `goToZoho` answers `null` on one path - the origin guard - and that guard has already written «This

@@ -321,6 +321,20 @@ function buildReport(r) {
     L.push(`  counts: ${Object.entries(r.counts).map(([k, v]) => `${k} ${Number(v)}`).join(' · ')}`);
   }
   if (r.refused && r.refused.length) L.push(`  areas your Zoho role refused: ${r.refused.join(', ')}`);
+  // **Printed as fields, and not through `clean`.** The bridge writes the same three facts into the
+  // message as well, and the message cannot carry them here: `redactHard` turns `INVALID_CSRF_TOKEN`
+  // and every cookie name into `<name>` and reads «128 chars, no '='» as a quotation - correctly,
+  // because its whole job is to destroy anything shaped like an identifier. The diagnostic was added
+  // so a refusal arrives as evidence instead of three words, and the report is exactly where it was
+  // being asked to arrive.
+  //
+  // Safe without redaction by construction, which is why it is a *field* and not a licence: two
+  // names, a length, and a list of cookie names. No value of any cookie is read anywhere on this
+  // path, and `shape` is a count of characters and a yes/no about one of them.
+  if (r.diag && r.diag.what === 'csrf') {
+    L.push(`  csrf: token from ${r.diag.from || '?'} (${r.diag.shape || 'no value'})`);
+    L.push(`  cookies on that page, names only: ${(r.diag.cookies || []).join(' ') || '(none readable)'}`);
+  }
   if (r.steps && r.steps.length) {
     L.push('');
     L.push('last steps, oldest first');
@@ -4393,6 +4407,7 @@ function reportFacts(err, ai) {
     },
     refused: [],
     ai,
+    diag: (err && err.diag) || null,
     steps: reportSteps.slice(),
   };
 }

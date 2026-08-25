@@ -218,6 +218,20 @@ function buildReport(r) {
     L.push(`  counts: ${Object.entries(r.counts).map(([k, v]) => `${k} ${Number(v)}`).join(' · ')}`);
   }
   if (r.refused && r.refused.length) L.push(`  areas your Zoho role refused: ${r.refused.join(', ')}`);
+  // **Printed as fields, and not through `clean`.** The bridge writes the same three facts into the
+  // message as well, and the message cannot carry them here: `redactHard` turns `INVALID_CSRF_TOKEN`
+  // and every cookie name into `<name>` and reads «128 chars, no '='» as a quotation - correctly,
+  // because its whole job is to destroy anything shaped like an identifier. The diagnostic was added
+  // so a refusal arrives as evidence instead of three words, and the report is exactly where it was
+  // being asked to arrive.
+  //
+  // Safe without redaction by construction, which is why it is a *field* and not a licence: two
+  // names, a length, and a list of cookie names. No value of any cookie is read anywhere on this
+  // path, and `shape` is a count of characters and a yes/no about one of them.
+  if (r.diag && r.diag.what === 'csrf') {
+    L.push(`  csrf: token from ${r.diag.from || '?'} (${r.diag.shape || 'no value'})`);
+    L.push(`  cookies on that page, names only: ${(r.diag.cookies || []).join(' ') || '(none readable)'}`);
+  }
   if (r.steps && r.steps.length) {
     L.push('');
     L.push('last steps, oldest first');
@@ -628,6 +642,9 @@ function bridgeError(r, fallback) {
   const e = new Error(r ? ((r && r.error) || fallback) : MSG.staleBridge);
   e.status = (r && r.status) || 0;
   e.forbidden = !!(r && r.forbidden);
+  // What the bridge could say about *why*, in fields. The sentence it also builds is for the status
+  // line and does not survive the problem report - see `buildReport`.
+  e.diag = (r && r.diag) || null;
   return e;
 }
 
@@ -5881,6 +5898,7 @@ function reportFacts(err, ai) {
     // `=== false` and reported an empty list every time. The one fact in the report that explains a
     // whole class of «why is this tab empty» was the one it never carried. Found by a review.
     refused: Object.keys(tabAccess || {}).filter((k) => tabAccess[k] && tabAccess[k].state === 'forbidden'),
+    diag: (err && err.diag) || null,
     ai,
     steps: reportSteps.slice(),
   };

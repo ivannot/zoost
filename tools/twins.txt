@@ -40,7 +40,7 @@ buildExportHtml	c1989b83e8f7	b2d9c4d7bc68	divergent
 buildExportMarkdown	a15fa042450c	fbf90f473b83	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
-buildReport	3de3b69b14b5	3de3b69b14b5	identical
+buildReport	4a85b7b77405	4a85b7b77405	identical
 buildSchemaGraph	fbecf3b254ed	d28416eec22e	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
@@ -211,7 +211,7 @@ render	1f1f526caa02	b47086e0e791	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	de56c9b9ed2d	5037a60baf16	divergent
 renderRx	da8caf217c7f	da8caf217c7f	identical
-reportFacts	991ceaf03121	24f523b42a89	divergent
+reportFacts	1ccc3c0ad48c	3bc8d1655e61	divergent
 reportFoot	5369198eb387	5369198eb387	identical
 reportHead	38270d601c35	38270d601c35	identical
 reportMark	267dd72f6fe1	267dd72f6fe1	identical
