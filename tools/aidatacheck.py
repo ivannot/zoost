@@ -14,10 +14,19 @@ named on the page. A field emitted by a tool and absent from `tools/aisends.txt`
 ledger row for a field nothing emits any more is a finding too, because a policy that over-declares
 is as wrong as one that under-declares - it describes a product that does not exist.
 
-**What this does not do**, stated rather than left to be found. It reads `key: ${...}` inside the
-functions named below, which is how every answer in both products is written today; a tool that
-returns a bare sentence, a JSON blob or a table without that shape sends data this cannot see. It
-says nothing about *whether the wording on the page is a fair description* of what the field holds -
+**What this does not do**, stated rather than left to be found, and corrected once because the
+statement itself was wrong. It reads `key: ${...}` inside the functions named below - which is how
+**two of the seven** are written, not «how every answer in both products is written today», as this
+said until somebody measured it. The other five answer in tables and sentences and contribute no
+field at all; the run prints that, because a denominator that hides five empty subjects is the exact
+shape of hole this repository has been caught by three times.
+
+The field scan is also anchored: a key must start a line. So `namespace.name` (a dot), `REST` and
+`Workspace` (capitals), `source tables` (a space) and a key written after `}` on the same line are
+all invisible to it, and each of those exists in the shipped code. Those payloads are held by the
+raw-object rule and by the sentinel cases in `tests/panel.test.mjs`, not by the ledger.
+
+It says nothing about *whether the wording on the page is a fair description* of what a field holds -
 only that somebody wrote a row for it and had to look at the page to do so. And it does not read the
 Italian page: the two are held together by `sitecheck.py`, which is where that comparison lives.
 """
@@ -73,9 +82,36 @@ def _body(text: str, name: str) -> str:
 #
 # Anything ending in `ForModel` is a projection: a function whose whole job is to name what may go.
 # Passing one to `JSON.stringify` is the shape this is asking for, so it is not a finding.
-RAW_OUT = re.compile(
-    r"JSON\.stringify\(\s*(?!\{)(?!(?:[\w$]*ForModel)\b)([A-Za-z_$][\w$]*)\s*(?:\|\|[^,)]*)?\s*[,)]"
-    r"|\{\s*\.\.\.\s*[A-Za-z_$][\w$]*")
+# The first argument of a `JSON.stringify(` call, read by counting brackets rather than by stopping
+# at the first comma. The comma is what a regex has to stop at, and it is wrong here: `{ ok: 1, ...e }`
+# is one argument with a comma in it, so a pattern that cut there saw `{ ok: 1` and let a whole stored
+# row through. Six other forms walked past the same version - `e.detail`, `rows[0]`, a `.filter(...)`,
+# `Object.assign({}, e)`, `[e]`, `e ?? {}` - all of them things somebody writes.
+def _first_arg(code: str, at: int) -> str:
+    depth, out = 0, []
+    for ch in code[at:at + 400]:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            if depth == 0:
+                break
+            depth -= 1
+        elif ch == "," and depth == 0:
+            break
+        out.append(ch)
+    return "".join(out).strip()
+
+
+# What a projected value looks like where it is handed over: a call to a projection, a literal built
+# here, or a local whose own initialiser is a projection call - which is what hoisting produces, and
+# what the first version reported as a finding on a refactor that changes nothing.
+SAFE_ARG = re.compile(r"^(?:[\w$]*ForModel\s*\(|\{|\[\s*\]|'|\"|`)")
+SPREAD = re.compile(r"\.\.\.\s*[A-Za-z_$][\w$]*")
+
+
+def _projected_locals(body: str) -> set:
+    """Local names whose initialiser is a projection call - `const safe = xForModel(e)`."""
+    return set(re.findall(r"(?:const|let|var)\s+([\w$]+)\s*=\s*[\w$]*ForModel\s*\(", body))
 
 
 def raw_objects() -> list:
@@ -86,8 +122,14 @@ def raw_objects() -> list:
         for fn in fns:
             body = _body(text, fn)
             code = "\n".join(l for l in body.split("\n") if not l.strip().startswith("//"))
-            for m in RAW_OUT.finditer(code):
-                out.append(f"{app}: {fn}() sends «{m.group(0)[:40]}» - a stored row, whole")
+            safe = _projected_locals(code)
+            for m in re.finditer(r"JSON\.stringify\(", code):
+                arg = _first_arg(code, m.end())
+                # A literal is a safe shape only while it is built here: an object that spreads a
+                # stored row is one property and a whole row, and the brace was letting it past.
+                if arg and not SPREAD.search(arg) and (SAFE_ARG.match(arg) or arg in safe):
+                    continue
+                out.append(f"{app}: {fn}() sends «JSON.stringify({arg[:40]}» - a stored row, whole")
     return out
 
 
@@ -143,9 +185,24 @@ def main() -> int:
         print(ledger_delta(f"aidatacheck: {LEDGER.relative_to(ROOT)}", before, ledger_count(LEDGER)), flush=True)
         return 0
 
-    read = sum(len(fns) for _, fns in SOURCES.values())
-    print(f"aidatacheck: {len(pairs)} field(s) sent by {read} answer builder(s) across "
-          f"{len(SOURCES)} product(s); tools/aisends.txt names where each is declared.", flush=True)
+    # **The denominator was this file counting its own configuration**: «7 answer builders» because
+    # seven names are typed in `SOURCES`, and it would have printed seven with all seven deleted from
+    # the source. Measured per builder instead - five of the seven contribute no field at all, because
+    # they answer in tables and sentences rather than in `key: ${...}` - and beside it a cruder count
+    # of the subject: how many tools each product implements, taken by a pattern that knows nothing
+    # about fields. A builder that stops contributing is then visible as a number that moved.
+    per = {f"{app}.{fn}": len(FIELD.findall(_body((ROOT / rel).read_text(encoding='utf-8'), fn)))
+           for app, (rel, fns) in SOURCES.items() for fn in fns}
+    tools = sum((ROOT / rel).read_text(encoding="utf-8").count("if (name === '")
+                for rel, _ in SOURCES.values())
+    quiet = [k for k, v in per.items() if not v]
+    print(f"aidatacheck: {len(pairs)} field(s) read from {len(per) - len(quiet)} of {len(per)} answer "
+          f"builder(s) across {len(SOURCES)} product(s), which implement {tools} tool(s) between them; "
+          f"tools/aisends.txt names where each field is declared.", flush=True)
+    if quiet:
+        print(f"  no field has the `key: ${{...}}` shape in: {', '.join(sorted(quiet))} - they answer in "
+              f"tables and sentences, which this cannot read. Their payload is held by the raw-object "
+              f"rule below and by the cases in tests/panel.test.mjs, not by the ledger.", flush=True)
     for app, k in unrecorded:
         print(f"  {app}: the assistant sends «{k}» and tools/aisends.txt has no row for it - "
               f"section 4.2 of the privacy page may not declare it.", flush=True)

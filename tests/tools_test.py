@@ -5986,6 +5986,74 @@ class WhatTheAssistantSendsIsDeclared(unittest.TestCase):
                              f'pattern has stopped anchoring to the start of a line')
 
 
+class TheRawObjectRuleCanProduceAPositive(unittest.TestCase):
+    """`raw_objects()` had no test at all, and the two plants in the commit that added it were both
+    on the *field* scan beside it. A sweep asked to break it walked seven handover forms past it -
+    every one of them something somebody writes - and made it report a refactor that changes nothing.
+
+    So the forms are the cases. Each is substituted into a shipped answer builder, the checker is run,
+    and the exit code is read; the file is restored either way.
+    """
+
+    ANCHOR = 'aiTrunc(JSON.stringify(workflowForModel(detail || e), null, 2), 6000))'
+    LEAKS = ['JSON.stringify(e.detail, null, 2)',
+             'JSON.stringify(rows[0], null, 2)',
+             'JSON.stringify(list.filter((x) => x.path === p), null, 2)',
+             'JSON.stringify(Object.assign({}, e), null, 2)',
+             'JSON.stringify([e], null, 2)',
+             'JSON.stringify({ ok: 1, ...e }, null, 2)',
+             'JSON.stringify({ ...e, kind: 1 }, null, 2)',
+             'JSON.stringify(e ?? {}, null, 2)']
+
+    def run_check(self):
+        return subprocess.run([sys.executable, str(ROOT / 'tools' / 'aidatacheck.py')],
+                              cwd=ROOT, capture_output=True, text=True)
+
+    def plant(self, replacement, extra=None):
+        src = ROOT / 'apps' / 'crm' / 'ai.js'
+        keep = src.read_text(encoding='utf-8')
+        self.assertIn(self.ANCHOR, keep, 'the workflow branch has moved - these plants have no subject')
+        try:
+            body = keep.replace(self.ANCHOR, replacement, 1)
+            if extra:
+                body = body.replace(extra[0], extra[1], 1)
+            src.write_text(body, encoding='utf-8')
+            return self.run_check()
+        finally:
+            src.write_text(keep, encoding='utf-8')
+
+    def test_it_is_clean_on_the_tree_as_it_stands(self):
+        r = self.run_check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_every_handover_form_is_reported(self):
+        for form in self.LEAKS:
+            with self.subTest(form=form):
+                r = self.plant(f'aiTrunc({form}, 6000))')
+                self.assertEqual(r.returncode, 1,
+                                 f'«{form}» hands a stored row to the provider and the checker said '
+                                 f'nothing:\n{r.stdout}')
+
+    def test_a_projection_hoisted_into_a_local_is_not_a_finding(self):
+        # The one refactor that changes nothing, and the first version reported it. A local counts as
+        # projected when its own initialiser is a projection call.
+        r = self.plant('aiTrunc(JSON.stringify(safe, null, 2), 6000))',
+                       ('      if (detail || e) {',
+                        '      const safe = workflowForModel(detail || e);\n      if (detail || e) {'))
+        self.assertEqual(r.returncode, 0,
+                         f'hoisting the projection into a local is reported as a leak:\n{r.stdout}')
+
+    def test_the_run_says_how_many_builders_gave_it_nothing(self):
+        # The headline counted the names typed into SOURCES - it would have printed seven with all
+        # seven deleted from the source. Five of the seven contribute no field, and the run says so.
+        r = self.run_check()
+        self.assertRegex(r.stdout, r'read from \d+ of \d+ answer builder',
+                         'the headline no longer separates what was read from what was opened')
+        self.assertIn('no field has the', r.stdout,
+                      'the builders that contribute nothing are not named, so five empty subjects '
+                      'hide inside one number')
+
+
 class BothListingsHaveTheSameShape(unittest.TestCase):
     """Two listings, one submission process: a section in one is a section in the other.
 
