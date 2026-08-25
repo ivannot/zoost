@@ -7510,6 +7510,9 @@ test('a nested release leaves the buttons off while anything still holds the pul
                   classList: { toggle() {} },
                   set disabled(v) { ctx.disabled[id + ':v'] = v; },
                   get disabled() { return ctx.disabled[id + ':v']; } }),
+                // `blockZoho` also restates what «Pull all» pulls, from the tabs it walks - so the
+                // list travels with it here, or the lift throws where the panel would not.
+                TABS: [{ id: 'functions', label: 'Functions' }, { id: 'modules', label: 'Modules' }],
                 zohoReady: () => true, navOpenNow: () => false, Math };
   vm.createContext(ctx);
   vm.runInContext([sliceFn('apps/crm/sidepanel.js', 'blockZoho'),
@@ -11528,6 +11531,65 @@ test('every script the panels load evaluates on its own', () => {
                           + 'makes the panel dead on arrival.');
     }
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// What a control promises, and what it says when it cannot keep the promise.
+//
+// Three things a reader meets before anything else, all of them wrong in the CRM and right in the
+// twin: a tooltip that named four of the six areas the button pulls, six controls that went grey and
+// kept saying what they do instead of why they are off, and «no answer from the page» arriving as
+// «Error: Error: unknown».
+test('crm: Pull all names every area it walks', () => {
+  const p = { disabled: false, title: '', classList: { toggle() {} } };
+  // Loaded the way the panel loads it, not parsed as if it were JSON: `tabs.js` is a script, and
+  // reading it with a regex is a second reader that can disagree with the first.
+  const w = {};
+  vm.runInContext(read('apps/crm/tabs.js'), vm.createContext({ window: w }));
+  const TABS = w.ZOOST_TABS;
+  assert.ok(TABS.length >= 5, `only ${TABS.length} tab(s) lifted - this case is measuring nothing`);
+  const { blockZoho } = load([sliceFn('apps/crm/sidepanel.js', 'blockZoho')], {
+    console, document: { body: { classList: { toggle() {} } } }, ZOHO_BTNS: [],
+    $: (id) => (id === 'pull' ? p : null), TABS,
+  });
+  blockZoho(false);
+  for (const t of TABS) {
+    assert.ok(p.title.includes(t.label),
+              `«${t.label}» is pulled by this button and not named in its tooltip: «${p.title}»`);
+  }
+});
+
+test('crm: a control that is off says why, in the words the panel uses', () => {
+  const els = {};
+  for (const b of ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai']) {
+    els[b] = { disabled: false, title: `What I do: ${b}`, dataset: {} };
+  }
+  const reason = 'Press Pull all - nothing has been read from this workspace yet.';
+  const { sayWhyDisabled } = load([sliceFn('apps/crm/sidepanel.js', 'sayWhyDisabled')], {
+    console, LOCAL_BTNS: Object.keys(els), $: (id) => els[id], emptyReason: () => reason,
+  });
+  sayWhyDisabled();
+  assert.match(els.export.title, /What I do/, 'an enabled control stopped saying what it does');
+  Object.values(els).forEach((e) => { e.disabled = true; });
+  sayWhyDisabled();
+  for (const [id, el] of Object.entries(els)) {
+    assert.equal(el.title, reason, `${id} is off and still says what it does: «${el.title}»`);
+  }
+  // And back: a control that comes alive says what it does again, not why it used to be off.
+  Object.values(els).forEach((e) => { e.disabled = false; });
+  sayWhyDisabled();
+  assert.match(els.askai.title, /What I do/, 'a control that came back kept its refusal');
+});
+
+test('crm: no answer from the Zoho page is a sentence, not an internal word', () => {
+  const stale = 'The Zoho tab is still running an older copy of this extension - reload that tab.';
+  const { bridgeError } = load([sliceFn('apps/crm/sidepanel.js', 'bridgeError')],
+                               { Error, MSG: { staleBridge: stale } });
+  assert.equal(bridgeError(undefined, 'list failed').message, stale,
+               'a page that answered nothing is reported with the caller\'s internal fallback');
+  // What Zoho itself said still comes through - the fallback is for the case with no answer at all.
+  assert.equal(bridgeError({ error: 'Zoho answered 403' }, 'list failed').message, 'Zoho answered 403');
+  assert.equal(bridgeError({ ok: false }, 'list failed').message, 'list failed');
 });
 
 // ---------------------------------------------------------------------------------------------

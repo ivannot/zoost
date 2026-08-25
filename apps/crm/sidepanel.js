@@ -33,6 +33,14 @@ const FN_NAMES = ['api_name', 'display_name', 'name'];   // every name a functio
 // this list already knew there were two: the per-type Pull stayed enabled through an environment
 // mismatch and failed at the click instead, which is the one-of-a-set miss this repository keeps
 // recording. Anything Zoho-bound goes in ZOHO_BTNS and is blocked in one place.
+// What «Pull all» announces, derived from what it walks rather than typed beside it. It walks
+// `TABS`, so this is `TABS` - the markup said «functions, modules, workflows and schedules», four
+// of the six, and Actions and Connections shipped without ever reaching that sentence.
+//
+// **Not the runner table**: `runners` carries a seventh entry, `failures`, which that loop never
+// reaches because it is not a tab - the health view pulls it on its own. Building the sentence
+// from the runners would have promised an area this button does not pull, which is the mistake
+// this line exists to stop, made in the other direction.
 const LOCAL_BTNS = ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
 // **Three lists, and a control in none of them.** `ZOHO_BTNS` held the two Pulls and was applied by
 // setting `disabled`; a rule in the stylesheet greyed `#pvreveal` and `#pvfind` by id, because those
@@ -53,6 +61,12 @@ function blockZoho(on) {
     if ('disabled' in el) el.disabled = on;
     el.classList.toggle('zblocked', on);
   });
+  const p = $('pull');
+  // **What Pull all pulls, from the list it actually runs.** The markup said «functions, modules,
+  // workflows and schedules» - four of seven - and Actions, Connections and Failures shipped without
+  // ever reaching that string. It is the sentence a reader sees before every pull, so it is derived
+  // from `PULL_AREAS` rather than kept in step by hand.
+  if (p) p.title = on ? p.title : `Pull all - ${TABS.map((t) => t.label).join(', ')}`;
 }
 // A workspace of invented data, written by «+ Sample» rather than pulled. It is an ordinary
 // workspace in every other respect - the same list, the same walks, the same exports - and there is
@@ -602,7 +616,13 @@ function publishAccess() {
 // content script raises it, the message channel flattens it, and this is where it becomes an Error
 // again. Every `if (!r?.ok) throw …` in the pulls goes through here.
 function bridgeError(r, fallback) {
-  const e = new Error((r && r.error) || fallback);
+  // **No answer at all is its own fact, and it has a sentence.** `chrome.tabs.sendMessage` resolves
+  // `undefined` when nothing is listening - a reloaded tab, an extension that has just updated, a
+  // frame the bridge never reached - and every caller passed its own internal word as the fallback,
+  // so the reader was shown «Error: Error: unknown», «list failed», «pull failed». Four states, no
+  // meaning, and `MSG.staleBridge` - which says the true thing and names the remedy - was reached
+  // from one place. The twin has answered this with one sentence since it existed.
+  const e = new Error(r ? ((r && r.error) || fallback) : MSG.staleBridge);
   e.status = (r && r.status) || 0;
   e.forbidden = !!(r && r.forbidden);
   return e;
@@ -4335,6 +4355,27 @@ async function readJsonIn(h, name) { const fh = await h.getFileHandle(name); ret
 function setEnabled(on) {
   LOCAL_BTNS.forEach((b) => ($(b).disabled = !on));
   blockZoho(!on || isSample());
+  sayWhyDisabled();
+}
+
+/** Why each of these is grey, on the control itself.
+ *
+ * They went off and kept their «what I do» tooltip - `export` said «Self-contained HTML report of
+ * this workspace» while disabled, `askai` said «Ask AI about this org». The twin states the rule it
+ * follows: a control and the empty state under it must not name different blockers. This side applied
+ * that to the three workspace buttons and to nothing else.
+ *
+ * The reason is asked of `emptyReason()`, the same function the lists ask, so the sentence under the
+ * cursor and the sentence in the pane cannot disagree - which is the whole point of there being one.
+ */
+function sayWhyDisabled() {
+  const why = emptyReason();
+  LOCAL_BTNS.forEach((b) => {
+    const el = $(b);
+    if (!el) return;
+    if (!el.dataset.can) el.dataset.can = el.title || '';
+    el.title = el.disabled ? (why || 'Not available yet - open a workspace first.') : el.dataset.can;
+  });
 }
 
 // Re-granting access to a folder we already know must NOT reopen the file picker: a lapsed
@@ -5201,6 +5242,7 @@ async function pullEverything() {
   setPullBusy(true);
   try {
   const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures };
+  // The same seven the button's tooltip names - one list, so the promise and the act cannot part.
   const skipped = [];
   // What this pull will actually do, counted before it starts: the areas your Zoho role allows and
   // your settings ask for. A «3 of 6» that silently meant «3 of whatever is left» would be worse
