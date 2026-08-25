@@ -474,8 +474,9 @@ accepts no liability for any loss, damage or data issue arising from its use, an
 obligation to provide support, maintenance or fixes.
 
 Zoost reads from the Zoho CRM instance you are already signed in to and writes to a local folder
-you choose. Nothing about your org passes through a server of ours. Two things leave the machine,
-and only when you send them: what you ask the optional AI assistant, which goes straight to the
+you choose. There is no server of ours in that path: the mirror goes from your Zoho session to your
+folder and stops. Two things leave the machine, and only when you send
+them: what you ask the optional AI assistant, which goes straight to the
 provider you configured with your own key, and a problem report you have read in full and pressed
 Send on at zoost.it, where it becomes a public GitHub issue. **Exports are a different
 matter**: the export dialog lets you choose what a file may contain (source code is opt-in and

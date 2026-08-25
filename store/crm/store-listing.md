@@ -145,15 +145,15 @@ No browsing data, no Zoho CRM data and no personal information go into storage. 
 ## 7. scripting justification (max 1000)
 
 ```
-scripting injects this extension's own code, never remote code, and only into the manifest's hosts.
+scripting injects this extension's own code, never remote code, only into the manifest's hosts.
 
-1. A bridge that calls the Zoho CRM API from the page's own origin, with the session the user is already signed in with. That is what reads their own functions, module metadata, layouts, related lists, workflows, schedules and connection names - no separate credentials, within their existing Zoho permissions.
+1. A bridge that calls the Zoho CRM API from the page's own origin, with the session they are already signed in with. It reads their functions, module metadata, layouts, related lists, workflows, schedules, automation actions, connection names and Zoho's report of failed runs - no separate credentials, within their Zoho permissions.
 
-2. A hook that notices when a Deluge function is saved in the native editor, so the local file follows. It wraps the page's own fetch and XMLHttpRequest to see method and URL: no bodies read, nothing altered.
+2. A hook that notices a Deluge function being saved in the native editor, so the local file follows. It wraps the page's fetch and XMLHttpRequest to see method and URL: no bodies read, nothing altered.
 
-3. One line returning a frame's address, in every frame of the tab - how the panel finds the Zoho CRM frame inside a Zoho One or Zoho CRM Plus shell. Nothing else is read.
+3. One line returning a frame's address, in every frame of the tab - how the panel finds its frame in a Zoho One or Zoho CRM Plus shell. Nothing else is read.
 
-4. A problem report's text, into the zoost.it page the panel just opened, so the user reads and sends it.
+4. A problem report's text, into the zoost.it page the panel just opened, for the user to read and send.
 
 Nothing is written to Zoho CRM, except this: Find types a function name into Zoho's search box.
 ```
