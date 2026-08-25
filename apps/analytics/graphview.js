@@ -876,6 +876,11 @@ function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
     $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <span style=\"color:#94a3b8\">Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
+    // The badge is the same number as the line, so it is refreshed on both branches. This one
+    // returned before it: widening a focused diagram to «Everything» redrew the drawing and the
+    // sentence and left the tab counting the focus - measured 13 against 18 drawn here, 10
+    // against 11 in the twin, 42 against 111 on a call graph.
+    erCountRefresh();
     return;
   }
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;

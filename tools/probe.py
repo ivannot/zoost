@@ -1218,6 +1218,31 @@ ER = """
           + `beside the badge still says ${after.line} - the window is stating in one place that `
           + 'boxes went and in another that they are here');
     }
+
+    // **The badge is the count of what is drawn, so it is asked to be exactly that.** Every defect
+    // this scenario has ever found in the window was two numbers about one drawing disagreeing -
+    // after a fold, after «Everything», after a scope change - and each was found by measuring one
+    // transition by hand. This asserts the identity instead, after every action the scenario takes,
+    // so the next transition that forgets to refresh it is caught by having been written at all.
+    const agree = (what) => {
+      const b = badge(); const drawn = erVisibleIds().length;
+      if (b !== drawn) say(`after ${what} the tab says ${b} and the drawing has ${drawn}`);
+    };
+    agree('the fold');
+    // **A focus first, then «Everything».** The branch that returned before refreshing the badge is
+    // the one that only runs with a focus live, so widening from an unfocused diagram walks straight
+    // past it - written that way first, and the planted defect went unnoticed.
+    if (typeof setFocus === 'function' && erIds.length) {
+      setFocus(erIds[0]);
+      await settle('the focus never landed');
+      agree('a focus');
+      const all = $('focusall');
+      if (all && !all.disabled) {
+        all.click();
+        await settle('the scope never widened');
+        agree('Everything with a focus live');
+      }
+    }
     document.title = 'SHOT OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """

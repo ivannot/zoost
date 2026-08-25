@@ -422,7 +422,13 @@ function erToggleCut(a, b, away) {
   // note in `erCovers` has described exactly that for months; teaching `entityBreakdown` to skip
   // what is folded made the *computation* right and changed nothing, because nobody ran it again.
   // Found by driving the window rather than reading it.
-  graphStat();
+  //
+  // Through the dispatcher, because there are two lines and this called one of them by name: with a
+  // focus live, folding a branch swapped the focused sentence for the whole-graph one while the badge
+  // went on counting the focused drawing - measured at 12 against «17 of 18 modules», and in the twin
+  // at 2 against «14 of 25 tables». `statRefresh` is `curFocus ? egoStat() : graphStat()`, so the
+  // unfocused path is exactly what it was.
+  statRefresh();
   if (after !== before) erHint(after > before ? MSG.folded(after - before) : MSG.unfolded(before - after));
 }
 
@@ -754,7 +760,11 @@ function erArrState() {
   return {
     app: APP, kind: (DATA && DATA.kind) || '', workspace: erArrWorkspace(),
     focus: curFocus || '', depth: egoDepth, emphasis: erEmph, names: nameMode,
-    arcs: edgesAmong(erIds).length,
+    // **What is on the drawing, not what was laid out.** `erIds` is the set the layout last placed;
+    // a fold taken after that layout leaves it behind, so saving straight after folding recorded
+    // 22 arcs over a drawing with 12 - measured. The load compares against this number, so the
+    // two sides have to mean the same thing or one of them warns about nothing.
+    arcs: edgesAmong(erVisibleIds()).length,
     positions: pos, moved: [...erRaised.keys()], folds,
     savedAt: new Date().toISOString(),
   };
@@ -809,7 +819,15 @@ function erApplyArrangement(file) {
   // Framed, not restored: where the reader was looking is not part of what they built, but a drawing
   // they cannot see is not an arrangement either.
   erFit();
-  const arcs = edgesAmong(erIds).length;
+  // The same set the file recorded - see `erArrState`.
+  //
+  // **This is still measured one frame early**, and it is left that way deliberately: the draw this
+  // schedules has not run yet, so `erVisibleIds()` is the set from before the file was applied. The
+  // obvious repair - run this from a callback after the draw - was written, measured, and did not
+  // work: the callback never fired in the harness, and the sentence is overwritten a frame later by
+  // the fold hint regardless, so nobody reads this message at all. Two defects, one of them hiding
+  // the other; recorded in docs/findings rather than half-fixed here.
+  const arcs = edgesAmong(erVisibleIds()).length;
   const lost = m.stale.length || foldsLost || elsewhere || (file.arcs && arcs !== file.arcs);
   erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
     + (elsewhere ? MSG.arrOtherWorkspace(fileWs) : '')
