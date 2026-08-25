@@ -529,9 +529,12 @@ test('a lapsed folder permission is explained, not quoted', () => {
   }
 });
 
+// Passed through means passed through: it used to add «Error: », and every caller already leads
+// with its own sentence, so the status line read «Functions pull error: Error: …». The two
+// places that show the text bare add the marker themselves.
 test('anything else is passed through rather than dressed up', () => {
   for (const app of ['crm', 'analytics']) {
-    assert.equal(errText(app)(new Error('429 rate limited')), 'Error: 429 rate limited');
+    assert.equal(errText(app)(new Error('429 rate limited')), '429 rate limited');
   }
 });
 

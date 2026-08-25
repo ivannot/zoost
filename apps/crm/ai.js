@@ -71,7 +71,12 @@ function friendlyError(e) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
       + 'Press \u21bb Refresh in the toolbar to grant it again, then run it again. Nothing was written.';
   }
-  return MSG.errPrefix + m;
+  // **The caller says what failed; this says why.** The prefix was added here and every caller
+  // already leads with its own sentence, so the status line read «Functions pull error: Error:
+  // Zoho refused the request» - and the branch above never carried it anyway, so the two halves
+  // of this function did not even agree. The two places that show it bare add the marker
+  // themselves.
+  return m;
 }
 
 /** Re-grant the working folder before the assistant touches it.
@@ -1089,7 +1094,7 @@ async function aiSend() {
     else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     if (!current()) return;
     setStatus('', '');
-  } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); setStatus('AI error', 'warn'); }
+  } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: MSG.errPrefix + friendlyError(e) }); setStatus('AI error', 'warn'); }
   finally {
     // `gen === aiGen`, not unconditionally. The first version of this released whatever it found,
     // and that is a different defect rather than a fix: press **Clear** during a send and

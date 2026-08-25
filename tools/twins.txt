@@ -20,7 +20,7 @@ aiMarkdown	3f691b1cef40	f064613e3b42	divergent
 aiNeedCurrent	ab3dfc884fd4	ab3dfc884fd4	identical
 aiRenderMessages	b54eb6aee3bd	4894fcbf36e3	divergent
 aiRunAnthropicAgent	d2c7dcbe718a	d2c7dcbe718a	identical
-aiSend	e63ce50571b6	00cb1ed36b9d	divergent
+aiSend	cd1da61168b8	ea831a5581a5	divergent
 aiShowLock	a2c4e5d92320	a2c4e5d92320	identical
 aiStreamAnthropic	afbe2cf1862f	afbe2cf1862f	identical
 aiToolArg	8fc8ff0203b7	0b09a0bc91bf	divergent
@@ -40,7 +40,7 @@ buildExportHtml	c1989b83e8f7	b2d9c4d7bc68	divergent
 buildExportMarkdown	a15fa042450c	fbf90f473b83	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
-buildReport	4a85b7b77405	4a85b7b77405	identical
+buildReport	596a7edd9441	596a7edd9441	identical
 buildSchemaGraph	fbecf3b254ed	d28416eec22e	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
@@ -124,7 +124,7 @@ escReportA	46ee492a3bf3	46ee492a3bf3	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	1e57d1af56a5	4b046384501d	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
-friendlyError	e2fc432f4aa8	e2fc432f4aa8	identical
+friendlyError	03ec3f39bd0d	03ec3f39bd0d	identical
 goToZoho	44136fa355b3	cf28ebbab779	divergent
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
@@ -168,6 +168,7 @@ navWhen	6d2200ac5636	6d2200ac5636	identical
 noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
+noteThrown	6c35bc6fa368	6c35bc6fa368	identical
 onAiengine	db42c8c059e5	55f96961b339	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
@@ -195,7 +196,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	7bac2f653c83	e56766fa859d	divergent
+pullAll	7bac2f653c83	bd1051a4299b	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
@@ -236,7 +237,7 @@ seedShortcuts	a2eedf0c5050	a2eedf0c5050	identical
 select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	f1130b960701	f1130b960701	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
-setFocus	e1ed4bc8ee83	aad7cdea1214	divergent
+setFocus	f2a33f350182	9be5357f9740	divergent
 setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent

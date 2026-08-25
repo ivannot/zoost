@@ -209,7 +209,13 @@ function buildReport(r) {
   L.push('');
   L.push('what happened');
   L.push(`  ${clean(r.message) || '(no message)'}`);
-  if (r.stack) ours(r.stack).split('\n').slice(0, 12).forEach((s) => L.push(`  ${s.trim()}`));
+  // **Only the frames.** The comment above is true of the frames and false of the first line:
+  // V8 puts the message there verbatim, so the light redaction reprinted, one line below, the
+  // portal name and the org id that `redactHard` had just removed from that same sentence -
+  // under a footer telling the reader that names and ids are stripped. Every message this panel
+  // builds by interpolation was affected, and the header is `r.message` again anyway.
+  const frames = r.stack ? String(r.stack).split('\n').filter((s) => /^\s*at\s/.test(s)) : [];
+  if (frames.length) ours(frames.join('\n')).split('\n').slice(0, 12).forEach((s) => L.push(`  ${s.trim()}`));
   L.push('');
   L.push('state');
   L.push(`  tab: ${r.tab} · search: ${r.search} · pull: ${r.pullActive ? 'running' : 'idle'}`);
@@ -3095,12 +3101,19 @@ function selectRow(path) {
     // the second closed group was still not drawn, `find()` still answered nothing, and the reader
     // was left where they were with no reason given. Found when a driver started refusing to click
     // a control that is not on the page.
-    for (let k = 0; k < 200; k++) {
+    // **And it stops at the one that was in the way.** Opening them all was the shape the first
+    // fix took, and it costs the reader every fold they had made: nine groups collapsed, one
+    // arrival from a link, and all nine are open. The functions tree opens exactly the target's
+    // group, because it can resolve the key from `treeData`; this function serves every list and
+    // cannot, so it asks after each one instead. What it still opens is whatever sits above the
+    // target in the list - said here rather than left to be found, because closing those again
+    // would mean a re-render per group for a fold nobody was looking at.
+    for (let k = 0; k < 200 && !row; k++) {
       const g = $('tree').querySelector('.grp.collapsed');
       if (!g) break;
       g.click();
+      row = find();
     }
-    row = find();
   }
   if (row) { revealRow(row, $('tree'), '.grp'); return; }
   requestAnimationFrame(() => {

@@ -350,7 +350,14 @@
     if (res.status === 204) return NO_CONTENT;
     if (res.ok) return res.json();
     const { message, code } = await errorDetail(res);
-    if (!retried && csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
+    // **The recovery is not the deluge family's, and pinning it there put back the defect it was
+    // written to end.** `_pageCsrf` outranks every cookie for *both* families and is dropped in
+    // exactly one place - `warmDeluge`, reached only from here - so with the condition naming
+    // `drepn`, a token Zoho rotated while the tab sat still was cleared by a Connections pull and
+    // by nothing else. Every other area sent the pinned value and was refused, for the life of
+    // that page, with no sentence anywhere telling the reader to reload Zoho. The refusal is the
+    // same refusal whichever path it arrives on; so is the fix.
+    if (!retried && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
       // Whether the primer worked is worth carrying: it is swallowed on purpose - we are after a
       // side effect and a role that refuses that endpoint is no worse off - but if it *also* failed,
       // the retry below was sent under exactly the conditions that had just been refused, and the
@@ -366,7 +373,7 @@
     // to be incomplete and the remaining cause is unidentified. Nothing is guessed here: what the
     // request actually carried is reported, so the next occurrence arrives as evidence instead of as
     // three words that fit every explanation.
-    if (csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
+    if (res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
       // **Which cookies the page has, by name.** The one question this failure keeps turning on is
       // whether the deluge family's own cookie is there at all - if it is, the token is stale; if it
       // is not, everything sent is a guess and no refresh can help. A name is not a credential and no

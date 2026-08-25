@@ -1159,7 +1159,12 @@ function statLinks() {
   // Folds too, which a check written for exactly that caught the moment this fallback was added:
   // «counts what is on the diagram without asking what was folded off it». `erHiddenSet` is the one
   // answer to that question and every other counter here already asks it.
-  const gone = erHiddenSet();
+  // ...but only where the nodes are counted the same way. `entityBreakdown` asks this question
+  // as `curView === 'er' ? erHiddenSet() : new Set()`, and asking it unconditionally here made the
+  // two halves of one sentence disagree off the diagram: «120 functions · 121 of 127 links» over
+  // a Relations table showing 127 rows, with nothing on the tab accounting for the six. The
+  // asymmetry this fallback removed on the ER tab, reintroduced on the other two.
+  const gone = curView === 'er' ? erHiddenSet() : new Set();
   const set = statDrawn(null)
     || (nodesA.length ? new Set(nodesA.filter((id) => N[id] && passKind(N[id]) && !gone.has(id))) : null);
   if (!set) return `<b>${DATA.counts.edges}</b> links`;
@@ -1278,10 +1283,17 @@ function setFocus(id) {
     //
     // The branch two lines down already clears the flag; this is the sibling that was not walked
     // when the same defect was fixed in `erToggleCut`.
-    if (curView === 'er') {
-      if (erVisibleIds().some((x) => !erIds.includes(x))) { erLaidOut = false; erShowMaybeHeavy(); }
-      else erRender();
-    }
+    // **And the flag is cleared wherever we are standing, because of where the click comes from.**
+    // The paragraph above says «click one of them in the Explorer list» - which happens on the
+    // Explorer tab, where `curView` is not `er`, so wrapping the whole thing in that test skipped
+    // the one path it was written for: the fold was deleted, `erLaidOut` stayed true, and the
+    // diagram was never laid out again. Counted 18, drawn 17, with the box they clicked missing
+    // and no `+` left to bring it back. Drawing is what belongs behind the tab test; forgetting
+    // a layout that is now wrong is not.
+    if (erVisibleIds().some((x) => !erIds.includes(x))) {
+      erLaidOut = false;
+      if (curView === 'er') erShowMaybeHeavy();
+    } else if (curView === 'er') erRender();
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;

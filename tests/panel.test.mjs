@@ -16476,3 +16476,141 @@ test('pressing Forget marks the AI section unsaved', () => {
                      + 'the removal is dropped, and Save then reports success with the key still stored');
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// A refused token is recovered whichever family asked - because the token it drops is shared.
+//
+// `_pageCsrf` outranks every cookie for both families and is cleared in exactly one place, reached
+// from the retry below. With that retry keyed on `drepn`, a token Zoho rotated while the tab sat
+// still was cleared by a Connections pull and by nothing else: every other area sent the pinned
+// value and was refused for the life of the page, with nothing anywhere telling the reader to
+// reload Zoho. That is the defect the memo drop was written to end, surviving on the paths the fix
+// did not name.
+test('a rotated CSRF token is recovered on any path, not only the deluge one', async () => {
+  const rel = 'apps/crm/content-bridge.js';
+  let live = 'TOKEN-A'.padEnd(40, 'A');
+  const sent = [];
+  const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+              encodeURIComponent,
+              instanceName: () => 'yourinstance', orgId: () => '1234567890',
+              location: { href: 'https://crm.zoho.eu/crm/yourinstance/tab/Contacts' },
+              document: { cookie: 'CT_CSRF_TOKEN=' + 'c'.repeat(128), getElementById: () => null },
+              fetch: async (url, opt) => {
+                const u = String(url).replace('https://crm.zoho.eu', '').split('?')[0];
+                if (u.includes('ConstantsInitial.do')) return { ok: true, status: 200, text: async () => `{"csrfToken":"${live}"}` };
+                const tok = (opt.headers['X-ZCSRF-TOKEN'] || '').split('=')[1] || '';
+                sent.push(tok);
+                if (tok === live) return { ok: true, status: 200, json: async () => ({ ok: true }) };
+                return { ok: false, status: 400, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' };
+              } };
+  const m = load(['NO_CONTENT', 'CSRF_COOKIES', '_org', 'lastCsrfFrom', 'lastCsrfShape'].map((c) => sliceConst(rel, c))
+    .concat(['memoValid', 'cookie', 'safePath', 'apiError', 'errorDetail', 'csrfToken', 'headers',
+             'pageCsrfToken', 'warmDeluge', 'api'].map((f) => sliceFn(rel, f))), g);
+
+  await m.api('/deluge/api/v1/connections', 'drepn');      // primes and memoises the page token
+  live = 'TOKEN-B'.padEnd(40, 'B');                        // Zoho rotates while the tab sits still
+  sent.length = 0;
+  const out = await m.api('/crm/v2/settings/modules', 'crmcsrfparam');
+  assert.deepEqual(out, { ok: true },
+                   'a CRM-family call was refused after Zoho rotated the token and never recovered - '
+                   + 'the memo it is pinned to is dropped on the deluge path only, so every area stays '
+                   + 'refused until the reader reloads the Zoho tab, which nothing tells them to do');
+  assert.equal(sent.length, 2, `it sent ${sent.length} request(s); the stale one and one retry were expected`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// The problem report does not reprint, one line down, what it has just redacted.
+//
+// V8 puts the message verbatim on the first line of `err.stack`. The message goes through the hard
+// redaction and the stack through the light one, so a file path, an api name or a six-digit id
+// removed from the sentence came straight back in the line below it - under a footer telling the
+// reader that names and ids are stripped where they are recognised.
+test('the report keeps the stack frames and not the message line', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/sidepanel.js`;
+    const g = { console, Object, String, Number, Array, JSON, RegExp, Math, Date, Boolean };
+    const m = load([sliceFn(rel, 'redact'), sliceFn(rel, 'redactHard'), sliceFn(rel, 'buildReport')], g);
+    const e = new Error('Could not write functions/Contacts/Update_Account_Owner.dg for org 123456');
+    const out = m.buildReport({ product: 'Zoost', version: '1.0.0', browser: 'Chrome', message: e.message,
+                                stack: e.stack, tab: 'functions', search: '', pullActive: false, counts: {}, log: [] });
+    for (const leak of ['Update_Account_Owner', 'functions/Contacts', '123456']) {
+      assert.ok(!out.includes(leak), `${app}: «${leak}» is in the report in full, having been redacted out of the sentence above it`);
+    }
+    assert.match(out, /\bat\b/, `${app}: the frames went with it - the stack is ours and is the whole of its value`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Clicking an item in the Explorer list lays the diagram out again - and that click happens on the
+// Explorer tab.
+//
+// The guard was `curView === 'er'`, which is never true where the click comes from, so the fold was
+// deleted, the counts put the box back, `erLaidOut` stayed true and nothing was ever laid out again:
+// counted 18, drawn 17, with no `+` left to bring it back. Drawing belongs behind the tab test;
+// forgetting a layout that is now wrong does not.
+test('a focus taken from the Explorer list forgets the layout it invalidates', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/graphview.js`;
+    const drew = [];
+    const g = { console, Object, Set, Array, Math, String,
+                N: { A: { id: 'A' }, B: { id: 'B' } }, curFocus: 'A', scopeAll: true,
+                curView: 'explorer',                 // where the list lives
+                erIds: ['A'],                        // B was folded off at the last layout
+                erLaidOut: true,
+                erVisibleIds: () => ['A', 'B'],      // and the fold has just been deleted
+                erUnhide: () => {}, computeMaxDepth: () => {}, updateDepthUI: () => {},
+                updateScopeUI: () => {}, egoStat: () => {}, bfsEgo: () => {}, relRender: () => {},
+                erShowMaybeHeavy: () => drew.push('layout'), erRender: () => drew.push('render'),
+                egoDepth: 2, maxEgoDepth: 3, $: () => ({}), esc: (s) => s, label: (n) => n.id };
+    const m = load([sliceFn(rel, 'setFocus')], g);
+    m.setFocus('B');
+    assert.equal(g.erLaidOut, false,
+                 `${app}: the layout still counts as current, so the box the reader clicked is counted `
+                 + 'by the header and the badge and is not on the diagram');
+    assert.deepEqual(drew, [], `${app}: it drew ${drew.join(',')} while the diagram tab is not on screen`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The two halves of one sentence count the same things.
+//
+// `statLinks` applied folds unconditionally while the node counts beside it apply them on the
+// diagram only, so the Relations tab read «120 functions · 121 of 127 links» over a table of 127
+// rows, with nothing on the tab accounting for the six. The asymmetry the fallback removed on the ER
+// tab, reintroduced on the other two.
+test('the link count applies folds where the node counts do', () => {
+  const rel = 'apps/crm/graphview.js';
+  const g = { console, Object, Set, Array, String, Math,
+              N: { A: {}, B: {}, C: {} }, nodesA: ['A', 'B', 'C'],
+              DATA: { counts: { edges: 3 } }, curView: 'rel',
+              passKind: () => true, statDrawn: () => null,
+              erHiddenSet: () => new Set(['C']),
+              edgesAmong: (ids) => (ids.length === 3 ? [1, 2, 3] : [1]) };
+  const m = load([sliceFn(rel, 'statLinks')], g);
+  const plain = (v) => { g.curView = v; return m.statLinks().replace(/<[^>]+>/g, ''); };
+  assert.equal(plain('rel'), '3 links', 'the Relations table shows every link and the header said «of»');
+  assert.equal(plain('explorer'), '3 links', 'the Explorer lists every item and the header said «of»');
+  assert.match(plain('er'), /1 of 3 links/, 'on the diagram the fold is what the reader is looking at');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A failure this panel handles is the failure its report is about - in both products.
+//
+// `lastThrown` written by the `error` and `unhandledrejection` listeners alone describes only what
+// nobody caught, and every failure that puts a report button on screen is caught by definition. The
+// CRM learnt this; Analytics was not walked, so its report carried the redacted status buffer and no
+// message, no stack and no error class. Derived from the catch blocks that raise the button.
+test('a panel that offers a report has recorded the error it is about', () => {
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    assert.match(src, /function noteThrown\(/, `${app}: nothing records a handled failure for the report`);
+    // The places that *raise* it: its own declaration and the calls that lower it are not among
+    // them, and deriving that from the argument keeps a fourth call site inside the net.
+    const raises = [...src.matchAll(/(?<!function )showEmergency\((?!false\))/g)].map((m) => m.index);
+    assert.ok(raises.length, `${app}: nothing puts the report button on screen - this case has lost its subject`);
+    const orphan = raises.filter((i) => !/noteThrown\(/.test(src.slice(Math.max(0, i - 1200), i + 400)));
+    assert.deepEqual(orphan, [],
+                     `${app}: ${orphan.length} place(s) put the report button on screen without recording `
+                     + 'what went wrong, so the report they open describes nothing');
+  }
+});

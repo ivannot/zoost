@@ -312,7 +312,13 @@ function buildReport(r) {
   L.push('');
   L.push('what happened');
   L.push(`  ${clean(r.message) || '(no message)'}`);
-  if (r.stack) ours(r.stack).split('\n').slice(0, 12).forEach((s) => L.push(`  ${s.trim()}`));
+  // **Only the frames.** The comment above is true of the frames and false of the first line:
+  // V8 puts the message there verbatim, so the light redaction reprinted, one line below, the
+  // portal name and the org id that `redactHard` had just removed from that same sentence -
+  // under a footer telling the reader that names and ids are stripped. Every message this panel
+  // builds by interpolation was affected, and the header is `r.message` again anyway.
+  const frames = r.stack ? String(r.stack).split('\n').filter((s) => /^\s*at\s/.test(s)) : [];
+  if (frames.length) ours(frames.join('\n')).split('\n').slice(0, 12).forEach((s) => L.push(`  ${s.trim()}`));
   L.push('');
   L.push('state');
   L.push(`  tab: ${r.tab} · search: ${r.search} · pull: ${r.pullActive ? 'running' : 'idle'}`);
@@ -1425,6 +1431,7 @@ async function pullAll() {
       : 'Pull failed: ' + friendlyError(e));
     $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
+    noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally {
     chrome.runtime.onMessage.removeListener(onProgress);
     setPullBusy(false);
@@ -1486,6 +1493,7 @@ async function pullOne(id) {
       : `Could not re-read «${v.name}»: ` + friendlyError(e));
     $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
+    noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { setPullBusy(false); }
 }
 
@@ -1534,6 +1542,7 @@ async function retryFailed() {
       ? 'Retry could not finish writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
       : 'Retry failed: ' + friendlyError(e)); $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
+    noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
 }
 
@@ -2693,7 +2702,12 @@ function friendlyError(e) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
       + 'Press \u21bb Refresh in the toolbar to grant it again, then run it again. Nothing was written.';
   }
-  return MSG.errPrefix + m;
+  // **The caller says what failed; this says why.** The prefix was added here and every caller
+  // already leads with its own sentence, so the status line read «Functions pull error: Error:
+  // Zoho refused the request» - and the branch above never carried it anyway, so the two halves
+  // of this function did not even agree. The two places that show it bare add the marker
+  // themselves.
+  return m;
 }
 
 /** Re-grant the working folder before the assistant touches it.
@@ -3265,7 +3279,7 @@ async function aiSend() {
     else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     if (!current()) return;
     status('', '');
-  } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); status('AI error', 'warn'); }
+  } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: MSG.errPrefix + friendlyError(e) }); status('AI error', 'warn'); }
   finally {
     // `gen === aiGen`, not unconditionally. The first version of this released whatever it found,
     // and that is a different defect rather than a fix: press **Clear** during a send and
@@ -4415,7 +4429,13 @@ function reportFacts(err, ai) {
 // to hand - and without this the report was *only* the status buffer, which is the half that has to
 // be redacted hardest and the half that says least. Two listeners, no call-site changes: an uncaught
 // error and a rejected promise are exactly the failures worth a stack.
+// **The sibling that was not walked.** The CRM learnt that `lastThrown` written by the two
+// listeners alone describes only the failures nobody caught - and every failure this panel shows a
+// report button for is caught by definition, that being why the button appears. Here it was left
+// as it was, so a Zoho Analytics refusal produced a report with no message, no stack and no error
+// class in it: the redacted status buffer and nothing else.
 let lastThrown = null;
+function noteThrown(e) { if (e instanceof Error) lastThrown = e; }
 window.addEventListener('error', (e) => { if (e && e.error) lastThrown = e.error; });
 window.addEventListener('unhandledrejection', (e) => { if (e && e.reason instanceof Error) lastThrown = e.reason; });
 let reportText = '';

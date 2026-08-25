@@ -932,10 +932,17 @@ function setFocus(id) {
     //
     // The branch two lines down already clears the flag; this is the sibling that was not walked
     // when the same defect was fixed in `erToggleCut`.
-    if (curView === 'er') {
-      if (erVisibleIds().some((x) => !erIds.includes(x))) { erLaidOut = false; erShowMaybeHeavy(); }
-      else erRender();
-    }
+    // **And the flag is cleared wherever we are standing, because of where the click comes from.**
+    // The paragraph above says «click one of them in the Explorer list» - which happens on the
+    // Explorer tab, where `curView` is not `er`, so wrapping the whole thing in that test skipped
+    // the one path it was written for: the fold was deleted, `erLaidOut` stayed true, and the
+    // diagram was never laid out again. Counted 11, drawn 9, with the table they clicked missing
+    // and no `+` left to bring it back. Drawing is what belongs behind the tab test; forgetting
+    // a layout that is now wrong is not.
+    if (erVisibleIds().some((x) => !erIds.includes(x))) {
+      erLaidOut = false;
+      if (curView === 'er') erShowMaybeHeavy();
+    } else if (curView === 'er') erRender();
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;
