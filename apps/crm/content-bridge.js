@@ -52,7 +52,21 @@
   // both bridges.
   function cookie(n) {
     const c = document.cookie.split('; ').find((x) => x.startsWith(n + '='));
-    return c ? c.slice(n.length + 1) : undefined;
+    // **Restored to the reading that worked**, which is the part between the first `=` and the
+    // second - not everything after the first, which is what a cookie value is by the specification.
+    // The spec reading went in on 20 August with its own commit saying «not observed in the field:
+    // the values captured on this account are hex, so it is latent rather than live», and five days
+    // later the connections pull - the only `/deluge/` call in this file, the only one whose token
+    // comes from here - began answering 400 INVALID_CSRF_TOKEN on an org that had pulled it daily
+    // for twenty days.
+    //
+    // The rule is not about cookies. **A defect nobody has observed is a theory; a call that works is
+    // a measurement**, and changing the second to satisfy the first is the wrong way round. This is
+    // not a claim that the truncation is right - it is the removal of a change that had nothing
+    // observed behind it. When the real cause is measured this line moves again, in the same commit
+    // as that measurement, and the error beside it now reports the token's length and whether it
+    // carries an `=` so the measurement costs one pull.
+    return c ? c.slice(n.length + 1).split('=')[0] : undefined;
   }
 
   function instanceName() {

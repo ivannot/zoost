@@ -579,16 +579,30 @@ test('Analytics counts the SQL files it writes, and says so before the first one
 // ---------- both bridges: reading one cookie out of the jar ----------
 //
 // `csrfToken()` above is tested with the jar injected, so the *reading* was covered by nothing. It
-// was `split('=')[1]`, which stops at the first `=` in the value - padding on anything base64 - and
-// the failure is silent: two thirds of a token goes out and Zoho answers 400, which looks exactly
-// like a session that has expired. Held in both bridges because the helper is byte-identical there.
+// is `split('=')[1]` - the part between the first `=` and the second - and by the specification a
+// cookie value is everything after the first, so this reading is wrong about a value carrying base64
+// padding. Held in both bridges because the helper is byte-identical there.
+//
+// **It was changed to the specification reading, and that broke the product.** The commit that did
+// it said in its own words «not observed in the field: the values captured on this account are hex,
+// so it is latent rather than live» - a theory, held against a call that had pulled every day for
+// twenty days on a real org. Five days later that call, the only `/deluge/` one in the file and the
+// only one whose token comes from here, began answering 400 INVALID_CSRF_TOKEN.
+//
+// So the case is inverted, and the rule it now holds is the one that was broken: **a defect nobody
+// has observed is a theory, and a working call is a measurement.** Restoring the truncation is not a
+// claim that it is correct - it is a refusal to keep a change that was never justified by anything
+// observed. The day the real cause is measured, this case is rewritten in the same commit as the
+// reading, with that measurement named in it.
 for (const app of ['crm', 'analytics']) {
   const { cookie } = load([sliceFn(`apps/${app}/content-bridge.js`, 'cookie')],
     { get document() { return { cookie: globalThis.__raw }; } });
   const withRaw = (raw, fn) => { globalThis.__raw = raw; try { return fn(); } finally { delete globalThis.__raw; } };
 
-  test(`${app}: a value containing = is read whole, not truncated at the first one`, () => {
-    withRaw('a=1; CSRF_TOKEN=abc==; z=9', () => assert.equal(cookie('CSRF_TOKEN'), 'abc=='));
+  test(`${app}: a value containing = is read the way the working version read it`, () => {
+    withRaw('a=1; CSRF_TOKEN=abc==; z=9', () => assert.equal(cookie('CSRF_TOKEN'), 'abc',
+      'the reading was changed to the specification\u0027s and the only call that depends on it stopped '
+      + 'working - see the note above this block before changing it back'));
   });
 
   test(`${app}: an ordinary value reads as itself`, () => {
