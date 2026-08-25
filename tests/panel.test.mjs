@@ -16732,3 +16732,136 @@ test('a renamed query table does not lose the SQL captured under its old name', 
   assert.ok(!gone.has('sql/Beta-22.sql'),
             'a view Zoho no longer has kept its file - the prune refuses everything and is not a prune');
 });
+
+// ---------------------------------------------------------------------------------------------
+// The HTML export identifies a function the way the rest of the product does: `namespace.api_name`.
+//
+// Anchored and indexed on `api_name` alone, two functions in different namespaces sharing a name -
+// 9 of the sample's 120 - collapsed onto one anchor and one graph node. Both sections printed the
+// last node's callers and callees, so one was reported as calling nothing while it calls two and the
+// other as having a caller it does not have, under the same heading and beside different source
+// code. That is the chapter a reader uses to decide what is safe to delete. Driven through the
+// shipped builder, because the cover this had read `buildExportHtml`'s source for its chapter ids
+// and had never run it.
+const EXPORT_STUBS = () => ({
+  console, Object, Set, Map, Array, JSON, String, Number, Date, Math, Boolean, RegExp,
+  window: {}, sanitize: (x) => String(x).replace(/[^\w.\-]/g, '_'),
+  esc: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+  escHtml: (x) => String(x == null ? '' : x),
+  PRODUCT_NAME: 'Zoost', PRODUCT_AUTHOR: 'x', PRODUCT_URL: 'x', PRODUCT_SITE: 'x', PRODUCT_VERSION: '1',
+  APP_KIND: 'crm', REPORT_CSS: '', EXPORT_CSS: '', EXPORT_JS: '', REPORT_FILTER_JS: '',
+  SCOPE_DEFAULT: {}, SCOPE_KEYS: ['functions', 'code', 'modules', 'relations'],
+  bound: { label: 'Sample org' }, chrome: { runtime: { getManifest: () => ({ version: '1.0.0' }) } },
+  byField: (k) => (a, b) => String(a[k]).localeCompare(String(b[k])),
+  first: (x) => x, isFnAction: () => false, envOf: () => 'Zoho CRM', fnStats: () => null,
+  moduleRefusal: () => ({ text: 'refused' }),
+  freshnessLine: () => '', reportToc: () => '', reportHead: () => '', reportFoot: () => '',
+  MSG: { hRankedOver: () => '', hOrphan: 'Orphans', hUnres: 'Unresolved', hAmbig: 'Ambiguous', hBroken: 'Broken', hFK: 'Missing FK' },
+});
+
+test('the export gives each function its own anchor and its own call graph', async () => {
+  const rel = 'apps/crm/export.js';
+  const fns = [
+    { api_name: 'notify_Owner', display_name: 'Notify owner', namespace: 'automation', downloaded: true, code: '// automation', rest: false },
+    { api_name: 'notify_Owner', display_name: 'Notify owner', namespace: 'schedule', downloaded: true, code: '// schedule', rest: false },
+    { api_name: 'log', display_name: 'Log', namespace: 'util', downloaded: true, code: '// log', rest: false },
+  ];
+  const node = (ns, api, calls, cb) => ({ id: `${ns}.${api}`, namespace: ns, api_name: api, name: api,
+                                          display_name: api, calls, called_by: cb, category: 'functions' });
+  const g = { nodes: { 'automation.notify_Owner': node('automation', 'notify_Owner', ['util.log'], []),
+                       'schedule.notify_Owner': node('schedule', 'notify_Owner', [], ['util.log']),
+                       'util.log': node('util', 'log', ['schedule.notify_Owner'], ['automation.notify_Owner']) } };
+  const m = load([sliceFn(rel, 'buildExportHtml')], EXPORT_STUBS());
+  const html = await m.buildExportHtml(fns, [], g, {}, [], [], [], {}, [], {},
+    { functions: true, code: true, modules: true, relations: true, health: false, connections: true });
+
+  const ids = [...html.matchAll(/id="(fn-[^"]+)"/g)].map((x) => x[1]);
+  const dup = [...new Set(ids.filter((x, i) => ids.indexOf(x) !== i))];
+  assert.deepEqual(dup, [],
+                   `${dup.join(', ')} is the id of two sections at once - every link to it lands on the `
+                   + 'first, and the second is unreachable from anywhere in the document');
+  const refs = (ns) => {
+    const seg = html.slice(html.indexOf(`id="fn-${ns}.notify_Owner"`));
+    return [Number(/Uses \((\d+)\)/.exec(seg)[1]), Number(/Used by \((\d+)\)/.exec(seg)[1])];
+  };
+  assert.deepEqual(refs('automation'), [1, 0], "automation.notify_Owner was given another function's references");
+  assert.deepEqual(refs('schedule'), [0, 1], "schedule.notify_Owner was given another function's references");
+});
+
+// ---------------------------------------------------------------------------------------------
+// A chapter left out of an export says it was left out, and never that the org has none.
+//
+// The Relations chapter printed «No related lists in this export - re-run Pull Modules» whatever the
+// reader had chosen, so an export made with Relations unticked told whoever received it that the org
+// has none - 22 of them in the sample - and instructed them to re-run a pull that would change
+// nothing. A positive claim about somebody's org, in the document written for a reader who cannot
+// check it. Its two neighbours have asked `absent()` all along.
+test('an unticked export chapter says so instead of claiming the org is empty', async () => {
+  const rel = 'apps/crm/export.js';
+  const mods = [{ api_name: 'Contacts', module_name: 'Contacts', fields: [],
+                  related_lists: [{ api_name: 'Deals', module: { api_name: 'Deals' } }] }];
+  const build = async (relations) => {
+    const m = load([sliceFn(rel, 'buildExportHtml')], EXPORT_STUBS());
+    return m.buildExportHtml([], mods, { nodes: {} }, {}, [], [], [], {}, [], {},
+      { functions: false, modules: true, relations, health: false });
+  };
+  const off = await build(false);
+  const seg = off.slice(off.indexOf('id="relations"'), off.indexOf('id="relations"') + 400);
+  assert.ok(!/re-run Pull Modules/.test(seg),
+            'the report told its reader the org has no related lists, and to re-run a pull that would '
+            + 'change nothing - about data the reader of this export deliberately left out');
+  assert.match(seg, /unticked when it was made/, 'and it did not say what actually happened');
+
+  const on = await build(true);
+  const segOn = on.slice(on.indexOf('id="relations"'), on.indexOf('id="relations"') + 400);
+  assert.ok(!/unticked/.test(segOn), 'a chapter that was asked for now says it was not');
+});
+
+// ---------------------------------------------------------------------------------------------
+// An export preset stores a scope the page can read back - the stamp travels with the values.
+//
+// `SCOPE_FULL` and `SCOPE_SAFE` carry no `sv`, and the presets assigned them over an empty object,
+// so pressing «Everything» stored a scope that `loadScope` then read as «written before the default
+// changed» and put through the one-shot migration again. Every reload, for ever: the source-code
+// tick chosen through the preset could never be remembered, while the same tick made by hand was.
+// Settings has assigned onto the stored object since it was written.
+test('an export preset keeps what the page needs to read it back', () => {
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    // Derived: whatever `loadScope` compares to decide a stored scope is old. Naming `sv` here would
+    // survive the day that field is renamed and stop meaning anything.
+    const stamp = /(\w+)\.(\w+) !== \w+/.exec(sliceFn(`apps/${app}/sidepanel.js`, 'loadScope').replace(/^\s*\/\/.*$/gm, ''));
+    assert.ok(stamp, `${app}: loadScope no longer tests a stamp on the stored scope - this case has lost its subject`);
+    for (const preset of ['SCOPE_FULL', 'SCOPE_SAFE']) {
+      const m = new RegExp(`dlgScope = Object\\.assign\\(([^)]*)${preset}\\)`).exec(src);
+      assert.ok(m, `${app}: the ${preset} preset no longer assigns into dlgScope`);
+      assert.match(m[1], /dlgScope/,
+                   `${app}: the ${preset} preset replaces the scope with a bare literal, so the «${stamp[2]}» `
+                   + 'stamp is dropped and the stored choice is migrated away on every single reload');
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Every row the exported report draws is a row its filter box can hide.
+//
+// The box says it «hides any row, entry or card that does not match». The CRM health chapter is
+// `div.hxrow` and the selector reached none of its 62 rows: every function card vanished while the
+// whole audit stayed on screen, which reads as «these are the matches». Analytics renders the same
+// audit as `<li>`, so its filter did cover it - the twins differed and only one of them was wrong.
+test('the report filter reaches every kind of row the report draws', () => {
+  const shell = read('apps/crm/reportshell.js');
+  const sel = /querySelectorAll\('([^']+)'\)/.exec(shell);
+  assert.ok(sel, 'the report filter no longer selects anything - this case has lost its subject');
+  // Derived from the markup: every class the two export builders put a per-item row in.
+  const drawn = new Set();
+  for (const rel of ['apps/crm/export.js', 'apps/analytics/sidepanel.js']) {
+    for (const m of read(rel).matchAll(/<(?:div|li|tr)\s+class="(hxrow|item|relrow)\b/g)) drawn.add(m[1]);
+  }
+  assert.ok(drawn.size, 'no per-item rows found in either builder - the derivation broke');
+  for (const cls of drawn) {
+    assert.ok(sel[1].includes(`.${cls}`) || (cls === 'relrow' && sel[1].includes('tbody tr')),
+              `the report draws .${cls} rows and the filter cannot see them: they stay on screen while `
+              + 'everything that matched the box disappears, which reads as «these are the matches»');
+  }
+});

@@ -95,6 +95,10 @@ function sampleRefuse() {
   return true;
 }
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
+// What the Type chip lets through - written once, because three places asked it and one of them now
+// has to *say* what it excluded. Three copies of a predicate are three chances for the sentence
+// about a filter to describe a different filter from the one that ran.
+const passTypeRow = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter);
 // The data centre to fall back on when the panel knows neither a workspace nor a tab. It is a
 // display-only copy of a setting, so it is read into a URL and never written from here.
 let zohoDc = 'zoho.com';
@@ -744,6 +748,10 @@ function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!dlgScope[k]; });
   const e = $('sc_code'); if (e) e.disabled = !dlgScope.functions;
   const l = $('sc_layouts'); if (l) l.disabled = !dlgScope.modules;
+  // Relations has the identical dependency and was left live: `scopeFromUI` forces it off whenever
+  // Modules is, then repaints, so the tick bounced straight back and the dialog said nothing. A
+  // control that refuses in silence is worse than one that is visibly unavailable.
+  const rl = $('sc_relations'); if (rl) rl.disabled = !dlgScope.modules;
   $('scwarn').textContent = dlgScope.code ? '\u26a0 includes full source code' : '';
 }
 function scopeFromUI() {
@@ -1581,7 +1589,7 @@ function renderTree() {
   }
   const term = $('find').value.trim().toLowerCase();
   const shown = treeData
-    .filter((e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter))
+    .filter(passTypeRow)
     .filter((e) => !connFilterSet || connFilterSet.has(e.path))
   // A function carries **three** names and Zoho means a different thing by each: `display_name`
   // («LearningObjects - Upsert User DELETE»), `api_name` (a lowercased slug), and `name` - the
@@ -1601,7 +1609,12 @@ function renderTree() {
   // folder access lapsed - it is the least useful sentence available.
   if (!shown.length) {
     const m = document.createElement('div'); m.className = 'empty';
-    m.innerHTML = treeData.length ? '<b>No matches.</b>'
+    // And which of the two narrowings did it: the Type filter can be excluding almost the whole
+    // org while the box looks like the only thing in the way. Named, the reader clears the right
+    // one; unnamed, «No matches» is a true sentence about a list that was never looked at.
+    m.innerHTML = treeData.length
+      ? `<b>No matches.</b>${typeFilter && typeFilter !== 'all'
+        ? ` The type filter is holding the list to ${treeData.filter(passTypeRow).length} of ${treeData.length} function(s) - set <b>Type</b> to <b>All</b> to search them all.` : ''}`
       : (emptyReason() || '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to mirror this org.');
     tree.appendChild(m); return;
   }
@@ -3656,9 +3669,14 @@ async function contentSearch() {
   const cache = await getCodeCache(op); if (mine !== searchSeq || !cache || !op.current()) return;
   const tl = term.toLowerCase();
   const results = [];
-  const passType = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter);
+  // What the sentence below has to be able to say. «No matches» is the whole answer on this
+  // surface, and it was given without mentioning that the Type filter had excluded 108 of 120
+  // functions - a true sentence about a search that never looked. The Analytics twin names its
+  // narrowing in the same situation; this is the same fact in the same voice.
+  let searched = 0;
   for (const e of treeData) {
-    if (!e.downloaded || !passType(e)) continue;
+    if (!e.downloaded || !passTypeRow(e)) continue;
+    searched++;
     const code = cache.get(e.id); if (!code) continue;
     let idx = -1, count = 0;
     if (rx) {
@@ -3679,7 +3697,13 @@ async function contentSearch() {
   }
   results.sort((a, b) => b.count - a.count || labelOf(a.e).localeCompare(labelOf(b.e)));
   tree.innerHTML = '';
-  if (!results.length) { tree.innerHTML = `<div class="treemsg">No matches for "${escHtml(term)}".</div>`; return; }
+  if (!results.length) {
+    const narrowing = typeFilter === 'all' ? 'The search box was' : 'The type filter and the search box were';
+    tree.innerHTML = `<div class="treemsg"><b>No matches for "${escHtml(term)}".</b> `
+      + `${narrowing} applied to ${searched} of ${treeData.length} function(s) - the rest were not searched. `
+      + `${typeFilter === 'all' ? 'Only downloaded source is searched.' : 'Set Type to All to search them.'}</div>`;
+    return;
+  }
   const total = results.reduce((n, r) => n + r.count, 0);
   const hdr = document.createElement('div'); hdr.className = 'srhdr'; hdr.textContent = `${total} match(es) in ${results.length} file(s)`; tree.appendChild(hdr);
   const hlRe = rx ? rx.re : new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
@@ -5786,8 +5810,13 @@ async function onExpgo() {
   closeScope(true);
 }
 $('expgo').onclick = onExpgo;
-$('pspFull').onclick = () => { dlgScope = Object.assign({}, SCOPE_FULL); dlgAutoCleared.clear(); scopeToUI(); };
-$('pspSafe').onclick = () => { dlgScope = Object.assign({}, SCOPE_SAFE); dlgAutoCleared.clear(); scopeToUI(); };
+// **A preset replaces the values, not the stamp.** `SCOPE_FULL` and `SCOPE_SAFE` carry no `sv`,
+// so pressing one of them stored a scope that `loadScope` then read as «written before the
+// default changed» and put through the one-shot migration again - every reload, for ever. The
+// source-code tick chosen through «Everything» could never be remembered, while the same tick
+// made by hand was. Settings has assigned onto the stored object since it was written.
+$('pspFull').onclick = () => { dlgScope = Object.assign({}, dlgScope, SCOPE_FULL); dlgAutoCleared.clear(); scopeToUI(); };
+$('pspSafe').onclick = () => { dlgScope = Object.assign({}, dlgScope, SCOPE_SAFE); dlgAutoCleared.clear(); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else closeAbout(); };
 loadScope();

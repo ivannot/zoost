@@ -3526,6 +3526,11 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
   // view named anywhere in the document now points at where that view is described; a name that
   // belongs to no view in this export stays plain text rather than becoming a link to nothing.
   const vAnchor = (id) => 'v-' + String(id).replace(/[^\w.-]+/g, '_');
+  // **The SQL chapter needs its own.** Both chapters headed a query table with `v-<id>`, so every
+  // one of them carried two identical anchors and every link in the document landed on the first -
+  // the Structure heading. The chapter the reader ticked, and the one flagged as sensitive, had no
+  // working link into it from anywhere. Invisible with SQL unticked, because then there is only one.
+  const sqlAnchor = (id) => 'sql-' + String(id).replace(/[^\w.-]+/g, '_');
   const byName = new Map(views.map((v) => [v.name, v.id]));
   // **Which anchors this document will actually contain**, derived from `secs` - the same list the
   // loop below draws from - rather than from the org. The first version linked any name that was a
@@ -3540,12 +3545,16 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
   const anchored = new Set();
   for (const x of secs) {
     if (x.tables) for (const t of x.tables) anchored.add(vAnchor(t.id));
-    else if (x.id === 'sql') for (const v of views) if (v.type === 'QueryTable') anchored.add(vAnchor(v.id));
+    else if (x.id === 'sql') for (const v of views) if (v.type === 'QueryTable') anchored.add(sqlAnchor(v.id));
   }
+  // Structure first, because that is where a reader wants to land; the SQL heading when Structure
+  // was unticked and the SQL chapter is the only one that has a heading for that query table.
+  // Registering the SQL chapter's tables under the *structure* anchor made every such link live
+  // and pointing at nothing in exactly that combination.
   const vLink = (name) => {
     const id = byName.get(name);
-    const a = id === undefined ? null : vAnchor(id);
-    return a && anchored.has(a) ? `<a href="#${escA(a)}">${esc2(name)}</a>` : esc2(name);
+    const a = id === undefined ? null : [vAnchor(id), sqlAnchor(id)].find((x) => anchored.has(x));
+    return a ? `<a href="#${escA(a)}">${esc2(name)}</a>` : esc2(name);
   };
   // `links` names the columns that hold a view's name, so those cells become links and every
   // other cell stays escaped text. Declared per table rather than guessed from the content: a
@@ -3562,7 +3571,7 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
         // cannot tell a query that was dropped from one that never existed. The heading is always
         // there; what varies is whether the source or the reason sits under it.
         const st = await sqlReadState(v.id, op);
-        if (st.kind === 'unread') { body += `<h3 id="${escA(vAnchor(v.id))}">${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
+        if (st.kind === 'unread') { body += `<h3 id="${escA(sqlAnchor(v.id))}">${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
         // Highlighted, like the panel and like the CRM's own report, which has coloured its Deluge
         // since it existed. This one printed plain escaped text: the same query, in two places, one
         // of them readable - and the report is the copy that goes to somebody without the extension,
@@ -3571,7 +3580,7 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
         // reason it may be handed to innerHTML at all; the placeholder for «not read» is not SQL and
         // stays on `esc2`.
         const has = st.body != null && st.body.trim();
-        body += `<h3 id="${escA(vAnchor(v.id))}">${esc2(v.name)}</h3><pre class="${has ? 'code' : 'note'}">`
+        body += `<h3 id="${escA(sqlAnchor(v.id))}">${esc2(v.name)}</h3><pre class="${has ? 'code' : 'note'}">`
           + `${has && window.highlightSql ? window.highlightSql(st.body) : esc2(sqlText(st.body))}</pre>`;
       }
     } else if (x.h) {
@@ -4338,8 +4347,13 @@ $('expx').onclick = () => closeScope(false);
 $('expcancel').onclick = () => closeScope(false);
 $('expgo').onclick = () => { scopeFromUI(); closeScope(true); };
 // The presets set what the dialog holds, never the stored preference - see `dlgScope`.
-$('pspFull').onclick = () => { dlgScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
-$('pspSafe').onclick = () => { dlgScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
+// **A preset replaces the values, not the stamp.** `SCOPE_FULL` and `SCOPE_SAFE` carry no `sv`,
+// so pressing one of them stored a scope that `loadScope` then read as «written before the
+// default changed» and put through the one-shot migration again - every reload, for ever. The
+// source-code tick chosen through «Everything» could never be remembered, while the same tick
+// made by hand was. Settings has assigned onto the stored object since it was written.
+$('pspFull').onclick = () => { dlgScope = Object.assign({}, dlgScope, SCOPE_FULL); scopeToUI(); };
+$('pspSafe').onclick = () => { dlgScope = Object.assign({}, dlgScope, SCOPE_SAFE); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('opts').onclick = () => openSettings();
 $('about').onclick = showAbout;

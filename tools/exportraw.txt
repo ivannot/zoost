@@ -186,6 +186,7 @@ apps/crm/export.js	sc.function_name || '?'
 apps/crm/export.js	sc.name
 apps/crm/export.js	schHtml
 apps/crm/export.js	scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${
+apps/crm/export.js	scheduledBy[fnKey(f)].map((sc) => `<a href="#${schAnchor(sc.id)}">${es
 apps/crm/export.js	scope.code ? ' (full source)' : ' (signatures only - source code exclu
 apps/crm/export.js	scope.code ? '' : ' · source code excluded'
 apps/crm/export.js	scope.code ? srcBlock(f) : ''

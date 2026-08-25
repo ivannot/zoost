@@ -39,18 +39,29 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const now = new Date().toLocaleString();
 
   // function cross-references (uses / used by), navigable via anchors
-  const fnAnchor = (api) => 'fn-' + sanitize(api || '');
+  // **A function is `namespace.api_name`, and this file had it as `api_name`.** Two functions in
+  // different namespaces sharing a name - 9 of 120 in the sample - collapsed onto one anchor and one
+  // graph node, so both sections printed the last node's callers and callees: one reported as
+  // calling nothing while it calls two, the other as having a caller it does not have, under the
+  // same heading and beside different source code. The whole chapter a reader uses to decide what is
+  // safe to delete. The Markdown twin has keyed on the pair since it was written - `### automation.notifyOwner`.
+  const fnKey = (f) => (f ? (f.namespace || '') + '.' + (f.api_name || f.name || '') : '');
+  const fnAnchor = (key) => 'fn-' + sanitize(key || '');
+  const nodeByKey = {}; if (g && g.nodes) Object.values(g.nodes).forEach((n) => { nodeByKey[fnKey(n)] = n; });
+  const keyOf = (id) => (g && g.nodes[id] ? fnKey(g.nodes[id]) : null);
   const connAnchor = (name) => 'conn-' + sanitize(name || '');
   const connApiSet = new Set((conns || []).map((c) => c.name));
   const _hByName = {}; Object.values(g.nodes || {}).forEach((n) => (_hByName[n.name] ||= []).push(n));
   const codeResolve = (ns, name) => {
     const nodes = g.nodes || {};
     const t = nodes[ns + '.' + name] || ((_hByName[name] || []).length === 1 ? _hByName[name][0] : null);
-    return t ? { href: '#' + fnAnchor(t.api_name), label: t.display_name || t.name } : null;
+    return t ? { href: '#' + fnAnchor(fnKey(t)), label: t.display_name || t.name } : null;
   };
   const hl = (c) => (window.highlightDeluge ? window.highlightDeluge(c, codeResolve) : esc(c));
-  const fnApiSet = new Set(fns.map((f) => f.api_name));
-  const fnLink = (api) => (api && fnApiSet.has(api)) ? `<a href="#${fnAnchor(api)}">${esc(api)}</a>` : esc(api || '?');
+  const fnKeySet = new Set(fns.map(fnKey));
+  // The label stays the api_name - it is what the reader recognises - while the link carries the pair.
+  const fnLink = (key) => { const lab = (nodeByKey[key] && nodeByKey[key].api_name) || String(key || '').split('.').slice(1).join('.') || key;
+    return (key && fnKeySet.has(key)) ? `<a href="#${fnAnchor(key)}">${esc(lab)}</a>` : esc(lab || '?'); };
 
 
   // What goes where the source would be. `code === null` is «there was nothing to read»; `''` is a
@@ -67,19 +78,17 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
         : `<pre class="code">${hl(f.code)}</pre>`);
 
-  const nodeByApi = {}; if (g && g.nodes) Object.values(g.nodes).forEach((n) => { if (n.api_name) nodeByApi[n.api_name] = n; });
-  const apiOf = (id) => (g && g.nodes[id] && g.nodes[id].api_name) || null;
   // workflow <-> function wiring
   const fnById = {}, fnByName = {};
   fns.forEach((f) => { fnById[f.id] = f; if (f.name) fnByName[f.name.toLowerCase()] = f; if (f.display_name) fnByName[f.display_name.toLowerCase()] = f; });
   const wfFnActions = (w) => { const acts = []; ((w.detail && w.detail.conditions) || []).forEach((c) => ['instant_actions', 'scheduled_actions'].forEach((bk) => { const b = c[bk]; if (b && b.actions) b.actions.forEach((a) => { if (isFnAction(a)) acts.push(a); }); })); return acts; };
   const resolveFn = (a) => fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()];
   const triggeredBy = {};
-  wfs.forEach((w) => wfFnActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fn.api_name] ||= []).push({ id: w.id, name: w.name }); }));
+  wfs.forEach((w) => wfFnActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fnKey(fn)] ||= []).push({ id: w.id, name: w.name }); }));
   const wfAnchor = (id) => 'wf-' + sanitize(String(id));
   const schAnchor = (id) => 'sch-' + sanitize(String(id));
   const scheduledBy = {};
-  scheds.forEach((sc) => { const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()]; if (fn) (scheduledBy[fn.api_name] ||= []).push(sc); });
+  scheds.forEach((sc) => { const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()]; if (fn) (scheduledBy[fnKey(fn)] ||= []).push(sc); });
   const assocText = (f) => {
     const ap = f.associated_place || [];
     if (!ap.length) return '';
@@ -94,15 +103,15 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   Object.keys(byNs).sort().forEach((ns) => {
     fnHtml += `<h3 class="grp">${esc(ns)} <span class="cnt">${byNs[ns].length}</span></h3>`;
     byNs[ns].sort(byField('api_name')).forEach((f) => {
-      const node = nodeByApi[f.api_name];
-      const uses = node ? node.calls.map(apiOf).filter(Boolean) : [];
-      const usedBy = node ? node.called_by.map(apiOf).filter(Boolean) : [];
-      const trig = triggeredBy[f.api_name] || [];
+      const node = nodeByKey[fnKey(f)];
+      const uses = node ? node.calls.map(keyOf).filter(Boolean) : [];
+      const usedBy = node ? node.called_by.map(keyOf).filter(Boolean) : [];
+      const trig = triggeredBy[fnKey(f)] || [];
       const refs = f.downloaded ? `<div class="refs">`
         + `<span><b>Uses (${uses.length}):</b> ${uses.length ? uses.map(fnLink).join(', ') : '<span class=\'none\'>none</span>'}</span>`
         + `<span><b>Used by (${usedBy.length}):</b> ${usedBy.length ? usedBy.map(fnLink).join(', ') : '<span class=\'none\'>none (entry point or unused)</span>'}</span>`
         + (trig.length ? `<span><b>Triggered by (${trig.length}):</b> ${trig.map((w) => `<a href="#${wfAnchor(w.id)}">${esc(w.name)}</a>`).join(', ')}</span>` : '')
-        + ((scheduledBy[f.api_name] || []).length ? `<span><b>Scheduled by (${scheduledBy[f.api_name].length}):</b> ${scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
+        + ((scheduledBy[fnKey(f)] || []).length ? `<span><b>Scheduled by (${scheduledBy[fnKey(f)].length}):</b> ${scheduledBy[fnKey(f)].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
         + assocText(f)
         + ((f.modulesR || []).length ? `<span><b>Reads (${f.modulesR.length}):</b> ${f.modulesR.map(esc).join(', ')}</span>` : '')
         + ((f.modulesW || []).length ? `<span><b>Writes (${f.modulesW.length}):</b> ${f.modulesW.map(esc).join(', ')}</span>` : '')
@@ -112,7 +121,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         + (f.stats ? `<span><b>Size:</b> ${f.stats.lines} lines (${f.stats.codeLines} code) · ${(f.stats.chars / 1024).toFixed(1)} KB · <b>outbound calls:</b> ${f.stats.apiCalls || 'none'}${f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} zoho.crm, ${f.stats.zoho} other${f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''})` : ''}</span>` : '')
         + ((f.modified_by || f.updatedTime) ? `<span><b>Modified:</b> ${f.modified_by ? 'by ' + esc(f.modified_by) : ''}${f.updatedTime ? ' · ' + esc(String(f.updatedTime).slice(0, 16)) : ''}</span>` : '')
         + `</div>` : '';
-      fnHtml += `<section class="item" id="${escA(fnAnchor(f.api_name))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
+      fnHtml += `<section class="item" id="${escA(fnAnchor(fnKey(f)))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
         + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.downloaded ? '' : '<span class="badge no">not downloaded</span>'}</div>`
         // Three states, not two. «Not downloaded» has a badge in the header; «downloaded and the
@@ -203,7 +212,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const relHtml = allRels.length
     ? `<p class="hxd">One row per relation. To read a related list in Deluge you need the <b>relation API name</b> - it is not the api_name of either module.</p>`
       + `<table class="ftbl"><thead><tr><th>Relation API name</th><th>Label</th><th>On module</th><th>Returns</th><th>Via</th><th>Type</th><th>Deluge</th></tr></thead><tbody>${allRels.map(relRowHtml).join('')}</tbody></table>`
-    : '<p class="empty">No related lists in this export - re-run Pull Modules.</p>';
+    // **And unticked is not «none».** This sentence went out whatever the reader had chosen, so an
+    // export made with Relations off told whoever received it that the org has no related lists -
+    // 22 of them in the sample - and instructed them to re-run a pull that would change nothing. A
+    // positive claim about somebody's org, in a document written for a reader who cannot check it.
+    // Its two neighbours ask `absent()`; this one never learnt to.
+    : absent(scope.relations, 'related lists');
 
   // workflows grouped by trigger module
   const wfByMod = {}; wfs.forEach((w) => (wfByMod[w.module || '(no module)'] ||= []).push(w));
@@ -212,7 +226,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
   const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
   const wfTiming = (bk) => { const ea = bk.execute_after; return (ea && ea.unit != null) ? `after ${ea.unit} ${ea.period || ''}`.trim() : ''; };
-  const wfActionHtml = (a) => { if (isFnAction(a)) { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fn.api_name)}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } return `<span class="wfact-x">${esc(a.type)}: ${esc(a.name)}</span>`; };
+  const wfActionHtml = (a) => { if (isFnAction(a)) { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fnKey(fn))}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } return `<span class="wfact-x">${esc(a.type)}: ${esc(a.name)}</span>`; };
   let wfHtml = '';
   Object.keys(wfByMod).sort().forEach((mod) => {
     wfHtml += `<h3 class="grp">${esc(mod)} <span class="cnt">${wfByMod[mod].length}</span></h3>`;
@@ -257,7 +271,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   let schHtml = '';
   scheds.slice().sort(byField('name')).forEach((sc) => {
     const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()];
-    const fl = fn ? `<a href="#${fnAnchor(fn.api_name)}">${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">${esc(sc.function_name || '?')}</span>`;
+    const fl = fn ? `<a href="#${fnAnchor(fnKey(fn))}">${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">${esc(sc.function_name || '?')}</span>`;
     schHtml += `<section class="item" id="${escA(schAnchor(sc.id))}" data-name="${escA(((sc.name || '') + ' ' + (sc.function_name || '')).toLowerCase())}">`
       + `<div class="ih"><b>${esc(sc.name)}</b> <code>${esc(sc.frequency || '')}</code>${sc.status !== 'active' ? `<span class="badge no">${esc(sc.status || '')}</span>` : ''}</div>`
       + `<div class="refs"><span><b>Runs function:</b> ${fl}</span>${sc.next ? `<span><b>Next:</b> ${esc(sc.next)}</span>` : ''}</div></section>`;
@@ -272,8 +286,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // the audit and pointed each one at a chapter that was never written. Measured: one dead anchor
   // per health entry, in the report of an org whose functions the reader deliberately left out.
   // `fnLink` above already asks this question; this one did not, which is the whole defect.
-  const hLink = (n) => (scope.functions && fnApiSet.has(n.api_name)
-    ? `<a href="#${fnAnchor(n.api_name)}">${esc(n.display_name || n.name)}</a>`
+  const hLink = (n) => (scope.functions && fnKeySet.has(fnKey(n))
+    ? `<a href="#${fnAnchor(fnKey(n))}">${esc(n.display_name || n.name)}</a>`
     : esc(n.display_name || n.name));
   const hOrph = hNodes.filter((n) => n.dead_suspect).sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || ''));
   const hUnres = hNodes.filter((n) => n.unresolved && n.unresolved.length);
@@ -315,7 +329,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // Contents index: informative tables (one row per item) for functions and modules
   Object.keys(byNs).sort().forEach((ns) => {
     byNs[ns].slice().sort(byField('api_name')).forEach((f) => {
-      const n = nodeByApi[f.api_name];
+      const n = nodeByKey[fnKey(f)];
     });
   });
   ['Standard', 'Custom'].forEach((k) => groups[k].slice().sort(byField('api_name')).forEach((m) => {
