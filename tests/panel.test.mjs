@@ -12149,6 +12149,35 @@ test('the call graph header counts the links on the drawing', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// Choosing a working folder does not paint over what reading it just found.
+//
+// `refreshWorkspaces` is the function that diagnoses a folder, and in the Analytics panel its answer
+// was overwritten one line later by a green «Working folder: X» - every time, whatever it found. Two
+// of the sentences it destroys exist nowhere else: «N workspace folders sit directly in X - move the
+// Zoho Analytics ones into X/analytics/», the only explanation of the old flat layout, and «Could
+// not read X/analytics», after which `rootGranted` is false while the status line says success and
+// the list underneath says access is not granted - the two halves of the panel contradicting each
+// other. The CRM twin says it first and reads after, and does not have this.
+//
+// Derived over both products, because the ordering is the fact: whatever the picker's handler says
+// about the folder, it says before it asks anything to read it.
+test('picking a working folder says so before reading it, in both panels', () => {
+  for (const [app, fn, reader] of [['crm', 'pickRoot', 'loadWorkspaces'],
+                                   ['analytics', 'pickRoot', 'refreshWorkspaces']]) {
+    const body = sliceFn(`apps/${app}/sidepanel.js`, fn)
+      .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    const said = body.indexOf('Working folder:');
+    const read = body.indexOf(`${reader}(`);
+    assert.ok(said > 0, `${app}: the handler no longer says which folder was chosen`);
+    assert.ok(read > 0, `${app}: the handler no longer reads the folder - ${reader} is gone`);
+    assert.ok(said < read,
+              `${app}: «Working folder» is written after ${reader}(), so whatever reading the folder `
+              + 'found - a flat layout that needs moving, a folder that cannot be read - is painted '
+              + 'over by a green line that is true of nothing except the picker.');
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // The CRM's diagram window draws two subjects, and an arc means a different thing in each.
 //
 // The Schema graph draws modules and related lists; the Wiring graph reuses the same drawing for

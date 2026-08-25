@@ -557,8 +557,15 @@ async function pickRoot() {
     if (foreign > 6 && !confirm(`\u00ab${h.name}\u00bb already contains ${foreign} items that are not Zoost workspaces.\n\n`
       + `${BLAST_RADIUS}\n\nUse this folder anyway?`)) return;
     root = h; rootGranted = true; await window.idbHandle.set('rootDir', h);
-    await refreshWorkspaces();
+    // **Said before the folder is read, not after it.** `refreshWorkspaces` is what diagnoses the
+    // folder, and its diagnosis was overwritten one line later by a green «Working folder: X» -
+    // every time, whatever it found. Two of those messages exist nowhere else: «N workspace folders
+    // sit directly in X - move the Zoho Analytics ones into X/analytics/», which is the only place
+    // the old flat layout is explained, and «Could not read X/analytics», after which
+    // `rootGranted` is false while the status line says success and the list underneath says access
+    // is not granted. The CRM twin has this order and does not have the defect.
     status(`Working folder: \u00ab${h.name}\u00bb`, 'ok');
+    await refreshWorkspaces();
   } catch (e) {
     if (e && e.name === 'AbortError') return;         // the user closed the picker - not an error
     status('Could not open that folder: ' + (e.message || e), 'bad');
