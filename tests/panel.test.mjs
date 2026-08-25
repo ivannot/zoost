@@ -11534,6 +11534,39 @@ test('every script the panels load evaluates on its own', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// The diagram's header names the workspace it is drawing, in that product's own words.
+//
+// Two defects in one line. `graphlogic.js` is byte-identical in both products and said «org» - which
+// is one product's noun: Zoho Analytics has no org, and the number beside it is a workspace id. And
+// the Analytics *fixture* wrote `{name, id}` where the panel sends `{instance, org}`, so the header
+// fell to «workspace not recorded» - which is the picture published on the site, in both guides and
+// in a Web Store screenshot slot. The shop window was photographing a failure state.
+//
+// Run against the fixtures the pictures are rendered from, so a fixture that stops matching the
+// payload is caught here rather than in an image nobody reads.
+test('the diagram header names the workspace, from the fixtures the pictures use', () => {
+  const { wsLine } = load([sliceFn('apps/analytics/graphlogic.js', 'wsLine')], { esc: (x) => String(x) });
+  const seen = [];
+  for (const f of readdirSync(`${ROOT}/fixtures`)) {
+    if (!/^graph-.*\.json$/.test(f)) continue;
+    const ws = JSON.parse(read(`fixtures/${f}`)).workspace;
+    const line = wsLine(ws);
+    seen.push(f);
+    assert.ok(!/not recorded/.test(line),
+              `${f}: the header falls to its empty state - «${line}». The fixture carries `
+              + `${JSON.stringify(Object.keys(ws || {}))} and the header reads instance, org and idWord.`);
+    // The identity, not just something: the name and the id both reach the reader.
+    assert.ok(line.includes(String(ws.org)), `${f}: the id is missing from «${line}»`);
+    assert.ok(line.includes(String(ws.instance)), `${f}: the name is missing from «${line}»`);
+    // And the word for the id is the one that product uses, never the other's.
+    assert.ok(new RegExp(`${ws.idWord} ${ws.org}`).test(line),
+              `${f}: the id is not introduced by «${ws.idWord}»: «${line}»`);
+  }
+  // If there are no graph fixtures, this case is measuring nothing and says so.
+  assert.ok(seen.length >= 2, `only ${seen.length} graph fixture(s) found`);
+});
+
+// ---------------------------------------------------------------------------------------------
 // A workspace the panel can no longer read is not still on screen.
 //
 // `dir` and `bound` were cleared and the model was not, so the list went on drawing every view of a

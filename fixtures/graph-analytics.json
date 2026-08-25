@@ -1421,8 +1421,9 @@
     "unresolved": 0
   },
   "workspace": {
-    "name": "Sample workspace",
-    "id": "99000001",
+    "idWord": "workspace",
+    "instance": "Sample workspace",
+    "org": "99000001",
     "label": "Sample workspace"
   }
 }

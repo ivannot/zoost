@@ -3803,6 +3803,7 @@
     "unresolved": 0
   },
   "workspace": {
+    "idWord": "org",
     "instance": "sampleorg",
     "org": "1234567890",
     "label": "Sample org"

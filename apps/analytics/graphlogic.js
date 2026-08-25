@@ -42,9 +42,14 @@ function wsLine(ws) {
   // twice, which is what a sample workspace does by construction and what a user is free to do by
   // hand.
   const label = ws.label && ws.label !== ws.instance ? esc(ws.label) : null;
+  // The word for the id comes with the id. This file is byte-identical in both products, and it said
+  // \u00aborg\u00bb - which is one product's noun: Zoho Analytics has no org, and the number beside it is a
+  // workspace id. The panel that owns the identity names it; a payload without the word prints the
+  // number alone rather than borrowing the other product's vocabulary.
+  const idWord = ws.idWord ? `${esc(ws.idWord)} ` : '';
   return label
-    ? `\u00b7 <b>${label}</b> \u00b7 ${inst} \u00b7 org ${org}`
-    : `\u00b7 <b>${inst}</b> \u00b7 org ${org}`;
+    ? `\u00b7 <b>${label}</b> \u00b7 ${inst} \u00b7 ${idWord}${org}`
+    : `\u00b7 <b>${inst}</b> \u00b7 ${idWord}${org}`;
 }
 
 function hueFor(k) {

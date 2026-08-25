@@ -41,7 +41,7 @@ buildExportMarkdown	a15fa042450c	fbf90f473b83	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildReport	3de3b69b14b5	3de3b69b14b5	identical
-buildSchemaGraph	fbecf3b254ed	ee1997168a94	divergent
+buildSchemaGraph	fbecf3b254ed	d28416eec22e	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
 clearFocus	e0db54dca347	e0db54dca347	identical
@@ -269,7 +269,7 @@ workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
 writeActiveWhenStillCurrent	5d27a20f05b3	5d27a20f05b3	identical
 writeFileAt	d6a3e4360b80	d6a3e4360b80	identical
 writeSampleWorkspace	61cba1747bc9	e42d55f49ab8	divergent
-wsLine	bdc9638a609d	bdc9638a609d	identical
+wsLine	7554f7e6278f	7554f7e6278f	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent
 wsOptionTitle	71c68d9469b5	ec5f3ef6335a	divergent
 wsShown	b0d9bb9c3d25	f14b74b6c279	divergent

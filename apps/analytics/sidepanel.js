@@ -2525,7 +2525,9 @@ function buildSchemaGraph() {
     // `label` travels too: without it the window has nothing to show and falls back to the derived
     // name, which is exactly the case the label exists for - Zoho Analytics calls the first
     // workspace of every account the same thing.
-    workspace: { instance: bound ? (bound.name || bound.workspace) : null, org: bound ? bound.workspace : null,
+    // `idWord` because the header is drawn by a file both products share: the number below is a
+    // workspace id, and without this the window called it an org - the other product's noun.
+    workspace: { idWord: 'workspace', instance: bound ? (bound.name || bound.workspace) : null, org: bound ? bound.workspace : null,
                  label: (bound && bound.label) || null },
   };
 }

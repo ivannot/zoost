@@ -2030,7 +2030,9 @@ function graphForWindow(g) {
 async function loadGraph(op = beginWorkspaceOp()) {
   if (!op.current()) throw new Error(WS_MOVED);
   const nodes = [];
-  const workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
+  // `idWord` because the header is drawn by a file both products share - see the twin, where the
+  // number is a workspace id and this one is an org.
+  const workspace = { idWord: 'org', instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
   const dirtySrc = new Set(_dirtySource);   // snapshot, as the tree load does
   let summary = null;
   try { summary = JSON.parse(await op.read(META_INDEX)); } catch (_) {}

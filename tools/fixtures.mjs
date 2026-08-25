@@ -143,7 +143,8 @@ function callGraph(files, meta) {
            counts: { nodes: Object.keys(nodes).length, edges,
                      dead_suspects: Object.values(nodes).filter((n) => n.dead_suspect).length,
                      unresolved: Object.values(nodes).filter((n) => n.unresolved.length).length },
-           workspace: { instance: meta.instance, org: meta.org, label: 'Sample org' } };
+           // `idWord` travels with the id: the header is drawn by a file both products share.
+           workspace: { idWord: 'org', instance: meta.instance, org: meta.org, label: 'Sample org' } };
 }
 
 /* The module graph: lookups are the edges, and a module Zoho refused to describe is a node that
@@ -168,7 +169,8 @@ function schemaGraph(files, meta) {
   const edges = Object.values(nodes).reduce((s, n) => s + n.calls.filter((c) => nodes[c]).length, 0);
   return { kind: 'schema', nodes, edges: [], focus: null, depth: 2,
            counts: { nodes: Object.keys(nodes).length, edges, dead_suspects: 0, unresolved: 0 },
-           workspace: { instance: meta.instance, org: meta.org, label: 'Sample org' } };
+           // `idWord` travels with the id: the header is drawn by a file both products share.
+           workspace: { idWord: 'org', instance: meta.instance, org: meta.org, label: 'Sample org' } };
 }
 
 // `--as-delivered <dir>` writes what `+ Sample` writes, into a directory of the caller's choosing.
@@ -229,7 +231,13 @@ function analyticsGraph(af) {
            counts: { nodes: Object.keys(nodes).length, edges,
                      dead_suspects: Object.values(nodes).filter((nd) => nd.dead_suspect).length,
                      unresolved: 0 },
-           workspace: { name: 'Sample workspace', id: '99000001', label: 'Sample workspace' } };
+           // **The shape the panel actually sends**, not one that looks like it. The window reads
+           // `instance`, `org` and `idWord`; this wrote `name` and `id`, so the header fell to its
+           // empty state - «workspace not recorded» - and that is the picture published on the site,
+           // in both guides and in a Web Store screenshot slot. The shop window was photographing a
+           // failure state, and the fixture was the reason.
+           workspace: { idWord: 'workspace', instance: 'Sample workspace', org: '99000001',
+                        label: 'Sample workspace' } };
 }
 
 const an = generator('analytics');
