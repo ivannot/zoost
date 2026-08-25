@@ -687,6 +687,24 @@ async function saveKeys(obj) {
   keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
   return true;
 }
+/** Which key of this section has unsaved edits, if any.
+ *
+ * **A reload belongs to a section, not to the key that happened to change**, so «is there anything
+ * to lose» has to be asked of the section. Asked of the key it was answered wrongly wherever two
+ * keys share one reload, and both products have such a pair. In the CRM the panel writes
+ * `tabAccessView` at the end of every pull - a display-only copy of which tabs the role still
+ * grants - nothing ever marks that key, so the silent branch ran, `loadTabs()` redrew the section
+ * from disk, and a reordering the reader had not saved yet was gone with no message at all. The same
+ * shape sits under the diagram pair on both sides: `erDrawMax` arriving alone would reload `lay`.
+ *
+ * The box is raised on the *dirty* key rather than on the changed one, because the changed one may
+ * have no section element to hang it from - `tabAccessView` has none - and a conflict nobody can see
+ * is the silence this is here to end.
+ */
+function dirtyPeer(key) {
+  const mine = SECTIONS[key].reload;
+  return [...dirty].find((k) => SECTIONS[k] && SECTIONS[k].reload === mine);
+}
 function conflictBox(key, on) {
   const id = 'cf_' + key;
   let el = document.getElementById(id);
@@ -724,7 +742,8 @@ async function otherWindowChanged(ch, area) {
   if (area !== 'local') return;
   for (const key of Object.keys(SECTIONS)) {
     if (!ch[key] || wasOwn(key)) continue;
-    if (dirty.has(key)) conflictBox(key, true);
+    const peer = dirtyPeer(key);
+    if (peer) conflictBox(peer, true);
     else { try { await SECTIONS[key].reload(); } catch (_) {} }
   }
 }

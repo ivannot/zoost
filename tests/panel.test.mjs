@@ -11609,6 +11609,64 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// A write from elsewhere never silently reloads a section that has unsaved edits in it - and «has
+// edits» is a question about the section, not about the key that happened to change.
+//
+// The settings page catches up by itself when another window writes a setting, and asks first when
+// there is something to lose. It asked about the *key*, and both products have two keys sharing one
+// reload, so the wrong answer came out wherever the pair was split. In the CRM the panel writes
+// `tabAccessView` at the end of every pull - a copy of which tabs the role still grants - nothing
+// ever marks that key, so the silent branch ran, `loadTabs()` redrew the whole section from disk,
+// and a reordering the reader had not saved yet was gone with no message at all. Pull all, and your
+// unsaved Tabs edits are simply not there any more.
+//
+// Derived: the pairs come out of the page's own SECTIONS table by which reload they share, and every
+// ordered pair in every group is driven. Naming the two pairs here would leave the third one, added
+// later, unwatched.
+test('a key arriving from elsewhere does not reload a section with unsaved edits', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const reloaded = [];
+    const boxed = [];
+    const loaders = [...read(rel).matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1]);
+    const g = { console, Object, Set, Map, Date, Array, String, Promise,
+                dirty: new Set(), wasOwn: () => false,
+                conflictBox: (k, on) => boxed.push([k, on]),
+                SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram' };
+    for (const n of loaders) g[n] = async () => reloaded.push(n);
+    const m = load([sliceConst(rel, 'SECTIONS'), sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'otherWindowChanged')], g);
+
+    const groups = new Map();
+    for (const [k, v] of Object.entries(m.SECTIONS)) {
+      if (!groups.has(v.reload)) groups.set(v.reload, []);
+      groups.get(v.reload).push(k);
+    }
+    const shared = [...groups.values()].filter((ks) => ks.length > 1);
+    assert.ok(shared.length, `${app}: no two keys share a reload any more - this case has lost its subject`);
+
+    for (const ks of shared) {
+      for (const changed of ks) {
+        for (const held of ks) {
+          if (held === changed) continue;
+          g.dirty.clear(); g.dirty.add(held);
+          reloaded.length = 0; boxed.length = 0;
+          await m.otherWindowChanged({ [changed]: {} }, 'local');
+          assert.deepEqual(reloaded, [],
+            `${app}: «${changed}» arrived from another window and the page redrew the section while `
+            + `«${held}» had unsaved edits in it. They are gone, and nothing was said.`);
+          assert.equal(boxed.length, 1,
+            `${app}: «${changed}» arrived with «${held}» unsaved and no conflict box was raised - `
+            + 'keeping the edits without saying why is the same silence one step later.');
+          assert.equal(boxed[0][0], held,
+            `${app}: the box was raised on «${boxed[0][0]}» rather than on «${held}», which is the key `
+            + 'that has a section on the page to hang it from.');
+        }
+      }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // A button that rewrites the form is an edit, and the page has to know it.
 //
 // Unsaved edits are noticed by two listeners on the section, `input` and `change`, so that a field
