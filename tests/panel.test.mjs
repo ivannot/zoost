@@ -2976,6 +2976,34 @@ test('the sample workspace is written by the shipped generator, and nothing abou
   // ...and without the flag, none of the awkward states - a refused module on day one is a puzzle
   assert.ok(!Object.values(files).some((t) => /INVALID_MODULE/.test(t)),
     'the workspace a first-time reader opens contains a module Zoho refused to describe');
+
+  // **The access verdicts, in the shape the panel reads and for every area it has.** The generator
+  // wrote `{ok: true}` and the panel reads `state` - `accessOf()` is `tabAccess[id].state` - so
+  // every area of the sample answered `null`: not granted, not refused, nothing. And it listed six
+  // of the seven, missing `actions`, which has no tab of its own; that is the same absence that made
+  // `noteAccess('failures', …)` return silently for months, in the same product, over the same
+  // table. A sample recording something the product cannot read is worse than one recording nothing,
+  // because the file looks complete.
+  //
+  // Both halves derived: the areas from `AREA_SCOPE` in the shipped panel, the field from the one
+  // expression that reads it.
+  const scope = sliceConst('apps/crm/sidepanel.js', 'AREA_SCOPE');
+  const { AREA_SCOPE } = load([scope], {});
+  const areas = Object.keys(AREA_SCOPE);
+  assert.ok(areas.length > 3, `only ${areas.length} area(s) found - the derivation broke`);
+  assert.deepEqual(Object.keys(cfg.access || {}).sort(), areas.slice().sort(),
+                   `the sample records ${JSON.stringify(Object.keys(cfg.access || {}))} and the panel `
+                   + `pulls ${JSON.stringify(areas)} - an area with no tab of its own is exactly the one `
+                   + 'that gets left out here.');
+  const reader = /tabAccess\[id\] && tabAccess\[id\]\.(\w+)/.exec(read('apps/crm/sidepanel.js'));
+  assert.ok(reader, 'accessOf no longer reads a field off the verdict - this case has lost its subject');
+  for (const [area, rec] of Object.entries(cfg.access || {})) {
+    assert.equal(rec[reader[1]], 'ok',
+                 `the sample records ${JSON.stringify(rec)} for ${area}, and the panel reads `
+                 + `«${reader[1]}» off it - so the area comes back as ${JSON.stringify(rec[reader[1]])}, `
+                 + 'which is neither granted nor refused.');
+    assert.ok(rec.pulledAt, `${area} has no pulledAt, so nothing can say how old the sample's data is`);
+  }
 });
 
 test('nothing reaches Zoho for a sample workspace, navigations included', () => {

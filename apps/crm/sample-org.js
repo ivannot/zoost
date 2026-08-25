@@ -575,9 +575,15 @@ function deluge(ns, name, params, calls) {
       }),
     });
 
+    // **The shape the panel reads, and every area it knows about.** This wrote `{ok: true}` and the
+    // panel reads `state` - `accessOf()` is `tabAccess[id].state` - so every area of the sample came
+    // back `null`: not «granted», not «refused», nothing. And the list was six of the seven in
+    // `AREA_SCOPE`; `actions` has no tab of its own, which is exactly how it was missed here and how
+    // it was missed in `noteAccess` before that. A sample that records an absence the product cannot
+    // read is worse than one that records nothing, because the file looks complete.
     const areas = {};
-    ['functions', 'modules', 'workflows', 'schedules', 'connections', 'failures']
-      .forEach((a) => (areas[a] = { at: WHEN, pulledAt: WHEN, ok: true }));
+    ['functions', 'modules', 'workflows', 'schedules', 'actions', 'connections', 'failures']
+      .forEach((a) => (areas[a] = { state: 'ok', status: 0, at: WHEN, pulledAt: WHEN }));
     J('.zoost.json', {
       org: ORG, instance: INSTANCE, base: BASE, sandbox: false, label: 'Sample org',
       // The one field that makes this a sample rather than a mirror. The panel reads it and refuses
