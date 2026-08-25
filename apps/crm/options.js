@@ -492,7 +492,13 @@ $('saveAi').onclick = onSaveAi;
 let scope = Object.assign({}, SCOPE_DEFAULT);
 // True until a read succeeds, so a page that never learnt what is stored cannot write over it. Same
 // flag, same reason, as the saved-patterns list further down.
-let scopeLoadFailed = false;
+// **`true`, as the sentence above says and as `rxLoadFailed` already did.** Starting at `false`
+// meant «this page has read the stored value» before it had read anything, and until a read could
+// be *cancelled* that was survivable: `beginLoad`'s contract is «an older read must not publish,
+// because a newer one will». `invalidateSectionLoads` broke that contract - it cancels a read with
+// nothing queued behind it - so an edit made while the page is still starting up leaves the form
+// showing the markup's own empty state, and Save writes that over the reader's preference.
+let scopeLoadFailed = true;
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!scope[k]; });
   $('sc_code').disabled = !scope.functions;
@@ -514,7 +520,10 @@ async function loadScope() {
   // other three loaders on this page did not.
   try {
     const r = await chrome.storage.local.get('exportScope');
-    if (current() && r.exportScope) scope = Object.assign({}, SCOPE_DEFAULT, r.exportScope);
+    // Inside the guard, with the assignment: a read that was overtaken - or cancelled by the reader
+    // typing - has not learnt anything, and saying it has is what lets Save proceed.
+    if (!current()) return;
+    if (r.exportScope) scope = Object.assign({}, SCOPE_DEFAULT, r.exportScope);
     scopeLoadFailed = false;
   } catch (_) { if (current()) scopeLoadFailed = true; }
   if (!current()) return;
@@ -640,6 +649,12 @@ async function loadLay() {
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
     if (current() && Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
   } catch (_) {}
+  // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
+  // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
+  // second read discarded, `layToUI()` paints the built-in ceiling into the box and a Save writes it
+  // over whatever was stored. A read that was overtaken, or cancelled because the reader started
+  // typing, has nothing to publish.
+  if (!current()) return;
   layToUI();
 }
 
@@ -654,7 +669,7 @@ const TAB_DEFS = window.ZOOST_TABS;   // one registry, in tabs.js - see the note
 const TAB_IDS = TAB_DEFS.map((t) => t.id);
 // True until a read succeeds, so a page that never learnt the stored order cannot write the
 // built-in one over it - the same flag, and the same reason, as the export defaults above.
-let tabsLoadFailed = false;
+let tabsLoadFailed = true;
 let tabOrderCur = TAB_IDS.slice();
 let tabHiddenCur = [];
 let tabNoPullCur = [];

@@ -12577,6 +12577,49 @@ test('the folder warning is one sentence, in every place either product says it'
 });
 
 // ---------------------------------------------------------------------------------------------
+// A read that was cancelled has learnt nothing, and nothing that follows may pretend otherwise.
+//
+// `beginLoad` was written on a contract: an older read must not publish, **because a newer read
+// will**. `invalidateSectionLoads` broke it - a reader's edit cancels the read in flight with
+// nothing queued behind it - and two things downstream were relying on the old contract without
+// saying so. `scopeLoadFailed` and `tabsLoadFailed` started `false`, meaning «this page has read the
+// stored value» before it had read anything, against comments that both say «true until a read
+// succeeds»; and `loadScope` cleared its flag outside the guard, so a cancelled read reported
+// success. The window is a human click during `init()`, and what it costs is the reader's stored
+// export scope or tab order, written over by the markup's own empty state with no conflict box -
+// which is the exact defect the flags were added to prevent.
+//
+// Derived over both products: every `*LoadFailed` flag a settings page declares must begin true, and
+// every loader must publish nothing after a read that is no longer current.
+test('a cancelled read leaves the page saying it has not read', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const src = read(rel);
+
+    const flags = [...src.matchAll(/^let (\w*LoadFailed) = (\w+);/gm)];
+    assert.ok(flags.length, `${app}: no *LoadFailed flag declared - this case has lost its subject`);
+    for (const [, name, init] of flags) {
+      assert.equal(init, 'true',
+                   `${app}: ${name} starts ${init}, so the page claims to have read the stored value `
+                   + 'before it has read anything. A read can now be cancelled with nothing queued to '
+                   + 'replace it, and then Save writes the built-in defaults over the reader\u0027s.');
+    }
+
+    // Every loader draws only while it is current. The check is the *last* thing each one does:
+    // publishing after a cancelled read is what turns «nothing to draw» into «draw the empty form».
+    for (const m of src.matchAll(/^async function (load[A-Z]\w*)\s*\(/gm)) {
+      const body = sliceFn(rel, m[1]);
+      const draw = Math.max(body.lastIndexOf('ToUI()'), body.lastIndexOf('render'));
+      if (draw < 0) continue;
+      const guard = body.lastIndexOf('if (!current()) return;', draw);
+      assert.ok(guard > 0,
+                `${app}: ${m[1]}() draws with no «if (!current()) return;» before it, so a read the `
+                + 'reader cancelled by typing still paints the form - with whatever the markup holds.');
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // An edit that begins after a reload has started still wins.
 //
 // Two orderings were covered: the section already dirty when the external write arrives, and one

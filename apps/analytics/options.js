@@ -469,6 +469,12 @@ async function loadLay() {
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
     if (current() && Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
   } catch (_) {}
+  // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
+  // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
+  // second read discarded, `layToUI()` paints the built-in ceiling into the box and a Save writes it
+  // over whatever was stored. A read that was overtaken, or cancelled because the reader started
+  // typing, has nothing to publish.
+  if (!current()) return;
   layToUI();
 }
 
