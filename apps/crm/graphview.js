@@ -1143,10 +1143,30 @@ function statOf(set, allN, allE) {
 // Guarded on `nodesA`, which `erVisibleIds` filters: it is filled when the data arrives, and reading
 // a layout array before then is the «0 of 90 modules» defect this file has already had once.
 const statDrawn = (fallback) => (curView === 'er' && nodesA.length ? new Set(erVisibleIds()) : fallback);
+/** The links, counted on what is drawn when the drawing is what is on screen.
+ *
+ * `statOf` does this for the schema branch and hands back both halves of the sentence; the call
+ * graph's header is built from `entityBreakdown()` and needs only this one number, so it is its own
+ * function rather than a fifth parameter on something that already has four.
+ */
+function statLinks() {
+  const set = statDrawn(null);
+  if (!set) return `<b>${DATA.counts.edges}</b> links`;
+  const n = edgesAmong([...set]).length;
+  return n === DATA.counts.edges
+    ? `<b>${n}</b> links`
+    : `<b>${n}</b> <span style="color:#94a3b8">of ${DATA.counts.edges}</span> links`;
+}
 function graphStat() {
   $('statline').innerHTML = DATA.kind === 'schema'
     ? `${statOf(statDrawn(null), DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}${mirrorNote()}${orphanNote()}`
-    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them${mirrorNote()} · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
+    // **The link count, on the drawing, for the same reason as the node count beside it.** The schema
+    // branch was given `statDrawn` and this one was not, so on the Wiring graph the header went on
+    // reporting the whole graph's links over a filtered picture: measured at 127 links above a
+    // diagram with 77 arcs, with no «of 127» and nothing on screen to reconcile them. The node side
+    // reconciles across four numbers - «100 of 120 functions ... 48 not drawn» - which is already
+    // work for the reader; the link side did not reconcile at all.
+    : `${entityBreakdown()} · ${statLinks()} · <b>${DATA.counts.dead_suspects}</b> nothing calls them${mirrorNote()} · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
   erCountRefresh();
 }
 // Whichever of the two is the right one for the state we are in.

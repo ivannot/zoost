@@ -12117,6 +12117,38 @@ test('a box brought back after a relayout reaches the drawing', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// On the call graph the header counts the links it is drawing, not the ones the org has.
+//
+// The node count was moved onto the drawing and the link count beside it was not: the schema branch
+// of `graphStat` was given the drawn set and the call-graph branch kept `DATA.counts.edges`, so the
+// header reported the whole graph's links over a filtered picture - «127 links» above a diagram with
+// 77 arcs, no «of 127», and nothing on screen to reconcile them. The node side at least reconciles,
+// across four numbers, which is already work for a reader.
+test('the call graph header counts the links on the drawing', () => {
+  const G = 'apps/crm/graphview.js';
+  const ctx = { DATA: { kind: 'calls', counts: { edges: 9 } }, Object, Array, Set, String, console,
+                curView: 'er', nodesA: ['a', 'b', 'c'],
+                edgesA: [['a', 'b'], ['b', 'c'], ['a', 'c']],
+                erVisibleIds: () => ['a', 'b'] };
+  const m = load([sliceConst(G, 'edgesAmong'), sliceConst(G, 'statDrawn'), sliceFn(G, 'statLinks')], ctx);
+
+  assert.match(m.statLinks(), /<b>1<\/b>/,
+               `the header says ${m.statLinks()} - one arc joins the two boxes on screen`);
+  assert.match(m.statLinks(), /of 9/,
+               `the header says ${m.statLinks()} - a partial count with no «of» reads as the whole graph`);
+
+  // Off the diagram tab there is no drawing to count, and the org's own number is the honest one.
+  ctx.curView = 'explorer';
+  assert.equal(m.statLinks(), '<b>9</b> links',
+               `away from the diagram it says ${m.statLinks()} instead of what the org holds`);
+
+  // And when everything is drawn, no «of»: a number qualified against itself is noise.
+  ctx.curView = 'er';
+  ctx.DATA.counts.edges = 1;
+  assert.equal(m.statLinks(), '<b>1</b> links', `it says ${m.statLinks()} when the drawing is the whole graph`);
+});
+
+// ---------------------------------------------------------------------------------------------
 // The CRM's diagram window draws two subjects, and an arc means a different thing in each.
 //
 // The Schema graph draws modules and related lists; the Wiring graph reuses the same drawing for

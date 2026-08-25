@@ -128,7 +128,7 @@ friendlyError	e2fc432f4aa8	e2fc432f4aa8	identical
 goToZoho	44136fa355b3	cf28ebbab779	divergent
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
-graphStat	14447f64e3df	0fc8a3fd40ae	divergent
+graphStat	1d87798be903	0fc8a3fd40ae	divergent
 hasPerm	b2ad51545bd5	b2ad51545bd5	identical
 hueFor	14a512e6b267	14a512e6b267	identical
 init	95aac20a6c5c	15c9a8e91f96	divergent

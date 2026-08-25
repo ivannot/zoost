@@ -21,7 +21,7 @@ d61ee0b22eedce02  apps/crm/export.js:107: href="${connAnchor(c.name)}" is not at
 43eae51bbdfcc8ce  apps/crm/export.js:299: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:421: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:429: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-5859e8f4ffb251d8  apps/crm/graphview.js:1863: class="${lk}" is not attribute-escaped
+5859e8f4ffb251d8  apps/crm/graphview.js:1883: class="${lk}" is not attribute-escaped
 20867c10b8f60824  apps/crm/health.js:158: class="${g.items.length ? (g.bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
 84ff11af55c61f48  apps/crm/highlight.js:118: title="${why}" is not attribute-escaped
 1fb496710d9f6227  apps/crm/modules.js:230: class="${ref ? 'st-none' : m.error ? 'st-err' : 'st-ok'}" is not attribute-escaped
