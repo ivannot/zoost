@@ -351,6 +351,57 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
 // by field. Naming fields here would be a second description of each shape, free to drift from the
 // pull that produces it - and inventing one that does not exist is how an assistant ends up
 // confidently discussing something that was never there.
+/** What an automation action looks like to the assistant - named field by field.
+ *
+ * **`{ ...e }` sent the row whole, and a denylist over an open object is the wrong shape.** It had
+ * already failed twice by its own comments: the sender's address was named and withheld, the
+ * webhook's URL beside it was not, and the URL went out until somebody noticed. What kept going out
+ * after that was everything nobody had thought to name - `created_by` and `modified_by`, which are
+ * people; `created_time` and `modified_time`; the template's id; how many recipients; whether the
+ * action is locked. None of them is in section 4.2, which enumerates an action's name, kind, the
+ * field an update writes and its value, and a webhook's method and host.
+ *
+ * So the direction is reversed: a field reaches the provider because it is written here, and adding
+ * one is a decision somebody makes on purpose - which is the only way an enumeration on a privacy
+ * page can stay true of the code. `tests/panel.test.mjs` drives this with a sentinel in every field
+ * of the source row and requires the unlisted ones to be absent.
+ */
+function actionForModel(a, fired, addresses) {
+  const out = {
+    kind: a.kind,
+    name: a.name || '',
+    module: a.module || '',
+    module_label: a.module_label || '',
+    associated: !!a.associated,
+    fired_by: fired.map((r) => r.name || r.id),
+  };
+  if (a.kind === 'field_updates') {
+    out.field = a.field || '';
+    out.field_label = a.field_label || '';
+    out.field_type = a.field_type || '';
+    out.value = actStale(a) ? '(not read by this pull)' : (a.value === undefined ? null : a.value);
+    out.value_kind = a.value_kind || '';
+  }
+  if (a.kind === 'webhooks') {
+    out.method = a.method || '';
+    // Host and path shape only - never the query string, and never the rest of the path. The helper
+    // that decides is the same one `list_actions` uses, which is the point of it having a name.
+    out.url = webhookForModel(a.url);
+  }
+  if (a.kind === 'email_notifications') {
+    out.template_name = (a.template && a.template.name) || '';
+    out.sender_type = a.from_type || '';
+    // The one field behind a setting, and it stays behind it. `from_name` is the person's own name
+    // when the sender is a user, which is why it is gated with the address rather than beside it.
+    if (addresses) { out.from_name = a.from_name || ''; out.from_address = a.from_address || ''; }
+  }
+  if (a.kind === 'tasks') {
+    out.notify = !!a.notify;
+    if (actKept(a)) out.detail = KEPT_DETAIL;
+    else if (actThin(a)) out.detail = MISS_DETAIL;
+  }
+  return out;
+}
 async function aiFocus(op = beginWorkspaceOp()) {
   const p = currentPath;
   if (!p) return '';
@@ -407,7 +458,7 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // address beside it was held back - the panel shows the two as one fact, «From», and the
         // export emits neither. The door nobody thought to close, in the block whose comment says
         // exactly that. Found by a review of this file.
-        const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
+        const shown = actionForModel(e, fired, addresses);
         // And the webhook's address, for the same reason and by the same helper `list_actions` uses
         // one screen over. `webhookForModel`'s own docstring names this threat, and the fix went
         // into the tool that lists them and not into the block that focuses one. `{ ...e }` sends
@@ -416,12 +467,6 @@ async function aiFocus(op = beginWorkspaceOp()) {
         //
         // Unlike the sender there is no setting: the query is withheld always. What the model
         // answers about is which rule calls out and where, and the host and the path say that.
-        if (shown.url) shown.url = webhookForModel(shown.url);
-        const WITHHELD = '(withheld - Settings can let the assistant see the sender)';
-        if (!addresses) {
-          if (shown.from_address) shown.from_address = WITHHELD;
-          if (shown.from_name) shown.from_name = WITHHELD;
-        }
         return block(`the ${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb`,
           aiTrunc(JSON.stringify(shown, null, 2), 4000))
           + (fired.length ? '' : (e.associated

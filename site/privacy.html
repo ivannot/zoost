@@ -218,8 +218,9 @@
       Anthropic or OpenAI. For Zoost CRM that content is <b>Deluge source code</b>, module schemas - field
       labels, API names, data types, which field looks up which module, and <b>the values inside a
       picklist</b>, which are your own vocabulary and not Zoho's - workflow definitions, schedules,
-      automation actions (their names, kinds, the field an update writes
-      and the value it writes, and a webhook's method and host - never its path
+      automation actions (their names, kinds, the field an update writes -
+      its API name, its label and its type - and the value it writes, the name of the email template a
+      notification sends, and a webhook's method and host - never its path
       or its query string, either of which can be the whole of a posting credential), connection names, their connectors, whether Zoho reports each as connected,
       and <b>the scopes each one was granted</b> (never their secrets or tokens,
       which Zoost never reads), what Zoho reports about <b>failed executions</b> - function names, Zoho's

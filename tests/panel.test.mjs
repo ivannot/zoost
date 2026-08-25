@@ -167,6 +167,69 @@ test('a refused deluge call is retried with the token the page itself uses', asy
 });
 
 // ---------------------------------------------------------------------------------------------
+// An automation action reaches the AI provider field by field, and the fields are named here.
+//
+// `aiFocus` sent `{ ...e }` - the stored row, whole - with a handful of fields corrected on the way
+// out. A denylist over an open object had already failed twice by its own comments: the sender's
+// address was named and withheld, the webhook URL beside it was not, and it went out until somebody
+// noticed. What kept going out afterwards was everything nobody had thought to name: `created_by`
+// and `modified_by`, which are people; both timestamps; the template's id; the recipient count;
+// whether the action is locked. None of them is in section 4.2, which enumerates an action's name,
+// kind, the field an update writes and its value, and a webhook's method and host.
+//
+// A sentinel in every field of the source, and the assertion is about what is *absent*: a projection
+// can only be checked from the outside by naming what must not survive it.
+test('an automation action is projected for the provider, not handed over whole', () => {
+  const REL = 'apps/crm/ai.js';
+  const g = { Object, String, Array, JSON, Boolean, console,
+              actStale: () => false, actKept: () => false, actThin: () => false,
+              KEPT_DETAIL: 'kept', MISS_DETAIL: 'thin',
+              webhookForModel: (u) => `${String(u).split('/').slice(0, 3).join('/')}/(rest withheld)` };
+  const { actionForModel } = load([sliceFn(REL, 'actionForModel')], g);
+
+  // Every field the pull can put on a row, each carrying its own sentinel. Derived from the shipped
+  // sample rather than typed: a field added to the pull tomorrow appears here without anyone
+  // remembering, and lands in the «must not survive» list until it is named in the projection.
+  const sample = JSON.parse(read('fixtures/crm/sampleorg-1234567890/actions/index.json'));
+  const fields = [...new Set(sample.flatMap((r) => Object.keys(r)))];
+  assert.ok(fields.length > 15, `only ${fields.length} field(s) in the sample - the derivation broke`);
+
+  const NAMED = new Set(['kind', 'name', 'module', 'module_label', 'associated', 'field', 'field_label',
+                         'field_type', 'value', 'value_kind', 'method', 'url', 'from_type', 'from_name',
+                         'from_address', 'template', 'notify']);
+  const secret = fields.filter((f) => !NAMED.has(f));
+  assert.ok(secret.includes('created_by') && secret.includes('modified_by'),
+            `the two person-carrying fields are not in the unnamed set (${secret.join(', ')}) - this case `
+            + 'has lost the thing it is about');
+
+  for (const kind of ['email_notifications', 'field_updates', 'webhooks', 'tasks']) {
+    const row = { kind };
+    for (const f of fields) if (f !== 'kind') row[f] = `SENTINEL_${f}`;
+    row.template = { id: 'SENTINEL_template_id', name: 'SENTINEL_template_name' };
+    row.url = 'https://hooks.example.com/SENTINEL_path?token=SENTINEL_query';
+
+    const out = JSON.stringify(actionForModel(row, [{ name: 'a rule' }], false));
+    for (const f of secret) {
+      assert.doesNotMatch(out, new RegExp(`SENTINEL_${f}\\b`),
+                          `«${f}» reaches the provider on a ${kind} and no disclosure names it: ${out.slice(0, 200)}`);
+    }
+    assert.doesNotMatch(out, /SENTINEL_template_id/, `${kind}: the template's id goes out, and nothing names it`);
+    assert.doesNotMatch(out, /SENTINEL_query/, `${kind}: a webhook's query string goes out - it can be the whole credential`);
+    assert.doesNotMatch(out, /SENTINEL_path/, `${kind}: a webhook's path goes out, which 4.2 says never happens`);
+    assert.doesNotMatch(out, /SENTINEL_from_address|SENTINEL_from_name/,
+                        `${kind}: the sender travels with the setting off`);
+    assert.match(out, /SENTINEL_name/, `${kind}: the action's own name does not reach the model at all`);
+  }
+
+  // With the setting on, the sender travels - that is what the switch is for, and a projection that
+  // silently dropped it would be a different lie.
+  const withSender = JSON.stringify(actionForModel(
+    { kind: 'email_notifications', name: 'n', from_name: 'SENTINEL_from_name', from_address: 'SENTINEL_from_address' },
+    [], true));
+  assert.match(withSender, /SENTINEL_from_address/, 'the setting is on and the address still does not travel');
+});
+
+// ---------------------------------------------------------------------------------------------
 // Nothing either product injects into a Zoho page writes to it.
 //
 // The first non-negotiable is «no write path to Zoho», and it carried one stated exception for as
@@ -575,12 +638,23 @@ test('crm: the sender-sharing switch is read when it is used, not cached with th
 });
 
 test('crm: the sender name is withheld with the sender address, not without it', () => {
-  // The focus block spreads the whole row, so withholding has to name every field that carries the
-  // sender - `from_name` is the person's own name when the type is `user`, and it was travelling.
-  const src = read('apps/crm/ai.js');
-  const block = src.slice(src.indexOf('const shown = { ...e'), src.indexOf('return block(', src.indexOf('const shown = { ...e')));
-  assert.match(block, /shown\.from_address = WITHHELD/);
-  assert.match(block, /shown\.from_name = WITHHELD/, 'the name goes while the address is held back');
+  // **The subject of this case was the denylist, and the denylist is gone.** It read the source of
+  // `const shown = { ...e }` and required two fields to be overwritten on the way out - which is a
+  // photograph of one repair, and could say nothing about the fields nobody had thought of. The row
+  // is projected field by field now, so what has to hold is that the sender is not among the fields
+  // written unless the setting says so, and that is asserted by driving the projection: see «an
+  // automation action is projected for the provider, not handed over whole».
+  //
+  // Kept, and pointed at the code, because the fact itself still has to hold: `from_name` is the
+  // person's own name when the sender type is `user`, and it travelled for a while beside an address
+  // that was being withheld.
+  const proj = sliceFn('apps/crm/ai.js', 'actionForModel');
+  assert.match(proj, /if \(addresses\)/,
+               'the sender is no longer behind the setting in the projection');
+  const gated = proj.slice(proj.indexOf('if (addresses)'));
+  for (const f of ['from_name', 'from_address']) {
+    assert.ok(gated.includes(f), `${f} is written outside the setting that is supposed to gate it`);
+  }
 });
 
 test('crm: a customer record id is not captured at the boundary', () => {

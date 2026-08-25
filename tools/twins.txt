@@ -238,7 +238,7 @@ setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
-showAbout	297a49352e51	f619f304c657	divergent
+showAbout	9033919a9674	f619f304c657	divergent
 showEmergency	cfdb73138aab	cfdb73138aab	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
