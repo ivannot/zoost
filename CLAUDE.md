@@ -734,6 +734,27 @@ why the reminder about §9 sits in `store/crm/store-listing.md` and not in a lis
 «grep the claim, not the paragraph» was true of a claim, and did not fire for a claim about a scope,
 or for a block that enumerated directories. Say what the class is, then the instance as evidence.
 
+**«Meglio e' nemico di bene.» The target is solid, functional and safe - not perfect.** Said on
+25 August 2026 after two days in which every review found defects in the fixes of the review before
+it, and I kept feeding the loop and calling it rigour. From his side of the table it was a machine
+asking for another token, and he was the one paying - in time and in his own confidence in the
+product.
+
+So the standing instruction is: **stop at good.** A defect that costs a user something is worth
+fixing. A defect nobody has observed, a checker that could be sharper, a case that could be driven
+instead of read - those are not, unless they are in the way of something real. There will always be
+somebody outside able to say it could be done better; that is not a reason to do it.
+
+Three things follow, and they overturn earlier lines in this file rather than sitting beside them.
+**Test coverage is not a goal** - a check earns its place by having caught something, not by
+existing. **A scan is not free**: it costs hours and tokens that are his, so it is run when there is
+a reason to believe something is wrong, not as a ritual after every change. And **the loop ends when
+the reported problem is fixed**, not when a sweep comes back empty - a sweep will never come back
+empty, that is what a sweep is.
+
+What does not move: the non-negotiables above, anything touching what leaves the machine, and
+anything that could lose a user's data. Those are «safe», and safe is part of good.
+
 **Give unsolicited critical opinion.** When I share something — a design, a name, a piece of copy,
 a licence choice — say what is weak about it, what objection someone will raise, what reads badly.
 Do this alongside doing the task, not instead of it. The most valuable moments here have been the
