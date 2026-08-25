@@ -471,6 +471,9 @@ $('saveAi').onclick = onSaveAi;
 
 // ---------- export scope ----------
 let scope = Object.assign({}, SCOPE_FULL);
+// True until a read succeeds, so a page that never learnt what is stored cannot write over it. Same
+// flag, same reason, as the saved-patterns list further down.
+let scopeLoadFailed = false;
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!scope[k]; });
   $('sc_code').disabled = !scope.functions;
@@ -485,7 +488,16 @@ function scopeFromUI() {
 }
 async function loadScope() {
   const current = beginLoad('exportScope');
-  try { const r = await chrome.storage.local.get('exportScope'); if (current() && r.exportScope) scope = Object.assign({}, SCOPE_FULL, r.exportScope); } catch (_) {}
+  // **A read that failed is not «nothing is stored».** This swallowed it and drew the built-in
+  // defaults, which look exactly like a stored preference - and Save then wrote them over the real
+  // one, turning the source code back *on* for somebody who had turned it off. The saved-patterns
+  // list two hundred lines down has carried a flag for precisely this since it was written; the
+  // other three loaders on this page did not.
+  try {
+    const r = await chrome.storage.local.get('exportScope');
+    if (current() && r.exportScope) scope = Object.assign({}, SCOPE_FULL, r.exportScope);
+    scopeLoadFailed = false;
+  } catch (_) { if (current()) scopeLoadFailed = true; }
   if (!current()) return;
   scopeToUI();
 }
@@ -504,6 +516,8 @@ SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFro
 $('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); };
 $('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); };
 async function onSaveScope() {
+  // Nothing is written over a preference this page never managed to read.
+  if (scopeLoadFailed) { toast('The stored defaults could not be read, so nothing was saved - reload this page.', true); return; }
   scopeFromUI();
   // Stamped, like every other writer of this preference. Without it the panel reads what this page
   // saved as a scope from before the source-code default changed, applies its one-shot migration and
@@ -549,7 +563,14 @@ async function onSaveLay() {
   // both - so tuning a spread in the window and then visiting this page for anything at all threw
   // that tuning away. The same shape as the export-scope preset: a page may only write the settings
   // it can show, and it carries the rest.
-  const prev = (await chrome.storage.local.get('erParams')).erParams || {};
+  // **Read inside a guard, because this is a merge and a merge needs its base.** Unguarded, a
+  // rejection escaped an `onclick`-assigned async function - and neither settings page registers
+  // an `unhandledrejection` listener, though both panels do - so Save did nothing, said nothing,
+  // and looked like a button that is not wired. Every other Save on this page goes through
+  // `saveKeys`, which catches and says so.
+  let prev;
+  try { prev = (await chrome.storage.local.get('erParams')).erParams || {}; }
+  catch (_) { toast(MSG.readFailed, true); return; }
   // `kind` is dropped, and that is the point of writing it out rather than merging blindly.
   //
   // The window records which graph it was tuned on, and the window applies a saved `current` only
@@ -605,6 +626,9 @@ async function loadLay() {
 // that should move.
 const TAB_DEFS = window.ZOOST_TABS;   // one registry, in tabs.js - see the note at the top of it
 const TAB_IDS = TAB_DEFS.map((t) => t.id);
+// True until a read succeeds, so a page that never learnt the stored order cannot write the
+// built-in one over it - the same flag, and the same reason, as the export defaults above.
+let tabsLoadFailed = false;
 let tabOrderCur = TAB_IDS.slice();
 let tabHiddenCur = [];
 let tabNoPullCur = [];
@@ -696,10 +720,13 @@ async function loadTabs() {
       tabNoPullCur = (Array.isArray(p.nopull) ? p.nopull : []).filter((id) => TAB_IDS.includes(id));
     }
     if (st && st.tabAccessView) tabAccessCur = st.tabAccessView;
-  } catch (_) {}
+    tabsLoadFailed = false;
+  } catch (_) { if (current()) tabsLoadFailed = true; }
   renderTabs();
 }
 async function onSaveTabs() {
+  // Nothing is written over an order this page never managed to read.
+  if (tabsLoadFailed) { toast(MSG.readFailed, true); return; }
   if (!await saveKeys({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } })) return;
   await stamp();
   toast('Tabs saved.');

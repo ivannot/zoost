@@ -11534,6 +11534,81 @@ test('every script the panels load evaluates on its own', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
+// A read that failed never authorises a write, on either settings page.
+//
+// The rule is this repository's own and it has a helper - `readCfgForWrite`, whose whole comment is
+// about this - and three of the five loaders on the page did the opposite: `catch (_) {}`, then draw
+// the built-in defaults, which look exactly like a stored preference. Save then wrote them over the
+// real one, turning the Deluge source *on* for somebody who had turned it off. The saved-patterns
+// list has carried a flag for precisely this since it was written; its siblings did not.
+//
+// Derived: every Save on both pages is driven with a storage that rejects, and none of them may
+// write. The list of handlers comes from the file, so one added tomorrow is held to it by existing.
+test('no settings page writes over a preference it could not read', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    // **The composite writers.** A saver that writes a value the page shows whole - the data centre
+    // is a select, and that is all of it - has nothing unshown to lose, and refusing it would be
+    // asking the reader to reload before making a choice they can see. The rule is about the parts a
+    // failed read leaves invisible: a scope of twelve booleans, an order of tabs, a key behind a
+    // passphrase. Derived by what the saver hands to `saveKeys`: a value read straight off a control
+    // is shown, anything else is not.
+    const src = read(rel);
+    const savers = [...src.matchAll(/async function (on[A-Z]\w*|save[A-Z]\w*)\s*\(/g)].map((m) => m[1])
+      .filter((n) => !/^saveKeys$/.test(n))
+      .filter((n) => {
+        const body = sliceFn(rel, n);
+        const call = /saveKeys\(\s*\{([^}]*)\}/.exec(body);
+        return call ? !/^\s*\w+:\s*\$\([^)]*\)\.(value|checked)\s*$/.test(call[1]) : true;
+      });
+    // If none is found the derivation has broken, not the page.
+    assert.ok(savers.length >= 3, `${app}: only ${savers.length} save handler(s) found in ${rel}`);
+    for (const name of savers) {
+      let wrote = false;
+      const said = [];
+      const el = () => ({ checked: false, value: '', textContent: '', min: '0', max: '100',
+                          disabled: false, style: {}, dataset: {},
+                          classList: { add() {}, remove() {}, toggle() {} }, focus() {} });
+      const g = {
+        console, Object, Promise, Math, Number, JSON, Set, Date, Array,
+        $: () => el(), toast: (t, bad) => said.push([String(t), !!bad]),
+        MSG: { readFailed: 'READFAIL', saveFailed: 'SAVEFAIL' },
+        // The write itself works; what fails is the read the merge needs.
+        saveKeys: async () => { wrote = true; return true; },
+        stamp: async () => {}, markClean: () => {}, beginLoad: () => () => true, currentLoad: () => 1,
+        chrome: { storage: { local: { get: async () => { throw new Error('IO'); },
+                                      set: async () => { wrote = true; } } } },
+        window: { idbHandle: { get: async () => { throw new Error('IO'); }, set: async () => { wrote = true; } },
+                  ZOOST_KEYVAULT: { forget: async () => {}, remember: async () => {} },
+                  showDirectoryPicker: async () => { throw Object.assign(new Error('no'), { name: 'AbortError' }); } },
+        confirm: () => false,
+        // Everything the individual handlers reach for; a missing one throws and is reported as such.
+        scope: {}, lay: {}, drawMax: 800, SCOPE_KEYS: [], SCOPE_FULL: {}, SCOPE_SV: 2, LAY_CTL: [],
+        TAB_IDS: [], tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabAccessCur: {},
+        scopeLoadFailed: false, tabsLoadFailed: false, rxLoadFailed: false, rxCur: [],
+        layFromUI: () => {}, scopeFromUI: () => {}, renderTabs: () => {}, renderRx: () => {},
+        mergeKeys: async () => ({}), engineIncomplete: () => false, showForget: () => {},
+        aiLockUI: () => {}, loadAi: async () => {}, showRoot: async () => {}, loadRx: async () => {},
+        currentAi: async () => ({ anthropic: {}, openai: {} }), engineLabel: (x) => x,
+      };
+      // **The loaders run first, and they run against the same rejecting storage.** A saver refuses
+      // because the *load* failed, not because the save did - so a harness that only breaks the save
+      // is asking a different question, and this one passed while `onSaveScope` wrote the defaults.
+      const loaders = [...read(rel).matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1]);
+      const pieces = loaders.map((n) => sliceFn(rel, n));
+      let fn;
+      try { ({ [name]: fn } = load([...pieces, sliceFn(rel, name)], g)); } catch (_) { continue; }
+      for (const n of loaders) { try { await g[n](); } catch (_) { /* that is the point */ } }
+      wrote = false;
+      try { await fn(); } catch (_) { /* a throw is not a write; what is asserted is the write */ }
+      assert.equal(wrote, false,
+                   `${app}: ${name}() wrote with the stored value unreadable - it is saving the `
+                   + `page's built-in defaults over whatever is really there. It said ${JSON.stringify(said[0] || null)}`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // The diagram's header names the workspace it is drawing, in that product's own words.
 //
 // Two defects in one line. `graphlogic.js` is byte-identical in both products and said «org» - which

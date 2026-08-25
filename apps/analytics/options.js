@@ -416,7 +416,14 @@ $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = 
 async function onSaveLay() {
   // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
   // writes it when the reader changes Emphasis in there. Replacing the object threw it away.
-  const prev = (await chrome.storage.local.get('erParams')).erParams || {};
+  // **Read inside a guard, because this is a merge and a merge needs its base.** Unguarded, a
+  // rejection escaped an `onclick`-assigned async function - and neither settings page registers
+  // an `unhandledrejection` listener, though both panels do - so Save did nothing, said nothing,
+  // and looked like a button that is not wired. Every other Save on this page goes through
+  // `saveKeys`, which catches and says so.
+  let prev;
+  try { prev = (await chrome.storage.local.get('erParams')).erParams || {}; }
+  catch (_) { toast(MSG.readFailed, true); return; }
   if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
   toast('Diagram defaults saved.');
 }
