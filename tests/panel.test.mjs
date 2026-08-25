@@ -583,26 +583,22 @@ test('Analytics counts the SQL files it writes, and says so before the first one
 // cookie value is everything after the first, so this reading is wrong about a value carrying base64
 // padding. Held in both bridges because the helper is byte-identical there.
 //
-// **It was changed to the specification reading, and that broke the product.** The commit that did
-// it said in its own words «not observed in the field: the values captured on this account are hex,
-// so it is latent rather than live» - a theory, held against a call that had pulled every day for
-// twenty days on a real org. Five days later that call, the only `/deluge/` one in the file and the
-// only one whose token comes from here, began answering 400 INVALID_CSRF_TOKEN.
+// **This reading was blamed for a live failure and it was not the cause, and that round trip is the
+// thing worth keeping.** The connections pull began answering 400 INVALID_CSRF_TOKEN; this line had
+// changed five days earlier and was the only line in the whole request path that had moved in twenty
+// days, so it was reverted on that reasoning - and reverting it changed nothing, because the token
+// on that org is 128 characters with no `=` in it, which makes the two readings the same value.
 //
-// So the case is inverted, and the rule it now holds is the one that was broken: **a defect nobody
-// has observed is a theory, and a working call is a measurement.** Restoring the truncation is not a
-// claim that it is correct - it is a refusal to keep a change that was never justified by anything
-// observed. The day the real cause is measured, this case is rewritten in the same commit as the
-// reading, with that measurement named in it.
+// **The only change in a window is the first suspect, not the cause**, and one measurement separates
+// them. It cost a revert, a commit and a round trip to learn that here, against an error message
+// that could have carried the token's shape from the beginning. It carries it now.
 for (const app of ['crm', 'analytics']) {
   const { cookie } = load([sliceFn(`apps/${app}/content-bridge.js`, 'cookie')],
     { get document() { return { cookie: globalThis.__raw }; } });
   const withRaw = (raw, fn) => { globalThis.__raw = raw; try { return fn(); } finally { delete globalThis.__raw; } };
 
-  test(`${app}: a value containing = is read the way the working version read it`, () => {
-    withRaw('a=1; CSRF_TOKEN=abc==; z=9', () => assert.equal(cookie('CSRF_TOKEN'), 'abc',
-      'the reading was changed to the specification\u0027s and the only call that depends on it stopped '
-      + 'working - see the note above this block before changing it back'));
+  test(`${app}: a value containing = is read whole, not truncated at the first one`, () => {
+    withRaw('a=1; CSRF_TOKEN=abc==; z=9', () => assert.equal(cookie('CSRF_TOKEN'), 'abc=='));
   });
 
   test(`${app}: an ordinary value reads as itself`, () => {

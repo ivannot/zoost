@@ -52,21 +52,20 @@
   // both bridges.
   function cookie(n) {
     const c = document.cookie.split('; ').find((x) => x.startsWith(n + '='));
-    // **Restored to the reading that worked**, which is the part between the first `=` and the
-    // second - not everything after the first, which is what a cookie value is by the specification.
-    // The spec reading went in on 20 August with its own commit saying «not observed in the field:
-    // the values captured on this account are hex, so it is latent rather than live», and five days
-    // later the connections pull - the only `/deluge/` call in this file, the only one whose token
-    // comes from here - began answering 400 INVALID_CSRF_TOKEN on an org that had pulled it daily
-    // for twenty days.
+    // Everything after the first `=`, which is what a cookie value is.
     //
-    // The rule is not about cookies. **A defect nobody has observed is a theory; a call that works is
-    // a measurement**, and changing the second to satisfy the first is the wrong way round. This is
-    // not a claim that the truncation is right - it is the removal of a change that had nothing
-    // observed behind it. When the real cause is measured this line moves again, in the same commit
-    // as that measurement, and the error beside it now reports the token's length and whether it
-    // carries an `=` so the measurement costs one pull.
-    return c ? c.slice(n.length + 1).split('=')[0] : undefined;
+    // **This line was blamed for a live failure and it was not the cause.** The connections pull
+    // began answering 400 INVALID_CSRF_TOKEN; this reading had changed five days earlier, from «the
+    // part between the first `=` and the second», and it was the only line in the whole request path
+    // that had moved in twenty days - so it was restored on that reasoning. The measurement that
+    // settled it came from the org itself: the token is 128 characters and carries no `=` at all, so
+    // the two readings return the identical value and neither can have broken anything.
+    //
+    // Restored again, and the episode is what the line is worth keeping for: **the only change in a
+    // window is not the cause, it is the first suspect**, and the difference between the two is a
+    // measurement. The error below reports the token's shape now, which is how this one was closed in
+    // a single pull instead of another day.
+    return c ? c.slice(n.length + 1) : undefined;
   }
 
   function instanceName() {
@@ -296,8 +295,16 @@
     // request actually carried is reported, so the next occurrence arrives as evidence instead of as
     // three words that fit every explanation.
     if (csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
+      // **Which cookies the page has, by name.** The one question this failure keeps turning on is
+      // whether the deluge family's own cookie is there at all - if it is, the token is stale; if it
+      // is not, everything sent is a guess and no refresh can help. A name is not a credential and no
+      // value is read, so the answer can travel in the message the reader is already pasting, instead
+      // of costing them a console and me another day of theories.
+      let jar = '';
+      try { jar = document.cookie.split('; ').map((c) => c.split('=')[0]).filter(Boolean).sort().join(' '); } catch (_) {}
       throw apiError(res.status, path,
         `${message} - the token was read from ${lastCsrfFrom} (${lastCsrfShape || 'no value'})`
+        + `; cookies on this page: ${jar || '(none readable)'}`
         + (retried === 'unprimed' ? ', and the Zoho CRM call made to refresh it failed too' : ', and it was still refused after a refresh'),
         code);
     }
