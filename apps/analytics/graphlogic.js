@@ -420,7 +420,18 @@ function erToggleCut(a, b, away) {
   else if (away) erCut.set(k, away);
   else return;
   const after = erHiddenSet().size;
-  erRender();                             // a drawing filter: nothing is laid out again
+  // **An unfold can bring back a box the layout no longer knows about.** `erRender` draws `erIds`,
+  // and `erIds` is whatever `erLayout` last set it to - `erVisibleIds()`, which excludes what is
+  // folded. So any relayout taken while a branch is folded - a chip, a depth, an emphasis, the
+  // spread slider, `Re-layout` - drops those boxes out of `erIds`, and the unfold afterwards has
+  // nothing to draw. Measured on a four-node graph: «1 box is back», the badge and the header both
+  // counting four, and three on the drawing. Nothing brought it back until the next relayout, and
+  // the reader had just done the thing that causes one.
+  //
+  // A fold is still only a filter, which is the whole reason this is fast; an unfold that restores an
+  // id the layout has never placed is not, and it says so by asking for one.
+  const back = erVisibleIds().some((id) => !erIds.includes(id));
+  if (back) { erLaidOut = false; erShowMaybeHeavy(); } else erRender();   // a drawing filter: nothing is laid out again
   // And the two numbers beside the drawing. `erRender` redraws the boxes; it does not re-run the
   // counts, so folding thirteen boxes away left the tab badge and the status line both saying 18
   // while five were drawn - and the hint on the same screen said «13 boxes off the diagram». The

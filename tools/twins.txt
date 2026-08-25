@@ -112,7 +112,7 @@ erTipIds	6d80db9a1ca4	6d80db9a1ca4	identical
 erTipOn	cda3bfa68316	cda3bfa68316	identical
 erTipShow	4ce0ece76994	4ce0ece76994	identical
 erTipText	b770d433afce	b770d433afce	identical
-erToggleCut	630523e026b4	630523e026b4	identical
+erToggleCut	1f22c0a5ae3a	1f22c0a5ae3a	identical
 erUnhide	cd9ab515870d	cd9ab515870d	identical
 erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
 erVisibleIds	372e3743dccc	dffd20c3e9ec	divergent

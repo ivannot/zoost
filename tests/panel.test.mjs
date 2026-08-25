@@ -12047,6 +12047,76 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// A branch brought back after a relayout is actually drawn, not only counted.
+//
+// A fold is a drawing filter and nothing is laid out again, which is what makes it instant. But
+// `erRender` draws `erIds`, and `erIds` is whatever `erLayout` last set it to - `erVisibleIds()`,
+// which excludes what is folded. So any relayout taken while a branch is folded drops those boxes
+// out of `erIds`, and the unfold afterwards has nothing to draw: the hint says «1 box is back», the
+// tab badge and the header line both count it, and the diagram does not change. Every control that
+// relays out is one the reader is likely to touch while a branch is away - a chip, the depth, the
+// emphasis, the spread slider, Re-layout.
+//
+// The sequence is what this case is: fold, relayout, unfold. Asking only «does an unfold restore the
+// count» answers yes on the broken code, which is exactly what made it survive.
+test('a box brought back after a relayout reaches the drawing', () => {
+  const G = 'apps/crm/graphview.js';
+  const L = 'apps/crm/graphlogic.js';
+  const mod = (id, calls) => ({ id, name: id, category: 'modules', calls, called_by: [],
+                                fields: [{ api_name: 'Name' }], rest: false, dead_suspect: false, unresolved: [] });
+  const hints = [];
+  let laidOut = 0;
+  const ctx = { N: { A: mod('A', ['B', 'D']), B: mod('B', ['C']), C: mod('C', []), D: mod('D', []) },
+                egoSet: null, erAll: false, curFocus: null, curView: 'er', erEmph: 'relations',
+                DATA: { kind: 'schema', counts: { nodes: 4, edges: 3 } },
+                nodesA: ['A', 'B', 'C', 'D'], edgesA: [['A', 'B'], ['B', 'C'], ['A', 'D']],
+                hiddenKinds: new Set(), onlyConds: new Set(), erCut: new Map(), erIds: [],
+                erLaidOut: true, Set, Map, Object, Array, String, console,
+                ekey: (a, b) => `${a}\u0000${b}`,
+                erRender: () => {}, statRefresh: () => {}, erHint: (t) => hints.push(String(t)),
+                MSG: { folded: (n) => `folded ${n}`, unfolded: (n) => `unfolded ${n}` } };
+  // The layout as the window actually does it: `erShow` runs `erLayout` **only** when the flag is
+  // down - `if (!erLaidOut) { erLayout(); erLaidOut = true; }` - so a caller that asks for a draw
+  // without clearing it gets nothing new. A stub that places the boxes unconditionally answers for
+  // the flag, and let a plant that drops `erLaidOut = false` pass.
+  ctx.erShowMaybeHeavy = () => {
+    if (!ctx.erLaidOut) { laidOut++; ctx.erIds = m.erVisibleIds(); ctx.erLaidOut = true; }
+  };
+  const m = load([sliceConst(G, 'KINDOF'), sliceConst(G, 'CONDITION_KEYS'), sliceConst(G, 'erCandidate'),
+                  sliceFn(G, 'passKind'), sliceFn(L, 'erHiddenSet'), sliceFn(G, 'erFieldsFor'),
+                  sliceFn(L, 'linkedUnderFilter'), sliceFn(G, 'erVisibleIds'), sliceFn(L, 'erFoldedBy'),
+                  sliceFn(L, 'erWouldGo'), sliceFn(L, 'erReach'), sliceFn(L, 'erToggleCut')], ctx);
+
+  ctx.erIds = m.erVisibleIds();
+  assert.deepEqual(ctx.erIds, ['A', 'B', 'C', 'D'], 'the fixture does not start with everything drawn');
+
+  m.erToggleCut('B', 'C', 'C');                       // fold the branch
+  assert.equal(hints.at(-1), 'folded 1', `folding said ${JSON.stringify(hints.at(-1))}`);
+  assert.deepEqual(m.erVisibleIds(), ['A', 'B', 'D'], 'the fold did not take the box off the drawing');
+
+  ctx.erIds = m.erVisibleIds();                       // anything that relays out, while it is folded
+  const laid = laidOut;
+
+  m.erToggleCut('B', 'C', 'C');                       // and back
+  assert.equal(hints.at(-1), 'unfolded 1', `unfolding said ${JSON.stringify(hints.at(-1))}`);
+  assert.deepEqual(m.erVisibleIds(), ['A', 'B', 'C', 'D'], 'the unfold did not restore the box to the visible set');
+  assert.deepEqual(ctx.erIds, ['A', 'B', 'C', 'D'],
+                   `the window says the box is back and draws ${JSON.stringify(ctx.erIds)}. The layout `
+                   + 'ran while it was folded, so it is not in the set `erRender` draws, and nothing will '
+                   + 'put it there until the next relayout - which the reader has just done.');
+  assert.equal(laidOut, laid + 1,
+               'restoring a box the layout has never placed did not ask for a layout - a fold is a '
+               + 'filter, an unfold of something unplaced is not');
+
+  // And the ordinary unfold - nothing relaid out in between - still costs no layout, which is the
+  // whole reason folding is instant.
+  const cheap = laidOut;
+  m.erToggleCut('B', 'C', 'C');
+  m.erToggleCut('B', 'C', 'C');
+  assert.equal(laidOut, cheap, 'a fold and an immediate unfold now relay out, which makes folding slow');
+});
+
+// ---------------------------------------------------------------------------------------------
 // The CRM's diagram window draws two subjects, and an arc means a different thing in each.
 //
 // The Schema graph draws modules and related lists; the Wiring graph reuses the same drawing for
