@@ -1598,65 +1598,44 @@ def waits() -> tuple:
     return (bare, cond)
 
 
-def clicks_before_ready() -> list:
-    """Clicks on a control the product keeps hidden until its data arrives, with nothing waited for.
+def click_guard_installed() -> tuple:
+    """(scenarios missing the on-screen guard, scenarios read).
 
-    **A click on a hidden element neither throws nor works**, which is the worst shape a step in a
-    driver can have. The ER scenario opened by clicking the diagram tab; that tab carries
-    `display:none` in the markup and is shown when the graph lands, so an early click did nothing,
-    `settle` then returned on a document that had gone quiet for its own reasons, and the run failed
-    three lines later saying «the fixture draws 0 boxes» - which reads as a bad fixture. It passed
-    whenever the browser was already warm, and that is the whole of what «intermittent» was here.
+    **This was a static sweep and the static sweep could not see the defect it was written for.**
+    The ER scenario clicked the diagram tab, which carries `display:none` until the graph lands; a
+    click on a hidden control neither throws nor works, so the run failed three lines later saying
+    «the fixture draws 0 boxes» - a sentence about the fixture, describing a race. The sweep read the
+    text before each `.click(`, and of the 75 in these scenarios it reached 40 and could judge 2:
+    the click goes through a helper, and «a wait exists somewhere earlier» is true of everything
+    after the first one. Deleting the guard it was written for changed its answer not at all.
 
-    Both halves are derived. Which controls are hidden comes from the shipped markup, not from a
-    list here; which clicks are unguarded comes from the scenario text before each `.click(`. The
-    blind spot, stated: an element hidden by a stylesheet rather than by an inline style is not
-    seen, and neither is a scenario that reaches the page some other way - dispatching an event,
-    setting a value.
+    Text cannot answer «is this element on screen». The page can, so the question is asked there -
+    every scenario installs a `HTMLElement.prototype.click` that refuses a control the product is
+    hiding, by name. It found two real ones on its first run: a loop that believed it closed every
+    group in the tree and closed one, and a click on a Retry button that is hidden precisely because
+    there is nothing to retry, under an assertion that therefore compared a status line with itself.
+
+    What is left here is the one thing a text scan can honestly hold: that every scenario installs
+    it. A scenario added tomorrow without the guard is a scenario back in the dark.
     """
     import ast
-    import re
-    root = pathlib.Path(__file__).resolve().parent.parent
-    hidden = set()
-    pages = 0
-    for html in sorted(root.glob("apps/*/*.html")):
-        pages += 1
-        for m in re.finditer(r"<[^>]*\bid=\"([\w-]+)\"[^>]*>", html.read_text(encoding="utf-8")):
-            if re.search(r"style=\"[^\"]*display\s*:\s*none", m.group(0)):
-                hidden.add(m.group(1))
     tree = ast.parse(pathlib.Path(__file__).read_text(encoding="utf-8"))
-    late = []
+    missing, seen = [], 0
     for node in tree.body:
         if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
             continue
         body = node.value.value
         if not isinstance(body, str) or "const wait =" not in body:
             continue
+        seen += 1
         name = node.targets[0].id if isinstance(node.targets[0], ast.Name) else "?"
-        start = body.find("(async () => {")
-        run = body[start:] if start >= 0 else body
-        for m in re.finditer(r"\$\('([\w-]+)'\)[^\n]*\.click\(|querySelector\(([^)]*)\)[^\n]*\.click\(", run):
-            sel = m.group(1) or m.group(2) or ""
-            ids = {sel} | {x for x in re.findall(r"[\w-]+", sel)}
-            if not (ids & hidden):
-                continue
-            # **A click inside a helper happens where the helper is called**, not where it is
-            # written, and both scenarios of the panel declare theirs at the top. Read literally
-            # this reported them for a click that runs several settles later - a checker inventing
-            # two findings, which is the class this repository catches by measuring its own tools.
-            # So when the click sits inside a `const <name> = async` declaration, the moment asked
-            # about is that helper's first call site.
-            when = m.start()
-            decl = run.rfind("const ", 0, m.start())
-            head_decl = run[decl:m.start()] if decl >= 0 else ""
-            fn = re.match(r"const (\w+) = async", head_decl)
-            if fn:
-                call = run.find(f"{fn.group(1)}()", decl + len(head_decl))
-                when = call if call >= 0 else m.start()
-            head = run[:when]
-            if "await until(" not in head and "await settle(" not in head:
-                late.append(f"{name}: clicks {sel.strip()} before waiting for anything")
-    return late, pages, len(hidden)
+        # The *install*, not the mention: `const real = HTMLElement.prototype.click` reads it, and a
+        # plant that blanked that line left the marker in place and the check green - the checker
+        # measuring a word instead of the act.
+        if "HTMLElement.prototype.click = function" not in body:
+            missing.append(name)
+    return missing, seen
+
 
 def main() -> int:
     if not shots.have_chrome():
@@ -1701,12 +1680,13 @@ def main() -> int:
           f"panel takes.", flush=True)
     # The other bet, and the one that does not throw when it loses: clicking a control the product
     # keeps hidden until its data has arrived. The denominator is the markup's, not a list here.
-    late, pages, hidden = clicks_before_ready()
-    print(f"probe: {hidden} control(s) across {pages} shipped page(s) are hidden until their data "
-          f"lands; every click on one is preceded by a condition.", flush=True)
-    for line in late:
-        print(f"probe: {line} - a click on a hidden control does nothing and says nothing, so the "
-              f"run fails later about something else, and passes whenever the browser is warm.", flush=True)
+    missing, scenarios = click_guard_installed()
+    print(f"probe: {scenarios - len(missing)} of {scenarios} scenario(s) refuse a click on a control "
+          f"the product is hiding - asked of the page, which is the only thing that can answer it.", flush=True)
+    for name in missing:
+        print(f"probe: {name} does not install the on-screen guard, so a click on a hidden control "
+              f"there is a silent no-op and the failure lands later, about something else.", flush=True)
+    late = missing
     print("probe: the scripted paths above ran without throwing.", flush=True)
     return 1 if late else 0
 

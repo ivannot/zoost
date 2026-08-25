@@ -5886,47 +5886,46 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
         spec.loader.exec_module(mod)
         return mod
 
-    def test_nothing_is_clicked_before_the_thing_it_needs_has_arrived(self):
-        """A click on a control the product hides until its data lands neither throws nor works.
+    def test_every_scenario_refuses_a_click_on_a_hidden_control(self):
+        """A click on a control the product hides neither throws nor works.
 
         The worst shape a step in a driver can have, and the ER scenario had it: it opened by
         clicking the diagram tab, which carries `display:none` until the graph arrives. Early, the
         click did nothing, `settle` returned on a document quiet for its own reasons, and the run
         failed three lines later saying «the fixture draws 0 boxes» - which reads as a bad fixture.
         It passed whenever the browser was already warm, and that was the whole of «intermittent».
-        """
-        late, pages, hidden = self.probe().clicks_before_ready()
-        self.assertGreater(pages, 0, 'no shipped page was read - the denominator is empty')
-        self.assertGreater(hidden, 0,
-                           'no control in either product is hidden in its markup any more, so this '
-                           'check has no subject and is passing over nothing')
-        self.assertEqual(late, [], '; '.join(late))
 
-    def test_it_can_see_an_unguarded_click(self):
-        # A clean answer proves nothing until the subject has been made dirty on purpose. The plant
-        # is the defect as it was: the ER scenario clicking the diagram tab first thing.
+        **The check for it was a text sweep and could not see it.** Of the 75 clicks in these
+        scenarios it reached 40 and could judge 2 - the click goes through a helper, and «a wait
+        exists somewhere earlier» is true of everything after the first one - so deleting the guard
+        it was written for changed its answer not at all. Text cannot answer «is this on screen».
+        The page can, and every scenario now installs a `click` that refuses one the product is
+        hiding. It found two real defects on its first run, one of them in the product.
+
+        What is held here is the one thing a text scan can honestly hold: that the guard is there.
+        """
+        missing, scenarios = self.probe().click_guard_installed()
+        self.assertGreater(scenarios, 3, 'no scenario was read - the denominator is empty')
+        self.assertEqual(missing, [],
+                         f'{missing} drive the panel without refusing a click on a hidden control, so '
+                         f'a click that does nothing there fails later, about something else')
+
+    def test_it_can_see_a_scenario_without_the_guard(self):
+        # A clean answer proves nothing until the subject is made dirty on purpose.
         src = ROOT / 'tools' / 'probe.py'
         keep = src.read_text(encoding='utf-8')
-        old = """    const ertab = () => document.querySelector('.tab[data-v="er"]');"""
-        self.assertIn(old, keep, 'the ER scenario no longer opens the way this plant expects')
+        old = '    HTMLElement.prototype.click = function clickOnScreen() {'
+        self.assertIn(old, keep, 'the scenarios no longer install the guard the way this plant expects')
         try:
-            src.write_text(keep.replace(old, """    document.querySelector('#ertab').click();
-    const ertab = () => document.querySelector('.tab[data-v="er"]');""", 1), encoding='utf-8')
-            late, _, _ = self.probe().clicks_before_ready()
+            # The install taken out, not the word: blanking `const real = …` left the marker behind
+            # and this passed, which is the check measuring a mention instead of the act.
+            src.write_text(keep.replace(old, '    const unusedGuard = function clickOnScreen() {', 1), encoding='utf-8')
+            missing, _ = self.probe().click_guard_installed()
         finally:
             src.write_text(keep, encoding='utf-8')
-        self.assertTrue(any('ER' in x for x in late),
-                        'a scenario clicking a hidden control first thing was not reported, so the '
-                        'clean answer above is a clean answer about nothing')
-
-    def test_a_click_inside_a_helper_is_judged_where_the_helper_is_called(self):
-        # It was judged where the helper is *written*, and both panel scenarios declare theirs at
-        # the top - so the check invented two findings about clicks that run several settles later.
-        # A checker measuring itself, which is where three findings in a row have come from here.
-        late, _, _ = self.probe().clicks_before_ready()
-        self.assertFalse(any('navtab' in x for x in late),
-                         'the check reports the panel scenarios for a click inside a helper they '
-                         'declare early and call late')
+        self.assertTrue(missing,
+                        'a scenario with the guard taken out was not reported, so the clean answer '
+                        'above is a clean answer about nothing')
 
 
 class WhatTheAssistantSendsIsDeclared(unittest.TestCase):
