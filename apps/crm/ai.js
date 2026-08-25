@@ -351,6 +351,72 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
 // by field. Naming fields here would be a second description of each shape, free to drift from the
 // pull that produces it - and inventing one that does not exist is how an assistant ends up
 // confidently discussing something that was never there.
+/** The other four rows the focus block used to hand over whole.
+ *
+ * The action was projected first, because a review found a person's name in it. These four are the
+ * same shape and were left standing: a workflow, a schedule, a connection and a module all went to
+ * the provider as `JSON.stringify(row)`. Between them they carried `created_by` and `createdBy` -
+ * people - and, on a module, `layouts`, which section 4.2 does not name.
+ *
+ * One helper per kind rather than one clever one: what may leave is a decision per kind, and a
+ * shared filter would make «add a field» a thing that happens to four kinds at once. The nested
+ * substance a workflow carries - its conditions, what it executes and when - is what the assistant
+ * exists to answer about, so it travels; who last touched it does not.
+ */
+/** A workflow rule is **Zoho's** object, not one this product composes, and that changes the trade.
+ *
+ * The pull stores the rule as Zoho returns it, so an allowlist here cannot be complete: a key Zoho
+ * adds tomorrow is one the assistant stops seeing. That is the direction to fail in - a question
+ * answered less well is recoverable, a field nobody decided to send is not - and it is stated rather
+ * than left for somebody to discover when an answer gets thinner.
+ *
+ * What is named is what a rule *does*: when it fires, on what, under which conditions, and what it
+ * then runs. What is not named is who made it and when, which is what section 4.2 covers for a
+ * function and a connection and not for a workflow.
+ */
+function workflowForModel(w) {
+  const out = {
+    name: w.name || '', module: w.module || '', type: w.type || '',
+    status: w.status !== undefined ? w.status : w.active,
+    description: w.description || '',
+    last_executed_time: w.last_executed_time || null,
+  };
+  for (const k of ['execute_when', 'execution', 'criteria', 'conditions', 'actions',
+                   'instant_actions', 'scheduled_actions', 'trigger']) {
+    if (w[k] !== undefined) out[k] = w[k];
+  }
+  return out;
+}
+function scheduleForModel(x) {
+  return {
+    name: x.name || '', status: x.status === undefined ? null : x.status,
+    frequency: x.frequency === undefined ? null : x.frequency,
+    function_name: x.function_name || '',
+    next: x.next || null, last: x.last || null,
+  };
+}
+function connectionForModel(c) {
+  return {
+    name: c.name || '', label: c.label || '',
+    connector: c.connector || '', connector_label: c.connectorLabel || '',
+    connected: c.connected !== false,
+    scopes: c.scopes || [],
+  };
+}
+function moduleRowForModel(m) {
+  return {
+    api_name: m.api_name || '', singular_label: m.singular_label || '', plural_label: m.plural_label || '',
+    generated_type: m.generated_type || '', unreadable: !!m.unreadable,
+    viewable: !!m.viewable, creatable: !!m.creatable, editable: !!m.editable, deletable: !!m.deletable,
+    api_supported: m.api_supported !== false,
+    fields: m.fields || [],
+    related_lists: m.related_lists || [],
+    // The layout names a module carries are not in section 4.2, and a module row is the only place
+    // they reach the provider. Held back rather than declared: the question the assistant answers
+    // about a module is its shape, and a layout name adds nothing to that.
+    layouts_count: (m.layouts || []).length,
+  };
+}
 /** What an automation action looks like to the assistant - named field by field.
  *
  * **`{ ...e }` sent the row whole, and a denylist over an open object is the wrong shape.** It had
@@ -423,17 +489,17 @@ async function aiFocus(op = beginWorkspaceOp()) {
       try { detail = JSON.parse(await op.read(p)); } catch (_) {}
       if (detail || e) {
         return block(`the workflow «${(e && e.name) || (detail && detail.name) || '?'}»`,
-          aiTrunc(JSON.stringify(detail || e, null, 2), 6000))
+          aiTrunc(JSON.stringify(workflowForModel(detail || e), null, 2), 6000))
           + (detail ? '' : '\nOnly the index entry is on disk for this workflow; its conditions and actions have not been pulled.\n');
       }
     }
     if (p.startsWith('schedules/')) {
       const e = scheduleData.find((x) => x.path === p);
-      if (e) return block(`the schedule «${e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
+      if (e) return block(`the schedule «${e.name || '?'}»`, aiTrunc(JSON.stringify(scheduleForModel(e), null, 2), 3000));
     }
     if (p.startsWith('connections/')) {
       const e = connectionData.find((x) => x.path === p);
-      if (e) return block(`the connection «${e.label || e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
+      if (e) return block(`the connection «${e.label || e.name || '?'}»`, aiTrunc(JSON.stringify(connectionForModel(e), null, 2), 3000));
     }
     // The «one of a set» miss, again: every other kind had a branch here and this one did not, so
     // selecting an action and asking «what does this do?» got «I have no reference» while the same
@@ -458,7 +524,7 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // address beside it was held back - the panel shows the two as one fact, «From», and the
         // export emits neither. The door nobody thought to close, in the block whose comment says
         // exactly that. Found by a review of this file.
-        const shown = actionForModel(e, fired, addresses);
+
         // And the webhook's address, for the same reason and by the same helper `list_actions` uses
         // one screen over. `webhookForModel`'s own docstring names this threat, and the fix went
         // into the tool that lists them and not into the block that focuses one. `{ ...e }` sends
@@ -468,7 +534,7 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // Unlike the sender there is no setting: the query is withheld always. What the model
         // answers about is which rule calls out and where, and the host and the path say that.
         return block(`the ${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb`,
-          aiTrunc(JSON.stringify(shown, null, 2), 4000))
+          aiTrunc(JSON.stringify(actionForModel(e, fired, addresses), null, 2), 4000))
           + (fired.length ? '' : (e.associated
             ? '\nZoho reports it as in use, but no rule on disk names it - the rule that uses it may not have been pulled.\n'
             : '\nNo workflow rule on disk fires this action.\n'));
@@ -478,7 +544,7 @@ async function aiFocus(op = beginWorkspaceOp()) {
       const e = moduleData.find((x) => x.path === p);
       if (e) {
         const ref = moduleRefusal(e.unreadable);
-        return block(`the module «${e.label || e.api_name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 6000))
+        return block(`the module «${e.label || e.api_name || '?'}»`, aiTrunc(JSON.stringify(moduleRowForModel(e), null, 2), 6000))
           + (ref ? `\n${ref.text} Its fields, layouts and relations are absent because they were never read, not because there are none.\n` : '');
       }
     }

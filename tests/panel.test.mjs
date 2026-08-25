@@ -933,8 +933,15 @@ const focusCtx = {
   }),
   JSON, Object,
 };
+// The five projections the focus block hands its rows to. Lifted rather than stubbed: what they let
+// through is the thing under test everywhere below, and a stub would answer for them.
 const { aiFocus } = load([sliceFn('apps/crm/modules.js', 'moduleRefusal'),
                           sliceFn('apps/crm/ai.js', 'fnSource'),
+                          sliceFn('apps/crm/ai.js', 'workflowForModel'),
+                          sliceFn('apps/crm/ai.js', 'scheduleForModel'),
+                          sliceFn('apps/crm/ai.js', 'connectionForModel'),
+                          sliceFn('apps/crm/ai.js', 'moduleRowForModel'),
+                          sliceFn('apps/crm/ai.js', 'actionForModel'),
                           sliceFn('apps/crm/ai.js', 'aiFocus')], focusCtx);
 
 function looking(at, extra = {}) {
@@ -965,6 +972,56 @@ test('a workflow whose detail was never pulled says so rather than looking compl
   const out = await looking('workflows/7.json', { __wf: [{ path: 'workflows/7.json', name: 'Half known' }] });
   assert.match(out, /the workflow «Half known»/);
   assert.match(out, /have not been pulled/);
+});
+
+// **What the focus block hands over is projected for every kind, not only the one a review found.**
+// The action was fixed first because somebody read it and saw a person's name. The other four were
+// the same shape and were left standing: a workflow, a schedule, a connection and a module all went
+// as `JSON.stringify(row)`. Between them they carried `created_by` and `createdBy` - people - two
+// timestamps, and the names of a module's layouts, which section 4.2 does not name.
+//
+// Driven with a sentinel in every field, and the assertion is absence. `tools/aidatacheck.py` refuses
+// the shape; this proves the fields.
+test('no focus block hands over a stored row whole', async () => {
+  const SENT = (f) => `SENTINEL_${f}`;
+  const rows = {
+    schedule: { path: 'schedules/9', name: 'Nightly', status: 'active', frequency: 'daily',
+                function_name: 'nightly', next: 'n', last: 'l',
+                id: SENT('id'), created_by: SENT('created_by'), modified_by: SENT('modified_by'),
+                created_time: SENT('created_time'), modified_time: SENT('modified_time') },
+    connection: { path: 'connections/books', name: 'books', label: 'Books API', connector: 'c',
+                  connectorLabel: 'C', connected: true, scopes: ['s'],
+                  id: SENT('id'), createdBy: SENT('createdBy') },
+    module: { path: 'modules/Contacts.json', api_name: 'Contacts', label: 'Contacts', fields: [],
+              related_lists: [], layouts: [{ id: SENT('layout_id'), name: SENT('layout_name') }],
+              id: SENT('id'), module_name: SENT('module_name') },
+  };
+  const outs = {
+    schedule: await looking('schedules/9', { __sc: [rows.schedule] }),
+    connection: await looking('connections/books', { __cn: [rows.connection] }),
+    module: await looking('modules/Contacts.json', { __md: [rows.module] }),
+  };
+  for (const [kind, out] of Object.entries(outs)) {
+    for (const f of ['created_by', 'modified_by', 'createdBy', 'created_time', 'modified_time',
+                     'layout_id', 'layout_name']) {
+      assert.doesNotMatch(out, new RegExp(`SENTINEL_${f}\\b`),
+                          `a ${kind} sends «${f}» to the provider and no disclosure names it`);
+    }
+  }
+  // The substance still travels, or the projection has simply broken the feature.
+  assert.match(outs.connection, /Books API/, 'a connection loses the label the reader selected it by');
+  assert.match(outs.schedule, /nightly/, 'a schedule loses the function it runs, which is the whole question');
+  assert.match(outs.module, /Contacts/, 'a module loses its own name');
+
+  // A workflow is Zoho's object rather than one this product composes, so what it does travels and
+  // the trade is stated in the projection: an unnamed key is lost, never leaked.
+  const wf = await looking('workflows/42.json', {
+    __wf: [{ path: 'workflows/42.json', name: 'Notify owner', id: '42' }],
+    __files: { 'workflows/42.json': JSON.stringify({ name: 'Notify owner', actions: ['send mail'],
+                                                     created_by: SENT('created_by') }) },
+  });
+  assert.match(wf, /send mail/, 'a workflow loses what it actually does');
+  assert.doesNotMatch(wf, /SENTINEL_created_by/, 'a workflow carries who made it');
 });
 
 test('schedules, connections and modules each get a focus of their own', async () => {

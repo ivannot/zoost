@@ -64,6 +64,33 @@ def _body(text: str, name: str) -> str:
     return text[m.start():end]
 
 
+# A whole object handed to the provider. `JSON.stringify(row)` and `{ ...row }` are the two shapes
+# this repository has actually used, and both defeat every disclosure: what leaves is whatever the
+# pull happened to store, so a field added to the mirror reaches an AI provider without anyone
+# deciding it should. Five of them existed here - an action, a workflow, a schedule, a connection and
+# a module - and between them they carried two people's names, two timestamps, a template id and the
+# names of a module's layouts, none of it in section 4.2.
+#
+# Anything ending in `ForModel` is a projection: a function whose whole job is to name what may go.
+# Passing one to `JSON.stringify` is the shape this is asking for, so it is not a finding.
+RAW_OUT = re.compile(
+    r"JSON\.stringify\(\s*(?!\{)(?!(?:[\w$]*ForModel)\b)([A-Za-z_$][\w$]*)\s*(?:\|\|[^,)]*)?\s*[,)]"
+    r"|\{\s*\.\.\.\s*[A-Za-z_$][\w$]*")
+
+
+def raw_objects() -> list:
+    """Places an answer builder hands a whole stored row to the provider."""
+    out = []
+    for app, (rel, fns) in SOURCES.items():
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for fn in fns:
+            body = _body(text, fn)
+            code = "\n".join(l for l in body.split("\n") if not l.strip().startswith("//"))
+            for m in RAW_OUT.finditer(code):
+                out.append(f"{app}: {fn}() sends «{m.group(0)[:40]}» - a stored row, whole")
+    return out
+
+
 def sent() -> dict:
     """{app: {field}} - every key the answer builders interpolate a value into."""
     out = {}
@@ -129,7 +156,12 @@ def main() -> int:
     for app, k in blank:
         print(f"  {app}: «{k}» is recorded but its row says UNNAMED - read the page and say which "
               f"words cover it.", flush=True)
-    n = len(unrecorded) + len(stale) + len(blank)
+    raw = raw_objects()
+    for line in raw:
+        print(f"  {line}. What leaves is whatever the pull stored, so a field added to the mirror "
+              f"reaches a provider with nobody deciding it should. Name the fields in a *ForModel "
+              f"projection.", flush=True)
+    n = len(unrecorded) + len(stale) + len(blank) + len(raw)
     print(f"aidatacheck: {n} finding(s).", flush=True)
     return 1 if n else 0
 
