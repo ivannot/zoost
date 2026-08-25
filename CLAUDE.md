@@ -104,6 +104,19 @@ defect. What it cannot do is remove the *model's* blind spots: it shares them. I
 reaches an independent review; it does not replace one, and saying otherwise would be the false
 reassurance this file exists to refuse.
 
+**A subagent is pointed at what does not work, and at nothing else.** Not at the shape of a checker,
+not at whether a case could be driven rather than read, not at coverage. «Basta filosofia del
+software»: find the malfunction, reproduce it, name what a user does and what wrong thing happens.
+Said on 25 August 2026, and earned the same day - a review pointed that way found that one ordinary
+keystroke had made four settings sections unsaveable in both products, shipped by me hours earlier
+in the fix for the opposite defect, and reported as done.
+
+The reason it is worth spending a scan on at all is the same sentence: **I do not see my own
+mistakes.** Not «sometimes» - the record of this repository is that the defects in what I have just
+written are found by a reader with no memory of writing it, and the ones I find myself are in
+somebody else's code. That is the human failure mode exactly, and having read the diff twice is not
+a defence against it.
+
 The six questions, each earned by a defect that shipped:
 
 - **What global state is written after an `await`?** The folder can change under an operation, and a
