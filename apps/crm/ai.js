@@ -772,6 +772,15 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
     let bubble = null, el = null;
     const onText = (t) => {
       if (!current()) return;
+      // **A half answer is not an answer, and it looked exactly like one.** The explanation below
+      // only fires when *nothing* was streamed; when the model starts writing and then reaches the
+      // budget, the reader was left with a paragraph that stops mid-sentence and no way to tell that
+      // from a model that had finished. The marker goes on the message the reader is looking at.
+      if (bubble && stop_reason === 'max_tokens') {
+        bubble.content += `\n\n---\n*Cut off here: the model reached its answer budget of ${AI_MAX_TOKENS} tokens.`
+          + ' Ask a narrower question, or raise **Answer budget** in Settings.*';
+        aiRenderMessages();
+      }
       if (!bubble) { bubble = { role: 'assistant', content: '' }; aiMessages.push(bubble); aiRenderMessages(); const ns = $('aimsgs').querySelectorAll('.aimsg.assistant .aitext'); el = ns[ns.length - 1]; }
       bubble.content += t; if (el) { el.innerHTML = aiMarkdown(bubble.content); $('aimsgs').scrollTop = $('aimsgs').scrollHeight; }
     };
@@ -819,7 +828,11 @@ async function aiCall(cfg, messages, system) {
     return fetch(base + '/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${o.apiKey}` },
-      body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: 4096 }),
+      // **The budget the reader set, not a number written here.** Settings says «Tokens one answer
+      // may cost» and names that box in the message the panel prints when a reply is cut - and this
+      // engine ignored it and sent 4096, so raising it changed nothing and the explanation sent the
+      // reader to change model for an output ceiling. The other engine has read it since it shipped.
+      body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: AI_MAX_TOKENS }),
     });
   }
   // Older chat models want `max_tokens`; newer OpenAI models reject it and require
@@ -835,6 +848,10 @@ async function aiCall(cfg, messages, system) {
   const c = d.choices && d.choices[0];
   const txt = (c && c.message && c.message.content) || '';
   if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything - this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
+  // The same cut, the other engine: text *and* a length stop is a truncated answer, and it used to
+  // be returned as if it were whole.
+  if (txt && c && c.finish_reason === 'length')
+    return txt + '\n\n---\n*Cut off here: the model reached its output limit. Ask a narrower question.*';
   return txt;
 }
 let aiBusy = false;

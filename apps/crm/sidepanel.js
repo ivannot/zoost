@@ -785,8 +785,14 @@ function showAbout() {
     + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escA(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escA(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${escHtml(LEGAL_DISCLAIMER)}</div>`
-    + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
-    + `The extension has no server of its own and sends nothing anywhere. Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
+    // **«Sends nothing anywhere» stopped being true the day the assistant shipped**, and this dialog
+    // went on saying it while the store copy, the site and the twin panel were all corrected. The
+    // twin's wording is the one that survived that argument, so this is the twin's wording with this
+    // product's own nouns - and both now name the report page, which neither did.
+    + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and their Deluge source, module and field names, workflow and schedule names - are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Records are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine, except a problem report you write, read in full and send yourself. `
+    + `Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
   $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
 }
 function closeAbout() { $('scrim').classList.remove('on'); panelInert(false); $('aboutdlg').classList.remove('on'); }
@@ -2628,7 +2634,35 @@ function homeUrl() {
  *
  * Returns the tab id, or null when there was nothing to move.
  */
+// **Nothing navigates anywhere this extension is not allowed to be.** Every «Open in Zoho» builds its
+// URL from `bound.base`, and `bound` is `.zoost.json` - a file on disk, in a folder the user may have
+// been given rather than made. `guardOk()` compares that origin against the tab before a *pull*; no
+// navigation asked anything, so a workspace received from somebody else could point a control
+// labelled with Zoho's name at any origin, in the user's own Zoho frame.
+//
+// The check is here and not at the six builders, because a seventh added tomorrow inherits it - the
+// same argument `safePath` makes in the bridge. The families come from `host_permissions`, so this
+// cannot drift from what the manifest actually grants.
+// The hosts, exactly, out of `host_permissions` - not a prefix. Written as a prefix first, and
+// `https://crm.zoho.eu.evil.com/` walked straight through it: `^https://crm\.zoho` is happy with any
+// domain that *starts* that way. A host is a whole string or it is somebody else's.
+const ZOHO_HOSTS = new Set(ZOHO_MATCHES.map((h) => {
+  try { return new URL(h.replace(/\*$/, '')).host; } catch (_) { return null; }
+}).filter(Boolean));
+function zohoUrlOk(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && ZOHO_HOSTS.has(u.host);
+  } catch (_) { return false; }
+}
 async function goToZoho(url, opts = {}) {
+  if (!zohoUrlOk(url)) {
+    // Said, not swallowed: a control that does nothing is the failure this repository refuses, and
+    // the reason is worth the reader's attention - it is about the workspace, not about the click.
+    setStatus('This workspace points at ' + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
+      + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad');
+    return null;
+  }
   if (opts.newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
   let id = await zohoTabId();
   if (!id) { const t = await chrome.tabs.create({ url, active: opts.active !== false }); return t.id; }
@@ -4679,6 +4713,24 @@ function updateWsButtons() {
   updateSampleButtons();
 }
 
+
+/** The one option a selector shows when there is nothing to select, built as a node.
+ *
+ * A folder's name is data, and it was going into markup: a directory called
+ * `</option><option selected>…` rewrote the workspace selector rather than appearing in it. The CSP
+ * stops that becoming script, and it does not stop a control the user did not choose or a name they
+ * cannot read. The twin escaped the same value; this side had two copies that did not.
+ *
+ * `textContent` rather than an escaper, because the right answer to «this is not markup» is not to
+ * escape it more carefully - it is not to build markup at all.
+ */
+function selPlaceholder(sel, text) {
+  const o = document.createElement('option');
+  o.value = '';
+  o.textContent = text;
+  sel.replaceChildren(o);
+}
+
 async function loadWorkspaces() {
   if (!root) root = await window.idbHandle.get('rootDir');
   const sel = $('ws'); sel.innerHTML = '';
@@ -4691,7 +4743,7 @@ async function loadWorkspaces() {
   }
   rootGranted = await hasPerm(root);
   if (!rootGranted) {
-    sel.innerHTML = `<option value="">${root.name} - access not granted</option>`;
+    selPlaceholder(sel, `${root.name} - access not granted`);
     switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus('Click \u00abGrant access\u00bb above, or anywhere in this panel - one click, no folder picker.', 'warn');
     renderBlocked(); await refreshContext(); return;
@@ -4725,7 +4777,7 @@ async function loadWorkspaces() {
         try { await e.getFileHandle(CFG); stray++; } catch (_) {}
       }
     } catch (_) {}
-    sel.innerHTML = `<option value="">${root.name}/${APP_DIR} - no workspaces yet</option>`;
+    selPlaceholder(sel, `${root.name}/${APP_DIR} - no workspaces yet`);
     switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus(stray
       ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`

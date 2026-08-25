@@ -580,15 +580,30 @@ const reportPage = (opts = {}) => {
   };
   const ctx = vm.createContext({
     document: doc, window: {},
+    // The response a case wants, so the terminal state can be asserted; the default is the accepted
+    // one every existing case was written against.
     fetch: (url, init) => { sent.push({ url, body: JSON.parse(init.body) });
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: 'https://x/1' }) }); },
+      return opts.fetch ? opts.fetch(url, init)
+        : Promise.resolve({ ok: true, json: () => Promise.resolve({ url: 'https://x/1' }) }); },
   });
   vm.runInContext(read('site/report.js'), ctx);
   return { els, sent, get: (id) => doc.getElementById(id),
+    // What the reader is looking at: the sentence, whether Send is still offered, and whether it
+    // can be pressed again.
+    msg: () => els.msg.innerHTML || els.msg.textContent,
+    sendShown: () => els.send.style.display !== 'none',
+    sendEnabled: () => !els.send.disabled,
     say(text) { doc.getElementById('says').value = text; },
     arrive(text) { els.body.value = text; els.body.listeners.input.forEach((f) => f()); },
     type(text) { els.body.value = text; els.body.listeners.input.forEach((f) => f()); },
-    send() { els.send.onclick(); } };
+    // **The handler's promise, returned.** These cases used to call the click and read the request
+    // body, which is the moment the send *starts*; every assertion ran before the response resolved,
+    // so what the reader ends up looking at - the receipt link, the Send button going away, the
+    // reason a failure gives - was asserted by nothing. It also hid a real fault: `said()` read an
+    // identifier it never declared, which a browser resolves through the legacy `window.<id>` and
+    // this harness does not, so the success path threw into the catch and rendered «network refused»
+    // while the suite stayed green.
+    send() { return els.send.onclick(); } };
 };
 
 test('the page opens in the state a reader with no report arrives in', () => {
@@ -1434,4 +1449,30 @@ test('the other endpoint holds a complete answer for the full time too', async (
   assert.equal(withGap, short,
     'a version is ahead and its release notes could not be read, and the answer is held for the full '
     + 'time - so the gap outlives whatever caused it');
+});
+
+// ---------------------------------------------------------------------------------------------
+// What the reader is left looking at after a send, which nothing asserted.
+//
+// Every send case read the request body - the moment the send starts - and stopped. The receipt
+// link, Send disappearing, and the sentence a failure leaves behind were covered by nothing, and the
+// gap hid a real fault: `said()` used an identifier it never declared, which a browser resolves
+// through the legacy `window.<id>` property and this harness does not. The successful response threw
+// into the catch and the page rendered «network refused», with the suite green.
+test('a report that was accepted leaves the reader with its link, and Send gone', async () => {
+  const p = reportPage({ fetch: async () => ({ ok: true, json: async () => ({ url: 'https://github.com/x/y/issues/7' }) }) });
+  p.arrive('Zoost report\nversion 1.47.0');
+  p.say('it did not open');
+  await p.send();
+  assert.match(p.msg(), /issues\/7/, `the receipt link is not on screen: ${p.msg()}`);
+  assert.equal(p.sendShown(), false, 'Send is still offered after the report was accepted');
+});
+
+test('a report the server refused says why, and offers Send again', async () => {
+  const p = reportPage({ fetch: async () => ({ ok: false, json: async () => ({ error: 'the check did not pass' }) }) });
+  p.arrive('Zoost report\nversion 1.47.0');
+  p.say('it did not open');
+  await p.send();
+  assert.match(p.msg(), /the check did not pass/, `the reason was not shown: ${p.msg()}`);
+  assert.equal(p.sendEnabled(), true, 'Send stayed disabled, so the reader cannot try again');
 });

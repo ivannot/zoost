@@ -11266,7 +11266,11 @@ test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the 
   const mk = (frames) => {
     const acted = [];
     const ctx = {
-      Date, Promise, Error, console, RegExp,
+      Date, Promise, Error, console, RegExp, URL,
+      // The hosts the check reads, as `host_permissions` gives them - the panel derives the set from
+      // the manifest, so the fixture supplies the manifest's shape and not the set.
+      ZOHO_MATCHES: ['https://crm.zoho.eu/*', 'https://crm.zoho.com/*', 'https://one.zoho.eu/*'],
+      setStatus: () => {},
       zohoTabId: async () => 42,
       chrome: {
         tabs: {
@@ -11288,8 +11292,12 @@ test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the 
       },
     };
     vm.createContext(ctx);
+    // `goToZoho` refuses a URL that is not on a host the manifest names, so the check and the host
+    // set it reads travel with it - without them every case below would be refused before it acted.
     vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
                      sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
+                     sliceConst('apps/crm/sidepanel.js', 'ZOHO_HOSTS'),
+                     sliceFn('apps/crm/sidepanel.js', 'zohoUrlOk'),
                      sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
                      sliceFn('apps/crm/sidepanel.js', 'goToZoho')].join('\n'), ctx);
     return { ctx, acted };
@@ -11443,6 +11451,258 @@ test('every script the panels load evaluates on its own', () => {
                           + 'that ended early is the one that keeps happening: it parses, and it '
                           + 'makes the panel dead on arrival.');
     }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// A folder's name is data, wherever it came from.
+//
+// The workspace selector interpolated `root.name` into markup in two places, so a directory called
+// `</option><option selected>…` rewrote the control instead of appearing in it. The extension's CSP
+// stops that becoming script; it does not stop a control the reader did not choose, or a name they
+// cannot read. The twin escaped the same value, which is what made the two copies look deliberate.
+//
+// Run: the placeholder is built and its text read back.
+test('a folder called something hostile appears as its name, not as markup', () => {
+  const hostile = '</option><option selected>not your workspace</option>';
+  const made = [];
+  const sel = { children: null, replaceChildren(...n) { this.children = n; } };
+  const ctx = vm.createContext({
+    document: { createElement: () => { const o = { value: '', textContent: '' }; made.push(o); return o; } },
+  });
+  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'selPlaceholder'), ctx);
+  vm.runInContext('selPlaceholder', ctx)(sel, `${hostile} - access not granted`);
+  assert.equal(made.length, 1, 'the placeholder is more than one element');
+  assert.equal(sel.children.length, 1, `the selector holds ${sel.children.length} controls, not one`);
+  assert.ok(sel.children[0].textContent.includes(hostile),
+            'the name did not survive as text');
+  assert.equal(sel.children[0].value, '', 'the placeholder is selectable as if it were a workspace');
+
+  // And the derivation: no `root.name` may reach `innerHTML` unescaped in either panel, so a third
+  // copy cannot reintroduce it. If neither panel mentions the name at all, this is measuring nothing.
+  let mentions = 0;
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    for (const m of src.matchAll(/innerHTML\s*=\s*(`[^`]*`)/g)) {
+      if (!/root\.name/.test(m[1])) continue;
+      mentions += 1;
+      assert.match(m[1], /\$\{esc[A-Za-z]*\(root\.name\)/,
+                   `${app}: a folder name reaches innerHTML unescaped: ${m[1].slice(0, 80)}`);
+    }
+    mentions += (src.match(/selPlaceholder\(/g) || []).length;
+  }
+  assert.ok(mentions > 0, 'neither panel names the folder in a selector any more - this case is the '
+                          + 'broken one, not the code');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Re-injecting a bridge into a page that already has an older one replaces it.
+//
+// The guard is a version, not a boolean - that is what the commit which introduced it says. It was
+// `1` from that day, and both bridges changed three times afterwards without it moving, so the panel's
+// recovery path («inject it again») returned at the first line and left the old listener answering.
+// The check that covered it read the *shape* - «the guard compares against some word» - which `1`,
+// `999` and a real version all satisfy equally, so it stayed green through all three changes.
+//
+// This one runs the shipped file, twice, and counts listeners.
+test('a bridge re-injected over an older build replaces it, and over its own does not', () => {
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/content-bridge.js`);
+    let listeners = 0, version = '1.47.0';
+    const ctx = vm.createContext({});
+    Object.assign(ctx, {
+      window: ctx, self: ctx, console,
+      addEventListener: () => {}, removeEventListener: () => {},
+      document: { addEventListener: () => {}, removeEventListener: () => {}, querySelector: () => null,
+                  documentElement: { innerHTML: '' }, cookie: '' },
+      location: { origin: 'https://crm.zoho.eu', href: 'https://crm.zoho.eu/crm/org/tab/Home', pathname: '/crm/org/tab/Home' },
+      navigator: { userAgent: '' },
+      fetch: async () => ({ ok: true, status: 200, json: async () => ({}), text: async () => '' }),
+      chrome: { runtime: { getManifest: () => ({ version }),
+                           onMessage: { addListener: () => { listeners += 1; } } } },
+    });
+    const run = () => { try { vm.runInContext(src, ctx); } catch (_) { /* the stub is not a browser */ } };
+    run();
+    const first = listeners;
+    // If the first injection registers nothing, this case is measuring nothing - say so rather than
+    // passing on two zeroes.
+    assert.equal(first, 1, `${app}: the bridge registered ${first} listener(s) on a clean page`);
+    run();
+    assert.equal(listeners, first, `${app}: injecting the same build twice registered a second listener`);
+    // And the case the guard exists for: a page still carrying the marker of an earlier release.
+    // And the case the guard exists for, in the shape it actually happens: the page carries whatever
+    // *this same file* wrote under the previous release. Setting the marker to an invented value
+    // proves nothing - a counter never equals a version string, so the plant would pass. The marker
+    // has to be produced by the code, which is why the version is swapped and the file re-run.
+    version = '1.48.0';
+    run();
+    assert.equal(listeners, first + 1,
+                 `${app}: a page carrying the previous build's marker kept the old bridge - the marker `
+                 + 'does not change between builds, so re-injecting replaces nothing');
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The answer budget is the reader's, and a cut answer says it was cut.
+//
+// Two halves, both wrong in the same direction - the panel quietly presenting less than it promised.
+// The setting is called «Answer budget», Settings says it is the tokens one answer may cost, and the
+// message the panel prints when a reply is cut names that box. One engine read it; the other sent a
+// literal 4096, so raising the setting changed nothing and the explanation sent the reader off to
+// change model for an *output* ceiling. And when a reply was cut *after* it had started, nothing was
+// said at all: the paragraph simply stopped, which is indistinguishable from a model that finished.
+//
+// Run, not read: the request body is captured, and the stream is driven to the stop it is about.
+test('the answer budget reaches the request, in both products', async () => {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+    let sent = null;
+    const g = { AI_MAX_TOKENS: 16384, OPENAI_BASE: 'https://api.openai.com/v1', JSON, console,
+                fetch: async (u, o) => { sent = JSON.parse(o.body);
+                  return { ok: true, status: 200,
+                           json: async () => ({ choices: [{ message: { content: 'x' }, finish_reason: 'stop' }] }) }; } };
+    const { aiCall } = load([sliceFn(file, 'aiCall')], g);
+    await aiCall({ openai: { model: 'gpt-x', apiKey: 'k' } }, [{ role: 'user', content: 'q' }], null);
+    // If nothing was captured the harness is the broken thing, not the product.
+    assert.ok(sent, `${app}: no request was made - this case is measuring nothing`);
+    const limit = Object.entries(sent).find(([k]) => /^max_(tokens|completion_tokens)$/.test(k));
+    assert.ok(limit, `${app}: the request names no output limit at all: ${Object.keys(sent)}`);
+    assert.equal(limit[1], 16384,
+                 `${app}: sent ${limit[1]} where the reader's budget is 16384 - the setting does nothing`);
+  }
+});
+
+test('an answer cut off by the budget says so, in both products', () => {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+    // The streaming path: the marker must go on the message the reader is looking at, not only on
+    // the empty case.
+    // The marker lives in the agent loop, which is what holds the bubble - `aiStreamAnthropic`
+              // only fetches and parses. Naming the wrong function is how a check reads a body that
+              // could never contain what it is looking for.
+    const src = sliceFn(file, 'aiRunAnthropicAgent');
+    assert.ok(/bubble && stop_reason === 'max_tokens'/.test(src),
+              `${app}: a reply that starts and then hits the budget is left looking finished`);
+    // And the other engine's equivalent, which returns rather than streams.
+    const call = sliceFn(file, 'aiCall');
+    assert.ok(/txt && c && c\.finish_reason === 'length'/.test(call),
+              `${app}: a truncated OpenAI answer is returned as if it were whole`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Cancel cancels, in both products.
+//
+// The export dialog saves what you leave it with. One panel edited the *stored* preference as you
+// ticked, so pressing «Everything» and then **Cancel** left the SQL box ticked when the dialog
+// reopened, and the next export wrote that down - the box §4.3 of the privacy policy names as the
+// sensitive half of the export, turned on by a click the reader took back. The twin had kept a
+// working copy for exactly this reason, with the reason written above it, since it was written.
+//
+// Run, not read: the two functions are lifted and driven through the sequence a person performs.
+test('cancelling the export dialog leaves the stored scope alone, in both products', () => {
+  const cases = {
+    crm: { file: 'apps/crm/sidepanel.js', sensitive: 'code', on: 'functions' },
+    analytics: { file: 'apps/analytics/sidepanel.js', sensitive: 'sql', on: 'structure' },
+  };
+  for (const [app, c] of Object.entries(cases)) {
+    const keys = JSON.parse(sliceConst(c.file, 'SCOPE_KEYS').replace(/^[^[]*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
+    assert.ok(keys.includes(c.sensitive), `${app}: SCOPE_KEYS has no «${c.sensitive}» - this case is the broken one`);
+    const boxes = {};
+    for (const k of keys) boxes['sc_' + k] = { checked: false, disabled: false };
+    boxes.scwarn = { textContent: '' };
+    const stored = {};
+    for (const k of keys) stored[k] = k !== c.sensitive;          // the shipped default: sensitive off
+    const ctx = { Object, JSON, console, Set, $: (id) => boxes[id], SCOPE_KEYS: keys,
+                  // The CRM also records which boxes it cleared *for* the reader, to warn about
+                  // stale data; it is not what this case is about, and it has to be here to run.
+                  dlgAutoCleared: new Set(),
+                  expScope: { ...stored }, dlgScope: { ...stored } };
+    vm.createContext(ctx);
+    vm.runInContext([sliceFn(c.file, 'scopeToUI'), sliceFn(c.file, 'scopeFromUI')].join('\n'), ctx);
+    // Open the dialog on what is stored, tick the sensitive box, and read it back.
+    vm.runInContext('dlgScope = Object.assign({}, expScope); scopeToUI();', ctx);
+    boxes['sc_' + c.sensitive].checked = true;
+    vm.runInContext('scopeFromUI()', ctx);
+    assert.equal(ctx.dlgScope[c.sensitive], true, `${app}: the dialog did not take the tick`);
+    assert.equal(ctx.expScope[c.sensitive], false,
+                 `${app}: ticking «${c.sensitive}» changed the stored preference before anything was `
+                 + 'confirmed - Cancel cannot undo what has already been written');
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The About dialog cannot claim nothing leaves while the panel can send something.
+//
+// The CRM's said «the extension has no server of its own and sends nothing anywhere» for as long as
+// the assistant has existed. The store copy was corrected, the site was corrected, the twin panel was
+// corrected - and the dialog inside the product, which is where a user actually reads it, was not.
+// One sentence, four surfaces, three of them updated: the enumeration trap, on a claim.
+//
+// Derived rather than spelled out: **if the panel can reach a network host, the dialog has to say so.**
+// The hosts come from the manifest, minus the platform's own - which the extension reads through the
+// user's own session and which the sentence above already covers.
+test('the About dialog names every destination the panel can reach', () => {
+  for (const app of ['crm', 'analytics']) {
+    const man = JSON.parse(read(`apps/${app}/manifest.json`));
+    const outward = (man.host_permissions || [])
+      .filter((h) => !/zoho|zohocloud/.test(h))
+      .map((h) => h.replace(/^https:\/\//, '').replace(/\/\*$/, ''));
+    // If the manifest grants nothing outward, this case is measuring nothing and says so.
+    assert.ok(outward.length >= 2, `${app}: no outward host in the manifest - either the assistant went `
+                                   + 'away, or this case is the thing that is broken');
+    const src = read(`apps/${app}/sidepanel.js`);
+    const about = src.slice(src.indexOf('<h4>Your data</h4>'), src.indexOf('<h4>Your data</h4>') + 1600);
+    assert.ok(about, `${app}: the About dialog no longer has a «Your data» section`);
+    assert.ok(/assistant/i.test(about),
+              `${app}: the dialog does not mention the assistant, and the manifest grants ${outward}`);
+    assert.ok(!/sends nothing anywhere|nothing leaves this machine\.<\/div>/.test(about),
+              `${app}: the dialog claims nothing leaves, and the manifest grants ${outward}`);
+    // And the other thing that leaves on a click.
+    assert.ok(/problem report/i.test(about),
+              `${app}: the dialog does not mention the problem report, which opens a page and is written into it`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Nothing navigates anywhere the manifest does not name.
+//
+// Every «Open in Zoho» builds its URL from the workspace binding, and the binding is `.zoost.json` -
+// a file on disk, in a folder the user may have been handed rather than made. The pull compares that
+// origin against the tab before it reads anything; no *navigation* asked. So a workspace folder from
+// somebody else could point a control labelled with Zoho's name at any origin, in the user's own
+// Zoho frame, and the panel would take it there.
+//
+// The check is one function per panel because there are six builders in one product and three in the
+// other, and a seventh must inherit it. Run rather than read, on the two shapes that matter: the
+// hosts the manifest actually grants, and a domain that merely *starts* like one - which is what the
+// first version of this check let through.
+test('a workspace can only send you to a host the manifest names', () => {
+  const man = { host_permissions: ['https://crm.zoho.eu/*', 'https://crmsandbox.zoho.com/*',
+                                   'https://one.zoho.eu/*', 'https://analytics.zoho.eu/*'] };
+  const cases = {
+    crm: { pieces: [sliceConst('apps/crm/sidepanel.js', 'ZOHO_HOSTS'),
+                    sliceFn('apps/crm/sidepanel.js', 'zohoUrlOk')],
+           globals: { ZOHO_MATCHES: man.host_permissions.filter((h) => !/analytics/.test(h)), URL },
+           good: ['https://crm.zoho.eu/crm/inst/tab/Contacts', 'https://one.zoho.eu/x'] },
+    analytics: { pieces: [sliceConst('apps/analytics/sidepanel.js', 'APP_HOSTS'),
+                          sliceFn('apps/analytics/sidepanel.js', 'zohoUrlOk')],
+                 globals: { chrome: { runtime: { getManifest: () => man } }, URL },
+                 good: ['https://analytics.zoho.eu/workspace/1/view/2'] },
+  };
+  for (const [app, c] of Object.entries(cases)) {
+    const { zohoUrlOk } = load(c.pieces, c.globals);
+    for (const u of c.good) assert.ok(zohoUrlOk(u), `${app}: refuses ${u}, which the manifest grants`);
+    for (const u of ['https://crm.zoho.eu.evil.example/crm/x',      // starts like one; is not one
+                     'https://analytics.zoho.eu.evil.example/w/1',
+                     'https://attacker.example/crm/inst/tab/Contacts',
+                     'http://crm.zoho.eu/crm/x',                    // not https
+                     'javascript:alert(1)', 'data:text/html,x', '', null, undefined])
+      assert.equal(zohoUrlOk(u), false, `${app}: would navigate to ${u}`);
+    // If a manifest with no hosts still says yes to something, the derivation is not deriving.
+    const empty = load(c.pieces, app === 'crm'
+      ? { ZOHO_MATCHES: [], URL }
+      : { chrome: { runtime: { getManifest: () => ({ host_permissions: [] }) } }, URL });
+    assert.equal(empty.zohoUrlOk(c.good[0]), false,
+                 `${app}: says yes with no hosts granted - the list is not coming from the manifest`);
   }
 });
 

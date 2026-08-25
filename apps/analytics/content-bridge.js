@@ -38,7 +38,12 @@
   // re-injection returned at the first line and left the dead copy in place until the reader
   // reloaded the tab. Two listeners cannot result: an orphaned context cannot answer, and a live one
   // of a different build cannot exist without an update having orphaned it.
-  const BRIDGE_V = 1;
+  // **Derived from the build, not a counter somebody has to remember.** It was `1` from the commit
+  // that introduced it, and this file changed three times after that - the frame identity gate, the
+  // shared reply, the queued answer - so an open Zoho document kept answering with the old bridge and
+  // the re-injection that was supposed to replace it returned at this line. A guard that cannot tell
+  // two builds apart is the boolean it was written to stop being.
+  const BRIDGE_V = chrome.runtime.getManifest().version;
   if (window.__zoostAnalyticsBridge === BRIDGE_V) { return; }
   window.__zoostAnalyticsBridge = BRIDGE_V;
 

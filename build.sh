@@ -62,6 +62,24 @@ else
   SOURCE="no git checkout — fixed epoch"
 fi
 find .build -exec touch -t "$STAMP" {} +
+# **And the modes, which `zip` records in the central directory.** `-X` drops the *extra* field and
+# keeps the Unix mode, and `cp -R` gives each staged file `source_mode & ~umask` - so the archive's
+# bytes depend on two properties of the machine: the mode of the file in the checkout, and the umask
+# of whoever runs this.
+#
+# Measured, because the claim arrived overstated and the overstatement is instructive: **umask alone
+# changes nothing** on a tree whose files are 644, since a umask only takes bits away. Nor does a 664
+# file alone, because umask 022 takes that bit straight back off. It takes *both* - a permissive
+# umask and a file that carries the group-write bit, which is what a `core.sharedRepository=group`
+# clone or a copy through a Windows drive gives you - and then the same commit produces two different
+# SHA-256s: 6d495d99… against 98534e81…, reproduced here.
+#
+# That falsifies the guarantee the whole chain rests on, and it fails in the direction that costs
+# most: `release.sh` prints the local hash and says to stop if it does not match what CI publishes,
+# so one such machine would make every release look tampered with. Everything else was pinned
+# already - LC_ALL, the sort order, the timestamps; this was the last property of the machine still
+# getting into the bytes.
+find .build -type d -exec chmod 755 {} + && find .build -type f -exec chmod 644 {} +
 
 if [[ "${2:-}" == "--unpacked" ]]; then
   OUT="dist/${NAME}-${VERSION}-unpacked.zip"

@@ -51,6 +51,10 @@
     return { ok: r.ok, j: j };
   }
   function said(res) {
+  // `msg` was read from the enclosing click handler - except it is not enclosing: this function is
+  // declared beside it, not inside it. It worked because a browser puts every `id` on `window`, so
+  // `msg` resolved to the element by that legacy route and nothing ever said otherwise. Ask for it.
+  var msg = $('msg');
   if (res.ok && res.j && res.j.url) {
     // The link is the receipt: the reader can see exactly what was published, and delete
     // nothing - which is why they were asked to read it here rather than after the fact.
@@ -125,7 +129,9 @@
     if (!token) { msg.textContent = 'The anti-abuse check has not finished. If a box has appeared above, complete it; otherwise press Send again in a moment.'; return; }
     $('send').disabled = true;
     msg.textContent = 'Sending\u2026';
-    fetch('/api/report', {
+    // Returned, so a caller - the test harness is the only one - can wait for the state the reader
+    // ends up in rather than for the moment the request left.
+    return fetch('/api/report', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ report: text, says: says, token: token, hand: hand,

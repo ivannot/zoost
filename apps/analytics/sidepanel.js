@@ -62,7 +62,15 @@ const PULL_STATE = '.pull-state.json';
 // The data centre to fall back on when the panel knows neither a workspace nor a tab. A
 // display-only copy of a setting: read into a URL, never written from here.
 let zohoDc = 'zoho.com';
-const PULL_SV = 1;                            // pull schema version; bump when new fields are captured
+// Pull schema version: bump it when the pull starts capturing something it did not before.
+//
+// **It has to be read somewhere, or bumping it does nothing.** It was written into every config
+// and by nothing else, so a mirror from an older schema would have been published as current with
+// the new fields quietly missing - the version was decoration. `mirrorIsOlderThanSchema()` is what
+// reads it; what it does is *say so*, not refuse, because a mirror written by an older Zoost is
+// still every fact it captured and the reader decides whether that is enough. The twin marks the
+// rows it can re-fetch and re-fetches them; this mirror has no per-row granularity to mark.
+const PULL_SV = 1;
 
 // Every sentence this panel says in more than one place, plus the one it shares with the CRM panel.
 // A message written out twice is two messages the moment somebody edits one of them - so a literal
@@ -711,7 +719,8 @@ async function selectWorkspace(w) {
   const gen = ++wsGen;
   dir = w.handle; forgetDirs();
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '',
-            sample: !!w.cfg.sample, lastPull: w.cfg.lastPull || null };
+            sample: !!w.cfg.sample, lastPull: w.cfg.lastPull || null,
+            sv: Number(w.cfg.sv || 0) };
   const op = beginWorkspaceOp();
   await rememberActive('activeWsAnalytics', w.id, gen);
   if (!op.current()) return;   // a second selection overtook this one while IndexedDB was writing
@@ -1120,7 +1129,32 @@ const workspaceUrl = () => (bound && bound.origin && bound.workspace
  * there and one path serves both. A refused injection falls back to the tab, which is where this
  * started.
  */
+// **Nothing navigates anywhere this extension is not allowed to be.** «Open in Zoho» builds its URL
+// from `bound.origin`, and `bound` is `.zoost.json` - a file on disk, in a folder the user may have
+// been given rather than made. The pull compares that origin against the tab; no navigation asked
+// anything, so a workspace received from somebody else could point a control labelled with Zoho's
+// name at any origin, inside the user's own Zoho frame. Written the same way in the twin.
+//
+// The check is here and not at the call sites, so one added tomorrow inherits it. `APP_HOST_RE` is
+// the application's own origin: a workspace URL that is not on it is not a workspace URL.
+// The application's own hosts, exactly, out of `host_permissions` - not a prefix. A prefix test lets
+// `https://analytics.zoho.eu.evil.com/` through, which is the whole point of the check.
+const APP_HOSTS = new Set((chrome.runtime.getManifest().host_permissions || [])
+  .filter((h) => /^https:\/\/analytics\./.test(h))
+  .map((h) => { try { return new URL(h.replace(/\*$/, '')).host; } catch (_) { return null; } })
+  .filter(Boolean));
+function zohoUrlOk(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && APP_HOSTS.has(u.host);
+  } catch (_) { return false; }
+}
 async function goToZoho(url) {
+  if (!zohoUrlOk(url)) {
+    status('This workspace points at ' + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
+      + ', which is not a Zoho Analytics address. Nothing was opened - check where this workspace folder came from.', 'bad');
+    return null;
+  }
   const id = await analyticsTabId();
   if (!id) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
   const fid = await analyticsFrameId(id);
@@ -1594,7 +1628,8 @@ async function writeToDisk(info, op, next) {
   const cfg = await readJson(CFG, {}, op);
   if (!op.current()) return false;
   bound = { workspace: info.workspace, name: info.name, origin: info.origin,
-            label: cfg.label || '', sample: !!cfg.sample, lastPull: cfg.lastPull || null };
+            label: cfg.label || '', sample: !!cfg.sample, lastPull: cfg.lastPull || null,
+            sv: Number(cfg.sv || 0) };
   return true;
 }
 
@@ -1652,7 +1687,10 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   // belongs to the one being left. This and the removal below are the only places that forget.
   selectedId = null; navClear(); $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   render();
-  if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
+  // And whether the schema that wrote it is the one this build reads - stated, not acted on: a mirror
+  // from an older Zoost is still every fact it captured, and what to do about that is the reader's.
+  if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}`
+    + `${mirrorIsOlderThanSchema() ? ' · written by an older Zoost - Pull all captures what this one reads' : ''}.`, '');
   return true;
 }
 
@@ -2486,11 +2524,16 @@ function buildSchemaGraph() {
   };
 }
 
-// What the diagram window is given, which is less than what the panel holds. `source_code` is put
-// back onto the graph nodes by loadGraph() for the assistant and the Markdown export - both of which
-// read it from memory - and the window has never touched it: it draws names, kinds and arrows. So it
-// is stripped here rather than shipped and forgotten, because the payload crosses into storage and
-// what crosses a boundary is what has to be justified.
+// What the diagram window is given, which is less than what the panel holds. **This product's graph
+// nodes never carry source at all** - a workspace has views, columns and relations, and the `''` the
+// node builder writes is a shape the two products share, not a value. The sentence here used to be
+// the other product's, copied whole: it told the next reader that Deluge sits in memory and is
+// stripped at this line, which is a claim about a data flow that does not exist. A privacy comment is
+// part of the security model, so it says what is true and nothing more.
+//
+// The strip stays, and it is the point of this function: the payload crosses into storage, and a
+// field added to a node tomorrow has to be admitted here deliberately rather than arriving by
+// default. It is a filter on the boundary, not a remedy for something known to be in the payload.
 //
 // And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
 // setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
@@ -3040,6 +3083,15 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
     if (!current()) return;
     const toolUses = content.filter((b) => b.type === 'tool_use');
     if (stop_reason !== 'tool_use' || !toolUses.length) {
+      // **A half answer is not an answer, and it looked exactly like one.** The explanation below
+      // only fires when *nothing* was streamed; when the model starts writing and then reaches the
+      // budget, the reader is left with a paragraph that stops mid-sentence and no way to tell that
+      // from a model that had finished. Written the same way in the twin.
+      if (bubble && stop_reason === 'max_tokens') {
+        bubble.content += `\n\n---\n*Cut off here: the model reached its answer budget of ${AI_MAX_TOKENS} tokens.`
+          + ' Ask a narrower question, or raise **Answer budget** in Settings.*';
+        aiRenderMessages();
+      }
       if (!bubble) {
         const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
         // «(empty response)» was what a turn that hit its answer budget looked like, and it names
@@ -3078,7 +3130,11 @@ async function aiCall(cfg, messages, system) {
   async function post(limitField) {
     return fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${o.apiKey}` },
-      body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: 4096 }),
+      // **The budget the reader set, not a number written here.** Settings says «Tokens one answer
+      // may cost» and names that box in the message the panel prints when a reply is cut - and this
+      // engine ignored it and sent 4096, so raising it changed nothing and the explanation sent the
+      // reader to change model for an output ceiling. The other engine has read it since it shipped.
+      body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: AI_MAX_TOKENS }),
     });
   }
   // Older chat models want `max_tokens`; newer OpenAI models reject it and require
@@ -3094,6 +3150,10 @@ async function aiCall(cfg, messages, system) {
   const c = d.choices && d.choices[0];
   const txt = (c && c.message && c.message.content) || '';
   if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything - this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
+  // The same cut, the other engine: text *and* a length stop is a truncated answer, and it used to
+  // be returned as if it were whole.
+  if (txt && c && c.finish_reason === 'length')
+    return txt + '\n\n---\n*Cut off here: the model reached its output limit. Ask a narrower question.*';
   return txt;
 }
 
@@ -3238,6 +3298,13 @@ const SCOPE_SAFE = { views: true, structure: true, relations: true, sql: false, 
 const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { sql: false });
 const SCOPE_SV = 2;
 let expScope = Object.assign({}, SCOPE_DEFAULT);
+// What the dialog is editing right now, kept apart from the stored preference for the reason the twin
+// records: this dialog saves what you leave it with, so editing the stored value in place meant
+// **Cancel did not cancel** - tick «Everything», press Cancel, and the SQL box was ticked when it
+// reopened, and stored by the next export. That box is the one §4.3 of the privacy policy names as
+// the sensitive half of an Analytics export, which is why it starts unticked and why a transient
+// tick must never become a stored preference.
+let dlgScope = Object.assign({}, SCOPE_DEFAULT);
 async function loadScope() {
   // The twin of the CRM's, for the same reason and with the same one-shot stamp: a scope saved while
   // the dialog opened with the SQL ticked is not evidence that anybody chose it.
@@ -3250,13 +3317,13 @@ async function loadScope() {
   } catch (_) {}
 }
 function scopeToUI() {
-  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!expScope[k]; });
-  const q = $('sc_sql'); if (q) q.disabled = !expScope.structure;
-  $('scwarn').textContent = expScope.sql ? '\u26a0 includes the full SQL of every query table' : '';
+  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!dlgScope[k]; });
+  const q = $('sc_sql'); if (q) q.disabled = !dlgScope.structure;
+  $('scwarn').textContent = dlgScope.sql ? '\u26a0 includes the full SQL of every query table' : '';
 }
 function scopeFromUI() {
-  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) expScope[k] = !!e.checked; });
-  if (!expScope.structure) expScope.sql = false;
+  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) dlgScope[k] = !!e.checked; });
+  if (!dlgScope.structure) dlgScope.sql = false;
   scopeToUI();
 }
 /** What the keyboard can reach while a dialog is up.
@@ -3290,6 +3357,9 @@ function askScope() {
     // no status line to go stale and nothing at all on screen. Settled as «cancelled», which is what
     // it became.
     if (_scopeResolve) _scopeResolve(null);
+    // The dialog opens on a copy of what is stored; nothing it does touches the stored value
+    // until the reader presses Export.
+    dlgScope = Object.assign({}, expScope);
     _scopeResolve = resolve; scopeToUI();
     $('scrim').classList.add('on'); panelInert(true); $('expscope').classList.add('on');
   });
@@ -3297,6 +3367,8 @@ function askScope() {
 function closeScope(ok) {
   $('scrim').classList.remove('on'); panelInert(false); $('expscope').classList.remove('on');
   const r = _scopeResolve; _scopeResolve = null;
+  // Export takes what the dialog holds and *then* it becomes the preference; Cancel takes nothing.
+  if (ok) expScope = Object.assign({}, dlgScope);
   if (r) r(ok ? Object.assign({}, expScope) : null);
 }
 
@@ -3318,6 +3390,11 @@ function fkText(viewId, colName) {
  *
  *  The dates come from what the pull wrote beside the data, so an area nobody has pulled says so
  *  rather than borrowing the newest one. */
+/** True when what is on disk was written by a pull older than the current capture schema. */
+function mirrorIsOlderThanSchema() {
+  return !!bound && !bound.sample && Number(bound.sv || 0) < PULL_SV;
+}
+
 function analyticsFreshness() {
   const day = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : 'never read');
   const parts = [
@@ -3584,8 +3661,10 @@ function renderHealth() {
     closeHealth(); openDetail(id);
   }));
 }
-function openHealth() { renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); }
-function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); }
+// `#health.on` is in this panel's own stylesheet and nothing ever set it, so the audit button stayed
+// unlit while the AI button beside it lights - the rule was dead CSS and the twin did it right.
+function openHealth() { renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); $('health').classList.add('on'); }
+function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); $('health').classList.remove('on'); }
 
 // ---------- about ----------
 // The same dialog the CRM panel shows, with the same sections in the same order. A user who has both
@@ -3601,7 +3680,7 @@ function showAbout() {
     + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
     + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs - view and column names, relations, and the SQL of your query tables - are sent directly from your browser to the provider you configured, and to no one else. `
-    + `Rows are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine.</div>`;
+    + `Rows are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine, except a problem report you write, read in full and send yourself.</div>`;
   $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
 }
 function closeAbout() { $('scrim').classList.remove('on'); panelInert(false); $('aboutdlg').classList.remove('on'); }
@@ -4173,8 +4252,9 @@ $('healthx').onclick = closeHealth;
 $('expx').onclick = () => closeScope(false);
 $('expcancel').onclick = () => closeScope(false);
 $('expgo').onclick = () => { scopeFromUI(); closeScope(true); };
-$('pspFull').onclick = () => { expScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
-$('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
+// The presets set what the dialog holds, never the stored preference - see `dlgScope`.
+$('pspFull').onclick = () => { dlgScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
+$('pspSafe').onclick = () => { dlgScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('opts').onclick = () => openSettings();
 $('about').onclick = showAbout;

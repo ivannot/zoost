@@ -141,7 +141,11 @@ CHECKS = [
         'title': 'The diagram window opens on the real workspace',
         'do': ['Open the call graph (Zoho CRM) or the ER model (Zoho Analytics) from the panel.'],
         'pass': 'It draws, the focus lands where you asked, and the counts agree with the panel.',
-        'covers': ['apps/*/graphview.js', 'apps/*/graphlogic.js', 'apps/crm/graph-core.js'],
+        # The window's markup as well as its script: the toolbar, the tabs and the chip row live in
+        # `graphview.html`, and a change there is exactly what this check would notice. It was not
+        # covered, so a release could be cut with the diagram's chrome altered and nobody asked.
+        'covers': ['apps/*/graphview.js', 'apps/*/graphview.html', 'apps/*/graphlogic.js',
+                   'apps/crm/graph-core.js'],
     },
     {
         'id': 'sample',
@@ -206,7 +210,22 @@ CHECKS = [
 
 
 def sh(*args: str) -> str:
-    return subprocess.run(args, capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
+    """Run git and return its output - and **refuse to read a failure as an empty answer.**
+
+    This dropped the return code, so `git diff --name-only <gone>..HEAD` failing was indistinguishable
+    from «nothing changed». A recorded answer names the commit it was given on; once that commit stops
+    resolving - amended, rebased away, collected, or the record carried in from another clone - every
+    check went quiet and this tool printed «N manual check(s) still standing … nothing they exercise
+    has changed since», which is an invented claim about what a person answered. The one thing this
+    file must never do.
+    """
+    out = subprocess.run(args, capture_output=True, text=True, cwd=str(ROOT))
+    if out.returncode != 0:
+        raise SystemExit(f"handcheck: `{' '.join(args)}` failed ({out.returncode}). "
+                         f"{out.stderr.strip() or 'no reason given'}\n"
+                         "  A recorded answer is about a commit; if that commit is gone, the answer is "
+                         "gone with it - run the checks again rather than trusting a silence.")
+    return out.stdout.strip()
 
 
 def head() -> str:

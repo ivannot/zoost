@@ -5,7 +5,7 @@
 addSampleWorkspace	354dce527925	da2e4f395fc9	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
 aiBuildSeed	a0ab5d3c236a	260d3c14a906	divergent
-aiCall	3eb02256d69b	9ecc6bf28f4c	divergent
+aiCall	3c9b4968c37f	f22e6e26de7d	divergent
 aiCap	113394dc8123	113394dc8123	identical
 aiClear	bc37da0fa783	edbcc54cb5ca	divergent
 aiContextLabel	6b65dd4c3db5	9e759687172d	divergent
@@ -19,7 +19,7 @@ aiLocked	2f50d3d07bfc	2f50d3d07bfc	identical
 aiMarkdown	3f691b1cef40	f064613e3b42	divergent
 aiNeedCurrent	ab3dfc884fd4	ab3dfc884fd4	identical
 aiRenderMessages	b54eb6aee3bd	4894fcbf36e3	divergent
-aiRunAnthropicAgent	d8fce8c6dc75	d8fce8c6dc75	identical
+aiRunAnthropicAgent	c48d13fd1ddb	d2c7dcbe718a	divergent
 aiSend	e63ce50571b6	00cb1ed36b9d	divergent
 aiShowLock	a2c4e5d92320	a2c4e5d92320	identical
 aiStreamAnthropic	afbe2cf1862f	afbe2cf1862f	identical
@@ -31,7 +31,7 @@ appRoot	7ce174166cab	7ce174166cab	identical
 applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
 askFrame	3dcad4e94815	fdb572847247	divergent
-askScope	d27f77a79c58	a599531ca679	divergent
+askScope	d27f77a79c58	5a0012715e71	divergent
 beginLoad	090fe6a5aab2	090fe6a5aab2	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
@@ -47,9 +47,9 @@ chipEl	5c4af366101f	5c4af366101f	identical
 clearFocus	e0db54dca347	e0db54dca347	identical
 closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	ce1a122bff29	ce1a122bff29	identical
-closeHealth	33e8c3372102	39acab54b873	divergent
+closeHealth	33e8c3372102	cae4fa6fb940	divergent
 closeNavMenu	67073a3b5d66	67073a3b5d66	identical
-closeScope	b272bb357c1c	d0fa6743ab69	divergent
+closeScope	b272bb357c1c	5b47da8582c5	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	11d7d721e357	11d7d721e357	identical
@@ -124,7 +124,7 @@ fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	1e57d1af56a5	4b046384501d	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	e2fc432f4aa8	e2fc432f4aa8	identical
-goToZoho	44136fa355b3	f4f5c239f644	divergent
+goToZoho	44136fa355b3	cf28ebbab779	divergent
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	7753ba68b1be	c9709b0f9729	divergent
@@ -173,7 +173,7 @@ onSaveRx	974e36827c7e	974e36827c7e	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	1d9967844be3	1d9967844be3	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
-openHealth	1ccc9b2b0408	0c5941e396f4	divergent
+openHealth	1ccc9b2b0408	feb5273e65ed	divergent
 openRxMenu	f5c90a637572	70c41ed10480	divergent
 openSchemaGraph	040b78cc9838	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
@@ -225,8 +225,8 @@ sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
 saveKeys	647ec30fc72a	647ec30fc72a	identical
 saveSearchPattern	593f956d7d95	593f956d7d95	identical
 sayWhereTheReportWent	2075390ad7f5	604b8164ad60	divergent
-scopeFromUI	3a730daf94e4	c83939bc53c4	divergent
-scopeToUI	f35c4710f682	13ff88ae9736	divergent
+scopeFromUI	3a730daf94e4	dba5d46721f4	divergent
+scopeToUI	f35c4710f682	c63391d26a9d	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical
 seedShortcuts	a2eedf0c5050	a2eedf0c5050	identical
 select	a415fad61600	e1eca3d924a3	divergent
@@ -237,7 +237,7 @@ setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
-showAbout	d4c0689d8483	d3b3a7dc9b69	divergent
+showAbout	db05bb61f991	fadaea3b4183	divergent
 showEmergency	cfdb73138aab	cfdb73138aab	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
@@ -273,3 +273,4 @@ wsLine	bdc9638a609d	bdc9638a609d	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent
 wsOptionTitle	71c68d9469b5	ec5f3ef6335a	divergent
 wsShown	b0d9bb9c3d25	f14b74b6c279	divergent
+zohoUrlOk	deb427611af9	3059f8561815	divergent
