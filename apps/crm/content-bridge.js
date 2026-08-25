@@ -80,7 +80,7 @@
   // field yet must be asked again, and a value that was found cannot change without a navigation,
   // which replaces the document this script is attached to. Switching org in Zoho is such a
   // navigation; the panel compares the org against the binding on every pull regardless.
-  let _org = null, _zuid = null, _memoAt = null;
+  let _org = null, _zuid = null, _pageCsrf = null, _memoAt = null;
   // The URL the memo belongs to. The paragraph above rests on «a value that was found cannot change
   // without a navigation, which replaces the document this script is attached to» - and that is a
   // claim about somebody else's single-page application, which nothing here can establish.
@@ -93,7 +93,11 @@
   // the whole CRM DOM a few thousand times - because the URL does not change during a pull.
   function memoValid() {
     if (_memoAt === location.href) return true;
-    _memoAt = location.href; _org = null; _zuid = null;
+    // `_pageCsrf` belongs here for the same reason the other two do, and the check written for
+    // them caught it the day it was added: it is read out of one document's own response, and a
+    // pushState inside a suite shell changes the document under it. A token remembered across
+    // that is the same defect as an org id remembered across it.
+    _memoAt = location.href; _org = null; _zuid = null; _pageCsrf = null;
     return false;
   }
   function orgId() {
@@ -154,6 +158,10 @@
   function csrfToken(csrfPrefix) {
     const names = CSRF_COOKIES[csrfPrefix || 'crmcsrfparam'] || CSRF_COOKIES.crmcsrfparam;
     const shape = (v) => `${v.length} chars, ${v.includes('=') ? 'contains' : 'no'} \u0027=\u0027`;
+    // The page's own token first, once something has gone and read it: it is what Zoho sends, to both
+    // families, and it is not in the cookie jar. See `pageCsrfToken`.
+    memoValid();
+    if (_pageCsrf) { lastCsrfFrom = 'the page (ConstantsInitial.do)'; lastCsrfShape = shape(_pageCsrf); return _pageCsrf; }
     for (const n of names) { const v = cookie(n); if (v) { lastCsrfFrom = n; lastCsrfShape = shape(v); return v; } }
     // Fall back to the other family rather than sending nothing: an empty token is a guaranteed 400,
     // and before this split the shared value was right often enough to be worth trying.
@@ -218,11 +226,46 @@
   // specific error string, only for the deluge family, and the primer's own result is ignored -
   // we are after the side effect, and a user whose role refuses that endpoint is no worse off than
   // before. If the second attempt fails the original error is what the user sees.
+  /** The CSRF token the page itself uses, read from where the page gets it.
+   *
+   *  **Measured from Zoho's own successful request**, not reasoned about. A capture of the Connections
+   *  screen loading shows `x-zcsrf-token: drepn=<128 chars>`, answered 200, and that value is in no
+   *  cookie at all - `drecn` does not exist on this data centre and the comparison says so. It is
+   *  byte-for-byte the same value Zoho sends to the `/crm/` endpoints as `crmcsrfparam`: one token,
+   *  two prefixes. Its source is the `csrfToken` field of `ConstantsInitial.do`.
+   *
+   *  What we send is the `CT_CSRF_TOKEN` **cookie**, which is a different value. The CRM API accepts
+   *  it, the deluge runtime does not - which is exactly the shape of the report: every area pulls and
+   *  connections alone is refused.
+   *
+   *  Read lazily and once: this is a GET on the reader's own session against the same origin, the
+   *  same kind of call the rest of this file makes, and it happens only when a deluge request has
+   *  already been refused.
+   */
+  async function pageCsrfToken() {
+    memoValid();
+    if (_pageCsrf) return _pageCsrf;
+    const inst = instanceName();
+    if (!inst) return null;
+    try {
+      const r = await fetch(BASE + safePath(`/crm/${encodeURIComponent(inst)}/ConstantsInitial.do`),
+        { headers: headers(), credentials: 'include' });
+      if (!r.ok) return null;
+      const m = (await r.text()).match(/"csrfToken"\s*:\s*"([^"]{16,512})"/);
+      return m ? (_pageCsrf = m[1]) : null;
+    } catch (_) { return null; }
+  }
+
   async function warmDeluge() {
     // Its own result is still not acted on - the side effect is the point, and a role that cannot
     // reach this endpoint is no worse off for having asked. What is returned is whether the primer
     // itself got an answer, so a second refusal can say whether it was ever primed at all. That
     // distinction is the difference between «the token is wrong» and «the session is not there».
+    // **The primer stopped being a superstition.** It used to make an ordinary CRM call and hope the
+    // deluge runtime would accept the next attempt - a remedy chosen without knowing which of two
+    // explanations was true, said so in its own comment, and measured not to work. It now fetches the
+    // token the page itself uses; the retry sends that instead of the cookie.
+    if (await pageCsrfToken()) return true;
     try {
       const r = await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
         { headers: headers(), credentials: 'include' });

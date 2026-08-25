@@ -108,6 +108,64 @@ test('an apostrophe inside a double-quoted string does not open a string', () =>
   assert.ok(out.includes('after = 1'));
 });
 
+// ---------------------------------------------------------------------------------------------
+// The deluge runtime is sent the token the page uses, which is not in the cookie jar at all.
+//
+// Measured from a capture of Zoho's own Connections screen, answered 200: the header is
+// `x-zcsrf-token: drepn=<128 chars>`, and that value matches no cookie on the page - `drecn`, the
+// name this file looked for, does not exist on that data centre. It is byte-for-byte the same value
+// Zoho sends the `/crm/` endpoints as `crmcsrfparam`: one token, two prefixes, sourced from the
+// `csrfToken` field of `ConstantsInitial.do`.
+//
+// What the bridge sent was the `CT_CSRF_TOKEN` cookie, a different value. The CRM API accepts it and
+// the deluge runtime refuses it, which is exactly the report: every area pulls, connections alone
+// stops. The primer that was supposed to recover from this made an ordinary CRM call and hoped -
+// its own comment admits it did not know which of two explanations was true - so it now fetches the
+// token instead.
+test('a refused deluge call is retried with the token the page itself uses', async () => {
+  const REL = 'apps/crm/content-bridge.js';
+  const asked = [];
+  const answers = [
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+    { status: 200, ok: true, text: async () => '{"a":1,"csrfToken":"PAGETOKEN0000000000","b":2}' },
+    { status: 200, ok: true, json: async () => ({ connections: [] }) },
+  ];
+  const sent = [];
+  const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+              encodeURIComponent,
+              instanceName: () => 'yourinstance',
+              document: { cookie: 'CT_CSRF_TOKEN=cookievalue' },
+              cookie: (n) => (n === 'CT_CSRF_TOKEN' ? 'cookievalue' : undefined),
+              // The memo is tied to the document it was read from - `memoValid()` clears it on a
+              // navigation - so the harness has to say the page has not moved, or the token is
+              // dropped between being fetched and being used.
+              memoValid: () => true,
+              fetch: async (url, opt) => { asked.push(String(url)); sent.push(opt && opt.headers); return answers.shift(); } };
+  // `_pageCsrf` and the two `lastCsrf*` are module-level `let`s the lifted functions write; they are
+  // declared in the file outside any of them, so the slices have to bring them or the first read is
+  // a ReferenceError - which is what the first run of this case was.
+  const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
+                  sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
+                  sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
+                  sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'pageCsrfToken'),
+                  sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')],
+                 Object.assign(g, { orgId: () => '1234567890' }));
+
+  const out = await m.api('/deluge/api/connections', 'drepn');
+  assert.deepEqual(out, { connections: [] },
+                   `the retry did not succeed: asked ${JSON.stringify(asked.map((u) => u.split('?')[0]))}`);
+  assert.ok(asked.some((u) => /ConstantsInitial\.do$/.test(u)),
+            `nothing went and read the page's token - it asked ${JSON.stringify(asked)}. The primer is `
+            + 'making an ordinary CRM call and hoping again, which is what was measured not to work.');
+
+  const first = sent[0]['X-ZCSRF-TOKEN'];
+  const retry = sent[sent.length - 1]['X-ZCSRF-TOKEN'];
+  assert.equal(first, 'drepn=cookievalue', `the first attempt sent ${JSON.stringify(first)}`);
+  assert.equal(retry, 'drepn=PAGETOKEN0000000000',
+               `the retry sent ${JSON.stringify(retry)} - it has to carry the page's token, under the `
+               + 'deluge prefix, which is what Zoho\u0027s own successful request carries.');
+});
+
 // ---------- CRM: which cookie carries which CSRF token ----------
 
 // The context is kept, not only what `load` hands back: `lastCsrfFrom` is a `let` the function
@@ -116,8 +174,15 @@ test('an apostrophe inside a double-quoted string does not open a string', () =>
 const csrfCtx = { cookie: (n) => globalThis.__jar[n], document: { getElementById: () => null } };
 const csrf = load([
   sliceConst('apps/crm/content-bridge.js', 'CSRF_COOKIES'),
+  // The page's own token, which `csrfToken` prefers when something has been and read it. Declared
+  // outside the function, so the slice has to bring it: `null` here is «nobody has read it yet»,
+  // which is the state every case in this block is about.
+  sliceConst('apps/crm/content-bridge.js', '_org'),
+  // `lastCsrfFrom` and `lastCsrfShape` are deliberately *not* lifted: declaring them inside the vm
+  // makes the writes land on the module binding, and the cases below read them off the context. The
+  // undeclared form is what lets a write reach the harness at all.
   sliceFn('apps/crm/content-bridge.js', 'csrfToken'),
-], csrfCtx);
+], Object.assign(csrfCtx, { memoValid: () => true }));
 
 function withJar(jar, fn) { globalThis.__jar = jar; try { return fn(); } finally { delete globalThis.__jar; } }
 

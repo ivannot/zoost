@@ -106,6 +106,7 @@ apps/analytics/sidepanel.js	refreshWorkspaces	viewsPulledAt
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
+apps/crm/content-bridge.js	pageCsrfToken	_pageCsrf
 apps/crm/graphview.js	init	DATA
 apps/crm/graphview.js	init	N
 apps/crm/graphview.js	init	curFocus
