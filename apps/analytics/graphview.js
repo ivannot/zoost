@@ -813,8 +813,18 @@ function statOf(set, allN, allE) {
 // The whole-graph line, with no focus on it. Lifted out of the init block so the chips can put it
 // back: it was written once at startup and then never again, so filtering changed the drawing
 // underneath a summary of the unfiltered graph.
+// **The header line sits above all three views, and on the ER tab what is on screen is the drawing.**
+// It counted the Explorer's set - what passes the chips and is not folded away - while the diagram
+// additionally leaves out a box with no field to show and, under an emphasis that draws links, one
+// no link reaches. So two numbers on one screen disagreed with nothing to reconcile them, the tab
+// badge beside it having always counted the drawing. `statOf` already prints «5 of 18», which is the
+// sentence that says both at once.
+//
+// Guarded on `nodesA`, which `erVisibleIds` filters: it is filled when the data arrives, and reading
+// a layout array before then is the «0 of 90 modules» defect this file has already had once.
+const statDrawn = (fallback) => (curView === 'er' && nodesA.length ? new Set(erVisibleIds()) : fallback);
 function graphStat() {
-  $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> in no relation${orphanNote()}`;
+  $('statline').innerHTML = `${statOf(statDrawn(null), DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> in no relation${orphanNote()}`;
   erCountRefresh();
 }
 // Whichever of the two is the right one for the state we are in.
@@ -875,7 +885,7 @@ function noFocusHere(id) {
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <span style=\"color:#94a3b8\">Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
+    $('statline').innerHTML = `${statOf(statDrawn(null), DATA.counts.nodes, DATA.counts.edges)} · <span style=\"color:#94a3b8\">Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
     // The badge is the same number as the line, so it is refreshed on both branches. This one
     // returned before it: widening a focused diagram to «Everything» redrew the drawing and the
     // sentence and left the tab counting the focus - measured 13 against 18 drawn here, 10
@@ -885,7 +895,7 @@ function egoStat() {
   }
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;
   const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to focus it</span>${orphanNote()}`;
+  $('statline').innerHTML = `${statOf(statDrawn(egoSet), allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to focus it</span>${orphanNote()}`;
   erCountRefresh();
 }
 function setFocus(id) {

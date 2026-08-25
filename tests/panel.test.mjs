@@ -11609,6 +11609,69 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// With the diagram on screen, the line above it counts the diagram.
+//
+// The header line sits above all three views and used to count the Explorer's set - what passes the
+// chips and is not folded away. The drawing leaves out more than that: a box with no field to show,
+// and under a link emphasis one that no link reaches. So the line and the tab badge, a centimetre
+// apart, reported different numbers about the same picture with nothing on screen to reconcile them.
+// Measured 3 against 1 on a three-module fixture, in both products.
+//
+// `statOf` already knows how to say both - «1 of 3» - so what changed is which set it is given. The
+// case drives the real line builder and the real badge and compares what each of them wrote, rather
+// than recomputing either: two numbers agreeing is the whole claim.
+test('the status line and the diagram badge report the same drawing', () => {
+  for (const app of ['crm', 'analytics']) {
+    const G = `apps/${app}/graphview.js`;
+    const L = `apps/${app}/graphlogic.js`;
+    const mod = (id, fields) => ({ id, name: id, category: 'modules', calls: [], called_by: [], fields,
+                                   rest: false, dead_suspect: false, unresolved: [] });
+    // One module has a field to list and two have none, which is the gap: all three pass the chips,
+    // one is drawn.
+    const N = { a: mod('a', [{ api_name: 'Name' }]), b: mod('b', []), c: mod('c', []) };
+    const els = {};
+    const el = (id) => (els[id] = els[id] || { innerHTML: '', textContent: '', style: {}, title: '',
+                                               classList: { toggle() {}, add() {}, remove() {} } });
+    const ctx = { N, egoSet: null, erAll: false, curFocus: null, curView: 'er', scopeAll: false, erEmph: 'fields',
+                  DATA: { kind: 'schema', counts: { nodes: 3, edges: 0, dead_suspects: 0, unresolved: 0 } },
+                  nodesA: ['a', 'b', 'c'], edgesA: [], hiddenKinds: new Set(), onlyConds: new Set(),
+                  erCut: new Map(), erIds: ['a', 'b', 'c'],
+                  $: el, Set, Object, Map, Array, String, console,
+                  NOUN: () => ({ n: 'modules', n1: 'module', e: 'relations', e1: 'relation', dead: 'in no relation' }),
+                  countedAs: () => 'modules', mirrorNote: () => '', orphanNote: () => '',
+                  drawable: () => true, crowded: () => false,
+                  MSG: { tabOver: (n) => `over ${n}`, tabCrowded: (n) => `tight ${n}`, tabCount: (n) => `count ${n}` } };
+    const m = load([sliceConst(G, 'KINDOF'), sliceConst(G, 'CONDITION_KEYS'), sliceConst(G, 'erCandidate'),
+                    sliceFn(G, 'passKind'), sliceFn(L, 'erHiddenSet'), sliceFn(L, 'statCounts'),
+                    sliceFn(G, 'erFieldsFor'), sliceFn(L, 'linkedUnderFilter'), sliceFn(G, 'erVisibleIds'),
+                    sliceConst(G, 'statDrawn'), sliceFn(G, 'statOf'), sliceFn(G, 'erCountRefresh'),
+                    sliceFn(G, 'graphStat')], ctx);
+    els.ertab = { style: { display: '' }, title: '', classList: { toggle() {} } };
+
+    const drawn = m.erVisibleIds().length;
+    assert.equal(drawn, 1, `${app}: the fixture no longer separates the two sets - it proves nothing`);
+    m.graphStat();
+    const said = /<b>(\d+)<\/b>/.exec(els.statline.innerHTML);
+    assert.ok(said, `${app}: the status line carries no count at all: ${els.statline.innerHTML.slice(0, 80)}`);
+    assert.equal(Number(said[1]), drawn,
+                 `${app}: the line opens with ${said[1]} and the diagram draws ${drawn}. The tab badge beside `
+                 + `it says ${els.ertabn.textContent}, and nothing on screen says why the two differ.`);
+    assert.equal(els.ertabn.textContent, String(drawn), `${app}: the badge itself has stopped counting the drawing`);
+
+    // And the other half of the guard, which is a defect this window has already had: before the
+    // data lands, `nodesA` is empty and everything derived from it is zero. A line reading «0 of 90
+    // modules» over a graph that has 90 is the version of this bug that shipped once.
+    ctx.nodesA = [];
+    els.statline.innerHTML = '';
+    m.graphStat();
+    const early = /<b>(\d+)<\/b>/.exec(els.statline.innerHTML);
+    assert.equal(Number(early[1]), 3,
+                 `${app}: with the layout arrays still empty the line said ${early[1]} of 3. It is reading a `
+                 + 'state that has not arrived yet and reporting it as a count of the org.');
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // A settings page starts up by a named declaration, and waits for what it started.
 //
 // The Analytics page opened its life inside `(function init() { … })()` and fired its four loaders
