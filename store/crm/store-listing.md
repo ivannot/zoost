@@ -155,7 +155,7 @@ scripting injects this extension's own code, never remote code, only into the ma
 
 4. A problem report's text, into the zoost.it page the panel just opened, for the user to read and send.
 
-Nothing is written to Zoho CRM.
+Every request this sends Zoho CRM is a read: no create, update or delete call exists in it.
 ```
 
 ## 8. tabs justification (max 1000)
