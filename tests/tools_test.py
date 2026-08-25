@@ -5986,6 +5986,54 @@ class WhatTheAssistantSendsIsDeclared(unittest.TestCase):
                              f'pattern has stopped anchoring to the start of a line')
 
 
+class NobodyParksACase(unittest.TestCase):
+    """A case switched off in the source is a case nobody runs, and both counts hide it.
+
+    `test('x', { skip: … })` still appears in node's `tests N`, and `@unittest.skip` leaves «Ran N»
+    where it was and prints `OK (skipped=1)` underneath - so the exact numbers in `tests/run.sh`,
+    which exist to notice cases that stop running, cannot see the commonest way one does.
+
+    Refusing every skip was tried and was wrong: two cases skip on GitHub's runner - no Chrome, a
+    shallow clone - and turning those red made a correct run fail. That is the honest answer to «the
+    browser is what this asserts about and there is no browser», and it is what the runner needs.
+
+    The line is between the two. An environment gate is decided *at run time*, carries its reason,
+    and is `self.skipTest(...)`; a parked case is decided in the source and is a decorator or an
+    option. This holds the second one, which is the one nobody can see in a count.
+    """
+
+    def test_no_python_case_is_parked_in_the_source(self):
+        for f in sorted((ROOT / 'tests').glob('*.py')):
+            src = f.read_text(encoding='utf-8')
+            for m in re.finditer(r'(?m)^\s*@unittest\.(skip|expectedFailure)\b.*$', src):
+                line = src[:m.start()].count('\n') + 1
+                self.fail(f'{f.name}:{line} parks a case in the source: {m.group(0).strip()[:70]}. '
+                          f'It is counted as run by tests/run.sh and executed by nothing. An '
+                          f'environment gate belongs at run time, as self.skipTest(reason).')
+
+    def test_no_node_case_is_parked_in_the_source(self):
+        for f in sorted((ROOT / 'tests').glob('*.test.mjs')):
+            src = f.read_text(encoding='utf-8')
+            for m in re.finditer(r'(?m)^\s*(?:test|it)\([^\n]*\{\s*(skip|todo)\s*:', src):
+                line = src[:m.start()].count('\n') + 1
+                self.fail(f'{f.name}:{line} parks a case: {m.group(0).strip()[:70]}. Node counts it in '
+                          f'«tests N», so the exact number in tests/run.sh cannot notice it.')
+
+    def test_every_runtime_skip_says_why(self):
+        # The other half: a gate with no reason is indistinguishable from a park, in the one place a
+        # reader looks when a count is lower than they expected.
+        # Lines that *are* the call, not lines that mention it: the first version matched the word
+        # inside this class's own failure message and reported itself - a checker reading its own
+        # prose, which this repository has now met four times in one day.
+        for f in sorted((ROOT / 'tests').glob('*.py')):
+            for line in f.read_text(encoding='utf-8').split('\n'):
+                m = re.match(r'\s*(?:self\.)?skipTest\(\s*(.)', line)
+                if not m:
+                    continue
+                self.assertIn(m.group(1), '\'"',
+                              f'{f.name}: a skipTest with no written reason - «{line.strip()[:60]}»')
+
+
 class TheRawObjectRuleCanProduceAPositive(unittest.TestCase):
     """`raw_objects()` had no test at all, and the two plants in the commit that added it were both
     on the *field* scan beside it. A sweep asked to break it walked seven handover forms past it -

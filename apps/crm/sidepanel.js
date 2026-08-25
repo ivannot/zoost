@@ -3069,7 +3069,17 @@ function selectRow(path) {
   // the reader would have done, and each list re-renders itself its own way. Then we look again on
   // the next frame, which is also the answer to the second reason.
   if (!row) {
-    $('tree').querySelectorAll('.grp.collapsed').forEach((g) => g.click());
+    // **One at a time, asked again each time.** Collecting them and clicking the list opened the
+    // first group, whose handler calls `renderTree()` - which replaces every node, so the rest of
+    // that NodeList was detached from the document and its clicks did nothing at all. A row inside
+    // the second closed group was still not drawn, `find()` still answered nothing, and the reader
+    // was left where they were with no reason given. Found when a driver started refusing to click
+    // a control that is not on the page.
+    for (let k = 0; k < 200; k++) {
+      const g = $('tree').querySelector('.grp.collapsed');
+      if (!g) break;
+      g.click();
+    }
     row = find();
   }
   if (row) { revealRow(row, $('tree'), '.grp'); return; }

@@ -27,6 +27,32 @@ shots = importlib.util.module_from_spec(spec); spec.loader.exec_module(shots)
 
 CRM = """
   const say = (m) => { throw new Error(m); };
+  // **A click on a control that is not on screen neither throws nor works**, which is the worst
+  // shape a step in a driver can have: the ER scenario opened by clicking the diagram tab, which
+  // carries `display:none` until the graph lands, and a run that lost that race failed three lines
+  // later saying «the fixture draws 0 boxes» - a sentence about the fixture, describing a race.
+  //
+  // This was a static sweep first, and the static sweep could not see it: the click goes through a
+  // helper, so of the 75 in these scenarios it read 40 and could judge 2. Deleting the guard it was
+  // written for changed its answer not at all. Text cannot answer «is this element on screen»; the
+  // page can, so the question is asked here, where a wrong answer is a thrown error naming the
+  // control instead of a failure three lines later about something else.
+  (() => {
+    const real = HTMLElement.prototype.click;
+    HTMLElement.prototype.click = function clickOnScreen() {
+      const cs = getComputedStyle(this);
+      const why = !this.isConnected ? 'not in the document'
+        : cs.display === 'none' ? 'display:none'
+        : cs.visibility === 'hidden' ? 'visibility:hidden'
+        : '';
+      // `offsetParent === null` was tried as a fourth condition and taken out again: it is also null
+      // for a `position:fixed` element, for one inside a `display:contents` box, and before the first
+      // layout - so it reported controls that are on screen. The three above are unambiguous and are
+      // exactly «the product is hiding this», which is the thing that made a click a silent no-op.
+      if (why) say(`clicked a control that is not on screen (${why}): ${this.id || this.className || this.tagName}`);
+      return real.apply(this, arguments);
+    };
+  })();
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Wait for the thing, with the same ceiling as the sleep it replaces.
   //
@@ -440,8 +466,23 @@ CRM = """
           // and it has to be visible even when its group is **closed**, which is the case that was
           // reported next: the row is not drawn at all, so there is nothing to scroll to. Closed
           // here on purpose before jumping, because that is the state a reader leaves behind.
-          $('tree').querySelectorAll('.grp:not(.collapsed)').forEach((g) => g.click());
-          await settle('the groups never collapsed');
+          // **One at a time, re-asked each time.** Collecting them all and clicking the list closed
+          // the first group, which redraws the tree - so every other element in that NodeList was
+          // detached from the document and its click did nothing at all. The scenario believed it
+          // had closed every group and had closed one, and the assertions after it were about a
+          // state it never reached. Found the day clicking something not on screen started throwing.
+          // Quiet **first**, then look, then click. Collapsing one redraws the tree, and the redraw
+          // can land after `settle`'s quiet window - so a node found before it was detached by the
+          // time the click reached it, and the click did nothing. Asking after the document has
+          // settled, and skipping a node that went away while we held it, is the difference between
+          // «the reader closed the groups» and «the reader closed one».
+          for (let k = 0; k < 40; k++) {
+            await settle('the groups never collapsed');
+            const g = $('tree').querySelector('.grp:not(.collapsed)');
+            if (!g) break;
+            if (!g.isConnected) continue;
+            g.click();
+          }
           const link3 = document.querySelector('#pvcode a.c-link[data-mod]');
           if (link3) { link3.click(); await settle(); }
           // and it has to be *visible*: a jump that selects a row below the fold is a jump the
@@ -702,6 +743,32 @@ CRM = """
 
 AN = """
   const say = (m) => { throw new Error(m); };
+  // **A click on a control that is not on screen neither throws nor works**, which is the worst
+  // shape a step in a driver can have: the ER scenario opened by clicking the diagram tab, which
+  // carries `display:none` until the graph lands, and a run that lost that race failed three lines
+  // later saying «the fixture draws 0 boxes» - a sentence about the fixture, describing a race.
+  //
+  // This was a static sweep first, and the static sweep could not see it: the click goes through a
+  // helper, so of the 75 in these scenarios it read 40 and could judge 2. Deleting the guard it was
+  // written for changed its answer not at all. Text cannot answer «is this element on screen»; the
+  // page can, so the question is asked here, where a wrong answer is a thrown error naming the
+  // control instead of a failure three lines later about something else.
+  (() => {
+    const real = HTMLElement.prototype.click;
+    HTMLElement.prototype.click = function clickOnScreen() {
+      const cs = getComputedStyle(this);
+      const why = !this.isConnected ? 'not in the document'
+        : cs.display === 'none' ? 'display:none'
+        : cs.visibility === 'hidden' ? 'visibility:hidden'
+        : '';
+      // `offsetParent === null` was tried as a fourth condition and taken out again: it is also null
+      // for a `position:fixed` element, for one inside a `display:contents` box, and before the first
+      // layout - so it reported controls that are on screen. The three above are unambiguous and are
+      // exactly «the product is hiding this», which is the thing that made a click a silent no-op.
+      if (why) say(`clicked a control that is not on screen (${why}): ${this.id || this.className || this.tagName}`);
+      return real.apply(this, arguments);
+    };
+  })();
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Wait for the thing, with the same ceiling as the sleep it replaces.
   //
@@ -928,11 +995,13 @@ AN = """
     if ($('ws').value !== shownWs) say('the picker was left showing a workspace the panel is not reading');
     if (!/pull in progress/i.test($('statustext').textContent))
       say('the refusal was silent: ' + $('statustext').textContent);
-    // Retry failed, with nothing failed: it must do nothing rather than pretend.
-    const beforeRetry = $('statustext').textContent;
-    $('retry').click(); await settle();
-    if ($('statustext').textContent !== beforeRetry && !/nothing|no /i.test($('statustext').textContent))
-      say('Retry failed with nothing to retry said: ' + $('statustext').textContent);
+    // **Retry, with nothing failed, is not offered** - and this used to click it anyway. The control
+    // carries `display:none` until something has failed, so the click was a no-op and the assertion
+    // under it compared a status line with itself: it could not have failed. A driver clicking what
+    // the product is hiding is the shape this whole guard exists for, and it was in the guard's own
+    // file. What holds instead is the product's actual behaviour: nothing to retry, nothing offered.
+    if (getComputedStyle($('retry')).display !== 'none')
+      say('Retry is offered with nothing failed - pressing it can only produce a refusal');
 
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
@@ -954,6 +1023,32 @@ AN = """
 # half, or throws cannot pass it.
 PULL_AN = r"""
   const say = (m) => { throw new Error(m); };
+  // **A click on a control that is not on screen neither throws nor works**, which is the worst
+  // shape a step in a driver can have: the ER scenario opened by clicking the diagram tab, which
+  // carries `display:none` until the graph lands, and a run that lost that race failed three lines
+  // later saying «the fixture draws 0 boxes» - a sentence about the fixture, describing a race.
+  //
+  // This was a static sweep first, and the static sweep could not see it: the click goes through a
+  // helper, so of the 75 in these scenarios it read 40 and could judge 2. Deleting the guard it was
+  // written for changed its answer not at all. Text cannot answer «is this element on screen»; the
+  // page can, so the question is asked here, where a wrong answer is a thrown error naming the
+  // control instead of a failure three lines later about something else.
+  (() => {
+    const real = HTMLElement.prototype.click;
+    HTMLElement.prototype.click = function clickOnScreen() {
+      const cs = getComputedStyle(this);
+      const why = !this.isConnected ? 'not in the document'
+        : cs.display === 'none' ? 'display:none'
+        : cs.visibility === 'hidden' ? 'visibility:hidden'
+        : '';
+      // `offsetParent === null` was tried as a fourth condition and taken out again: it is also null
+      // for a `position:fixed` element, for one inside a `display:contents` box, and before the first
+      // layout - so it reported controls that are on screen. The three above are unambiguous and are
+      // exactly «the product is hiding this», which is the thing that made a click a silent no-op.
+      if (why) say(`clicked a control that is not on screen (${why}): ${this.id || this.className || this.tagName}`);
+      return real.apply(this, arguments);
+    };
+  })();
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Wait for the thing, with the same ceiling as the sleep it replaces.
   //
@@ -1147,6 +1242,32 @@ PULL_AN = r"""
 # harness that reads as one about the product.
 ER = """
   const say = (m) => { throw new Error(m); };
+  // **A click on a control that is not on screen neither throws nor works**, which is the worst
+  // shape a step in a driver can have: the ER scenario opened by clicking the diagram tab, which
+  // carries `display:none` until the graph lands, and a run that lost that race failed three lines
+  // later saying «the fixture draws 0 boxes» - a sentence about the fixture, describing a race.
+  //
+  // This was a static sweep first, and the static sweep could not see it: the click goes through a
+  // helper, so of the 75 in these scenarios it read 40 and could judge 2. Deleting the guard it was
+  // written for changed its answer not at all. Text cannot answer «is this element on screen»; the
+  // page can, so the question is asked here, where a wrong answer is a thrown error naming the
+  // control instead of a failure three lines later about something else.
+  (() => {
+    const real = HTMLElement.prototype.click;
+    HTMLElement.prototype.click = function clickOnScreen() {
+      const cs = getComputedStyle(this);
+      const why = !this.isConnected ? 'not in the document'
+        : cs.display === 'none' ? 'display:none'
+        : cs.visibility === 'hidden' ? 'visibility:hidden'
+        : '';
+      // `offsetParent === null` was tried as a fourth condition and taken out again: it is also null
+      // for a `position:fixed` element, for one inside a `display:contents` box, and before the first
+      // layout - so it reported controls that are on screen. The three above are unambiguous and are
+      // exactly «the product is hiding this», which is the thing that made a click a silent no-op.
+      if (why) say(`clicked a control that is not on screen (${why}): ${this.id || this.className || this.tagName}`);
+      return real.apply(this, arguments);
+    };
+  })();
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Wait for the thing, with the same ceiling as the sleep it replaces.
   //
@@ -1259,6 +1380,32 @@ ER = """
 
 PULL_CRM = r"""
   const say = (m) => { throw new Error(m); };
+  // **A click on a control that is not on screen neither throws nor works**, which is the worst
+  // shape a step in a driver can have: the ER scenario opened by clicking the diagram tab, which
+  // carries `display:none` until the graph lands, and a run that lost that race failed three lines
+  // later saying «the fixture draws 0 boxes» - a sentence about the fixture, describing a race.
+  //
+  // This was a static sweep first, and the static sweep could not see it: the click goes through a
+  // helper, so of the 75 in these scenarios it read 40 and could judge 2. Deleting the guard it was
+  // written for changed its answer not at all. Text cannot answer «is this element on screen»; the
+  // page can, so the question is asked here, where a wrong answer is a thrown error naming the
+  // control instead of a failure three lines later about something else.
+  (() => {
+    const real = HTMLElement.prototype.click;
+    HTMLElement.prototype.click = function clickOnScreen() {
+      const cs = getComputedStyle(this);
+      const why = !this.isConnected ? 'not in the document'
+        : cs.display === 'none' ? 'display:none'
+        : cs.visibility === 'hidden' ? 'visibility:hidden'
+        : '';
+      // `offsetParent === null` was tried as a fourth condition and taken out again: it is also null
+      // for a `position:fixed` element, for one inside a `display:contents` box, and before the first
+      // layout - so it reported controls that are on screen. The three above are unambiguous and are
+      // exactly «the product is hiding this», which is the thing that made a click a silent no-op.
+      if (why) say(`clicked a control that is not on screen (${why}): ${this.id || this.className || this.tagName}`);
+      return real.apply(this, arguments);
+    };
+  })();
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Wait for the thing, with the same ceiling as the sleep it replaces.
   //
