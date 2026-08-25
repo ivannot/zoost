@@ -255,21 +255,41 @@ test('nothing injected into a Zoho page writes into it', () => {
   }
   assert.ok(injected.size >= 2, `only ${injected.size} injected script(s) found - the derivation broke`);
 
-  // The vocabulary of writing into a page one does not own. Reading is not listed: the bridges query
-  // the DOM constantly and that is the whole of how they work.
+  // **The vocabulary of writing into a page one does not own - and it is a denylist, which is stated
+  // rather than left to be found.** A list of spellings cannot be complete; what it does is make the
+  // shortcut cost a deliberate act rather than a moment's convenience. Five spellings let a whole
+  // write path through on the first version - `execCommand`, `setAttribute`, `value =`,
+  // `requestSubmit` were in none of them - so the list is wider, and the day a sixth way is needed
+  // it belongs in the manifest justification and both listings before it belongs here.
+  //
+  // Reading is not listed: the bridges query the DOM constantly and that is the whole of how they
+  // work. So `innerHTML` is only a finding when it is *assigned*, and `.value =` is not listed at
+  // all - `row.value = …` on this product's own object is on nearly every pull path, and telling
+  // that from an input's value needs to know what the receiver is.
   const WRITES = [
     [/\bdispatchEvent\s*\(/, 'dispatches a synthetic event'],
     [/new\s+(?:Keyboard|Mouse|Pointer|Input)Event\s*\(/, 'builds a synthetic input event'],
     [/HTMLInputElement\.prototype/, 'reaches for the native value setter'],
     [/\.focus\s*\(\s*\)/, 'moves the focus in their page'],
     [/\.click\s*\(\s*\)/, 'clicks something for the reader'],
+    [/\bexecCommand\s*\(/, 'edits their document through execCommand'],
+    [/\.setAttribute\s*\(/, 'writes an attribute into their page'],
+    [/\.removeAttribute\s*\(/, 'removes an attribute from their page'],
+    [/\brequestSubmit\s*\(|\.submit\s*\(\s*\)/, 'submits one of their forms'],
+    [/\.innerHTML\s*=|\.outerHTML\s*=|insertAdjacentHTML\s*\(/, 'writes markup into their page'],
+    [/\bappendChild\s*\(|\breplaceChild\s*\(|\bremoveChild\s*\(|\.remove\s*\(\s*\)/, 'changes their DOM tree'],
   ];
   const found = [];
   for (const rel of [...injected].sort()) {
     let src;
     try { src = read(rel); } catch (_) { continue; }
+    // **Trailing comments too.** The stripper dropped a line only when its *trim* began with `//`,
+    // so a note at the end of a line of code stayed - and in a file whose comments are this dense,
+    // and on this subject, «Find used to call .focus() on their search box» is a line somebody
+    // writes. Planted exactly that and the battery went red over a comment.
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n')
-      .filter((l) => !l.trim().startsWith('//')).join('\n');
+      .map((l) => l.replace(/(^|[^:'"\`\\])\/\/.*$/, '$1'))
+      .join('\n');
     for (const [rx, what] of WRITES) if (rx.test(code)) found.push(`${rel} ${what}`);
   }
   assert.deepEqual(found, [],
@@ -284,8 +304,15 @@ test('nothing injected into a Zoho page writes into it', () => {
 // The context is kept, not only what `load` hands back: `lastCsrfFrom` is a `let` the function
 // writes on every call, and a name read off the returned object is the value it had at load time -
 // which is `undefined`, for ever, however the code behaves. The live one lives in the context.
-const csrfCtx = { cookie: (n) => globalThis.__jar[n], document: { getElementById: () => null } };
+//
+// **And `cookie()` is the real one.** It was stubbed - `cookie: (n) => jar[n]` - which reads the jar
+// as a map and so answers the same for both readings of a cookie value. The block below exists to
+// tell a truncated token from a whole one, and with the stub in place restoring the truncating
+// version left every case here green. The jar is handed over as `document.cookie`, the string the
+// browser gives, and the shipped parser reads it.
+const csrfCtx = { document: { get cookie() { return globalThis.__raw || ''; }, getElementById: () => null } };
 const csrf = load([
+  sliceFn('apps/crm/content-bridge.js', 'cookie'),
   sliceConst('apps/crm/content-bridge.js', 'CSRF_COOKIES'),
   // The page's own token, which `csrfToken` prefers when something has been and read it. Declared
   // outside the function, so the slice has to bring it: `null` here is «nobody has read it yet»,
@@ -297,7 +324,11 @@ const csrf = load([
   sliceFn('apps/crm/content-bridge.js', 'csrfToken'),
 ], Object.assign(csrfCtx, { memoValid: () => true }));
 
-function withJar(jar, fn) { globalThis.__jar = jar; try { return fn(); } finally { delete globalThis.__jar; } }
+// The jar as the browser serialises it, so the shipped `cookie()` does the parsing.
+function withJar(jar, fn) {
+  globalThis.__raw = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
+  try { return fn(); } finally { delete globalThis.__raw; }
+}
 
 test('the deluge family reads drecn, not the CRM token', () => {
   // Measured after a 400 INVALID_CSRF_TOKEN: the two cookies usually hold the same value, which is
@@ -381,6 +412,14 @@ test('a refused CSRF token says which cookie it came from', () => {
   // guaranteed 400, and «the token was read from nowhere» is the one answer that names it.
   withJar({}, () => {
     csrf.csrfToken('drepn');
+    // **And the shape goes with it.** Two exits set the source and left the previous request's shape
+    // standing, so the message read «the token was read from nowhere (128 chars, no '=')» - a token
+    // from nowhere, a hundred and twenty-eight characters long. `lastCsrfShape || 'no value'` cannot
+    // catch that: the string is not empty, it is another moment's. A measurement that is a memory of
+    // a different request is the failure this shape was added to end, one field along.
+    assert.doesNotMatch(csrfCtx.lastCsrfShape, /\d+ chars/,
+                        `no token was sent and the shape reads ${JSON.stringify(csrfCtx.lastCsrfShape)}, `
+                        + 'which is the size of one that was');
     assert.match(csrfCtx.lastCsrfFrom, /nowhere/,
                  `with no cookie at all the source reads ${JSON.stringify(csrfCtx.lastCsrfFrom)} - an empty `
                  + 'token is refused exactly like a wrong one, and the two need telling apart');
@@ -12197,19 +12236,40 @@ test('the call graph header counts the links on the drawing', () => {
 //
 // Derived over both products, because the ordering is the fact: whatever the picker's handler says
 // about the folder, it says before it asks anything to read it.
-test('picking a working folder says so before reading it, in both panels', () => {
-  for (const [app, fn, reader] of [['crm', 'pickRoot', 'loadWorkspaces'],
-                                   ['analytics', 'pickRoot', 'refreshWorkspaces']]) {
-    const body = sliceFn(`apps/${app}/sidepanel.js`, fn)
-      .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
-    const said = body.indexOf('Working folder:');
-    const read = body.indexOf(`${reader}(`);
-    assert.ok(said > 0, `${app}: the handler no longer says which folder was chosen`);
-    assert.ok(read > 0, `${app}: the handler no longer reads the folder - ${reader} is gone`);
-    assert.ok(said < read,
-              `${app}: «Working folder» is written after ${reader}(), so whatever reading the folder `
-              + 'found - a flat layout that needs moving, a folder that cannot be read - is painted '
-              + 'over by a green line that is true of nothing except the picker.');
+test('picking a working folder says so before reading it, in both panels', async () => {
+  // **Driven, because the positions of two strings in a file are not the order they run in.** This
+  // compared `indexOf('Working folder:')` against `indexOf('refreshWorkspaces(')` in the source, and
+  // a helper defeats it entirely: `const say = () => status('Working folder: …')` declared first and
+  // called last passes, with the diagnosis painted over exactly as it was reported. What has to hold
+  // is the order of the *effects*, so the handler is run and the effects are recorded in sequence.
+  for (const [app, reader] of [['crm', 'loadWorkspaces'], ['analytics', 'refreshWorkspaces']]) {
+    const rel = `apps/${app}/sidepanel.js`;
+    const seq = [];
+    const handle = { name: 'Zoost', queryPermission: async () => 'granted',
+                     requestPermission: async () => 'granted',
+                     values: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true }) }) }) };
+    const g = { console, Object, Set, Map, Promise, Array, String, Symbol, JSON,
+                APP_DIRS: ['crm', 'analytics'], CFG: '.zoost.json',
+                BLAST_RADIUS: 'x', confirm: () => true,
+                root: null, rootGranted: false,
+                workspaceChangeRefuse: () => false, sampleRefuse: () => false,
+                ensurePerm: async () => true, mismatchRefuse: () => false,
+                window: { showDirectoryPicker: async () => handle, idbHandle: { set: async () => {} } },
+                status: (t, k) => seq.push(`said ${k}: ${String(t).slice(0, 22)}`),
+                setStatus: (t, k) => seq.push(`said ${k}: ${String(t).slice(0, 22)}`),
+                [reader]: async () => { seq.push('read the folder'); },
+                updateWsButtons: () => {}, refreshContext: async () => {} };
+    const m = load([sliceFn(rel, 'pickRoot')], g);
+    await m.pickRoot();
+
+    const said = seq.findIndex((x) => x.includes('Working folder'));
+    const readAt = seq.indexOf('read the folder');
+    assert.ok(said >= 0, `${app}: the handler never said which folder was chosen - it did ${JSON.stringify(seq)}`);
+    assert.ok(readAt >= 0, `${app}: the handler never read the folder - it did ${JSON.stringify(seq)}`);
+    assert.ok(said < readAt,
+              `${app}: it did ${JSON.stringify(seq)}. «Working folder» lands after the folder is read, `
+              + 'so whatever reading it found - a flat layout that needs moving, a folder that cannot '
+              + 'be read - is painted over by a green line true of nothing except the picker.');
   }
 });
 

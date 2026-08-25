@@ -169,8 +169,18 @@
       const v = cookie(n);
       if (v) { lastCsrfFrom = n + ' (fallback - not this family\u0027s own cookie)'; lastCsrfShape = shape(v); return v; }
     }
-    try { const el = document.getElementById('token'); if (el && el.value) { lastCsrfFrom = '#token in the page'; return el.value; } } catch (_) {}
+    try {
+      const el = document.getElementById('token');
+      if (el && el.value) { lastCsrfFrom = '#token in the page'; lastCsrfShape = shape(el.value); return el.value; }
+    } catch (_) {}
+    // **Both of these left the previous request's shape in place**, so the message read «the token
+    // was read from nowhere - no CSRF cookie was readable (128 chars, no '=')»: a token from nowhere,
+    // a hundred and twenty-eight characters long. `lastCsrfShape || 'no value'` cannot catch that,
+    // because the string is not empty - it is another moment's. The shape was added because three
+    // words fitted every explanation, and a shape that is a memory of a different request is the same
+    // failure one field along.
     lastCsrfFrom = 'nowhere - no CSRF cookie was readable';
+    lastCsrfShape = 'no token was sent';
     return '';
   }
   function headers(csrfPrefix) {
