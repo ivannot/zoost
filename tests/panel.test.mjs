@@ -11609,6 +11609,55 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// A settings page starts up by a named declaration, and waits for what it started.
+//
+// The Analytics page opened its life inside `(function init() { … })()` and fired its four loaders
+// without awaiting any of them. Three consequences, none of them visible on screen. `functions()` in
+// `tools/asynccheck.py` matches a declaration at the start of a line, so the whole startup - awaits
+// included - was invisible to the one check that reads for a global written after a yield. Four
+// promises nobody holds, on a page that registers no `unhandledrejection` listener, means a read
+// that fails is a message in a console nobody has open. And the order in which they land decides
+// which failure flag is set by the time a Save asks - the flags added the same week to stop this
+// page writing its defaults over settings it could not read.
+//
+// The CRM twin was converted to a declaration months ago, for the first of those reasons, and this
+// side was not walked. Derived on both, so a third page is held to it too: every `load*` the file
+// declares must have been called, and `init()`'s promise must not resolve before they finish.
+test('a settings page waits for the settings it is loading', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const src = read(rel);
+    assert.match(src, /^async function init\(\)/m,
+                 `${app}: options.js no longer starts from a named async declaration. An IIFE is a scope `
+                 + '`tools/asynccheck.py` cannot enter, so nothing reads the startup of the page at all.');
+
+    const loaders = [...src.matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1]);
+    assert.ok(loaders.length, `${app}: no load* functions - this case has lost its subject`);
+    const started = [];
+    const finished = [];
+    const g = { console, Object, Math, Number, JSON, Set, Array, String, Promise,
+                $: () => ({ textContent: '', innerHTML: '', value: '' }),
+                esc: (x) => String(x), LEGAL_DISCLAIMER: 'x',
+                showRoot: async () => {},
+                window: { ZOHO_ANALYTICS_SQL: { rules: [] } },
+                chrome: { runtime: { getManifest: () => ({ name: 'Zoost', version: '0.0.0' }) } } };
+    for (const n of loaders) {
+      g[n] = () => { started.push(n); return new Promise((r) => setTimeout(() => { finished.push(n); r(); }, 1)); };
+    }
+    const m = load([sliceFn(rel, 'init')], g);
+    await m.init();
+
+    for (const n of loaders) {
+      assert.ok(started.includes(n), `${app}: init() never calls ${n}() - a section of the page is drawn `
+                                     + 'from whatever the markup happens to say.');
+      assert.ok(finished.includes(n), `${app}: init() returned while ${n}() was still running. Nobody holds `
+                                      + 'that promise, the page registers no unhandledrejection listener, and '
+                                      + 'which flag is set when a Save asks depends on which one lands first.');
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // The folder warning says the same thing everywhere it is said, and does not overstate.
 //
 // Choosing a working folder grants read and write over everything below it, which is the largest

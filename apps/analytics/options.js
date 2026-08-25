@@ -751,7 +751,14 @@ try {
   chrome.storage.onChanged.addListener(otherWindowChanged);
 } catch (_) {}
 
-(function init() {
+// A declaration and a call, not an immediately-invoked expression, and the same shape as the CRM
+// twin - which was converted for this reason and this side was not walked. `functions()` in
+// `tools/asynccheck.py` matches a declaration at the start of a line, so the whole startup of this
+// page, awaits included, was invisible to the one check that reads for a global written after a
+// yield. The four loaders were also fired and not awaited: four promises nobody holds, on a page
+// that registers no `unhandledrejection` listener, and whose order decides which failure flag is
+// set by the time a Save reads it.
+async function init() {
   const m = chrome.runtime.getManifest();
   $('ttl').textContent = m.name;
   $('ver').textContent = 'v' + m.version;
@@ -761,11 +768,9 @@ try {
   // The credits and the version live in the panel's own About dialog, which says the same words -
   // this page keeps the one thing that may not disappear from any user-facing surface.
   $('legal').textContent = LEGAL_DISCLAIMER;
-  loadAi();
-  loadLay();
-  loadDc();
-  loadRx();
-})();
+  await loadDc(); await loadAi(); await loadLay(); await loadRx();
+}
+init();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {
   $(id).oninput = () => { syncLockRow(); markEngineOptions(); };
