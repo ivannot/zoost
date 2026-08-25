@@ -130,15 +130,23 @@
   // until now nothing recorded it. Written where the choice is made, read where the failure is
   // reported - never inferred from the prefix, which is the trap this file already carries a note
   // about (`drepn` the header, `drecn` the cookie, one letter apart and neither derivable).
+  // And its *shape*, which is what decides the one open question about this failure. `cookie()`
+  // changed on 20 August from `split('=')[1]` - the part between the first and the second `=` - to
+  // everything after the first, and those two differ for exactly one kind of value: one carrying an
+  // `=`, which is base64 padding. That commit called the change latent, on the ground that «the
+  // values captured on this account are hex». A length and a yes/no about one character say whether
+  // that ground held, and neither is the token.
   let lastCsrfFrom = null;
+  let lastCsrfShape = '';
   function csrfToken(csrfPrefix) {
     const names = CSRF_COOKIES[csrfPrefix || 'crmcsrfparam'] || CSRF_COOKIES.crmcsrfparam;
-    for (const n of names) { const v = cookie(n); if (v) { lastCsrfFrom = n; return v; } }
+    const shape = (v) => `${v.length} chars, ${v.includes('=') ? 'contains' : 'no'} \u0027=\u0027`;
+    for (const n of names) { const v = cookie(n); if (v) { lastCsrfFrom = n; lastCsrfShape = shape(v); return v; } }
     // Fall back to the other family rather than sending nothing: an empty token is a guaranteed 400,
     // and before this split the shared value was right often enough to be worth trying.
     for (const n of CSRF_COOKIES.crmcsrfparam.concat(CSRF_COOKIES.drepn)) {
       const v = cookie(n);
-      if (v) { lastCsrfFrom = n + ' (fallback - not this family\u0027s own cookie)'; return v; }
+      if (v) { lastCsrfFrom = n + ' (fallback - not this family\u0027s own cookie)'; lastCsrfShape = shape(v); return v; }
     }
     try { const el = document.getElementById('token'); if (el && el.value) { lastCsrfFrom = '#token in the page'; return el.value; } } catch (_) {}
     lastCsrfFrom = 'nowhere - no CSRF cookie was readable';
@@ -275,7 +283,7 @@
     // three words that fit every explanation.
     if (csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
       throw apiError(res.status, path,
-        `${message} - the token was read from ${lastCsrfFrom}`
+        `${message} - the token was read from ${lastCsrfFrom} (${lastCsrfShape || 'no value'})`
         + (retried === 'unprimed' ? ', and the Zoho CRM call made to refresh it failed too' : ', and it was still refused after a refresh'),
         code);
     }

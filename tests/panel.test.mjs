@@ -178,6 +178,27 @@ test('a refused CSRF token says which cookie it came from', () => {
                  'the fallback does not say it is one, so a reader takes a guess for the real thing');
   });
 
+  // **The shape, which is the whole question about the failure reported from a real org.** `cookie()`
+  // changed from «the part between the first and the second `=`» to «everything after the first»,
+  // and those differ for exactly one kind of value: one carrying base64 padding. The commit that
+  // made the change called it latent because the captured values were hex. A length and whether one
+  // character is present settle it, and neither of them is the token.
+  withJar({ drecn: 'aGVsbG8=' }, () => {
+    csrf.csrfToken('drepn');
+    assert.match(csrfCtx.lastCsrfShape, /8 chars/,
+                 `the shape reads ${JSON.stringify(csrfCtx.lastCsrfShape)} - a truncated value and a whole `
+                 + 'one are the same three words in the error without it');
+    assert.match(csrfCtx.lastCsrfShape, /contains/,
+                 'a value carrying the padding does not say so, which is the one fact that separates '
+                 + 'the two readings of the same cookie');
+  });
+  withJar({ drecn: 'deadbeef' }, () => {
+    csrf.csrfToken('drepn');
+    assert.match(csrfCtx.lastCsrfShape, /no '='/,
+                 `a hex value reads ${JSON.stringify(csrfCtx.lastCsrfShape)} - it must be able to say the `
+                 + 'padding is absent, or «contains» proves nothing');
+  });
+
   // And the case that is not a wrong token at all: nothing readable. Sending an empty string is a
   // guaranteed 400, and «the token was read from nowhere» is the one answer that names it.
   withJar({}, () => {
@@ -14658,6 +14679,7 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
     // the sentence a refused deluge call throws, and a free reference would have made every one of
     // those throw a ReferenceError instead - which is what happened on the first attempt.
     lastCsrfFrom: 'drecn',
+    lastCsrfShape: '64 chars, no \u0027=\u0027',
   };
   const { api, NO_CONTENT } = load([
     sliceConst('apps/crm/content-bridge.js', 'NO_CONTENT'),
