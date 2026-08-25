@@ -11609,6 +11609,111 @@ test('no settings page writes over a preference it could not read', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
+// A button that rewrites the form is an edit, and the page has to know it.
+//
+// Unsaved edits are noticed by two listeners on the section, `input` and `change`, so that a field
+// added later is covered without anyone remembering to wire it. Neither of them fires when a script
+// writes into the controls - which is what «Everything», «Safe», «Reset» do - so after pressing one
+// the section was still recorded as untouched. The page then had licence to reload it silently the
+// moment the same key was written from the diagram window or a second settings tab: no conflict box,
+// no question, and the preset the reader had just applied vanished under their eyes.
+//
+// Both the subjects and the answers are derived. A subject is any inline click handler that redraws
+// the form - the convention in both files is `*ToUI()` or `render*()` - and the key it marks has to
+// be one the page actually has, which is what `[data-section]` in its own markup says.
+test('a button that rewrites the form marks its section as edited', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const sections = [...read(`apps/${app}/options.html`).matchAll(/data-section="(\w+)"/g)].map((m) => m[1]);
+    assert.ok(sections.length, `${app}: options.html declares no [data-section] - this case has lost its subject`);
+
+    const lines = read(rel).split('\n')
+      .filter((l) => /^\$\('\w+'\)\.onclick = \(\) => \{.*\};\s*$/.test(l))
+      .filter((l) => /(ToUI|render[A-Z]\w*)\(\)/.test(l));
+    assert.ok(lines.length, `${app}: no one-line click handler redraws the form - the convention has moved`);
+
+    for (const line of lines) {
+      const id = /\$\('(\w+)'\)/.exec(line)[1];
+      const marked = [];
+      const el = () => ({ value: '', checked: false, textContent: '', disabled: false, hidden: false,
+                          style: {}, dataset: {}, innerHTML: '', classList: { add() {}, remove() {}, toggle() {} },
+                          querySelectorAll: () => [], querySelector: () => null, appendChild() {}, focus() {} });
+      const g = { console, Object, Math, Number, JSON, Set, Array, String,
+                  $: () => el(), markDirty: (k) => marked.push(k),
+                  scopeToUI() {}, layToUI() {}, renderTabs() {}, renderRx() {},
+                  SCOPE_FULL: {}, SCOPE_SAFE: {}, LAY_DEFAULT: {}, DRAW_MAX_DEFAULT: 800, TAB_IDS: [],
+                  scope: {}, lay: {}, drawMax: 0, tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], rxCur: [] };
+      // The line is evaluated as written - `$('x').onclick = ...` - and `$` hands back one box, so
+      // what the page attached is what this reads back off it. Rewriting the line into something
+      // else would be testing a transcription.
+      const box = {};
+      g.$ = () => box;
+      try { load([line], g); } catch (e) { assert.fail(`${app}: could not evaluate the handler on ${id} - ${e.message}`); }
+      assert.equal(typeof box.onclick, 'function', `${app}: nothing was attached to ${id}`);
+      box.onclick();
+
+      assert.ok(marked.length, `${app}: pressing ${id} rewrites the form and marks nothing. The section `
+                               + 'reads as untouched, so a write from anywhere else reloads it and the reader loses what they just chose.');
+      for (const k of marked) {
+        assert.ok(sections.includes(k), `${app}: ${id} marks «${k}», which is not a section on the page `
+                                        + `(${sections.join(', ')}) - the mark lands nowhere and is the same as no mark.`);
+      }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// «Saved.» is answered by whether it works, so a settings page that cannot say the second must not
+// say the first.
+//
+// The CRM has said the honest thing since the AI settings shipped - «Saved - but the selected engine
+// still needs a model and an API key.», with the warning flag on - and Analytics said plain success
+// over exactly the same state. The reader then opened the AI panel, one screen away, and found it
+// refusing, with nothing to connect the refusal to the page that had just congratulated them.
+//
+// Derived on both sides rather than named: the saver is the function that writes `aicfg`, and it is
+// driven with an engine selected and neither a model nor a key in it - the state the sentence is
+// about. What is asserted is that the toast is flagged, because that flag is what colours it.
+test('a settings page does not announce success over an AI engine that cannot run', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const src = read(rel);
+    // Both products have more than one function that writes `aicfg` - «Remove the protection» is
+    // another - so the subject is narrowed by what it does rather than by its name: the saver is the
+    // one that composes the config out of the form: it is the only one that reads both the engine
+    // picker and the key boxes.
+    const writers = [...src.matchAll(/async function (\w+)\s*\(/g)].map((m) => m[1])
+      .filter((n) => /saveKeys\(\s*\{\s*aicfg:/.test(sliceFn(rel, n)));
+    const name = writers.find((n) => /\$\('aiengine'\)/.test(sliceFn(rel, n))
+                                     && /\$\('ai_a_key'\)/.test(sliceFn(rel, n)));
+    assert.ok(name, `${app}: no function composes aicfg from the form (${writers.join(', ') || 'none writes it'}) `
+                    + '- this case has lost its subject');
+
+    const vals = { aiengine: 'anthropic', ai_a_model: '', ai_a_key: '', ai_o_model: '', ai_o_key: '',
+                   ai_maxiter: '20', ai_maxtokens: '16384', ai_seedcap: '72000' };
+    const said = [];
+    const el = (id) => ({ value: vals[id] === undefined ? '' : vals[id], checked: false, textContent: '',
+                          hidden: true, classList: { add() {}, remove() {}, toggle() {} }, focus() {}, select() {} });
+    const g = { console, Object, Math, Number, JSON, Promise, Set, Date, Array, String,
+                $: el, toast: (t, bad) => said.push([String(t), !!bad]), MSG: { readFailed: 'READFAIL' },
+                saveKeys: async () => true, stamp: async () => {}, loadAi: async () => {},
+                readCfgForWrite: async () => ({ anthropic: {}, openai: {} }),
+                mergeKeys: async () => {}, engineLabel: (e) => e, aiForget: new Set(), aiPassChanging: false,
+                window: { ZOOST_KEYVAULT: { unlock: async () => null } },
+                chrome: { storage: { session: { remove: async () => {} }, local: { set: async () => {} } } } };
+    const m = load([sliceFn(rel, name)], g);
+    await m[name]();
+
+    assert.equal(said.length, 1, `${app}: ${name}() said ${JSON.stringify(said)} - one sentence was expected`);
+    assert.equal(said[0][1], true,
+                 `${app}: ${name}() announced «${said[0][0]}» over an engine with no model and no key. `
+                 + 'The assistant will refuse in the panel next door and the reader has been told it is set up.');
+    assert.match(said[0][0], /needs a model and an API key/,
+                 `${app}: ${name}() flagged it but said «${said[0][0]}» - the reader needs what is missing, not that something is.`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // The diagram's header names the workspace it is drawing, in that product's own words.
 //
 // Two defects in one line. `graphlogic.js` is byte-identical in both products and said «org» - which

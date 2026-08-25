@@ -384,8 +384,17 @@ async function saveAi() {
     cfg.active = usable[0];
     moved = engineLabel(cfg.active);
   }
+  // **«Saved.» is a claim about the next question the reader will ask, which is «does it work».**
+  // The CRM twin has said the honest thing since it shipped; this side announced plain success over
+  // a configuration the assistant cannot use - an engine selected with no model, or with no key -
+  // and the reader learnt otherwise in the AI panel, one screen away, with nothing connecting the
+  // two. Same words as the twin, same warning flag.
+  const sel = cfg[cfg.active] || {};
+  const ready = !!((sel.apiKey || sel.apiKeyEnc) && sel.model);
   if (!await saveKeys({ aicfg: cfg })) return;
-  toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.` : 'AI settings saved.');
+  toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.`
+    : ready ? 'AI settings saved.'
+    : 'Saved - but the selected engine still needs a model and an API key.', !ready);
   // Re-read from where it was just written, rather than patching the flags by hand: the form has to
   // agree with the disk, and the page has three of them to keep in step (is a key stored, is it
   // encrypted, is a passphrase set). Reconstructing that here is a second copy of loadAi() waiting to
@@ -412,7 +421,14 @@ $('pDrawMax').addEventListener('input', () => {
   drawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
   $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
-$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
+// **A preset is an edit, and the page only counted the ones it could hear.** Marks are attached
+// to the section - one `input`, one `change` - so a field added later is covered without anyone
+// remembering. Neither fires when a script writes into the controls, which is exactly what these
+// buttons do, so the whole form changed under a section the page still believed was untouched.
+// The cost lands on the next write from the diagram window or a second settings tab: an
+// unmarked section is reloaded on the spot, without the conflict box, and the preset the reader
+// had just applied disappeared while they were looking at it.
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
 async function onSaveLay() {
   // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
   // writes it when the reader changes Emphasis in there. Replacing the object threw it away.

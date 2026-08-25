@@ -513,8 +513,15 @@ SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFro
 // defaults at the same time, with nothing said about any of it.
 //
 // A page may only write the settings it can show. What it does not show, it carries.
-$('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); };
-$('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); };
+// **A preset is an edit, and the page only counted the ones it could hear.** Marks are attached
+// to the section - one `input`, one `change` - so a field added later is covered without anyone
+// remembering. Neither fires when a script writes into the controls, which is exactly what these
+// buttons do, so the whole form changed under a section the page still believed was untouched.
+// The cost lands on the next write from the diagram window or a second settings tab: an
+// unmarked section is reloaded on the spot, without the conflict box, and the preset the reader
+// had just applied disappeared while they were looking at it.
+$('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); markDirty('exportScope'); };
+$('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); markDirty('exportScope'); };
 async function onSaveScope() {
   // Nothing is written over a preference this page never managed to read.
   if (scopeLoadFailed) { toast('The stored defaults could not be read, so nothing was saved - reload this page.', true); return; }
@@ -556,7 +563,7 @@ $('pDrawMax').addEventListener('input', () => {
   drawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
   $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
-$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
 async function onSaveLay() {
   // Merged, never replaced. This page edits the sliders; `kind` and `mode` belong to the diagram
   // window, which writes them when the reader tunes a graph inside it. Replacing the object erased
@@ -732,7 +739,7 @@ async function onSaveTabs() {
   toast('Tabs saved.');
 }
 $('saveTabs').onclick = onSaveTabs;
-$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); };
+$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); markDirty('tabPrefs'); };
 
 
 // ---------- guarding against the stale save ----------
