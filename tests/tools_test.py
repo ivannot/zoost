@@ -7327,10 +7327,6 @@ class TheSuiteCountsItself(unittest.TestCase):
                                 f'{ran} is still compared with -ge somewhere')
         self.assertIn('up from', s, 'a rise fails without telling the reader it is a rise')
 
-    def _floors(self):
-        s = self.script()
-        return {k: int(re.search(rf'^{k}=(\d+)', s, re.M).group(1)) for k in ('NODE_FLOOR', 'PY_FLOOR')}
-
     def test_the_expectations_are_reachable(self):
         """A number nothing can reach is a suite that always fails; one under what runs is one that
         measures nothing. Both are read from the script and compared against a count taken here, so
@@ -7345,10 +7341,19 @@ class TheSuiteCountsItself(unittest.TestCase):
         s = self.script()
         want = {k: int(re.search(rf'^{k}=(\d+)', s, re.M).group(1)) for k in ('NODE_EXPECTED', 'PY_EXPECTED')}
 
-        methods = 0
-        for f in sorted((ROOT / 'tests').glob('*.py')):
-            methods += len(re.findall(r'(?m)^\s*def test_\w+', f.read_text(encoding='utf-8')))
+        # **Only the file the battery runs.** This counted every `tests/*.py`, and `run.sh` executes
+        # `tests/tools_test.py` alone - so a second file made the two numbers unreconcilable: raising
+        # `PY_EXPECTED` to satisfy this broke the `-eq` in the script, and lowering it broke this. A
+        # population one number describes and the other does not is not a check, it is a trap for
+        # whoever adds the file.
+        collected = ROOT / 'tests' / 'tools_test.py'
+        self.assertIn(collected.name, s, f'{collected.name} is not what the battery runs any more')
+        methods = len(re.findall(r'(?m)^\s*def test_\w+', collected.read_text(encoding='utf-8')))
         self.assertGreater(methods, 0, 'no python cases found at all - the sweep broke')
+        stray = [f.name for f in sorted((ROOT / 'tests').glob('*_test.py')) if f != collected]
+        self.assertEqual(stray, [],
+                         f'{stray} sit beside the suite and the battery never runs them - either add '
+                         f'them to tests/run.sh or they are cases nobody executes')
         self.assertEqual(want['PY_EXPECTED'], methods,
                          f"PY_EXPECTED is {want['PY_EXPECTED']} and {methods} python cases are declared. "
                          f'None of them expands at run time, so the two are the same number or one of '

@@ -68,6 +68,16 @@ node --test --test-reporter=spec tests/*.test.mjs | tee "$NODEOUT"
 # The spec reporter writes «ℹ tests N», the tap one «# tests N`»; match the number after the word
 # rather than the decoration in front of it, so changing reporter does not silently stop the floor.
 NODE_RAN=$(sed -nE 's/^[^0-9]*tests ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
+# **A skipped case counts as run in that total**, which is the commonest way a case stops running and
+# the one an exact number was supposed to notice. `test('x', { skip: … })` still appears in `tests N`,
+# so the count does not move and the battery stays green over a case nobody executes. Read the
+# reporter's own skipped line and refuse any.
+NODE_SKIPPED=$(sed -nE 's/^[^0-9]*skipped ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
+[ "${NODE_SKIPPED:-0}" -eq 0 ] || {
+  echo "  ${NODE_SKIPPED} node case(s) are skipped. They are counted in the total, so the number below" >&2
+  echo "  cannot notice them: a parked case is a case that is not running." >&2
+  exit 1
+}
 [ "${NODE_RAN:-0}" -eq "$NODE_EXPECTED" ] || {
   if [ "${NODE_RAN:-0}" -lt "$NODE_EXPECTED" ]; then
     echo "  the node suite ran ${NODE_RAN:-no} case(s) and $NODE_EXPECTED were expected - cases stopped" >&2
@@ -94,6 +104,12 @@ echo "── unit: python ──"
 python3 tests/tools_test.py > "$PYOUT" 2>&1 || { cat "$PYOUT"; exit 1; }
 grep -E '^(Ran [0-9]+ tests?|OK|FAILED)' "$PYOUT" || echo "  (tests/tools_test.py printed no summary - it did not run to the end)"
 PY_RAN=$(sed -nE 's/^Ran ([0-9]+) tests?.*/\1/p' "$PYOUT" | tail -1)
+# Same hole on this side: `@unittest.skip` prints «OK (skipped=1)» and leaves «Ran N» where it was.
+PY_SKIPPED=$(sed -nE 's/^OK \(skipped=([0-9]+)\)$/\1/p' "$PYOUT" | tail -1)
+[ "${PY_SKIPPED:-0}" -eq 0 ] || {
+  echo "  ${PY_SKIPPED} python case(s) are skipped, and «Ran ${PY_RAN}» counts them." >&2
+  exit 1
+}
 [ "${PY_RAN:-0}" -eq "$PY_EXPECTED" ] || {
   if [ "${PY_RAN:-0}" -lt "$PY_EXPECTED" ]; then
     echo "  the python suite ran ${PY_RAN:-no} case(s) and $PY_EXPECTED were expected - a file stopped" >&2
