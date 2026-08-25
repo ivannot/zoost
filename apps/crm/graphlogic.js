@@ -430,22 +430,20 @@ function erToggleCut(a, b, away) {
   //
   // A fold is still only a filter, which is the whole reason this is fast; an unfold that restores an
   // id the layout has never placed is not, and it says so by asking for one.
+  // **And the message goes with the draw, not before it.** `erShowMaybeHeavy` defers through a frame,
+  // so `erHint` below ran first and `erShow` then wrote the generic hint line straight over it - the
+  // reader folded a branch and was told how to zoom. That is the defect `erApplyArrangement` was
+  // given the `after` continuation for, in the commit that introduced this branch beside it; the
+  // sibling did not get it. When nothing is laid out again the hint is written here, as it always
+  // was, because there is no frame to wait for.
+  const say = () => {
+    statRefresh();
+    if (after !== before) erHint(after > before ? MSG.folded(after - before) : MSG.unfolded(before - after));
+  };
   const back = erVisibleIds().some((id) => !erIds.includes(id));
-  if (back) { erLaidOut = false; erShowMaybeHeavy(); } else erRender();   // a drawing filter: nothing is laid out again
-  // And the two numbers beside the drawing. `erRender` redraws the boxes; it does not re-run the
-  // counts, so folding thirteen boxes away left the tab badge and the status line both saying 18
-  // while five were drawn - and the hint on the same screen said «13 boxes off the diagram». The
-  // note in `erCovers` has described exactly that for months; teaching `entityBreakdown` to skip
-  // what is folded made the *computation* right and changed nothing, because nobody ran it again.
-  // Found by driving the window rather than reading it.
-  //
-  // Through the dispatcher, because there are two lines and this called one of them by name: with a
-  // focus live, folding a branch swapped the focused sentence for the whole-graph one while the badge
-  // went on counting the focused drawing - measured at 12 against «17 of 18 modules», and in the twin
-  // at 2 against «14 of 25 tables». `statRefresh` is `curFocus ? egoStat() : graphStat()`, so the
-  // unfocused path is exactly what it was.
-  statRefresh();
-  if (after !== before) erHint(after > before ? MSG.folded(after - before) : MSG.unfolded(before - after));
+  if (back) { erLaidOut = false; erShowMaybeHeavy(say); return; }
+  erRender();                             // a drawing filter: nothing is laid out again
+  say();
 }
 
 function linkedUnderFilter() {

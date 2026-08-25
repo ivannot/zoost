@@ -2766,7 +2766,12 @@ function templateUrl(a) {
 async function openZohoAt(url, what) {
   if (sampleRefuse()) return;
   if (!url) { setStatus(MSG.noActionTarget, 'warn'); return; }
-  await goToZoho(url);
+  // **The refusal is the return value, and six callers threw it away.** `goToZoho` answers `null`
+  // on one path only - the origin guard - and that guard has already written «This workspace points
+  // at <somewhere>, which is not a Zoho address. Nothing was opened», in red, for a workspace folder
+  // that came from somebody else. Announcing success on top of it left that sentence on screen for
+  // microseconds and told the reader the page is open. It is not.
+  if (!await goToZoho(url)) return;
   setStatus(`Opened \u00ab${what}\u00bb in Zoho.`, 'ok');
 }
 async function openActionInZoho(a) { await openZohoAt(actionUrl(a), a.name || a.id); }
@@ -2775,21 +2780,21 @@ async function openModulePage(genName, navigable, label) {
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !genName) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  await goToZoho(`${base}/crm/${inst}/tab/${genName}`);
+  if (!await goToZoho(`${base}/crm/${inst}/tab/${genName}`)) return;
   setStatus(`Opened \u00ab${genName}\u00bb in Zoho.`, 'ok');
 }
 async function openModuleLayouts(gen) {
   if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  await goToZoho(`${base}/crm/${inst}/settings/modules/${gen}/layouts`);
+  if (!await goToZoho(`${base}/crm/${inst}/settings/modules/${gen}/layouts`)) return;
   setStatus(`Opened ${gen} layouts in Zoho.`, 'ok');
 }
 async function openModuleLayout(gen, layoutId) {
   if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  await goToZoho(layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`);
+  if (!await goToZoho(layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`)) return;
   setStatus(layoutId ? 'Opened the layout in Zoho.' : `Opened ${gen} layouts in Zoho.`, 'ok');
 }
 function moduleNavigable(m) {
@@ -2864,10 +2869,14 @@ async function reveal(fn) {
   if (sampleRefuse()) return;
   const url = functionsUrl();
   if (!url) { setStatus(MSG.noTarget, 'warn'); return; }
-  let id = await zohoTabId();
-  if (!id) { id = await openTargetZoho(false); if (!id) return; }
+  // **One navigation, not two.** `openTargetZoho` *is* `goToZoho(functionsUrl())`, so the second
+  // call was redundant on the branch where a tab existed and worse on the branch where none did:
+  // `chrome.tabs.create` resolves before the navigation commits, so the fresh tab's `url` is still
+  // empty, `zohoTabId()` fails all three of its tests, and `goToZoho` opens a *second* tab. One
+  // click on «Functions in Zoho» with no CRM tab open left two identical tabs.
   setStatus(MSG.openingFns, 'busy');
-  await goToZoho(url);
+  const at = (await zohoTabId()) ? await goToZoho(url) : await openTargetZoho(false);
+  if (!at) return;
   setStatus(`Zoho\u0027s functions are open - look for \u00ab${fn.displayName || fn.name || fn.apiName}\u00bb.`, 'ok');
 }
 
@@ -5534,7 +5543,7 @@ async function openWorkflowInZoho(id) {
   const ws = bound || {};
   if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding - pull first.', 'warn'); return; }
   const url = `${ws.base}/crm/${ws.instance}/settings/workflow-rules/${id}`;
-  try { await goToZoho(url); setStatus('Opened workflow in Zoho.', 'ok'); }
+  try { if (await goToZoho(url)) setStatus('Opened workflow in Zoho.', 'ok'); }
   catch (e) { setStatus('Could not open: ' + e.message, 'warn'); }
 }
 async function openWorkflow(e) {

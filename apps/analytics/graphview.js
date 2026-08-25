@@ -922,7 +922,20 @@ function setFocus(id) {
   if (scopeAll) {
     // remember the new focus for when the scope goes back, but do not re-lay-out the org
     egoStat();
-    if (curView === 'er') erRender();
+    // **`erUnhide` is the other unfold, and it has the same precondition as the one in
+    // `erToggleCut`.** `erRender` draws `erIds`, and `erIds` is what `erLayout` last placed - which
+    // excludes whatever was folded at the time. So: focus a box, set the scope to everything, fold a
+    // branch, touch any chip (that lays out again, and the folded boxes leave `erIds`), then click
+    // one of them in the Explorer list, which still lists it because that list does not apply folds.
+    // The fold is deleted, the header and the badge count the boxes back, and the drawing does not
+    // have them. Measured on a four-node chain: counted 4, drawn 2.
+    //
+    // The branch two lines down already clears the flag; this is the sibling that was not walked
+    // when the same defect was fixed in `erToggleCut`.
+    if (curView === 'er') {
+      if (erVisibleIds().some((x) => !erIds.includes(x))) { erLaidOut = false; erShowMaybeHeavy(); }
+      else erRender();
+    }
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;

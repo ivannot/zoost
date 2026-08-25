@@ -112,7 +112,7 @@ erTipIds	6d80db9a1ca4	6d80db9a1ca4	identical
 erTipOn	cda3bfa68316	cda3bfa68316	identical
 erTipShow	4ce0ece76994	4ce0ece76994	identical
 erTipText	b770d433afce	b770d433afce	identical
-erToggleCut	1f22c0a5ae3a	1f22c0a5ae3a	identical
+erToggleCut	cfb74873676c	cfb74873676c	identical
 erUnhide	cd9ab515870d	cd9ab515870d	identical
 erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
 erVisibleIds	372e3743dccc	dffd20c3e9ec	divergent
@@ -234,7 +234,7 @@ seedShortcuts	a2eedf0c5050	a2eedf0c5050	identical
 select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	f1130b960701	f1130b960701	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
-setFocus	a8444d56b280	fbd29419ae8c	divergent
+setFocus	e1ed4bc8ee83	aad7cdea1214	divergent
 setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent

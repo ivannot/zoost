@@ -1150,7 +1150,18 @@ const statDrawn = (fallback) => (curView === 'er' && nodesA.length ? new Set(erV
  * function rather than a fifth parameter on something that already has four.
  */
 function statLinks() {
-  const set = statDrawn(null);
+  // **The chips apply on every tab, so this does too.** `statDrawn` answers only on the diagram, and
+  // the count beside it - `entityBreakdown()` - filters by `passKind` wherever the reader is. So on
+  // the Explorer and Relations tabs the header read «2 of 4 functions · 3 links»: three links between
+  // two shown functions, with no «of» and nothing to reconcile them, which is the sentence this
+  // function was written to remove. The schema branch of the same statement never had the asymmetry,
+  // because `statCounts` filters both numbers.
+  // Folds too, which a check written for exactly that caught the moment this fallback was added:
+  // «counts what is on the diagram without asking what was folded off it». `erHiddenSet` is the one
+  // answer to that question and every other counter here already asks it.
+  const gone = erHiddenSet();
+  const set = statDrawn(null)
+    || (nodesA.length ? new Set(nodesA.filter((id) => N[id] && passKind(N[id]) && !gone.has(id))) : null);
   if (!set) return `<b>${DATA.counts.edges}</b> links`;
   const n = edgesAmong([...set]).length;
   return n === DATA.counts.edges
@@ -1257,7 +1268,20 @@ function setFocus(id) {
   if (scopeAll) {
     // remember the new focus for when the scope goes back, but do not re-lay-out the org
     egoStat();
-    if (curView === 'er') erRender();
+    // **`erUnhide` is the other unfold, and it has the same precondition as the one in
+    // `erToggleCut`.** `erRender` draws `erIds`, and `erIds` is what `erLayout` last placed - which
+    // excludes whatever was folded at the time. So: focus a box, set the scope to everything, fold a
+    // branch, touch any chip (that lays out again, and the folded boxes leave `erIds`), then click
+    // one of them in the Explorer list, which still lists it because that list does not apply folds.
+    // The fold is deleted, the header and the badge count the boxes back, and the drawing does not
+    // have them. Measured on a four-node chain: counted 4, drawn 2.
+    //
+    // The branch two lines down already clears the flag; this is the sibling that was not walked
+    // when the same defect was fixed in `erToggleCut`.
+    if (curView === 'er') {
+      if (erVisibleIds().some((x) => !erIds.includes(x))) { erLaidOut = false; erShowMaybeHeavy(); }
+      else erRender();
+    }
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;

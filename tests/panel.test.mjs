@@ -12142,6 +12142,7 @@ test('a box brought back after a relayout reaches the drawing', () => {
   const hints = [];
   let laidOut = 0;
   const ctx = { N: { A: mod('A', ['B', 'D']), B: mod('B', ['C']), C: mod('C', []), D: mod('D', []) },
+                statRefresh: () => {},
                 egoSet: null, erAll: false, curFocus: null, curView: 'er', erEmph: 'relations',
                 DATA: { kind: 'schema', counts: { nodes: 4, edges: 3 } },
                 nodesA: ['A', 'B', 'C', 'D'], edgesA: [['A', 'B'], ['B', 'C'], ['A', 'D']],
@@ -12154,8 +12155,12 @@ test('a box brought back after a relayout reaches the drawing', () => {
   // down - `if (!erLaidOut) { erLayout(); erLaidOut = true; }` - so a caller that asks for a draw
   // without clearing it gets nothing new. A stub that places the boxes unconditionally answers for
   // the flag, and let a plant that drops `erLaidOut = false` pass.
-  ctx.erShowMaybeHeavy = () => {
+  // The continuation too: the hint travels with the draw now, because the draw is deferred through a
+  // frame and the message was being written over by `erShow`'s own line. A stub that drops `after`
+  // answers for the very thing that carries it.
+  ctx.erShowMaybeHeavy = (after) => {
     if (!ctx.erLaidOut) { laidOut++; ctx.erIds = m.erVisibleIds(); ctx.erLaidOut = true; }
+    if (after) after();
   };
   const m = load([sliceConst(G, 'KINDOF'), sliceConst(G, 'CONDITION_KEYS'), sliceConst(G, 'erCandidate'),
                   sliceFn(G, 'passKind'), sliceFn(L, 'erHiddenSet'), sliceFn(G, 'erFieldsFor'),
@@ -12203,24 +12208,80 @@ test('the call graph header counts the links on the drawing', () => {
   const G = 'apps/crm/graphview.js';
   const ctx = { DATA: { kind: 'calls', counts: { edges: 9 } }, Object, Array, Set, String, console,
                 curView: 'er', nodesA: ['a', 'b', 'c'],
+                N: { a: { id: 'a', category: 'x' }, b: { id: 'b', category: 'x' }, c: { id: 'c', category: 'y' } },
+                hiddenKinds: new Set(['y']), onlyConds: new Set(),
+                erCut: new Map(), erIds: ['a', 'b'],
                 edgesA: [['a', 'b'], ['b', 'c'], ['a', 'c']],
                 erVisibleIds: () => ['a', 'b'] };
-  const m = load([sliceConst(G, 'edgesAmong'), sliceConst(G, 'statDrawn'), sliceFn(G, 'statLinks')], ctx);
+  const m = load([sliceConst(G, 'KINDOF'), sliceConst(G, 'CONDITION_KEYS'), sliceFn(G, 'passKind'),
+                  sliceFn('apps/crm/graphlogic.js', 'erHiddenSet'),
+                  sliceConst(G, 'edgesAmong'), sliceConst(G, 'statDrawn'), sliceFn(G, 'statLinks')], ctx);
 
   assert.match(m.statLinks(), /<b>1<\/b>/,
                `the header says ${m.statLinks()} - one arc joins the two boxes on screen`);
   assert.match(m.statLinks(), /of 9/,
                `the header says ${m.statLinks()} - a partial count with no «of» reads as the whole graph`);
 
-  // Off the diagram tab there is no drawing to count, and the org's own number is the honest one.
+  // **Off the diagram tab the chips still apply**, and the count beside this one - the entity
+  // breakdown - has always filtered by them wherever the reader is. Answering with the org's total
+  // there put «2 of 4 functions · 3 links» on screen: three links between two shown functions, with
+  // no «of» and nothing to reconcile them, which is the sentence this exists to remove.
   ctx.curView = 'explorer';
+  assert.match(m.statLinks(), /<b>1<\/b>/,
+               `on the Explorer tab with a chip off it says ${m.statLinks()}`);
+  assert.match(m.statLinks(), /of 9/, `on the Explorer tab it says ${m.statLinks()} - no «of» to reconcile it`);
+
+  // With nothing laid out at all there is no set to count, and the org's own number is the honest one.
+  ctx.nodesA = [];
   assert.equal(m.statLinks(), '<b>9</b> links',
-               `away from the diagram it says ${m.statLinks()} instead of what the org holds`);
+               `before the graph has arrived it says ${m.statLinks()} instead of what the org holds`);
+  ctx.nodesA = ['a', 'b', 'c'];
 
   // And when everything is drawn, no «of»: a number qualified against itself is noise.
   ctx.curView = 'er';
   ctx.DATA.counts.edges = 1;
   assert.equal(m.statLinks(), '<b>1</b> links', `it says ${m.statLinks()} when the drawing is the whole graph`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// A refusal to navigate is not followed by a line saying it worked.
+//
+// `goToZoho` answers `null` on one path - the origin guard - and that guard has already written «This
+// workspace points at <somewhere>, which is not a Zoho address. Nothing was opened», in red, for a
+// workspace folder that came from somebody else. Six callers ignored the return and announced
+// success on top of it, so the one sentence that would make a reader check where that folder came
+// from was on screen for microseconds.
+//
+// Derived: every caller of `goToZoho` in either panel that says something afterwards must have
+// looked at what it answered.
+test('nothing says a Zoho page opened when the navigation was refused', () => {
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const names = [...src.matchAll(/^async function (\w+)\s*\(/gm)].map((m) => m[1]);
+    let seen = 0;
+    for (const n of names) {
+      const body = sliceFn(`apps/${app}/sidepanel.js`, n)
+        .split('\n').map((l) => l.replace(/(^|[^:'"`\\])\/\/.*$/, '$1')).join('\n');
+      const call = body.indexOf('goToZoho(');
+      if (call < 0 || n === 'goToZoho') continue;
+      const after = body.slice(call);
+      const says = /set?[sS]tatus\(\s*[^)]*'ok'/.test(after) || /status\([^)]*'ok'/.test(after);
+      if (!says) continue;
+      seen++;
+      // The property is «the answer is used», and the shape that throws it away is a bare statement:
+      // a line that is nothing but the call. Anything else - an `if`, an assignment, a `return`, a
+      // conditional - has it in hand.
+      const discarded = body.split('\n')
+        .filter((l) => /^\s*(await\s+)?goToZoho\(/.test(l))
+        .map((l) => l.trim().slice(0, 60));
+      assert.deepEqual(discarded, [],
+                       `${app}: ${n}() calls goToZoho and then says a page opened, without looking at `
+                       + `what it answered: ${JSON.stringify(discarded)}. It answers null when the `
+                       + 'workspace points somewhere that is not Zoho, and has already said so in red.');
+    }
+    assert.ok(seen > 0 || app === 'analytics',
+              `${app}: no caller announces success after goToZoho - this case has lost its subject`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
