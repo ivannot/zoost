@@ -58,7 +58,7 @@ copyCode	b81ea73b94f0	582021ac794c	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
 dirtyPeer	5f62d305d70c	5f62d305d70c	identical
-dropWorkspaceState	9970afd3e184	167539fa76e8	divergent
+dropWorkspaceState	32638959a5ae	167539fa76e8	divergent
 egoStat	07126f3c9de0	07126f3c9de0	identical
 emptyReason	f7a750117acd	c6461ab20713	divergent
 engineIncomplete	54560440576d	54560440576d	identical
@@ -196,7 +196,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	088d7c40f588	bd1051a4299b	divergent
+pullAll	51bd90df0425	bd1051a4299b	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical

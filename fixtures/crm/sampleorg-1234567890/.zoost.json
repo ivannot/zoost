@@ -9,34 +9,46 @@
   "lastPull": "2026-08-07T10:00:00.000Z",
   "access": {
     "functions": {
+      "state": "ok",
+      "status": 0,
       "at": "2026-08-07T10:00:00.000Z",
-      "pulledAt": "2026-08-07T10:00:00.000Z",
-      "ok": true
+      "pulledAt": "2026-08-07T10:00:00.000Z"
     },
     "modules": {
+      "state": "ok",
+      "status": 0,
       "at": "2026-08-07T10:00:00.000Z",
-      "pulledAt": "2026-08-07T10:00:00.000Z",
-      "ok": true
+      "pulledAt": "2026-08-07T10:00:00.000Z"
     },
     "workflows": {
+      "state": "ok",
+      "status": 0,
       "at": "2026-08-07T10:00:00.000Z",
-      "pulledAt": "2026-08-07T10:00:00.000Z",
-      "ok": true
+      "pulledAt": "2026-08-07T10:00:00.000Z"
     },
     "schedules": {
+      "state": "ok",
+      "status": 0,
       "at": "2026-08-07T10:00:00.000Z",
-      "pulledAt": "2026-08-07T10:00:00.000Z",
-      "ok": true
+      "pulledAt": "2026-08-07T10:00:00.000Z"
+    },
+    "actions": {
+      "state": "ok",
+      "status": 0,
+      "at": "2026-08-07T10:00:00.000Z",
+      "pulledAt": "2026-08-07T10:00:00.000Z"
     },
     "connections": {
+      "state": "ok",
+      "status": 0,
       "at": "2026-08-07T10:00:00.000Z",
-      "pulledAt": "2026-08-07T10:00:00.000Z",
-      "ok": true
+      "pulledAt": "2026-08-07T10:00:00.000Z"
     },
     "failures": {
+      "state": "ok",
+      "status": 0,
       "at": "2026-08-07T10:00:00.000Z",
-      "pulledAt": "2026-08-07T10:00:00.000Z",
-      "ok": true
+      "pulledAt": "2026-08-07T10:00:00.000Z"
     }
   }
 }

@@ -399,7 +399,16 @@ const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_
 let listGap = null;
 // Set *and* cleared by every list: it only ever set, so a hole from one pull outlived the pull that
 // filled it - and a sentence that cannot go away is one nobody reads.
-function noteListGap(why) { listGap = why ? String(why).slice(0, 120) : null; }
+let listGapWho = '';
+// **Read by whoever is last to speak, and cleared by nobody in between.** It was spent by
+// `downloadMissing` - the last word of `pullCurrent` and the *first* of six areas in a Pull all -
+// so on the button most people press, five summaries painted over it and the run closed green
+// with a whole language of the org missing from the count. The early return for «nothing to
+// download» skipped it entirely, which is every pull after the first. `takeListGap()` is what a
+// closing line calls; anything that is not a closing line leaves it alone.
+function noteListGap(why, which) { listGap = why ? String(why).slice(0, 120) : null; listGapWho = why ? (which || []).join(', ') : ''; }
+function listGapNote() { return listGap ? ` Zoho would not list ${listGapWho ? `\u00ab${listGapWho}\u00bb` : 'one of this org\u0027s function languages'} (${listGap}) - if it has any, they are not in this count.` : ''; }
+function takeListGap() { const t = listGapNote(); listGap = null; listGapWho = ''; listProbe = null; return t; }
 // What the second list ask answered when it did not fail. Kept and shown because the alternative
 // is what has just happened: a value chosen by analogy, a pull that surfaced nothing, and no way
 // to tell «this org has none» from «that request is wrong» without a capture. It disappears from
@@ -1888,7 +1897,8 @@ async function rebuildTree() {
   // in green, under 122 «Downloading n/121…» lines, and pressing Refresh could not bring it back
   // because the values were gone. The pull's own closing line reads them too, and only a load that
   // nobody followed with a download clears them.
-  const gap = listGap;
+  // Read, never spent: the closing line of the pull is what clears these.
+  const gap = listGapNote();
   const probe = listProbe;
   // **What could not be read is part of the answer.** Every sidecar that failed to open used to be
   // swallowed one by one, so a mirror the browser could not read at all closed on «120 functions
@@ -1898,7 +1908,7 @@ async function rebuildTree() {
   // existed.
   setStatus(`${treeData.length} functions (${dl} downloaded`
     + (unmirrored ? `, ${unmirrored} listed without source` : '') + ').'
-    + (gap ? ` Zoho would not list one of this org's function languages (${gap}) - if it has any, they are not in this count.` : '')
+    + gap
     + (probe ? ` ${probe}` : '')
     + (unreadableMetas.length
       ? ` ${unreadableMetas.length} file(s) could not be read - what they hold is not in this list.`
@@ -3814,12 +3824,23 @@ async function contentSearch() {
 // its rows from the previous index are carried forward, which keeps them in the tree and keeps the
 // prune from taking their files. A language nobody has an old row for contributes nothing.
 async function mergeUnanswered(entries, unanswered, op) {
-  const langs = new Set((unanswered || []).map((x) => String(x).toLowerCase()));
-  if (!langs.size) return entries;
+  if (!(unanswered || []).length) return entries;
   let prev = [];
   try { const t = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(t)) prev = t; } catch (_) {}
   const have = new Set(entries.map((e) => String(e.id)));
-  const kept = prev.filter((e) => e && langs.has(String(e.language || 'deluge').toLowerCase()) && !have.has(String(e.id)));
+  // **Every non-Deluge row, not the ones whose language matches the ask that failed.** The ask carries
+  // the query value and a row carries the response value, and the bridge's own comment says they
+  // differ - `nodejs` is what is asked for and `nodejs_22` is what comes back. Comparing them for
+  // equality meant that when the failing ask was spelled differently from the rows it would have
+  // returned, nothing was carried and those functions were written out of the index: the deletion this
+  // function exists to prevent, surviving in the one case the code documents as real.
+  //
+  // So the question is not «which language failed» but «can I still tell that this row is gone», and
+  // with any ask refused the answer for every non-Deluge row is no. Deluge is walked on its own and
+  // its failure is a failed pull, so a Deluge row missing from the list really is missing. The cost is
+  // that a non-Deluge function Zoho has genuinely deleted lingers until a pull where every language
+  // answers - which is the right side to err on, and the side the rest of this file already takes.
+  const kept = prev.filter((e) => e && !isDeluge(e.language) && !have.has(String(e.id)));
   return kept.length ? entries.concat(kept) : entries;
 }
 async function pullAll() {
@@ -3837,7 +3858,7 @@ async function pullAll() {
     // second ask is deliberately allowed to fail without taking the pull down with it - which is
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
     // functions produces exactly the silent, complete-looking mirror this change is undoing.
-    noteListGap(r.otherFailed);
+    if (op.current()) noteListGap(r.otherFailed, r.unanswered);   // the answer describes the workspace we asked from
     noteListProbe(r);
     // Same rule as the reconciler, and here it was worse: the truncation was reported *after* the
     // pruning had already run, so the warning described files that were already gone.
@@ -4183,7 +4204,7 @@ async function reconcileNow(op) {
     // second ask is deliberately allowed to fail without taking the pull down with it - which is
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
     // functions produces exactly the silent, complete-looking mirror this change is undoing.
-    noteListGap(r.otherFailed);
+    if (op.current()) noteListGap(r.otherFailed, r.unanswered);   // the answer describes the workspace we asked from
     noteListProbe(r);
     // A list that stopped early is not a statement about what exists: it is a statement about how
     // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
@@ -4806,6 +4827,11 @@ function clearConversationState() {
   return had;
 }
 function dropWorkspaceState() {
+  // These two describe the list of *a* workspace, and survived into the next one: pick another org,
+  // or press + Sample - which never contacts Zoho at all - and its tree line closed on «Zoho would
+  // not list one of this org's function languages». The sixth question this repository asks of every
+  // change is what survives a change of workspace, and these were two more answers to it.
+  listGap = null; listGapWho = ''; listProbe = null;
   const had = clearConversationState();
   dropFileCaches();   // everything read out of a file - listed once, in the function below
   // Relative paths mean nothing outside the folder they came from: a removal that failed in one
@@ -5481,7 +5507,9 @@ async function pullEverything() {
   // refused, the other is what you told it not to ask for. A pull that quietly covered less than the
   // whole org without saying so is a mirror you cannot trust.
   const note = forbiddenNote()
-    + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '');
+    + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '')
+    // The run's own last word, because five areas speak after the functions one does.
+    + takeListGap();
   if (op.current()) setStatus(summary + note, note ? 'warn' : summaryKind);
   // In a finally, because the body above calls renderers and helpers that are not individually
   // guarded - one exception used to leave `pullBusy` true and the whole panel locked until reopen.
@@ -5549,7 +5577,13 @@ async function downloadMissing() {
   // `mirrored` first: asking `fetchOne` for one of these answers nothing, and counting that as a
   // failed download would put a number on screen that no retry could ever bring down.
   const pending = treeData.filter((e) => e.mirrored !== false && (!e.downloaded || e.stale || e.pathChanged));   // stale = older schema, a rename, or Zoho's updatedTime moved
-  if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
+  if (!pending.length) {
+    // Nothing to fetch is a pull outcome like any other, and it is the outcome of every pull after
+    // the first - so this is where a census that came back short was dropped in silence, always.
+    const short = pullActive ? '' : takeListGap();
+    setStatus('All functions downloaded.' + short, short ? 'warn' : 'ok');
+    updateMissingButton(); return;
+  }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0, cleanup = 0;
   // The longest loop in the panel - one fetch and a pause per function, so minutes on a large org,
@@ -5585,11 +5619,10 @@ async function downloadMissing() {
     // A census that came back short outlives the download that followed it: it is the last thing
     // written, and it is a warning, because «all downloaded» over a list missing a whole language of
     // the org is the green sentence this project exists to refuse.
-    const short = listGap; listGap = null; listProbe = null;
+    const short = pullActive ? '' : takeListGap();   // in a Pull all, the run's own closing line says it
     setStatus((fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
       : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`
-      : `All ${ok} functions downloaded.`)
-      + (short ? ` Zoho would not list one of this org's function languages (${short}) - if it has any, they are not in this count.` : ''),
+      : `All ${ok} functions downloaded.`) + short,
       (fail || cleanup || short) ? 'warn' : 'ok');
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }

@@ -17452,12 +17452,23 @@ test('a refused language keeps its own rows and does not stop the pull', async (
     const files = { 'functions/index.json': JSON.stringify(prev) };
     const op = { root: {}, current: () => true, say: () => {},
                  read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } };
-    const m = load([sliceFn(rel, 'mergeUnanswered')], { console, Object, JSON, Set, Array, String, Promise });
+    const m = load([sliceFn(rel, 'mergeUnanswered')], { console, Object, JSON, Set, Array, String, Promise,
+      isDeluge: (l) => !l || /^deluge/i.test(String(l)) });
     return (await m.mergeUnanswered([{ id: 'd1', language: 'deluge' }], unanswered, op)).map((e) => e.id).join(',');
   };
   assert.equal(await run(['nodejs_22']), 'd1,n1',
                'the row for the language that would not answer was dropped from the index, so the '
                + 'function vanishes from the tree and the prune below takes its files');
+  // **The ask carries the query value and the row carries the response value, and they differ** -
+  // `nodejs` is asked for, `nodejs_22` comes back. Matching them for equality meant that when the
+  // failing ask was spelled differently from the rows it would have returned, nothing was carried and
+  // those functions were written out of the index: the deletion this function exists to prevent.
+  assert.equal(await run(['nodejs']), 'd1,n1',
+               'the failing ask was spelled differently from the row it would have returned, so the row '
+               + 'was treated as deleted - which is the whole defect, one spelling along');
+  assert.equal(await run(['java']), 'd1,n1',
+               'a refusal of any language leaves every non-Deluge row unverifiable, and unverifiable is '
+               + 'not deleted');
   assert.equal(await run([]), 'd1',
                'a function Zoho really has deleted was carried forward, so the mirror never forgets anything');
 
@@ -17616,34 +17627,54 @@ test('a link to a function with no source here says which absence it is', () => 
 });
 
 // ---------------------------------------------------------------------------------------------
-// A census that came back short outlives the download that followed it, and is a warning.
+// A census that came back short is on the line that closes the pull the reader pressed.
 //
-// The sentence was written by `rebuildTree`, which a pull calls *before* downloading - so it lived
-// for one tick, in green, under 122 «Downloading n/121…» lines, and pressing Refresh could not bring
-// it back because the value had been consumed. Measured on screen: one millisecond. «All 120
-// downloaded» over a list missing a whole language of the org is the green sentence this project
-// exists to refuse.
-test('a list that came back short is still on screen when the pull ends', () => {
-  const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
-  // Derived from the two functions that write the closing line, because naming the sentence would
-  // pass on a build that writes it and then paints over it.
-  const tree = sliceFn('apps/crm/sidepanel.js', 'rebuildTree').replace(/^\s*\/\/.*$/gm, '');
-  assert.match(tree, /const gap = listGap;\s*$/m,
-               'the tree load consumes the gap, so the pull that follows it cannot say anything and a '
-               + 'Refresh cannot bring it back');
-  assert.match(tree, /\(unreadableMetas\.length \|\| gap \|\| probe\) \? 'warn' : 'ok'/,
-               'the line carrying «a whole language of your org may be missing» is painted green');
+// It was written by the tree load and spent by `downloadMissing` - which is the last word of «Pull
+// functions» and the *first* of six areas in «Pull all», so on the button most people press five
+// summaries painted over it and the run ended green. The early return for «nothing to download»
+// never produced it at all, which is every pull after the first. And `dropWorkspaceState` did not
+// clear it, so it followed the reader into the next workspace and onto the sample, which never
+// contacts Zoho.
+//
+// Derived from the three closing lines rather than from a sentence, because a build that writes the
+// sentence and then paints over it passes any check that greps for the words.
+test('a list that came back short is on the line that closes the pull', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const bare = (fn) => sliceFn(rel, fn).replace(/^\s*\/\/.*$/gm, '');
+  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
 
-  const dm = sliceFn('apps/crm/sidepanel.js', 'downloadMissing').replace(/^\s*\/\/.*$/gm, '');
-  assert.match(dm, /const short = listGap; listGap = null;/,
-               'the pull\'s closing line does not read the gap, so «All N downloaded» is the last word '
-               + 'over a census that was never complete');
-  assert.match(dm, /\(fail \|\| cleanup \|\| short\) \? 'warn' : 'ok'/,
-               'and it announces that as fine');
-  // Cleared as well as set: a hole from one pull outlived the pull that filled it.
-  assert.match(src, /function noteListGap\(why\) \{ listGap = why \? [^;]+: null; \}/,
-               'the gap can only be set, so the sentence never goes away and nobody reads it');
+  // Only a closing line may consume it; everything else reads.
+  // Its own declaration is not a call site.
+  const takers = [...src.matchAll(/(?<!function )takeListGap\(\)/g)].length;
+  assert.equal(takers, 3, `takeListGap() is called ${takers} time(s) - it belongs to the three lines `
+                          + 'that close a run: the two in downloadMissing and the one in pullEverything');
+  assert.match(bare('rebuildTree'), /const gap = listGapNote\(\);/,
+               'the tree load consumes the note again, so the pull that follows cannot say it');
+
+  const dm = bare('downloadMissing');
+  assert.match(dm, /if \(!pending\.length\) \{[\s\S]{0,240}takeListGap\(\)/,
+               'the «nothing to download» return says nothing about a census that came back short - and '
+               + 'that is the outcome of every pull after the first');
+  assert.match(dm, /\(fail \|\| cleanup \|\| short\) \? 'warn' : 'ok'/, 'and it announces it as fine');
+
+  assert.match(bare('pullEverything'), /\+ takeListGap\(\);/,
+               'Pull all closes on the last area it ran, so the functions warning is painted over by '
+               + 'five summaries and the run ends green');
+
+  // It belongs to a workspace, and did not leave with it.
+  assert.match(bare('dropWorkspaceState'), /listGap = null;/,
+               'the note follows the reader into the next workspace - and onto + Sample, which never '
+               + 'contacts Zoho at all');
+  // The write happens after an await, so it must ask whether this is still the workspace that asked.
+  // Both of them: it is written from two pulls, and one guarded call site is not a guarded write.
+  const notes = [...src.matchAll(/noteListGap\(r\.otherFailed/g)].length;
+  const guarded = [...src.matchAll(/if \(op\.current\(\)\) noteListGap\(r\.otherFailed/g)].length;
+  assert.equal(guarded, notes,
+               `${notes - guarded} of ${notes} write(s) of the gap happen after an await with nothing `
+               + 'asking whether this is still the workspace that asked - a switch during the list puts '
+               + "one org's gap into the flag the next org's tree load reads");
 });
+
 
 // ---------------------------------------------------------------------------------------------
 // And the badge on the card tells the two absences apart, like the block under it.
