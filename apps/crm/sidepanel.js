@@ -397,7 +397,9 @@ const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_
 // written by both pulls that list functions and consumed where the count is reported - a flag
 // written by several and read by none is a shape this repository has already paid for once.
 let listGap = null;
-function noteListGap(why) { listGap = String(why || 'no answer').slice(0, 120); }
+// Set *and* cleared by every list: it only ever set, so a hole from one pull outlived the pull that
+// filled it - and a sentence that cannot go away is one nobody reads.
+function noteListGap(why) { listGap = why ? String(why).slice(0, 120) : null; }
 // What the second list ask answered when it did not fail. Kept and shown because the alternative
 // is what has just happened: a value chosen by analogy, a pull that surfaced nothing, and no way
 // to tell «this org has none» from «that request is wrong» without a capture. It disappears from
@@ -1881,8 +1883,13 @@ async function rebuildTree() {
   // Listed and not mirrored is its own number, because it belongs to neither of the other two: it
   // is not «downloaded» and it is not waiting to be.
   const unmirrored = treeData.filter((e) => e.mirrored === false).length;
-  const gap = listGap; listGap = null;   // said once, on the line that reports the count it belongs to
-  const probe = listProbe; listProbe = null;
+  // **Read, and not spent.** These used to be nulled here, and the line that carries them is written
+  // by `rebuildTree` - which a pull calls *before* downloading, so the sentence lived for one tick,
+  // in green, under 122 «Downloading n/121…» lines, and pressing Refresh could not bring it back
+  // because the values were gone. The pull's own closing line reads them too, and only a load that
+  // nobody followed with a download clears them.
+  const gap = listGap;
+  const probe = listProbe;
   // **What could not be read is part of the answer.** Every sidecar that failed to open used to be
   // swallowed one by one, so a mirror the browser could not read at all closed on «120 functions
   // (120 downloaded).» in green - the rows drawn from file names alone, every one marked as present.
@@ -1897,7 +1904,7 @@ async function rebuildTree() {
       ? ` ${unreadableMetas.length} file(s) could not be read - what they hold is not in this list.`
       : '')
     + (statsDeferred() ? ' Size and call counts appear when the diagram, the audit or a code search builds the map.' : ''),
-  unreadableMetas.length ? 'warn' : 'ok');
+  (unreadableMetas.length || gap || probe) ? 'warn' : 'ok');
   await refreshContext();
 }
 
@@ -3316,7 +3323,15 @@ async function navOpen(p) {
   if (p.startsWith('connections/')) { goMode('connections'); await rebuildConnections(); const e = find(connectionData); return e ? openConnection(e) : gone(); }
   if (p.startsWith('actions/')) { goMode('actions'); await rebuildActions(); const e = find(actionData); return e ? openAction(e) : gone(); }
   if (p.startsWith('modules/')) { goMode('modules'); await rebuildModules(); return openModule(p); }
-  goMode('functions'); return openFile(p);
+  // Functions were the one kind here that opened without asking whether there is anything to open -
+  // every other branch answers `gone()`. A step to a function whose source this mirror does not hold
+  // says which of the two it is, in the same words the row does, instead of closing the pane.
+  goMode('functions');
+  const fe = treeData.find((x) => x.path === p);
+  if (fe && fe.mirrored === false) { selectRow(p); setStatus(MSG.notMirrored(langLabel(fe.language)), 'warn'); return; }
+  if (fe && !fe.downloaded) { selectRow(p); return void fetchThenRedrawRow(fe); }
+  if (!fe) return gone();
+  return openFile(p);
 }
 
 /** Go to step `i`. The position moves even when the item turns out not to be there any more - the
@@ -3822,7 +3837,7 @@ async function pullAll() {
     // second ask is deliberately allowed to fail without taking the pull down with it - which is
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
     // functions produces exactly the silent, complete-looking mirror this change is undoing.
-    if (r.otherFailed) noteListGap(r.otherFailed);
+    noteListGap(r.otherFailed);
     noteListProbe(r);
     // Same rule as the reconciler, and here it was worse: the truncation was reported *after* the
     // pruning had already run, so the warning described files that were already gone.
@@ -4033,7 +4048,12 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
   Object.values(nodes).forEach((n) => n.calls.forEach((c) => edges.add(n.id + '\u0000' + c)));
   return Object.assign({}, g, {
     nodes,
-    counts: Object.assign({}, g.counts, { nodes: Object.keys(nodes).length, edges: edges.size, dead_suspects: dead }),
+    // `nodes` here counts everything the drawing holds - functions, actions, workflows, schedules,
+    // connections, modules - and `mirrorNote` reads it as «functions in this mirror», which is how
+    // the window came to print «over 168 of 123»: more functions in the mirror than the org has,
+    // contradicting the counts on its own line. The function count is kept under its own name.
+    counts: Object.assign({}, g.counts, { fnNodes: g.counts ? g.counts.nodes : undefined,
+      nodes: Object.keys(nodes).length, edges: edges.size, dead_suspects: dead }),
   });
 }
 async function openGraph() {
@@ -4163,7 +4183,7 @@ async function reconcileNow(op) {
     // second ask is deliberately allowed to fail without taking the pull down with it - which is
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
     // functions produces exactly the silent, complete-looking mirror this change is undoing.
-    if (r.otherFailed) noteListGap(r.otherFailed);
+    noteListGap(r.otherFailed);
     noteListProbe(r);
     // A list that stopped early is not a statement about what exists: it is a statement about how
     // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
@@ -5562,9 +5582,15 @@ async function downloadMissing() {
     if (ok) await saveMetaIndex(onDisk, op);
     if (!op.current()) return;
     updateMissingButton();
-    setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
+    // A census that came back short outlives the download that followed it: it is the last thing
+    // written, and it is a warning, because «all downloaded» over a list missing a whole language of
+    // the org is the green sentence this project exists to refuse.
+    const short = listGap; listGap = null; listProbe = null;
+    setStatus((fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
       : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`
-      : `All ${ok} functions downloaded.`, (fail || cleanup) ? 'warn' : 'ok');
+      : `All ${ok} functions downloaded.`)
+      + (short ? ` Zoho would not list one of this org's function languages (${short}) - if it has any, they are not in this count.` : ''),
+      (fail || cleanup || short) ? 'warn' : 'ok');
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 function updateRow(e) {
@@ -5853,7 +5879,17 @@ function openFunctionFromWorkflow(id, name) {
   let ent = treeData.find((x) => x.id === nid) || treeData.find((x) => (x.display_name || '').toLowerCase() === nm || (x.api_name || '').toLowerCase() === nm);
   if (!ent) { setStatus(`Function "${name}" not in workspace - pull functions first.`, 'warn'); return; }
   if (!tabReachable('functions')) return;
-  setMode('functions'); openFromTree(ent.path);
+  // **Arriving at a row is not the same as opening a file.** This asked «is it in `treeData`» and
+  // then opened its path unconditionally - so a function this mirror has no source for closed the
+  // pane the reader was looking at, flashed `Read failed: NotFoundError`, had that overwritten in
+  // the same tick by the tree count, and recorded a step in the history that Back/Forward replays
+  // for ever. The tree row two functions over has answered this properly since it was written; every
+  // *link* to the same row went round it.
+  setMode('functions');
+  selectRow(ent.path);
+  if (ent.mirrored === false) { setStatus(MSG.notMirrored(langLabel(ent.language)), 'warn'); return; }
+  if (!ent.downloaded) { void fetchThenRedrawRow(ent); return; }
+  openFromTree(ent.path);
 }
 
 

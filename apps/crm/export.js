@@ -231,7 +231,11 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         + `</div>` : '';
       fnHtml += `<section class="item" id="${escA(fnAnchor(fnKey(f)))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
-        + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.downloaded ? '' : '<span class="badge no">not downloaded</span>'}</div>`
+        + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.mirrored === false ? `<span class="badge no">${esc(langLabelOf(f.language))}, source not read</span>`
+          // Two facts, one badge: «not downloaded» is a pull that has not happened and this is a
+          // language nothing here reads. The block below already tells them apart; the badge that
+          // labels the card did not, so the two arrived under the same word.
+          : f.downloaded ? '' : '<span class="badge no">not downloaded</span>'}</div>`
         // Three states, not two. «Not downloaded» has a badge in the header; «downloaded and the
         // file could not be read» had nothing at all - the section simply ended, and a reader
         // without the extension saw a function that looks like every other one and happens to show
@@ -717,7 +721,7 @@ function buildExportMarkdown(d, scope) {
   md += CONTENTS;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
-  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
+  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source not read` : n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
   mods.slice().sort(byField('api_name')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
   if (wfs.length) {

@@ -160,6 +160,7 @@ apps/crm/export.js	n.api_name || ''
 apps/crm/export.js	n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}
 apps/crm/export.js	n.description ? ' - ' + first(n.description) : ''
 apps/crm/export.js	n.downloaded ? '' : ' \u00b7 not downloaded'
+apps/crm/export.js	n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source not
 apps/crm/export.js	n.modified_by ? 'by ' + n.modified_by : ''
 apps/crm/export.js	n.modulesUnknown
 apps/crm/export.js	n.name

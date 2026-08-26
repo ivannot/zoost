@@ -17542,3 +17542,130 @@ test('the assistant does not deny a function it was told about', async () => {
   const gone = String(await m.aiExecTool('get_function', { name: 'neverExisted' }, op));
   assert.match(gone, /^Function not found/, 'a name that is genuinely absent stopped being reported as absent');
 });
+
+// ---------------------------------------------------------------------------------------------
+// The diagram's coverage sentence counts functions, and its own line counts everything.
+//
+// `callGraphWithContext` overwrites `counts.nodes` with the size of the augmented graph - functions
+// plus actions, workflows, schedules, connections and modules - and `mirrorNote` read it as
+// «functions in this mirror». The window printed «over 168 of 123»: more functions in the mirror than
+// the org has, contradicting the counts printed beside it on the same line. Health and both reports
+// were right because they read the plain graph's counts, not the window's.
+test('the diagram says how many functions are in the mirror, not how many boxes it drew', () => {
+  const rel = 'apps/crm/graphview.js';
+  const say = (counts) => {
+    const m = load([sliceFn(rel, 'mirrorNote')], { console, Object, String, Number,
+      DATA: { counts }, esc: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x) });
+    return m.mirrorNote();
+  };
+  const drawn = say({ nodes: 168, fnNodes: 120, inOrg: 123, notInMirror: 1, notMirrorable: 2 });
+  assert.match(drawn, /over 120 of 123/,
+               `the window said «${(/over [^<]*/.exec(drawn) || [''])[0]}» - it is reporting every box it `
+               + 'drew as a function, and the same line prints the other kinds beside it');
+
+  // An older payload with no fnNodes falls back rather than saying nothing.
+  assert.match(say({ nodes: 120, inOrg: 123, notInMirror: 3 }), /over 120 of 123/,
+               'a graph from before this field existed lost its coverage sentence');
+  // And the sentence appears at all when the only absence is a language this build does not read.
+  assert.match(say({ nodes: 168, fnNodes: 120, inOrg: 122, notInMirror: 0, notMirrorable: 2 }),
+               /does not read/, 'the one surface where «no caller» is a picture said nothing');
+  assert.equal(say({ nodes: 120, fnNodes: 120, inOrg: 120, notInMirror: 0, notMirrorable: 0 }), '',
+               'a complete mirror carries a caveat about nothing');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Following a link to a function whose source is not here refuses the way the row does.
+//
+// `openFunctionFromWorkflow` asked «is it in `treeData`» and then opened its path: the pane the
+// reader was looking at closed, `Read failed: NotFoundError` flashed and was overwritten in the same
+// tick by the tree count, and a step was recorded that Back and Forward replay for ever. The tree row
+// has answered this properly since it was written; every link to the same row went round it. Applies
+// to an ordinary Deluge function that has not downloaded yet just as much - the state of any
+// workspace showing «Complete missing».
+test('a link to a function with no source here says which absence it is', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const rows = [
+    { id: 'j1', path: 'functions/standalone/syncLedger.dg', api_name: 'syncLedger', display_name: 'Sync ledger', language: 'java17', mirrored: false, downloaded: false },
+    { id: 'd9', path: 'functions/automation/notPulled.dg', api_name: 'notPulled', display_name: 'Not pulled', language: 'deluge', mirrored: true, downloaded: false },
+    { id: 'd1', path: 'functions/automation/here.dg', api_name: 'here', display_name: 'Here', language: 'deluge', mirrored: true, downloaded: true },
+  ];
+  const said = [], opened = [], fetched = [];
+  const g = { console, Object, String, Array, Set,
+              treeData: rows, viewMode: 'functions',
+              setStatus: (t, k) => said.push([String(t), k]), setMode: () => {}, selectRow: () => {},
+              tabReachable: () => true, openFromTree: (p) => opened.push(p),
+              fetchThenRedrawRow: (e) => { fetched.push(e.id); },
+              isDeluge: (l) => !l || /^deluge/i.test(String(l)),
+              langLabel: (l) => (!l || /^deluge/i.test(String(l)) ? 'Deluge' : String(l).replace(/_/g, ' ')),
+              MSG: { notMirrored: (lang) => `${lang} function - Zoost lists it and does not read this kind of code yet.` } };
+  const m = load([sliceFn(rel, 'openFunctionFromWorkflow')], g);
+
+  m.openFunctionFromWorkflow('j1', 'syncLedger');
+  assert.deepEqual(opened, [],
+                   'the link opened a file that is not on disk - the pane closes, a read error flashes '
+                   + 'and is overwritten, and a dead step goes into the history');
+  assert.match(String((said[0] || [])[0]), /java17/, 'and it did not say why there is nothing to open');
+  assert.equal((said[0] || [])[1], 'warn', 'it announced the refusal as though it were fine');
+
+  m.openFunctionFromWorkflow('d9', 'notPulled');
+  assert.deepEqual(fetched, ['d9'],
+                   'a Deluge function that has not downloaded yet was opened rather than fetched - the '
+                   + 'state of any workspace showing «Complete missing»');
+  m.openFunctionFromWorkflow('d1', 'here');
+  assert.deepEqual(opened, ['functions/automation/here.dg'], 'a function that is here stopped opening');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A census that came back short outlives the download that followed it, and is a warning.
+//
+// The sentence was written by `rebuildTree`, which a pull calls *before* downloading - so it lived
+// for one tick, in green, under 122 «Downloading n/121…» lines, and pressing Refresh could not bring
+// it back because the value had been consumed. Measured on screen: one millisecond. «All 120
+// downloaded» over a list missing a whole language of the org is the green sentence this project
+// exists to refuse.
+test('a list that came back short is still on screen when the pull ends', () => {
+  const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  // Derived from the two functions that write the closing line, because naming the sentence would
+  // pass on a build that writes it and then paints over it.
+  const tree = sliceFn('apps/crm/sidepanel.js', 'rebuildTree').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(tree, /const gap = listGap;\s*$/m,
+               'the tree load consumes the gap, so the pull that follows it cannot say anything and a '
+               + 'Refresh cannot bring it back');
+  assert.match(tree, /\(unreadableMetas\.length \|\| gap \|\| probe\) \? 'warn' : 'ok'/,
+               'the line carrying «a whole language of your org may be missing» is painted green');
+
+  const dm = sliceFn('apps/crm/sidepanel.js', 'downloadMissing').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(dm, /const short = listGap; listGap = null;/,
+               'the pull\'s closing line does not read the gap, so «All N downloaded» is the last word '
+               + 'over a census that was never complete');
+  assert.match(dm, /\(fail \|\| cleanup \|\| short\) \? 'warn' : 'ok'/,
+               'and it announces that as fine');
+  // Cleared as well as set: a hole from one pull outlived the pull that filled it.
+  assert.match(src, /function noteListGap\(why\) \{ listGap = why \? [^;]+: null; \}/,
+               'the gap can only be set, so the sentence never goes away and nobody reads it');
+});
+
+// ---------------------------------------------------------------------------------------------
+// And the badge on the card tells the two absences apart, like the block under it.
+test('the export badge does not call an unreadable language a missed download', async () => {
+  const rel = 'apps/crm/export.js';
+  const stats = { lines: 1, codeLines: 1, chars: 8, apiCalls: 0, invokeurl: 0, crm: 0, zoho: 0, sendmail: 0 };
+  const fns = [{ id: 'j1', name: 'syncLedger', api_name: 'syncLedger', display_name: 'Sync ledger',
+                 namespace: 'standalone', language: 'java17', mirrored: false, downloaded: false, node: { calls: [], called_by: [], stats } },
+               { id: 'd9', name: 'notPulled', api_name: 'notPulled', display_name: 'Not pulled',
+                 namespace: 'automation', language: 'deluge', mirrored: true, downloaded: false, node: { calls: [], called_by: [], stats } }];
+  const g = { nodes: {}, counts: { nodes: 0, inOrg: 2, notInMirror: 1, notMirrorable: 1 } };
+  const m = load([...EXPORT_PARTS, sliceFn(rel, '_mdCell'), sliceFn(rel, 'buildExportHtml'),
+                  sliceFn(rel, 'buildExportMarkdown')], MD_STUBS());
+  const html = await m.buildExportHtml(fns, [], g, {}, [], [], [], { failures: [] }, [], {}, MD_SCOPE);
+  const card = html.slice(html.indexOf('id="fn-standalone.syncLedger"'));
+  const head = card.slice(0, card.indexOf('</div>'));
+  assert.ok(!/>not downloaded</.test(head),
+            'the card badges a language nothing here reads with the same word as a pull that has not '
+            + 'happened - two facts, one label, in the document handed to somebody who cannot check');
+  assert.match(head, /source not read/, 'and it does not say what it is');
+
+  const md = m.buildExportMarkdown({ fns, mods: [], g, wfs: [], scheds: [], conns: [], fails: { failures: [] }, acts: [], actUsers: {} }, MD_SCOPE);
+  const line = md.split('\n').find((l) => l.includes('standalone.syncLedger'));
+  assert.ok(!/not downloaded/.test(line), `the Markdown inventory says «${line}» - the same suffix it gives a missed download`);
+});

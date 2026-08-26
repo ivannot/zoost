@@ -1223,9 +1223,12 @@ function mirrorNote() {
     .filter(Boolean).join(', and ');
   // Escaped although they are counts: «it is a number» is a belief about the value, and the checker
   // that reads this line is built to refuse exactly that argument. It costs nothing to be right.
-  return ` \u00b7 <span style="color:#94a3b8" title="${escA(c.nodes)} of ${escA(c.inOrg)} functions are in this`
+  // `fnNodes` where the window has it: `nodes` is every box on the drawing, and this sentence
+  // is about functions. They are the same number only on a graph that draws nothing else.
+  const inMirror = c.fnNodes === undefined ? c.nodes : c.fnNodes;
+  return ` \u00b7 <span style="color:#94a3b8" title="${escA(inMirror)} of ${escA(c.inOrg)} functions are in this`
     + ` mirror. ${why}, and a function called only from one of those is`
-    + ` counted as having no caller.">over ${esc(c.nodes)} of ${esc(c.inOrg)}</span>`;
+    + ` counted as having no caller.">over ${esc(inMirror)} of ${esc(c.inOrg)}</span>`;
 }
 // Asked to centre on something this diagram does not contain. Never silently: the whole point of
 // opening it focused was to look at that one thing, so the window says which it was and what it is
