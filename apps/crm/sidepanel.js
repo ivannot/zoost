@@ -2120,7 +2120,12 @@ function graphForWindow(g) {
   const out = Object.assign({}, g, { nodes: {} });
   for (const [id, n] of Object.entries(g.nodes || {})) {
     const copy = Object.assign({}, n);
+    // **Both fields, because the source has two names.** This stripped `source_code`, and the assistant
+    // caches what it read on the same node as `_src` - so once somebody had asked about a function, the
+    // payload handed to the diagram window carried its Deluge source again, and `privacy.html` says in
+    // as many words that it does not. It never leaves the machine, and the page still has to be true.
     delete copy.source_code;
+    delete copy._src;
     out.nodes[id] = copy;
   }
   return out;

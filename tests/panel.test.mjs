@@ -18075,3 +18075,34 @@ test('the audit will not conclude over an area whose pull came back short', asyn
   assert.equal(G(schedGone, 'broken').bad, false,
                'with the Schedules area never pulled the group still presented itself as a complete audit');
 });
+
+// ---------------------------------------------------------------------------------------------
+// The payload the diagram window is given carries no Deluge source, under either of its names.
+//
+// `graphForWindow` stripped `source_code`; the assistant caches what it read on the same node as
+// `_src`, so once somebody had asked about a function the drawing's payload carried its source again.
+// It never leaves the machine - and `site/privacy.html` states in as many words that it does not,
+// which is a claim this project does not let outlive its truth.
+//
+// Derived: every field any shipped script assigns a function's source to, not a list written here.
+test('the diagram payload carries a function source under no name at all', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const m = load([sliceFn(rel, 'graphForWindow')], { Object, console });
+  const src = 'info "secret deluge";';
+  const out = m.graphForWindow({ nodes: { 'ns.f': { id: 'ns.f', source_code: src, _src: src, name: 'f' } } });
+  const text = JSON.stringify(out);
+  assert.ok(!text.includes('secret deluge'),
+            `the payload handed to the diagram window contains the function source: ${text.slice(0, 120)}`);
+
+  // The fields are derived from the panel and the assistant, so a third name cannot be added silently.
+  const names = new Set();
+  for (const f of ['apps/crm/sidepanel.js', 'apps/crm/ai.js']) {
+    for (const mm of read(f).matchAll(/\bn\.(_src|source_code)\s*=/g)) names.add(mm[1]);
+  }
+  assert.ok(names.size >= 1, 'no shipped script assigns a source to a node any more - this case has lost its subject');
+  const stripper = sliceFn(rel, 'graphForWindow');
+  for (const nm of names) {
+    assert.match(stripper, new RegExp(`delete copy\\.${nm}`),
+                 `a function's source is stored as «${nm}» and the diagram payload does not remove it`);
+  }
+});

@@ -127,7 +127,7 @@ focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	03ec3f39bd0d	03ec3f39bd0d	identical
 goToZoho	44136fa355b3	cf28ebbab779	divergent
 grantRoot	1e1447674d2d	50f056678e38	divergent
-graphForWindow	9db12f0021b7	9db12f0021b7	identical
+graphForWindow	50e566ea6668	9db12f0021b7	divergent
 graphStat	1d87798be903	0fc8a3fd40ae	divergent
 hasPerm	b2ad51545bd5	b2ad51545bd5	identical
 hueFor	14a512e6b267	14a512e6b267	identical
