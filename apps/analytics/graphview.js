@@ -2053,8 +2053,11 @@ function erUpdateControlVis() {
   set('rowFs', rel);
   set('rowSub', rel);
   const h = $('erlayHead');
-  if (h) h.textContent = (conc ? 'Concentric layout (focus + depth)' : 'Free layout (all modules)')
-    + ' \u00b7 ' + (rel ? 'relation labels' : 'module boxes');
+  // **In this product's nouns.** «all modules» and «module boxes» were copied from the twin without
+  // the substitution the twin makes - and Zoho Analytics has no modules, which is the whole reason
+  // `EMPH_WORD` exists three lines down. It reached the button beside this and not this header.
+  if (h) h.textContent = (conc ? 'Concentric layout (focus + depth)' : 'Free layout (all tables)')
+    + ' \u00b7 ' + (rel ? 'relation labels' : 'table boxes');
 }
 function erParamsToUI() {
   ER_CTL.forEach(([sl, lb, k]) => { const e = $(sl); if (e) { e.value = erP[k]; $(lb).textContent = k === 'spread' ? (erP[k] / 10).toFixed(1) : erP[k]; } });

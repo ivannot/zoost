@@ -4518,8 +4518,14 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
   // the rest. A global accumulator let a config read elsewhere describe the next workspace.
   assert.ok(/let failed = null;/.test(load) && /noteFailure/.test(load),
             'the load has no local place to collect its own failure');
-  assert.ok(/diskUnreadable = views\.length \? null : failed;/.test(load),
+  // It used to be `views.length ? null : failed` - the failure kept only when *nothing* opened, so a
+  // workspace short by one file loaded as though it were whole and every surface below stated
+  // absences it could not establish. What matters is still that the verdict comes from this load's
+  // own collector and not from a stray global.
+  assert.ok(/diskUnreadable = \(failedAll && failedAll\.length\) \? failedAll\[0\] : null;/.test(load),
     'a stray failure from an unrelated read can speak about this workspace');
+  assert.ok(/diskUnreadableAll = failedAll \|\| \[\];/.test(load),
+    'only the first unreadable file is kept, so the sentence cannot name what is actually missing');
   // Comments stripped: this asserts the order of two *branches*, and a comment above one of them
   // naming the other's sentence made it fail on a correct change. A test about code reads code.
   const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason')
@@ -15067,8 +15073,11 @@ test('analytics: the export contents name the chapters in the order the document
     shortDate: () => '—', fkText: () => '', viewById: () => new Map(),
     sqlReadState: async () => ({ kind: 'ok', body: 'select 1' }), sqlText: (x) => String(x || ''),
     beginWorkspaceOp: () => ({}),
-    healthFindings: () => ({ counts: { views: 0, tables: 0, columns: 0, relations: 0, sql: 0 },
-                             orphans: [], islands: [], system: [], unread: [] }),
+    // The shape `healthFindings` actually returns: six lists, not four. Two of them were computed
+    // and read by the panel alone, and the exports were short by both.
+    healthFindings: () => ({ counts: { views: 0, folders: 0, tables: 0, columns: 0, relations: 0, sql: 0 },
+                             orphans: [], islands: [], system: [], unread: [],
+                             undescribed: [], noStructure: [] }),
   };
   const { buildExportMarkdown } = load([
     sliceFn('apps/analytics/sidepanel.js', 'exportSections'),
@@ -17699,4 +17708,36 @@ test('the export badge does not call an unreadable language a missed download', 
   const md = m.buildExportMarkdown({ fns, mods: [], g, wfs: [], scheds: [], conns: [], fails: { failures: [] }, acts: [], actUsers: {} }, MD_SCOPE);
   const line = md.split('\n').find((l) => l.includes('standalone.syncLedger'));
   assert.ok(!/not downloaded/.test(line), `the Markdown inventory says «${line}» - the same suffix it gives a missed download`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Folding a branch reports the boxes that left the drawing, not the boxes that left the graph.
+//
+// `erHiddenSet()` walks the whole graph and the diagram draws a subset of it - 11 boxes of 25 on an
+// ordinary Analytics workspace - so one click removed 9 boxes and announced 11, while the tooltip
+// that offered the fold said 9, the badge went 11 to 2 and the status line agreed with the badge.
+// One action, four numbers, three of them right. It happened to agree in the CRM, where everything
+// reachable is drawn; `graphlogic.js` is byte-identical, so it was latent there.
+test('a fold reports what left the drawing, not what left the graph', () => {
+  const rel = 'apps/crm/graphlogic.js';
+  const hints = [];
+  // Five nodes in the graph, three of them drawn: the shape that makes the two counts differ.
+  const ctx = { Set, Map, Object, Array, String, console,
+                erCut: new Map(), erIds: ['A', 'B', 'C'], erLaidOut: true,
+                ekey: (a, b) => a + ' ' + b,
+                erHiddenSet: () => new Set(ctx.erCut.size ? ['C', 'D', 'E'] : []),
+                erVisibleIds: () => (ctx.erCut.size ? ['A', 'B'] : ['A', 'B', 'C']),
+                erRender: () => {}, statRefresh: () => {},
+                erShowMaybeHeavy: (after) => { ctx.erIds = ctx.erVisibleIds(); ctx.erLaidOut = true; if (after) after(); },
+                erHint: (t) => hints.push(String(t)),
+                MSG: { folded: (n) => 'folded ' + n, unfolded: (n) => 'unfolded ' + n } };
+  const m = load([sliceFn(rel, 'erToggleCut')], ctx);
+
+  m.erToggleCut('B', 'C', 'C');
+  assert.equal(hints.at(-1), 'folded 1',
+               'the fold said "' + hints.at(-1) + '" and one box left the drawing - it is counting the '
+               + 'graph, which holds boxes the diagram never drew');
+  m.erToggleCut('B', 'C', 'C');
+  assert.equal(hints.at(-1), 'unfolded 1',
+               'unfolding said "' + hints.at(-1) + '" while one box came back on screen');
 });

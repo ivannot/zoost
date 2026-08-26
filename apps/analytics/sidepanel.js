@@ -535,6 +535,7 @@ async function readJson(rel, fallback, op, onFailure) {
 // What the last load off disk ran into, and the only thing the empty state is allowed to speak about:
 // a stray failure from some unrelated read must not turn into a sentence about this workspace.
 let diskUnreadable = null;
+let diskUnreadableAll = [];   // all of them, because the sentence names what is missing
 // Set by the one branch of `loadFromDisk` that refuses a mirror outright, and cleared by every other
 // path through it, so the empty state can name that refusal instead of falling through to «nothing
 // pulled yet» - which is what a reader was told about a folder full of files.
@@ -1348,6 +1349,7 @@ function refuseIncompleteSnapshot() {
   // question - «who else owns this flag?» - applied to a flag I had just added.
   pullInterrupted = true;
   diskUnreadable = null;   // it is not an unreadable file; naming one would send the reader to fix it
+  diskUnreadableAll = [];
   render();
 }
 
@@ -1731,7 +1733,11 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
     return false;
   }
   let failed = null;
-  const noteFailure = (f) => { failed = failed || f; };
+  // Every file that would not open, not the first one. What the reader is about to be told
+  // depends on which ones are missing, and one of them standing for all of them is how a mirror
+  // short by a single file came to load as though it were whole.
+  const noteFailure = (f) => { failed = failed || f; (failedAll ||= []).push(f); };
+  let failedAll = null;
   const readOne = (rel) => readJson(rel, null, op, noteFailure);
   const v = await readOne('views.json');
   viewsPulledAt = (v && v.pulledAt) || null;
@@ -1755,7 +1761,15 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   if (regexMode) { regexMode = false; $('rxmode').classList.remove('on'); }
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
-  diskUnreadable = views.length ? null : failed;
+  // **A workspace that loaded some of its files is not a workspace that loaded.** This kept the
+  // failure only when *nothing* opened - so a `schema.json` that would not parse, with the view
+  // list intact, produced a panel reporting 0 tables, 0 columns and 0 relations, an assistant
+  // answering «has no columns and no reachable source», a health audit listing 35 views as having
+  // no structure, and two exports with empty chapters and no note. None of it true: the tables
+  // are in Zoho and were pulled, and one local file will not open. Absence read off a mirror that
+  // is silently short is the one thing this product must never state.
+  diskUnreadable = (failedAll && failedAll.length) ? failedAll[0] : null;
+  diskUnreadableAll = failedAll || [];
   pullInterrupted = false;
   // Another workspace on disk: the chain is dropped, because every step in it is a view id that
   // belongs to the one being left. This and the removal below are the only places that forget.
@@ -1763,8 +1777,13 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   render();
   // And whether the schema that wrote it is the one this build reads - stated, not acted on: a mirror
   // from an older Zoost is still every fact it captured, and what to do about that is the reader's.
+  // A load that is short says so on the line that reports it, and says it as a warning: this is the
+  // only sentence between «one file would not open» and every surface below stating an absence.
+  const shortBy = diskUnreadableAll.map((f) => f.rel).join(', ');
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}`
-    + `${mirrorIsOlderThanSchema() ? ' · written by an older Zoost - Pull all captures what this one reads' : ''}.`, '');
+    + `${mirrorIsOlderThanSchema() ? ' · written by an older Zoost - Pull all captures what this one reads' : ''}.`
+    + (shortBy ? ` ${diskUnreadableAll.length} file(s) here would not open (${shortBy}) - what they hold is missing from every count below. Press ↻ Refresh, or Pull all to rewrite them.` : ''),
+    shortBy ? 'warn' : '');
   return true;
 }
 
@@ -3564,14 +3583,17 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
   for (const x of secs) {
     body += `<h2 id="${escA(x.id)}">${esc2(x.title)}</h2>`;
     if (x.rows) body += tbl(x.head, x.rows, x.links);
-    else if (x.tables) body += x.tables.map((t) => `<h3 id="${escA(vAnchor(t.id))}">${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)]))).join('');
+    else if (x.tables) body += x.tables.map((t) => `<section class="qsec" data-name="${escA(String(t.name || '').toLowerCase())}"><h3 id="${escA(vAnchor(t.id))}">${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)])) + '</section>').join('');
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
         // Skipping an unread query made the export silently smaller than the workspace: a reader
         // cannot tell a query that was dropped from one that never existed. The heading is always
         // there; what varies is whether the source or the reason sits under it.
         const st = await sqlReadState(v.id, op);
-        if (st.kind === 'unread') { body += `<h3 id="${escA(sqlAnchor(v.id))}">${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
+        // Wrapped, so the filter box can hide it: the report's filter selects rows, entries and
+        // sections, and a bare `<h3>` + `<pre>` is none of those - every SQL block stayed on screen
+        // through a search that had emptied the tables around it.
+        if (st.kind === 'unread') { body += `<section class="qsec" data-name="${escA(String(v.name || '').toLowerCase())}"><h3 id="${escA(sqlAnchor(v.id))}">${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p></section>`; continue; }
         // Highlighted, like the panel and like the CRM's own report, which has coloured its Deluge
         // since it existed. This one printed plain escaped text: the same query, in two places, one
         // of them readable - and the report is the copy that goes to somebody without the extension,
@@ -3580,17 +3602,23 @@ async function buildExportHtml(sc, op = beginWorkspaceOp()) {
         // reason it may be handed to innerHTML at all; the placeholder for «not read» is not SQL and
         // stays on `esc2`.
         const has = st.body != null && st.body.trim();
-        body += `<h3 id="${escA(sqlAnchor(v.id))}">${esc2(v.name)}</h3><pre class="${has ? 'code' : 'note'}">`
-          + `${has && window.highlightSql ? window.highlightSql(st.body) : esc2(sqlText(st.body))}</pre>`;
+        body += `<section class="qsec" data-name="${escA(String(v.name || '').toLowerCase())}"><h3 id="${escA(sqlAnchor(v.id))}">${esc2(v.name)}</h3><pre class="${has ? 'code' : 'note'}">`
+          + `${has && window.highlightSql ? window.highlightSql(st.body) : esc2(sqlText(st.body))}</pre></section>`;
       }
     } else if (x.h) {
       const H = x.h;
-      body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
+      body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.folders}</b> folders · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
         + `<p class="gap">Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.</p>`
         + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict - a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.</p>`
         + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${vLink(v.name)}<span class="ty">${esc2(v.type)}</span></li>`).join('')}</ul>` : '')
         + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${vLink(t.name)}<span class="ty">${esc2(t.kind)}</span></li>`).join('')}</ul>`
         + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${vLink(v.name)}</li>`).join('')}</ul>`
+        // **The other two the panel shows.** `undescribed` and `noStructure` were computed and read
+        // by the panel alone, so an export was short by two of the six lists - and the panel's own
+        // list helper writes «…and N more. The full list is in the exports.» over a section the
+        // exports did not contain. The CRM twin writes all seven of its sections through one helper.
+        + `<h3>No description (${H.undescribed.length} of ${H.counts.views})</h3><ul>${H.undescribed.map((v) => `<li>${vLink(v.name)}<span class="ty">${esc2(v.type)}</span></li>`).join('') || '<li class="gap">None</li>'}</ul>`
+        + `<h3>No structure reachable (${H.noStructure.length})</h3><ul>${H.noStructure.map((v) => `<li>${vLink(v.name)}<span class="ty">${esc2(v.type)}</span></li>`).join('') || '<li class="gap">None</li>'}</ul>`
         + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} - ${esc2(f.error)}</li>`).join('')}</ul>` : '');
     }
   }
@@ -3620,7 +3648,10 @@ async function buildExportMarkdown(sc, op = beginWorkspaceOp()) {
   const secs = exportSections(sc);
   const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
   let out = `# ${bound.label || bound.name || bound.workspace}\n\nZoho Analytics workspace ${bound.label && bound.name ? `${bound.name} ` : ''}\`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
-  out += '> Read-only mirror. Zoost never writes to Zoho Analytics and never reads record data.\n\n';
+  // The absolute this project already walked back everywhere else, still shipping inside every
+  // Markdown export - `auditcheck` does not read template literals in a builder, so no gate had ever
+  // read it. What is claimable is which requests are sent, not what somebody else's server does.
+  out += '> Read-only mirror. Every request Zoost sends Zoho Analytics is a read, and it never asks for record data.\n\n';
   // The dialect reference is written **before** the sections, so it is listed before them: the
   // contents used to name it last while the document put it first, which shifted every entry
   // after it by one. And its title is taken from the block itself rather than typed again here -
@@ -3645,12 +3676,14 @@ async function buildExportMarkdown(sc, op = beginWorkspaceOp()) {
       }
     } else if (x.h) {
       const H = x.h;
-      out += `${H.counts.views} views · ${H.counts.tables} tables · ${H.counts.columns} columns · ${H.counts.relations} relations · ${H.counts.sql} SQL\n\n`;
+      out += `${H.counts.views} views · ${H.counts.folders} folders · ${H.counts.tables} tables · ${H.counts.columns} columns · ${H.counts.relations} relations · ${H.counts.sql} SQL\n\n`;
       out += '> Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.\n\n';
       out += `### Nothing depends on them (${H.orphans ? H.orphans.length : '—'})\n\n> Candidates, not a verdict - a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.\n\n`;
       if (H.orphans) out += H.orphans.map((v) => `- ${v.name} (${v.type})`).join('\n') + '\n\n';
       out += `### Tables in no relation (${H.islands.length})\n\n` + H.islands.map((t) => `- ${t.name} (${t.kind})`).join('\n') + '\n\n';
       out += `### Put there by Zoho, not by you (${H.system.length})\n\n` + H.system.map((v) => `- ${v.name}`).join('\n') + '\n\n';
+      out += `### No description (${H.undescribed.length} of ${H.counts.views})\n\n` + (H.undescribed.map((v) => `- ${v.name} (${v.type})`).join('\n') || 'None') + '\n\n';
+      out += `### No structure reachable (${H.noStructure.length})\n\n` + (H.noStructure.map((v) => `- ${v.name} (${v.type})`).join('\n') || 'None') + '\n\n';
       if (H.unread.length) out += `### Could not be read (${H.unread.length})\n\n` + H.unread.map((f) => `- ${(viewById().get(f.id) || {}).name || f.id} - ${f.error}`).join('\n') + '\n\n';
     }
   }

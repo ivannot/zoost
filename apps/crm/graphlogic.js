@@ -415,11 +415,21 @@ function erUnhide(id) {
 
 function erToggleCut(a, b, away) {
   const k = ekey(a, b);
-  const before = erHiddenSet().size;
+  // **Counted on the drawing, which is what the reader is looking at.** `erHiddenSet()` walks the whole
+  // graph, and the diagram draws a subset of it - 11 boxes of 25 on an ordinary Analytics workspace.
+  // So folding a branch removed 9 boxes and announced 11, while the tooltip that offered the fold said
+  // 9, the badge went 11 -> 2 and the status line agreed with the badge: one action, four numbers,
+  // three of them right. The tooltip was right because `erReach` defaults to `erIds` - its docstring
+  // says why, and this line was written against the other set. In the CRM it happened to agree,
+  // because there everything reachable is drawn; the file is byte-identical, so it was latent there.
+  // `erVisibleIds()` is what the drawing will hold - the first count tried was «hidden boxes that are
+  // currently drawn», which is 0 on both sides once a re-layout has already dropped them, so unfolding
+  // said nothing at all while boxes came back on screen.
+  const before = erVisibleIds().length;
   if (erCut.has(k)) erCut.delete(k);
   else if (away) erCut.set(k, away);
   else return;
-  const after = erHiddenSet().size;
+  const after = erVisibleIds().length;
   // **An unfold can bring back a box the layout no longer knows about.** `erRender` draws `erIds`,
   // and `erIds` is whatever `erLayout` last set it to - `erVisibleIds()`, which excludes what is
   // folded. So any relayout taken while a branch is folded - a chip, a depth, an emphasis, the
@@ -438,7 +448,7 @@ function erToggleCut(a, b, away) {
   // was, because there is no frame to wait for.
   const say = () => {
     statRefresh();
-    if (after !== before) erHint(after > before ? MSG.folded(after - before) : MSG.unfolded(before - after));
+    if (after !== before) erHint(after < before ? MSG.folded(before - after) : MSG.unfolded(after - before));
   };
   const back = erVisibleIds().some((id) => !erIds.includes(id));
   if (back) { erLaidOut = false; erShowMaybeHeavy(say); return; }

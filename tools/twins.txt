@@ -36,8 +36,8 @@ beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	7e355522d897	188f4403e823	divergent
-buildExportMarkdown	28e58593482a	fbf90f473b83	divergent
+buildExportHtml	7e355522d897	e1a5052dd09d	divergent
+buildExportMarkdown	28e58593482a	f5d0fbdf2c0e	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildReport	596a7edd9441	596a7edd9441	identical
@@ -112,9 +112,9 @@ erTipIds	6d80db9a1ca4	6d80db9a1ca4	identical
 erTipOn	cda3bfa68316	cda3bfa68316	identical
 erTipShow	4ce0ece76994	4ce0ece76994	identical
 erTipText	b770d433afce	b770d433afce	identical
-erToggleCut	cfb74873676c	cfb74873676c	identical
+erToggleCut	11d00be815d2	11d00be815d2	identical
 erUnhide	cd9ab515870d	cd9ab515870d	identical
-erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
+erUpdateControlVis	b78229b43139	316596fe6304	divergent
 erVisibleIds	372e3743dccc	dffd20c3e9ec	divergent
 erWouldGo	8b7bc7f08079	8b7bc7f08079	identical
 erWouldShow	ca79d2150047	ca79d2150047	identical

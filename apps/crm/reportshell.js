@@ -236,7 +236,10 @@ function reportFoot(name, url) {
 // on one side and reached none of its 62 rows on the other: every function card vanished while
 // the whole audit stayed on screen, which reads as «these are the matches». A selector that
 // silently misses a chapter is worse than one that filters nothing.
-const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').value.trim().toLowerCase();var els=document.querySelectorAll('main tbody tr, main li, main .item, main .hxrow');for(var i=0;i<els.length;i++){var e=els[i];if(e.closest('.toc')){continue;}e.style.display=(!q||(e.textContent||'').toLowerCase().indexOf(q)>=0)?'':'none';}}"
+// The Analytics report holds neither, so the filter emptied its tables and left every heading and
+// every SQL block standing - in the chapter that is the biggest and the one flagged sensitive.
+// A section is hidden with its heading now, so what stays on screen is what matched.
+const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').value.trim().toLowerCase();var els=document.querySelectorAll('main tbody tr, main li, main .item, main .hxrow, main section.qsec');for(var i=0;i<els.length;i++){var e=els[i];if(e.closest('.toc')){continue;}e.style.display=(!q||(e.textContent||'').toLowerCase().indexOf(q)>=0)?'':'none';}}"
   // The sticky band's real height, measured at load and on resize. A jump puts its target at
   // the top of the window, which is under the band, so without this the reader lands a few
   // lines into the section with its heading hidden - and a constant would be wrong for the
