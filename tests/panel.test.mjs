@@ -17015,11 +17015,17 @@ test('the function list asks for every language Zoho serves', async () => {
                 const node = { id: '2', api_name: 'runIt', name: 'runIt', category: 'standalone', source: 'crm', language: 'nodejs_22', script: null,
                                rest_api: [{ active: false, type: 'zapikey', url: 'https://crm.zoho.eu/x?zapikey=SECRETVALUE' }] };
                 if (lang === 'deluge') return { functions: [del] };
+                if (lang === 'all') return { functions: [del, node] };   // the probe: one page, everything
                 return { functions: lang === 'nodejs_22' ? [node] : [] };
               } };
-  const m = load([sliceConst(rel, 'OTHER_LANGUAGES'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], g);
+  const m = load([sliceConst(rel, 'LANGUAGES'), sliceConst(rel, 'DISCOVER_LANGUAGE'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], g);
 
   const both = await m.listFunctions();
+  for (const want of ['deluge', 'java', 'java17', 'nodejs', 'nodejs_22', 'python_3_12']) {
+    assert.ok(asked.includes(want),
+              `the list was never asked for ${want} - it is one of the six Zoho's own functions UI asks `
+              + `for, and what it does not ask for it cannot list. Asked: ${JSON.stringify(asked)}`);
+  }
   assert.ok(asked.includes('nodejs_22'),
             `the list was asked for ${JSON.stringify(asked)} - Zoho answers for the versioned name, so an `
             + "org's Node functions are listed as none and the mirror looks complete");
@@ -17051,11 +17057,31 @@ test('the function list asks for every language Zoho serves', async () => {
   const emptyG = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
                    Array, encodeURIComponent, PAGE: 200, MAX_PAGES: 5,
                    list: (d) => (d && d.functions) || [], api: async () => ({ functions: [] }) };
-  const m2 = load([sliceConst(rel, 'OTHER_LANGUAGES'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], emptyG);
+  const m2 = load([sliceConst(rel, 'LANGUAGES'), sliceConst(rel, 'DISCOVER_LANGUAGE'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], emptyG);
   const empty = await m2.listFunctions();
   assert.equal(empty.otherFailed, null, 'an empty answer was reported as a failure');
   assert.equal(empty.otherReturned, 0, 'what the second ask returned is not recorded');
   assert.ok(empty.otherAsked, 'which language was asked for is not recorded, so a wrong value cannot be found');
+
+  // **And a seventh language is a finding about this build.** The six are what Zoho asks for today;
+  // one more, and every count above is short with nothing to say so - the «it answered with nothing»
+  // sentence cannot fire, because the six that were asked did answer. One page of `all` is read for
+  // this and for nothing else: it is reported, never merged.
+  const probeG = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+                   Array, encodeURIComponent, PAGE: 200, MAX_PAGES: 5,
+                   list: (d) => (d && d.functions) || [],
+                   api: async (path) => ({ functions: path.includes('language=all')
+                     ? [{ id: '9', api_name: 'later', name: 'later', category: 'standalone', source: 'crm', language: 'ruby_9', rest_api: [] }]
+                     : [] }) };
+  const m3 = load([sliceConst(rel, 'LANGUAGES'), sliceConst(rel, 'DISCOVER_LANGUAGE'),
+                   sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], probeG);
+  const seventh = await m3.listFunctions();
+  assert.equal((seventh.unknownLangs || []).join(','), 'ruby_9',
+               'Zoho named a language this build does not ask for and nothing noticed - which is the '
+               + 'same silent, complete-looking mirror, one language further along');
+  assert.equal(seventh.entries.length, 0,
+               'the probe was merged into the list: it reads one page, so what it returns is not a '
+               + 'statement about the org and must not become one');
 });
 
 // ---------------------------------------------------------------------------------------------

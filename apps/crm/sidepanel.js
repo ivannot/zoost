@@ -310,12 +310,12 @@ const MSG = {
   staleBridge: 'The Zoho tab is still running an older copy of this extension - reload that tab, then pull again.',
   // The three status-dot tooltips, which say what a click will do rather than what the mark is.
   notHere: 'Not in workspace - click to download',
-  // Not «click to download»: there is nothing a click could fetch. A Node function's source is a
-  // folder in Zoho, read a file at a time from another endpoint, and mirroring it is not built.
-  // Saying the wrong missing thing is worse than saying nothing, because the reader goes and does
-  // it and nothing changes.
-  notMirrored: (lang) => `${lang} function - Zoost lists it, and does not mirror its source yet. `
-    + 'Its code is a folder in Zoho rather than one file, and reading that is not built. Open it in Zoho.',
+  // Not «click to download»: there is nothing a click could fetch. Zoho compiles functions in six
+  // languages and this mirror reads the source of one of them; the others are listed and named, and
+  // that is all this build claims. Saying the wrong missing thing is worse than saying nothing,
+  // because the reader goes and does it and nothing changes.
+  notMirrored: (lang) => `${lang} function - Zoost lists it and does not read this kind of code yet. `
+    + 'Only Deluge sources are mirrored; open this one in Zoho.',
   hereRepull: 'In workspace - click to re-download from Zoho',
   failed: 'Failed: ',
   // The twin already had this name; the CRM had the string twice and nothing said so, because the
@@ -384,13 +384,13 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // place on the first version of this line.
 const escQ = (s) => String(s).replace(/[\u0022\u0027]/g, (c) => (c === '\u0022' ? '&quot;' : '&#39;'));
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
-// **Which functions this mirror actually holds the source of.** Zoho serves Node functions through
-// the same list endpoint, and their source is neither a field on that record nor one file: it is a
-// small folder - the entry point, a config, whatever was vendored - fetched a file at a time from a
-// different endpoint. Mirroring that is not built. What *is* built is saying so: they are listed,
-// they carry their language, and every place that would otherwise say «run Pull all to fetch it»
-// says the true thing instead. A function nobody can see is worse than one we cannot download,
-// because the reader cannot tell it is missing.
+// **Which functions this mirror actually holds the source of.** Zoho compiles functions in six
+// languages and serves them all through one list endpoint; only Deluge arrives with its source in
+// the record. The rest keep theirs elsewhere - a Node function's is a folder, fetched a file at a
+// time from another endpoint - and reading any of that is not built. What *is* built is saying so:
+// they are all listed, every one carries its language, and every place that would otherwise say «run
+// Pull all to fetch it» says the true thing instead. A function nobody can see is worse than one we
+// cannot download, because the reader cannot tell it is missing.
 const isDeluge = (lang) => !lang || /^deluge/i.test(String(lang));
 const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_/g, ' '));
 // What the second ask could not read, kept until there is a status line to put it on. One value,
@@ -404,9 +404,19 @@ function noteListGap(why) { listGap = String(why || 'no answer').slice(0, 120); 
 // the line the moment the ask returns something, so a normal org says nothing about it.
 let listProbe = null;
 function noteListProbe(r) {
-  listProbe = (r && r.otherAsked && !r.otherFailed && !r.otherNew)
-    ? `Zoho listed no functions in any other language (asked language=${r.otherAsked}, it answered with ${r.otherReturned}).`
-    : null;
+  // Two different things to say, and the second is about this build rather than about the org.
+  const parts = [];
+  if (r && r.otherAsked && !r.otherFailed && !r.otherNew) {
+    parts.push(`Zoho listed no functions outside Deluge (asked ${r.otherAsked}; it answered with ${r.otherReturned}).`);
+  }
+  // **A language nobody here has heard of.** The six asked for are what Zoho's UI asks for today, so
+  // a seventh is invisible to every count above - and this is the one sentence that can say it,
+  // because it comes from Zoho naming the language rather than from us guessing at it.
+  if (r && r.unknownLangs && r.unknownLangs.length) {
+    parts.push(`Zoho lists function(s) in a language this build does not ask for: ${r.unknownLangs.join(', ')}. `
+      + 'They are not in this list - tell the author.');
+  }
+  listProbe = parts.length ? parts.join(' ') : null;
 }
 // What the pull leaves so the next open does not have to read every meta. A cache beside the
 // index, checked against the folder walk on every load - see rebuildTree().
@@ -1881,7 +1891,7 @@ async function rebuildTree() {
   // existed.
   setStatus(`${treeData.length} functions (${dl} downloaded`
     + (unmirrored ? `, ${unmirrored} listed without source` : '') + ').'
-    + (gap ? ` Zoho would not list this org's Node functions (${gap}) - if it has any, they are not in this count.` : '')
+    + (gap ? ` Zoho would not list one of this org's function languages (${gap}) - if it has any, they are not in this count.` : '')
     + (probe ? ` ${probe}` : '')
     + (unreadableMetas.length
       ? ` ${unreadableMetas.length} file(s) could not be read - what they hold is not in this list.`
@@ -2162,7 +2172,7 @@ async function loadGraph(op = beginWorkspaceOp()) {
   // distinction this panel spent the day learning in four other places.
   //
   // **And a function this mirror cannot hold is not a function that failed to download.** The index
-  // lists the Node ones now, and folding them into `notInMirror` would turn «could not be
+  // lists every language now, and folding those into `notInMirror` would turn «could not be
   // downloaded» - a sentence about a fixable failure - into a permanent number nothing can move,
   // printed under the audit as though a retry would clear it. They are counted, and counted apart.
   let inOrg = null, notMirrorable = 0;
@@ -5483,7 +5493,7 @@ async function downloadMissing() {
   // from `updateMissingButton` would be an assignment on top of the five-second re-render - set
   // once, never revisited, which measured as «still off after the tab came back into line».
   if (!zohoReady()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  // `mirrored` first: asking `fetchOne` for a Node function answers nothing, and counting that as a
+  // `mirrored` first: asking `fetchOne` for one of these answers nothing, and counting that as a
   // failed download would put a number on screen that no retry could ever bring down.
   const pending = treeData.filter((e) => e.mirrored !== false && (!e.downloaded || e.stale || e.pathChanged));   // stale = older schema, a rename, or Zoho's updatedTime moved
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }

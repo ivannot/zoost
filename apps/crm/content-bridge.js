@@ -420,20 +420,23 @@
   // this org have» has always meant «what Deluge functions does it have» - and Zoho serves Node ones
   // through the same endpoint now, which left an org that has them with a mirror that did not name
   // them and did not say so. That is the omission this project spends its length refusing.
-  // **The list wants the versioned name, and this took two wrong guesses to stop guessing about.**
-  // First `nodejs` - the value Zoho's own UI sends on the *detail* call - which listed nothing on an
-  // org that has one. Then `all`, which the detail call also accepts. Both were analogies from
-  // another endpoint. The capture of the list request itself says
-  // `?type=org&language=nodejs_22&limit=50`, and answers with the function: it is the full versioned
-  // name, and neither of the two shorter forms is it.
+  // **Every language Zoho lists, asked the way Zoho asks for it.** The value is the full versioned
+  // name: `nodejs_22`, not `nodejs`, which is a different slot and empty on the org this was captured
+  // from. Two guesses shipped before anything measured that - `nodejs` and `all`, both taken by
+  // analogy from the *detail* call, both listing nothing on an org that has one.
   //
-  // Which means this value goes stale the day Zoho ships the next runtime, silently - so the pull
-  // reports what it asked for and what came back whenever the answer is empty. A version that has
-  // moved then arrives as a sentence on screen instead of as an org that «has no Node functions».
+  // These six are what Zoho's own functions UI asks for, read off a capture of it doing so. Five of
+  // them answer `204` there - «this org has none of those» - which is what they cost when empty.
   //
-  // The ask is a list rather than a constant for the same reason: the next runtime is added here,
-  // and the old one keeps answering for orgs that still have functions on it.
-  const OTHER_LANGUAGES = ['nodejs_22'];
+  // Adding the next runtime is one line. What happens when nobody adds it is handled below rather
+  // than hoped about.
+  const LANGUAGES = ['deluge', 'java', 'java17', 'nodejs', 'nodejs_22', 'python_3_12'];
+  // Asked as well as the named ones, never instead, and only for its first page: what it answers is
+  // not measured, and a walk whose behaviour is unknown must not be one the mirror depends on. It is
+  // read for *reporting* only - a language it names that is not in the list above is this build
+  // being short, and the panel says so. The limit, stated rather than left to be found: one page, so
+  // a language whose functions all sort past it is not detected.
+  const DISCOVER_LANGUAGE = 'all';
   async function listPage(language) {
     let start = 1, raw = [], pages = 0, capped = false;
     while (true) {
@@ -452,14 +455,33 @@
     // and never as a failed pull of the Deluge functions that did arrive. What is not known travels
     // as `otherFailed` rather than being rounded down to zero.
     let other = { raw: [], capped: false }, otherFailed = null;
-    for (const lang of OTHER_LANGUAGES) {
+    for (const lang of LANGUAGES) {
+      if (lang === 'deluge') continue;
       try { const r = await listPage(lang); other.raw = other.raw.concat(r.raw); other.capped = other.capped || r.capped; }
       catch (e) { otherFailed = (e && e.message) || 'no answer'; }
     }
-    // By id: `all` returns the Deluge ones too, and a function listed twice is a row twice in the
-    // tree and two files racing for one path.
+    // **A named list can only ever find what somebody thought of.** Six languages is what this build
+    // knows about, and the day Zoho serves a seventh the mirror is short again with nothing saying
+    // so: the "it answered with nothing" sentence does not fire, because the six we do ask for
+    // answered. So one page of `all` is read, and any language in it that the six do not name is
+    // reported under the name Zoho gives it. A finding about *this code*, printed where it can be
+    // acted on, rather than an absence nobody can see.
+    //
+    // It is also the only measurement of `all` there has ever been: I asserted in a commit message
+    // that it lists nothing, and that was a guess wearing a measurement's clothes. Nothing depends on
+    // the answer - it is read, it is not merged.
+    let discover = [];
+    try { discover = list(await api(`/crm/v2/settings/functions?type=org&start=1&limit=${PAGE}&language=${DISCOVER_LANGUAGE}`), 'functions', 'functions'); }
+    catch (_) { /* a probe answers what it can, or nothing */ }
+    const known = new Set(LANGUAGES.map((x) => String(x).toLowerCase()));
+    const unknownLangs = [...new Set(discover
+      .map((f) => String(f.language || 'deluge'))
+      .filter((l) => !known.has(l.toLowerCase())))].sort();
+    // By id: a function listed twice is a row twice in the tree and two files racing for one path.
     const seen = new Set(deluge.raw.map((f) => String(f.id)));
-    const extra = other.raw.filter((f) => !seen.has(String(f.id)));
+    const extra = other.raw.filter((f) => {
+      const id = String(f.id); if (seen.has(id)) return false; seen.add(id); return true;
+    });
     const raw = deluge.raw.concat(extra);
     const capped = deluge.capped || other.capped;
     const all = raw.filter((f) => f.source !== 'extension');
@@ -482,7 +504,8 @@
     // the request itself is wrong - which is the sentence that was missing when this shipped as a
     // guess and came back not working.
     return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped,
-             otherFailed, otherAsked: OTHER_LANGUAGES.join(', '), otherReturned: other.raw.length, otherNew: extra.length };
+             otherFailed, otherAsked: LANGUAGES.join(', '), otherReturned: other.raw.length,
+             otherNew: extra.length, unknownLangs };
   }
   // Workflow rules - list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {

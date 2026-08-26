@@ -358,7 +358,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       ? `<div class="hxcov"><b>Read from your mirror:</b> ${esc(g.counts.nodes)} of ${esc(g.counts.inOrg)} functions. ${esc(g.counts.notInMirror)} could not be downloaded, and a function called only from one of those is counted here as having no caller.</div>`
       : '')
     + ((g && g.counts && g.counts.notMirrorable)
-      ? `<div class="hxcov"><b>${esc(g.counts.notMirrorable)} function(s) are listed without their source</b> - Zoost does not mirror Node function code yet - so they make no calls here, and anything only they call appears below as having no caller.</div>`
+      ? `<div class="hxcov"><b>${esc(g.counts.notMirrorable)} function(s) are listed without their source</b> - Zoost reads Deluge sources only - so they make no calls here, and anything only they call appears below as having no caller.</div>`
       : '')
     + (scope.functions ? '' : `<div class="hxcov"><b>Functions were not included in this export.</b> The lists below still name them, because the audit is about them - but there is nothing here to link to. Export again with Functions ticked to read them.</div>`)
     + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
@@ -901,7 +901,7 @@ function buildExportMarkdown(d, scope) {
     } else if (g && g.counts && g.counts.notInMirror > 0) {
       md += `> **Read from your mirror:** ${g.counts.nodes} of ${g.counts.inOrg} functions. ${g.counts.notInMirror} could not be downloaded, and a function called only from one of those is counted here as having no caller.\n\n`;
     }
-    if (g && g.counts && g.counts.notMirrorable) md += `> **${g.counts.notMirrorable} function(s) are listed without their source** - Zoost does not mirror Node function code yet - so they make no calls here, and anything only they call appears below as having no caller.\n\n`;
+    if (g && g.counts && g.counts.notMirrorable) md += `> **${g.counts.notMirrorable} function(s) are listed without their source** - Zoost reads Deluge sources only - so they make no calls here, and anything only they call appears below as having no caller.\n\n`;
     if (!scope.functions) md += '> **Functions were not included in this export.** The lists below still name them, because the audit is about them.\n\n';
     md += '> **Coverage.** Analyzed: function-to-function calls, workflows, schedules, and each function\'s *associated_place* (blueprint, button, ...). **Not** analyzed: custom client scripts, approval/assignment/scoring rules. Items are **candidates to review**, never automatic deletions.\n\n';
     const sec = (title, rows, desc) => {
