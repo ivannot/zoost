@@ -1,52 +1,52 @@
 {
   "checks": {
     "assistant": {
-      "at": "2026-08-21T11:37:47+00:00",
-      "commit": "1dec49c94479d9347fe930f68aaadaac23d5eaa7",
-      "note": "Ivan, 21 Aug 2026, in conversation: \u00abho fatto i test di entrambe le app e tutto OK. green\u00bb",
+      "at": "2026-08-26T16:05:34+00:00",
+      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
+      "note": "fatto tutti i test. si puo' procedere",
       "result": "pass",
       "title": "The assistant answers about the org, with a real key",
-      "version": "1.29.0"
+      "version": "1.30.0"
     },
     "export": {
-      "at": "2026-08-21T11:37:47+00:00",
-      "commit": "1dec49c94479d9347fe930f68aaadaac23d5eaa7",
-      "note": "Ivan, 21 Aug 2026, in conversation: \u00abho fatto i test di entrambe le app e tutto OK. green\u00bb",
+      "at": "2026-08-26T16:05:34+00:00",
+      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
+      "note": "fatto tutti i test. si puo' procedere",
       "result": "pass",
       "title": "An export opens and reads as the panel reads",
-      "version": "1.29.0"
+      "version": "1.30.0"
     },
     "fresh-profile": {
-      "at": "2026-08-21T11:37:47+00:00",
-      "commit": "1dec49c94479d9347fe930f68aaadaac23d5eaa7",
-      "note": "Ivan, 21 Aug 2026, in conversation: \u00abho fatto i test di entrambe le app e tutto OK. green\u00bb",
+      "at": "2026-08-26T16:05:34+00:00",
+      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
+      "note": "fatto tutti i test. si puo' procedere",
       "result": "pass",
       "title": "A profile that has never seen Zoost",
-      "version": "1.29.0"
+      "version": "1.30.0"
     },
     "passphrase": {
-      "at": "2026-08-21T11:37:47+00:00",
-      "commit": "1dec49c94479d9347fe930f68aaadaac23d5eaa7",
-      "note": "Ivan, 21 Aug 2026, in conversation: \u00abho fatto i test di entrambe le app e tutto OK. green\u00bb",
+      "at": "2026-08-26T16:05:34+00:00",
+      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
+      "note": "fatto tutti i test. si puo' procedere",
       "result": "pass",
       "title": "The API key under a passphrase, across a browser restart",
-      "version": "1.29.0"
+      "version": "1.30.0"
     },
     "pull-all": {
-      "at": "2026-08-21T11:37:47+00:00",
-      "commit": "1dec49c94479d9347fe930f68aaadaac23d5eaa7",
-      "note": "Ivan, 21 Aug 2026, in conversation: \u00abho fatto i test di entrambe le app e tutto OK. green\u00bb",
+      "at": "2026-08-26T16:05:34+00:00",
+      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
+      "note": "fatto tutti i test. si puo' procedere",
       "result": "pass",
       "title": "Pull all, on a real org, from an empty workspace",
-      "version": "1.29.0"
+      "version": "1.30.0"
     },
     "restart": {
-      "at": "2026-08-21T11:37:47+00:00",
-      "commit": "1dec49c94479d9347fe930f68aaadaac23d5eaa7",
-      "note": "Ivan, 21 Aug 2026, in conversation: \u00abho fatto i test di entrambe le app e tutto OK. green\u00bb",
+      "at": "2026-08-26T16:05:34+00:00",
+      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
+      "note": "fatto tutti i test. si puo' procedere",
       "result": "pass",
       "title": "A full browser restart: the folder, and what you changed in Settings",
-      "version": "1.29.0"
+      "version": "1.30.0"
     }
   }
 }
