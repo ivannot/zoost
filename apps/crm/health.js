@@ -17,6 +17,23 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const nodes = Object.values(g.nodes);
   const fnById = {}, fnByName = {};
   nodes.forEach((n) => { if (n.id) fnById[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) fnByName[String(k).toLowerCase()] = n; }); });
+  // **A function the org has is not missing because this mirror cannot read it.** The nodes above are
+  // built from the `.dg` files, and Zoho compiles functions in six languages of which this reads one -
+  // so a schedule that runs a Java function came out as «missing function», in the group that is
+  // coloured as a defect and reads «references a function not in this workspace». The reader goes
+  // into Zoho to repair wiring that works. What the panel lists is the answer to «does the org have
+  // it», and the index the pull wrote is what the panel lists from.
+  let listedIds = new Set(), listedNames = new Set();
+  try {
+    const idx = JSON.parse(await op.read('functions/index.json'));
+    if (Array.isArray(idx)) idx.forEach((e) => {
+      if (!e) return;
+      if (e.id != null) listedIds.add(String(e.id));
+      [e.name, e.api_name, e.display_name].forEach((k) => { if (k) listedNames.add(String(k).toLowerCase()); });
+    });
+  } catch (_) { /* no index: the graph is then the only answer there is */ }
+  const known = (id, name) => !!(fnById[String(id)] || fnByName[String(name || '').toLowerCase()]
+    || listedIds.has(String(id)) || listedNames.has(String(name || '').toLowerCase()));
   const byName = (a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || '');
   const fnLink = (n) => `<a data-file="${escA(n.file)}">${nmNode(n)}</a>`;
   const orphan = nodes.filter((n) => n.dead_suspect).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
@@ -24,9 +41,9 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
   const broken = [];
   let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
-  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
+  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!known(a.id, a.name)) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
   let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
-  scheds.forEach((sc) => { if (!(fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
+  scheds.forEach((sc) => { if (!known(sc.function_id, sc.function_name)) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
   for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }

@@ -66,10 +66,17 @@ function wfFunctionActions(w) {
   });
   return out.filter(isFnAction);
 }
-function healthFacts(g, mods, wfs, scheds) {
+function healthFacts(g, mods, wfs, scheds, fns) {
   const nodes = Object.values((g && g.nodes) || {});
   const byId = {}, byAny = {};
   nodes.forEach((n) => { if (n.id) byId[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) byAny[String(k).toLowerCase()] = n; }); });
+  // **What the org has, not what this mirror could read.** The nodes are built from `.dg` files
+  // and Zoho compiles functions in six languages, so a schedule running a Java one came out under
+  // «references a function not in this workspace» - a defect badge on wiring that works, in the
+  // report somebody uses to decide what to repair. The function list is the answer to «does it
+  // exist», and both builders have it.
+  (fns || []).forEach((f) => { if (f.id != null) byId[String(f.id)] = byId[String(f.id)] || f;
+    [f.name, f.api_name, f.display_name].forEach((k) => { if (k) byAny[String(k).toLowerCase()] = byAny[String(k).toLowerCase()] || f; }); });
   const orphans = nodes.filter((n) => n.dead_suspect).sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || ''));
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length);
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length);
@@ -367,7 +374,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   });
 
   // health / audit (same checks as the panel, rendered statically with links to #fn anchors)
-  const H = healthFacts(g, mods, wfs, scheds);
+  const H = healthFacts(g, mods, wfs, scheds, fns);
   const hNodes = H.nodes, hStat = H.stat, hOrph = H.orphans, hUnres = H.unresolved,
         hAmbig = H.ambiguous, hBroken = H.broken, hFK = H.missingFk, hBig = H.biggest, hChatty = H.chattiest;
   // **A link only where the section exists.** The health lists are built from the graph, which is
@@ -943,7 +950,10 @@ function buildExportMarkdown(d, scope) {
   // section that used to be here carried the author and the legal disclaimer as well, and the two
   // formats of one export are not allowed to say different amounts about themselves.
   if (scope.health) {
-    const H = healthFacts(g, mods, wfs, scheds);
+    // `d.fns` and not `fnList`: what the org has does not depend on which chapters were ticked, and
+    // `fnList` is empty when Functions were unticked. There is no `fns` in this scope at all - a
+    // name `node --check` accepts and only running it refuses.
+    const H = healthFacts(g, mods, wfs, scheds, d.fns || []);
     const label = (n) => _mdCell(n.display_name || n.name);
     md += '---\n\n## Health\n\n';
     if (g && g.counts && g.counts.notInMirror === null) {

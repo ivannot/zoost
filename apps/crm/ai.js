@@ -289,6 +289,24 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
 
   // No fallback: the loader answers or throws, and one here would quietly restore the
   // «empty means moved» defect the next time somebody adds a `return null`.
+  // **Named, not only counted.** A caveat on the answers stops the model stating an absence as a
+  // fact; it does not let it answer the question. Asked about a function Zoho compiles in another
+  // language, a model whose index does not contain it says «not found» - about a row the reader is
+  // looking at. So they are listed, with their language and with what is true of them: Zoost has the
+  // name and not the code. Read from the index the pull wrote, which is the only place that knows.
+  let unread = [];
+  try {
+    const idx = JSON.parse(await op.read('functions/index.json'));
+    if (Array.isArray(idx)) unread = idx.filter((e) => e && e.language && !/^deluge/i.test(String(e.language)));
+  } catch (_) { /* no index, or unreadable: the caveat on every answer still stands */ }
+  if (unread.length) {
+    funcs += `\n## Functions Zoost lists and cannot read (${unread.length})\n`
+      + 'Zoho compiles these in another language. Zoost has their name and not their source, so they\n'
+      + 'are absent from the index above, from the call graph and from every code search. They exist:\n'
+      + 'say so, and say their source is not in this workspace.\n';
+    unread.forEach((e) => { funcs += `- ${e.namespace || 'misc'}.${e.api_name} [${e.language}]\n`; });
+  }
+
   const mods = await loadModuleFiles(op); const mk = Object.keys(mods).sort();
   // Marked in the index too, so a module Zoho refused is known to be unknowable before it is asked
   // about, rather than at the moment the answer would already have been guessed.
@@ -691,12 +709,22 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   // is believed, was not - the same fact carried to two of its three consumers.
   //
   // `null` is «could not be established», and says so rather than reading as «nothing missing».
+  //
+  // **And the third consumer got taught a second time.** Zoho compiles functions in six languages
+  // and this mirror reads the source of one; the rest are listed by the panel and are not nodes
+  // here, so the model answered «Function not found» and «0 functions match» about a row the reader
+  // can see on screen. The audit and both reports were told about that and this was not - the same
+  // miss, in the same place, one absence later. Both are said, because they are different absences:
+  // one is a download that can be retried, the other is a language this build does not read.
   const short = g.counts ? g.counts.notInMirror : undefined;
+  const unread = (g.counts && g.counts.notMirrorable) || 0;
   const overMirror = short === null || short === undefined
     ? ' (answered over the functions in this mirror; how many the org has could not be established)'
-    : short > 0
-      ? ` (answered over ${g.counts.nodes} of the org's ${g.counts.inOrg} functions - ${short} did `
-        + 'not download, so an absence here is not an absence in Zoho)'
+    : (short > 0 || unread > 0)
+      ? ` (answered over ${g.counts.nodes} of the org's ${g.counts.inOrg} functions`
+        + (short > 0 ? ` - ${short} did not download` : '')
+        + (unread > 0 ? `${short > 0 ? ', and' : ' -'} ${unread} are in a language Zoost does not read` : '')
+        + ', so an absence here is not an absence in Zoho)'
       : '';
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
   if (name === 'list_functions') {

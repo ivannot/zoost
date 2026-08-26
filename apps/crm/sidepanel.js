@@ -4147,7 +4147,11 @@ async function reconcileNow(op) {
     // any org past the paging limit by an ordinary create. Raised by an outside review.
     if (r.capped) {
       await rebuildTree();
-      setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
+      // Which of the two made it partial: a page limit is «try again», a refused language is «that
+      // area of your org would not answer», and they are not the same thing to do next.
+      setStatus(r.otherFailed
+        ? `Zoho would not list one of this org's function languages (${errText(r.otherFailed)}) - the list is incomplete, so nothing was written or removed. Click Pull all.`
+        : `Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
       return;
     }
     const live = new Set((r.entries || []).map((e) => String(e.id)));

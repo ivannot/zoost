@@ -17332,3 +17332,95 @@ test('a module a function reads or writes links to its section', async () => {
   // A module this export does not carry stays text rather than becoming a link to nothing.
   assert.ok(!/<a href="#mod-Ghosts">/.test(card), 'a module with no section in this export was linked to it');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A schedule that runs a function this mirror cannot read is not broken wiring.
+//
+// The audit's nodes come from the `.dg` files, and Zoho compiles functions in six languages of which
+// this reads one - so a schedule running a Java function came out under «references a function not
+// in this workspace», in the group coloured as a defect, while the Functions tab of the same panel
+// listed that function. The reader goes into Zoho to repair wiring that works. «Does the org have
+// it» is answered by what the pull listed, not by what it could parse.
+test('a schedule running an unreadable function is not reported as broken', () => {
+  const rel = 'apps/crm/export.js';
+  const scheds = [{ id: 's1', name: 'Nightly ledger', function_id: 'j1', function_name: 'syncLedger' },
+                  { id: 's2', name: 'Ghost run', function_id: 'zz', function_name: 'goneForGood' }];
+  const listed = [{ id: 'j1', name: 'syncLedger', api_name: 'syncLedger', display_name: 'Sync ledger',
+                    namespace: 'standalone', language: 'java17', mirrored: false }];
+  const m = load([...EXPORT_PARTS], MD_STUBS());
+
+  const withList = m.healthFacts({ nodes: {} }, [], [], scheds, listed);
+  assert.equal(withList.broken.map((b) => b.fn).join(','), 'goneForGood',
+               `the audit called ${JSON.stringify(withList.broken.map((b) => b.fn))} broken - a function `
+               + 'the panel lists on the same screen is reported as missing, and the reader goes into '
+               + 'Zoho to repair a schedule that works');
+
+  // The positive control: with nothing listed, both are genuinely unknown and both are reported.
+  const blind = m.healthFacts({ nodes: {} }, [], [], scheds, []);
+  assert.equal(blind.broken.length, 2, 'the check no longer reports a genuinely missing function either');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The same question, on the panel's own audit and in what the assistant is given.
+//
+// Three surfaces answer «does this org have that function»: the health view, the reports, and the
+// model. The reports were taught first; the panel's audit called a working schedule broken, and the
+// model - the surface that answers in words and is believed - said «Function not found» about a row
+// the reader is looking at. That miss is recorded in `ai.js` as having been made once before, with
+// the same shape, one absence earlier.
+test('the panel audit and the assistant know a function the mirror cannot read', async () => {
+  const files = {
+    'functions/index.json': JSON.stringify([
+      { id: 'd1', api_name: 'build_Invoice', name: 'build_Invoice', namespace: 'automation', language: 'deluge' },
+      { id: 'j1', api_name: 'syncLedger', name: 'syncLedger', display_name: 'Sync ledger', namespace: 'standalone', language: 'java17' },
+    ]),
+    'schedules/index.json': JSON.stringify([
+      { id: 's1', name: 'Nightly ledger', function_id: 'j1', function_name: 'syncLedger' },
+      { id: 's2', name: 'Ghost run', function_id: 'zz', function_name: 'goneForGood' },
+    ]),
+    'workflows/index.json': JSON.stringify([]),
+  };
+  const op = { root: {}, current: () => true, say: () => {},
+               read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } };
+
+  // --- the panel's audit
+  const hg = { console, Object, Set, Map, Array, JSON, String, Number, Promise, RegExp, Date,
+               beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes: {}, counts: {} }),
+               escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+               isFnAction: (a) => !!a && (a.type === 'functions' || a.type === 'function'),
+               actionUsers: new Map(),
+               walk: async function* () {},
+               nmNode: (n) => String(n.name || ''), loadModuleFiles: async () => ({}),
+               failuresIndex: async () => null, fnStats: () => null,
+               MSG: { hRankedOver: () => '', hOrphan: 'x', hUnresolved: 'x', hAmbiguous: 'x',
+                      hBroken: 'x', hMissingRefs: 'x', hBiggest: 'x', hBiggestDesc: 'x', hChattiest: 'x' } };
+  const h = load([sliceFn('apps/crm/health.js', 'buildHealth')], hg);
+  let audit = null;
+  try { audit = await h.buildHealth(op); } catch (e) { assert.fail(`buildHealth needs another stub: ${e.message}`); }
+  const brokenText = JSON.stringify(audit).toLowerCase();
+  assert.ok(!brokenText.includes('syncledger'),
+            'the audit reports the schedule that runs syncLedger as broken wiring, while the Functions '
+            + 'tab of the same panel lists it - the reader goes into Zoho to repair something that works');
+  assert.ok(brokenText.includes('goneforgood'),
+            'and it stopped reporting a schedule whose function really is not there');
+
+  // --- what the model is handed
+  const ag = { console, Object, Set, Map, Array, JSON, String, Number, Math, Promise, RegExp, Date,
+               beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes: {}, counts: {} }),
+               walk: async function* () {},
+               aiLoadConnections: async () => [],
+               aiLoadActions: async () => ({ list: [], users: new Map() }),
+               loadModuleFiles: async () => ({}), AI_SEED_CAP_DEFAULT: 60000,
+               loadWorkflowsForAi: async () => [], loadSchedulesForAi: async () => [],
+               loadConnectionsForAi: async () => [], loadActionsForAi: async () => [],
+               failuresIndex: async () => ({ at: null, usage: null, runs: [], credits: null, capped: false, byName: new Map(), all: [] }),
+               loadWorkflows: async () => [], loadSchedules: async () => [], loadConnections: async () => [], loadActions: async () => [],
+               bound: {}, MSG: { hRankedOver: () => '' } };
+  const a = load([sliceFn('apps/crm/ai.js', 'aiBuildSeed')], ag);
+  let seed = '';
+  try { seed = await a.aiBuildSeed(60000, op); } catch (e) { assert.fail(`aiBuildSeed needs another stub: ${e.message}`); }
+  assert.match(seed, /syncLedger/,
+               'the model is given an index that does not contain this function, so it answers «not '
+               + 'found» about a row the reader can see on screen');
+  assert.match(seed, /java17/, 'it is listed without saying what it is, so the model cannot explain the absence');
+});
