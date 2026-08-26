@@ -17741,3 +17741,31 @@ test('a fold reports what left the drawing, not what left the graph', () => {
   assert.equal(hints.at(-1), 'unfolded 1',
                'unfolding said "' + hints.at(-1) + '" while one box came back on screen');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A box «Everything» deliberately leaves off says so where the reader is looking.
+//
+// `addresses` is off in both presets on purpose - an export is a file you hand to somebody, and an
+// address is the one thing in this mirror that belongs to a person rather than to a configuration.
+// The reason was written in the source and nowhere the reader can see it, so pressing a button
+// labelled «Everything» and watching one box stay empty reads as a defect. Reported as exactly that.
+//
+// Derived: whichever key the preset excludes, not the name of this one.
+test('a box the Everything preset leaves off is labelled as deliberate', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/sidepanel.js`;
+    const g = { console, Object, SCOPE_SV: 2 };
+    const m = load([sliceConst(rel, 'SCOPE_FULL')], g);
+    const html = read(`apps/${app}/sidepanel.html`);
+    const off = Object.keys(m.SCOPE_FULL).filter((k) => !m.SCOPE_FULL[k]);
+    for (const k of off) {
+      const at = html.indexOf(`id="sc_${k}"`);
+      assert.ok(at > 0, `${app}: «Everything» leaves ${k} off and the dialog has no box for it`);
+      const label = html.slice(at, html.indexOf('</label>', at));
+      assert.match(label, /Everything/,
+                   `${app}: pressing «Everything» leaves «${k}» unticked and its label does not say so - `
+                   + 'a button that does not do what it is called reads as a defect, and this one is a '
+                   + 'decision');
+    }
+  }
+});
