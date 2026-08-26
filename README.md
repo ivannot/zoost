@@ -138,7 +138,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 **Exports - human-friendly and AI-friendly**
 - **Export → HTML**: the entire workspace - functions (highlighted, cross-linked), modules,
   workflows, the actions they fire, schedules, connections, and the health report - as one self-contained, navigable HTML file.
-- **Export → Markdown**: the whole org as a single `.md` (index + full sources + schemas + connections),
+- **Export → Markdown**: the whole org as a single `.md` - the same chapters as the HTML report,
+  including the workflows with their criteria and actions, the schedules, and the health audit -
   ready to drop into any external LLM. Work inside the extension *and* outside it.
 
 **AI assistant (bring your own key)**
@@ -352,8 +353,10 @@ from structured data, not a text search.
 
 - **HTML** (`export/*.html`): one navigable file - functions (cross-linked), modules, workflows,
   schedules, connections, health. Great for reviews, handovers, documentation.
-- **Markdown** (`export/*.md`): AI-friendly whole-org context for external LLMs - index + full
-  function sources + module schemas.
+- **Markdown** (`export/*.md`): AI-friendly whole-org context for external LLMs - index, full
+  function sources, module schemas, relations, workflows (trigger, criteria, instant and scheduled
+  actions), schedules, actions, connections, failures and the health audit. Every chapter the HTML
+  report has, because an assistant cannot see what is missing from what it was given.
 
 Both land in your workspace folder, so they're versioned with your Git.
 

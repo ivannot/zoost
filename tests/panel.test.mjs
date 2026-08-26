@@ -83,6 +83,15 @@ const { stripNonCode, scanDeluge, moduleRefs } = load([
   sliceFn('apps/crm/graph-core.js', 'moduleRefs'),
 ], { window: {} });
 
+// The pieces both CRM export builders now read from module scope: the audit's section
+// descriptions (written once, because both reports print them), the workflow criteria
+// formatters, and `healthFacts`, which computes the audit for both. A harness that lifts a
+// builder without them throws on the first line that uses one.
+const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN', 'HD_MISSING_FK',
+                      'HD_CHATTIEST', 'wfValOf', 'wfOne', 'wfCrit', 'wfTiming']
+  .map((k) => sliceConst('apps/crm/export.js', k))
+  .concat([sliceFn('apps/crm/export.js', 'healthFacts')]);
+
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
   // comments first cuts `url: "https://x"` at the `//`, which leaves an unterminated quote that
@@ -9493,7 +9502,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
   });
 
   test('the Markdown lists a function the pull could not download', () => {
-    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
     const md = buildExportMarkdown(data(), { functions: true, code: true });
     assert.ok(md.includes('`ns.beta`'), 'a function in the index is missing from the report');
     assert.ok(/- Functions: 2 \(1 not downloaded/.test(md), `the count is not the org's: ${md.split('\n')[5]}`);
@@ -9501,14 +9510,14 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
   });
 
   test('a function with no source gets no empty code fence', () => {
-    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
     const md = buildExportMarkdown(data(), { functions: true, code: true });
     assert.ok(md.includes('```deluge\ninfo "a";'), 'the downloaded function lost its source');
     assert.ok(!/```deluge\n\n?```/.test(md), 'an empty fence reads as a function with no body');
   });
 
   test('turning off the source keeps every function listed', () => {
-    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
     const md = buildExportMarkdown(data(), { functions: true, code: false });
     assert.ok(!md.includes('```deluge'), 'source excluded and a fence was written anyway');
     assert.ok(md.includes('### ns.alpha') && md.includes('### ns.beta'), 'a function vanished with the source');
@@ -11667,7 +11676,7 @@ test('a size ranking states how many functions it could measure', () => {
   const data = { fns, mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [], conns: [],
                  fails: { at: null, usage: null, failures: [] }, acts: [], actUsers: new Map() };
 
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
   const md = buildExportMarkdown(data, { functions: true, code: true });
   assert.match(md, /## Size and outbound calls/,
     'the size chapter vanishes when a function cannot be measured, so «not measured» reads as «no size»');
@@ -14382,7 +14391,7 @@ test('crm: the exported report states how much of the org its graph covers', () 
     chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
   };
   const build = (counts) => {
-    const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], { ...globals });
+    const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportHtml')], { ...globals });
     const node = { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha',
                    calls: [], called_by: [], dead_suspect: true };
     return buildExportHtml([{ api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', node }],
@@ -14580,7 +14589,7 @@ test('crm: both reports carry the run counts and the credit reading', () => {
   };
   const scope = { functions: true, failures: true };
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml([], [], { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
   assert.match(html, /nightlyDigest/, 'the HTML report does not name the busiest functions the panel lists');
   assert.match(html, /412/, 'the HTML report drops the run counts');
@@ -14589,7 +14598,7 @@ test('crm: both reports carry the run counts and the credit reading', () => {
     'the run counts are in the report without the caveat the panel gives them - and a report is read ' +
     'without the panel beside it');
 
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
   const md = buildExportMarkdown({ fns: [], mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [],
                                    conns: [], fails, acts: [], actUsers: new Map() }, scope);
   assert.match(md, /nightlyDigest/, 'the Markdown report does not name the busiest functions');
@@ -14852,7 +14861,7 @@ test('crm: both reports are produced with every chapter ticked and something in 
                 [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], health,
                 [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope];
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml(...args);
   for (const f of fns) assert.ok(html.includes(f.display_name), `${f.display_name} is not in the report`);
 
@@ -14895,7 +14904,7 @@ test('crm: both reports are produced with every chapter ticked and something in 
             'source was ticked and no source reached the document');
 
   // The Markdown twin takes the same data as one object - a different shape, same fixture.
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
   const md = buildExportMarkdown({ fns, mods, g: args[2], modRefs: {}, wfs: args[4], scheds: args[5],
                                    conns: args[6], fails: health, acts: args[8], actUsers: new Map() },
                                  scope);
@@ -14951,7 +14960,7 @@ test('crm: the export contents name the chapters the export has, in the order it
     MSG: { hRankedOver: () => '', hOrphan: 'o', hUnresolved: 'u', hAmbiguous: 'a', hBroken: 'b',
            hMissingRefs: 'm', hBiggest: 'B', hChattiest: 'C', hBiggestDesc: 'd' },
   };
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
 
   // Everything ticked in both runs: this is about the composition, not about the scope - a chapter
   // left out by the reader is left out of both halves by construction, and the interesting case is
@@ -15141,7 +15150,7 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
   for (const k of ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules',
                    'actions', 'addresses', 'connections', 'failures', 'health']) scope[k] = true;
 
-  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
+  const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml([], mods, { nodes: {}, counts: {} }, {}, [], [], [], fails, [], new Map(), scope);
   assert.ok(html.includes('&lt;script&gt;'),
     'the hostile name never reached the report - the fixture is not exercising what it claims to');
@@ -15160,7 +15169,7 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
 
   // `_mdCell` is the Markdown escaper and it is the shipped one, for the same reason as above:
   // a hand-written copy of its rule in the fixture is a stub of the thing under test.
-  const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown'),
+  const { buildExportMarkdown } = load([...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown'),
                                        sliceFn('apps/crm/export.js', '_mdCell')], globals);
   const md = buildExportMarkdown({ fns: [], mods, g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [],
                                    conns: [], fails, acts: [], actUsers: new Map() }, scope);
@@ -16771,7 +16780,7 @@ test('the export gives each function its own anchor and its own call graph', asy
   const g = { nodes: { 'automation.notify_Owner': node('automation', 'notify_Owner', ['util.log'], []),
                        'schedule.notify_Owner': node('schedule', 'notify_Owner', [], ['util.log']),
                        'util.log': node('util', 'log', ['schedule.notify_Owner'], ['automation.notify_Owner']) } };
-  const m = load([sliceFn(rel, 'buildExportHtml')], EXPORT_STUBS());
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportHtml')], EXPORT_STUBS());
   const html = await m.buildExportHtml(fns, [], g, {}, [], [], [], {}, [], {},
     { functions: true, code: true, modules: true, relations: true, health: false, connections: true });
 
@@ -16801,7 +16810,7 @@ test('an unticked export chapter says so instead of claiming the org is empty', 
   const mods = [{ api_name: 'Contacts', module_name: 'Contacts', fields: [],
                   related_lists: [{ api_name: 'Deals', module: { api_name: 'Deals' } }] }];
   const build = async (relations) => {
-    const m = load([sliceFn(rel, 'buildExportHtml')], EXPORT_STUBS());
+    const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportHtml')], EXPORT_STUBS());
     return m.buildExportHtml([], mods, { nodes: {} }, {}, [], [], [], {}, [], {},
       { functions: false, modules: true, relations, health: false });
   };
@@ -16864,4 +16873,96 @@ test('the report filter reaches every kind of row the report draws', () => {
               `the report draws .${cls} rows and the filter cannot see them: they stay on screen while `
               + 'everything that matched the box disappears, which reads as «these are the matches»');
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The Markdown export carries every chapter the HTML one does.
+//
+// «The exports exist so someone without the extension sees what you see; a number that lives only on
+// screen makes the report a lesser, quietly incomplete copy - and the person reading it cannot know
+// what they are missing.» The Markdown had no Health chapter at all while the dialog offered a
+// Health tick for both buttons, and gave a workflow one line - name, module, functions, last run -
+// against the HTML's trigger, criteria, per-condition criteria and instant/scheduled actions with
+// their delays. It is the file written for an assistant, so what is absent from it is absent from
+// every answer it gives, invisibly.
+//
+// One-directional on purpose: Markdown may hold more (it has a size table the HTML spreads across
+// the function cards), and never less. Both builders are run - a check that read the source for
+// chapter names would pass on a chapter that is emitted empty.
+const MD_FIXTURE = () => {
+  const stats = { lines: 1, codeLines: 1, chars: 8, apiCalls: 0, invokeurl: 0, crm: 0, zoho: 0, sendmail: 0 };
+  return {
+    fns: [{ api_name: 'notify_Owner', display_name: 'Notify owner', namespace: 'automation', downloaded: true,
+            code: 'info 1;', rest: false, node: { calls: [], called_by: [], stats } }],
+    mods: [{ api_name: 'Contacts', module_name: 'Contacts', fields: [{ api_name: 'Owner', lookup: 'Ghosts' }], related_lists: [] }],
+    wfs: [{ id: 'w1', name: 'On create', module: 'Contacts', type: 'on_create', active: true,
+            detail: { description: 'when a contact lands', last_executed_time: '2026-08-01T10:00:00Z',
+                      execute_when: { type: 'on_create', details: { repeat: false, fields: [{ api_name: 'Email' }],
+                                      criteria: { comparator: 'equal', field: { api_name: 'Lead_Source' }, value: 'Web' } } },
+                      conditions: [{ sequence_number: 1,
+                                     criteria_details: { criteria: { comparator: 'not_equal', field: { api_name: 'Email' }, value: 'x' } },
+                                     instant_actions: { actions: [{ type: 'functions', name: 'notify_Owner', id: 'f1' }] },
+                                     scheduled_actions: [{ execute_after: { unit: 2, period: 'days' },
+                                                           actions: [{ type: 'tasks', name: 'Follow up', id: 't1' }] }] }] } }],
+    scheds: [{ id: 's1', name: 'Nightly', frequency: 'daily', status: 'active', function_name: 'ghost_fn', function_id: 'zz', next: '2026-08-27' }],
+    g: { nodes: { 'automation.notify_Owner': { id: 'automation.notify_Owner', namespace: 'automation', api_name: 'notify_Owner',
+                                               name: 'notify_Owner', display_name: 'Notify owner', calls: [], called_by: [],
+                                               dead_suspect: true, unresolved: [], ambiguous: [], stats } },
+         counts: { nodes: 1, inOrg: 1, notInMirror: 0 } },
+  };
+};
+const MD_STUBS = () => Object.assign(EXPORT_STUBS(), {
+  bound: { label: 'Sample org', instance: 'yourinstance', org: '1234567890', base: 'https://crm.zoho.eu' },
+  isFnAction: (a) => !!a && (a.type === 'functions' || a.type === 'function'),
+  freshnessLine: () => 'today', wfScheduled: () => ({ count: 1, delays: ['2 days'] }),
+  firedBy: () => [], actionKindLabel: (k) => k, actProv: () => '', actStale: () => false,
+  actKept: () => false, actThin: () => false, mapVal: () => '', _pick: () => '',
+  KEPT_DETAIL: '', MISS_DETAIL: '', FAIL_CAPPED: '',
+  MSG: { hRankedOver: (a, b) => `Ranked over ${a} of ${b}.`, hOrphan: 'No caller', hUnresolved: 'Unresolved calls',
+         hAmbiguous: 'Ambiguous calls', hBroken: 'Broken references', hMissingRefs: 'Missing lookups',
+         hBiggest: 'Biggest', hBiggestDesc: 'By lines.', hChattiest: 'Chattiest' },
+});
+const MD_SCOPE = { functions: true, code: true, modules: true, relations: true, layouts: true, workflows: true,
+                   schedules: true, actions: true, connections: true, failures: true, health: true, addresses: true };
+
+test('the Markdown export has every chapter the HTML export has', async () => {
+  const rel = 'apps/crm/export.js';
+  const f = MD_FIXTURE();
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportMarkdown'), sliceFn(rel, 'buildExportHtml'),
+                  sliceFn(rel, '_mdCell')], MD_STUBS());
+  const md = m.buildExportMarkdown({ fns: f.fns, mods: f.mods, g: f.g, wfs: f.wfs, scheds: f.scheds,
+                                     conns: [], fails: { failures: [] }, acts: [], actUsers: {} }, MD_SCOPE);
+  const html = await m.buildExportHtml(f.fns, f.mods, f.g, {}, f.wfs, f.scheds, [], { failures: [] }, [], {}, MD_SCOPE);
+  const norm = (t) => t.replace(/\s*\(.*\)$/, '').trim();
+  const mdCh = new Set([...md.matchAll(/^## (.+)$/gm)].map((x) => norm(x[1])));
+  const htmlCh = [...html.matchAll(/<h2 id="[^"]*">([^<]+)<\/h2>/g)].map((x) => norm(x[1]));
+  assert.ok(htmlCh.length > 3, `only ${htmlCh.length} HTML chapter(s) found - the derivation broke`);
+  const missing = htmlCh.filter((t) => !mdCh.has(t));
+  assert.deepEqual(missing, [],
+                   `${missing.join(', ')} is in the HTML report and not in the Markdown one, which is the `
+                   + 'file an assistant is given: what is absent from it is absent from every answer it '
+                   + 'gives, and nobody reading those answers can tell');
+});
+
+// ---------------------------------------------------------------------------------------------
+// And it carries what those chapters are for, not just their headings.
+//
+// A heading with a one-line summary under it passes any check that counts chapters, which is why
+// this one reads the facts: a rule's criteria, the delay on a scheduled action, and each audit
+// section's own count.
+test('the Markdown export prints a workflow criteria, a delay and the audit counts', () => {
+  const rel = 'apps/crm/export.js';
+  const f = MD_FIXTURE();
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportMarkdown'),
+                  sliceFn(rel, '_mdCell')], MD_STUBS());
+  const md = m.buildExportMarkdown({ fns: f.fns, mods: f.mods, g: f.g, wfs: f.wfs, scheds: f.scheds,
+                                     conns: [], fails: { failures: [] }, acts: [], actUsers: {} }, MD_SCOPE);
+  assert.match(md, /when: Lead_Source equal Web/, 'a rule is in the report without what makes it fire');
+  assert.match(md, /criteria: Email not_equal/, 'a condition is in the report without its own criteria');
+  assert.match(md, /scheduled \(after 2 days\): tasks: Follow up/,
+               'a scheduled action is in the report without the delay, which is the whole of what «scheduled» means');
+  assert.match(md, /\| Nightly \| daily \| active \| ghost_fn \| 2026-08-27 \|/, 'the schedules table lost a column');
+  assert.match(md, /### No caller \(1\)/, 'the audit is a heading with no findings under it');
+  assert.match(md, /### Broken references \(1\)/, 'a schedule pointing at a function that is not here went unreported');
+  assert.match(md, /### Missing lookups \(1\)/, 'a lookup pointing at a module that is not here went unreported');
 });

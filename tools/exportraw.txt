@@ -22,14 +22,22 @@ apps/crm/export.js	REPORT_FILTER_JS
 apps/crm/export.js	String(a.id)
 apps/crm/export.js	String(a.name || '').toLowerCase()
 apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
+apps/crm/export.js	_mdCell((rel.module && rel.module.api_name) || rel.module || '')
 apps/crm/export.js	_mdCell(L.name || String(L.id))
+apps/crm/export.js	_mdCell(String(det.last_executed_time).slice(0, 16))
 apps/crm/export.js	_mdCell(a.name || a.id)
 apps/crm/export.js	_mdCell(actProv(a))
 apps/crm/export.js	_mdCell(actionKindLabel(a.kind))
+apps/crm/export.js	_mdCell(b.fn || '?')
+apps/crm/export.js	_mdCell(b.kind)
+apps/crm/export.js	_mdCell(b.name || '?')
 apps/crm/export.js	_mdCell(c.connector || '')
 apps/crm/export.js	_mdCell(c.label || '')
 apps/crm/export.js	_mdCell(c.name)
+apps/crm/export.js	_mdCell(ct)
+apps/crm/export.js	_mdCell(det.description)
 apps/crm/export.js	_mdCell(detail)
+apps/crm/export.js	_mdCell(ewc)
 apps/crm/export.js	_mdCell(f.api_name)
 apps/crm/export.js	_mdCell(f.componentType)
 apps/crm/export.js	_mdCell(f.label || f.api_name)
@@ -39,23 +47,39 @@ apps/crm/export.js	_mdCell(f.reason)
 apps/crm/export.js	_mdCell(fl.api_name || '')
 apps/crm/export.js	_mdCell(fl.data_type || '')
 apps/crm/export.js	_mdCell(fl.field_label || fl.display_label || fl.api_name)
+apps/crm/export.js	_mdCell(mod)
 apps/crm/export.js	_mdCell(n.namespace + '.' + n.name)
+apps/crm/export.js	_mdCell(n.namespace)
 apps/crm/export.js	_mdCell(r.api)
 apps/crm/export.js	_mdCell(r.api_name)
+apps/crm/export.js	_mdCell(r.field)
 apps/crm/export.js	_mdCell(r.label || '')
 apps/crm/export.js	_mdCell(r.label)
 apps/crm/export.js	_mdCell(r.module || r.connected_module || '')
+apps/crm/export.js	_mdCell(r.module)
 apps/crm/export.js	_mdCell(r.name || r.id)
 apps/crm/export.js	_mdCell(r.parent)
+apps/crm/export.js	_mdCell(r.target)
 apps/crm/export.js	_mdCell(r.type || '')
 apps/crm/export.js	_mdCell(r.type)
 apps/crm/export.js	_mdCell(r.via || '')
+apps/crm/export.js	_mdCell(sc.frequency || '')
+apps/crm/export.js	_mdCell(sc.function_name || '?')
+apps/crm/export.js	_mdCell(sc.name)
+apps/crm/export.js	_mdCell(sc.next || '')
+apps/crm/export.js	_mdCell(sc.status || '')
 apps/crm/export.js	_mdCell(sec.display_label || sec.name || 'Section')
+apps/crm/export.js	_mdCell(tim)
+apps/crm/export.js	_mdCell(title)
+apps/crm/export.js	_mdCell(w.name)
+apps/crm/export.js	_mdCell(wfCrit(rel.criteria))
 apps/crm/export.js	_pick(f.picklist, 12, _mdCell)
 apps/crm/export.js	_pick(fl.picklist, 12, esc)
 apps/crm/export.js	a.field_label || a.field
 apps/crm/export.js	a.field_type ? ' (' + a.field_type + ')' : ''
+apps/crm/export.js	a.name || a.id
 apps/crm/export.js	a.type
+apps/crm/export.js	a.type || '?'
 apps/crm/export.js	actHtml
 apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
 apps/crm/export.js	actWithheld
@@ -69,6 +93,8 @@ apps/crm/export.js	count ? rows : '<p class="hxnone">None</p>'
 apps/crm/export.js	desc
 apps/crm/export.js	desc ? `<p class="hxd">${desc}</p>` : ''
 apps/crm/export.js	det.repeat ? 'yes' : 'no'
+apps/crm/export.js	dt.fields.map((fl) => (fl.field && fl.field.api_name) || fl.api_name |
+apps/crm/export.js	dt.repeat ? 'yes' : 'no'
 apps/crm/export.js	ea.period || ''
 apps/crm/export.js	ea.unit
 apps/crm/export.js	empty
@@ -107,12 +133,16 @@ apps/crm/export.js	fnHtml || absent(scope.functions, 'functions')
 apps/crm/export.js	freshnessLine()
 apps/crm/export.js	frows
 apps/crm/export.js	g.comparator || ''
+apps/crm/export.js	g.counts.inOrg
+apps/crm/export.js	g.counts.nodes
+apps/crm/export.js	g.counts.notInMirror
 apps/crm/export.js	g2
 apps/crm/export.js	hLink(n)
 apps/crm/export.js	healthHtml
 apps/crm/export.js	healthTotal
 apps/crm/export.js	inst
 apps/crm/export.js	k
+apps/crm/export.js	label(n)
 apps/crm/export.js	last ? ' \u00b7 last run ' + String(last).slice(0, 16) : ''
 apps/crm/export.js	layoutsHtml
 apps/crm/export.js	m.api_name
@@ -130,6 +160,7 @@ apps/crm/export.js	n.modified_by ? 'by ' + n.modified_by : ''
 apps/crm/export.js	n.modulesUnknown
 apps/crm/export.js	n.name
 apps/crm/export.js	n.namespace
+apps/crm/export.js	n.namespace ? ` \u00b7 ${_mdCell(n.namespace)}` : ''
 apps/crm/export.js	n.rest ? ' \u00b7 REST' : ''
 apps/crm/export.js	n.rest ? ' \u00b7 REST-enabled' : ''
 apps/crm/export.js	n.return_type
@@ -145,6 +176,7 @@ apps/crm/export.js	n.stats.invokeurl
 apps/crm/export.js	n.stats.lines
 apps/crm/export.js	n.stats.sendmail
 apps/crm/export.js	n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''
+apps/crm/export.js	n.stats.sendmail ? ` \u00b7 ${n.stats.sendmail} sendmail` : ''
 apps/crm/export.js	n.stats.sendmail ? `, ${n.stats.sendmail} sendmail` : ''
 apps/crm/export.js	n.stats.zoho
 apps/crm/export.js	n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''
@@ -197,10 +229,12 @@ apps/crm/export.js	stamp
 apps/crm/export.js	status
 apps/crm/export.js	tabLabel(t.id)
 apps/crm/export.js	tim
+apps/crm/export.js	tim ? ` (${_mdCell(tim)})` : ''
 apps/crm/export.js	tim ? ` (${tim})` : ''
 apps/crm/export.js	title
 apps/crm/export.js	toc
 apps/crm/export.js	usesLinks
+apps/crm/export.js	w.active ? '' : ' (inactive)'
 apps/crm/export.js	w.active ? '' : '<span class="badge no">inactive</span>'
 apps/crm/export.js	w.active ? '\u25cf' : ''
 apps/crm/export.js	w.id

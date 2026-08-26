@@ -26,6 +26,46 @@ function freshnessLine() {
   return parts.join(' \u00b7 ');
 }
 
+// **The audit, computed once for both reports.** It used to live inside `buildExportHtml`, so the
+// Markdown export - the one written for an assistant, where a missing chapter is invisible - simply
+// had no Health at all. Recomputing it beside the second builder would be the same list twice, and
+// the twin that drifts is always the one nobody opens. `hSec` and its Markdown counterpart render
+// this; neither decides what is in it.
+// The criteria and timing of a workflow, as text. Module-level because both reports print them and
+// a second copy of a formatter is a second answer to «what does this rule actually say».
+// What each section of the audit means, said once. Both reports print these, and the day they were
+// two copies is the day one of them starts describing a different audit from the one it lists.
+const HD_ORPHAN = 'No caller in code, not REST, no associated_place.';
+const HD_UNRESOLVED = 'Calls a function that does not resolve in this workspace.';
+const HD_AMBIGUOUS = 'A call matches more than one function.';
+const HD_BROKEN = 'A workflow/schedule references a function not in this workspace.';
+const HD_MISSING_FK = 'A lookup points to a module not in this workspace.';
+const HD_CHATTIEST = 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.';
+const wfValOf = (g) => { const v = g.value; if (g.type === 'field' && v && v.api_name) return v.api_name; if (v === '${EMPTY}' || v === '${empty}') return 'empty'; return v == null ? '' : String(v); };
+const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
+const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
+const wfTiming = (bk) => { const ea = bk.execute_after; return (ea && ea.unit != null) ? `after ${ea.unit} ${ea.period || ''}`.trim() : ''; };
+function healthFacts(g, mods, wfs, scheds) {
+  const nodes = Object.values((g && g.nodes) || {});
+  const byId = {}, byAny = {};
+  nodes.forEach((n) => { if (n.id) byId[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) byAny[String(k).toLowerCase()] = n; }); });
+  const orphans = nodes.filter((n) => n.dead_suspect).sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || ''));
+  const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length);
+  const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length);
+  // Informational rankings, deliberately kept out of the issue total: they are not defects.
+  const stat = nodes.filter((n) => n.stats && n.stats.lines);
+  const biggest = stat.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15);
+  const chattiest = stat.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15);
+  const broken = [];
+  wfs.forEach((w) => { if (!w.detail) return; (w.detail.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(byId[String(a.id)] || byAny[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); });
+  scheds.forEach((sc) => { if (!(byId[String(sc.function_id)] || byAny[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
+  const modSet = new Set(mods.map((m) => m.api_name));
+  const missingFk = [];
+  mods.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (t.module && (t.module.api_name || t.module)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modSet.has(t)) missingFk.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
+  return { nodes, stat, orphans, unresolved, ambiguous, broken, missingFk, biggest, chattiest,
+           total: orphans.length + unresolved.length + ambiguous.length + broken.length + missingFk.length };
+}
+
 function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
   if (!scope.functions) fns = [];
@@ -222,10 +262,6 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // workflows grouped by trigger module
   const wfByMod = {}; wfs.forEach((w) => (wfByMod[w.module || '(no module)'] ||= []).push(w));
   // rich workflow rendering (mirrors the panel detail)
-  const wfValOf = (g) => { const v = g.value; if (g.type === 'field' && v && v.api_name) return v.api_name; if (v === '${EMPTY}' || v === '${empty}') return 'empty'; return v == null ? '' : String(v); };
-  const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
-  const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
-  const wfTiming = (bk) => { const ea = bk.execute_after; return (ea && ea.unit != null) ? `after ${ea.unit} ${ea.period || ''}`.trim() : ''; };
   const wfActionHtml = (a) => { if (isFnAction(a)) { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fnKey(fn))}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } return `<span class="wfact-x">${esc(a.type)}: ${esc(a.name)}</span>`; };
   let wfHtml = '';
   Object.keys(wfByMod).sort().forEach((mod) => {
@@ -278,9 +314,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   });
 
   // health / audit (same checks as the panel, rendered statically with links to #fn anchors)
-  const hNodes = Object.values(g.nodes || {});
-  const hById = {}, hByAny = {};
-  hNodes.forEach((n) => { if (n.id) hById[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) hByAny[String(k).toLowerCase()] = n; }); });
+  const H = healthFacts(g, mods, wfs, scheds);
+  const hNodes = H.nodes, hStat = H.stat, hOrph = H.orphans, hUnres = H.unresolved,
+        hAmbig = H.ambiguous, hBroken = H.broken, hFK = H.missingFk, hBig = H.biggest, hChatty = H.chattiest;
   // **A link only where the section exists.** The health lists are built from the graph, which is
   // not filtered by the export's scope - so with Functions unticked this named every function in
   // the audit and pointed each one at a chapter that was never written. Measured: one dead anchor
@@ -289,19 +325,6 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const hLink = (n) => (scope.functions && fnKeySet.has(fnKey(n))
     ? `<a href="#${fnAnchor(fnKey(n))}">${esc(n.display_name || n.name)}</a>`
     : esc(n.display_name || n.name));
-  const hOrph = hNodes.filter((n) => n.dead_suspect).sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || ''));
-  const hUnres = hNodes.filter((n) => n.unresolved && n.unresolved.length);
-  const hAmbig = hNodes.filter((n) => n.ambiguous && n.ambiguous.length);
-  // Informational rankings, deliberately kept out of the issue total below: they are not defects.
-  const hStat = hNodes.filter((n) => n.stats && n.stats.lines);
-  const hBig = hStat.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15);
-  const hChatty = hStat.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15);
-  const hBroken = [];
-  wfs.forEach((w) => { if (!w.detail) return; (w.detail.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(hById[String(a.id)] || hByAny[(a.name || '').toLowerCase()])) hBroken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); });
-  scheds.forEach((sc) => { if (!(hById[String(sc.function_id)] || hByAny[(sc.function_name || '').toLowerCase()])) hBroken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
-  const hModSet = new Set(mods.map((m) => m.api_name));
-  const hFK = [];
-  mods.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (t.module && (t.module.api_name || t.module)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!hModSet.has(t)) hFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const hSec = (title, count, desc, rows, bad) => `<div class="hxsec"><h3>${esc(title)} <span class="hxn ${count ? (bad ? 'bad' : 'warn') : 'ok'}">${count}</span></h3>${desc ? `<p class="hxd">${desc}</p>` : ''}${count ? rows : '<p class="hxnone">None</p>'}</div>`;
   const healthHtml =
     // What the panel, the assistant and the diagram window all say and this did not: the graph is
@@ -316,15 +339,15 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       : '')
     + (scope.functions ? '' : `<div class="hxcov"><b>Functions were not included in this export.</b> The lists below still name them, because the audit is about them - but there is nothing here to link to. Export again with Functions ticked to read them.</div>`)
     + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
-    + hSec(MSG.hOrphan, hOrph.length, 'No caller in code, not REST, no associated_place.', hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
-    + hSec(MSG.hUnresolved, hUnres.length, 'Calls a function that does not resolve in this workspace.', hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
-    + hSec(MSG.hAmbiguous, hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
-    + hSec(MSG.hBroken, hBroken.length, 'A workflow/schedule references a function not in this workspace.', hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
-    + hSec(MSG.hMissingRefs, hFK.length, 'A lookup points to a module not in this workspace.', hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
+    + hSec(MSG.hOrphan, hOrph.length, HD_ORPHAN, hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
+    + hSec(MSG.hUnresolved, hUnres.length, HD_UNRESOLVED, hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
+    + hSec(MSG.hAmbiguous, hAmbig.length, HD_AMBIGUOUS, hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
+    + hSec(MSG.hBroken, hBroken.length, HD_BROKEN, hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
+    + hSec(MSG.hMissingRefs, hFK.length, HD_MISSING_FK, hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
     + hSec(MSG.hBiggest, hBig.length, MSG.hBiggestDesc + ' ' + esc(MSG.hRankedOver(hStat.length, hNodes.length)), hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
-    + hSec(MSG.hChattiest, hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. ' + esc(MSG.hRankedOver(hStat.length, hNodes.length)), hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
+    + hSec(MSG.hChattiest, hChatty.length, HD_CHATTIEST + ' ' + esc(MSG.hRankedOver(hStat.length, hNodes.length)), hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
     ;
-  const healthTotal = hOrph.length + hUnres.length + hAmbig.length + hBroken.length + hFK.length;
+  const healthTotal = H.total;
 
   // Contents index: informative tables (one row per item) for functions and modules
   Object.keys(byNs).sort().forEach((ns) => {
@@ -592,12 +615,20 @@ function buildExportMarkdown(d, scope) {
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho CRM: ${freshnessLine()}\n\n`;
-  // What is in this file, not what was ticked. The line listed the scope, and the scope includes
-  // `health` - which this report has no chapter for at all. So a reader, and the assistant this file
-  // is written for, were told the export covers an audit that is not in it. «Nothing in a report
-  // should be invented there» is the rule, and a contents list is the first thing that can break it.
+  // What is in this file, not what was ticked. The line listed the scope, and the scope included
+  // `health`, which this report had no chapter for - so a reader, and the assistant this file is
+  // written for, were told the export covers an audit that was not in it. «Nothing in a report should
+  // be invented there» is the rule, and a contents list is the first thing that can break it. The
+  // chapter exists now, and this line is still derived rather than declared: the fix for the missing
+  // chapter must not become the reason nobody notices the next one.
   //
   // Placed after the body is built, so it can only ever name chapters that were emitted.
+  // The same three states the HTML report gives a chapter, in the same words: it is here and full, it
+  // is here and empty, or it was not asked for. This report emitted its chapters only when they had
+  // content, so «no functions in this org» and «functions were unticked» both came out as silence -
+  // and silence in the file an assistant reads is the one absence nobody can see. `absent()` next
+  // door has drawn this distinction since it was written.
+  const mdAbsent = (asked, what) => (asked ? `No ${what}.\n\n` : `Not included in this export - ${what} were unticked when it was made.\n\n`);
   const CONTENTS = '- Contents: (filled in below)\n\n';
   md += CONTENTS;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
@@ -616,7 +647,8 @@ function buildExportMarkdown(d, scope) {
     });
   }
   if (scheds.length) { md += '\n### Schedules\n'; scheds.forEach((sc) => { md += `- ${sc.name} \u2192 ${sc.function_name || '?'}${sc.frequency ? ' (' + sc.frequency + ')' : ''}\n`; }); }
-  if (fnList.length) md += `\n---\n\n## Functions${scope.code ? ' (full source)' : ' (signatures only - source code excluded from this export)'}\n\n`;
+  md += `\n---\n\n## Functions${scope.code ? ' (full source)' : ' (signatures only - source code excluded from this export)'}\n\n`;
+  if (!fnList.length) md += mdAbsent(scope.functions, 'functions');
   fnList.forEach((n) => {
     md += `### ${n.namespace}.${n.name}\n\n`;
     md += `- api_name: \`${n.api_name || ''}\`${n.return_type ? ` \u00b7 returns ${n.return_type}` : ''}${n.rest ? ' \u00b7 REST-enabled' : ''}\n`;
@@ -659,8 +691,9 @@ function buildExportMarkdown(d, scope) {
     }
     rels.push({ api: r.api_name, label: r.label || '', parent: m.api_name, child, via, type: r.type || 'default', sys: SYS_REL_M.test(r.api_name) || !child });
   }));
+  md += '---\n\n## Relations (related lists)\n\n';
+  if (!rels.length || !scope.relations) md += mdAbsent(scope.relations, 'related lists');
   if (rels.length && scope.relations) {
-    md += '---\n\n## Relations (related lists)\n\n';
     md += 'To read a related list in Deluge you need the **relation API name**. It is not the api_name of the parent module, nor of the target module. Call:\n\n';
     md += '```deluge\nrows = zoho.crm.getRelatedRecords("<relation API name>", "<module the record belongs to>", recordId);\n```\n\n';
     const emit = (list, title) => {
@@ -674,7 +707,8 @@ function buildExportMarkdown(d, scope) {
     emit(rels.filter((r) => !r.sys), 'Module-to-module relations');
     emit(rels.filter((r) => r.sys), 'System related lists (notes, attachments, activities\u2026)');
   }
-  if (mods.length) md += '---\n\n## Modules (schema)\n\n';
+  md += '---\n\n## Modules (schema)\n\n';
+  if (!mods.length) md += mdAbsent(scope.modules, 'modules');
   mods.slice().sort(byField('api_name')).forEach((m) => {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
     const mref = moduleRefusal(m.unreadable);
@@ -716,6 +750,60 @@ function buildExportMarkdown(d, scope) {
   // The actions a rule fires, for a reader who has the file and not the panel. This is the chapter
   // an external model is most likely to be asked about - «what happens when a deal is won» - so the
   // rules that fire each are in the row rather than a section away.
+  // **The three chapters the HTML report had and this one did not.** «Every piece of information the
+  // panel shows about an item belongs in the HTML and Markdown exports too» - and a workflow was one
+  // line here (name, module, functions, last run) against the HTML's trigger, criteria, per-condition
+  // criteria and instant/scheduled actions with their delays; a schedule was one line against
+  // frequency, status, the function and the next run; and the audit was not here at all, while the
+  // dialog offered a Health tick for both buttons. This file is the one written for an assistant, so
+  // what is absent from it is absent from every answer it gives - invisibly.
+  if (wfs.length) {
+    md += '---\n\n## Workflows\n\nWhat fires, when, and what it does. Criteria are as Zoho stores them.\n\n';
+    const wfActionMd = (a) => (isFnAction(a) ? `\u0192 ${a.name || a.id}` : `${a.type || '?'}: ${a.name || a.id}`);
+    const wfByModMd = {};
+    wfs.forEach((w) => (wfByModMd[w.module || 'Other'] ||= []).push(w));
+    Object.keys(wfByModMd).sort().forEach((mod) => {
+      md += `### ${_mdCell(mod)}\n\n`;
+      wfByModMd[mod].slice().sort(byField('name')).forEach((w) => {
+        const det = w.detail;
+        md += `#### ${_mdCell(w.name)}${w.active ? '' : ' (inactive)'}\n\n`;
+        if (!det) { md += '- not downloaded\n\n'; return; }
+        const ew = det.execute_when || {}, dt = ew.details || {};
+        const trig = [w.type || ew.type || ''];
+        if (dt.repeat != null) trig.push(`repeat: ${dt.repeat ? 'yes' : 'no'}`);
+        if (Array.isArray(dt.fields) && dt.fields.length) trig.push(`fields: ${dt.fields.map((fl) => (fl.field && fl.field.api_name) || fl.api_name || String(fl)).join(', ')}`);
+        md += `- trigger: ${_mdCell(trig.filter(Boolean).join(' \u00b7 '))}\n`;
+        const ewc = wfCrit(dt.criteria || ew.criteria);
+        if (ewc) md += `- when: ${_mdCell(ewc)}\n`;
+        if (det.description) md += `- description: ${_mdCell(det.description)}\n`;
+        if (det.last_executed_time) md += `- last run: ${_mdCell(String(det.last_executed_time).slice(0, 16))}\n`;
+        (det.conditions || []).forEach((c, i) => {
+          const cd = c.criteria_details || {};
+          md += `\n**Condition ${c.sequence_number || i + 1}**\n\n`;
+          const ct = wfCrit(cd.criteria);
+          if (ct) md += `- criteria: ${_mdCell(ct)}\n`;
+          const rel = cd.relational_criteria;
+          if (rel && (rel.module || rel.criteria)) md += `- related: ${_mdCell((rel.module && rel.module.api_name) || rel.module || '')} ${_mdCell(wfCrit(rel.criteria))}\n`;
+          const inst = (c.instant_actions && c.instant_actions.actions) || [];
+          if (inst.length) md += `- instant: ${_mdCell(inst.map(wfActionMd).join(', '))}\n`;
+          const sch = Array.isArray(c.scheduled_actions) ? c.scheduled_actions : (c.scheduled_actions && c.scheduled_actions.actions ? [c.scheduled_actions] : []);
+          sch.forEach((bk) => {
+            const aa = bk.actions || []; const tim = wfTiming(bk);
+            if (aa.length) md += `- scheduled${tim ? ` (${_mdCell(tim)})` : ''}: ${_mdCell(aa.map(wfActionMd).join(', '))}\n`;
+          });
+        });
+        md += '\n';
+      });
+    });
+  }
+  if (scheds.length) {
+    md += '---\n\n## Schedules\n\nEach schedule and the function it runs.\n\n';
+    md += '| Schedule | Frequency | Status | Runs function | Next |\n|---|---|---|---|---|\n';
+    scheds.slice().sort(byField('name')).forEach((sc) => {
+      md += `| ${_mdCell(sc.name)} | ${_mdCell(sc.frequency || '')} | ${_mdCell(sc.status || '')} | ${_mdCell(sc.function_name || '?')} | ${_mdCell(sc.next || '')} |\n`;
+    });
+    md += '\n';
+  }
   if (acts.length) {
     const withheld = acts.filter((a) => a.from_address).length;
     md += '---\n\n## Actions\n\nWhat a workflow rule fires: notifications, field updates, tasks and webhooks. Each exists on its own in Zoho and is reused across rules. "Fired by" is read from the rules in this workspace.\n\n';
@@ -781,6 +869,30 @@ function buildExportMarkdown(d, scope) {
   // One line, the way the HTML report's foot is one line: what made this, and a link to it. The
   // section that used to be here carried the author and the legal disclaimer as well, and the two
   // formats of one export are not allowed to say different amounts about themselves.
+  if (scope.health) {
+    const H = healthFacts(g, mods, wfs, scheds);
+    const label = (n) => _mdCell(n.display_name || n.name);
+    md += '---\n\n## Health\n\n';
+    if (g && g.counts && g.counts.notInMirror === null) {
+      md += '> **Read from your mirror.** How many of your functions are in it could not be established, so treat "no caller" as covering only what is here.\n\n';
+    } else if (g && g.counts && g.counts.notInMirror > 0) {
+      md += `> **Read from your mirror:** ${g.counts.nodes} of ${g.counts.inOrg} functions. ${g.counts.notInMirror} could not be downloaded, and a function called only from one of those is counted here as having no caller.\n\n`;
+    }
+    if (!scope.functions) md += '> **Functions were not included in this export.** The lists below still name them, because the audit is about them.\n\n';
+    md += '> **Coverage.** Analyzed: function-to-function calls, workflows, schedules, and each function\'s *associated_place* (blueprint, button, ...). **Not** analyzed: custom client scripts, approval/assignment/scoring rules. Items are **candidates to review**, never automatic deletions.\n\n';
+    const sec = (title, rows, desc) => {
+      md += `### ${_mdCell(title)} (${rows.length})\n\n`;
+      if (desc) md += `${desc}\n\n`;
+      md += rows.length ? rows.join('\n') + '\n\n' : 'None\n\n';
+    };
+    sec(MSG.hOrphan, H.orphans.map((n) => `- ${label(n)}${n.namespace ? ` \u00b7 ${_mdCell(n.namespace)}` : ''}`), HD_ORPHAN);
+    sec(MSG.hUnresolved, H.unresolved.map((n) => `- ${label(n)} \u2192 ${_mdCell(n.unresolved.join(', '))}`), HD_UNRESOLVED);
+    sec(MSG.hAmbiguous, H.ambiguous.map((n) => `- ${label(n)} \u2192 ${_mdCell(n.ambiguous.join(', '))}`), HD_AMBIGUOUS);
+    sec(MSG.hBroken, H.broken.map((b) => `- ${_mdCell(b.kind)} ${_mdCell(b.name || '?')} \u2192 missing "${_mdCell(b.fn || '?')}"`), HD_BROKEN);
+    sec(MSG.hMissingRefs, H.missingFk.map((r) => `- ${_mdCell(r.module)}.${_mdCell(r.field)} \u2192 ${_mdCell(r.target)}`), HD_MISSING_FK);
+    sec(MSG.hBiggest, H.biggest.map((n) => `- ${label(n)} \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB`), MSG.hBiggestDesc + ' ' + MSG.hRankedOver(H.stat.length, H.nodes.length));
+    sec(MSG.hChattiest, H.chattiest.map((n) => `- ${label(n)} \u00b7 ${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ` \u00b7 ${n.stats.sendmail} sendmail` : ''}`), HD_CHATTIEST + ' ' + MSG.hRankedOver(H.stat.length, H.nodes.length));
+  }
   md += `\n---\n\nGenerated by [${PRODUCT_NAME}](${PRODUCT_URL})\n`;
   // Derived from the chapters that were actually written. See the note beside CONTENTS.
   const chapters = [...md.matchAll(/(?:^|\n)## ([^\n(]+)/g)].map((m) => m[1].trim())

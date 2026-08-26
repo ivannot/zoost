@@ -121,7 +121,19 @@ export function load(pieces, globals = {}) {
       || p.match(/^\s*(?:const|let|var)\s+(\w+)\s*=/);
     if (m) names.push(m[1]);
   }
-  vm.runInContext(pieces.join('\n\n') + `\n;({ ${names.join(', ')} })`, ctx);
+  // **A piece already in this context is not evaluated again.** Several tests share one globals
+  // object on purpose - that is what keeps a getter live between them, per the note above - and
+  // `vm.createContext` hands the same context back for it. A `function` declaration survives being
+  // run twice there; a `const` throws «already been declared», so the day a shared helper moved to
+  // module scope and every harness had to lift it, three tests that had passed for months went red
+  // on the second `load()` of the same context. What is already defined is already what the piece
+  // would define: the same source, from the same file.
+  const already = new Set(names.filter((n) => vm.runInContext(`typeof ${n} !== 'undefined'`, ctx)));
+  const fresh = pieces.filter((p) => {
+    const m = p.match(/^\s*(?:async\s+)?function\s+(\w+)\s*\(/) || p.match(/^\s*(?:const|let|var)\s+(\w+)\s*=/);
+    return !(m && already.has(m[1]));
+  });
+  vm.runInContext(fresh.join('\n\n') + `\n;({ ${names.join(', ')} })`, ctx);
   return vm.runInContext(`({ ${names.join(', ')} })`, ctx);
 }
 
