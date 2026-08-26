@@ -17830,8 +17830,11 @@ test('analytics: the assistant says when the mirror is short instead of assertin
 test('the audit is silent about what it has not looked at, and about callers it cannot see', async () => {
   const rel = 'apps/crm/health.js';
   const build = (files, nodes) => {
+    // `NotFoundError` is what the File System Access API rejects with for a file that is not there,
+    // and this audit now tells that apart from a file that would not open. A bare Error would be read
+    // as the second.
     const op = { root: {}, current: () => true,
-                 read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } };
+                 read: async (p) => { if (!(p in files)) { const e = new Error('gone'); e.name = 'NotFoundError'; throw e; } return files[p]; } };
     const g = { console, Object, Set, Map, Array, JSON, String, Number, Promise, RegExp, Date,
                 beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes, counts: {} }),
                 escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
@@ -17897,4 +17900,74 @@ test('the diagram does not call a box unconnected while printing its connections
     assert.match(say(1, 0, 3, 0), /takes part in none/,
                  `${app}: a box that genuinely has no relation lost the sentence that explains the empty drawing`);
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The audit does not turn «I could not read that file» into «it does not exist».
+//
+// Three groups conclude from three different reads, and each swallowed its failure - so an ordinary
+// broken or half-written file made the audit assert, in the surface somebody deletes and repairs
+// from: a function that is fired by a workflow has no caller; a schedule that runs a Java function
+// is a broken reference; a lookup into a module that is right there points at nothing. All three
+// reproduced from outside. The class is the one this repository keeps re-learning one surface at a
+// time: a conclusion has to consult the record of what could not be read.
+test('the audit refuses to conclude from a file it could not read', async () => {
+  const rel = 'apps/crm/health.js';
+  const BAD = '@@unparseable@@';
+  const build = (files, nodes) => {
+    const op = { root: {}, current: () => true,
+                 read: async (p) => {
+                   if (!(p in files)) { const e = new Error('gone'); e.name = 'NotFoundError'; throw e; }
+                   if (files[p] === BAD) { const e = new Error('bad'); e.name = 'SyntaxError'; throw e; }
+                   return files[p];
+                 } };
+    const g = { console, Object, Set, Map, Array, JSON, String, Number, Promise, RegExp, Date,
+                beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes, counts: {} }),
+                escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+                isFnAction: (a) => !!a && (a.type === 'functions' || a.type === 'function'),
+                nmNode: (n) => String(n.display_name || n.name || ''), loadModuleFiles: async () => ({}),
+                walk: async function* () { for (const k of Object.keys(files)) if (k.startsWith('modules/')) yield k; },
+                isModuleFile: (p) => p.startsWith('modules/') && p.endsWith('.json'),
+                actionUsers: new Map(), failuresIndex: async () => null, fnStats: () => null,
+                MSG: { hRankedOver: () => '', hOrphan: 'No caller', hUnresolved: 'x', hAmbiguous: 'x',
+                       hBroken: 'Broken', hMissingRefs: 'Missing refs', hBiggest: 'x',
+                       hBiggestDesc: 'x', hChattiest: 'x' } };
+    return load([sliceFn(rel, 'buildHealth')], g).buildHealth(op);
+  };
+  const G = (h, id) => h.groups.find((x) => x.id === id);
+  const fn = { id: 'f1', namespace: 'ns', name: 'pullCatalogue', api_name: 'pullCatalogue',
+               display_name: 'Pull catalogue', calls: [], called_by: [], unresolved: [], ambiguous: [],
+               dead_suspect: true, file: 'x.dg' };
+  const wfIdx = JSON.stringify([{ id: 'w1', name: 'Nightly' }]);
+  const wfDetail = JSON.stringify({ conditions: [{ instant_actions: { actions: [{ type: 'functions', name: 'pullCatalogue', id: 'f1' }] } }] });
+
+  // 1. a workflow whose detail did not open still fires the function it fires.
+  const wfOk = await build({ 'workflows/index.json': wfIdx, 'workflows/w1.json': wfDetail }, { a: fn });
+  assert.equal(G(wfOk, 'orphan').items.length, 0, 'the control is wrong: a fired function is listed as an orphan');
+  const wfBad = await build({ 'workflows/index.json': wfIdx, 'workflows/w1.json': BAD }, { a: fn });
+  assert.equal(G(wfBad, 'orphan').items.length, 0,
+               'a workflow file that would not open put the function it fires into «nothing calls them» - '
+               + 'the list somebody deletes from');
+  assert.match(G(wfBad, 'orphan').desc, /would not open/, 'and the group did not say why it is empty');
+
+  // 2. the function index unreadable is not «that function is missing».
+  const other = Object.assign({}, fn, { id: 'zz', name: 'other', api_name: 'other', dead_suspect: false });
+  const schIdx = JSON.stringify([{ id: 's1', name: 'Nightly', function_id: 'f9', function_name: 'javaFn' }]);
+  const fnOk = await build({ 'schedules/index.json': schIdx, 'functions/index.json': JSON.stringify([{ id: 'f9', api_name: 'javaFn' }]) }, { z: other });
+  assert.equal(G(fnOk, 'broken').items.length, 0, 'the control is wrong: a schedule with its function present is broken');
+  const fnBad = await build({ 'schedules/index.json': schIdx, 'functions/index.json': BAD }, { z: other });
+  assert.equal(G(fnBad, 'broken').items.length, 0,
+               'an unreadable function index made a working schedule a broken reference, in red - the '
+               + 'reader goes into Zoho to repair something that works');
+  assert.equal(G(fnBad, 'broken').bad, false, 'and it was painted as a defect');
+
+  // 3. a module file that would not open is not a module that is not there.
+  const orders = JSON.stringify({ api_name: 'Orders', fields: [{ api_name: 'Cust', lookup: 'Customers' }] });
+  const customers = JSON.stringify({ api_name: 'Customers', fields: [] });
+  const mOk = await build({ 'modules/Orders.json': orders, 'modules/Customers.json': customers }, {});
+  assert.equal(G(mOk, 'fk').items.length, 0, 'the control is wrong: a lookup into a module that is here is missing');
+  const mBad = await build({ 'modules/Orders.json': orders, 'modules/Customers.json': BAD }, {});
+  assert.equal(G(mBad, 'fk').items.length, 0,
+               'a module file that would not open made a working lookup a missing reference');
+  assert.match(G(mBad, 'fk').desc, /would not open/, 'and the group did not say why it is empty');
 });

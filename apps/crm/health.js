@@ -23,6 +23,11 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // coloured as a defect and reads «references a function not in this workspace». The reader goes
   // into Zoho to repair wiring that works. What the panel lists is the answer to «does the org have
   // it», and the index the pull wrote is what the panel lists from.
+  // **Every read this audit depends on, and whether it worked.** A `catch (_) {}` here turns «I could
+  // not read that file» into «that thing does not exist», and this audit is where somebody decides
+  // what to delete and what to repair. Three groups conclude from three different reads; each records
+  // its own, and a group whose input did not arrive says so instead of concluding.
+  const unread = { fnIndex: false, wfDetail: [], modules: [] };
   let listedIds = new Set(), listedNames = new Set();
   try {
     const idx = JSON.parse(await op.read('functions/index.json'));
@@ -31,7 +36,11 @@ async function buildHealth(op = beginWorkspaceOp()) {
       if (e.id != null) listedIds.add(String(e.id));
       [e.name, e.api_name, e.display_name].forEach((k) => { if (k) listedNames.add(String(k).toLowerCase()); });
     });
-  } catch (_) { /* no index: the graph is then the only answer there is */ }
+  } catch (e) {
+    // Absent is «never pulled», which `noFunctionsHere` below already handles. Unreadable is
+    // «I have not looked», and the wiring group must not conclude from it.
+    if (!/NotFound/i.test(String(e && e.name))) unread.fnIndex = true;
+  }
   const known = (id, name) => !!(fnById[String(id)] || fnByName[String(name || '').toLowerCase()]
     || listedIds.has(String(id)) || listedNames.has(String(name || '').toLowerCase()));
   // Every function an automation runs, by every name it might be named with. Read before the lists
@@ -39,7 +48,11 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const firedByAutomation = new Set();
   let wfIdxEarly = []; try { wfIdxEarly = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   for (const w of wfIdxEarly) {
-    let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
+    let d = null;
+    try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); }
+    catch (e) { if (!/NotFound/i.test(String(e && e.name))) unread.wfDetail.push(w.name || w.id); }
+    // A workflow whose detail did not arrive names no functions here - so a function it alone fires
+    // would arrive in «nothing calls them», which is the list a deletion follows.
     if (!d) continue;
     (d.conditions || []).forEach((c) => {
       const acts = [];
@@ -57,8 +70,11 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // landed in «nothing calls them» - while the diagram, which adds those as nodes, showed the edge
   // on the same mirror. Two surfaces of one workspace disagreeing about the question a deletion is
   // decided from. The names are collected below, before this list is built.
-  const orphan = nodes.filter((n) => n.dead_suspect && !firedByAutomation.has(String(n.api_name || n.name || '').toLowerCase()))
-    .sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
+  // A workflow whose detail did not arrive names none of its functions, so «no caller» would be a
+  // conclusion drawn from a file nobody read.
+  const orphan = unread.wfDetail.length ? []
+    : nodes.filter((n) => n.dead_suspect && !firedByAutomation.has(String(n.api_name || n.name || '').toLowerCase()))
+      .sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">calls: ${escHtml(n.unresolved.join(', '))}</span>` }));
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
   const broken = [];
@@ -71,11 +87,19 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // answer is «I have not looked» - which came out as «Broken automations 16» in red, each row
   // naming a function that exists. The reader goes into Zoho to repair sixteen rules that work.
   const noFunctionsHere = !nodes.length && !listedIds.size && !listedNames.size;
-  if (noFunctionsHere) broken.length = 0;
+  // «Is this function in the workspace» is answered by the graph *and* the index. With the index
+  // unreadable and any node at all present, the «nothing pulled» guard does not fire and a schedule
+  // running a function this build does not parse came out as a broken reference.
+  const brokenBlind = noFunctionsHere || unread.fnIndex;
+  if (brokenBlind) broken.length = 0;
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
-  for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
-  modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
+  // A module file that would not open drops out of the local census, and the next line then reads a
+  // lookup pointing at it as a lookup pointing at nothing.
+  for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (e) { if (!/NotFound/i.test(String(e && e.name))) unread.modules.push(p); } } }
+  // With a module file unreadable the census is short, and a lookup into it reads as a lookup into
+  // nothing. The group is not computed rather than computed wrong.
+  if (!unread.modules.length) modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   // The module named here *is* in the workspace - it is its lookup's target that is not - so it
   // opens, and the target stays plain text because there is nothing to open.
   const fkItems = missingFK.map((r) => ({ html: `<a data-kind="module" data-id="${escA(r.module)}">${escHtml(r.module)}</a>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
@@ -171,16 +195,26 @@ async function buildHealth(op = beginWorkspaceOp()) {
     { id: 'chattiest', tab: 'size', title: MSG.hChattiest,
       desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates. '
         + MSG.hRankedOver(withStats.length, nodes.length), bad: false, items: chattiest },
-    { id: 'orphan', tab: 'functions', title: MSG.hOrphan, desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
+    { id: 'orphan', tab: 'functions', title: MSG.hOrphan,
+      desc: unread.wfDetail.length
+        ? `Not asked: ${unread.wfDetail.length} workflow file(s) here would not open (${unread.wfDetail.slice(0, 3).join(', ')}), and a function they fire would read as having no caller. Press \u21bb Refresh, or Pull all.`
+        : 'No caller in code, not exposed as REST, and no associated_place.',
+      bad: false, items: orphan },
     { id: 'unresolved', tab: 'functions', title: MSG.hUnresolved, desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
     { id: 'ambiguous', tab: 'functions', title: MSG.hAmbiguous, desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
     { id: 'unattached', tab: 'wiring', title: 'Automation actions nothing fires', desc: actDesc, bad: false, items: unattached },
     { id: 'broken', tab: 'wiring', title: MSG.hBroken,
-      desc: noFunctionsHere
-        ? 'Not asked: no functions have been pulled into this workspace, so whether a rule points at one that is missing cannot be told from here. Pull all, then look again.'
+      desc: brokenBlind
+        ? (unread.fnIndex
+          ? 'Not asked: the function index here would not open, so whether a rule points at one that is missing cannot be told from this mirror. Press \u21bb Refresh, or Pull all.'
+          : 'Not asked: no functions have been pulled into this workspace, so whether a rule points at one that is missing cannot be told from here. Pull all, then look again.')
         : 'A workflow or schedule references a function not in this workspace.',
-      bad: !noFunctionsHere, items: brokenItems },
-    { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs, desc: 'A lookup field points to a module not in this workspace (may be a system module).', bad: false, items: fkItems },
+      bad: !brokenBlind, items: brokenItems },
+    { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs,
+      desc: unread.modules.length
+        ? `Not asked: ${unread.modules.length} module file(s) here would not open, so a lookup into one of them would read as a lookup into nothing. Press \u21bb Refresh, or Pull all.`
+        : 'A lookup field points to a module not in this workspace (may be a system module).',
+      bad: false, items: fkItems },
   ];
   if (!op.current()) throw new Error(WS_MOVED);
   return { groups, coverage };
