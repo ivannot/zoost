@@ -41,6 +41,10 @@ const HD_AMBIGUOUS = 'A call matches more than one function.';
 const HD_BROKEN = 'A workflow/schedule references a function not in this workspace.';
 const HD_MISSING_FK = 'A lookup points to a module not in this workspace.';
 const HD_CHATTIEST = 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.';
+// The same question the panel asks, asked here because these two scripts share no module scope.
+// Kept to one expression so the two answers cannot part company on a value neither has seen.
+const isDelugeLang = (lang) => !lang || /^deluge/i.test(String(lang));
+const langLabelOf = (lang) => (isDelugeLang(lang) ? 'Deluge' : String(lang).replace(/_/g, ' '));
 const wfValOf = (g) => { const v = g.value; if (g.type === 'field' && v && v.api_name) return v.api_name; if (v === '${EMPTY}' || v === '${empty}') return 'empty'; return v == null ? '' : String(v); };
 const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
 const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
@@ -129,15 +133,22 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // that declares it runs - so every HTML export with source ticked died on «Cannot access
   // 'srcBlock' before initialization», which is the default scope. A function *declaration* is
   // hoisted and would not have done this; an arrow assigned to a const is not, and looks identical.
+  // **Three absences, not two.** «Not downloaded» is an instruction, and it is the wrong one for a
+  // function whose source Zoho does not serve this extension at all: the reader runs the pull it
+  // names and nothing changes. The report says which of the three it is looking at.
   const srcBlock = (f) => (
-    !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
+    f.mirrored === false ? `<p class="note">${esc(langLabelOf(f.language))} function - Zoost lists it and does not read this kind of code. Only Deluge sources are mirrored; this one is in Zoho.</p>`
+      : !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
       : f.code === null || f.code === undefined
         ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
         : `<pre class="code">${hl(f.code)}</pre>`);
 
   // workflow <-> function wiring
   const fnById = {}, fnByName = {};
-  fns.forEach((f) => { fnById[f.id] = f; if (f.name) fnByName[f.name.toLowerCase()] = f; if (f.display_name) fnByName[f.display_name.toLowerCase()] = f; });
+  // By api_name too: a rule names the function the way Deluge does, and `name` is only one of the
+  // three names a function carries. With the loader dropping `name`, every lookup fell through to
+  // `display_name` - «Notify owner» - which is not what an action is called.
+  fns.forEach((f) => { if (f.id != null) fnById[String(f.id)] = f; [f.name, f.api_name, f.display_name].forEach((k) => { if (k) fnByName[String(k).toLowerCase()] = f; }); });
   const resolveFn = (a) => fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()];
   const triggeredBy = {};
   wfs.forEach((w) => wfFunctionActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fnKey(fn)] ||= []).push({ id: w.id, name: w.name }); }));
@@ -498,7 +509,7 @@ async function loadExportData(op = beginWorkspaceOp()) {
     if (p.endsWith('.meta.json')) { try { const m = JSON.parse(await op.read(p)); metaById.set(String(m.id), { meta: m, dg: p.replace(/\.meta\.json$/, '.dg') }); } catch (_) {} }
   }
   let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
-  const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
+  const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, name: v.meta.name, language: v.meta.language, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
   const fns = [];
   for (const e of entries) {
     // `null` and not `''`: a source that could not be read is not an empty one, and `fnStats`
@@ -506,7 +517,17 @@ async function loadExportData(op = beginWorkspaceOp()) {
     // outbound calls» in a report somebody reads without the extension.
     const d = metaById.get(String(e.id)); let code = null;
     if (d) { try { code = await op.read(d.dg); } catch (_) {} }
-    fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
+    // **The identity, and what this mirror holds of it.** These five used to be dropped here, and
+    // everything downstream that needs them reads a report built by this loader: `resolveFn`
+    // matches a workflow's action by `id` and by `name`, so with both absent every function
+    // collided on `undefined` and no rule ever resolved - the «Triggered by» row was missing from
+    // the real export while the logic that builds it was right, and a case that fed the builder
+    // directly could not see it. `language` and `mirrored` matter for the opposite reason: without
+    // them a function whose source Zoho does not serve us reads as one that simply has not been
+    // downloaded, and the report tells its reader to run a pull that will change nothing.
+    fns.push({ id: e.id, name: (d && d.meta.name) || e.name || e.api_name, api_name: e.api_name,
+               language: e.language || 'deluge', mirrored: isDelugeLang(e.language),
+               display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
   }
   const mods = [];
   for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); try { m._layouts = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
@@ -625,10 +646,16 @@ function buildExportMarkdown(d, scope) {
     .map((f) => Object.assign({ namespace: f.namespace, name: f.api_name, api_name: f.api_name,
                                 rest: f.rest, stats: f.stats, source_code: f.code }, f.node || {},
                               { downloaded: f.downloaded, source_code: f.code,
+                                // Carried after the spread of `f.node`, which has neither: the graph
+                                // holds only what a source read produced, and these two are about
+                                // whether there was one to read.
+                                language: f.language, mirrored: f.mirrored,
                                 display_name: f.display_name, associated_place: f.associated_place,
                                 connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime }))
     .sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
-  const notDown = fnList.filter((n) => !n.downloaded).length;
+  const notDown = fnList.filter((n) => n.mirrored !== false && !n.downloaded).length;
+  // Its own number, because «not downloaded» invites a pull and this does not.
+  const notRead = fnList.filter((n) => n.mirrored === false).length;
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
   const inst = (bound && bound.instance) || 'workspace', org = (bound && bound.org) || '?', env = bound ? envOf(bound.base) : '?';
   const first = (t) => (t || '').split('\n')[0].slice(0, 120);
@@ -636,7 +663,7 @@ function buildExportMarkdown(d, scope) {
   const wfFns = (w) => [...new Set(wfFunctionActions(w).map((a) => a.name))];
   let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
-  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
+  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''}${notRead ? ` (${notRead} in a language Zoost does not read - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho CRM: ${freshnessLine()}\n\n`;
   // What is in this file, not what was ticked. The line listed the scope, and the scope included
   // `health`, which this report had no chapter for - so a reader, and the assistant this file is
@@ -691,7 +718,8 @@ function buildExportMarkdown(d, scope) {
     if (n.modified_by || n.updatedTime) md += `- modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''}\n`;
     // An empty fence would read as a function with no body. Not downloaded is a different fact from
     // empty, and this report has one job: never to let the two look alike.
-    md += !n.downloaded ? '\n- source: not downloaded - run Pull all, or ↻ Refresh, to fetch it\n\n'
+    md += n.mirrored === false ? `\n- source: not read - ${langLabelOf(n.language)} is listed by Zoost and its code is not mirrored; only Deluge sources are\n\n`
+        : !n.downloaded ? '\n- source: not downloaded - run Pull all, or ↻ Refresh, to fetch it\n\n'
         // The third state, which this line had two of. A function whose file could not be read
         // got an empty fence - «a function with no body», which the comment above forbids in those
         // words about the case one branch over. `null` is «nothing to read»; `''` is an empty file

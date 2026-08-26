@@ -483,7 +483,13 @@
       const id = String(f.id); if (seen.has(id)) return false; seen.add(id); return true;
     });
     const raw = deluge.raw.concat(extra);
-    const capped = deluge.capped || other.capped;
+    // **A language that would not answer makes this list partial, and partial is what `capped`
+    // already means here.** Without it the pull wrote an entries array missing that language's rows
+    // straight over `functions/index.json` and pruned against it: one 429 on the second ask and the
+    // rows are gone from disk, with the warning living only in memory - reopen the panel and the
+    // functions have vanished with nothing left saying why. «Does partial data authorise a
+    // destructive act» is question five of the six this repository keeps, and this is its answer.
+    const capped = deluge.capped || other.capped || !!otherFailed;
     const all = raw.filter((f) => f.source !== 'extension');
     const entries = all.map((f) => ({
       id: String(f.id), api_name: f.api_name, name: f.name, display_name: f.display_name || f.api_name,

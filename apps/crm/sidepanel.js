@@ -3809,7 +3809,9 @@ async function pullAll() {
       // may never do. Nothing was pruned, and that part was right; what was lost was the telling.
       // Measured by driving the pull with a truncated list and recording the status line in order.
       await rebuildTree();
-      setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
+      setStatus(r.otherFailed
+        ? `Zoho would not list one of this org's function languages (${errText(r.otherFailed)}) - the list is incomplete, so nothing was written or removed. Try again.`
+        : `Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
       endPull(); return;
     }
     await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));

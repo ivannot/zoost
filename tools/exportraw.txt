@@ -144,6 +144,7 @@ apps/crm/export.js	healthTotal
 apps/crm/export.js	inst
 apps/crm/export.js	k
 apps/crm/export.js	label(n)
+apps/crm/export.js	langLabelOf(n.language)
 apps/crm/export.js	last ? ' \u00b7 last run ' + String(last).slice(0, 16) : ''
 apps/crm/export.js	layoutsHtml
 apps/crm/export.js	m.api_name
@@ -184,6 +185,8 @@ apps/crm/export.js	n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) :
 apps/crm/export.js	name
 apps/crm/export.js	notDown
 apps/crm/export.js	notDown ? ` (${notDown} not downloaded - listed, without source)` : ''
+apps/crm/export.js	notRead
+apps/crm/export.js	notRead ? ` (${notRead} in a language Zoost does not read - listed, wi
 apps/crm/export.js	now
 apps/crm/export.js	op
 apps/crm/export.js	org

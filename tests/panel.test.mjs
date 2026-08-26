@@ -10691,10 +10691,15 @@ test('both exports say which kind of missing source it is', () => {
   assert.match(html[1], /f\.code === null|f\.code === undefined/, 'it cannot tell «could not be read»');
   assert.match(html[1], /<pre class="code">/, 'it stopped showing the source it does have');
 
-  const md = src.slice(src.indexOf("md += !n.downloaded ?"), src.indexOf("```\\n\\n') : '\\n';") + 20);
+  // From wherever that chain now begins: a third branch was added in front of it, and anchoring on
+  // the old first line made this fail for the length of one condition rather than for anything real.
+  const md = src.slice(src.indexOf("md += n.mirrored === false ?"), src.indexOf("```\\n\\n') : '\\n';") + 20);
   assert.ok(md.length > 50, 'the Markdown source block has moved - this check no longer reads it');
   assert.match(md, /could not be read/, 'the Markdown export emits an empty fence for an unread file');
   assert.match(md, /not downloaded/, 'the Markdown export cannot tell «not downloaded»');
+  // The third: a language this build does not read is not a download that has not happened.
+  assert.match(md, /does not read|not read/, 'the Markdown export cannot tell «not a language we read»');
+  assert.match(html[1], /mirrored === false/, 'the HTML export cannot tell «not a language we read»');
 
   // And the two must not disagree about what an *empty* file is: it keeps its fence in Markdown and
   // its <pre> in HTML, because a file that is there and is empty is a fact about the function.
@@ -17162,4 +17167,86 @@ test('a workflow that calls a function only after a delay says so on the functio
   const m2 = load([...EXPORT_PARTS], MD_STUBS());
   const got = m2.wfFunctionActions(wfsMixed[0]).map((a) => a.name).join(',');
   assert.equal(got, 'notify_Owner', `the function index took ${got} - a task is not a function call`);
+});
+
+// ---------------------------------------------------------------------------------------------
+// A list that could not be asked in full does not get written over the index.
+//
+// The org list is asked once per language and the extra asks are deliberately allowed to fail
+// without taking the pull down - which is safe only if the result is then treated as partial. It was
+// not: one 429 on the second ask and the pull wrote an entries array missing that language's rows
+// straight over `functions/index.json`, then pruned the files against it. The rows were gone from
+// disk and the warning lived only in memory, so reopening the panel showed functions that had
+// vanished with nothing left saying why. `capped` already means «this list is partial, write and
+// remove nothing» - a failed language ask is the same fact.
+test('a language that would not answer makes the list partial rather than shorter', async () => {
+  const rel = 'apps/crm/content-bridge.js';
+  const del = { id: 'd1', api_name: 'sendMail', name: 'sendMail', category: 'standalone', source: 'crm', language: 'deluge', rest_api: [] };
+  const node = { id: 'n1', api_name: 'runIt', name: 'runIt', category: 'standalone', source: 'crm', language: 'nodejs_22', rest_api: [] };
+  let fails = false;
+  const g = { BASE: 'x', Object, Error, String, Promise, JSON, console, RegExp, Array, encodeURIComponent,
+              PAGE: 200, MAX_PAGES: 5, list: (d) => (d && d.functions) || [],
+              api: async (path) => {
+                const lang = path.split('&language=')[1];
+                if (lang === 'nodejs_22' && fails) throw new Error('429 - RATE_LIMIT');
+                if (lang === 'deluge') return { functions: [del] };
+                if (lang === 'nodejs_22') return { functions: [node] };
+                return { functions: [] };
+              } };
+  const m = load([sliceConst(rel, 'LANGUAGES'), sliceConst(rel, 'DISCOVER_LANGUAGE'),
+                  sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], g);
+
+  const whole = await m.listFunctions();
+  assert.equal(whole.capped, false, 'a list that was asked in full is refused as partial, so nothing is ever written');
+  assert.equal(whole.entries.map((e) => e.id).join(','), 'd1,n1', 'the whole list did not arrive');
+
+  fails = true;
+  const short = await m.listFunctions();
+  assert.equal(short.capped, true,
+               'a language that answered with an error produced a shorter list that the pull writes over '
+               + 'the index and prunes against - those functions are deleted from disk, and the only '
+               + 'warning is in memory');
+  assert.match(String(short.otherFailed), /RATE_LIMIT/, 'and it does not say which ask failed');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The export loader keeps what the report is built out of.
+//
+// It dropped `id`, `name`, `language` and the mirrored flag. Two consequences, both in the report
+// somebody is handed: `resolveFn` matches a rule's action by id and by name, so with both missing
+// every function collided on `undefined` and no workflow ever resolved - the «Triggered by» row was
+// absent from the real export while the code that builds it was correct, and the case that fed the
+// builder directly could not see it. And a function whose source Zoho does not serve this extension
+// read as one that had simply not downloaded, so the report told its reader to run a pull that
+// changes nothing.
+test('the export loader keeps a function identity and its language', async () => {
+  const rel = 'apps/crm/export.js';
+  const files = {
+    'functions/index.json': JSON.stringify([
+      { id: 'd1', api_name: 'notify_Owner', display_name: 'Notify owner', namespace: 'automation', category: 'standalone', source: 'crm', rest: false, language: 'deluge' },
+      { id: 'n1', api_name: 'runIt', display_name: 'runIt', namespace: 'standalone', category: 'standalone', source: 'crm', rest: false, language: 'nodejs_22' },
+    ]),
+    'functions/automation/notify_Owner.meta.json': JSON.stringify({ id: 'd1', name: 'notify_Owner', api_name: 'notify_Owner', display_name: 'Notify owner', nameSpace: 'automation' }),
+    'functions/automation/notify_Owner.dg': 'info 1;',
+  };
+  const g = { console, Object, Map, Set, Array, JSON, String, Number, Promise, RegExp,
+              beginWorkspaceOp: () => ({ root: {}, current: () => true,
+                read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } }),
+              walk: async function* () { for (const k of Object.keys(files)) yield k; },
+              moduleNames: () => [], isModuleFile: () => false, sanitize: (x) => x, fnStats: () => null,
+              ensureGraph: async () => ({ nodes: {}, counts: {} }), loadWorkflows: async () => [],
+              loadSchedules: async () => [], loadConnections: async () => [], failuresIndex: async () => null,
+              loadActions: async () => [], actionUsers: new Map() };
+  const m = load([sliceConst(rel, 'isDelugeLang'), sliceFn(rel, 'loadExportData')], g);
+  const d = await m.loadExportData();
+
+  const del = d.fns.find((f) => f.api_name === 'notify_Owner');
+  assert.equal(String(del.id), 'd1', 'the id is dropped, so a rule naming this function resolves to nothing');
+  assert.equal(del.name, 'notify_Owner', 'the api-level name is dropped, and a rule names a function by it');
+  const node = d.fns.find((f) => f.api_name === 'runIt');
+  assert.equal(node.language, 'nodejs_22', 'the language is dropped, so the report cannot say what it is');
+  assert.equal(node.mirrored, false,
+               'the report cannot tell «not downloaded» from «not a language we read», and tells the '
+               + 'reader to run a pull that will change nothing');
+  assert.equal(del.mirrored, true, 'a Deluge function was marked as one this build does not read');
 });
