@@ -5288,13 +5288,31 @@ class DriftFromTheSubmittedListingIsSaid(unittest.TestCase):
         # Read off *where the sentence appears*, not off the finding count - `--offline` reports its
         # own skipped live comparison as a finding by design, so the count is never zero here and
         # the first version of this asserted against it and failed for the wrong reason.
-        out = self.report()
-        under = out[:out.index('auditcheck:')] if 'auditcheck:' in out else out
-        self.assertNotIn('differ from what was last pasted', under,
-                         'drift against the submitted listing is reported above the notes, so it '
-                         'would refuse every release that changed the copy')
-        self.assertIn('differ from what was last pasted', out,
-                      'the drift sentence is not printed at all')
+        # **The drift is made, not waited for.** This read whatever the repository happened to hold, and
+        # passed for weeks because some section was always ahead of what had been pasted. The hour
+        # everything was submitted and recorded, there was no drift left to find, the sentence was not
+        # printed, and a case about *where* it is printed failed for the absence of its own subject.
+        # A check that cannot produce what it is looking at is not a check.
+        import json
+        app = sorted(d.name for d in (ROOT / 'apps').iterdir() if (d / 'manifest.json').exists())[0]
+        rec = ROOT / 'store' / app / 'listing.json'
+        before = rec.read_bytes()
+        try:
+            d = json.loads(before)
+            k = sorted(d['sections'])[0]
+            d['sections'][k] = 'plantedplant'          # a hash nothing can match
+            rec.write_text(json.dumps(d, indent=2) + '\n', encoding='utf-8')
+            out = self.report()
+            under = out[:out.index('auditcheck:')] if 'auditcheck:' in out else out
+            self.assertNotIn('differ from what was last pasted', under,
+                             'drift against the submitted listing is reported above the notes, so it '
+                             'would refuse every release that changed the copy')
+            self.assertIn('differ from what was last pasted', out,
+                          'a section was planted as drifted and the run does not say so')
+        finally:
+            rec.write_bytes(before)
+        # And with nothing planted it does not invent one: the other direction, on the real tree.
+        self.assertEqual(rec.read_bytes(), before, 'the planted drift was not restored')
 
     def test_nothing_submitted_yet_is_not_everything_drifted(self):
         import importlib.util
