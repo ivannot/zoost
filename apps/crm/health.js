@@ -28,6 +28,22 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // what to delete and what to repair. Three groups conclude from three different reads; each records
   // its own, and a group whose input did not arrive says so instead of concluding.
   const unread = { fnIndex: false, fnIndexAbsent: false, wfDetail: [], modules: [] };
+  // **What the pull already knew and this audit could not see.** A module Zoho returned whose file
+  // would not write is left out of the index by design - an index row whose file is absent is the
+  // mirror lying about itself - so comparing the index against the files cannot find it, and the
+  // lookup into it read as a lookup into nothing. The pull records that gap where it survives:
+  // `.zoost.json`'s `access`, written by `noteAccess`, which every area's pull calls with the
+  // reason when it ends short. An area whose last pull did not end `ok` is a mirror this audit may
+  // not conclude from.
+  const areaShort = new Set();
+  try {
+    const cfg = JSON.parse(await op.read('.zoost.json'));
+    const acc = (cfg && cfg.access) || {};
+    ['functions', 'modules', 'workflows', 'schedules'].forEach((a) => {
+      const st = acc[a] && acc[a].state;
+      if (st && st !== 'ok') areaShort.add(a);
+    });
+  } catch (_) { /* no config, or unreadable: the file checks below are then all there is */ }
   let listedIds = new Set(), listedNames = new Set();
   try {
     const idx = JSON.parse(await op.read('functions/index.json'));
@@ -84,7 +100,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // decided from. The names are collected below, before this list is built.
   // A workflow whose detail did not arrive names none of its functions, so «no caller» would be a
   // conclusion drawn from a file nobody read.
-  const orphan = unread.wfDetail.length ? []
+  const orphan = (unread.wfDetail.length || areaShort.has('workflows') || areaShort.has('schedules')) ? []
     : nodes.filter((n) => n.dead_suspect && !firedByAutomation.has(String(n.api_name || n.name || '').toLowerCase()))
       .sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">calls: ${escHtml(n.unresolved.join(', '))}</span>` }));
@@ -102,7 +118,12 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // «Is this function in the workspace» is answered by the graph *and* the index. With the index
   // unreadable and any node at all present, the «nothing pulled» guard does not fire and a schedule
   // running a function this build does not parse came out as a broken reference.
-  const brokenBlind = noFunctionsHere || unread.fnIndex;
+  // **And the automations are half of this question.** The group enumerates the references from the
+  // workflow details and the schedule index, and it was reading only whether the *functions* were
+  // there - so a workflow detail that never downloaded, or a Schedules area never pulled, produced
+  // a clean green group with a categorical description over a mirror that had not been read.
+  const brokenBlind = noFunctionsHere || unread.fnIndex || unread.wfDetail.length > 0
+    || areaShort.has('functions') || areaShort.has('workflows') || areaShort.has('schedules');
   if (brokenBlind) broken.length = 0;
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
@@ -119,7 +140,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
   } catch (_) { unread.modules.push('modules/index.json'); }
   // With a module file unreadable the census is short, and a lookup into it reads as a lookup into
   // nothing. The group is not computed rather than computed wrong.
-  if (!unread.modules.length) modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
+  if (!unread.modules.length && !areaShort.has('modules')) modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   // The module named here *is* in the workspace - it is its lookup's target that is not - so it
   // opens, and the target stays plain text because there is nothing to open.
   const fkItems = missingFK.map((r) => ({ html: `<a data-kind="module" data-id="${escA(r.module)}">${escHtml(r.module)}</a>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
@@ -218,7 +239,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
     { id: 'orphan', tab: 'functions', title: MSG.hOrphan,
       // Two shapes of the same blindness, said apart because the way out differs: an area nobody has
       // pulled needs Pull all, a detail that failed needs Complete missing.
-      desc: unread.wfDetail.length
+      desc: (unread.wfDetail.length || areaShort.has('workflows') || areaShort.has('schedules'))
         ? (unread.wfDetail.some((x) => /not pulled/.test(x))
           ? `Not asked: ${unread.wfDetail.filter((x) => /not pulled/.test(x)).map((x) => x.replace(' (not pulled)', '')).join(' and ')} have not been pulled into this workspace, and a function they fire would read here as having no caller. Press Pull all.`
           : `Not asked: ${unread.wfDetail.length} automation file(s) here did not arrive (${unread.wfDetail.slice(0, 3).join(', ')}), and a function they fire would read as having no caller. Press \u21bb Refresh, or Complete missing.`)
@@ -229,14 +250,16 @@ async function buildHealth(op = beginWorkspaceOp()) {
     { id: 'unattached', tab: 'wiring', title: 'Automation actions nothing fires', desc: actDesc, bad: false, items: unattached },
     { id: 'broken', tab: 'wiring', title: MSG.hBroken,
       desc: brokenBlind
-        ? ((unread.fnIndex && !unread.fnIndexAbsent)
+        ? ((unread.wfDetail.length || areaShort.has('workflows') || areaShort.has('schedules'))
+          ? 'Not asked: the automation mirror here is incomplete - a workflow detail or the schedule list did not arrive - so a reference that is missing could not be told from one that was never read. Press Complete missing, or Pull all.'
+          : (unread.fnIndex && !unread.fnIndexAbsent)
           ? 'Not asked: the function index here would not open, so whether a rule points at one that is missing cannot be told from this mirror. Press \u21bb Refresh, or Pull all.'
           : 'Not asked: no functions have been pulled into this workspace, so whether a rule points at one that is missing cannot be told from here. Pull all, then look again.')
         : 'A workflow or schedule references a function not in this workspace.',
       bad: !brokenBlind, items: brokenItems },
     { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs,
-      desc: unread.modules.length
-        ? `Not asked: ${unread.modules.length} module file(s) here would not open, so a lookup into one of them would read as a lookup into nothing. Press \u21bb Refresh, or Pull all.`
+      desc: (unread.modules.length || areaShort.has('modules'))
+        ? `Not asked: the module mirror here is incomplete${unread.modules.length ? ` (${unread.modules.length} file(s) missing or unreadable)` : ' - the last pull could not write all of it'}, so a lookup into one of them would read as a lookup into nothing. Press \u21bb Refresh, or Pull all.`
         : 'A lookup field points to a module not in this workspace (may be a system module).',
       bad: false, items: fkItems },
   ];

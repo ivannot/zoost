@@ -17853,13 +17853,15 @@ test('the audit is silent about what it has not looked at, and about callers it 
                  unresolved: [], ambiguous: [], dead_suspect: true, file: 'x.dg' };
   const group = (h, id) => h.groups.find((x) => x.id === id || x.title === id);
 
-  const withSchedule = await build({ 'schedules/index.json': scheds }, { [node.id]: node });
+  const withSchedule = await build({ 'schedules/index.json': scheds, 'workflows/index.json': '[]' }, { [node.id]: node });
   assert.equal(group(withSchedule, 'No caller').items.length, 0,
                'a function a schedule runs every six hours is listed as having no caller, in the group '
                + 'somebody reads to decide what is safe to delete - and the diagram of the same mirror '
                + 'draws the edge');
 
-  const noFunctions = await build({ 'schedules/index.json': scheds }, {});
+  // A complete automation mirror: the group under test is the functions one, and an incomplete
+  // automation mirror now stops that group for its own reason.
+  const noFunctions = await build({ 'schedules/index.json': scheds, 'workflows/index.json': '[]' }, {});
   const br = group(noFunctions, 'broken');
   assert.equal(br.items.length, 0,
                'with no functions pulled the audit reports the rules as broken - it has not looked, and '
@@ -17868,7 +17870,7 @@ test('the audit is silent about what it has not looked at, and about callers it 
   assert.match(br.desc, /no functions have been pulled/, 'without saying why the group is empty');
 
   // The positive control: functions pulled, one genuinely absent, and it is still reported in red.
-  const real = await build({ 'schedules/index.json': scheds,
+  const real = await build({ 'schedules/index.json': scheds, 'workflows/index.json': '[]',
                              'functions/index.json': JSON.stringify([{ id: 'zz', api_name: 'other' }]) }, {});
   assert.equal(group(real, 'broken').items.length, 1, 'a rule pointing at a function that is really gone stopped being reported');
   assert.equal(group(real, 'broken').bad, true, 'and it stopped being a defect');
@@ -17997,5 +17999,79 @@ test('the audit refuses to conclude from a file it could not read', async () => 
                + 'reference - a walk only meets what is there, so it left no trace of being short');
   assert.equal(G(mBad, 'fk').items.length, 0,
                'a module file that would not open made a working lookup a missing reference');
-  assert.match(G(mBad, 'fk').desc, /would not open/, 'and the group did not say why it is empty');
+  assert.match(G(mBad, 'fk').desc, /mirror here is incomplete/, 'and the group did not say why it is empty');
+});
+
+// ---------------------------------------------------------------------------------------------
+// What the pull already knew, and this audit could not see.
+//
+// A module Zoho returned whose file would not write is left out of the index on purpose - an index
+// row whose file is absent is the mirror lying about itself - so comparing the index against the
+// files cannot find it, and the lookup into that module read as a lookup into nothing. The pull knew:
+// it printed «1 write(s) failed: Customers». The audit did not, because that fact lived only in a
+// status line. It lives in `.zoost.json`'s `access`, which every area's pull writes through
+// `noteAccess`, and an area whose last pull did not end `ok` is one this audit may not conclude from.
+//
+// And «Broken automations» was reading only whether the *functions* were there, while it enumerates
+// its references from the workflow details and the schedule index - so a detail that never
+// downloaded, or a Schedules area never pulled, produced a clean green group with a categorical
+// description over a mirror nobody had finished reading.
+test('the audit will not conclude over an area whose pull came back short', async () => {
+  const rel = 'apps/crm/health.js';
+  const build = (files, nodes) => {
+    const op = { root: {}, current: () => true,
+                 read: async (p) => {
+                   if (!(p in files)) { const e = new Error('gone'); e.name = 'NotFoundError'; throw e; }
+                   return files[p];
+                 } };
+    const g = { console, Object, Set, Map, Array, JSON, String, Number, Promise, RegExp, Date,
+                beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes, counts: {} }),
+                escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+                isFnAction: (a) => !!a && (a.type === 'functions' || a.type === 'function'),
+                nmNode: (n) => String(n.display_name || n.name || ''), loadModuleFiles: async () => ({}),
+                walk: async function* () { for (const k of Object.keys(files)) if (k.startsWith('modules/')) yield k; },
+                isModuleFile: (p) => p.startsWith('modules/') && p.endsWith('.json') && p !== 'modules/index.json',
+                actionUsers: new Map(), failuresIndex: async () => null, fnStats: () => null,
+                MSG: { hRankedOver: () => '', hOrphan: 'No caller', hUnresolved: 'x', hAmbiguous: 'x',
+                       hBroken: 'Broken', hMissingRefs: 'Missing refs', hBiggest: 'x',
+                       hBiggestDesc: 'x', hChattiest: 'x' } };
+    return load([sliceFn(rel, 'buildHealth')], g).buildHealth(op);
+  };
+  const G = (h, id) => h.groups.find((x) => x.id === id);
+  const ok = JSON.stringify({ access: { modules: { state: 'ok' }, workflows: { state: 'ok' }, schedules: { state: 'ok' } } });
+  const modShort = JSON.stringify({ access: { modules: { state: 'failed' }, workflows: { state: 'ok' }, schedules: { state: 'ok' } } });
+  const orders = JSON.stringify({ api_name: 'Orders', fields: [{ api_name: 'Cust', lookup: 'Customers' }] });
+  const modBase = { 'workflows/index.json': '[]', 'schedules/index.json': '[]',
+                    'modules/index.json': JSON.stringify([{ api_name: 'Orders' }]), 'modules/Orders.json': orders };
+
+  // The positive control first: with the pull recorded as complete, the dangling lookup is reported.
+  assert.equal(G(await build(Object.assign({}, modBase, { '.zoost.json': ok }), {}), 'fk').items.length, 1,
+               'a lookup into a module the org really does not have stopped being reported');
+  const modBad = await build(Object.assign({}, modBase, { '.zoost.json': modShort }), {});
+  assert.equal(G(modBad, 'fk').items.length, 0,
+               'a module whose file the pull could not write is left out of the index by design, so the '
+               + 'index-against-files check cannot see it - and the lookup into it was reported as '
+               + 'pointing outside the workspace, which is a working lookup somebody goes to repair');
+  assert.match(G(modBad, 'fk').desc, /mirror here is incomplete/, 'and the group did not say why it is empty');
+
+  const wfIdx = JSON.stringify([{ id: 'w1', name: 'Nightly' }]);
+  const wfBroken = JSON.stringify({ conditions: [{ instant_actions: { actions: [{ type: 'functions', name: 'ghostFn', id: 'zzz' }] } }] });
+  const node = { id: 'f1', namespace: 'ns', name: 'realFn', api_name: 'realFn', display_name: 'Real',
+                 calls: [], called_by: [], unresolved: [], ambiguous: [], dead_suspect: false, file: 'x.dg' };
+  const autoBase = { 'schedules/index.json': '[]', 'modules/index.json': '[]',
+                     'functions/index.json': JSON.stringify([{ id: 'f1', api_name: 'realFn' }]), '.zoost.json': ok };
+
+  assert.equal(G(await build(Object.assign({}, autoBase, { 'workflows/index.json': wfIdx, 'workflows/w1.json': wfBroken }), { z: node }), 'broken').items.length, 1,
+               'a rule pointing at a function that really is gone stopped being reported');
+  const detailGone = await build(Object.assign({}, autoBase, { 'workflows/index.json': wfIdx }), { z: node });
+  assert.equal(G(detailGone, 'broken').bad, false,
+               'a workflow detail that never downloaded left «Broken automations» green and categorical - '
+               + 'a group that enumerates its references from files it has not read');
+  assert.match(G(detailGone, 'broken').desc, /automation mirror here is incomplete/, 'and it did not say so');
+
+  const schedGone = await build({ 'workflows/index.json': '[]', 'modules/index.json': '[]',
+                                  'functions/index.json': JSON.stringify([{ id: 'f1', api_name: 'realFn' }]),
+                                  '.zoost.json': ok }, { z: node });
+  assert.equal(G(schedGone, 'broken').bad, false,
+               'with the Schedules area never pulled the group still presented itself as a complete audit');
 });
