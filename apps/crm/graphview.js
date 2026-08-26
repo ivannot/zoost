@@ -1125,7 +1125,11 @@ function statOf(set, allN, allE) {
   const ef = c.e !== allE ? ` <span style="color:#94a3b8">of ${allE}</span>` : '';
   // A reason when the answer is one box with nothing around it, the same as its twin: the count on
   // its own reads as a fault rather than as the finding it is.
-  const alone = c.n === 1 && c.e === 0 && curFocus;
+  // **Only when there really are none.** This read the *drawn* counts, so a chip or a fold that
+  // left one box on screen produced «0 of 2 relations - it takes part in none»: the true total
+  // four words earlier and the claim contradicting it. `allE` is what the org has; when the two
+  // differ the sentence is about the filter, and there is nothing to say.
+  const alone = c.n === 1 && c.e === 0 && !allE && curFocus;
   return `<b>${c.n}</b>${nf} ${countedAs(c.n, nf ? allN : null, NOUN().n1, NOUN().n)}`
     + ` \u00b7 <b>${c.e}</b>${ef} ${countedAs(c.e, ef ? allE : null, NOUN().e1, NOUN().e)}`
     + (alone ? ' <span style="color:#94a3b8">- it takes part in none, so there is nothing to draw around it</span>' : '');

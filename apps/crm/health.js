@@ -34,9 +34,31 @@ async function buildHealth(op = beginWorkspaceOp()) {
   } catch (_) { /* no index: the graph is then the only answer there is */ }
   const known = (id, name) => !!(fnById[String(id)] || fnByName[String(name || '').toLowerCase()]
     || listedIds.has(String(id)) || listedNames.has(String(name || '').toLowerCase()));
+  // Every function an automation runs, by every name it might be named with. Read before the lists
+  // below because one of them asks about it.
+  const firedByAutomation = new Set();
+  let wfIdxEarly = []; try { wfIdxEarly = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
+  for (const w of wfIdxEarly) {
+    let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
+    if (!d) continue;
+    (d.conditions || []).forEach((c) => {
+      const acts = [];
+      if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions);
+      (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || [])));
+      acts.filter(isFnAction).forEach((a) => { if (a.name) firedByAutomation.add(String(a.name).toLowerCase()); });
+    });
+  }
+  let schIdxEarly = []; try { schIdxEarly = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
+  schIdxEarly.forEach((sc) => { if (sc && sc.function_name) firedByAutomation.add(String(sc.function_name).toLowerCase()); });
   const byName = (a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || '');
   const fnLink = (n) => `<a data-file="${escA(n.file)}">${nmNode(n)}</a>`;
-  const orphan = nodes.filter((n) => n.dead_suspect).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
+  // **Called by a schedule is called.** `ensureGraph` builds nodes from the `.dg` files only, so a
+  // function whose one caller is a schedule or a workflow arrived here with `called_by` empty and
+  // landed in «nothing calls them» - while the diagram, which adds those as nodes, showed the edge
+  // on the same mirror. Two surfaces of one workspace disagreeing about the question a deletion is
+  // decided from. The names are collected below, before this list is built.
+  const orphan = nodes.filter((n) => n.dead_suspect && !firedByAutomation.has(String(n.api_name || n.name || '').toLowerCase()))
+    .sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">calls: ${escHtml(n.unresolved.join(', '))}</span>` }));
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
   const broken = [];
@@ -44,6 +66,12 @@ async function buildHealth(op = beginWorkspaceOp()) {
   for (const w of wfIdx) { let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!known(a.id, a.name)) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
   let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
   scheds.forEach((sc) => { if (!known(sc.function_id, sc.function_name)) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
+  // **With no functions pulled at all, «missing» is not something this can establish.** The wiring
+  // group asks «is this function in the workspace», and with the functions area never pulled the
+  // answer is «I have not looked» - which came out as «Broken automations 16» in red, each row
+  // naming a function that exists. The reader goes into Zoho to repair sixteen rules that work.
+  const noFunctionsHere = !nodes.length && !listedIds.size && !listedNames.size;
+  if (noFunctionsHere) broken.length = 0;
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
   for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
@@ -147,7 +175,11 @@ async function buildHealth(op = beginWorkspaceOp()) {
     { id: 'unresolved', tab: 'functions', title: MSG.hUnresolved, desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
     { id: 'ambiguous', tab: 'functions', title: MSG.hAmbiguous, desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
     { id: 'unattached', tab: 'wiring', title: 'Automation actions nothing fires', desc: actDesc, bad: false, items: unattached },
-    { id: 'broken', tab: 'wiring', title: MSG.hBroken, desc: 'A workflow or schedule references a function not in this workspace.', bad: true, items: brokenItems },
+    { id: 'broken', tab: 'wiring', title: MSG.hBroken,
+      desc: noFunctionsHere
+        ? 'Not asked: no functions have been pulled into this workspace, so whether a rule points at one that is missing cannot be told from here. Pull all, then look again.'
+        : 'A workflow or schedule references a function not in this workspace.',
+      bad: !noFunctionsHere, items: brokenItems },
     { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs, desc: 'A lookup field points to a module not in this workspace (may be a system module).', bad: false, items: fkItems },
   ];
   if (!op.current()) throw new Error(WS_MOVED);

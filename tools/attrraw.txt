@@ -4,7 +4,7 @@
 # ternary of literals, a number. It should shrink; growth is printed.
 97a1176ce268894d  apps/analytics/graphview.js:340: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:346: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-68f3feec399e35c4  apps/analytics/graphview.js:1507: class="${lk}" is not attribute-escaped
+68f3feec399e35c4  apps/analytics/graphview.js:1511: class="${lk}" is not attribute-escaped
 218d6dfd58005ebf  apps/analytics/sidepanel.js:3236: class="${m.role}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:1079: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:238: class="${stCls}" is not attribute-escaped
@@ -22,9 +22,9 @@ fcf2869833b3c20b  apps/crm/export.js:384: href="${fnAnchor(fnKey(n))}" is not at
 43eae51bbdfcc8ce  apps/crm/export.js:406: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:421: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:429: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-c5d27cb218f749c5  apps/crm/graphview.js:1215: title="${why}" is not attribute-escaped
-5859e8f4ffb251d8  apps/crm/graphview.js:1931: class="${lk}" is not attribute-escaped
-20867c10b8f60824  apps/crm/health.js:183: class="${g.items.length ? (g.bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
+c5d27cb218f749c5  apps/crm/graphview.js:1219: title="${why}" is not attribute-escaped
+5859e8f4ffb251d8  apps/crm/graphview.js:1935: class="${lk}" is not attribute-escaped
+20867c10b8f60824  apps/crm/health.js:215: class="${g.items.length ? (g.bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
 84ff11af55c61f48  apps/crm/highlight.js:118: title="${why}" is not attribute-escaped
 1fb496710d9f6227  apps/crm/modules.js:250: class="${ref ? 'st-none' : m.error ? 'st-err' : 'st-ok'}" is not attribute-escaped
 b4e04e5a70731549  apps/crm/modules.js:252: title="${m.fieldCount}" is not attribute-escaped

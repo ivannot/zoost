@@ -17812,3 +17812,89 @@ test('analytics: the assistant says when the mirror is short instead of assertin
     assert.ok(!/would not open/.test(text), tool + ' carries a caveat about a mirror that is complete');
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The audit does not raise an alarm about something it has not looked at, or that is not true.
+//
+// Three of one family, all reported by a reviewer applying a publish/do-not-publish bar: the product
+// saying something alarming that is not the case, in the surfaces a deletion or a repair is decided
+// from.
+//
+// - A function whose only caller is a schedule arrived in «nothing calls them». `ensureGraph` builds
+//   nodes from the `.dg` files, so that edge is not in it - while the diagram, which adds schedules
+//   and workflows as nodes, drew the edge on the same mirror. Two surfaces of one workspace
+//   disagreeing about exactly the question somebody deletes over.
+// - With the functions area never pulled, the wiring group read «Broken automations 16» in red, each
+//   row naming a function that exists. «Is this function in the workspace» has no answer when nobody
+//   has looked, and «I have not looked» is not «it is missing».
+test('the audit is silent about what it has not looked at, and about callers it cannot see', async () => {
+  const rel = 'apps/crm/health.js';
+  const build = (files, nodes) => {
+    const op = { root: {}, current: () => true,
+                 read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } };
+    const g = { console, Object, Set, Map, Array, JSON, String, Number, Promise, RegExp, Date,
+                beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes, counts: {} }),
+                escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+                isFnAction: (a) => !!a && (a.type === 'functions' || a.type === 'function'),
+                nmNode: (n) => String(n.display_name || n.name || ''), loadModuleFiles: async () => ({}),
+                walk: async function* () {}, actionUsers: new Map(),
+                failuresIndex: async () => null, fnStats: () => null,
+                MSG: { hRankedOver: () => '', hOrphan: 'No caller', hUnresolved: 'x', hAmbiguous: 'x',
+                       hBroken: 'Broken automations', hMissingRefs: 'x', hBiggest: 'x',
+                       hBiggestDesc: 'x', hChattiest: 'x' } };
+    return load([sliceFn(rel, 'buildHealth')], g).buildHealth(op);
+  };
+  const scheds = JSON.stringify([{ id: 's1', name: 'Catalogue pull', function_id: 'f9', function_name: 'pullCatalogue' }]);
+  const node = { id: 'schedule.pullCatalogue', namespace: 'schedule', name: 'pullCatalogue',
+                 api_name: 'pullCatalogue', display_name: 'Pull catalogue', calls: [], called_by: [],
+                 unresolved: [], ambiguous: [], dead_suspect: true, file: 'x.dg' };
+  const group = (h, id) => h.groups.find((x) => x.id === id || x.title === id);
+
+  const withSchedule = await build({ 'schedules/index.json': scheds }, { [node.id]: node });
+  assert.equal(group(withSchedule, 'No caller').items.length, 0,
+               'a function a schedule runs every six hours is listed as having no caller, in the group '
+               + 'somebody reads to decide what is safe to delete - and the diagram of the same mirror '
+               + 'draws the edge');
+
+  const noFunctions = await build({ 'schedules/index.json': scheds }, {});
+  const br = group(noFunctions, 'broken');
+  assert.equal(br.items.length, 0,
+               'with no functions pulled the audit reports the rules as broken - it has not looked, and '
+               + '"I have not looked" is not "it is missing"');
+  assert.equal(br.bad, false, 'and it paints that as a defect');
+  assert.match(br.desc, /no functions have been pulled/, 'without saying why the group is empty');
+
+  // The positive control: functions pulled, one genuinely absent, and it is still reported in red.
+  const real = await build({ 'schedules/index.json': scheds,
+                             'functions/index.json': JSON.stringify([{ id: 'zz', api_name: 'other' }]) }, {});
+  assert.equal(group(real, 'broken').items.length, 1, 'a rule pointing at a function that is really gone stopped being reported');
+  assert.equal(group(real, 'broken').bad, true, 'and it stopped being a defect');
+});
+
+// ---------------------------------------------------------------------------------------------
+// «It takes part in none» is said only when there are none.
+//
+// It read the *drawn* counts, so one chip or one fold produced «0 of 2 relations - it takes part in
+// none»: the true total printed four words earlier and the claim contradicting it, adjacently. In
+// both products, since the line is a twin.
+test('the diagram does not call a box unconnected while printing its connections', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/graphview.js`;
+    const g = { console, Object, String, Number, curFocus: 'Contacts',
+                countedAs: (n, all, one, many) => (n === 1 ? one : many),
+                NOUN: () => ({ n1: 'table', n: 'tables', e1: 'relation', e: 'relations' }) };
+    // `statCounts` is stubbed to hand back the pair the case is about - it counts a set of ids, and
+    // what this line does with the two numbers is the subject.
+    g.statCounts = (set) => set;
+    const m = load([sliceFn(rel, 'statOf')], g);
+    const say = (n, e, allN, allE) => m.statOf({ n, e }, allN, allE).replace(/<[^>]+>/g, '');
+
+    // One box drawn, no relation drawn, and the org has two: a chip or a fold, not an unconnected box.
+    assert.ok(!/takes part in none/.test(say(1, 0, 3, 2)),
+              `${app}: the line reads «${say(1, 0, 3, 2)}» - it prints the true total and then denies it `
+              + 'four words later, about a table a filter is hiding the relations of');
+    // And when there really are none, it still says so.
+    assert.match(say(1, 0, 3, 0), /takes part in none/,
+                 `${app}: a box that genuinely has no relation lost the sentence that explains the empty drawing`);
+  }
+});

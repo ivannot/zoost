@@ -815,7 +815,11 @@ function statOf(set, allN, allE) {
   // around it: «1 tables · 0 relations» is a count that reads as a fault. The focused view really is
   // alone - the ER model Zoho Analytics returns links nothing to it - and saying so is the difference
   // between an answer and a shrug.
-  const alone = c.n === 1 && c.e === 0 && curFocus;
+  // **Only when there really are none.** This read the *drawn* counts, so a chip or a fold that
+  // left one box on screen produced «0 of 2 relations - it takes part in none»: the true total
+  // four words earlier and the claim contradicting it. `allE` is what the org has; when the two
+  // differ the sentence is about the filter, and there is nothing to say.
+  const alone = c.n === 1 && c.e === 0 && !allE && curFocus;
   return `<b>${c.n}</b>${nf} ${countedAs(c.n, nf ? allN : null, 'table', 'tables')}`
     + ` · <b>${c.e}</b>${ef} ${countedAs(c.e, ef ? allE : null, 'relation', 'relations')}`
     + (alone ? ' <span style="color:#94a3b8">- it takes part in none, so there is nothing to draw around it</span>' : '');
