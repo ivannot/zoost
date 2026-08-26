@@ -17320,8 +17320,12 @@ test('a module a function reads or writes links to its section', async () => {
   const card = html.slice(html.indexOf('id="fn-automation.handle"'), html.indexOf('id="fn-automation.handle"') + 2500);
 
   for (const line of ['Reads', 'Writes', 'Reached by URL']) {
-    const seg = card.slice(card.indexOf(`<b>${line} (`));
-    assert.match(seg.slice(0, 300), /<a href="#mod-Contacts">Contacts<\/a>/,
+    // **Cut at this line's own end.** A 300-character window from the start of «Reads» reached into
+    // «Writes», so the assertion was satisfied by the *next* line's link and passed with «Reads»
+    // printing plain text. A check that reads past its subject proves the neighbour.
+    const from = card.indexOf(`<b>${line} (`);
+    const seg = card.slice(from, card.indexOf('</span>', from));
+    assert.match(seg, /<a href="#mod-Contacts">Contacts<\/a>/,
                  `«${line}» prints the module as text - the report has a section for it and the reader `
                  + 'cannot get there, in a document whose whole point is that it is one hypertext');
   }
