@@ -96,6 +96,11 @@ function healthFacts(g, mods, wfs, scheds, fns) {
 
 function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
+  // **What the org has, kept before the scope empties it.** The audit asks «does this function
+  // exist», and that does not depend on which chapters the reader ticked - unticking Functions turned
+  // a working schedule back into «missing function», which is the defect this argument exists to
+  // stop. The Markdown builder was given the unfiltered list deliberately; this one was not walked.
+  const allFns = fns || [];
   if (!scope.functions) fns = [];
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
@@ -374,7 +379,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   });
 
   // health / audit (same checks as the panel, rendered statically with links to #fn anchors)
-  const H = healthFacts(g, mods, wfs, scheds, fns);
+  const H = healthFacts(g, mods, wfs, scheds, allFns);
   const hNodes = H.nodes, hStat = H.stat, hOrph = H.orphans, hUnres = H.unresolved,
         hAmbig = H.ambiguous, hBroken = H.broken, hFK = H.missingFk, hBig = H.biggest, hChatty = H.chattiest;
   // **A link only where the section exists.** The health lists are built from the graph, which is

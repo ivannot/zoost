@@ -2175,13 +2175,22 @@ async function loadGraph(op = beginWorkspaceOp()) {
   // lists every language now, and folding those into `notInMirror` would turn «could not be
   // downloaded» - a sentence about a fixable failure - into a permanent number nothing can move,
   // printed under the audit as though a retry would clear it. They are counted, and counted apart.
-  let inOrg = null, notMirrorable = 0;
+  let inOrg = null, notMirrorable = 0, unreadFns = [];
   try {
     const idx = JSON.parse(await op.read('functions/index.json'));
-    if (Array.isArray(idx)) { inOrg = idx.length; notMirrorable = idx.filter((e) => !isDeluge(e && e.language)).length; }
+    if (Array.isArray(idx)) {
+      inOrg = idx.length;
+      // The rows themselves, not only how many: three surfaces have to *name* these functions -
+      // the assistant answers about them by name, and it had to re-read the index to do it.
+      unreadFns = idx.filter((e) => !isDeluge(e && e.language))
+        .map((e) => ({ id: e.id, api_name: e.api_name, name: e.name, display_name: e.display_name,
+                       namespace: e.namespace, language: e.language }));
+      notMirrorable = unreadFns.length;
+    }
   } catch (_) {}
   g.counts.inOrg = inOrg;
   g.counts.notMirrorable = notMirrorable;
+  g.unreadFns = unreadFns;
   g.counts.notInMirror = inOrg === null ? null : Math.max(0, inOrg - notMirrorable - g.counts.nodes);
   // What the parser saw, written down for the next build. Only when something had to be read: a
   // graph built entirely from the summary has nothing new to say, and rewriting the file on every
@@ -3783,6 +3792,21 @@ async function contentSearch() {
 }
 
 // ---------- pull / graph ----------
+// **What a pull writes when a language would not answer.** Refusing the whole write was the first
+// shape of this, and on an org whose role always refuses one of them it made the product do nothing
+// at all - no tree, no graph, no export, no assistant - with a message telling the reader to try
+// again, for ever. What answered is complete; what did not answer is not «deleted», it is unread. So
+// its rows from the previous index are carried forward, which keeps them in the tree and keeps the
+// prune from taking their files. A language nobody has an old row for contributes nothing.
+async function mergeUnanswered(entries, unanswered, op) {
+  const langs = new Set((unanswered || []).map((x) => String(x).toLowerCase()));
+  if (!langs.size) return entries;
+  let prev = [];
+  try { const t = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(t)) prev = t; } catch (_) {}
+  const have = new Set(entries.map((e) => String(e.id)));
+  const kept = prev.filter((e) => e && langs.has(String(e.language || 'deluge').toLowerCase()) && !have.has(String(e.id)));
+  return kept.length ? entries.concat(kept) : entries;
+}
 async function pullAll() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
@@ -3809,14 +3833,14 @@ async function pullAll() {
       // may never do. Nothing was pruned, and that part was right; what was lost was the telling.
       // Measured by driving the pull with a truncated list and recording the status line in order.
       await rebuildTree();
-      setStatus(r.otherFailed
-        ? `Zoho would not list one of this org's function languages (${errText(r.otherFailed)}) - the list is incomplete, so nothing was written or removed. Try again.`
-        : `Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
+      setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
       endPull(); return;
     }
-    await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
+    const merged = await mergeUnanswered(r.entries, r.unanswered, op);
+    if (!op.current()) return;
+    await op.write('functions/index.json', JSON.stringify(merged, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
-    const liveIds = new Set(r.entries.map((e) => String(e.id))); const rmF = [];
+    const liveIds = new Set(merged.map((e) => String(e.id))); const rmF = [];
     for await (const p of walk(op.root)) {
       if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
       if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p.replace(/\.meta\.json$/, '.dg')); rmF.push(p); } } catch (_) {} }
@@ -4149,12 +4173,15 @@ async function reconcileNow(op) {
       await rebuildTree();
       // Which of the two made it partial: a page limit is «try again», a refused language is «that
       // area of your org would not answer», and they are not the same thing to do next.
-      setStatus(r.otherFailed
-        ? `Zoho would not list one of this org's function languages (${errText(r.otherFailed)}) - the list is incomplete, so nothing was written or removed. Click Pull all.`
-        : `Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
+      setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
       return;
     }
-    const live = new Set((r.entries || []).map((e) => String(e.id)));
+    // Computed here, above its first reader. Put beside the write - which is further down - it was a
+    // temporal dead zone: `node --check` accepted it and the case that drives this function said
+    // «Cannot access 'merged' before initialization», which is the only thing that ever says so.
+    const merged = await mergeUnanswered(r.entries, r.unanswered, op);
+    if (!op.current()) return;
+    const live = new Set(merged.map((e) => String(e.id)));
     // What the mirror said *before* this answer replaces it, read from disk. It used to be
     // `treeData`, which is module state written only by `rebuildTree()` - and `rebuildTree()` runs
     // only while the Functions tab is the one on screen. So on any other tab, switching workspace
@@ -4170,7 +4197,7 @@ async function reconcileNow(op) {
     let prev = [];
     try { const t = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(t)) prev = t; } catch (_) {}
     if (!op.current()) return;
-    await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
+    await op.write('functions/index.json', JSON.stringify(merged, null, 2));
     // Pruned from what Zoho says, never from what the page said.
     // Whatever a previous round could not finish removing, before anything else.
     // Try the removal again rather than asking whether the file is there: a read that fails for

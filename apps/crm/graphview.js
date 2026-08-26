@@ -1211,11 +1211,20 @@ function mirrorNote() {
     return ' \u00b7 <span style="color:#94a3b8" title="This counts callers among the functions in your'
       + ' mirror. How many the org has could not be established.">over an unknown share of the org</span>';
   }
-  if (!c.notInMirror) return '';
+  // **The fourth surface, told last.** `notInMirror` deliberately excludes the functions Zoho serves
+  // in a language this mirror does not read - so on an org where every Deluge source downloaded and
+  // thirty are Java, this printed nothing at all, while the health view, the HTML report and the
+  // Markdown one all say «30 function(s) are listed without their source». This is the one place
+  // «no caller» is read as a picture rather than as a list.
+  const unread = c.notMirrorable || 0;
+  if (!c.notInMirror && !unread) return '';
+  const why = [c.notInMirror ? `${escA(c.notInMirror)} did not download` : '',
+               unread ? `${escA(unread)} ${unread === 1 ? 'is' : 'are'} in a language Zoost does not read` : '']
+    .filter(Boolean).join(', and ');
   // Escaped although they are counts: «it is a number» is a belief about the value, and the checker
   // that reads this line is built to refuse exactly that argument. It costs nothing to be right.
   return ` \u00b7 <span style="color:#94a3b8" title="${escA(c.nodes)} of ${escA(c.inOrg)} functions are in this`
-    + ` mirror. ${escA(c.notInMirror)} did not download, and a function called only from one of those is`
+    + ` mirror. ${why}, and a function called only from one of those is`
     + ` counted as having no caller.">over ${esc(c.nodes)} of ${esc(c.inOrg)}</span>`;
 }
 // Asked to centre on something this diagram does not contain. Never silently: the whole point of

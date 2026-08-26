@@ -90,6 +90,7 @@ const { stripNonCode, scanDeluge, moduleRefs } = load([
 const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN', 'HD_MISSING_FK',
                       'HD_CHATTIEST', 'wfValOf', 'wfOne', 'wfCrit', 'wfTiming']
   .map((k) => sliceConst('apps/crm/export.js', k))
+  .concat([sliceConst('apps/crm/export.js', 'isDelugeLang'), sliceConst('apps/crm/export.js', 'langLabelOf')])
   .concat(['healthFacts', 'wfFunctionActions'].map((k) => sliceFn('apps/crm/export.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
@@ -7204,6 +7205,9 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                     // Only record what a later status line says about the list; this case is about
                     // what the prune does, and both are no-ops for it.
                     noteListGap: () => {}, noteListProbe: () => {},
+                    // Real, not stubbed: it decides what the index becomes, which is what this case
+                    // is about. With no language unanswered it hands back what it was given.
+
                     MSG: { noWorkspaceHere: 'no ws', folder: 'folder', wrongTab: 'wrong tab' },
                     setStatus: (t, k) => said.push([String(t), k]),
                     // One of three is returned, so a reader that trusts the answer prunes two.
@@ -7211,7 +7215,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                     bridgeError: () => new Error('list failed'), errText: (e) => String(e && e.message),
                     rebuildTree: async () => {}, downloadMissing: async () => {},
                     pruneFunction: async (id) => { pruned.push(id); return true; } };
-      const m = load([sliceFn('apps/crm/sidepanel.js', 'reconcileNow')], ctx);
+      const m = load([sliceFn('apps/crm/sidepanel.js', 'mergeUnanswered'), sliceFn('apps/crm/sidepanel.js', 'reconcileNow')], ctx);
       await m.reconcileNow({ current: () => true, read: async (f) => files[f],
                              write: async (f, v) => { files[f] = v; }, remove: async () => {} });
       return { said, pruned, index: JSON.parse(files['functions/index.json']) };
@@ -17170,16 +17174,15 @@ test('a workflow that calls a function only after a delay says so on the functio
 });
 
 // ---------------------------------------------------------------------------------------------
-// A list that could not be asked in full does not get written over the index.
+// A language that would not answer does not make the whole list partial.
 //
-// The org list is asked once per language and the extra asks are deliberately allowed to fail
-// without taking the pull down - which is safe only if the result is then treated as partial. It was
-// not: one 429 on the second ask and the pull wrote an entries array missing that language's rows
-// straight over `functions/index.json`, then pruned the files against it. The rows were gone from
-// disk and the warning lived only in memory, so reopening the panel showed functions that had
-// vanished with nothing left saying why. `capped` already means «this list is partial, write and
-// remove nothing» - a failed language ask is the same fact.
-test('a language that would not answer makes the list partial rather than shorter', async () => {
+// It did, for one commit: `capped` was set on any failed language ask, and `capped` refuses the write
+// *and* the prune - so an org whose role always refuses one of the five got a pull that wrote nothing
+// at all, for ever. `capped` means «this list is short and I cannot say where», which is true of a
+// page limit and false here: what answered is complete, and the panel carries forward the previous
+// rows of the language that did not. This case exists because the first fix for the destructive half
+// broke the constructive one, and both halves have to stay driven.
+test('a refused language does not make the whole list partial', async () => {
   const rel = 'apps/crm/content-bridge.js';
   const del = { id: 'd1', api_name: 'sendMail', name: 'sendMail', category: 'standalone', source: 'crm', language: 'deluge', rest_api: [] };
   const node = { id: 'n1', api_name: 'runIt', name: 'runIt', category: 'standalone', source: 'crm', language: 'nodejs_22', rest_api: [] };
@@ -17199,15 +17202,19 @@ test('a language that would not answer makes the list partial rather than shorte
   const whole = await m.listFunctions();
   assert.equal(whole.capped, false, 'a list that was asked in full is refused as partial, so nothing is ever written');
   assert.equal(whole.entries.map((e) => e.id).join(','), 'd1,n1', 'the whole list did not arrive');
+  assert.equal((whole.unanswered || []).length, 0, 'a language that answered was recorded as silent');
 
   fails = true;
   const short = await m.listFunctions();
-  assert.equal(short.capped, true,
-               'a language that answered with an error produced a shorter list that the pull writes over '
-               + 'the index and prunes against - those functions are deleted from disk, and the only '
-               + 'warning is in memory');
-  assert.match(String(short.otherFailed), /RATE_LIMIT/, 'and it does not say which ask failed');
+  assert.equal(short.capped, false,
+               'a refused language was reported as a capped list - the pull then writes nothing at all, '
+               + 'and on an org where that language always refuses the product never works');
+  assert.equal((short.unanswered || []).join(','), 'nodejs_22',
+               'which language did not answer is not carried, so the panel cannot tell its rows from deletions');
+  assert.equal(short.entries.map((e) => e.id).join(','), 'd1', 'what did answer did not arrive');
+  assert.match(String(short.otherFailed), /RATE_LIMIT/, 'and it does not say why');
 });
+
 
 // ---------------------------------------------------------------------------------------------
 // The export loader keeps what the report is built out of.
@@ -17406,7 +17413,11 @@ test('the panel audit and the assistant know a function the mirror cannot read',
 
   // --- what the model is handed
   const ag = { console, Object, Set, Map, Array, JSON, String, Number, Math, Promise, RegExp, Date,
-               beginWorkspaceOp: () => op, ensureGraph: async () => ({ nodes: {}, counts: {} }),
+               beginWorkspaceOp: () => op,
+               // The shape the graph has now: it read the index once and kept the rows, so the seed
+               // and the tools answer from one list instead of each re-reading the file.
+               ensureGraph: async () => ({ nodes: {}, counts: { nodes: 0, inOrg: 2, notInMirror: 0, notMirrorable: 1 },
+                 unreadFns: [{ id: 'j1', api_name: 'syncLedger', name: 'syncLedger', display_name: 'Sync ledger', namespace: 'standalone', language: 'java17' }] }),
                walk: async function* () {},
                aiLoadConnections: async () => [],
                aiLoadActions: async () => ({ list: [], users: new Map() }),
@@ -17423,4 +17434,111 @@ test('the panel audit and the assistant know a function the mirror cannot read',
                'the model is given an index that does not contain this function, so it answers «not '
                + 'found» about a row the reader can see on screen');
   assert.match(seed, /java17/, 'it is listed without saying what it is, so the model cannot explain the absence');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A language that would not answer costs its own rows, and nothing else.
+//
+// The first shape of this made a refused language a `capped` list - «short, and I cannot say where» -
+// which refuses the write *and* the prune. On an org whose role always refuses one of the five, or a
+// data centre that will not take one of them, that is a pull which writes nothing at all: no tree, no
+// graph, no export, no assistant, and a message telling the reader to try again, for ever. Worse than
+// the defect it was written for. What answered is complete; what did not answer is unread, not
+// deleted, so its rows from the previous index are carried forward.
+test('a refused language keeps its own rows and does not stop the pull', async () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const prev = [{ id: 'd1', language: 'deluge' }, { id: 'n1', language: 'nodejs_22' }];
+  const run = async (unanswered) => {
+    const files = { 'functions/index.json': JSON.stringify(prev) };
+    const op = { root: {}, current: () => true, say: () => {},
+                 read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } };
+    const m = load([sliceFn(rel, 'mergeUnanswered')], { console, Object, JSON, Set, Array, String, Promise });
+    return (await m.mergeUnanswered([{ id: 'd1', language: 'deluge' }], unanswered, op)).map((e) => e.id).join(',');
+  };
+  assert.equal(await run(['nodejs_22']), 'd1,n1',
+               'the row for the language that would not answer was dropped from the index, so the '
+               + 'function vanishes from the tree and the prune below takes its files');
+  assert.equal(await run([]), 'd1',
+               'a function Zoho really has deleted was carried forward, so the mirror never forgets anything');
+
+  // And the bridge no longer calls that a capped list, which is what refused the write.
+  const bg = { BASE: 'x', Object, Error, String, Promise, JSON, console, RegExp, Array, encodeURIComponent,
+               PAGE: 200, MAX_PAGES: 5, list: (d) => (d && d.functions) || [],
+               api: async (path) => {
+                 const lang = path.split('&language=')[1];
+                 if (lang === 'nodejs_22') throw new Error('403 - NO_PERMISSION');
+                 return { functions: lang === 'deluge' ? [{ id: 'd1', api_name: 'a', language: 'deluge', rest_api: [] }] : [] };
+               } };
+  const b = load([sliceConst('apps/crm/content-bridge.js', 'LANGUAGES'),
+                  sliceConst('apps/crm/content-bridge.js', 'DISCOVER_LANGUAGE'),
+                  sliceFn('apps/crm/content-bridge.js', 'listPage'),
+                  sliceFn('apps/crm/content-bridge.js', 'listFunctions')], bg);
+  const r = await b.listFunctions();
+  assert.equal(r.capped, false,
+               'a refused language is reported as a capped list, and the pull then writes nothing at '
+               + 'all - on an org where that language always refuses, the product never works');
+  assert.equal((r.unanswered || []).join(','), 'nodejs_22', 'which language did not answer is not carried');
+  assert.equal(r.entries.length, 1, 'what did answer did not arrive');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Unticking a chapter does not change what the audit believes the org has.
+//
+// `if (!scope.functions) fns = []` runs before `healthFacts` is given the list, so an HTML export made
+// with Functions unticked reported a working schedule as «missing function» again - the exact defect
+// that argument was added to stop, in the document handed to somebody who cannot check it. The
+// Markdown builder was given the unfiltered list deliberately; this one was not walked.
+test('an unticked chapter does not turn working wiring into a broken reference', async () => {
+  const rel = 'apps/crm/export.js';
+  const fns = [{ id: 'j1', name: 'syncLedger', api_name: 'syncLedger', display_name: 'Sync ledger',
+                 namespace: 'standalone', language: 'java17', mirrored: false, downloaded: false }];
+  const scheds = [{ id: 's1', name: 'Nightly ledger', function_id: 'j1', function_name: 'syncLedger' },
+                  { id: 's2', name: 'Ghost run', function_id: 'zz', function_name: 'goneForGood' }];
+  const g = { nodes: {}, counts: { nodes: 0, inOrg: 1, notInMirror: 0, notMirrorable: 1 } };
+  const broken = async (functions) => {
+    const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportHtml')], MD_STUBS());
+    const html = await m.buildExportHtml(fns, [], g, {}, [], scheds, [], { failures: [] }, [], {},
+      Object.assign({}, MD_SCOPE, { functions }));
+    const from = html.indexOf('id="health"');
+    return (html.slice(from).match(/missing «([^»]+)»/g) || []).join(',');
+  };
+  assert.equal(await broken(true), 'missing «goneForGood»', 'the audit is wrong with every chapter ticked');
+  assert.equal(await broken(false), 'missing «goneForGood»',
+               'unticking Functions made the audit report a schedule that works as broken wiring - the '
+               + 'reader goes into Zoho to repair it, and cannot check because the chapter is not there');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The tools that assert an absence say what kind of absence it is.
+//
+// The caveat rode the three branches that already carry a list; «Function not found» and «0 functions
+// match» - the two sentences that *are* the absence - went out bare. So the model was handed a seed
+// naming these functions and then told by its own tools that they do not exist, and it believes the
+// tool. Driven through the shipped `aiExecTool`, because a check reading the seed proves the seed.
+test('the assistant does not deny a function it was told about', async () => {
+  const rel = 'apps/crm/ai.js';
+  const g = { nodes: { 'automation.build_Invoice': { id: 'automation.build_Invoice', namespace: 'automation',
+                        name: 'build_Invoice', api_name: 'build_Invoice', calls: [], called_by: [],
+                        associated_place: [], connections: [], modules: [] } },
+              counts: { nodes: 1, inOrg: 2, notInMirror: 0, notMirrorable: 1 },
+              unreadFns: [{ id: 'j1', api_name: 'syncLedger', name: 'syncLedger', display_name: 'Sync ledger',
+                            namespace: 'standalone', language: 'java17' }] };
+  const gl = { console, Object, Set, Map, Array, JSON, String, Number, Math, Promise, RegExp, Date,
+               beginWorkspaceOp: () => ({ root: {}, current: () => true, read: async () => { throw new Error('ENOENT'); } }),
+               ensureGraph: async () => g, MSG: { noFn: 'Function not found: ' },
+               fnSource: async () => '', loadModuleFiles: async () => ({}), moduleNames: () => [],
+               failuresIndex: async () => null, aiLoadConnections: async () => [], aiLoadActions: async () => ({ list: [], users: new Map() }) };
+  const m = load([sliceFn(rel, 'aiExecTool')], gl);
+  const op = gl.beginWorkspaceOp();
+
+  for (const tool of ['get_function', 'who_calls', 'get_callees']) {
+    const out = String(await m.aiExecTool(tool, { name: 'syncLedger' }, op));
+    assert.ok(!/^Function not found/.test(out),
+              `${tool} answered «${out.slice(0, 60)}» about a function the panel lists and the seed names - `
+              + 'the model believes its tools over its seed, and tells the reader it does not exist');
+    assert.match(out, /java17/, `${tool} did not say why the source is not here`);
+  }
+  // A name that really is nowhere still gets the plain answer, with the coverage attached.
+  const gone = String(await m.aiExecTool('get_function', { name: 'neverExisted' }, op));
+  assert.match(gone, /^Function not found/, 'a name that is genuinely absent stopped being reported as absent');
 });

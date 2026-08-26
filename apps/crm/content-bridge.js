@@ -455,10 +455,14 @@
     // and never as a failed pull of the Deluge functions that did arrive. What is not known travels
     // as `otherFailed` rather than being rounded down to zero.
     let other = { raw: [], capped: false }, otherFailed = null;
+    // **Which languages did not answer, by name.** «Something failed» is enough to refuse a prune and
+    // not enough to keep a mirror working: the reader needs the rows that *did* arrive, and the panel
+    // needs to know which language's previous rows to carry forward rather than treat as deleted.
+    const unanswered = [];
     for (const lang of LANGUAGES) {
       if (lang === 'deluge') continue;
       try { const r = await listPage(lang); other.raw = other.raw.concat(r.raw); other.capped = other.capped || r.capped; }
-      catch (e) { otherFailed = (e && e.message) || 'no answer'; }
+      catch (e) { otherFailed = (e && e.message) || 'no answer'; unanswered.push(lang); }
     }
     // **A named list can only ever find what somebody thought of.** Six languages is what this build
     // knows about, and the day Zoho serves a seventh the mirror is short again with nothing saying
@@ -489,7 +493,14 @@
     // rows are gone from disk, with the warning living only in memory - reopen the panel and the
     // functions have vanished with nothing left saying why. «Does partial data authorise a
     // destructive act» is question five of the six this repository keeps, and this is its answer.
-    const capped = deluge.capped || other.capped || !!otherFailed;
+    // **And a refused language is not a capped list.** Making it one welded the constructive half of
+    // the guard to the destructive one: an org whose role always refuses `nodejs_22`, or a data
+    // centre that will not take `python_3_12`, got a pull that wrote nothing at all - no tree, no
+    // graph, no export, no assistant - and a message telling them to try again, for ever. That is
+    // worse than the defect it was written for. `capped` means «this list is short and I cannot say
+    // where», which is true of a page limit and false here: what answered is complete, and the
+    // panel carries the previous rows of the languages that did not.
+    const capped = deluge.capped || other.capped;
     const all = raw.filter((f) => f.source !== 'extension');
     const entries = all.map((f) => ({
       id: String(f.id), api_name: f.api_name, name: f.name, display_name: f.display_name || f.api_name,
@@ -511,7 +522,7 @@
     // guess and came back not working.
     return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped,
              otherFailed, otherAsked: LANGUAGES.join(', '), otherReturned: other.raw.length,
-             otherNew: extra.length, unknownLangs };
+             otherNew: extra.length, unknownLangs, unanswered };
   }
   // Workflow rules - list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {

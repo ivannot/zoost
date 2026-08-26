@@ -4,7 +4,7 @@
 # name	crm	analytics	state
 addSampleWorkspace	354dce527925	da2e4f395fc9	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
-aiBuildSeed	2b6c66a54c9f	260d3c14a906	divergent
+aiBuildSeed	f03bd8b87e3d	260d3c14a906	divergent
 aiCall	3c9b4968c37f	f22e6e26de7d	divergent
 aiCap	113394dc8123	113394dc8123	identical
 aiClear	bc37da0fa783	edbcc54cb5ca	divergent
@@ -12,7 +12,7 @@ aiContextLabel	6b65dd4c3db5	9e759687172d	divergent
 aiEngineChrome	1b258b12d73a	ae6ca83689d5	divergent
 aiEngineWord	eda86661e8e6	eda86661e8e6	identical
 aiEnsureFiles	46ca4cb53f51	46ca4cb53f51	identical
-aiExecTool	6751226a2319	ee81072522f9	divergent
+aiExecTool	1dd2260a8d4f	ee81072522f9	divergent
 aiGetCfg	886a0f61c599	886a0f61c599	identical
 aiLockMsg	27ab8454c641	27ab8454c641	identical
 aiLocked	2f50d3d07bfc	2f50d3d07bfc	identical
@@ -36,7 +36,7 @@ beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	271d465d8e8a	188f4403e823	divergent
+buildExportHtml	d7995e323675	188f4403e823	divergent
 buildExportMarkdown	8e74e8107ec0	fbf90f473b83	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
@@ -196,7 +196,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	80c58488ec46	bd1051a4299b	divergent
+pullAll	410bc5a160aa	bd1051a4299b	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical

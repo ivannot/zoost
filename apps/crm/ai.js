@@ -294,11 +294,9 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   // language, a model whose index does not contain it says «not found» - about a row the reader is
   // looking at. So they are listed, with their language and with what is true of them: Zoost has the
   // name and not the code. Read from the index the pull wrote, which is the only place that knows.
-  let unread = [];
-  try {
-    const idx = JSON.parse(await op.read('functions/index.json'));
-    if (Array.isArray(idx)) unread = idx.filter((e) => e && e.language && !/^deluge/i.test(String(e.language)));
-  } catch (_) { /* no index, or unreadable: the caveat on every answer still stands */ }
+  // From the graph, which read the index once and kept the rows - the same list the tools answer
+  // from, so the seed and the answers cannot disagree about which functions these are.
+  const unread = (g && g.unreadFns) || [];
   if (unread.length) {
     funcs += `\n## Functions Zoost lists and cannot read (${unread.length})\n`
       + 'Zoho compiles these in another language. Zoost has their name and not their source, so they\n'
@@ -718,12 +716,24 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   // one is a download that can be retried, the other is a language this build does not read.
   const short = g.counts ? g.counts.notInMirror : undefined;
   const unread = (g.counts && g.counts.notMirrorable) || 0;
+  // **The caveat belongs on the branches that assert an absence.** It rode the three that already
+  // carry a list, and «Function not found» and «0 functions match» - the two sentences that *are*
+  // the absence - went out bare. A model handed a seed that names these functions then contradicts
+  // its own seed, in the surface that answers in words and is believed.
+  const notFound = (nm) => {
+    const hit = ((g && g.unreadFns) || []).find((u) => String(u.api_name).toLowerCase() === String(nm || '').toLowerCase()
+      || String(u.name || '').toLowerCase() === String(nm || '').toLowerCase());
+    return hit
+      ? `${nm} is a ${hit.language} function. Zoho compiles it, this org has it, and Zoost does not read `
+        + 'that language - so its source, its calls and its callers are not in this workspace. It is not missing.'
+      : MSG.noFn + nm + overMirror;
+  };
   const overMirror = short === null || short === undefined
     ? ' (answered over the functions in this mirror; how many the org has could not be established)'
     : (short > 0 || unread > 0)
       ? ` (answered over ${g.counts.nodes} of the org's ${g.counts.inOrg} functions`
         + (short > 0 ? ` - ${short} did not download` : '')
-        + (unread > 0 ? `${short > 0 ? ', and' : ' -'} ${unread} are in a language Zoost does not read` : '')
+        + (unread > 0 ? `${short > 0 ? ', and' : ' -'} ${unread} ${unread === 1 ? 'is' : 'are'} in a language Zoost does not read` : '')
         + ', so an absence here is not an absence in Zoho)'
       : '';
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
@@ -747,15 +757,15 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
         + `workspace, so they are neither included nor excluded by the size and call criteria: `
         + unmeasured.map((r) => r.id).join(', ')
       : '';
-    if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.${gap}`;
+    if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.${gap}${overMirror}`;
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.${overMirror}\n`
       + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n') + gap;
   }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return notFound(input.name); return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
   // The caveat rides the *negative* answer only: a list of callers is a fact about what is here and
   // needs no hedge, while «none» is a claim about the org that this cannot make on its own.
-  if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)' + overMirror) : MSG.noFn + input.name; }
-  if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
+  if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)' + overMirror) : notFound(input.name); }
+  if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : notFound(input.name); }
   if (name === 'search_code') {
     const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)';
     const hits = []; let unread = 0;
