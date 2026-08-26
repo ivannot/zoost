@@ -416,26 +416,52 @@
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
   // Metadata-only list (fast, no code) - used to show all functions immediately, then download each on demand.
-  async function listFunctions() {
+  // One page-walk, asked per language. The org list is filtered by `language`, so «what functions does
+  // this org have» has always meant «what Deluge functions does it have» - and Zoho serves Node ones
+  // through the same endpoint now, which left an org that has them with a mirror that did not name
+  // them and did not say so. That is the omission this project spends its length refusing.
+  // The one Zoho serves besides Deluge today. A list rather than a guess: the query value is
+  // `nodejs` and the field comes back `nodejs_22`, so neither can be derived from the other.
+  const OTHER_LANGUAGE = 'nodejs';
+  async function listPage(language) {
     let start = 1, raw = [], pages = 0, capped = false;
     while (true) {
-      const path = `/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=deluge`;
+      const path = `/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=${encodeURIComponent(language)}`;
       const page = list(await api(path), 'functions', path);
       raw = raw.concat(page); if (page.length < PAGE) break; start += PAGE;
       if (++pages >= MAX_PAGES) { capped = true; break; }
     }
+    return { raw, capped };
+  }
+  async function listFunctions() {
+    const deluge = await listPage('deluge');
+    // **The second walk cannot damage the first.** Whether this org has any, and whether this
+    // endpoint answers for them the same way on every data centre, is not measured here - so a
+    // refusal, a shape we cannot read, or a role that does not grant them ends as «none of those»
+    // and never as a failed pull of the Deluge functions that did arrive. What is not known travels
+    // as `otherFailed` rather than being rounded down to zero.
+    let other = { raw: [], capped: false }, otherFailed = null;
+    try { other = await listPage(OTHER_LANGUAGE); }
+    catch (e) { otherFailed = (e && e.message) || 'no answer'; }
+    const raw = deluge.raw.concat(other.raw);
+    const capped = deluge.capped || other.capped;
     const all = raw.filter((f) => f.source !== 'extension');
     const entries = all.map((f) => ({
       id: String(f.id), api_name: f.api_name, name: f.name, display_name: f.display_name || f.api_name,
       namespace: (f.workflow && f.workflow.namespace) || f.category || 'misc',
       category: f.category, source: f.source,
+      // As Zoho spells it - `nodejs_22`, not the `nodejs` that was asked for. The version is the
+      // reader's business and ours: a mirror that recorded the query value would say nothing had
+      // changed on the day Zoho moves it.
+      language: f.language || 'deluge',
       rest: (f.rest_api || []).some((r) => r.active),
       // Measured on a captured list response: the org list carries `updatedTime`, and dropping it
       // here is what left «Pull all» unable to see a function edited by a colleague - the sidecar's
       // copy is from the last download, and with nothing to compare it against, nothing was stale.
       updatedTime: f.updatedTime || null,
     }));
-    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped };
+    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped,
+             otherFailed };
   }
   // Workflow rules - list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {

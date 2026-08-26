@@ -6364,7 +6364,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
     assert.ok(!/setStatus/.test(src.slice(at, at + 200)), 'the explanation is set where it is overwritten');
     // Both on the one call that closes the load. The clause about files that could not be read now
     // sits between them, so «immediately after» is no longer the property - «in the same sentence» is.
-    const close = src.slice(src.indexOf('functions (${dl} downloaded).'));
+    const close = src.slice(src.indexOf('functions (${dl} downloaded'));
     const call = close.slice(0, close.indexOf(');') + 2);
     assert.match(call, /statsDeferred\(\)/,
                  'the load\'s own status line does not carry it');
@@ -10810,7 +10810,10 @@ test('a function that guards one status message guards them all', () => {
 // which is a number about your own mirror and is the only gap that changes what the list means.
 test('the graph carries how much of the org it was built from', () => {
   const src = read('apps/crm/sidepanel.js');
-  const build = src.slice(src.indexOf('window.buildGraph('), src.indexOf('window.buildGraph(') + 1400);
+  // To where the answer is written, not a fixed number of characters: the window was 1400 and a
+  // paragraph added above the line pushed it out, failing for the length of a comment.
+  const from = src.indexOf('window.buildGraph(');
+  const build = src.slice(from, src.indexOf('g.counts.notInMirror =', from) + 200);
   assert.match(build, /functions\/index\.json/,
     'the graph is built without ever asking how many functions the org has');
   assert.match(build, /notInMirror/, 'nothing records the difference');
@@ -16965,4 +16968,80 @@ test('the Markdown export prints a workflow criteria, a delay and the audit coun
   assert.match(md, /### No caller \(1\)/, 'the audit is a heading with no findings under it');
   assert.match(md, /### Broken references \(1\)/, 'a schedule pointing at a function that is not here went unreported');
   assert.match(md, /### Missing lookups \(1\)/, 'a lookup pointing at a module that is not here went unreported');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The org's function list is asked once per language, and a refusal of the second ask is stated.
+//
+// Zoho's list endpoint filters by `language`, so «what functions does this org have» has always
+// meant «what Deluge functions does it have» - and Zoho serves Node ones through the same endpoint
+// now. An org that has them was getting a mirror that did not name them and did not say so, which is
+// the omission by silence this project spends its length refusing. Both halves are driven: the
+// second walk happens, and a refusal of it leaves the Deluge functions that did arrive alone.
+test('the function list asks for every language Zoho serves', async () => {
+  const rel = 'apps/crm/content-bridge.js';
+  const asked = [];
+  let nodeFails = false;
+  const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp, Array,
+              encodeURIComponent, PAGE: 200, MAX_PAGES: 5,
+              list: (d) => (d && d.functions) || [],
+              api: async (path) => {
+                const lang = path.split('&language=')[1];
+                asked.push(lang);
+                if (lang === 'nodejs' && nodeFails) throw new Error('403 - NO_PERMISSION');
+                return { functions: lang === 'deluge'
+                  ? [{ id: '1', api_name: 'sendMail', name: 'sendMail', category: 'standalone', source: 'crm', language: 'deluge', rest_api: [] }]
+                  : [{ id: '2', api_name: 'runIt', name: 'runIt', category: 'standalone', source: 'crm', language: 'nodejs_22', script: null,
+                       rest_api: [{ active: false, type: 'zapikey', url: 'https://crm.zoho.eu/x?zapikey=SECRETVALUE' }] }] };
+              } };
+  const m = load([sliceConst(rel, 'OTHER_LANGUAGE'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], g);
+
+  const both = await m.listFunctions();
+  assert.ok(asked.length > 1, `the list was asked for ${JSON.stringify(asked)} only - an org's Node functions are invisible`);
+  // As text: an array built inside the vm has another prototype, and deepEqual reads that as a
+  // different value.
+  assert.equal(both.entries.map((e) => e.language).join(','), 'deluge,nodejs_22',
+               'the language Zoho reports is not carried, so nothing downstream can tell them apart');
+  assert.equal(both.otherFailed, null, 'a walk that worked was reported as failed');
+  assert.ok(!JSON.stringify(both.entries).includes('SECRETVALUE'),
+            'the zapikey in rest_api reached the entries, and from there the mirror and the AI context');
+
+  asked.length = 0; nodeFails = true;
+  const partial = await m.listFunctions();
+  assert.equal(partial.entries.map((e) => e.api_name).join(','), 'sendMail',
+               'a refused second walk took the Deluge functions down with it');
+  assert.match(String(partial.otherFailed), /NO_PERMISSION/,
+               'the second walk failed silently, which is the same complete-looking mirror this change undoes');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A function whose source this mirror does not hold is its own state everywhere it is counted.
+//
+// Not «not downloaded»: nothing is coming for it, so «click to download» and «Complete missing (n)»
+// are both instructions the reader can follow to no effect - the wrong missing thing, which this
+// panel has already been corrected over twice. And not a failed download either: folding it into the
+// audit's coverage would turn a fixable number into a permanent one printed as though a retry
+// would clear it.
+test('a function listed without its source is neither downloaded nor missing', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const m = load([sliceConst(rel, 'isDeluge'), sliceConst(rel, 'langLabel')], { console, String, RegExp });
+  for (const [lang, want] of [['deluge', true], [undefined, true], ['Deluge', true], ['nodejs_22', false]]) {
+    assert.equal(m.isDeluge(lang), want, `isDeluge(${JSON.stringify(lang)}) is wrong, and it decides every count below`);
+  }
+  assert.equal(m.langLabel('nodejs_22'), 'nodejs 22', 'the badge would show the raw field');
+
+  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+  // Derived from the places that count: whoever decides what to fetch, and whoever puts a number on
+  // «Complete missing», has to ask. Naming them here would leave the third one, added later, unasked.
+  const pending = /const pending = treeData\.filter\((.+?)\);/.exec(src);
+  assert.ok(pending, 'the download queue is gone - this case has lost its subject');
+  assert.match(pending[1], /mirrored !== false/,
+               'the queue would ask Zoho for a source that endpoint does not serve, and count the '
+               + 'nothing it gets back as a failed download - a number no retry can bring down');
+  const miss = /const miss = arr\.filter\((.+?)\)\.length;/.exec(src);
+  assert.ok(miss, '«Complete missing» no longer counts - this case has lost its subject');
+  assert.match(miss[1], /mirrored !== false/,
+               'the button offers to complete something pressing it cannot complete');
+  assert.match(src, /g\.counts\.notInMirror = inOrg === null \? null : Math\.max\(0, inOrg - notMirrorable/,
+               'a function this mirror cannot hold is counted as one that failed to download');
 });

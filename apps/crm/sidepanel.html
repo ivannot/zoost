@@ -228,6 +228,7 @@
   /* Functions rows: fixed-width trailing columns of their own (rf/rl above belong to Modules), so
      the numbers line up down the list even when a row has nothing to put in one of them. The first
      .rest still carries margin-left:auto and pushes the whole group to the right edge. */
+  .f .rest.rlg{min-width:30px;text-align:right;color:#7dd3fc}
   .f .rest.rr{min-width:26px;text-align:right}
   .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
   .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
@@ -245,6 +246,8 @@
   .f .rest.rx{margin-left:0;color:var(--muted);font-weight:600}
   .f .st{cursor:pointer;font-size:11px;width:13px;text-align:center;flex:none}
   .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)} .st-stale{color:#f59e0b}
+  /* Listed, and its source is not something this mirror holds - neither present nor pending. */
+  .st-lang{color:#7dd3fc}
   /* Refused by Zoho. Neutral on purpose and readable: amber in this panel means "do something",
      and there is nothing to do. Lighter than .st-no, which means "not here yet" and is dim
      because it is waiting; this one is settled and has to be legible. */

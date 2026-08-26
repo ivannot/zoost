@@ -310,6 +310,12 @@ const MSG = {
   staleBridge: 'The Zoho tab is still running an older copy of this extension - reload that tab, then pull again.',
   // The three status-dot tooltips, which say what a click will do rather than what the mark is.
   notHere: 'Not in workspace - click to download',
+  // Not «click to download»: there is nothing a click could fetch. A Node function's source is a
+  // folder in Zoho, read a file at a time from another endpoint, and mirroring it is not built.
+  // Saying the wrong missing thing is worse than saying nothing, because the reader goes and does
+  // it and nothing changes.
+  notMirrored: (lang) => `${lang} function - Zoost lists it, and does not mirror its source yet. `
+    + 'Its code is a folder in Zoho rather than one file, and reading that is not built. Open it in Zoho.',
   hereRepull: 'In workspace - click to re-download from Zoho',
   failed: 'Failed: ',
   // The twin already had this name; the CRM had the string twice and nothing said so, because the
@@ -378,6 +384,20 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // place on the first version of this line.
 const escQ = (s) => String(s).replace(/[\u0022\u0027]/g, (c) => (c === '\u0022' ? '&quot;' : '&#39;'));
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
+// **Which functions this mirror actually holds the source of.** Zoho serves Node functions through
+// the same list endpoint, and their source is neither a field on that record nor one file: it is a
+// small folder - the entry point, a config, whatever was vendored - fetched a file at a time from a
+// different endpoint. Mirroring that is not built. What *is* built is saying so: they are listed,
+// they carry their language, and every place that would otherwise say «run Pull all to fetch it»
+// says the true thing instead. A function nobody can see is worse than one we cannot download,
+// because the reader cannot tell it is missing.
+const isDeluge = (lang) => !lang || /^deluge/i.test(String(lang));
+const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_/g, ' '));
+// What the second ask could not read, kept until there is a status line to put it on. One value,
+// written by both pulls that list functions and consumed where the count is reported - a flag
+// written by several and read by none is a shape this repository has already paid for once.
+let listGap = null;
+function noteListGap(why) { listGap = String(why || 'no answer').slice(0, 120); }
 // What the pull leaves so the next open does not have to read every meta. A cache beside the
 // index, checked against the folder walk on every load - see rebuildTree().
 const META_INDEX = 'functions/meta-index.json';
@@ -1533,23 +1553,31 @@ function clearConnectionFilter() { connectionFilter = null; connFilterSet = null
 function fnRowEl(e) {
   const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
   el.setAttribute('aria-selected', e.path === currentPath);
-  const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
-  const stCh = e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
-  const stTitle = e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? MSG.hereRepull : MSG.notHere;
+  // A function whose source this mirror does not hold is its own state, ahead of every other: it is
+  // not an error, it is not stale, and it is not «not here yet» - nothing is coming for it.
+  const unmirrored = e.mirrored === false;
+  const stCls = unmirrored ? 'st-lang' : e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
+  const stCh = unmirrored ? '◇' : e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
+  const stTitle = unmirrored ? MSG.notMirrored(langLabel(e.language)) : e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? MSG.hereRepull : MSG.notHere;
   // Every trailing slot is always emitted, empty when it has nothing to say. A slot that disappears
   // lets the next one slide into its place, and then the numbers stop lining up down the list -
   // which is the whole point of having them there.
   const st = e.stats;
+  // Its own slot and its own class, not a widening of `.rr`: those four badge classes are shared
+  // with rows in Modules and Connections, and reusing one would change two tabs nobody looked at.
+  const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${unmirrored ? escHtml(langLabel(e.language).slice(0, 4)) : ''}</span>`;
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
   const lineSlot = `<span class="rest rfl"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${st ? st.lines + 'L' : ''}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
-  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${restSlot}${nsSlot}${lineSlot}${callSlot}`;
+  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   // Both go through a declaration, because a `.then(cb)` is a scope the race checker cannot enter -
   // and this callback redraws a row after an await, which is the exact shape it exists to look at.
-  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); void fetchThenRedrawRow(e); };
-  el.onclick = () => { if (e.downloaded) openFromTree(e.path); else void fetchThenRedrawRow(e); };
+  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else void fetchThenRedrawRow(e); };
+  // A click on one of these used to start a download that answers nothing. It says what it is
+  // instead - the same sentence the dot carries, in the place a click is asking the question.
+  el.onclick = () => { if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else if (e.downloaded) openFromTree(e.path); else void fetchThenRedrawRow(e); };
   return el;
 }
 
@@ -1732,6 +1760,7 @@ async function rebuildTree() {
       index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
       const row = { path, api_name: e.api_name, display_name: e.display_name || e.api_name,
                     namespace: e.namespace, rest: e.rest, id, category: e.category, source: e.source,
+                    language: e.language || 'deluge', mirrored: isDeluge(e.language),
                     downloaded: false, stale: false, error: false, updatedTime: null,
                     // What Zoho's list said, kept apart from what the sidecar says: the two
                     // disagreeing is exactly the fact «stale» exists to carry.
@@ -1829,13 +1858,19 @@ async function rebuildTree() {
   // the summary back, so the next load may believe it again.
   distrustSummary = false;
   const dl = treeData.filter((e) => e.downloaded).length;
+  // Listed and not mirrored is its own number, because it belongs to neither of the other two: it
+  // is not «downloaded» and it is not waiting to be.
+  const unmirrored = treeData.filter((e) => e.mirrored === false).length;
+  const gap = listGap; listGap = null;   // said once, on the line that reports the count it belongs to
   // **What could not be read is part of the answer.** Every sidecar that failed to open used to be
   // swallowed one by one, so a mirror the browser could not read at all closed on «120 functions
   // (120 downloaded).» in green - the rows drawn from file names alone, every one marked as present.
   // A count is a measurement of what was read; saying it without saying what was not is the mirror
   // lying by omission. The twin names the file and what the browser called it, and has since it
   // existed.
-  setStatus(`${treeData.length} functions (${dl} downloaded).`
+  setStatus(`${treeData.length} functions (${dl} downloaded`
+    + (unmirrored ? `, ${unmirrored} listed without source` : '') + ').'
+    + (gap ? ` Zoho would not list this org's Node functions (${gap}) - if it has any, they are not in this count.` : '')
     + (unreadableMetas.length
       ? ` ${unreadableMetas.length} file(s) could not be read - what they hold is not in this list.`
       : '')
@@ -2113,10 +2148,19 @@ async function loadGraph(op = beginWorkspaceOp()) {
   // `functions/index.json` is what Zoho reported, so the difference is the answer. Unknown rather
   // than zero when the index cannot be read: «nobody looked» is not «nothing missing», which is the
   // distinction this panel spent the day learning in four other places.
-  let inOrg = null;
-  try { const idx = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(idx)) inOrg = idx.length; } catch (_) {}
+  //
+  // **And a function this mirror cannot hold is not a function that failed to download.** The index
+  // lists the Node ones now, and folding them into `notInMirror` would turn «could not be
+  // downloaded» - a sentence about a fixable failure - into a permanent number nothing can move,
+  // printed under the audit as though a retry would clear it. They are counted, and counted apart.
+  let inOrg = null, notMirrorable = 0;
+  try {
+    const idx = JSON.parse(await op.read('functions/index.json'));
+    if (Array.isArray(idx)) { inOrg = idx.length; notMirrorable = idx.filter((e) => !isDeluge(e && e.language)).length; }
+  } catch (_) {}
   g.counts.inOrg = inOrg;
-  g.counts.notInMirror = inOrg === null ? null : Math.max(0, inOrg - g.counts.nodes);
+  g.counts.notMirrorable = notMirrorable;
+  g.counts.notInMirror = inOrg === null ? null : Math.max(0, inOrg - notMirrorable - g.counts.nodes);
   // What the parser saw, written down for the next build. Only when something had to be read: a
   // graph built entirely from the summary has nothing new to say, and rewriting the file on every
   // open would touch a folder the reader may have under version control.
@@ -3728,6 +3772,11 @@ async function pullAll() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
     const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw bridgeError(r, 'list failed');
+    // **A list that came back short says so.** The org list is asked once per language, and the
+    // second ask is deliberately allowed to fail without taking the pull down with it - which is
+    // only defensible if the failure is stated. Otherwise a role that does not grant Node
+    // functions produces exactly the silent, complete-looking mirror this change is undoing.
+    if (r.otherFailed) noteListGap(r.otherFailed);
     // Same rule as the reconciler, and here it was worse: the truncation was reported *after* the
     // pruning had already run, so the warning described files that were already gone.
     if (r.capped) {
@@ -4061,6 +4110,11 @@ async function reconcileNow(op) {
     const r = await toBridge({ cmd: 'listFunctions' });
     if (!op.current()) return;           // the answer describes the workspace we were in, not this one
     if (!r?.ok) throw bridgeError(r, 'list failed');
+    // **A list that came back short says so.** The org list is asked once per language, and the
+    // second ask is deliberately allowed to fail without taking the pull down with it - which is
+    // only defensible if the failure is stated. Otherwise a role that does not grant Node
+    // functions produces exactly the silent, complete-looking mirror this change is undoing.
+    if (r.otherFailed) noteListGap(r.otherFailed);
     // A list that stopped early is not a statement about what exists: it is a statement about how
     // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
     // functions that are still in Zoho - the worst thing this product could do, and reachable on
@@ -5415,7 +5469,9 @@ async function downloadMissing() {
   // from `updateMissingButton` would be an assignment on top of the five-second re-render - set
   // once, never revisited, which measured as «still off after the tab came back into line».
   if (!zohoReady()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  const pending = treeData.filter((e) => !e.downloaded || e.stale || e.pathChanged);   // stale = older schema, a rename, or Zoho's updatedTime moved
+  // `mirrored` first: asking `fetchOne` for a Node function answers nothing, and counting that as a
+  // failed download would put a number on screen that no retry could ever bring down.
+  const pending = treeData.filter((e) => e.mirrored !== false && (!e.downloaded || e.stale || e.pathChanged));   // stale = older schema, a rename, or Zoho's updatedTime moved
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0, cleanup = 0;
@@ -5467,7 +5523,9 @@ function updateMissingButton() {
   const b = $('missing'); if (!b) return;
   if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'connections' || viewMode === 'actions') { b.style.display = 'none'; return; }
   const arr = viewMode === 'workflows' ? workflowData : treeData;
-  const miss = arr.filter((e) => !e.downloaded).length;
+  // «Complete missing» offers to fetch what is missing, and nothing it can fetch is missing here:
+  // counting these would put a number on the button that pressing it can never reduce.
+  const miss = arr.filter((e) => e.mirrored !== false && !e.downloaded).length;
   const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
   const n = miss + stale;
   // It downloads from Zoho, so on a sample there is nothing it could do. Absent rather than

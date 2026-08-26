@@ -44,7 +44,15 @@ async function buildHealth(op = beginWorkspaceOp()) {
     : short > 0
       ? `<b>Read from your mirror:</b> ${g.counts.nodes} of ${g.counts.inOrg} functions. ${short} could not be downloaded, and a function called only from one of those appears below as having no caller. `
       : '';
-  const coverage = mirror + `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  // **And the other absence, which is not a failure.** A Node function is listed by the panel and
+  // has no source here, so it is not a node in this graph: it calls nothing, and whatever it alone
+  // calls arrives in «no caller» below. Folding it into the sentence above would call it a failed
+  // download and invite a retry that cannot exist.
+  const nm = (g.counts && g.counts.notMirrorable) || 0;
+  const langNote = nm ? `<b>${nm} function(s)</b> are listed without their source - Zoost does not mirror `
+    + 'Node function code yet - so they make no calls here, and anything only they call appears below '
+    + 'as having no caller. ' : '';
+  const coverage = mirror + langNote + `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
   // Everything read from the platform rather than computed from the mirror, fetched once: both
   // groups below need it. It sits above them because moving one of them up put a use of `fx`
   // before its declaration - a temporal dead zone that `node --check` waves through and only

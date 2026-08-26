@@ -136,6 +136,7 @@ apps/crm/export.js	g.comparator || ''
 apps/crm/export.js	g.counts.inOrg
 apps/crm/export.js	g.counts.nodes
 apps/crm/export.js	g.counts.notInMirror
+apps/crm/export.js	g.counts.notMirrorable
 apps/crm/export.js	g2
 apps/crm/export.js	hLink(n)
 apps/crm/export.js	healthHtml
