@@ -420,9 +420,20 @@
   // this org have» has always meant «what Deluge functions does it have» - and Zoho serves Node ones
   // through the same endpoint now, which left an org that has them with a mirror that did not name
   // them and did not say so. That is the omission this project spends its length refusing.
-  // The one Zoho serves besides Deluge today. A list rather than a guess: the query value is
-  // `nodejs` and the field comes back `nodejs_22`, so neither can be derived from the other.
-  const OTHER_LANGUAGE = 'nodejs';
+  // **The list wants the versioned name, and this took two wrong guesses to stop guessing about.**
+  // First `nodejs` - the value Zoho's own UI sends on the *detail* call - which listed nothing on an
+  // org that has one. Then `all`, which the detail call also accepts. Both were analogies from
+  // another endpoint. The capture of the list request itself says
+  // `?type=org&language=nodejs_22&limit=50`, and answers with the function: it is the full versioned
+  // name, and neither of the two shorter forms is it.
+  //
+  // Which means this value goes stale the day Zoho ships the next runtime, silently - so the pull
+  // reports what it asked for and what came back whenever the answer is empty. A version that has
+  // moved then arrives as a sentence on screen instead of as an org that «has no Node functions».
+  //
+  // The ask is a list rather than a constant for the same reason: the next runtime is added here,
+  // and the old one keeps answering for orgs that still have functions on it.
+  const OTHER_LANGUAGES = ['nodejs_22'];
   async function listPage(language) {
     let start = 1, raw = [], pages = 0, capped = false;
     while (true) {
@@ -441,9 +452,15 @@
     // and never as a failed pull of the Deluge functions that did arrive. What is not known travels
     // as `otherFailed` rather than being rounded down to zero.
     let other = { raw: [], capped: false }, otherFailed = null;
-    try { other = await listPage(OTHER_LANGUAGE); }
-    catch (e) { otherFailed = (e && e.message) || 'no answer'; }
-    const raw = deluge.raw.concat(other.raw);
+    for (const lang of OTHER_LANGUAGES) {
+      try { const r = await listPage(lang); other.raw = other.raw.concat(r.raw); other.capped = other.capped || r.capped; }
+      catch (e) { otherFailed = (e && e.message) || 'no answer'; }
+    }
+    // By id: `all` returns the Deluge ones too, and a function listed twice is a row twice in the
+    // tree and two files racing for one path.
+    const seen = new Set(deluge.raw.map((f) => String(f.id)));
+    const extra = other.raw.filter((f) => !seen.has(String(f.id)));
+    const raw = deluge.raw.concat(extra);
     const capped = deluge.capped || other.capped;
     const all = raw.filter((f) => f.source !== 'extension');
     const entries = all.map((f) => ({
@@ -460,8 +477,12 @@
       // copy is from the last download, and with nothing to compare it against, nothing was stale.
       updatedTime: f.updatedTime || null,
     }));
+    // What the second ask actually answered, carried whether or not it went wrong. «Zero» and «it
+    // failed» are different facts, and on an org that has Node functions «zero» is the one that says
+    // the request itself is wrong - which is the sentence that was missing when this shipped as a
+    // guess and came back not working.
     return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped,
-             otherFailed };
+             otherFailed, otherAsked: OTHER_LANGUAGES.join(', '), otherReturned: other.raw.length, otherNew: extra.length };
   }
   // Workflow rules - list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {

@@ -7201,6 +7201,9 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                     dir: {}, pullActive: false, pendingAfterPull: false, failedRemovals: new Set(),
                     mismatchRefuse: () => false, hasPerm: async () => true, refreshContext: async () => {},
                     guardOk: () => true,
+                    // Only record what a later status line says about the list; this case is about
+                    // what the prune does, and both are no-ops for it.
+                    noteListGap: () => {}, noteListProbe: () => {},
                     MSG: { noWorkspaceHere: 'no ws', folder: 'folder', wrongTab: 'wrong tab' },
                     setStatus: (t, k) => said.push([String(t), k]),
                     // One of three is returned, so a reader that trusts the answer prunes two.
@@ -17001,21 +17004,32 @@ test('the function list asks for every language Zoho serves', async () => {
               api: async (path) => {
                 const lang = path.split('&language=')[1];
                 asked.push(lang);
-                if (lang === 'nodejs' && nodeFails) throw new Error('403 - NO_PERMISSION');
-                return { functions: lang === 'deluge'
-                  ? [{ id: '1', api_name: 'sendMail', name: 'sendMail', category: 'standalone', source: 'crm', language: 'deluge', rest_api: [] }]
-                  : [{ id: '2', api_name: 'runIt', name: 'runIt', category: 'standalone', source: 'crm', language: 'nodejs_22', script: null,
-                       rest_api: [{ active: false, type: 'zapikey', url: 'https://crm.zoho.eu/x?zapikey=SECRETVALUE' }] }] };
+                if (lang !== 'deluge' && nodeFails) throw new Error('403 - NO_PERMISSION');
+                // **Only for the value the capture shows Zoho answering to.** This stub used to
+                // answer for anything that was not `deluge`, so it was green on `nodejs` and on
+                // `all` - the two guesses that shipped and listed nothing on a real org. A fixture
+                // that answers whatever it is asked cannot fail on the defect it exists for. The
+                // request recorded is `?type=org&language=nodejs_22&limit=50`, versioned name and
+                // all, and that is what is written here.
+                const del = { id: '1', api_name: 'sendMail', name: 'sendMail', category: 'standalone', source: 'crm', language: 'deluge', rest_api: [] };
+                const node = { id: '2', api_name: 'runIt', name: 'runIt', category: 'standalone', source: 'crm', language: 'nodejs_22', script: null,
+                               rest_api: [{ active: false, type: 'zapikey', url: 'https://crm.zoho.eu/x?zapikey=SECRETVALUE' }] };
+                if (lang === 'deluge') return { functions: [del] };
+                return { functions: lang === 'nodejs_22' ? [node] : [] };
               } };
-  const m = load([sliceConst(rel, 'OTHER_LANGUAGE'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], g);
+  const m = load([sliceConst(rel, 'OTHER_LANGUAGES'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], g);
 
   const both = await m.listFunctions();
-  assert.ok(asked.length > 1, `the list was asked for ${JSON.stringify(asked)} only - an org's Node functions are invisible`);
+  assert.ok(asked.includes('nodejs_22'),
+            `the list was asked for ${JSON.stringify(asked)} - Zoho answers for the versioned name, so an `
+            + "org's Node functions are listed as none and the mirror looks complete");
   // As text: an array built inside the vm has another prototype, and deepEqual reads that as a
   // different value.
   assert.equal(both.entries.map((e) => e.language).join(','), 'deluge,nodejs_22',
                'the language Zoho reports is not carried, so nothing downstream can tell them apart');
   assert.equal(both.otherFailed, null, 'a walk that worked was reported as failed');
+  assert.equal(both.entries.length, 2, `${both.entries.length} entries for two functions`);
+  assert.equal(both.otherNew, 1, 'what the second ask added is not counted, so a pull cannot say what it found');
   assert.ok(!JSON.stringify(both.entries).includes('SECRETVALUE'),
             'the zapikey in rest_api reached the entries, and from there the mirror and the AI context');
 
@@ -17025,6 +17039,23 @@ test('the function list asks for every language Zoho serves', async () => {
                'a refused second walk took the Deluge functions down with it');
   assert.match(String(partial.otherFailed), /NO_PERMISSION/,
                'the second walk failed silently, which is the same complete-looking mirror this change undoes');
+
+  // **And «it answered, with nothing» is its own fact.** The first version of this shipped a value
+  // chosen by analogy with another endpoint, and a pull on an org that has a Node function surfaced
+  // none - with nothing on screen to tell «this org has none» from «that request is wrong». What the
+  // ask returned travels now, so the next pull is the measurement instead of the next guess.
+  nodeFails = false;
+  // A globals object built from scratch, never `{ ...g }`: `load` turns the object it is given into
+  // the vm context and skips re-declaring what is already there, so spreading a context that has
+  // already been loaded hands back the *first* closure - still bound to the first stub.
+  const emptyG = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+                   Array, encodeURIComponent, PAGE: 200, MAX_PAGES: 5,
+                   list: (d) => (d && d.functions) || [], api: async () => ({ functions: [] }) };
+  const m2 = load([sliceConst(rel, 'OTHER_LANGUAGES'), sliceFn(rel, 'listPage'), sliceFn(rel, 'listFunctions')], emptyG);
+  const empty = await m2.listFunctions();
+  assert.equal(empty.otherFailed, null, 'an empty answer was reported as a failure');
+  assert.equal(empty.otherReturned, 0, 'what the second ask returned is not recorded');
+  assert.ok(empty.otherAsked, 'which language was asked for is not recorded, so a wrong value cannot be found');
 });
 
 // ---------------------------------------------------------------------------------------------

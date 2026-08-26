@@ -196,7 +196,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	648b04ec4c9b	bd1051a4299b	divergent
+pullAll	bc110037bbb7	bd1051a4299b	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical

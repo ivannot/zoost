@@ -398,6 +398,16 @@ const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_
 // written by several and read by none is a shape this repository has already paid for once.
 let listGap = null;
 function noteListGap(why) { listGap = String(why || 'no answer').slice(0, 120); }
+// What the second list ask answered when it did not fail. Kept and shown because the alternative
+// is what has just happened: a value chosen by analogy, a pull that surfaced nothing, and no way
+// to tell «this org has none» from «that request is wrong» without a capture. It disappears from
+// the line the moment the ask returns something, so a normal org says nothing about it.
+let listProbe = null;
+function noteListProbe(r) {
+  listProbe = (r && r.otherAsked && !r.otherFailed && !r.otherNew)
+    ? `Zoho listed no functions in any other language (asked language=${r.otherAsked}, it answered with ${r.otherReturned}).`
+    : null;
+}
 // What the pull leaves so the next open does not have to read every meta. A cache beside the
 // index, checked against the folder walk on every load - see rebuildTree().
 const META_INDEX = 'functions/meta-index.json';
@@ -1862,6 +1872,7 @@ async function rebuildTree() {
   // is not «downloaded» and it is not waiting to be.
   const unmirrored = treeData.filter((e) => e.mirrored === false).length;
   const gap = listGap; listGap = null;   // said once, on the line that reports the count it belongs to
+  const probe = listProbe; listProbe = null;
   // **What could not be read is part of the answer.** Every sidecar that failed to open used to be
   // swallowed one by one, so a mirror the browser could not read at all closed on «120 functions
   // (120 downloaded).» in green - the rows drawn from file names alone, every one marked as present.
@@ -1871,6 +1882,7 @@ async function rebuildTree() {
   setStatus(`${treeData.length} functions (${dl} downloaded`
     + (unmirrored ? `, ${unmirrored} listed without source` : '') + ').'
     + (gap ? ` Zoho would not list this org's Node functions (${gap}) - if it has any, they are not in this count.` : '')
+    + (probe ? ` ${probe}` : '')
     + (unreadableMetas.length
       ? ` ${unreadableMetas.length} file(s) could not be read - what they hold is not in this list.`
       : '')
@@ -3777,6 +3789,7 @@ async function pullAll() {
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
     // functions produces exactly the silent, complete-looking mirror this change is undoing.
     if (r.otherFailed) noteListGap(r.otherFailed);
+    noteListProbe(r);
     // Same rule as the reconciler, and here it was worse: the truncation was reported *after* the
     // pruning had already run, so the warning described files that were already gone.
     if (r.capped) {
@@ -4115,6 +4128,7 @@ async function reconcileNow(op) {
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
     // functions produces exactly the silent, complete-looking mirror this change is undoing.
     if (r.otherFailed) noteListGap(r.otherFailed);
+    noteListProbe(r);
     // A list that stopped early is not a statement about what exists: it is a statement about how
     // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
     // functions that are still in Zoho - the worst thing this product could do, and reachable on
