@@ -8,17 +8,17 @@
 218d6dfd58005ebf  apps/analytics/sidepanel.js:3187: class="${m.role}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:1041: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:238: class="${stCls}" is not attribute-escaped
-19d72ce5b2b0915a  apps/crm/export.js:101: href="${fnAnchor(key)}" is not attribute-escaped
-88bb09f1b1fe606a  apps/crm/export.js:147: href="${wfAnchor(w.id)}" is not attribute-escaped
-7fcb4cad2f6275fe  apps/crm/export.js:148: href="${schAnchor(sc.id)}" is not attribute-escaped
-d61ee0b22eedce02  apps/crm/export.js:154: href="${connAnchor(c.name)}" is not attribute-escaped
-1c786c377b944c97  apps/crm/export.js:172: href="${modAnchor(api)}" is not attribute-escaped
-6b0364b29a6396e0  apps/crm/export.js:256: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
-75f1d36aa91c9102  apps/crm/export.js:262: href="${modAnchor(w.module)}" is not attribute-escaped
-6b0364b29a6396e0  apps/crm/export.js:300: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
-fcf2869833b3c20b  apps/crm/export.js:315: href="${fnAnchor(fnKey(n))}" is not attribute-escaped
-14a72bbea2ea53b6  apps/crm/export.js:317: class="${count ? (bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
-43eae51bbdfcc8ce  apps/crm/export.js:337: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
+19d72ce5b2b0915a  apps/crm/export.js:118: href="${fnAnchor(key)}" is not attribute-escaped
+88bb09f1b1fe606a  apps/crm/export.js:167: href="${wfAnchor(w.id)}" is not attribute-escaped
+7fcb4cad2f6275fe  apps/crm/export.js:168: href="${schAnchor(sc.id)}" is not attribute-escaped
+d61ee0b22eedce02  apps/crm/export.js:174: href="${connAnchor(c.name)}" is not attribute-escaped
+1c786c377b944c97  apps/crm/export.js:192: href="${modAnchor(api)}" is not attribute-escaped
+6b0364b29a6396e0  apps/crm/export.js:276: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
+75f1d36aa91c9102  apps/crm/export.js:282: href="${modAnchor(w.module)}" is not attribute-escaped
+6b0364b29a6396e0  apps/crm/export.js:320: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
+fcf2869833b3c20b  apps/crm/export.js:335: href="${fnAnchor(fnKey(n))}" is not attribute-escaped
+14a72bbea2ea53b6  apps/crm/export.js:337: class="${count ? (bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
+43eae51bbdfcc8ce  apps/crm/export.js:357: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:421: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:429: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 5859e8f4ffb251d8  apps/crm/graphview.js:1919: class="${lk}" is not attribute-escaped

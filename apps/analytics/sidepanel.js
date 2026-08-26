@@ -1586,7 +1586,7 @@ async function writePartialSnapshot(op, next) {
  *  was no map left to even say which were residue. Runs only after the new files and the new index
  *  are written; a removal that fails stays for the next pull, which derives the same keep-set and
  *  retries for free. */
-async function pruneSql(index, op, census, prevIndex) {
+async function pruneSql(index, op, census) {
   // **What the workspace has, not what this pull could read.** The keep-set was the new index alone,
   // and a query table is only in that index if its SQL came back *this time* - so a workspace where
   // 60 of 200 queries answered 429 lost 60 previously-good .sql files in one pull, in the folder the
@@ -1611,23 +1611,26 @@ async function pruneSql(index, op, census, prevIndex) {
   }
   const keep = new Set(Object.values(index).map((e) => `sql/${e.stem}.sql`));
   for (const v of census) keep.add(`sql/${stemOf(v.name, v.id)}.sql`);
-  // **And under the name it had when it was written.** The stem carries the view's name, so the two
-  // lines above protect a query table under the name it has *now* - and a rename in Zoho between
-  // two pulls, in a pull where that view's SQL read then failed, leaves the file on disk under the
-  // old stem and nothing keeping it. The only capture of that SQL, removed, with nothing written in
-  // its place. The previous index is the one record of what each file is called, which is why it is
-  // required here for the same reason the census is: a prune that cannot say what the workspace has
-  // must not decide what it no longer has.
-  if (!prevIndex || typeof prevIndex !== 'object') {
-    throw new Error('pruneSql needs the sql index as it was before this pull - without it a query '
-                    + 'table renamed in Zoho loses the SQL captured under its old name.');
-  }
-  for (const [id, e] of Object.entries(prevIndex)) {
-    if (e && e.stem && census.some((v) => v.id === id)) keep.add(`sql/${e.stem}.sql`);
-  }
+  // **And under any name it has ever had, which the id is the only stable record of.** The stem
+  // carries the view's name, so the two lines above protect a query table under the name it has
+  // *now*: rename it in Zoho, have that one SQL read fail, and the file sits on disk under the old
+  // stem with nothing keeping it.
+  //
+  // The first fix for this took the previous `sql/index.json` and protected the stems in it - and
+  // survived exactly one failed pull. `writeToDisk` overwrites that index with only what was read
+  // this time, so the *second* failed pull has no record of the old name and deletes the only
+  // capture. Reported from outside, reproduced here: two failed pulls after a rename, and the file
+  // is gone. A retention rule must not depend on a mapping that the failing path overwrites.
+  //
+  // The id is a suffix of every SQL filename and never changes, so it is what the rule reads. A live
+  // query whose SQL did not arrive this pull keeps every file carrying its id, whatever it was
+  // called; the moment fresh SQL for that id *does* arrive, `keep` holds the new name and the old
+  // ones are removed by the same pass. A query the workspace no longer has keeps nothing.
+  const freshIds = new Set(Object.keys(index).map(String));
+  const unreadLive = census.map((v) => String(v.id)).filter((id) => !freshIds.has(id)).map((id) => `-${id}.sql`);
   let failed = 0;
   for await (const p of walk(op.root)) {
-    if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p)) continue;
+    if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p) || unreadLive.some((sfx) => p.endsWith(sfx))) continue;
     try { await op.remove(p); }
     catch (e) {
       if ((e && e.message) === WS_MOVED) throw e;
@@ -1663,9 +1666,6 @@ async function writeToDisk(info, op, next) {
     // One .sql per query table, so the workspace is diffable in git - that is the whole point of the
     // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
     const index = {};
-    // Read before it is overwritten: what each .sql file on disk is called is nowhere else.
-    let prevIndex = {};
-    try { prevIndex = JSON.parse(await op.read('sql/index.json')) || {}; } catch (_) {}
     // Counted like every reading stage, and for the same reason: one file per query table is the
     // longest thing this function does, and «0 / 240» moving is the difference between working and
     // hung. Said every ten so the line does not flicker on a small workspace.
@@ -1680,7 +1680,7 @@ async function writeToDisk(info, op, next) {
     }
     await writeJson('sql/index.json', index, op);
     op.say('Removing what the workspace no longer has\u2026', 'busy');
-    next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'), prevIndex);
+    next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'));
     op.say('Finishing the mirror\u2026', 'busy');
     await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
   } catch (e) {

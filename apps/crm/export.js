@@ -45,6 +45,23 @@ const wfValOf = (g) => { const v = g.value; if (g.type === 'field' && v && v.api
 const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
 const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
 const wfTiming = (bk) => { const ea = bk.execute_after; return (ea && ea.unit != null) ? `after ${ea.unit} ${ea.period || ''}`.trim() : ''; };
+// Every function a rule calls, immediate or delayed. Written once because three places asked it
+// and one of them asked it wrong: `instant_actions` is an object with an `.actions` array and
+// `scheduled_actions` is an **array of timed buckets**, each with its own - so a reverse index
+// that treated both as objects saw no delayed calls at all. A function called only after a
+// delay then had no «Triggered by» row and, since `assocText` deliberately drops workflows,
+// its section read «Used by (0): none (entry point or unused)» - about a function that runs
+// every day. Somebody reading that report for impact analysis deletes it.
+function wfFunctionActions(w) {
+  const out = [];
+  ((w && w.detail && w.detail.conditions) || []).forEach((c) => {
+    out.push(...((c.instant_actions && c.instant_actions.actions) || []));
+    const sch = Array.isArray(c.scheduled_actions) ? c.scheduled_actions
+      : (c.scheduled_actions && c.scheduled_actions.actions ? [c.scheduled_actions] : []);
+    sch.forEach((bk) => out.push(...((bk && bk.actions) || [])));
+  });
+  return out.filter(isFnAction);
+}
 function healthFacts(g, mods, wfs, scheds) {
   const nodes = Object.values((g && g.nodes) || {});
   const byId = {}, byAny = {};
@@ -57,7 +74,7 @@ function healthFacts(g, mods, wfs, scheds) {
   const biggest = stat.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15);
   const chattiest = stat.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15);
   const broken = [];
-  wfs.forEach((w) => { if (!w.detail) return; (w.detail.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(byId[String(a.id)] || byAny[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); });
+  wfs.forEach((w) => wfFunctionActions(w).forEach((a) => { if (!(byId[String(a.id)] || byAny[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }));
   scheds.forEach((sc) => { if (!(byId[String(sc.function_id)] || byAny[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const modSet = new Set(mods.map((m) => m.api_name));
   const missingFk = [];
@@ -121,10 +138,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // workflow <-> function wiring
   const fnById = {}, fnByName = {};
   fns.forEach((f) => { fnById[f.id] = f; if (f.name) fnByName[f.name.toLowerCase()] = f; if (f.display_name) fnByName[f.display_name.toLowerCase()] = f; });
-  const wfFnActions = (w) => { const acts = []; ((w.detail && w.detail.conditions) || []).forEach((c) => ['instant_actions', 'scheduled_actions'].forEach((bk) => { const b = c[bk]; if (b && b.actions) b.actions.forEach((a) => { if (isFnAction(a)) acts.push(a); }); })); return acts; };
   const resolveFn = (a) => fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()];
   const triggeredBy = {};
-  wfs.forEach((w) => wfFnActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fnKey(fn)] ||= []).push({ id: w.id, name: w.name }); }));
+  wfs.forEach((w) => wfFunctionActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fnKey(fn)] ||= []).push({ id: w.id, name: w.name }); }));
   const wfAnchor = (id) => 'wf-' + sanitize(String(id));
   const schAnchor = (id) => 'sch-' + sanitize(String(id));
   const scheduledBy = {};
@@ -149,7 +165,11 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       const trig = triggeredBy[fnKey(f)] || [];
       const refs = f.downloaded ? `<div class="refs">`
         + `<span><b>Uses (${uses.length}):</b> ${uses.length ? uses.map(fnLink).join(', ') : '<span class=\'none\'>none</span>'}</span>`
-        + `<span><b>Used by (${usedBy.length}):</b> ${usedBy.length ? usedBy.map(fnLink).join(', ') : '<span class=\'none\'>none (entry point or unused)</span>'}</span>`
+        + `<span><b>Used by (${usedBy.length}):</b> ${usedBy.length ? usedBy.map(fnLink).join(', ') : (trig.length || (scheduledBy[fnKey(f)] || []).length
+          // «or unused» is a guess about the org, and on this card it can be checked: something on
+          // the same row runs it. It used to be printed regardless, beside a «Triggered by» line.
+          ? '<span class=\'none\'>none in code - it is run by the rule(s) below</span>'
+          : '<span class=\'none\'>none (entry point or unused)</span>')}</span>`
         + (trig.length ? `<span><b>Triggered by (${trig.length}):</b> ${trig.map((w) => `<a href="#${wfAnchor(w.id)}">${esc(w.name)}</a>`).join(', ')}</span>` : '')
         + ((scheduledBy[fnKey(f)] || []).length ? `<span><b>Scheduled by (${scheduledBy[fnKey(f)].length}):</b> ${scheduledBy[fnKey(f)].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
         + assocText(f)
@@ -613,7 +633,7 @@ function buildExportMarkdown(d, scope) {
   const inst = (bound && bound.instance) || 'workspace', org = (bound && bound.org) || '?', env = bound ? envOf(bound.base) : '?';
   const first = (t) => (t || '').split('\n')[0].slice(0, 120);
   const params = (n) => '(' + ((n.params || []).map((p) => (p && (p.name || p.param_name)) || p).filter(Boolean).join(', ')) + ')';
-  const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
+  const wfFns = (w) => [...new Set(wfFunctionActions(w).map((a) => a.name))];
   let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;

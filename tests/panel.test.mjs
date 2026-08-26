@@ -90,7 +90,7 @@ const { stripNonCode, scanDeluge, moduleRefs } = load([
 const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN', 'HD_MISSING_FK',
                       'HD_CHATTIEST', 'wfValOf', 'wfOne', 'wfCrit', 'wfTiming']
   .map((k) => sliceConst('apps/crm/export.js', k))
-  .concat([sliceFn('apps/crm/export.js', 'healthFacts')]);
+  .concat(['healthFacts', 'wfFunctionActions'].map((k) => sliceFn('apps/crm/export.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -9362,7 +9362,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     // The census is required now: these two cases called it with two arguments, which is the shape
     // the data loss had. An empty census here is the honest fixture - this case is about what the
     // *index* keeps - and it is passed explicitly rather than defaulted.
-    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, [], {});
+    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, []);
     assert.equal(failed, 0, 'a successful cleanup does not report its result to the pull');
     assert.deepEqual(removed.sort(), ['sql/deleted.sql', 'sql/renamed-old.sql'],
                      'a deleted or renamed query leaves its file behind with no map naming it');
@@ -9376,7 +9376,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
       walk: async function* () { yield 'sql/old.sql'; }, Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
-    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, [], {});
+    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, []);
     assert.equal(failed, 1, 'the caller cannot know cleanup was incomplete');
     assert.equal(said.length, 1);
     assert.equal(said[0][1], 'warn');
@@ -16719,7 +16719,6 @@ test('a refused module is not emptied by the pull that was refused', async () =>
 // so the workspace ends with no SQL at all for a query table that still exists.
 test('a renamed query table does not lose the SQL captured under its old name', async () => {
   const rel = 'apps/analytics/sidepanel.js';
-  const prev = { 11: { stem: 'Alpha-11' }, 22: { stem: 'Beta-22' } };
   const run = async (census, index) => {
     const disk = new Set(['sql/Alpha-11.sql', 'sql/Beta-22.sql']);
     const op = { root: {}, current: () => true, say: () => {}, remove: async (p) => { disk.delete(p); } };
@@ -16727,7 +16726,7 @@ test('a renamed query table does not lose the SQL captured under its old name', 
                 walk: async function* () { for (const p of [...disk]) yield p; },
                 stemOf: (name, id) => `${name}-${id}` };
     const m = load([sliceFn(rel, 'pruneSql')], g);
-    await m.pruneSql(index, op, census, prev);
+    await m.pruneSql(index, op, census);
     return disk;
   };
   const read = { 11: { stem: 'Alpha-11' } };               // only Alpha's SQL came back this pull
@@ -16743,6 +16742,20 @@ test('a renamed query table does not lose the SQL captured under its old name', 
   const gone = await run([{ id: '11', name: 'Alpha' }], read);
   assert.ok(!gone.has('sql/Beta-22.sql'),
             'a view Zoho no longer has kept its file - the prune refuses everything and is not a prune');
+
+  // **Twice, because the first fix survived exactly once.** It protected the stems in the previous
+  // `sql/index.json`, and `writeToDisk` overwrites that index with only what was read this time - so
+  // the second failed pull had no record of the old name and deleted the only capture. Repeated 429s
+  // or a permission that lapses after a rename is not an unlikely sequence; it is the likely one.
+  const twice = await run([{ id: '11', name: 'Alpha' }, { id: '22', name: 'Gamma' }], read);
+  assert.ok(twice.has('sql/Beta-22.sql'),
+            'the file survived one failed pull and not two - the retention rule is reading a mapping '
+            + 'that the failing path overwrites, so it forgets the name it is protecting');
+
+  // And it is not kept for ever: fresh SQL under the new name removes the old one in the same pass.
+  const fresh = await run([{ id: '11', name: 'Alpha' }, { id: '22', name: 'Gamma' }],
+                          { 11: { stem: 'Alpha-11' }, 22: { stem: 'Gamma-22' } });
+  assert.ok(!fresh.has('sql/Beta-22.sql'), 'the old name is kept after its replacement was written');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -17044,4 +17057,52 @@ test('a function listed without its source is neither downloaded nor missing', (
                'the button offers to complete something pressing it cannot complete');
   assert.match(src, /g\.counts\.notInMirror = inOrg === null \? null : Math\.max\(0, inOrg - notMirrorable/,
                'a function this mirror cannot hold is counted as one that failed to download');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A function a rule calls only after a delay is shown as called, in both directions.
+//
+// `instant_actions` is an object with an `.actions` array; `scheduled_actions` is an **array of
+// timed buckets**, each with its own. The reverse index treated both as objects, so it saw no
+// delayed calls at all: the workflow chapter listed the call, and the target function had no
+// «Triggered by» row - and because `assocText` deliberately drops workflows, its section read «Used
+// by (0): none (entry point or unused)» about a function that runs every day. Somebody reading that
+// report for impact analysis deletes it.
+//
+// One helper for all three readers now, because two of them had it right and the third did not, and
+// nothing could have told them apart.
+test('a workflow that calls a function only after a delay says so on the function too', async () => {
+  const rel = 'apps/crm/export.js';
+  const stats = { lines: 1, codeLines: 1, chars: 8, apiCalls: 0, invokeurl: 0, crm: 0, zoho: 0, sendmail: 0 };
+  const fns = [{ id: 'f1', name: 'notify_Owner', api_name: 'notify_Owner', display_name: 'Notify owner',
+                 namespace: 'automation', downloaded: true, code: 'info 1;', rest: false,
+                 node: { calls: [], called_by: [], stats } }];
+  const wfs = [{ id: 'w1', name: 'Nightly nudge', module: 'Contacts', type: 'on_create', active: true,
+                 detail: { execute_when: { type: 'on_create', details: {} },
+                           conditions: [{ sequence_number: 1, criteria_details: {},
+                                          instant_actions: { actions: [] },
+                                          scheduled_actions: [{ execute_after: { unit: 2, period: 'days' },
+                                                                actions: [{ type: 'functions', name: 'notify_Owner', id: 'f1' }] }] }] } }];
+  const g = { nodes: { 'automation.notify_Owner': { id: 'automation.notify_Owner', namespace: 'automation',
+                                                    api_name: 'notify_Owner', name: 'notify_Owner',
+                                                    display_name: 'Notify owner', calls: [], called_by: [],
+                                                    unresolved: [], ambiguous: [], stats } },
+              counts: { nodes: 1, inOrg: 1, notInMirror: 0 } };
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportHtml'), sliceFn(rel, '_mdCell')], MD_STUBS());
+  const html = await m.buildExportHtml(fns, [], g, {}, wfs, [], [], { failures: [] }, [], {}, MD_SCOPE);
+
+  const seg = html.slice(html.indexOf('id="fn-automation.notify_Owner"'));
+  assert.match(seg.slice(0, 1600), /Triggered by \(1\)/,
+               'the function is called by a rule and its section does not say so - the call is delayed, '
+               + 'and the reverse index read the delayed bucket as though it were the instant one');
+  assert.ok(!/none \(entry point or unused\)/.test(seg.slice(0, 1600)),
+            'the report calls it an entry point or unused, about a function a rule runs on a delay');
+
+  // The other direction is unchanged: an immediate call still arrives, and a delayed action that is
+  // not a function must not enter the function index.
+  const wfsMixed = JSON.parse(JSON.stringify(wfs));
+  wfsMixed[0].detail.conditions[0].scheduled_actions[0].actions.push({ type: 'tasks', name: 'Follow up', id: 't9' });
+  const m2 = load([...EXPORT_PARTS], MD_STUBS());
+  const got = m2.wfFunctionActions(wfsMixed[0]).map((a) => a.name).join(',');
+  assert.equal(got, 'notify_Owner', `the function index took ${got} - a task is not a function call`);
 });
