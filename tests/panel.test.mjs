@@ -17941,21 +17941,43 @@ test('the audit refuses to conclude from a file it could not read', async () => 
   const wfIdx = JSON.stringify([{ id: 'w1', name: 'Nightly' }]);
   const wfDetail = JSON.stringify({ conditions: [{ instant_actions: { actions: [{ type: 'functions', name: 'pullCatalogue', id: 'f1' }] } }] });
 
+  // The three areas this audit reads, present and complete: the state its conclusions are licensed by.
+  const complete = { 'schedules/index.json': '[]', 'modules/index.json': '[]' };
+
+  // **Absent is the same blindness as unreadable.** The first shape of this told them apart, and a
+  // reviewer walked straight through the second door: «never downloaded» and «not in Zoho» are not
+  // the same fact, and only the second licenses a conclusion. The index is written before the details
+  // are downloaded, so any failed «Pull workflows» leaves exactly this state.
+  const wfGone = await build(Object.assign({ 'workflows/index.json': wfIdx }, complete), { a: fn });
+  assert.equal(G(wfGone, 'orphan').items.length, 0,
+               'a workflow detail that never downloaded put the function it fires into «nothing calls '
+               + 'them» - the list somebody deletes from');
+  const never = await build(Object.assign({}, complete), { a: fn });
+  assert.equal(G(never, 'orphan').items.length, 0,
+               'with the automations never pulled at all, the audit still said this function has no '
+               + 'caller - it has not read the things that could call it');
+  assert.match(G(never, 'orphan').desc, /have not been pulled/, 'and it did not say so, or how to fix it');
+
   // 1. a workflow whose detail did not open still fires the function it fires.
-  const wfOk = await build({ 'workflows/index.json': wfIdx, 'workflows/w1.json': wfDetail }, { a: fn });
+  const wfOk = await build(Object.assign({ 'workflows/index.json': wfIdx, 'workflows/w1.json': wfDetail }, complete), { a: fn });
   assert.equal(G(wfOk, 'orphan').items.length, 0, 'the control is wrong: a fired function is listed as an orphan');
-  const wfBad = await build({ 'workflows/index.json': wfIdx, 'workflows/w1.json': BAD }, { a: fn });
+  const wfBad = await build(Object.assign({ 'workflows/index.json': wfIdx, 'workflows/w1.json': BAD }, complete), { a: fn });
   assert.equal(G(wfBad, 'orphan').items.length, 0,
                'a workflow file that would not open put the function it fires into «nothing calls them» - '
                + 'the list somebody deletes from');
-  assert.match(G(wfBad, 'orphan').desc, /would not open/, 'and the group did not say why it is empty');
+  assert.match(G(wfBad, 'orphan').desc, /did not arrive/, 'and the group did not say why it is empty');
 
   // 2. the function index unreadable is not «that function is missing».
   const other = Object.assign({}, fn, { id: 'zz', name: 'other', api_name: 'other', dead_suspect: false });
   const schIdx = JSON.stringify([{ id: 's1', name: 'Nightly', function_id: 'f9', function_name: 'javaFn' }]);
-  const fnOk = await build({ 'schedules/index.json': schIdx, 'functions/index.json': JSON.stringify([{ id: 'f9', api_name: 'javaFn' }]) }, { z: other });
+  const base2 = { 'workflows/index.json': '[]', 'modules/index.json': '[]' };
+  const fnOk = await build(Object.assign({ 'schedules/index.json': schIdx, 'functions/index.json': JSON.stringify([{ id: 'f9', api_name: 'javaFn' }]) }, base2), { z: other });
   assert.equal(G(fnOk, 'broken').items.length, 0, 'the control is wrong: a schedule with its function present is broken');
-  const fnBad = await build({ 'schedules/index.json': schIdx, 'functions/index.json': BAD }, { z: other });
+  const fnBad = await build(Object.assign({ 'schedules/index.json': schIdx, 'functions/index.json': BAD }, base2), { z: other });
+  const fnGone = await build(Object.assign({ 'schedules/index.json': schIdx }, base2), { z: other });
+  assert.equal(G(fnGone, 'broken').items.length, 0,
+               'a function index that never downloaded made a working schedule a broken reference');
+  assert.equal(G(fnGone, 'broken').bad, false, 'and painted it as a defect');
   assert.equal(G(fnBad, 'broken').items.length, 0,
                'an unreadable function index made a working schedule a broken reference, in red - the '
                + 'reader goes into Zoho to repair something that works');
@@ -17964,9 +17986,15 @@ test('the audit refuses to conclude from a file it could not read', async () => 
   // 3. a module file that would not open is not a module that is not there.
   const orders = JSON.stringify({ api_name: 'Orders', fields: [{ api_name: 'Cust', lookup: 'Customers' }] });
   const customers = JSON.stringify({ api_name: 'Customers', fields: [] });
-  const mOk = await build({ 'modules/Orders.json': orders, 'modules/Customers.json': customers }, {});
+  const midx = JSON.stringify([{ api_name: 'Orders' }, { api_name: 'Customers' }]);
+  const base3 = { 'workflows/index.json': '[]', 'schedules/index.json': '[]' };
+  const mOk = await build(Object.assign({ 'modules/index.json': midx, 'modules/Orders.json': orders, 'modules/Customers.json': customers }, base3), {});
   assert.equal(G(mOk, 'fk').items.length, 0, 'the control is wrong: a lookup into a module that is here is missing');
-  const mBad = await build({ 'modules/Orders.json': orders, 'modules/Customers.json': BAD }, {});
+  const mBad = await build(Object.assign({ 'modules/index.json': midx, 'modules/Orders.json': orders, 'modules/Customers.json': BAD }, base3), {});
+  const mGone = await build(Object.assign({ 'modules/index.json': midx, 'modules/Orders.json': orders }, base3), {});
+  assert.equal(G(mGone, 'fk').items.length, 0,
+               'a module the index names whose file never downloaded made a working lookup a missing '
+               + 'reference - a walk only meets what is there, so it left no trace of being short');
   assert.equal(G(mBad, 'fk').items.length, 0,
                'a module file that would not open made a working lookup a missing reference');
   assert.match(G(mBad, 'fk').desc, /would not open/, 'and the group did not say why it is empty');

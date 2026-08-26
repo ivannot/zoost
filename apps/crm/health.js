@@ -27,7 +27,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // not read that file» into «that thing does not exist», and this audit is where somebody decides
   // what to delete and what to repair. Three groups conclude from three different reads; each records
   // its own, and a group whose input did not arrive says so instead of concluding.
-  const unread = { fnIndex: false, wfDetail: [], modules: [] };
+  const unread = { fnIndex: false, fnIndexAbsent: false, wfDetail: [], modules: [] };
   let listedIds = new Set(), listedNames = new Set();
   try {
     const idx = JSON.parse(await op.read('functions/index.json'));
@@ -37,20 +37,30 @@ async function buildHealth(op = beginWorkspaceOp()) {
       [e.name, e.api_name, e.display_name].forEach((k) => { if (k) listedNames.add(String(k).toLowerCase()); });
     });
   } catch (e) {
-    // Absent is «never pulled», which `noFunctionsHere` below already handles. Unreadable is
-    // «I have not looked», and the wiring group must not conclude from it.
-    if (!/NotFound/i.test(String(e && e.name))) unread.fnIndex = true;
+    // **Absent blocks the conclusion exactly as unreadable does.** Splitting them was the last shape
+    // of this and a reviewer walked straight through the second door: «never downloaded» and «not in
+    // Zoho» are not the same thing, and only the second licenses a conclusion. Which of the two it
+    // was still decides the sentence, because the way out differs - Pull all against Refresh.
+    unread.fnIndex = true;
+    unread.fnIndexAbsent = /NotFound/i.test(String(e && e.name));
   }
   const known = (id, name) => !!(fnById[String(id)] || fnByName[String(name || '').toLowerCase()]
     || listedIds.has(String(id)) || listedNames.has(String(name || '').toLowerCase()));
   // Every function an automation runs, by every name it might be named with. Read before the lists
   // below because one of them asks about it.
   const firedByAutomation = new Set();
-  let wfIdxEarly = []; try { wfIdxEarly = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
+  // Never pulled at all is the same blindness: a workflow that has not been read cannot be shown
+  // not to call something. `pullAll` writes this index, so its absence means the area is missing.
+  let wfIdxEarly = [];
+  try { wfIdxEarly = JSON.parse(await op.read('workflows/index.json')); }
+  catch (_) { unread.wfDetail.push('workflows (not pulled)'); }
   for (const w of wfIdxEarly) {
     let d = null;
+    // A detail that is not there yet is a detail nobody has read. The index is written before the
+    // details are downloaded, so «Pull workflows» leaves exactly this state on any failure - and a
+    // function fired only by that workflow would arrive in «nothing calls them».
     try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); }
-    catch (e) { if (!/NotFound/i.test(String(e && e.name))) unread.wfDetail.push(w.name || w.id); }
+    catch (_) { unread.wfDetail.push(w.name || w.id); }
     // A workflow whose detail did not arrive names no functions here - so a function it alone fires
     // would arrive in «nothing calls them», which is the list a deletion follows.
     if (!d) continue;
@@ -61,7 +71,9 @@ async function buildHealth(op = beginWorkspaceOp()) {
       acts.filter(isFnAction).forEach((a) => { if (a.name) firedByAutomation.add(String(a.name).toLowerCase()); });
     });
   }
-  let schIdxEarly = []; try { schIdxEarly = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
+  let schIdxEarly = [];
+  try { schIdxEarly = JSON.parse(await op.read('schedules/index.json')); }
+  catch (_) { unread.wfDetail.push('schedules (not pulled)'); }
   schIdxEarly.forEach((sc) => { if (sc && sc.function_name) firedByAutomation.add(String(sc.function_name).toLowerCase()); });
   const byName = (a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || '');
   const fnLink = (n) => `<a data-file="${escA(n.file)}">${nmNode(n)}</a>`;
@@ -96,7 +108,15 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const missingFK = []; const modApis = new Set(); const modObjs = [];
   // A module file that would not open drops out of the local census, and the next line then reads a
   // lookup pointing at it as a lookup pointing at nothing.
-  for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (e) { if (!/NotFound/i.test(String(e && e.name))) unread.modules.push(p); } } }
+  for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) { unread.modules.push(p); } } }
+  // **And a module the index names with no file at all leaves no trace by walking.** A walk only
+  // meets what is there, so a module that never downloaded is simply absent from the census - and
+  // the next line reads a lookup into it as a lookup into nothing. The index is what says which
+  // modules this org has; without it, the census cannot be called complete either.
+  try {
+    const midx = JSON.parse(await op.read('modules/index.json'));
+    if (Array.isArray(midx)) midx.forEach((e) => { if (e && e.api_name && !modApis.has(e.api_name)) unread.modules.push(`modules/${e.api_name}.json`); });
+  } catch (_) { unread.modules.push('modules/index.json'); }
   // With a module file unreadable the census is short, and a lookup into it reads as a lookup into
   // nothing. The group is not computed rather than computed wrong.
   if (!unread.modules.length) modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
@@ -196,8 +216,12 @@ async function buildHealth(op = beginWorkspaceOp()) {
       desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates. '
         + MSG.hRankedOver(withStats.length, nodes.length), bad: false, items: chattiest },
     { id: 'orphan', tab: 'functions', title: MSG.hOrphan,
+      // Two shapes of the same blindness, said apart because the way out differs: an area nobody has
+      // pulled needs Pull all, a detail that failed needs Complete missing.
       desc: unread.wfDetail.length
-        ? `Not asked: ${unread.wfDetail.length} workflow file(s) here would not open (${unread.wfDetail.slice(0, 3).join(', ')}), and a function they fire would read as having no caller. Press \u21bb Refresh, or Pull all.`
+        ? (unread.wfDetail.some((x) => /not pulled/.test(x))
+          ? `Not asked: ${unread.wfDetail.filter((x) => /not pulled/.test(x)).map((x) => x.replace(' (not pulled)', '')).join(' and ')} have not been pulled into this workspace, and a function they fire would read here as having no caller. Press Pull all.`
+          : `Not asked: ${unread.wfDetail.length} automation file(s) here did not arrive (${unread.wfDetail.slice(0, 3).join(', ')}), and a function they fire would read as having no caller. Press \u21bb Refresh, or Complete missing.`)
         : 'No caller in code, not exposed as REST, and no associated_place.',
       bad: false, items: orphan },
     { id: 'unresolved', tab: 'functions', title: MSG.hUnresolved, desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
@@ -205,7 +229,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
     { id: 'unattached', tab: 'wiring', title: 'Automation actions nothing fires', desc: actDesc, bad: false, items: unattached },
     { id: 'broken', tab: 'wiring', title: MSG.hBroken,
       desc: brokenBlind
-        ? (unread.fnIndex
+        ? ((unread.fnIndex && !unread.fnIndexAbsent)
           ? 'Not asked: the function index here would not open, so whether a rule points at one that is missing cannot be told from this mirror. Press \u21bb Refresh, or Pull all.'
           : 'Not asked: no functions have been pulled into this workspace, so whether a rule points at one that is missing cannot be told from here. Pull all, then look again.')
         : 'A workflow or schedule references a function not in this workspace.',
