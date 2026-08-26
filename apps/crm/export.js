@@ -119,10 +119,35 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     return t ? { href: '#' + fnAnchor(fnKey(t)), label: t.display_name || t.name } : null;
   };
   const hl = (c) => (window.highlightDeluge ? window.highlightDeluge(c, codeResolve) : esc(c));
+  // **Above the function chapter, because that is where it is first used.** A module named in a
+  // function's Reads / Writes / Reached-by-URL line has a section of its own in this document, and
+  // those three lines printed it as text - a name the reader can see and not follow, in a file whose
+  // whole point is that it is one hypertext. Declaring these three where they used to be would have
+  // been a temporal dead zone: `node --check` accepts it and only running it says so, which this
+  // repository has now paid for three times.
+  const modAnchor = (api) => 'mod-' + sanitize(api || '');
+  const modApiSet = new Set(mods.map((m) => m.api_name));
+  const modLink = (api) => (api && modApiSet.has(api)) ? `<a href="#${modAnchor(api)}">${esc(api)}</a>` : esc(api || '');
   const fnKeySet = new Set(fns.map(fnKey));
   // The label stays the api_name - it is what the reader recognises - while the link carries the pair.
   const fnLink = (key) => { const lab = (nodeByKey[key] && nodeByKey[key].api_name) || String(key || '').split('.').slice(1).join('.') || key;
     return (key && fnKeySet.has(key)) ? `<a href="#${fnAnchor(key)}">${esc(lab)}</a>` : esc(lab || '?'); };
+  // **The other half of the same question, asked with a bare name.** Connections and the failures
+  // Zoho reports name a function without its namespace, and this file identifies one by the pair - so
+  // when the anchors moved to `namespace.api_name` every one of those names quietly stopped being a
+  // link. Reported from a real export: 36 functions listed under a connection, none of them
+  // clickable. A name that two namespaces share resolves to neither and stays text, because linking
+  // to the wrong function is worse than not linking.
+  const keyByName = {};
+  fns.forEach((f) => [f.api_name, f.name, f.display_name].forEach((n) => {
+    if (!n) return;
+    const k = String(n).toLowerCase();
+    keyByName[k] = (k in keyByName && keyByName[k] !== fnKey(f)) ? null : fnKey(f);
+  }));
+  const linkByName = (n) => {
+    const k = keyByName[String(n || '').toLowerCase()];
+    return (k && fnKeySet.has(k)) ? `<a href="#${fnAnchor(k)}">${esc(n)}</a>` : esc(n == null ? '' : n);
+  };
 
 
   // What goes where the source would be. `code === null` is «there was nothing to read»; `''` is a
@@ -184,9 +209,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         + (trig.length ? `<span><b>Triggered by (${trig.length}):</b> ${trig.map((w) => `<a href="#${wfAnchor(w.id)}">${esc(w.name)}</a>`).join(', ')}</span>` : '')
         + ((scheduledBy[fnKey(f)] || []).length ? `<span><b>Scheduled by (${scheduledBy[fnKey(f)].length}):</b> ${scheduledBy[fnKey(f)].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
         + assocText(f)
-        + ((f.modulesR || []).length ? `<span><b>Reads (${f.modulesR.length}):</b> ${f.modulesR.map(esc).join(', ')}</span>` : '')
-        + ((f.modulesW || []).length ? `<span><b>Writes (${f.modulesW.length}):</b> ${f.modulesW.map(esc).join(', ')}</span>` : '')
-        + ((f.modulesT || []).length ? `<span><b>Reached by URL (${f.modulesT.length}):</b> ${f.modulesT.map(esc).join(', ')}</span>` : '')
+        + ((f.modulesR || []).length ? `<span><b>Reads (${f.modulesR.length}):</b> ${f.modulesR.map(modLink).join(', ')}</span>` : '')
+        + ((f.modulesW || []).length ? `<span><b>Writes (${f.modulesW.length}):</b> ${f.modulesW.map(modLink).join(', ')}</span>` : '')
+        + ((f.modulesT || []).length ? `<span><b>Reached by URL (${f.modulesT.length}):</b> ${f.modulesT.map(modLink).join(', ')}</span>` : '')
         + (f.modulesUnknown ? `<span><b>Module not determinable:</b> ${f.modulesUnknown} call(s)</span>` : '')
         + ((scope.connections && (f.connections || []).length) ? `<span><b>Connections (${f.connections.length}):</b> ${f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href="#${connAnchor(c.name)}">${esc(c.name)}</a>` : esc(c.name)).join(', ')}</span>` : '')
         + (f.stats ? `<span><b>Size:</b> ${f.stats.lines} lines (${f.stats.codeLines} code) · ${(f.stats.chars / 1024).toFixed(1)} KB · <b>outbound calls:</b> ${f.stats.apiCalls || 'none'}${f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} zoho.crm, ${f.stats.zoho} other${f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''})` : ''}</span>` : '')
@@ -205,9 +230,6 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   });
 
   // module cross-references (FK links + referenced-by), navigable via anchors
-  const modAnchor = (api) => 'mod-' + sanitize(api || '');
-  const modApiSet = new Set(mods.map((m) => m.api_name));
-  const modLink = (api) => (api && modApiSet.has(api)) ? `<a href="#${modAnchor(api)}">${esc(api)}</a>` : esc(api || '');
   const relsHtmlFor = (m) => {
     const rl = scope.relations ? (m.related_lists || []) : [];
     if (!rl.length) return (scope.relations && m.related_read === false)
@@ -394,7 +416,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   }));
   // Connections: catalogue + which functions use each
   const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || byField('name')(a, b)).map((c) => {
-    const usesLinks = c.uses.length ? c.uses.map(fnLink).join(', ') : '<span class="none">none</span>';
+    const usesLinks = c.uses.length ? c.uses.map(linkByName).join(', ') : '<span class="none">none</span>';
     const status = c.missing ? '<span style="color:#b45309">not in catalogue</span>' : c.connected === false ? '<span style="color:#b45309">not connected</span>' : 'connected';
     return `<tr id="${escA(connAnchor(c.name))}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
   });
@@ -452,13 +474,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + ((fails.runs || []).length
         ? `<p class="note">The busiest ${esc(String(fails.runs.length))} functions over the same period, as Zoho counted them - not every function, and Zoho reports how often, not how long: a function that runs often is not automatically the expensive one.</p>`
           + '<table><thead><tr><th>Function</th><th>Runs in 24h</th></tr></thead><tbody>'
-          + fails.runs.map((r) => `<tr><td>${esc(r.name || String(r.id || '?'))}</td>`
+          + fails.runs.map((r) => `<tr><td>${linkByName(r.name || String(r.id || '?'))}</td>`
               + `<td>${esc(r.count == null ? 'unknown' : String(r.count))}</td></tr>`).join('')
           + '</tbody></table>'
         : '')
     + (failRows.length
         ? '<table><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
-          + failRows.map((f) => `<tr><td>${esc(f.name)}</td><td>${esc(f.componentType || '')}</td><td>${esc(String(f.count))}</td>`
+          + failRows.map((f) => `<tr><td>${linkByName(f.name)}</td><td>${esc(f.componentType || '')}</td><td>${esc(String(f.count))}</td>`
               + `<td>${esc(f.lastFailedAt ? new Date(f.lastFailedAt).toLocaleString() : '')}</td><td>${esc(f.reason || '')}</td></tr>`).join('')
           + '</tbody></table>'
         : '<p class="empty">Nothing had failed when this was read.</p>')

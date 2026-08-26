@@ -147,6 +147,8 @@ apps/crm/export.js	label(n)
 apps/crm/export.js	langLabelOf(n.language)
 apps/crm/export.js	last ? ' \u00b7 last run ' + String(last).slice(0, 16) : ''
 apps/crm/export.js	layoutsHtml
+apps/crm/export.js	linkByName(f.name)
+apps/crm/export.js	linkByName(r.name || String(r.id || '?'))
 apps/crm/export.js	m.api_name
 apps/crm/export.js	mapVal(m)
 apps/crm/export.js	modHtml || absent(scope.modules, 'modules')

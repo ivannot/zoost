@@ -17250,3 +17250,81 @@ test('the export loader keeps a function identity and its language', async () =>
                + 'reader to run a pull that will change nothing');
   assert.equal(del.mirrored, true, 'a Deluge function was marked as one this build does not read');
 });
+
+// ---------------------------------------------------------------------------------------------
+// A function named anywhere in the report is a link to its section.
+//
+// Connections and the failures Zoho reports name a function with a bare name - no namespace - and
+// this file identifies one by the pair. So the day the anchors moved to `namespace.api_name`, every
+// one of those names quietly stopped being a link: reported from a real export, 36 functions listed
+// under one connection and not one of them clickable. A regression from the fix for duplicate
+// anchors, invisible to a case that only read the function chapter.
+test('a function named by a connection or a failure links to its section', async () => {
+  const rel = 'apps/crm/export.js';
+  const stats = { lines: 1, codeLines: 1, chars: 8, apiCalls: 0, invokeurl: 0, crm: 0, zoho: 0, sendmail: 0 };
+  const fns = [{ id: 'f1', name: 'pushProduct', api_name: 'pushProduct', display_name: 'Push Product',
+                 namespace: 'automation', downloaded: true, code: 'info 1;', rest: false, mirrored: true,
+                 language: 'deluge', node: { calls: [], called_by: [], stats } },
+               { id: 'f2', name: 'shared', api_name: 'shared', display_name: 'Shared A', namespace: 'a',
+                 downloaded: true, code: '', rest: false, mirrored: true, language: 'deluge', node: { calls: [], called_by: [], stats } },
+               { id: 'f3', name: 'shared', api_name: 'shared', display_name: 'Shared B', namespace: 'b',
+                 downloaded: true, code: '', rest: false, mirrored: true, language: 'deluge', node: { calls: [], called_by: [], stats } }];
+  const g = { nodes: Object.fromEntries(fns.map((f) => [`${f.namespace}.${f.api_name}`,
+                { id: `${f.namespace}.${f.api_name}`, namespace: f.namespace, api_name: f.api_name, name: f.name,
+                  display_name: f.display_name, calls: [], called_by: [], unresolved: [], ambiguous: [], stats }])),
+              counts: { nodes: 3, inOrg: 3, notInMirror: 0 } };
+  const conns = [{ name: 'zohocrm', label: 'Zoho CRM', connector: 'z', connected: true, uses: ['pushProduct', 'shared'] }];
+  const fails = { at: '2026-08-01', usage: null, runs: [{ id: 'r1', name: 'Push Product', count: 239 }],
+                  failures: [{ name: 'Push Product', componentType: 'Rest API', count: 1, lastFailedAt: '2026-08-04', reason: 'boom' }] };
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportHtml')], MD_STUBS());
+  const html = await m.buildExportHtml(fns, [], g, {}, [], [], conns, fails, [], {}, MD_SCOPE);
+
+  const conn = html.slice(html.indexOf('id="connections"'));
+  assert.match(conn.slice(0, 2000), /<a href="#fn-automation\.pushProduct">pushProduct<\/a>/,
+               'a function listed under a connection is plain text - the reader cannot get from the '
+               + 'connection to the code that uses it, which is the whole point of that column');
+
+  const fail = html.slice(html.indexOf('id="failures"'));
+  assert.match(fail.slice(0, 3000), /<a href="#fn-automation\.pushProduct">Push Product<\/a>/,
+               'a function Zoho reports as failing is plain text, in the chapter somebody opens to go '
+               + 'and look at it');
+
+  // A name two namespaces share resolves to neither and stays text: linking to the wrong function is
+  // worse than not linking.
+  assert.ok(!/<a href="#fn-[ab]\.shared">/.test(conn.slice(0, 2000)),
+            'an ambiguous name was linked to one of the two functions that carry it, silently');
+});
+
+// ---------------------------------------------------------------------------------------------
+// And a module a function reads or writes is a link to that module's section.
+//
+// «Questo e' un ipertesto e tutto cio' che e' linkato deve essere navigabile.» The Reads, Writes and
+// Reached-by-URL lines printed module names as text while the same document has a section for each -
+// a name the reader can see and cannot follow. The helper that links one existed and was declared
+// below the chapter that needed it, which is why using it there had to move rather than be called.
+test('a module a function reads or writes links to its section', async () => {
+  const rel = 'apps/crm/export.js';
+  const stats = { lines: 1, codeLines: 1, chars: 8, apiCalls: 0, invokeurl: 0, crm: 0, zoho: 0, sendmail: 0 };
+  const fns = [{ id: 'f1', name: 'handle', api_name: 'handle', display_name: 'Handle', namespace: 'automation',
+                 downloaded: true, code: 'info 1;', rest: false, mirrored: true, language: 'deluge',
+                 modulesR: ['Contacts', 'Ghosts'], modulesW: ['Contacts'], modulesT: ['Contacts'],
+                 node: { calls: [], called_by: [], stats } }];
+  const mods = [{ api_name: 'Contacts', module_name: 'Contacts', fields: [], related_lists: [] }];
+  const g = { nodes: { 'automation.handle': { id: 'automation.handle', namespace: 'automation', api_name: 'handle',
+                                              name: 'handle', display_name: 'Handle', calls: [], called_by: [],
+                                              unresolved: [], ambiguous: [], stats,
+                                              modulesR: ['Contacts', 'Ghosts'], modulesW: ['Contacts'], modulesT: ['Contacts'] } },
+              counts: { nodes: 1, inOrg: 1, notInMirror: 0 } };
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportHtml')], MD_STUBS());
+  const html = await m.buildExportHtml(fns, mods, g, {}, [], [], [], { failures: [] }, [], {}, MD_SCOPE);
+  const card = html.slice(html.indexOf('id="fn-automation.handle"'), html.indexOf('id="fn-automation.handle"') + 2500);
+
+  for (const line of ['Reads', 'Writes', 'Reached by URL']) {
+    const seg = card.slice(card.indexOf(`<b>${line} (`));
+    assert.match(seg.slice(0, 300), /<a href="#mod-Contacts">Contacts<\/a>/,
+                 `«${line}» prints the module as text - the report has a section for it and the reader `
+                 + 'cannot get there, in a document whose whole point is that it is one hypertext');
+  }
+  // A module this export does not carry stays text rather than becoming a link to nothing.
+  assert.ok(!/<a href="#mod-Ghosts">/.test(card), 'a module with no section in this export was linked to it');
+});
