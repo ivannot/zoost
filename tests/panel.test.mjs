@@ -9065,6 +9065,8 @@ test('crm: a module resync publishes only what it managed to write', () => {
 test('analytics: every declared tool runs on the minimum input its schema declares', async () => {
   const src = read('apps/analytics/sidepanel.js');
   const ctx = {
+    // The load's own record of what would not open: the tools ask it before stating an absence.
+    diskUnreadableAll: [], aiMirrorShort: () => '',
     views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }, { id: 't1', name: 'T1', type: 'Table' }],
     schema: { t1: { name: 'T1', columns: [{ name: 'Revenue', type: 'number' }] } },
     sqls: { q1: { id: 'q1', sql: 'select Revenue from T1', stem: 'q1', parents: [], sources: {} } },
@@ -16119,6 +16121,7 @@ test('what the index leaves out is said once, and inside the cap, in either prod
     const ctx = Object.assign({
       Object, Math, Number, Set, Map, JSON, Promise, String, Error, Array, console,
       AI_SEED_CAP_DEFAULT: 72000, WS_MOVED: 'moved',
+      diskUnreadableAll: [],   // a complete mirror: the short-mirror header is about the other case
       beginWorkspaceOp: () => ({ current: () => true }),
       aiSeedSize: 0, aiSeedOmitted: [], aiSeedTruncated: false,
       op: { current: () => true },
@@ -17767,5 +17770,45 @@ test('a box the Everything preset leaves off is labelled as deliberate', () => {
                    + 'a button that does not do what it is called reads as a defect, and this one is a '
                    + 'decision');
     }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The Analytics assistant does not state an absence a file it could not open is responsible for.
+//
+// The load knows which files would not open and the panel's own line names them; the tools did not
+// ask. With `schema.json` unreadable the model was told «Orders has no columns and no reachable
+// source» and «Orders takes part in no relation» - categorical, about a table whose structure is in
+// Zoho and was pulled. That is the sentence somebody deletes a view over, and it is the same miss
+// made in the CRM one absence earlier and fixed there.
+test('analytics: the assistant says when the mirror is short instead of asserting an absence', async () => {
+  const rel = 'apps/analytics/sidepanel.js';
+  const views = [{ id: 'v1', name: 'Orders', type: 'Table' }];
+  const run = async (broken) => {
+    const g = { console, Object, Map, Set, Array, JSON, String, Number, Promise, RegExp,
+                views, schema: {}, relations: [], deps: null, diskUnreadableAll: broken,
+                viewById: () => new Map(views.map((v) => [v.id, v])),
+                structureChain: () => null, relationsOf: () => [], foreignKeys: () => ({ out: [], inc: [] }),
+                aiCap: (a) => a.join('\n'), isOrphanCandidate: () => false, MSG: { narrow: '' },
+                beginWorkspaceOp: () => ({ current: () => true }) };
+    const m = load([sliceConst(rel, 'AI_STRUCTURE_FILES'), sliceFn(rel, 'aiMirrorShort'),
+                    sliceFn(rel, 'aiFindView'), sliceFn(rel, 'aiStructureText'), sliceFn(rel, 'aiExecTool')], g);
+    return { structure: await m.aiExecTool('get_structure', { name: 'Orders' }),
+             relations: await m.aiExecTool('get_relations', { name: 'Orders' }) };
+  };
+
+  const short = await run([{ rel: 'schema.json', name: 'SyntaxError' }]);
+  for (const [tool, text] of Object.entries(short)) {
+    assert.match(text, /schema\.json would not open/,
+                 tool + ' answered "' + text.split('\n')[0] + '" with nothing saying the file it needed '
+                 + 'could not be read - the reader acts on that, and what it describes is in Zoho');
+    assert.match(text, /absence here as an absence in Zoho/, tool + ' does not say what to conclude');
+  }
+
+  // With every file readable the same absence is the plain answer: the caveat is about the mirror,
+  // not about the view.
+  const whole = await run([]);
+  for (const [tool, text] of Object.entries(whole)) {
+    assert.ok(!/would not open/.test(text), tool + ' carries a caveat about a mirror that is complete');
   }
 });

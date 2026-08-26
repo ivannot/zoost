@@ -2822,7 +2822,8 @@ function aiFindView(q) {
 function aiStructureText(v) {
   const m = viewById();
   const chain = structureChain(v, m);
-  if (!chain) return `${v.name} (${v.type}) has no columns and no reachable source.`;
+  // A structure that is not here because a file would not open is not a structure that is not there.
+  if (!chain) return `${v.name} (${v.type}) has no columns and no reachable source.` + aiMirrorShort();
   const src = chain[chain.length - 1], t = schema[src.id];
   const { out, inc } = foreignKeys(src.id);
   let s2 = `${src.name} (${t.kind}${t.system ? ', system table - synced by Zoho, not built by the user' : ''})`;
@@ -2859,6 +2860,13 @@ const AI_MAX_TOKENS_DEFAULT = 16384;
 let aiSeedSize = 0;                     // what the last index actually came to, shown in the chat
 
 async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
+  // Said once at the top as well as on the answers: a model that knows the mirror is short can
+  // decline to conclude before it asks, instead of being corrected after.
+  const shortHead = (diskUnreadableAll || []).length
+    ? `## This workspace is short\n${diskUnreadableAll.map((f) => f.rel).join(', ')} would not open, so what `
+      + 'they hold is missing from everything below. Never state an absence as a fact about Zoho '
+      + 'while this is true.\n\n'
+    : '';
   if (!op.current()) throw new Error(WS_MOVED);
   cap = Math.max(4000, Number(cap) || AI_SEED_CAP_DEFAULT);
   const m = viewById();
@@ -2895,7 +2903,9 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
 
   // Assemble in priority order, and record what did not fit rather than letting it vanish.
   const omitted = [];
-  let out = header + tables;
+  // Ahead of the header, and never truncated away: it is the one line that stops everything below
+  // being read as a statement about the org.
+  let out = shortHead + header + tables;
   if (out.length + reports.length <= cap) out += reports;
   else if (reports) omitted.push(`the ${pres.length} reports and pivots`);
   if (out.length + dashboards.length <= cap) out += dashboards;
@@ -2976,6 +2986,26 @@ function aiCap(lines, total, how, limit = 120) {
     + `\n… and ${total - limit} more (${total} in all). ${how}`;
 }
 
+// **What this mirror could not read, said to the surface that answers in words.** The load already
+// knows: `diskUnreadableAll` holds every file that would not open, and the panel's own line names
+// them. The assistant's tools did not ask, so with `schema.json` unreadable they answered «Orders has
+// no columns and no reachable source» and «Orders takes part in no relation» - categorical, about a
+// table whose structure is in Zoho and was pulled. That is the sentence somebody deletes a view over.
+//
+// It is not the twin's defect arriving late: the same miss was made in the CRM one absence earlier
+// and fixed there, and this is the third surface of this product to be told - after the panel and
+// before nothing, because the exports read their own counts.
+const AI_STRUCTURE_FILES = ['schema.json', 'relations.json'];
+function aiMirrorShort(kind) {
+  const rel = (diskUnreadableAll || []).map((f) => f.rel);
+  if (!rel.length) return '';
+  const mine = rel.filter((r) => AI_STRUCTURE_FILES.some((f) => String(r).endsWith(f)));
+  const which = (kind === 'any' ? rel : mine);
+  return which.length
+    ? `\n\nThis workspace is short: ${which.join(', ')} would not open, so what it holds is missing from `
+      + 'the answer above. Do not read an absence here as an absence in Zoho - press \u21bb Refresh, or Pull all.'
+    : '';
+}
 async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   input = input || {};
   const m = viewById();
@@ -2983,7 +3013,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     const f = (input.filter || '').toLowerCase(), ty = (input.type || '').toLowerCase(), minc = Number(input.min_columns) || 0;
     const rows = views.filter((v) => (!f || (v.name || '').toLowerCase().includes(f)) && (!ty || (v.type || '').toLowerCase() === ty)
       && (!minc || (schema[v.id] ? schema[v.id].columns.length : 0) >= minc));
-    if (!rows.length) return `0 views match. ${views.length} in the workspace.`;
+    if (!rows.length) return `0 views match. ${views.length} in the workspace.` + aiMirrorShort('any');
     const lines = rows.map((v) => `${v.name} [${v.type}]${schema[v.id] ? ' ' + schema[v.id].columns.length + ' cols' : ''}${v.folderName ? ' · ' + v.folderName : ''}`);
     return `${rows.length} of ${views.length} views:\n`
       + aiCap(lines, rows.length, 'Narrow with `filter` (a name substring), `type`, or `min_columns`.');
@@ -3057,11 +3087,11 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
       const cols = t.columns.filter((c) => c.name.toLowerCase().includes(q));
       if (cols.length) hits.push(`${t.name} [${t.kind}]: ` + cols.map((c) => `${c.name} (${c.type})`).join(', '));
     }
-    return hits.length ? `${hits.length} table(s) have a matching column:\n` + aiCap(hits, hits.length, MSG.narrow) : '(no matches)';
+    return hits.length ? `${hits.length} table(s) have a matching column:\n` + aiCap(hits, hits.length, MSG.narrow) : '(no matches)' + aiMirrorShort();
   }
   if (name === 'get_relations') {
     const list = v ? relationsOf(v.id) : relations;
-    if (!list.length) return v ? `${v.name} takes part in no relation.` : 'No relations in this workspace.';
+    if (!list.length) return (v ? `${v.name} takes part in no relation.` : 'No relations in this workspace.') + aiMirrorShort();
     return `${list.length} relation(s):\n` + aiCap(list.map((r) => `${r.sourceName} → ${r.targetName}   ${r.relation}`), list.length, 'Pass a table name to see only its relations.');
   }
   if (name === 'who_uses') {
@@ -3079,6 +3109,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return `${o.length} candidate(s) that nothing in this workspace depends on - candidates, not a verdict.\n`
       + 'By type: ' + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
       + aiCap(o.map((x) => `- ${x.name} [${x.type}]`), o.length, 'Use list_views with a type to see the rest.')
+      + aiMirrorShort('any')
       + '\nAnalytics only knows what its own views read from each other: a shared link, a scheduled export, an embedded report or an API consumer is invisible to it.';
   }
   return 'Unknown tool: ' + name;
