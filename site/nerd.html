@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/nerd">
 <meta property="og:title" content="The nerd page - how Zoost actually works">
 <meta property="og:description" content="What Zoost stands on, what it refuses to do, how a release is built and signed, and how to check any of it without taking my word.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/nerd">
 <link rel="alternate" hreflang="en" href="https://zoost.it/nerd">
@@ -46,8 +46,8 @@
 <div class="wrap">
 
   <h1>The nerd page</h1>
-  <p class="sub">Everything the product pages leave out on purpose: what Zoost stands on, what it
-    refuses to do, how a release is built, and how to check any of it without taking my word for it.</p>
+  <p class="sub">Everything the product pages deliberately leave out: which interfaces Zoost relies on,
+    what it refuses to do, how a release is built, and how to verify each claim for yourself.</p>
 
   <div class="toc">
     <b>On this page</b>
@@ -58,7 +58,7 @@
       <li><a href="#what-is-promised">What is promised, and what is not</a></li>
       <li><a href="#how-a-release-is-built">How a release is built</a></li>
       <li><a href="#check-it-yourself">Check it yourself</a></li>
-      <li><a href="#what-none-of-it-proves">What none of it proves</a></li>
+      <li><a href="#limits-of-these-checks">The limits of these checks</a></li>
     </ol>
   </div>
 
@@ -81,18 +81,18 @@
   </div>
   <div class="box">
     <h3>Reading Zoho Analytics</h3>
-    <p>Takes the workspace from the URL of the tab you are on - <code>/workspace/{id}</code> - so there
-      is nothing to scrape and nothing to pick wrong. CSRF follows the HTTP method rather than the
+    <p>Reads the workspace id from the URL of the current tab - <code>/workspace/{id}</code> - without
+      scraping any other identifier. CSRF follows the HTTP method rather than the
       path: every POST carries <code>X-ZCSRF-TOKEN</code>, no GET does, measured across a
       104-request capture with no exceptions.</p>
     <p>The ER model comes from one POST to <code>ZDBCreateERD.ma</code>. Its URL contains
-      <code>CREATE</code>, and what comes back is the model - Zoho Analytics' own diagram screen
-    makes the same call. What can be established from here is what Zoost does: one request, and the
-    answer kept on your disk. What a server keeps afterwards is not something a browser extension can
-    prove, so it is not claimed: if that distinction matters to your review, compare the workspace
+      <code>CREATE</code>, but the response is the model; Zoho Analytics' own diagram screen makes the
+    same call. What can be established here is what Zoost does: it sends one request and keeps the
+    response on your disk. A browser extension cannot prove what the server retains afterwards, so
+    Zoost makes no claim about that. If this distinction matters to your review, compare the workspace
     before and after, and your plan's audit trail if it has one. It is named here
-      because anyone checking the read-only claim literally will find it, and finding it unannounced
-      would read as a caught lie rather than as what it is.</p>
+      because anyone checking the read-only claim literally will find it and should also find the
+      explanation.</p>
   </div>
 
   <div class="box">
@@ -101,22 +101,20 @@
       The panel builds the text, redacts it, and opens <a href="/report">this page</a> - through the
       DOM, never through the address, because a URL is written to your browser history and syncs with
       it. You read it, you may edit it, and nothing moves until you press Send.</p>
-    <p>What Send posts to is <code>/api/report</code>, and <b>that endpoint is in this repository</b>
-      - <a href="https://github.com/ivannot/zoost/blob/main/site/_worker.js">site/_worker.js</a>, the
-      same file that answers the version badge. Reviewers have assumed the server behind it was
-      somewhere unreadable, which is a fair assumption about most sites and wrong about this one. It
-      refuses unless an anti-abuse check passes, rate-limits per address by a <i>salted hash</i>, so nothing
-      this site writes down can be walked back to an address - not even by whoever reads the store. Cloudflare, which serves the page, sees the address the way any host does, and the anti-abuse
-      check is given it because that is what the check is for, redacts the text again on the way through - a client is never
-      believed twice - caps the size, and rebuilds the issue body from validated pieces inside a fence
-      nothing can climb out of. It becomes a public issue on GitHub, under my account, and you get its
-      link.</p>
+    <p>The Send button posts to <code>/api/report</code>, and <b>the endpoint is part of this repository</b>:
+      <a href="https://github.com/ivannot/zoost/blob/main/site/_worker.js">site/_worker.js</a>, which also
+      provides the version badge. The endpoint accepts a report only after an anti-abuse check. It
+      rate-limits requests using a <i>salted hash</i> of the address, so the stored value cannot be
+      reversed into an address. Cloudflare sees the address because it hosts the site and provides the
+      anti-abuse check. The endpoint redacts the text again, limits its size, validates each part and
+      constructs an issue body that cannot escape its code fence. The result becomes a public GitHub
+      issue under my account, and the page gives you its link.</p>
   </div>
 
   <h2 id="certain-or-stopped">Certain, or stopped</h2>
-  <p>No retry loops against a guess. No matching a button label that changes with the interface
-    language. No synthetic clicks into a page I do not own. Where a path is not certain, the feature
-    stops with a precise message instead of trying something and hoping.</p>
+  <p>No retry loops based on a guess. No matching a button label that changes with the interface
+    language. No simulated clicks inside a third-party page. When a path is uncertain, the feature
+    stops with a precise message instead of trying and hoping.</p>
   <p>This is why Zoost CRM's function <b>Go to</b> was removed in 1.1.0: it drove Zoho's editor by
     clicking a localised "Edit function" label, looped ten times, and then failed with the wrong
     message. <b>Functions in Zoho</b> replaced it - it navigates by constructed URL, and the last,
@@ -125,11 +123,11 @@
     is a read, and there is no create, update or delete call left in it. What a server does with a read
     is the server's business and not something a client can promise about, which is why the claim is
     about what Zoost sends.</p>
-  <p>The exceptions are narrow, deliberate and written down: a bounded wait for a known element after
-    a navigation, one retry on a genuinely transient failure (network, 429, 5xx and never a
-    deterministic 4xx), and recovery by an action that was <em>measured</em> to work - the first
-    <code>/deluge/</code> call after a fresh login is refused, any ordinary Zoho CRM call fixes it, and that
-    was reproduced deliberately rather than guessed at.</p>
+  <p>The exceptions are narrow and documented. Zoost may wait for a known element after navigation or
+    retry once after a genuinely transient failure, such as a network error, 429 or 5xx response, but
+    never after a deterministic 4xx response. It also applies one measured recovery: after a fresh
+    login, Zoho refuses the first <code>/deluge/</code> call, while an ordinary Zoho CRM request makes
+    the next call succeed. This behaviour was reproduced deliberately rather than inferred.</p>
 
   <h2 id="what-is-never-called">What is never called</h2>
   <p>Neither extension calls an endpoint that creates, edits or deletes anything. That is a property
@@ -152,8 +150,8 @@
   <h2 id="what-is-promised">What is promised, and what is not</h2>
   <p>Those internal interfaces carry no compatibility promise. Zoho can change one without notice and
     a feature can stop working from one day to the next.</p>
-  <p>Nothing is guaranteed - the licence says so and so does this page. What is offered is effort: a
-    break will be looked at and fixed where fixing it is possible. Sometimes it will not be, and then
+  <p>Nothing is guaranteed, as both the licence and this page state. The commitment is to investigate
+    failures and fix them when possible. Sometimes a fix will not be possible, and then
     the feature will say plainly that it cannot do the thing rather than guess. <b>The mirror already
     on your disk keeps working either way</b>, because it is files you can open in any editor.</p>
 
@@ -162,13 +160,13 @@
     result is byte-identical, print the archive's contents into a public log, and sign a provenance
     attestation for it. The archive attached to the Release <em>is</em> the file submitted to the
     Chrome Web Store - never a build from a laptop.</p>
-  <p>Reproducibility is load-bearing rather than decorative: publishing a SHA-256 is worth nothing if
+  <p>Reproducibility is essential to the process: publishing a SHA-256 means little if
     two builds of the same commit differ, and mine did, because <code>zip</code> stores each file's
     mtime and walks the directory in filesystem order. The build now stamps every file with the
     commit's own date, sorts the file list, and passes <code>-X</code>.</p>
   <p>Every GitHub Action is pinned to a commit hash, never to a moving tag. A supply chain that ends
     in "and then whatever that tag says today" is not one.</p>
-  <p>Which is also the answer to a fair question, stated plainly rather than left to be guessed at.
+  <p>This also answers a reasonable question directly.
     This code was written with heavy assistance from a language model and reviewed line by line, and
     that is part of why the chain above exists in the form it does.</p>
   <p>Twenty-one files for Zoho CRM and thirteen for Zoho Analytics, no bundler and no minifier, a build
@@ -198,7 +196,7 @@
     <a href="/emergency">in case of emergency</a> is the page for that: the same signed archive, run
     without waiting for the queue.</p>
 
-<h2 id="what-none-of-it-proves">What none of it proves</h2>
+<h2 id="limits-of-these-checks">The limits of these checks</h2>
   <p>The upload to the Chrome Web Store is a workflow reading the Release asset, so the file Google
     receives is the one that was built and signed; what is still by hand is pressing Submit, which
     moves no bytes. What is still not covered is the far end: Google repackages and re-signs every

@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/ai">
 <meta property="og:title" content="AI and Zoost - what it adds, and when it does not">
 <meta property="og:description" content="Zoost works with no model at all. What the Markdown export already gives an assistant, what the built-in one adds, and when it is not worth a key.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/ai">
 <link rel="alternate" hreflang="en" href="https://zoost.it/ai">
@@ -46,16 +46,16 @@
 <div class="wrap">
 
   <h1>AI and Zoost</h1>
-  <p class="sub">The workbench is finished without a model, and most days that is how it gets used.
-    This page is about the other part: what an assistant can do with what Zoost has already written
-    to disk, what the built-in one adds that a file cannot, and where it stops being worth a key.</p>
+  <p class="sub">The workbench is complete without an AI model, and that is how most people will use it.
+    This page explains what an assistant can do with the files Zoost already writes, what the built-in
+    assistant adds, and when an API key is not worth using.</p>
 
   <div class="toc">
     <b>On this page</b>
     <ol>
-      <li><a href="#without-any-of-it">It works without any of it</a></li>
+      <li><a href="#zoost-works-without-ai">Zoost works without AI</a></li>
       <li><a href="#two-exports">Two exports, two readers</a></li>
-      <li><a href="#the-route-that-costs-nothing">The route that costs nothing</a></li>
+      <li><a href="#use-an-assistant-you-already-have">Use an assistant you already have</a></li>
       <li><a href="#what-the-built-in-assistant-adds">What the built-in assistant adds</a></li>
       <li><a href="#when-it-is-worth-a-key">When it is worth a key</a></li>
       <li><a href="#why-your-own-key">Why your own key</a></li>
@@ -64,11 +64,11 @@
     </ol>
   </div>
 
-  <h2 id="without-any-of-it">It works without any of it</h2>
-  <p>Zoost mirrors what you built inside Zoho CRM or Zoho Analytics to plain files on your own
-    machine, and then gives you the things the platform does not: a tree of everything at once,
-    diagrams you can focus and print, text search across every file, a health audit that names what
-    nothing references any more, and two exports.</p>
+  <h2 id="zoost-works-without-ai">Zoost works without AI</h2>
+  <p>Zoost copies what you built inside Zoho CRM or Zoho Analytics to plain files on your own
+    machine. From those files it creates what the platform does not provide: a complete inventory,
+    diagrams you can explore and print, full-text search, an audit of items with no known references,
+    and two export formats.</p>
   <p>None of that involves a model, a key or an account. If you never open the assistant, nothing is
     missing - it was added to a workbench that already worked. I am saying this first rather than
     last because a tool that only makes sense once you have bought an API key is a different product,
@@ -86,31 +86,31 @@
   </div>
   <div class="box">
     <h3>Markdown - for a model</h3>
-    <p>The same content in the shape a language model reads without effort: headings, tables, code
-      fences, nothing to see through. This is the file you paste into a chat.</p>
+    <p>The same content in a format that is easy for a language model to interpret: headings, tables
+      and code blocks, without visual elements to decode. Attach this file to a chat.</p>
   </div>
   <p>Before either is written, a dialog asks what may go into it - functions, module schema, layout
     detail, relations, workflows, schedules, actions, connections, failures, sender addresses, health - with the Deluge source code as a
     separate, clearly marked choice, because it is the sensitive part. There are two presets,
     <b>Everything</b> and <b>Share-safe</b>, and the choice is remembered. A section whose data is
     older than the rest arrives unticked, with the date and the reason.</p>
-  <p>An export is a file that leaves the machine. The decision about what is in it is therefore made
-    once, deliberately, in a place where you can see the whole of it.</p>
+  <p>An export is intended to leave your machine. That is why one dialog shows every available section
+    and lets you decide exactly what to include before the file is created.</p>
 
   <figure class="shot">
-    <img src="/img/crm-export.webp?v=5d232b8ebe" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-export.webp?v=de1f912a51" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The export dialog: a checkbox per section, with the Deluge source code marked as the sensitive one.">
     <figcaption><b>What may leave the machine, decided once.</b> A line per section, source code marked as the sensitive one, two presets, and the choice remembered.</figcaption>
   </figure>
 
-  <h2 id="the-route-that-costs-nothing">The route that costs nothing</h2>
+  <h2 id="use-an-assistant-you-already-have">Use an assistant you already have</h2>
   <p>Take the Markdown file to whichever assistant you already use - Claude, ChatGPT, Gemini,
     Copilot - and ask your question there. In the browser or in its desktop or mobile
     app - it is a file either way. No key, no configuration, nothing switched on inside
     Zoost.</p>
-  <p>This works better than people expect, and I would rather say so than sell around it. The sample
+  <p>This is often all you need, and it is important to say so clearly. The sample
     org that ships with Zoost - the 296 files itemised on <a href="/try">Try it</a>, Deluge sources
-    included - is about 200 KB of text. Any current model holds that at once.</p>
+    included - is about 200 KB of text, which a current model can usually handle in one go.</p>
   <p>So if the question is "explain what this function does" or "summarise these workflows for the
     handover note", this route gives you a larger model, a proper chat window and a conversation you
     can keep.</p>
@@ -122,9 +122,9 @@
   </div>
 
   <h2 id="what-the-built-in-assistant-adds">What the built-in assistant adds</h2>
-  <p>The assistant inside the panel is not handed the org. It is handed a <b>vocabulary</b> - the
-    names of what exists - and a set of <b>tools that read the mirror on your disk</b>, with
-    which to go and fetch the rest itself.</p>
+  <p>The assistant inside the panel does not receive the entire org. It receives a <b>vocabulary</b>
+    containing the names of the available objects and a set of <b>tools that read the mirror on your
+    disk</b>. It uses those tools to retrieve only the details needed for your question.</p>
   <div class="box">
     <h3>Zoost - workbench for Zoho CRM</h3>
     <p class="tools"><code>list_functions</code> <code>get_function</code> <code>who_calls</code>
@@ -138,10 +138,9 @@
       <code>get_sql</code> <code>search_sql</code> <code>search_columns</code>
       <code>get_relations</code> <code>who_uses</code> <code>orphans</code></p>
   </div>
-  <p>Every call it makes is printed in the chat as it happens, so what it read is something you can
-    see rather than something it claims. Four things follow, and together they are the whole of the
-    difference.</p>
-  <p><b>Scale.</b> The org never has to fit anywhere. What travels with each message is the index of
+  <p>Every tool call appears in the chat as it happens, so you can see what the assistant read. This
+    creates four practical differences.</p>
+  <p><b>Scale.</b> The entire org does not need to be sent. What travels with each message is the index of
     names, capped at 72,000 characters by default and adjustable. Under the chat title the panel
     prints the real size of the workspace you have open, in characters and approximate tokens.</p>
   <p>When an org is too large to name in full, what gets dropped is decided rather than arbitrary.
@@ -151,22 +150,23 @@
   <p><b>It knows what you are looking at.</b> Select a function, a workflow, a query table, and ask
     "what does this do?" with no preamble. The selection is part of the prompt.</p>
   <p><b>Freshness.</b> There is no snapshot to redo after the next pull.</p>
-  <p><b>It is where the question is asked.</b> This matters most in practice and is easiest to
-    overlook. Zoost exists so that questions about an org stop having to travel to whoever
-    administers it. The person with the question will rarely assemble an export, open a chat and
-    phrase the context: they will click a tab, or ask a colleague. A file on disk does not solve
-    that. A tab does.</p>
+  <p><b>It is available where the question arises.</b> This is often the most useful difference.
+    Someone with a question is unlikely to prepare an export, open another chat and explain the context.
+    They are more likely to open a tab or ask a colleague. Keeping the assistant in the panel removes
+    that extra work.</p>
 
   <figure class="shot">
-    <img src="/img/crm-ai.webp?v=59bbf20838" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-ai.webp?v=1e2a529b33" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The assistant inside the Zoost panel, with the context line under its title showing the size of what is sent with every message.">
-    <figcaption><b>The assistant, in the panel.</b> Under the title is the size of the index that travels with every message, in characters and tokens - the knob and its cost in the same place.</figcaption>
+    <figcaption><b>The assistant, in the panel.</b> Under the title, Zoost shows the size of the index sent
+      with each message in characters and tokens, so the setting and its effect on cost are visible together.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/analytics-ai.webp?v=0a1279212c" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-ai.webp?v=bbd856c708" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The assistant in the Zoost Analytics panel, with the tools it can call listed as it uses them.">
-    <figcaption><b>The same assistant, one product over.</b> In Zoho Analytics it reads structures, follows a foreign key and opens a query's SQL - nine tools, and every call it makes is printed as it happens.</figcaption>
+    <figcaption><b>The same assistant in Zoost Analytics.</b> It can read structures, follow a foreign key
+      and open a query's SQL through nine tools. Every call appears as it happens.</figcaption>
   </figure>
 
   <h2 id="when-it-is-worth-a-key">When it is worth a key</h2>
@@ -183,10 +183,10 @@
       <tr><td class="k" data-label="Your situation">You would rather nothing left the machine without you watching</td><td data-label="What I would do">The export - and read the file before you paste it</td></tr>
     </tbody>
   </table>
-  <p>The claim worth making is smaller than "it has AI in it", and it is the one that survives being
-    checked: <b>the built-in assistant buys retrieval and proximity, not knowledge.</b> No fact about
-    your org is reachable by one route and not the other - the mirror is the same mirror. A modest
-    pitch, and the accurate one. Better found here than found out later.</p>
+  <p>The useful claim is more precise than "it has AI": <b>the built-in assistant provides targeted
+    retrieval and immediate access, not additional knowledge.</b> The export and the assistant read the
+    same mirror and can reach the same facts. The difference is how they retrieve those facts and where
+    you ask the question.</p>
 
   <h2 id="why-your-own-key">Why your own key</h2>
   <p>Because there is no Zoost server. The request goes from your browser straight to Anthropic or

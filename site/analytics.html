@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost Analytics - see the shape of a workspace</title>
-<meta name="description" content="Every view, the columns of every table, each query table's SQL as its own file, the ER diagram, and a list of what nothing reads any more.">
+<meta name="description" content="Every view, every table's columns, each query table's SQL as its own file, the ER diagram, and a list of views with no known dependants.">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/analytics">
@@ -16,10 +16,10 @@
 <meta name="theme-color" content="#0d121c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Zoost Analytics - see the shape of a workspace">
-<meta property="og:description" content="Every view, the columns of every table, each query table's SQL as its own file, the ER diagram, and a list of what nothing reads any more.">
+<meta property="og:description" content="Every view, every table's columns, each query table's SQL as its own file, the ER diagram, and a list of views with no known dependants.">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://zoost.it/analytics">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="author" content="Ivan Notaristefano">
 <link rel="stylesheet" href="/site.css?v=7f27a8c885">
 </head>
@@ -50,9 +50,9 @@
     <p class="eyebrow"><b>Zoost Analytics</b><span>Zoost - workbench for Zoho Analytics</span></p>
       <h1>Hundreds of views, and no way<br>to see the shape of them.
       <span>Zoost draws you the map.</span></h1>
-    <p class="lead">Every view with its type and dates, the columns and foreign keys of every table, and the SQL
-      behind each query table as a file you can diff. Then the ER diagram, what reads from what - and the list of what nothing seems to read any more,
-      with what that list cannot see written beside it.</p>
+    <p class="lead">See every view with its type and dates, every table with its columns and foreign keys, and
+      every query table with its SQL in a file you can diff. Zoost also draws the ER diagram, maps dependencies,
+      and lists views with no known dependants while clearly stating what that analysis cannot detect.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Get it on the Chrome Web Store</a>
       <a class="btn" href="#whats-inside">What's inside</a>
@@ -66,18 +66,18 @@
     <h2>Why it exists</h2>
     <div class="why">
       <div>
-        <h3>A workspace outgrows its author</h3>
-        <p>A few years in, a workspace is hundreds of views: tables, query tables holding SQL somebody wrote at 2am,
-          and reports built on reports. Zoho Analytics will answer what one view depends on, one view at a time. It will
-          not tell you the shape of the whole thing.</p>
+        <h3>A workspace soon outgrows one person's memory</h3>
+        <p>After a few years, a workspace can contain hundreds of tables, query tables and reports built on other
+          reports. Zoho Analytics can show the dependencies of one view at a time, but not the structure of the
+          workspace as a whole.</p>
       </div>
       <div>
         <h3>A history for everything you pulled</h3>
         <p>Zoho Analytics keeps no history of anything: change a query table's SQL, a column or a
           relation and the previous state is gone. The mirror is ordinary files. Put them under Git and
           <code>git diff</code> answers <em>what changed in this workspace last month</em> - the question
-          that matters most the day a number moves and nobody knows why. <b>Git is optional</b>: without
-          it the mirror is still ordinary files you can search and hand over.</p>
+          that matters most when a result changes and nobody knows why. <b>Git is optional</b>: without it,
+          the mirror is still a set of ordinary files you can search and share.</p>
       </div>
       <div>
         <h3>The SQL is the source</h3>
@@ -86,24 +86,26 @@
       </div>
       <div>
         <h3>Before you delete anything</h3>
-        <p>Asking Zoho Analytics what depends on a view, three hundred times by hand, is how the question never gets
-          asked. Zoost asks it once for everything - and calls the answer a candidate, because a shared link or a
-          scheduled export is invisible to that graph.</p>
+        <p>Checking hundreds of views one by one is slow enough that the question is often never asked. Zoost checks
+          them all at once. It labels the results as candidates, because the dependency graph cannot see uses such
+          as shared links or scheduled exports.</p>
       </div>
       <div>
-        <h3>What you built, and what Zoho put there</h3>
-        <p>Half the tables in a connected workspace arrived by sync and were never yours. Zoho Analytics' own ER model
-          knows which, and the view list marks them - so the inventory is of your work, not of everything.</p>
+        <h3>Separate your work from synced tables</h3>
+        <p>Many tables in a connected workspace may have arrived through a data sync rather than being created by
+          you. Zoho Analytics identifies them in its ER model, and Zoost marks them in the view list so you can
+          distinguish your work from imported structures.</p>
       </div>
       <div>
         <h3>Several workspaces, side by side</h3>
-        <p>One working folder, a subfolder per workspace, each one bound to the workspace it came from. If you consult, four clients stay mirrored at once, and the panel takes the workspace from the tab
-          you are on: which client you are looking at is answered by the browser, not by remembering.</p>
+        <p>One working folder contains a separate subfolder for each workspace, bound to the workspace it came from.
+          You can keep several clients mirrored at once: the panel uses the workspace open in the current browser
+          tab, so you do not have to select it from memory.</p>
       </div>
     </div>
   
       <figure class="shot">
-        <img src="/img/analytics-panel.webp?v=6face73fe7" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/analytics-panel.webp?v=1a287e9333" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Zoost panel beside Zoho Analytics: every view in the workspace with its type, columns and dates, and the SQL of the selected query table below.">
         <figcaption><b>The whole workspace in one list</b> - type, folder, column count and both dates - with the SQL of whatever you select underneath.</figcaption>
       </figure>
@@ -155,7 +157,7 @@
         <h3>An ER diagram that stays readable</h3>
         <ul>
           <li>Tables as boxes, relations as arrows, the join written exactly as Zoho writes it.</li>
-          <li>Focus one table and walk out from it; click an arc to isolate a single relation.</li>
+          <li>Focus on one table and follow its dependencies; click an arc to isolate a single relation.</li>
           <li>Spacing and label size are live sliders. Save as PDF for a wall-size print.</li>
         </ul>
       </div>
@@ -185,15 +187,16 @@
     </div>
   
       <figure class="shot">
-        <img src="/img/analytics-columns.webp?v=fab266c67b" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/analytics-columns.webp?v=0096bd3e92" width="1760" height="1100" loading="lazy" decoding="async"
              alt="A table's columns with their Zoho data types, and the foreign keys pointing in and out of it.">
         <figcaption><b>A column at a time.</b> Its type as Zoho Analytics reports it, and its foreign keys in both directions: what this column points at, and what points at it.</figcaption>
       </figure>
     
       <figure class="shot">
-        <img src="/img/analytics-er.webp?v=af0a04683f" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/analytics-er.webp?v=b8dd513340" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The ER diagram of the workspace: tables as boxes with their columns, joined by their relations.">
-        <figcaption><b>The ER diagram.</b> Every join written the way Zoho Analytics writes it, not re-rendered in my words - focus one table and walk out from it.</figcaption>
+        <figcaption><b>The ER diagram.</b> Every join is shown exactly as Zoho Analytics reports it. Focus on one
+          table, then follow its relations through the workspace.</figcaption>
       </figure>
     </div>
 </section>
@@ -255,7 +258,7 @@
       pointing Zoost at anything of your own. No Zoho tab, no account.
       <br><br>It is generated rather than fetched, everything that would talk to Zoho is disabled for it,
       and you delete it like any other workspace. <a href="/try"><b>What that is worth, and how to evaluate it that way &rarr;</b></a></p>
-    <p class="note" style="margin-top:24px">What it rests on, the two endpoints it deliberately never calls, and
+    <p class="note" style="margin-top:24px">The interfaces it relies on, the two endpoints it deliberately never calls, and
       how to check any of it: <a href="/nerd">the nerd page</a>.</p>
     <p class="note" style="margin-top:8px">Everything runs in your browser, using the Zoho session you are already
       signed into. No account, no telemetry, no server between you and your workspace. The only things that ever
@@ -263,7 +266,7 @@
       yourself - and never the rows in your tables.</p>
   
       <figure class="shot">
-        <img src="/img/analytics-health.webp?v=3d61503230" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/analytics-health.webp?v=f8fd016664" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The health view: system tables, views nothing depends on, and what the scan cannot see.">
         <figcaption><b>What nothing depends on any more</b> - and, next to the number, what the scan cannot see: a shared link, a scheduled export, an API consumer. Candidates to review, never a verdict.</figcaption>
       </figure>

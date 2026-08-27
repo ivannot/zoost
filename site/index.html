@@ -19,7 +19,7 @@
 <meta property="og:description" content="A small family of Chrome extensions, one per Zoho product. They mirror what you built into plain files, then draw you the map.">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://zoost.it/">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="author" content="Ivan Notaristefano">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"Zoost",
@@ -54,11 +54,11 @@
   <div class="wrap">
     <h1>Everything you built inside Zoho is yours.<br><span>And with Zoost you can see all of it at once.</span></h1>
     <p class="lead">Zoho shows you one object at a time, in a browser tab. Zoost copies the whole org to plain
-      files on your own disk, then draws the map: what calls what, what depends on what, what nothing uses
-      any more.</p>
+      files on your own disk, then maps the links between them: which functions call each other, what depends
+      on what, and which objects appear to be unused.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">The workbenches</a>
-      <a class="btn" href="#in-common">What every Zoost has in common</a>
+      <a class="btn" href="#what-both-workbenches-share">What both workbenches share</a>
       <a class="btn" href="/try">Try it with invented data</a>
       <span class="meta">Free · Apache-2.0 · no account · source you can read, all of it</span>
     </div>
@@ -68,15 +68,15 @@
 <section id="what-moves">
   <div class="wrap">
     <h2>You are about to change one function</h2>
-    <p class="lead" style="margin-top:-6px">What else moves?</p>
+    <p class="lead" style="margin-top:-6px">What else will this change affect?</p>
     <pre class="dep"><b>Build invoice</b>
 ├─ On deal won         <i>automation</i>
 ├─ Refresh pricebooks  <i>button</i>
 └─ Dunning run         <i>schedule</i></pre>
-    <p class="note" style="margin-top:16px">Three different kinds of thing reach that one function: an
-      automation behind a workflow, a button somebody added to a module, and a schedule. Zoho will tell you
-      about each of them on a different screen - if you already know to ask. This is the sample workspace,
-      so you can open it yourself in a minute and click the same function.</p>
+    <p class="note" style="margin-top:16px">Three different mechanisms call this function: a workflow
+      automation, a button added to a module, and a schedule. Zoho shows each one on a different screen, but
+      only if you already know where to look. This example comes from the sample workspace, which you can open
+      in a minute and explore for yourself.</p>
     <div class="cta" style="margin-top:18px">
       <a class="btn p" href="/try">Open the sample workspace →</a>
       <span class="meta">invented data · no Zoho org · nothing to connect</span>
@@ -114,7 +114,8 @@
         </div>
         <p class="full">Zoost - workbench for Zoho Analytics</p>
         <p>Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table,
-          the SQL behind each query table as its own file, an ER diagram of the whole thing, and the list of what nothing seems to depend on any more.</p>
+          the SQL behind each query table as its own file, an ER diagram of the entire workspace, and a list of
+          views with no known dependants.</p>
         <div class="plinks">
           <a href="/analytics" aria-label="What Zoost Analytics does">What it does →</a>
           <a href="/docs-analytics" aria-label="How to use Zoost Analytics">How to use it →</a>
@@ -127,23 +128,25 @@
       Chrome Web Store.</p>
   
       <figure class="shot">
-        <img src="/img/crm-preview.webp?v=bc4de7c7e1" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/crm-preview.webp?v=cab68eafc3" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Zoost panel beside Zoho CRM: the function list above, and below it the Details tab of the selected function - its callers, what is failing in Zoho, its size.">
-        <figcaption><b>Zoost CRM.</b> The whole org in one list, and under it what is known about the function you picked: who calls it, where it is used, what is failing in Zoho, how big it is. Its source is the next tab along, where every call that resolves to a function you have is a link through to it.</figcaption>
+        <figcaption><b>Zoost CRM.</b> The whole org in one list. Select a function to see who calls it, where it
+          is used, which related executions are failing in Zoho, and how large it is. The next tab shows its
+          source code, with links from recognised function calls to their definitions.</figcaption>
       </figure>
 
       <figure class="shot">
-        <img src="/img/crm-graph.webp?v=a667ca20d1" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/crm-graph.webp?v=0ac9c49004" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Zoost call graph: one function at the centre and every function that calls it around it, drawn from the whole org at once.">
-        <figcaption><b>The same question, drawn.</b> One function, everything that reaches it, and everything it
-          reaches - from the whole org at once rather than one screen at a time.</figcaption>
+        <figcaption><b>The same question, as a graph.</b> One function at the centre, with everything that calls
+          it and everything it calls, drawn from the entire org rather than one screen at a time.</figcaption>
       </figure>
     </div>
 </section>
 
-<section id="in-common">
+<section id="what-both-workbenches-share">
   <div class="wrap">
-    <h2>What every Zoost has in common</h2>
+    <h2>What both workbenches share</h2>
     <div class="why">
       <div>
         <h3>It only reads</h3>
@@ -151,15 +154,15 @@
           already work; this is the window onto it.</p>
       </div>
       <div>
-        <h3>Plain files, your Git</h3>
+        <h3>Plain files, ready for Git</h3>
         <p>A folder you choose, filled with ordinary files. Put it under version control and
           <code>git diff</code> answers <em>what changed last month</em> - which neither product can answer about
           itself.</p>
       </div>
       <div>
         <h3>The whole thing at once</h3>
-        <p>Search everything together, follow a name to where it is used, and hand the lot to a colleague as one
-          document.</p>
+        <p>Search everything together, follow a name to every place it is used, and share the complete inventory
+          with a colleague as a single document.</p>
       </div>
       <div>
         <h3>Numbers without a grade</h3>
@@ -201,9 +204,10 @@
       result, are mine.</p>
   
       <figure class="shot">
-        <img src="/img/analytics-er.webp?v=af0a04683f" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/analytics-er.webp?v=b8dd513340" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The ER diagram of a Zoho Analytics workspace: tables as boxes with their columns, joined by their relations.">
-        <figcaption><b>Zoost Analytics.</b> The same shape of tool one product over: the workspace drawn, every join written the way Zoho Analytics writes it.</figcaption>
+        <figcaption><b>Zoost Analytics.</b> The same approach applied to another product: a map of the
+          workspace, with every join shown exactly as Zoho Analytics reports it.</figcaption>
       </figure>
     </div>
 </section>

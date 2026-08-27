@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/emergency">
 <meta property="og:title" content="In case of emergency - running a Zoost release before the Store has it">
 <meta property="og:description" content="When a fix is out and the Chrome Web Store has not caught up: how to run the same signed package by hand, what it costs you, and how to go back.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/emergency">
 <link rel="alternate" hreflang="en" href="https://zoost.it/emergency">
@@ -47,14 +47,14 @@
 <div class="wrap">
 
   <h1>In case of emergency</h1>
-  <p class="sub">Zoho changes something undocumented, part of Zoost stops working, a fix goes out the
-    same day - and then it sits in a review queue for days. This page is how you skip the queue and
-    run that fix now. It is the same signed package the Chrome Web Store is given, installed by hand.</p>
+  <p class="sub">Zoho changes an undocumented interface and part of Zoost stops working. A fix may be
+    ready the same day but remain in a review queue for several days. This page explains how to use it
+    immediately by manually installing the same signed package submitted to the Chrome Web Store.</p>
 
   <div class="toc">
     <b>On this page</b>
     <ol>
-      <li><a href="#what-is-where">What is where, right now</a></li>
+      <li><a href="#compare-the-available-versions">Compare the available versions</a></li>
       <li><a href="#why">Why the fix is quick and the queue is not</a></li>
       <li><a href="#before">Before you start</a></li>
       <li><a href="#what-you-lose">What you lose, and what you keep</a></li>
@@ -64,10 +64,10 @@
     </ol>
   </div>
 
-  <h2 id="what-is-where">What is where, right now</h2>
-  <p>This block is filled in when the page loads, by asking the Chrome Web Store what it is serving
-    and GitHub what has been released. If the two agree there is nothing here worth doing: install
-    from the Store like everybody else.</p>
+  <h2 id="compare-the-available-versions">Compare the available versions</h2>
+  <p>When the page loads, this section compares the version available on the Chrome Web Store with the
+    latest version released on GitHub. If they match, you do not need this procedure: install Zoost
+    from the Store.</p>
 
   <div id="ahead">
     <p class="meta">If this stays as it is - no script, or the check could not run -
@@ -80,17 +80,17 @@
     never hit is not an emergency.</p>
 
   <h2 id="why">Why the fix is quick and the queue is not</h2>
-  <p>Zoost is written and maintained by one person. Assessments of this project keep naming that as
-    its main risk, and they are right to: there is no team, no rota, and nobody to hand it
-    to. Here is the other half of it, stated as structure rather than as a promise.</p>
+  <p>Zoost is written and maintained by one person. Project assessments often identify this as its
+    main risk, and rightly so: there is no team, no rota and nobody else to take over. The same structure
+    can also shorten the path to a small fix. That is an organisational fact, not a promise about timing.</p>
   <p>Both extensions run on interfaces Zoho does not document. Zoho can change one without notice,
     and when that happens some part of Zoost stops working. That is the failure this page exists
     for. What follows a break is short: there is nobody to coordinate with, no release train to
     catch and no sprint boundary to wait for, so a small fix can be understood, written, tagged and
     built on the day it is reported. What takes days is the review queue at Google, and nobody here can
     shorten it.</p>
-  <p>So the shape of it is: the repair is fast, the delivery is slow. This page is how you skip the
-    slow part on the occasions when it actually costs you something.</p>
+  <p>In short, a fix can be quick while distribution is slow. This page lets you avoid that wait when
+    the problem is genuinely blocking your work.</p>
   <div class="box warn">
     <p><b>None of that is a commitment.</b> The licence says AS IS and means it. There is no
       guaranteed response time, no support obligation, and no promise that any particular break will
@@ -137,8 +137,8 @@
       API key, no passphrase, no diagram defaults. Nothing is broken and the fix is not failing: it
       is a different id, so it has its own empty storage.</p>
   </div>
-  <p><b>What you keep is everything that matters.</b> The mirror is files in a folder on your disk
-    and no extension owns it. Point the new copy at the same working folder with
+  <p><b>Your important data stays where it is.</b> The mirror consists of files in a folder on your disk
+    and does not belong to a particular extension installation. Point the new copy at the same working folder with
     <b class="k">Choose folder</b>, grant access again, and every workspace, every pulled function
     and every bit of history you committed is there, exactly as it was. The re-setup is the folder,
     and the AI key if you use one. A couple of minutes.</p>
@@ -146,21 +146,19 @@
     later gives it a new id again</b> and empties its settings a second time. Unzip it somewhere you
     are content to leave it before you load it, not into Downloads.</p>
   <p>The two ids being different has one advantage worth using: the Store build and the unpacked one
-    can be installed at the same time. Leave the Store one in place, so going back is removing the
-    unpacked copy rather than reinstalling anything. Run one at a time, though, and the way to do that
-    is the toggle in <code>chrome://extensions</code>: switch the Store copy <b>off</b> rather than
-    uninstalling it, and it keeps its settings and comes back with one click. Two copies watching the
-    same Zoho tab is not a case anything here was designed for, and on Zoho CRM it is not merely
-    untidy: the hook Zoost puts into the page's own world is guarded so that whichever copy loaded
-    first wins, which leaves the behaviour depending on load order rather than on the copy you meant
-    to use.</p>
+    can be installed at the same time. Leave the Store version installed so that going back only
+    requires removing the unpacked copy. Run one version at a time: in
+    <code>chrome://extensions</code>, switch the Store copy <b>off</b> instead of uninstalling it. Its
+    settings will remain available when you switch it on again. Do not leave both copies active on the
+    same Zoho tab. In Zoost CRM, whichever copy loads first controls the page hook, so the result would
+    depend on load order rather than on the version you intended to use.</p>
 
   <h2 id="running-it">Running it</h2>
   <ol>
     <li><b>Download the package</b> from the release above, or from
       <a href="https://github.com/ivannot/zoost/releases">the releases page</a>. It is the file named
       <code>zoost-&lt;product&gt;-&lt;version&gt;-store.zip</code>. Take the one attached to the
-      release; do not build your own, because then none of what follows means anything.</li>
+      release; do not build your own, because the checks below apply specifically to the published package.</li>
     <li><b>Check it is what it claims to be</b>, if you want to. This is the whole reason the release
       chain exists, and it is one command with the
       <a href="https://cli.github.com/">GitHub CLI</a>:
@@ -199,10 +197,9 @@
   <h2 id="not">What this is not</h2>
   <p><b>It is not a beta channel.</b> The package is the same one submitted for review, not an
     earlier or looser build. There is no separate branch of Zoost that gets released here first.</p>
-  <p><b>It is not a way around the review.</b> The tag builds the package and puts it on the item
-    as a draft; submitting it for review is a separate press, and it appears on the Store when it
-    clears. What this page removes is your wait,
-    not the review.</p>
+  <p><b>It is not a way around the review.</b> The release tag builds the package and uploads it to the
+    Chrome Web Store item as a draft. Submission for review is a separate step, and the version appears
+    on the Store only after approval. This page removes your wait, not Google's review.</p>
   <p><b>It is not the supported way to install Zoost.</b> The Store build updates itself, keeps its
     settings and does not make Chrome nag. If you are not currently blocked by something, install it
     from the Store and close this page.</p>

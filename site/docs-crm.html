@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/docs-crm">
 <meta property="og:title" content="How to use Zoost CRM">
 <meta property="og:description" content="Guide to Zoost CRM: working folder, pull, the call graph, the ER diagram, the health audit, the exports and the assistant.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/docs-crm">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-crm">
@@ -99,7 +99,7 @@
   <p>Zoost is not an editor. You keep writing Deluge in Zoho, where it compiles and validates. Zoost gives you the map, the audit, and - with Git - a history of the parts Zoho does not version.</p>
 
   <figure class="shot">
-    <img src="/img/crm-modules.webp?v=4998828a54" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-modules.webp?v=4ef22b4364" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Modules tab: a module selected, with its fields, types and layouts in the pane below.">
     <figcaption>The mirror is one folder per kind. Here the Modules tab, with a module's fields and layouts under it.</figcaption>
   </figure>
@@ -178,7 +178,7 @@
     contains; Zoho is where it is changed.</p>
 
   <figure class="shot">
-    <img src="/img/crm-workflows.webp?v=a9a8aa4153" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-workflows.webp?v=fb09792b3b" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Workflows tab: rules with their triggers, and which of them have actions that wait.">
     <figcaption>Chapter 3 pulls these too. A workflow carries its trigger, its criteria and - where it has them - the actions that fire after a delay.</figcaption>
   </figure>
@@ -287,20 +287,21 @@ git commit -m "baseline"</code></pre>
     <b class="ui">↓</b> walk the functions that are on screen - what the search and the type filter
     have left, never inside a collapsed group - and open each as a click would;
     <b class="ui">Home</b> and <b class="ui">End</b> go to the two ends.</p>
-  <p>Following a link is only half of it, so the panel keeps a <b>history</b>, exactly as a browser
-    does. In the detail pane, <b class="ui">◂</b> goes back a step and <b class="ui">▸</b> forward
-    again. The whole chain is a view of its own: the <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg> History</b>, beside <b class="ui">AI</b> in the toolbar, opens it in place
-    of the list, every item you have opened, most recent first, with the one you are on marked and the time
-    you opened it - so you can jump straight to a step several back instead of pressing back four
-    times. It answers the same search box as the list it replaces, and <b class="ui">Name</b> switches
-    the chain between display and internal names, and <b class="ui">Clear</b> empties it without closing what you are reading. <b class="ui">Alt</b> with <b class="ui">←</b> or <b class="ui">→</b> does the
-    same from the keyboard. Each control appears only when it has somewhere to take you. A step into an area your Zoho role does not grant is refused with a reason rather than opened onto an empty list.
-    The chain spans the tabs, so a rule you reached from a function is one step away from it; closing
-    the pane keeps it, and only changing workspace clears it - the steps would name another org's
-    files.</p>
+  <p>The panel keeps a <b>history</b> of the items you open. In the detail pane,
+    <b class="ui">◂</b> goes back one step and <b class="ui">▸</b> goes forward. The
+    <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg> History</b> button beside <b class="ui">AI</b> replaces the main list with
+    the complete sequence, most recent first. It marks the current item and shows when each item was opened,
+    so you can jump directly to an earlier step. The same search box filters this list;
+    <b class="ui">Name</b> switches between display and internal names, and <b class="ui">Clear</b>
+    empties the history without closing the item you are reading. You can also move through it with
+    <b class="ui">Alt</b> plus <b class="ui">←</b> or <b class="ui">→</b>. A control appears only when
+    it has somewhere to take you. If your Zoho role does not grant access to an area, Zoost refuses the
+    step and explains why instead of opening an empty list. History spans all tabs, remains available when
+    you close the pane, and is cleared only when you change workspace so that entries from different orgs
+    are never mixed.</p>
 
   <figure class="shot">
-    <img src="/img/crm-search.webp?v=fc8c45702c" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-search.webp?v=dc5003eb2f" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The panel searching the full text of every function at once, showing four matches in two files.">
     <figcaption>Chapter 5: <b>in: code</b> turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.</figcaption>
   </figure>
@@ -328,14 +329,14 @@ git commit -m "baseline"</code></pre>
     parent module. A task whose signature has not been read is left alone rather than guessed at.</p>
   <p class="note"><b>How the arrows are found, and what that cannot see.</b> An arrow between two
     functions is a <code>namespace.name(</code> written in the caller's source. Comments and text in
-    quotes are set aside first, so a call you have commented out is not an arrow - and the function it
-    named can then be reported by the health audit as one nothing calls. Four things follow, and they
-    are the honest edges of the method rather than defects: a call written any other way is not seen;
-    when the namespace in the source does not match where the function actually lives, Zoost links it
-    to the only function with that name, which is a deduction, and where two carry the same name it
-    says <b>ambiguous</b> instead of choosing; a call inside a branch that never runs is still an
-    arrow, because this reads your code and not its execution; and a function that calls itself is not
-    drawn as one. What the picture is, precisely, is <b>where your code names other code</b>.</p>
+    quotes are set aside first, so a commented-out call does not become an arrow. The function it named
+    may therefore appear in the health audit as having no known callers. This method has four limits.
+    Calls written in another form are not detected. If the namespace in the source does not match the
+    function's actual namespace, Zoost links to the only function with that name and marks the result as
+    a deduction; if more than one function has that name, it reports the call as <b>ambiguous</b> instead
+    of choosing. A call inside a branch that never runs still becomes an arrow because Zoost analyses
+    source code, not runtime execution. A self-call is not drawn as an arrow. In precise terms, the
+    diagram shows <b>where your code names other code</b>.</p>
   <ul>
     <li>The call graph is not only functions. A <b>workflow</b> or a <b>schedule</b> that fires one is a node
       of its own, and so is every <b>connection</b> a function reaches - each in its own colour, filterable
@@ -421,8 +422,7 @@ git commit -m "baseline"</code></pre>
       relation names forward.</li>
     <li><b>Click an arc</b> to isolate one relation: the two modules light up, everything else fades, and a
       card appears with the relation's API name and the Deluge call, ready to copy.</li>
-    <li><b class="ui">Fit</b> frames the whole drawing in the window, and a <b>window resize does it for you</b> - unless you have panned or zoomed, in which case the view you chose is kept and <b class="ui">Fit</b> hands it back. The tab carries the number of boxes the diagram would draw, and it follows the filters, so you can see a category coming off bring the graph within reach before you ask for it. Two numbers, both measured, doing different jobs. Past <b>80</b> the drawing gets crowded - up to there the layout kept every box clear of every other on the graphs it was tested against, and past it boxes start covering each other - so the count turns amber and says so, and the diagram is still drawn: that is your call, not ours. Past <b>800</b> it is not drawn at all, because the layout itself stops being affordable: 400 boxes take about 1.3 seconds, 800 about 3.6, 1200 about seven. That ceiling is a default and not a rule - the settings page lets you raise it, and says what you are trading: more of the graph, not a better picture of it. Switch a category off, or pick something to focus on, and the count comes down as you do. <b>Double-click empty canvas to zoom in on it</b> - the point you click ends up in the middle, and <b class="ui">Fit</b> is the way back. <b>Take a box off the drawing</b> with the <b class="ui">−</b> where an arc meets it - an arc joins two boxes, so it carries one at each end: the one where it touches this box takes the box at the other end away, and the one over there does the same to this one. What goes with it is whatever the box you clicked from can no longer reach without it, so anything reachable another way stays, and the tooltip names what will go and counts it before you press. Hovering it lists them by name - each in the colour its box wears on the diagram, so you can tell a workflow from a function without reading - because at the zoom these are read at, most of what a cascade takes is off screen. What is on screen is outlined at the same moment. A <b class="ui">+</b> in the same place brings it back. Clicking the arc offers both directions from the card, named. It hides rather than re-lays-out, so it composes with what you have arranged, and focusing something you have taken off puts it back. <b>Drag a box to move it.</b> The automatic layout is a starting point - past eighty boxes it crowds whatever it does, and you are the one who knows which two have to sit together. The arcs go while you drag and are redrawn where you drop, the drop says how many boxes it now covers, and <b class="ui">Re-layout</b> throws the arrangement away. What you arrange is what <b class="ui">Save PDF</b> prints. Changing a filter lays the diagram out again, and the boxes you moved keep their places while only the new ones are placed for you - the hint line says how many of each. A newcomer that lands on one of yours moves aside itself: what you placed stays where you put it, and only what you did not place gives way. Two boxes <i>you</i> overlapped stay overlapped - the drop already told you one covers the other, and undoing that would be us overruling you. <b class="ui">Layout ⚙</b> exposes spacing, spread, label gap and label size as live sliders. There is no correct
-      value - dense or airy depends on what you are looking at.</li>
+    <li><b class="ui">Fit</b> fits the entire drawing in the window. Resizing the window does the same automatically, unless you have already panned or zoomed; in that case your chosen view is preserved until you select <b class="ui">Fit</b> again. The tab shows how many boxes the current filters would draw, so you can narrow the graph before opening it. Above <b>80</b> boxes, the count turns amber to warn that the layout may become crowded, but the diagram is still drawn. Above <b>800</b>, Zoost does not compute the layout by default because it would take several seconds and could freeze the window. You can raise this limit in Settings, or reduce the graph by changing the filters or focus. <b>Double-click an empty part of the canvas to zoom in</b>; the point you click moves to the centre. To hide a branch, select the <b class="ui">−</b> where an arc meets a box. The tooltip previews which boxes will disappear, including any that would no longer be reachable; boxes that remain reachable by another route stay visible. A <b class="ui">+</b> restores the hidden branch, and focusing a hidden item restores it too. <b>Drag a box to move it.</b> Its arcs disappear while you drag and are redrawn when you drop it. Zoost reports any overlaps, while <b class="ui">Re-layout</b> discards your arrangement and starts again. When a filter changes, boxes you moved keep their positions and only new boxes are placed automatically. <b class="ui">Save PDF</b> prints the arrangement currently on screen. <b class="ui">Layout ⚙</b> provides live controls for spacing, spread, label gap and label size. There is no single right value: a dense or airy layout depends on what you need to inspect.</li>
     <li><b class="ui">File ▾</b> holds what leaves the window. <b class="ui">Save PDF</b> prints it at wall
       size. <b class="ui">Save arrangement…</b> writes the arrangement you made - which boxes sit where,
       which branches you folded - to a plain file, and <b class="ui">Load arrangement…</b> puts one back.
@@ -445,25 +445,25 @@ git commit -m "baseline"</code></pre>
     The <b>Explorer</b> and a focused <b>Wiring</b> stay fast at any org size; use a focus and a small depth.</p>
 
   <figure class="shot">
-    <img src="/img/crm-graph.webp?v=a667ca20d1" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-graph.webp?v=0ac9c49004" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The call graph window: functions, workflows, schedules, actions and connections as boxes joined by arrows.">
     <figcaption>Chapter 6: the diagram window. The chips at the top are the filter and the colour key at once, and they steer all three views.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-er.webp?v=a89574d535" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-er.webp?v=f8daf35586" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The ER diagram: modules as boxes listing their fields, joined by their lookups.">
     <figcaption>The other drawing in the same window: modules as tables, lookups as arrows, focusable and printable wall-size.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-explorer.webp?v=1b74543bc0" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-explorer.webp?v=03bb04b609" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The diagram window's Explorer list beside the drawing, with a function selected.">
     <figcaption>The Explorer column lists what the drawing contains, and selecting there moves the focus in the diagram.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-buttons.webp?v=7abb5560c3" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-buttons.webp?v=88f698c738" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The diagram window with one category switched off, redrawing the graph rather than hiding pieces.">
     <figcaption>The chips do not hide boxes, they rebuild the drawing - so switching a kind off actually makes a large graph readable.</figcaption>
   </figure>
@@ -485,7 +485,7 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <figure class="shot">
-    <img src="/img/crm-relations.webp?v=7bfbd8aed8" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-relations.webp?v=f933b06969" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Relations table: one row per related list with the API name that getRelatedRecords needs.">
     <figcaption>Chapter 7: this table is the answer. One row per related list, with the API name the call needs - which is neither module's own api_name, and is the reason this table exists.</figcaption>
   </figure>
@@ -529,7 +529,7 @@ git commit -m "baseline"</code></pre>
     it either way - what these decide is whether it leaves the machine.</p>
 
   <figure class="shot">
-    <img src="/img/crm-actions.webp?v=54e888bc16" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-actions.webp?v=bf3bc00c2e" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Actions tab: notifications, field updates, tasks and webhooks grouped by kind, with one open showing its template, sender and the rule that fires it.">
     <figcaption>Chapter 8: the four kinds in one list, the count of rules beside each, and what one of them actually sends.</figcaption>
   </figure>
@@ -555,7 +555,7 @@ git commit -m "baseline"</code></pre>
   </div>
 
   <figure class="shot">
-    <img src="/img/crm-connections.webp?v=6cacb90662" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-connections.webp?v=2c571565a0" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The connections tab: the org's connection catalogue with the functions that use each one.">
     <figcaption>Chapter 9: the catalogue, and which functions use each connection - so one that nothing uses is visible.</figcaption>
   </figure>
@@ -572,7 +572,7 @@ git commit -m "baseline"</code></pre>
     see where length and API cost concentrate - the reading is yours.</p>
 
   <figure class="shot">
-    <img src="/img/crm-health.webp?v=e79d8c9167" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-health.webp?v=dcb9458528" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The health view: orphan candidates, with the coverage note stating what the scan cannot see.">
     <figcaption>Chapter 10: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.</figcaption>
   </figure>
@@ -590,7 +590,7 @@ git commit -m "baseline"</code></pre>
     automatically the expensive one.</p>
 
   <figure class="shot">
-    <img src="/img/crm-runtime.webp?v=ee9c10a79d" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-runtime.webp?v=0839479235" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Size and calls tab of the health view: the busiest functions with how many times each ran in 24 hours, above the static line and call counts.">
     <figcaption>Chapter 10: <b>the guess and the measurement, side by side.</b> Length and outbound calls cover every function; the run counts cover the busiest few and come from Zoho.</figcaption>
   </figure>
@@ -621,7 +621,7 @@ git commit -m "baseline"</code></pre>
   </div>
 
   <figure class="shot">
-    <img src="/img/crm-failures.webp?v=f84931f93c" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-failures.webp?v=99f171da80" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The health view, Failures group: the run counts for the last 24 hours above a list of failing functions, with one open showing its reason and dates.">
     <figcaption>Chapter 10b: what Zoho reports as failing, with the reason and its line number. The two notes at the bottom of the detail are the two things it will not do.</figcaption>
   </figure>
@@ -648,7 +648,7 @@ git commit -m "baseline"</code></pre>
   <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
 
   <figure class="shot">
-    <img src="/img/crm-export.webp?v=5d232b8ebe" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-export.webp?v=de1f912a51" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The export dialog with a checkbox per section and the source code marked as the sensitive one.">
     <figcaption>Chapter 11: what may leave the machine, decided once and remembered.</figcaption>
   </figure>
@@ -766,7 +766,7 @@ git commit -m "baseline"</code></pre>
   </div>
 
   <figure class="shot">
-    <img src="/img/crm-settings.webp?v=ab45f99b5e" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-settings.webp?v=2276a5aac3" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The settings page: the engine selector, the Anthropic model and key, and the OpenAI fields left empty.">
     <figcaption>Chapter 12: where the engine and the key are chosen. The passphrase, the index cap and the tool-step limit are all on this page.</figcaption>
   </figure>

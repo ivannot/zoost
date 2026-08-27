@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/report">
 <meta property="og:title" content="Report a problem - Zoost">
 <meta property="og:description" content="The report your Zoost panel prepared, shown in full before anything is sent. You decide what goes, and it becomes a public issue on GitHub.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/report">
 <link rel="alternate" hreflang="en" href="https://zoost.it/report">
@@ -50,20 +50,18 @@
     straight into this page - it was never put in the address, so it is not in your history either.
     Nothing has reached zoost.it yet: it is in your browser, and it stays there until you press
     <b>Send</b>.</p>
-  <p class="sub" id="subhand">You got here without a report, so there is nothing for this page to show
-    you - a Zoost panel writes the text itself, from its <b>Report this problem</b> button. You can
-    still describe the problem in your own words below, and it will be sent as a public issue. If you
+  <p class="sub" id="subhand">You opened this page without a report prepared by Zoost. You can still
+    describe the problem below and send it as a public issue. If you
     have a GitHub account, <a href="https://github.com/ivannot/zoost/issues">opening an issue
-    yourself</a> is better: you keep it, you can add to it, and you see the reply.</p>
+    yourself</a> is better because you can edit it, add details later and receive replies.</p>
 
   <div id="trace" style="display:none">
     <h2>What will be sent</h2>
     <p>Read it. The panel has already taken out ids, addresses, names in quotes and the URLs it saw;
       what remains should name no part of your business.</p>
-    <p><b>It is locked, and that is on purpose.</b> This is the trace: what fixes the problem is that
-      it is exactly what your browser produced. If you delete or change any of it, the report is still
-      welcome - but it is no longer evidence, so it travels <b>marked as altered</b>, because a
-      diagnosis built on a trace that was quietly edited is worse than no diagnosis.</p>
+    <p><b>The trace is locked on purpose.</b> Keeping exactly what your browser produced makes it useful
+      for diagnosis. You can unlock and edit it, but the report will then be <b>marked as altered</b>
+      so nobody mistakes the edited text for the original trace.</p>
     <textarea id="body" rows="18" spellcheck="false" readonly aria-label="The report that will be sent"></textarea>
     <p class="editrow"><span id="editedNote" class="ednote" style="display:none">This report will be
       sent marked <b>altered by the sender</b>.</span><button id="edit" class="quiet">Edit it

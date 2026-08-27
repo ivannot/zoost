@@ -170,11 +170,18 @@ def render_og_card(dest: pathlib.Path) -> pathlib.Path:
     # A profile of its own, for the reason written above shots.render: the shared one is locked by
     # whichever Chrome has not finished exiting, and the wait is a hundred seconds.
     with tempfile.TemporaryDirectory() as prof:
-        subprocess.run([shots.chrome(), "--headless", "--disable-gpu", "--hide-scrollbars",
-                        "--user-data-dir=" + prof,
-                        "--window-size=1200,630", "--force-device-scale-factor=1",
-                        "--virtual-time-budget=4000", "--screenshot=" + str(dest),
-                        (ROOT / "tools" / "ogcard.html").as_uri()], check=True, capture_output=True)
+        command = [shots.chrome(), "--headless=new", "--disable-gpu", "--hide-scrollbars",
+                   "--user-data-dir=" + prof,
+                   "--window-size=1200,630", "--force-device-scale-factor=1",
+                   "--virtual-time-budget=4000", "--screenshot=" + str(dest),
+                   (ROOT / "tools" / "ogcard.html").as_uri()]
+        try:
+            subprocess.run(command, check=True, capture_output=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            # Some Chrome builds finish the capture but keep the headless process alive. The timeout
+            # terminates that process; a complete output file still makes this a successful render.
+            if not dest.exists() or not dest.stat().st_size:
+                raise
     return dest
 
 

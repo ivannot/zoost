@@ -19,7 +19,7 @@
 <meta property="og:description" content="Your Deluge functions as files you can diff, the module schema, the automations, and the graph of what calls what. The whole org on disk.">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://zoost.it/crm">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
 <meta name="author" content="Ivan Notaristefano">
 <link rel="stylesheet" href="/site.css?v=7f27a8c885">
 </head>
@@ -48,10 +48,10 @@
 <div class="hero">
   <div class="wrap">
     <p class="eyebrow"><b>Zoost CRM</b><span>Zoost - workbench for Zoho CRM</span></p>
-      <h1>Your Zoho CRM org as a local,<br>versionable, navigable codebase. <span>And a map of how it fits together.</span></h1>
-    <p class="lead">Every Deluge function as a file you can diff. The map of what calls what, which module
-      relates to which, and which automation fires when. Your whole Zoho CRM org on your own disk, searchable in
-      one go - and it calls no endpoint that creates, edits or deletes anything in it.</p>
+      <h1>Your Zoho CRM org as a local,<br>versionable, navigable codebase. <span>With a map of how everything connects.</span></h1>
+    <p class="lead">Every Deluge function becomes a file you can diff. Zoost maps which functions call each
+      other, how modules are related, and when each automation runs. Your whole Zoho CRM org is searchable on
+      your own disk, and Zoost calls no endpoint that creates, edits or deletes anything in it.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Get it on the Chrome Web Store</a>
       <a class="btn" href="#whats-inside">What's inside</a>
@@ -69,9 +69,9 @@
         <p>Zoho CRM's own version history covers a <em>function</em>, one at a time, inside Zoho. Everything
           else the pull captures - module schema, layouts, related lists, workflows and what they fire,
           schedules, connections - arrives on your disk as plain files. Put them under Git and they get a
-          history too, so one diff answers <em>what changed in this org last month</em> across every kind
-          at once. <b>Git is optional</b>: without it the mirror is still ordinary files you can search
-          and hand over.</p>
+          history too. A single diff can then show <em>what changed in this org last month</em> across every
+          kind of object. <b>Git is optional</b>: without it, the mirror is still a set of ordinary files you
+          can search and share.</p>
       </div>
       <div>
         <h3>The whole org at once</h3>
@@ -80,8 +80,9 @@
       </div>
       <div>
         <h3>Not an editor, on purpose</h3>
-        <p>Zoost does not replace Zoho's editor. You keep writing where Zoho compiles and validates.
-          Zoost is the other half: navigation, cross-references, the map and the audit the editor has no room for - and, with Git, a history of the parts Zoho does not version.</p>
+        <p>Zoost does not replace Zoho's editor. You keep writing where Zoho compiles and validates your code.
+          Zoost adds the navigation, cross-references, maps and audit views that the editor does not provide.
+          With Git, it also gives you a history of the parts Zoho does not version.</p>
       </div>
       <div>
         <h3>Grep your whole org</h3>
@@ -89,7 +90,7 @@
           place a field, a module, an endpoint or a hardcoded id is referenced, before you change it.</p>
       </div>
       <div>
-                <h3>The relation names you keep losing</h3>
+                <h3>The relation names that are hard to find</h3>
         <p>The API name of a related list is neither module's API&nbsp;name - and it is what
           <code>getRelatedRecords()</code> demands. Zoost catalogues every relation with the call ready to copy.</p>
       </div>
@@ -105,7 +106,7 @@
       on design, code and wording. The judgement calls, and the responsibility, are mine.</p>
   
       <figure class="shot">
-        <img src="/img/crm-panel.webp?v=e98e234f0e" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/crm-panel.webp?v=ea06b8039b" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Zoost side panel open beside Zoho CRM, listing an org's Deluge functions with their namespaces and status.">
         <figcaption><b>This is the whole idea.</b> The panel sits beside Zoho CRM and lists every function in the org at once, with its namespace, its size, and whether the local copy is current.</figcaption>
       </figure>
@@ -131,8 +132,8 @@
         <h3>The map</h3>
         <ul>
           <li><span class="k">Graph</span>: who calls a function, and what it calls. Click through it.</li>
-          <li><span class="k">ER diagram</span>: modules as tables, lookups as arrows. Focus one, walk out from it,
-            print it wall-size.</li>
+          <li><span class="k">ER diagram</span>: modules as tables and lookups as arrows. Focus on one module,
+            follow its relations, or print the full diagram at wall size.</li>
           <li>Calls to other functions are clickable in the code - jump to the definition and back.</li>
           <li><span class="k">Which modules a function reads and writes</span> - taken from the calls
             themselves - and the question turned round: open a module and see which functions touch it.
@@ -193,7 +194,7 @@
     </div>
   
       <figure class="shot">
-        <img src="/img/crm-graph.webp?v=a667ca20d1" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/crm-graph.webp?v=0ac9c49004" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The call graph: boxes for functions, workflows, schedules, actions and connections, joined by arrows for what calls what.">
         <figcaption><b>The map.</b> Focused on one function, two steps out. Workflows, schedules and connections are nodes too, so you see what <em>starts</em> the code and what it reaches - and a connection nothing uses stands out.</figcaption>
       </figure>
@@ -219,7 +220,7 @@
       and you delete it like any other workspace. <a href="/try"><b>What that is worth, and how to evaluate it that way &rarr;</b></a></p>
     <p class="note">Full walkthrough, including API key setup and troubleshooting:
       <a href="/docs-crm"><b>How to use Zoost</b></a>.</p>
-    <p class="note">What it rests on, what it refuses to do, and how to check any of it:
+    <p class="note">The interfaces it relies on, what it refuses to do, and how to verify its claims:
       <a href="/nerd">the nerd page</a>.</p>
     <p class="note">You need to be signed in to Zoho CRM in the same browser. Zoost uses your existing session
       and your existing permissions - it can see exactly what you can see, and nothing more.</p>
@@ -229,7 +230,7 @@
       report you write, read in full and send yourself. Everything else stays local.</p>
   
       <figure class="shot">
-        <img src="/img/crm-relations.webp?v=7bfbd8aed8" width="1760" height="1100" loading="lazy" decoding="async"
+        <img src="/img/crm-relations.webp?v=f933b06969" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Relations table, one row per related list, each with the API name that getRelatedRecords needs.">
         <figcaption><b>The thing you keep hunting for.</b> One row per related list, with the API name <code>zoho.crm.getRelatedRecords()</code> wants - which is neither module's name, and is not written down anywhere in Zoho CRM.</figcaption>
       </figure>
