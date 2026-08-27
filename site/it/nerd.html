@@ -137,17 +137,17 @@
       imponga - e il
     sorgente sono ventuno file di JavaScript in chiaro per Zoho CRM e tredici per Zoho Analytics, senza bundler né minificatore fra quello
     che è pubblicato e quello che leggi.</p>
-  <p>Due endpoint di Zoho Analytics restano deliberatamente intoccati, per lo stesso motivo tutti e
+  <p>Due endpoint di Zoho Analytics non vengono chiamati di proposito, per lo stesso motivo tutti e
       due: restituiscono i tuoi dati.</p>
   <ul>
     <li><code>ZDBTableDataAction.ma</code> restituisce il contenuto vero delle celle di una tabella. Zoost
       dichiara di non leggere mai le tue righe, quindi non lo chiama.</li>
     <li><code>ZAChartView.ve</code> darebbe la definizione dei report che altrimenti manca - tipo di
-      grafico, raggruppamenti, assi - ma arriva saldata alla serie calcolata, che sono di nuovo i tuoi
+      grafico, raggruppamenti, assi - ma arriva insieme alla serie già calcolata, che sono di nuovo i tuoi
       dati. Quindi le definizioni dei report restano <b>non coperte</b>, e ogni superficie lo dice
       invece di lasciar credere che il mirror sia completo.</li>
   </ul>
-  <p>Tirare a indovinare un parametro per sopprimere i dati è esattamente il punto in cui una
+  <p>Tirare a indovinare un parametro che escluda i dati è esattamente il punto in cui una
     dichiarazione di sola lettura si rompe per sbaglio. Non ci si prova.</p>
 
   <h2 id="what-is-promised">Cosa è promesso e cosa no</h2>
@@ -171,13 +171,12 @@
   <p>Ogni GitHub Action è agganciata a un hash di commit, mai a un tag che si può spostare. Una catena
     di fornitura che finisce con «e poi quello che dice quel tag oggi» non è una catena.</p>
   <p>Questo risponde anche a una domanda legittima, in modo esplicito:
-    questo codice è stato scritto con l'assistenza pesante di un modello linguistico e riletto riga per
+    questo codice è stato scritto in larga parte con l'assistenza di un modello linguistico e riletto riga per
     riga, ed è anche per quello che la catena qui sopra ha la forma che ha.</p>
   <p>Ventuno file per Zoho CRM e
     tredici per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su
     una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto
-    questo ti chiede di fidarti di come il codice è stato prodotto. Chi lo ha battuto è la cosa meno
-    verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.</p>
+    questo ti chiede di fidarti di come il codice è stato prodotto. Chi lo ha scritto materialmente è la cosa meno verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.</p>
 
   <h2 id="check-it-yourself">Verificalo tu</h2>
   <table>
