@@ -18137,23 +18137,30 @@ test('the function row shows what the list is sorted by', () => {
     return hit[1];
   };
 
-  assert.match(shown('size'), /^60\.0K$/,
-               `sorted by size the row shows «${shown('size')}» - the header says bytes and this is a `
-               + 'line count, so a correct order reads as a broken one');
-  assert.match(shown('modified'), /^2026-08-14$/, 'sorted by date the row shows something else');
+  assert.match(shown('modified'), /^2026-08-14$/,
+               `sorted by date the row shows «${shown('modified')}» - a line count under a list ordered `
+               + 'by date reads as an order that is not there, which is the defect this case exists for');
   // The two that already have a column of their own keep the line count.
   assert.equal(shown('lines'), '16L', 'sorting by lines stopped showing lines');
   assert.equal(shown('calls'), '16L', 'the calls sort has its own column and this one should not change');
   assert.equal(shown('name'), '16L', 'the default listing stopped showing lines');
 
-  // Derived: every sort the registry offers is either shown here or has a column of its own.
-  const g2 = { console };
-  const { TREE_SORTS } = load([sliceConst(rel, 'TREE_SORTS')], g2);
+  // Derived, and the rule the size sort was removed under: every criterion the list offers is either
+  // a column the row already has, or one this slot shows. A sort by something invisible is what made a
+  // correct order read as a broken one.
+  const { TREE_SORTS } = load([sliceConst(rel, 'TREE_SORTS')], { console });
   const own = new Set(['name', 'lines', 'calls']);
   for (const key of Object.keys(TREE_SORTS)) {
     if (own.has(key)) continue;
     assert.notEqual(shown(key), '16L',
                     `the list can be sorted by «${key}» and the row still shows the line count - `
-                    + 'the same shape as the defect this case was written for');
+                    + 'either give it this slot, or take the criterion away');
+  }
+  // And the menu offers exactly what the registry sorts: an option with no comparator sorts nothing.
+  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+  const menu = /\[\['name', 'Name \(grouped\)'\][\s\S]{0,200}?\]\)/.exec(src);
+  assert.ok(menu, 'the Sort menu for functions is gone - this case has lost its subject');
+  for (const key of [...(menu[0].matchAll(/\['(\w+)',/g))].map((m) => m[1])) {
+    assert.ok(key in TREE_SORTS, `the menu offers «${key}» and nothing sorts by it`);
   }
 });

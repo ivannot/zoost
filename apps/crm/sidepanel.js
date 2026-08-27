@@ -1600,14 +1600,17 @@ function fnRowEl(e) {
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
-  // **The column shows what the list is sorted by.** Sorting by Size and printing lines makes a
+  // **The column shows what the list is sorted by.** Sorting by Size and printing lines made a
   // correct order look broken: a sixteen-line function holding one enormous line outweighs a
-  // five-hundred-line one, the header says «by size in bytes», and the row said `16L` at the top
-  // of a descending list. Reported as a sorting bug, and it was not one - it was a list measured
-  // by a quantity it did not show. `modified` gets the same treatment; `lines` and `calls`
-  // already have a column each.
-  const sortShown = st && treeSort === 'size' ? `${(st.chars / 1024).toFixed(1)}K`
-    : treeSort === 'modified' ? String(e.updatedTime || '').slice(0, 10)
+  // five-hundred-line one, so `16L` sat at the top of a descending list under a header reading «by
+  // size in bytes». Reported as a sorting bug, and it was not one - it was a list measured by a
+  // quantity it did not show.
+  //
+  // The size sort is gone rather than given a column: «the sorts should mirror the columns that are
+  // there» is a smaller product than one more thing to display, and the KB are still on the row's
+  // own tooltip and in both reports. `modified` keeps its column, because a date sort over a line
+  // count is the same defect one entry along.
+  const sortShown = treeSort === 'modified' ? String(e.updatedTime || '').slice(0, 10)
     : st ? st.lines + 'L' : '';
   const wide = treeSort === 'modified' ? ' rfw' : '';
   const lineSlot = `<span class="rest rfl${wide}"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${escHtml(sortShown)}</span>`;
@@ -1642,7 +1645,6 @@ const TREE_SORTS = {
   name: null,
   lines: { label: 'lines', get: (e) => (e.stats ? e.stats.lines : -1) },
   calls: { label: 'outbound calls', get: (e) => (e.stats ? e.stats.apiCalls : -1) },
-  size: { label: 'size in bytes', get: (e) => (e.stats ? e.stats.chars : -1) },
   modified: { label: 'last modified', get: (e) => (e.updatedTime ? (Date.parse(String(e.updatedTime).replace(' ', 'T')) || 0) : -1) },
 };
 function renderTree() {
@@ -3101,7 +3103,7 @@ function buildTypeChips() {
     ss.setAttribute('aria-label', acts ? 'Sort actions' : 'Sort functions');
     (acts
       ? [['name', 'Kind, then name'], ['rules', 'Rules that fire it'], ['module', 'Module'], ['modified', MSG.lastModified]]
-      : [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', MSG.lastModified]])
+      : [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['modified', MSG.lastModified]])
       .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
     ss.value = acts ? actionSort : treeSort;
     const dirBtn = document.createElement('button'); dirBtn.className = 'sortdir';
