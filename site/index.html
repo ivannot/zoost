@@ -26,7 +26,7 @@
  "url":"https://zoost.it/","logo":"https://zoost.it/icon-512.png",
  "sameAs":["https://github.com/ivannot/zoost"]}
 </script>
-<link rel="stylesheet" href="/site.css?v=5437df666d">
+<link rel="stylesheet" href="/site.css?v=aacf2d5f35">
 </head>
 <body class="lp">
 <a class="skip" href="#content">Skip to content</a>
@@ -141,61 +141,6 @@
     </div>
 </section>
 
-<section id="ask-an-assistant">
-  <div class="wrap">
-    <h2>Before you take my word for any of it</h2>
-    <p class="lead" style="margin-top:-6px">Everything on this page is a claim. Have it read back to
-      you - all of it, by a machine, without installing anything.</p>
-    <p>Zoost is small, and it is published exactly as it was written: nothing packed, nothing
-      hidden. So an assistant can read the whole of it and tell you what it found. Copy the box
-      below into whichever one you already use - ChatGPT, Claude, Gemini, Copilot, any of them. You
-      do not need to understand what is inside the box; it is addressed to the machine, not to you.</p>
-    <p>It asks three questions, for three different people: what is this and is it worth ten
-      minutes, what can it actually do for somebody who works in Zoho all day, and what does
-      somebody who has to approve it need to know. In that order, because that is the order the
-      questions turn up in. And it asks where the answers <em>do not</em> match what is promised,
-      because a prompt fishing for compliments would be worth nothing.</p>
-    <p>It points at two places, because the comparison is the point: the promises are on this
-      site, the answers are in the code, and one checking the other is worth more than either alone.
-      Assistants differ in what they can open, so it asks for that first - use both if you can reach
-      both, one if only one, and say which. And if it can reach neither, stop: one that has read
-      nothing will answer anyway, from memory, and that answer looks exactly like a real one.</p>
-    <pre class="ask"><code>Look at these two and describe what you find at three levels.
-
-The code:    https://github.com/ivannot/zoost
-             (two Chrome extensions: apps/crm and apps/analytics)
-The promises: https://zoost.it
-
-Start by saying which of the two you were actually able to open. If only
-one, use that one and say so. If neither, stop there - do not answer
-from what you already know about it.
-
-1. In plain language, for somebody who does not write code:
-   what is it, who is it for, what changes for them if they install it,
-   and would you tell them it is worth ten minutes?
-
-2. For somebody who works in Zoho every day:
-   what can it actually do - the capabilities you find implemented, not
-   the ones described; where is it weak; what would frustrate them on a
-   large, untidy organisation; and would you recommend it to them?
-
-3. For whoever has to approve it:
-   what leaves the machine and when, which hosts it can reach, whether
-   anything writes back to Zoho, what it stores and where.
-
-Then finish with three things: anything promised - on the site, in
-README.md, or in the description inside either manifest.json - that the
-code does not have; what you cannot decide by reading alone; and what
-you would want to test in a running browser.</code></pre>
-    <p class="note" style="margin-top:16px">The last question in the box is the one to read
-      carefully. Reading tells you what a program is built to do; it cannot tell you what Zoho will
-      answer tomorrow, or what somebody does with a file once they have saved it - and an assistant
-      will sound just as sure either way, so it is asked to say where its answer stops. If you want
-      the technical version, with every claim taken apart one at a time, it is on
-      <a href="/nerd#ask-an-assistant">the nerd page</a>.</p>
-  </div>
-</section>
-
 <section id="in-common">
   <div class="wrap">
     <h2>What every Zoost has in common</h2>
@@ -277,7 +222,7 @@ you would want to test in a running browser.</code></pre>
         <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
         <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>. Both ask for their own platform's domains in every data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code>, and <code>zoost.it</code>. Zoho CRM adds its sandbox data centres, and both add the two suite shells - <code>one.zoho.*</code> and <code>crmplus.zoho.*</code>, with their <code>one.zohocloud.ca</code> and <code>crmplus.zohocloud.ca</code> counterparts for Canada, which is a different family however alike it looks. The bridge that reads your org is injected only into frames on its own platform's domain: inside Zoho One or Zoho CRM Plus your org is an ordinary page in a frame of its own, and that frame is the only thing either extension reads. Finding it costs one line that runs in every frame of the tab and answers with that frame's address - nothing else is read there, and nothing leaves the browser. The two AI hosts are reached only if someone turns the assistant on. And nothing of ours runs on <code>zoost.it</code> until you press <b>Report this problem</b>: it opens <a href="/report">the report page</a> and writes the text into the box, so that you read it before anything is sent. The manifest is the authority.</td></tr>
 <tr><td class="k">How you can check</td><td>Twenty-one files of plain JavaScript for Zoho CRM, thirteen for Zoho Analytics. No bundler, no minifier: what you read is what runs. Each release is built by GitHub twice over and signed, and one command verifies the published file.</td></tr>
-        <tr><td class="k">How to judge it without me</td><td>Every command is on the <a href="/nerd#check-it-yourself">nerd page</a>, and with them a prompt you can paste into whichever assistant you use: it reads the whole repository and answers at three levels - what this is in plain language, what it can do for somebody who works in Zoho every day, and what you need if you are the one approving it. Including where the claims fail. It is short enough to read in one go, which is the point of shipping it unminified.</td></tr>
+        <tr><td class="k">How to judge it without me</td><td>Every command is on the <a href="/nerd#check-it-yourself">nerd page</a>: what GitHub built, the same archive rebuilt on your own machine, and the commit and hash of every version ever submitted. The source is short enough to read in one sitting, which is the point of shipping it unminified.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Details, endpoint by endpoint: <a href="/nerd">the nerd

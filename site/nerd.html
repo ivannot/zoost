@@ -20,7 +20,7 @@
 <link rel="icon" href="/favicon.ico?v=600d06ca4d" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4a69cd9ac6">
 <meta name="theme-color" content="#0d121c">
-<link rel="stylesheet" href="/site.css?v=5437df666d">
+<link rel="stylesheet" href="/site.css?v=aacf2d5f35">
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
@@ -197,37 +197,6 @@
     out and the Chrome Web Store has not caught up with it yet,
     <a href="/emergency">in case of emergency</a> is the page for that: the same signed archive, run
     without waiting for the queue.</p>
-
-  <h3 id="ask-an-assistant">The same, asked of an assistant</h3>
-  <p>A narrower prompt than the one on the <a href="/#ask-an-assistant">home page</a>, for a reader who
-    is already this far down: it takes the technical claims apart one at a time rather than describing
-    the product. Everything it asks about is in this page, so its answer and this page can be compared
-    line by line - which is the only reason to run both.</p>
-  <pre class="ask"><code>Tell me where the technical claims about this project fail.
-
-The code:    https://github.com/ivannot/zoost
-             (two Chrome extensions: apps/crm and apps/analytics)
-The claims:  https://zoost.it/nerd , README.md, and the description
-             field inside each manifest.json
-
-Say first which of those you could open. Answer from the code for
-everything the code can settle; if you could not reach the code, stop
-rather than answering from what you already know.
-
-1. It says it never writes to Zoho. Find every request that is not a GET
-   and say what each one is for.
-2. Which hosts can it reach at all? Compare that with what the two
-   manifests declare, and with the four Chrome permissions they ask for.
-3. What leaves the machine, and under what conditions? The optional AI
-   assistant is supposed to be the only exception, and only once someone
-   enters their own key.
-4. What does it store, where, and what happens to a stored API key when
-   the passphrase protection is on and when it is off.
-5. How does it tell «Zoho returned nothing» apart from «Zoho refused»
-   and from «the response was not the shape this reads»?
-
-Tell me what contradicts those claims, what you cannot decide from the
-source alone, and what you would want to test in a running browser.</code></pre>
 
 <h2 id="what-none-of-it-proves">What none of it proves</h2>
   <p>The upload to the Chrome Web Store is a workflow reading the Release asset, so the file Google

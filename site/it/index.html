@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:14982eb7bce02f52 -->
+<!-- translated-from: site/index.html sha256:f563b4d860559423 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -27,7 +27,7 @@
  "url":"https://zoost.it/","logo":"https://zoost.it/icon-512.png",
  "sameAs":["https://github.com/ivannot/zoost"]}
 </script>
-<link rel="stylesheet" href="/site.css?v=5437df666d">
+<link rel="stylesheet" href="/site.css?v=aacf2d5f35">
 </head>
 <body class="lp">
 <a class="skip" href="#content">Vai al contenuto</a>
@@ -151,63 +151,6 @@
     </div>
 </section>
 
-<section id="ask-an-assistant">
-  <div class="wrap">
-    <h2>Prima di credere a quello che c'è scritto qui</h2>
-    <p class="lead" style="margin-top:-6px">Tutto quello che c'è in questa pagina è un'affermazione.
-      Fattela rileggere - tutta, da una macchina, senza installare niente.</p>
-    <p>Zoost è piccolo, ed è pubblicato esattamente com'è stato scritto: niente di compresso,
-      niente di nascosto. Quindi un assistente riesce a leggerlo tutto e a dirti cosa ha trovato.
-      Copia il riquadro qui sotto dentro quello che usi già - ChatGPT, Claude, Gemini, Copilot,
-      quello che è. Non serve che tu capisca cosa c'è scritto dentro il riquadro: è rivolto alla
-      macchina, non a te.</p>
-    <p>Fa tre domande, per tre persone diverse: cos'è e se vale dieci minuti, cosa sa fare davvero
-      per chi sta dentro Zoho tutto il giorno, e cosa deve sapere chi la deve autorizzare. In
-      quest'ordine, perché è l'ordine in cui le domande vengono. E chiede dove le risposte
-      <em>non</em> corrispondono a quello che viene promesso, perché un prompt che va a caccia di
-      complimenti non varrebbe niente.</p>
-    <p>Indica due posti, perché il confronto è tutto il senso: le promesse stanno su questo sito,
-      le risposte stanno nel codice, e l'uno che controlla l'altro vale più di ciascuno da solo. Gli
-      assistenti non riescono ad aprire le stesse cose, quindi la prima cosa che chiede è proprio
-      quella - usali tutti e due se ci arrivi, uno solo se arrivi a uno solo, e dillo. E se non
-      arriva a nessuno dei due, fermati: uno che non ha letto niente risponde lo stesso, a memoria, e
-      quella risposta sembra identica a una vera.</p>
-    <pre class="ask"><code>Guarda questi due e descrivi su tre livelli quello che trovi.
-
-Il codice:    https://github.com/ivannot/zoost
-              (due estensioni Chrome: apps/crm e apps/analytics)
-Le promesse:  https://zoost.it
-
-Comincia dicendo quale dei due sei davvero riuscito ad aprire. Se solo
-uno, usa quello e dillo. Se nessuno dei due, fermati lì - non rispondere
-con quello che già sai.
-
-1. In parole semplici, per chi non scrive codice:
-   cos'è, a chi serve, cosa cambia per quella persona se la installa,
-   e le diresti che vale dieci minuti del suo tempo?
-
-2. Per chi lavora dentro Zoho tutti i giorni:
-   cosa sa fare davvero - le funzionalità che trovi implementate, non
-   quelle descritte; dove è debole; cosa darebbe fastidio su
-   un'organizzazione grande e disordinata; e la consiglieresti?
-
-3. Per chi deve approvarla:
-   cosa esce dalla macchina e quando, quali host può raggiungere, se
-   qualcosa scrive dentro Zoho, cosa conserva e dove.
-
-Chiudi con tre cose: quello che viene promesso - sul sito, nel README o
-nella descrizione dentro i due manifest.json - e il codice non ha; quello
-che non puoi stabilire soltanto leggendo; e quello che vorresti provare
-in un browser in esecuzione.</code></pre>
-    <p class="note" style="margin-top:16px">L'ultima domanda del riquadro è quella da leggere con
-      attenzione. Leggere ti dice cosa un programma è fatto per fare; non ti dice cosa risponderà
-      Zoho domani, né cosa fa una persona con un file dopo che l'ha salvato - e un assistente suona
-      altrettanto sicuro nei due casi, quindi gli viene chiesto di dire dove finisce quello che sa.
-      Se vuoi la versione tecnica, con ogni affermazione smontata una per una, sta sulla
-      <a href="/it/nerd#ask-an-assistant">pagina nerd</a>.</p>
-  </div>
-</section>
-
 <section id="in-common">
   <div class="wrap">
     <h2>Cosa hanno in comune tutti gli Zoost</h2>
@@ -290,7 +233,7 @@ in un browser in esecuzione.</code></pre>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi; non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Entrambe chiedono i domini della propria piattaforma in ogni data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code> e <code>zoost.it</code>. Zoost per Zoho CRM aggiunge i data centre sandbox, ed entrambe aggiungono le due shell di suite - <code>one.zoho.*</code> e <code>crmplus.zoho.*</code>, con le controparti <code>one.zohocloud.ca</code> e <code>crmplus.zohocloud.ca</code> per il Canada, che è una famiglia diversa per quanto si somiglino. Il ponte che legge la tua org viene iniettato solo nei frame che stanno sul dominio della sua piattaforma: dentro Zoho One o Zoho CRM Plus la tua org è una pagina come le altre, in un frame suo, e quel frame è l'unica cosa che le estensioni leggono. Trovarlo costa una riga che gira in ogni frame della scheda e risponde con l'indirizzo di quel frame - lì non viene letto altro, e non esce niente dal browser. I due host AI si raggiungono solo se qualcuno accende l'assistente. E su <code>zoost.it</code> non gira niente di nostro finché non premi <b>Segnala un problema</b>: apre <a href="/report">la pagina della segnalazione</a> (in inglese: è una sola, così la segnalazione che arriva è in una lingua sola) e ci scrive dentro il testo, così lo leggi prima che parta qualsiasi cosa. Il manifest fa fede.</td></tr>
 <tr><td class="k">Come verificarlo</td><td>Ventuno file di JavaScript in chiaro per Zoho CRM, tredici per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma; un comando verifica il file pubblicato.</td></tr>
-        <tr><td class="k">Come giudicarlo senza di me</td><td>Ogni comando sta sulla <a href="/it/nerd#check-it-yourself">pagina nerd</a>, e con loro un prompt da incollare nell'assistente che usi: legge l'intero repository e risponde su tre livelli - cos'è in parole semplici, cosa sa fare per chi lavora dentro Zoho tutti i giorni, e quello che serve a chi la deve approvare. Compreso dove le affermazioni non reggono. È abbastanza corto da leggere in una volta sola, che è il motivo per cui viene distribuito non minificato.</td></tr>
+        <tr><td class="k">Come giudicarlo senza di me</td><td>Ogni comando sta sulla <a href="/it/nerd#check-it-yourself">pagina nerd</a>: cosa ha costruito GitHub, lo stesso archivio ricostruito sulla tua macchina, e il commit e l'hash di ogni versione mai inviata. Il sorgente è abbastanza corto da leggere in una volta sola, che è il motivo per cui viene distribuito non minificato.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Il dettaglio, endpoint per endpoint, sta sulla
