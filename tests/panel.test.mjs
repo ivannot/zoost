@@ -18106,3 +18106,54 @@ test('the diagram payload carries a function source under no name at all', () =>
                  `a function's source is stored as «${nm}» and the diagram payload does not remove it`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The list shows the quantity it is sorted by.
+//
+// Sorting by Size and printing lines makes a correct order look broken: a sixteen-line function
+// holding one enormous line outweighs a five-hundred-line one, so `16L` sat at the top of a
+// descending list under a header reading «by size in bytes». Reported as a sorting bug, and it was
+// not one - the sort was right and the column was measuring something else.
+//
+// Derived from the sort registry, so a criterion added later cannot quietly go unshown.
+test('the function row shows what the list is sorted by', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const el = () => ({ className: '', dataset: {}, innerHTML: '', style: {},
+                      setAttribute() {}, querySelector: () => ({}), onclick: null });
+  const row = { id: 'f1', path: 'functions/ns/batch.dg', api_name: 'batch', display_name: 'Batch',
+                namespace: 'ns', mirrored: true, downloaded: true, language: 'deluge', rest: false,
+                updatedTime: '2026-08-14 09:12',
+                stats: { lines: 16, codeLines: 14, chars: 61440, apiCalls: 1, invokeurl: 1, crm: 0, zoho: 0, sendmail: 0 } };
+  const shown = (sort) => {
+    const g = { console, Object, String, Number, document: { createElement: el },
+                treeSort: sort, currentPath: null,
+                escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+                labelOf: (e) => e.display_name, isDeluge: () => true, langLabel: () => 'Deluge',
+                MSG: { notHere: 'x', hereRepull: 'y', failed: 'z', clickRetry: '', notMirrored: () => '' },
+                fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
+    const m = load([sliceFn(rel, 'fnRowEl')], g);
+    const hit = /class="rest rfl[^"]*"[^>]*>([^<]*)</.exec(m.fnRowEl(row).innerHTML);
+    assert.ok(hit, `${sort}: the row has no measured column at all`);
+    return hit[1];
+  };
+
+  assert.match(shown('size'), /^60\.0K$/,
+               `sorted by size the row shows «${shown('size')}» - the header says bytes and this is a `
+               + 'line count, so a correct order reads as a broken one');
+  assert.match(shown('modified'), /^2026-08-14$/, 'sorted by date the row shows something else');
+  // The two that already have a column of their own keep the line count.
+  assert.equal(shown('lines'), '16L', 'sorting by lines stopped showing lines');
+  assert.equal(shown('calls'), '16L', 'the calls sort has its own column and this one should not change');
+  assert.equal(shown('name'), '16L', 'the default listing stopped showing lines');
+
+  // Derived: every sort the registry offers is either shown here or has a column of its own.
+  const g2 = { console };
+  const { TREE_SORTS } = load([sliceConst(rel, 'TREE_SORTS')], g2);
+  const own = new Set(['name', 'lines', 'calls']);
+  for (const key of Object.keys(TREE_SORTS)) {
+    if (own.has(key)) continue;
+    assert.notEqual(shown(key), '16L',
+                    `the list can be sorted by «${key}» and the row still shows the line count - `
+                    + 'the same shape as the defect this case was written for');
+  }
+});

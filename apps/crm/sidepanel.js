@@ -1600,7 +1600,17 @@ function fnRowEl(e) {
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
-  const lineSlot = `<span class="rest rfl"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${st ? st.lines + 'L' : ''}</span>`;
+  // **The column shows what the list is sorted by.** Sorting by Size and printing lines makes a
+  // correct order look broken: a sixteen-line function holding one enormous line outweighs a
+  // five-hundred-line one, the header says «by size in bytes», and the row said `16L` at the top
+  // of a descending list. Reported as a sorting bug, and it was not one - it was a list measured
+  // by a quantity it did not show. `modified` gets the same treatment; `lines` and `calls`
+  // already have a column each.
+  const sortShown = st && treeSort === 'size' ? `${(st.chars / 1024).toFixed(1)}K`
+    : treeSort === 'modified' ? String(e.updatedTime || '').slice(0, 10)
+    : st ? st.lines + 'L' : '';
+  const wide = treeSort === 'modified' ? ' rfw' : '';
+  const lineSlot = `<span class="rest rfl${wide}"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${escHtml(sortShown)}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
   el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   // Both go through a declaration, because a `.then(cb)` is a scope the race checker cannot enter -

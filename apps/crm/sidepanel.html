@@ -232,6 +232,8 @@
   .f .rest.rr{min-width:26px;text-align:right}
   .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
   .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
+  /* A date needs more room than a count; only the «last modified» sort asks for it. */
+  .f .rest.rfl.rfw{min-width:62px}
   .f .rest.rc{margin-left:6px;min-width:30px;text-align:right;color:#e0a86b}
   /* Actions rows: same discipline, their own classes rather than widening the four above, which
      Modules and Connections also draw. The module is a name and not a number, so it is bounded and
