@@ -48,10 +48,10 @@
 <div class="wrap">
 
   <h1>In caso di emergenza</h1>
-  <p class="sub">Zoho cambia qualcosa di non documentato, un pezzo di Zoost smette di funzionare, la
-    fix esce lo stesso giorno - e poi resta ferma giorni in una coda di revisione. Questa pagina
-    serve a saltare la coda e usare quella fix subito. È lo stesso pacchetto firmato che riceve il
-    Chrome Web Store, installato a mano.</p>
+  <p class="sub">Zoho cambia un'interfaccia non documentata e una parte di Zoost smette di funzionare.
+    La correzione può essere pronta lo stesso giorno, ma restare per giorni in attesa di revisione.
+    Questa pagina spiega come usarla subito: installi manualmente lo stesso pacchetto firmato inviato
+    al Chrome Web Store.</p>
 
   <div class="toc">
     <b>In questa pagina</b>
@@ -67,9 +67,9 @@
   </div>
 
   <h2 id="what-is-where">Che cosa c'è dove, adesso</h2>
-  <p>Questo riquadro si compila al caricamento della pagina, chiedendo al Chrome Web Store che cosa
-    sta servendo e a GitHub che cosa è stato rilasciato. Se i due coincidono qui non c'è niente da
-    fare: installa dallo Store come tutti.</p>
+  <p>Al caricamento, questo riquadro confronta la versione disponibile sul Chrome Web Store con
+    l'ultima rilasciata su GitHub. Se coincidono, non serve alcuna procedura speciale: installa Zoost
+    dallo Store.</p>
 
   <div id="ahead">
     <p class="meta">Se resta com'è - niente script, oppure il controllo non è riuscito -
@@ -82,29 +82,29 @@
     qualcosa in cui non sei mai incappato non è un'emergenza.</p>
 
   <h2 id="why">Perché la fix è rapida e la coda no</h2>
-  <p>Zoost è scritto e mantenuto da una persona sola. Le valutazioni di questo progetto indicano
-    regolarmente questo come il suo rischio principale, e fanno bene a indicarlo: non c'è un team, non c'è un
-    turno, non c'è nessuno a cui passarlo. Ecco l'altra metà della cosa, detta come struttura e
-    non come promessa.</p>
-  <p>Entrambe le estensioni si appoggiano a interfacce che Zoho non documenta. Zoho può cambiarne
+  <p>Zoost è scritto e mantenuto da una persona sola. Le valutazioni del progetto indicano spesso
+    questo come il rischio principale, e a ragione: non c'è un team, non ci sono turni e non c'è
+    nessuno a cui passare il lavoro. La stessa struttura, però, rende più breve il percorso di una
+    correzione. È un dato organizzativo, non una promessa sui tempi.</p>
+  <p>Entrambe le estensioni si basano su interfacce che Zoho non documenta. Zoho può cambiarne
     una senza preavviso, e quando succede un pezzo di Zoost smette di funzionare. È il guasto per
-    cui questa pagina esiste. Quello che segue una rottura è corto: non c'è nessuno con cui
+    cui questa pagina esiste. Il percorso che segue una rottura è breve: non c'è nessuno con cui
     coordinarsi, nessun treno di rilascio da prendere e nessun confine di sprint da aspettare, quindi
     una fix piccola può essere capita, scritta, taggata e costruita il giorno stesso in cui viene
-    segnalata. Quello che richiede giorni è la coda di revisione da Google, e nessuno
-    qui può accorciarla.</p>
-  <p>La forma della cosa è quindi questa: la riparazione è veloce, la consegna è lenta. Questa
-    pagina serve a saltare la parte lenta nei casi in cui ti sta davvero costando qualcosa.</p>
+    segnalata. A richiedere giorni può essere invece la coda di revisione di Google, che nessuno
+    qui può accorciare.</p>
+  <p>In breve: la correzione può essere rapida, la distribuzione no. Questa pagina ti permette di
+    evitare l'attesa quando il problema ti sta davvero bloccando.</p>
   <div class="box warn">
     <p><b>Niente di tutto questo è un impegno.</b> La licenza dice AS IS e lo dice sul serio. Non
       c'è un tempo di risposta garantito, non c'è un obbligo di assistenza e non c'è la promessa
-      che una certa rottura verrà riparata. Quello che si descrive sopra è dove va il tempo, non
-      quanto te ne spetta.</p>
+      che una certa rottura verrà riparata. Quanto descritto sopra spiega dove si impiega il tempo,
+      non stabilisce un tempo di risposta dovuto.</p>
   </div>
   <p>E la risposta onesta alla domanda che sta dietro alla critica, cioè <i>che succede se
     smette</i>: il tuo mirror sono file normali sul tuo disco. Sorgenti Deluge, SQL, JSON e Markdown,
-    leggibili con un editor di testo e un client Git, e restano leggibili che Zoost venga aggiornato
-    ancora oppure no. Il sorgente è Apache-2.0, le release sono <a href="/it/nerd#how-a-release-is-built">costruite in
+    leggibili con un editor di testo e un client Git, indipendentemente dai futuri aggiornamenti di
+    Zoost. Il sorgente è Apache-2.0, le release sono <a href="/it/nerd#how-a-release-is-built">costruite in
     pubblico e firmate</a> - e RELEASES.md nomina le prime, che precedono quella catena, invece di
     contarle dentro - e la build è riproducibile dal commit taggato da chiunque voglia portarla
     avanti. Se Zoost venisse abbandonato perderesti lo strumento. Non perderesti il lavoro
@@ -141,8 +141,8 @@
       provider AI né chiave API, nessuna passphrase, nessun default del diagramma. Non è rotto
       niente e la fix non sta fallendo: è un id diverso, quindi ha il suo spazio vuoto.</p>
   </div>
-  <p><b>Quello che resta è tutto ciò che conta.</b> Il mirror sono file in una cartella sul tuo
-    disco e non appartiene a nessuna estensione. Punta la copia nuova sulla stessa cartella di lavoro
+  <p><b>I dati importanti restano al loro posto.</b> Il mirror è formato da file in una cartella sul tuo
+    disco e non appartiene a una specifica installazione dell'estensione. Punta la nuova copia sulla stessa cartella di lavoro
     con <b class="k">Scegli cartella</b>, riconcedi l'accesso, e ogni workspace, ogni funzione
     scaricata e tutta la storia che hai committato sono lì, esattamente come prima. Da rifare c'è
     la cartella, e la chiave AI se la usi. Un paio di minuti.</p>
@@ -165,8 +165,8 @@
     <li><b>Scarica il pacchetto</b> dalla release qui sopra, oppure dalla
       <a href="https://github.com/ivannot/zoost/releases">pagina delle release</a>. È il file che si
       chiama <code>zoost-&lt;prodotto&gt;-&lt;versione&gt;-store.zip</code>. Prendi quello allegato
-      alla release; non costruirtelo da solo, perché allora niente di quello che segue significa
-      più qualcosa.</li>
+      alla release; non ricostruirlo da solo, perché le verifiche descritte di seguito riguardano
+      proprio il pacchetto pubblicato.</li>
     <li><b>Verifica che sia quello che dice di essere</b>, se ti va. È l'intero motivo per cui la
       catena di release esiste, ed è un comando solo con la
       <a href="https://cli.github.com/">CLI di GitHub</a>:
@@ -208,9 +208,10 @@
   <p><b>Non è un canale beta.</b> Il pacchetto è lo stesso che viene sottoposto a revisione, non
     una build anteriore o più permissiva. Non esiste un ramo separato di Zoost che venga rilasciato
     prima qui.</p>
-  <p><b>Non è un modo per aggirare la revisione.</b> La versione viene sottoposta a Google nella
-    quando viene taggata il pacchetto finisce sull'elemento come bozza; mandarlo in revisione e' una pressione a parte, e compare sullo Store quando passa. Quello che questa pagina
-    toglie è la tua attesa, non la revisione.</p>
+  <p><b>Non è un modo per aggirare la revisione.</b> Quando la versione viene taggata, il pacchetto
+    viene caricato come bozza nell'elemento del Chrome Web Store. L'invio in revisione è un passaggio
+    separato e la versione compare sullo Store solo dopo l'approvazione. Questa pagina elimina la tua
+    attesa, non il controllo di Google.</p>
   <p><b>Non è il modo supportato di installare Zoost.</b> La build dello Store si aggiorna da sola,
     si tiene le impostazioni e non fa brontolare Chrome. Se in questo momento non sei bloccato da
     niente, installala dallo Store e chiudi questa pagina.</p>

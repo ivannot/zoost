@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
-<meta name="description" content="Una piccola famiglia di estensioni Chrome, una per prodotto Zoho. Portano quello che hai costruito su file leggibili, e ti disegnano la mappa.">
+<meta name="description" content="Una famiglia di estensioni Chrome, una per prodotto Zoho. Trasformano ciò che hai costruito in file leggibili e ne mostrano la mappa.">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/">
 <link rel="alternate" hreflang="en" href="https://zoost.it/">
@@ -17,7 +17,7 @@
 <meta name="theme-color" content="#0d121c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno">
-<meta property="og:description" content="Una piccola famiglia di estensioni Chrome, una per prodotto Zoho. Portano quello che hai costruito su file leggibili, e ti disegnano la mappa.">
+<meta property="og:description" content="Una famiglia di estensioni Chrome, una per prodotto Zoho. Trasformano ciò che hai costruito in file leggibili e ne mostrano la mappa.">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/">
 <meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
@@ -54,9 +54,9 @@
 <div class="hero">
   <div class="wrap">
     <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E con Zoost puoi vederlo tutto insieme.</span></h1>
-    <p class="lead">Zoho te lo fa guardare un pezzo alla volta, dentro una scheda del browser. Zoost porta
-      l'org intera sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa:
-      chi chiama chi, chi dipende da chi e cosa non serve più a nessuno.</p>
+    <p class="lead">In Zoho puoi guardare un oggetto alla volta, dentro una scheda del browser. Zoost porta
+      l'intera org sul tuo disco, in file che puoi aprire con qualsiasi editor, e ti mostra la mappa:
+      chi chiama chi, quali elementi dipendono da altri e quali non vengono più usati.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">I workbench</a>
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
@@ -74,16 +74,15 @@
 <section id="what-moves">
   <div class="wrap">
     <h2>Stai per cambiare una funzione</h2>
-    <p class="lead" style="margin-top:-6px">Cos'altro si muove?</p>
+    <p class="lead" style="margin-top:-6px">Che altro viene coinvolto?</p>
     <pre class="dep"><b>Build invoice</b>
 ├─ On deal won         <i>automazione</i>
 ├─ Refresh pricebooks  <i>pulsante</i>
 └─ Dunning run         <i>schedulazione</i></pre>
-    <p class="note" style="margin-top:16px">A quella sola funzione arrivano tre cose di natura diversa:
-      un'automazione dietro un workflow, un pulsante che qualcuno ha aggiunto a un modulo e una
-      schedulazione. Zoho te le mostra una alla volta, ognuna in una schermata diversa - se già sai di
-      doverle cercare. Questo è il workspace di test: puoi aprirlo in un minuto e andare a vedere la
-      stessa funzione.</p>
+    <p class="note" style="margin-top:16px">Quella singola funzione viene richiamata da tre elementi diversi:
+      un'automazione collegata a un workflow, un pulsante aggiunto a un modulo e una schedulazione.
+      Zoho li mostra uno alla volta, in tre schermate diverse, e solo se sai già dove cercarli. Nel
+      workspace di esempio puoi aprire la stessa funzione e verificare tutto in un minuto.</p>
     <div class="cta" style="margin-top:18px">
       <a class="btn p" href="/it/try">Apri il workspace di test →</a>
       <span class="meta">dati inventati · nessuna org Zoho · niente da collegare</span>
@@ -139,14 +138,14 @@
       <figure class="shot">
         <img src="/img/crm-preview.webp?v=bc4de7c7e1" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il pannello Zoost accanto a Zoho CRM: sopra l'elenco delle funzioni, sotto il tab Details di quella selezionata - chi la chiama, cosa sta fallendo in Zoho, quanto è lunga.">
-        <figcaption><b>Zoost CRM.</b> Tutta l'org in un elenco, e sotto quello che si sa della funzione che hai scelto: chi la chiama, dove è usata, cosa sta fallendo in Zoho, quanto è lunga. Il sorgente sta nel tab accanto, dove le chiamate che risolvono a una funzione che hai sono link per arrivarci.</figcaption>
+        <figcaption><b>Zoost CRM.</b> Tutta l'org in un elenco. Sotto trovi ciò che sappiamo della funzione selezionata: chi la chiama, dove viene usata, quali errori segnala Zoho e quanto è lunga. Il codice sorgente è nella scheda accanto; ogni chiamata che corrisponde a una funzione presente nell'org diventa un link per raggiungerla.</figcaption>
       </figure>
 
       <figure class="shot">
         <img src="/img/crm-graph.webp?v=a667ca20d1" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il grafo delle chiamate di Zoost: una funzione al centro e intorno tutte quelle che la chiamano, disegnato sull'org intera.">
-        <figcaption><b>La stessa domanda, disegnata.</b> Una funzione, chi la chiama e chi chiama lei -
-          sull'org intera, invece che una schermata alla volta.</figcaption>
+        <figcaption><b>La stessa risposta, in forma grafica.</b> Una funzione, tutte quelle che la chiamano
+          e tutte quelle che vengono chiamate da lei, ricavate dall'intera org invece che da una schermata alla volta.</figcaption>
       </figure>
     </div>
 </section>
@@ -161,15 +160,16 @@
           Continui a lavorare dove hai sempre lavorato: questa è solo la finestra da cui lo vedi.</p>
       </div>
       <div>
-        <h3>File di testo, e il Git è il tuo</h3>
+        <h3>File di testo, pronti per Git</h3>
         <p>Una cartella che scegli tu, piena di file leggibili con qualsiasi editor: sorgenti, JSON, SQL.
           Mettila sotto controllo di versione e <code>git diff</code> risponde a
-          <em>cos'è cambiato il mese scorso</em> - una domanda a cui né l'uno né l'altro prodotto
-          sanno rispondere su sé stessi.</p>
+          <em>cos'è cambiato il mese scorso</em> - una domanda a cui nessuno dei due prodotti sa
+          rispondere da solo.</p>
       </div>
       <div>
         <h3>Tutto insieme, in un colpo solo</h3>
-        <p>Cerchi ovunque in una volta sola, segui un nome fin dove viene usato davvero, passi tutto quanto a un collega sotto forma di un documento unico.</p>
+        <p>Cerchi dappertutto con una sola ricerca, segui ogni nome fino ai punti in cui viene usato e
+          condividi con un collega un unico documento che raccoglie tutto.</p>
       </div>
       <div>
         <h3>Ti dà i numeri, non i giudizi</h3>
@@ -209,12 +209,12 @@
     <p class="note" style="margin-top:26px">Vuoi entrare nel merito - quali endpoint, cosa lo manda in crisi, come viene firmata una release?
       Sta tutto sulla <a href="/it/nerd">pagina nerd</a>, che è dove deve stare.</p>
     <p class="note" style="margin-top:14px">Lo costruisce e lo mantiene una persona sola, con un aiuto tutt'altro che secondario da Claudio
-      su design, codice e testi. Le decisioni, e la responsabilità di come vengono, restano mie.</p>
+      su design, codice e testi. Le decisioni finali e la responsabilità del risultato restano mie.</p>
   
       <figure class="shot">
         <img src="/img/analytics-er.webp?v=af0a04683f" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il diagramma ER di un workspace Zoho Analytics: le tabelle come riquadri con le colonne, unite dalle relazioni.">
-        <figcaption><b>Zoost Analytics.</b> Lo stesso tipo di strumento un prodotto più in là: il workspace disegnato, ogni join scritto come lo scrive Zoho Analytics.</figcaption>
+        <figcaption><b>Zoost Analytics.</b> Lo stesso approccio applicato a un altro prodotto: il workspace diventa un diagramma e ogni join conserva la forma usata da Zoho Analytics.</figcaption>
       </figure>
     </div>
 </section>
@@ -228,9 +228,9 @@
       <tbody>
         <tr><td class="k">Cosa legge</td><td>Solo configurazione: codice, definizioni dei campi, automazioni, la struttura di un workspace. <b>Mai i dati veri e propri</b>: in Zoho CRM né contatti, né trattative, né note; in Zoho Analytics mai le righe dentro una tabella.</td></tr>
         <tr><td class="k">Cosa scrive</td><td>Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa. Una chiamata è una <b>POST</b> e nel suo URL c'è scritto <code>CREATE</code>: <code>ZDBCreateERD.ma</code>, quella che restituisce il modello ER di un workspace Zoho Analytics ed è la stessa che fa la schermata dei diagrammi di quel prodotto. È scritta qui invece di essere lasciata trovare: da un browser si può affermare che cosa Zoost <i>manda</i>, mai che cosa il server ne faccia. Endpoint per endpoint sulla <a href="/it/nerd">pagina per smanettoni</a>.</td></tr>
-        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi la usa, e basta. Nessun account, nessuna telemetria, e niente esce se non lo manda lei: una domanda a un provider AI, o una <a href="/report" hreflang="en">segnalazione</a> letta per intero.</td></tr>
+        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi usa Zoost, e basta. Nessun account, nessuna telemetria: esce solo ciò che la persona decide di inviare, cioè una domanda a un provider AI o una <a href="/report" hreflang="en">segnalazione</a> che può leggere per intero prima dell'invio.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
-        <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi; non può fare niente che lei non potrebbe fare.</td></tr>
+        <tr><td class="k">Cosa può vedere</td><td>Esattamente ciò che quella persona può già vedere dentro Zoho. Zoost usa la stessa sessione e gli stessi permessi, quindi non può accedere a niente di più.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Entrambe chiedono i domini della propria piattaforma in ogni data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code> e <code>zoost.it</code>. Zoost per Zoho CRM aggiunge i data centre sandbox, ed entrambe aggiungono le due shell di suite - <code>one.zoho.*</code> e <code>crmplus.zoho.*</code>, con le controparti <code>one.zohocloud.ca</code> e <code>crmplus.zohocloud.ca</code> per il Canada, che è una famiglia diversa per quanto si somiglino. Il ponte che legge la tua org viene iniettato solo nei frame che stanno sul dominio della sua piattaforma: dentro Zoho One o Zoho CRM Plus la tua org è una pagina come le altre, in un frame suo, e quel frame è l'unica cosa che le estensioni leggono. Trovarlo costa una riga che gira in ogni frame della scheda e risponde con l'indirizzo di quel frame - lì non viene letto altro, e non esce niente dal browser. I due host AI si raggiungono solo se qualcuno accende l'assistente. E su <code>zoost.it</code> non gira niente di nostro finché non premi <b>Segnala un problema</b>: apre <a href="/report">la pagina della segnalazione</a> (in inglese: è una sola, così la segnalazione che arriva è in una lingua sola) e ci scrive dentro il testo, così lo leggi prima che parta qualsiasi cosa. Il manifest fa fede.</td></tr>
 <tr><td class="k">Come verificarlo</td><td>Ventuno file di JavaScript in chiaro per Zoho CRM, tredici per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma; un comando verifica il file pubblicato.</td></tr>
         <tr><td class="k">Come giudicarlo senza di me</td><td>Ogni comando sta sulla <a href="/it/nerd#check-it-yourself">pagina nerd</a>: cosa ha costruito GitHub, lo stesso archivio ricostruito sulla tua macchina, e il registro di quello che è stato inviato allo Store - comprese le voci che dichiara di non poter dimostrare, e perché. Il sorgente è abbastanza corto da leggere in una volta sola, che è il motivo per cui viene distribuito non minificato.</td></tr>

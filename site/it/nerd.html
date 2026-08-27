@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
-<meta name="description" content="Su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita e firmata una release, e come controllarlo senza fidarti di me.">
+<meta name="description" content="Su quali interfacce si basa Zoost, cosa si rifiuta di fare, come viene costruita e firmata una release e come verificarlo in prima persona.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/nerd">
 <meta property="og:title" content="La pagina nerd - come funziona davvero Zoost">
-<meta property="og:description" content="Su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita e firmata una release, e come controllarlo senza fidarti di me.">
+<meta property="og:description" content="Su quali interfacce si basa Zoost, cosa si rifiuta di fare, come viene costruita e firmata una release e come verificarlo in prima persona.">
 <meta property="og:image" content="https://zoost.it/img/og.png?v=d7cd318f9b">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/nerd">
@@ -47,8 +47,8 @@
 <div class="wrap">
 
   <h1>La pagina nerd</h1>
-  <p class="sub">Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge
-    Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ognuna di
+  <p class="sub">Tutto ciò che le pagine di prodotto lasciano fuori di proposito: su quali interfacce si basa
+    Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ciascuna di
     queste cose senza doverti fidare della mia parola.</p>
 
   <div class="toc">
@@ -65,7 +65,7 @@
   </div>
 
   <h2 id="undocumented-interfaces">Interfacce non documentate</h2>
-  <p>Né Zoho CRM né Zoho Analytics pubblicano API per quasi niente di quello che Zoost legge. Le due
+  <p>Né Zoho CRM né Zoho Analytics pubblicano API per gran parte di ciò che Zoost legge. Le due
     estensioni usano gli stessi endpoint interni che usano le interfacce web dei prodotti, con la sessione che hai già aperta.</p>
   <p>Questo ha conseguenze che vale la pena conoscere prima di costruirci intorno un processo.</p>
   <div class="box">
@@ -82,25 +82,26 @@
   </div>
   <div class="box">
     <h3>Come legge Zoho Analytics</h3>
-    <p>Prende il workspace dall'URL della scheda su cui sei - <code>/workspace/{id}</code> - quindi non c'è niente da estrarre, quindi niente da sbagliare. Il CSRF segue il metodo HTTP invece del percorso:
+    <p>Ricava il workspace dall'URL della scheda aperta - <code>/workspace/{id}</code> - senza dover
+      estrarre altri identificativi. Il CSRF segue il metodo HTTP invece del percorso:
       ogni POST porta <code>X-ZCSRF-TOKEN</code>, nessuna GET lo fa, misurato su una cattura di 104
       richieste senza eccezioni.</p>
     <p>Il modello ER viene da una POST a <code>ZDBCreateERD.ma</code>. Il suo URL contiene
-    <code>CREATE</code>, e quello che torna indietro è il modello: la schermata del diagramma di Zoho
-    Analytics fa la stessa chiamata. Quello che si può stabilire da qui è cosa fa Zoost - una richiesta,
-    e la risposta tenuta sul tuo disco. Cosa conservi un server dopo non è una cosa che un'estensione
-    del browser possa dimostrare, quindi non viene affermata: se quella distinzione conta per la tua
+    <code>CREATE</code>, ma restituisce il modello: la schermata del diagramma di Zoho Analytics usa la
+    stessa chiamata. Da qui si può stabilire che Zoost invia una richiesta e conserva la risposta sul
+    tuo disco. Un'estensione del browser non può dimostrare cosa conservi poi il server, quindi Zoost
+    non lo afferma. Se questa distinzione conta per la tua
     valutazione, confronta il workspace prima e dopo, e l'audit trail se il tuo piano ne ha uno. È
     nominata qui perché chi controlla alla lettera l'affermazione «non scrive» la troverà, e trovarla
-    non annunciata sembrerebbe una bugia colta sul fatto invece di quello che è.</p>
+    senza averla vista dichiarata, potrebbe considerarla una contraddizione.</p>
   </div>
 
   <div class="box">
     <h3>Mandare una segnalazione</h3>
     <p>L'unico percorso qui che finisce in un posto pubblico, quindi è scritto per esteso invece che
       riassunto. Il pannello costruisce il testo, lo oscura e apre <a href="/report">quella pagina</a>
-      (in inglese, ce n'è una sola) - attraverso il DOM, mai attraverso l'indirizzo, perché un URL
-      finisce nella cronologia del browser e si sincronizza con essa. Tu lo leggi, puoi modificarlo, e
+      (in inglese, ce n'è una sola) tramite il DOM, mai tramite l'indirizzo, perché un URL
+      finisce nella cronologia del browser e può essere sincronizzato. Puoi leggere e modificare il testo, e
       niente si muove finché non premi Invia.</p>
     <p>Quello a cui Invia manda i dati è <code>/api/report</code>, e <b>quell'endpoint è in questo
       repository</b>: <a href="https://github.com/ivannot/zoost/blob/main/site/_worker.js">site/_worker.js</a>,
@@ -109,21 +110,20 @@
       questo. Rifiuta se non passa il controllo anti-abuso, limita le richieste per indirizzo tramite
       un <i>hash con sale</i>, così niente di quello che questo sito scrive può essere ricondotto a un
       indirizzo - nemmeno da chi legge l'archivio. Cloudflare, che serve la pagina, l'indirizzo lo vede
-      come lo vede qualsiasi host, e al controllo anti-abuso viene passato perché è esattamente a
-      quello che serve, oscura di nuovo il
-      testo mentre passa - di un client non ci si fida due volte - limita la dimensione e ricostruisce
+      come qualsiasi servizio di hosting. L'indirizzo viene passato al controllo anti-abuso soltanto
+      per quella verifica. Il server oscura di nuovo il testo durante il passaggio, limita la dimensione e ricostruisce
       il corpo della issue da pezzi convalidati, dentro un recinto da cui il contenuto non può uscire.
       Diventa una issue pubblica su GitHub, sotto il mio account, e tu ne ricevi il link.</p>
   </div>
 
   <h2 id="certain-or-stopped">O certi, o fermi</h2>
-  <p>Nessun ciclo di tentativi contro un'ipotesi. Nessun aggancio a un'etichetta che cambia con la
-    lingua dell'interfaccia. Nessun click sintetico dentro una pagina che non è mia. Dove la strada non è certa, la funzione si ferma e te lo dice con precisione, invece di provarci e
+  <p>Nessun ciclo di tentativi basato su un'ipotesi. Nessun aggancio a un'etichetta che cambia con la
+    lingua dell'interfaccia. Nessun clic simulato dentro una pagina di terzi. Quando il percorso non è certo, la funzione si ferma e lo segnala con precisione, invece di provarci e
       sperare.</p>
   <p>È il motivo per cui il <b>Go to</b> sulle funzioni di Zoost CRM è stato rimosso nella 1.1.0: guidava l'editor
     di Zoho cliccando un'etichetta tradotta «Modifica funzione», ci riprovava dieci volte e poi si arrendeva con il messaggio sbagliato. Al suo posto c'è <b>Functions in Zoho</b>, che naviga per URL
     costruito, e l'ultimo click - quello che dipende dalla lingua - lo fai tu. Per un po' ha riempito la
-    loro casella di ricerca, che era l'unica eccezione a questa regola, e quell'eccezione non c'è più:
+    casella di ricerca di Zoho, che era l'unica eccezione a questa regola. Ora anche quell'eccezione è stata rimossa:
     ogni richiesta che l'estensione manda a Zoho adesso è una lettura, e non le resta dentro nessuna
     chiamata che crei, modifichi o cancelli. Cosa faccia un server con una lettura è affare suo e non
     qualcosa che un client possa promettere, per questo la frase parla di cosa Zoost manda.</p>
@@ -153,8 +153,8 @@
   <h2 id="what-is-promised">Cosa è promesso e cosa no</h2>
   <p>Quelle interfacce interne non portano nessuna promessa di compatibilità. Zoho può cambiarne una
     senza preavviso e una funzionalità può smettere di funzionare da un giorno all'altro.</p>
-  <p>Niente è garantito - lo dice la licenza e lo dice questa pagina. Quello che viene offerto è
-    impegno: se qualcosa si rompe viene guardato e sistemato dove è possibile sistemarlo. A volte non lo sarà: allora la funzionalità dirà chiaramente che quella cosa non la può fare, invece di
+  <p>Niente è garantito, come dichiarano sia la licenza sia questa pagina. L'impegno è esaminare ciò che
+    si rompe e correggerlo quando possibile. A volte non lo sarà: in quel caso la funzionalità dichiarerà chiaramente il proprio limite, invece di
     tirare a indovinare. <b>Il mirror che hai già sul disco continua a funzionare comunque</b>, perché è
     fatto di file che si leggono con un editor qualsiasi.</p>
 
@@ -163,14 +163,14 @@
     <b>due volte</b> per dimostrare che il risultato è identico byte per byte, stampi il contenuto
     dell'archivio in un log pubblico e firmi un'attestazione di provenienza. L'archivio allegato alla
     Release <em>è</em> il file inviato al Chrome Web Store - mai una build fatta su un portatile.</p>
-  <p>La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non
+  <p>La riproducibilità è il fondamento del processo, non un dettaglio decorativo: pubblicare uno SHA-256 non
     vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché
     <code>zip</code> memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del
     filesystem. Ora la build marca ogni file con la data del commit, ordina l'elenco dei file e passa
     <code>-X</code>.</p>
   <p>Ogni GitHub Action è agganciata a un hash di commit, mai a un tag che si può spostare. Una catena
     di fornitura che finisce con «e poi quello che dice quel tag oggi» non è una catena.</p>
-  <p>Che è anche la risposta a una domanda legittima, detta chiaramente invece di lasciarla indovinare:
+  <p>Questo risponde anche a una domanda legittima, in modo esplicito:
     questo codice è stato scritto con l'assistenza pesante di un modello linguistico e riletto riga per
     riga, ed è anche per quello che la catena qui sopra ha la forma che ha.</p>
   <p>Ventuno file per Zoho CRM e

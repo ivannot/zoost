@@ -51,8 +51,10 @@
     <p class="eyebrow"><b>Zoost Analytics</b><span>Zoost - workbench for Zoho Analytics</span></p>
       <h1>Centinaia di viste, nessun modo<br>di vederne la forma.<br>
       <span>Zoost te ne disegna la mappa.</span></h1>
-    <p class="lead">Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella e l'SQL dietro ogni query table come file su cui puoi fare un diff. Poi il diagramma ER, cosa legge da cosa - e l'elenco di quello che sembra non leggere più nessuno,
-      con accanto scritto cosa quell'elenco non riesce a vedere.</p>
+    <p class="lead">Per ogni vista trovi tipo e date; per ogni tabella, colonne e chiavi esterne. L'SQL di
+      ciascuna query table diventa un file su cui puoi fare un diff. In più hai il diagramma ER, le
+      dipendenze tra le viste e l'elenco degli elementi che sembrano non essere più usati, insieme ai
+      limiti dichiarati di quell'analisi.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
@@ -76,12 +78,12 @@
           dipende una vista, una vista per volta. Non ti dice che forma ha l'insieme.</p>
       </div>
       <div>
-        <h3>Una storia per tutto quello che hai scaricato</h3>
+        <h3>Uno storico per tutto ciò che hai scaricato</h3>
         <p>Zoho Analytics non tiene lo storico di niente: cambi l'SQL di una query table, una colonna o una
-          relazione e lo stato precedente non esiste più. Il mirror è fatto di file che si leggono con un editor
-          qualsiasi (JSON e SQL). Mettici Git sopra e <code>git diff</code> risponde a <em>cos'è cambiato in questo workspace il mese scorso</em> - la domanda che conta di più il giorno in cui un numero si muove e
-          nessuno sa perché. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì e li cerchi e li passi a un collega
-          comunque.</p>
+          relazione e lo stato precedente scompare. Il mirror è composto da file JSON e SQL leggibili con
+          qualsiasi editor. Aggiungi Git e <code>git diff</code> risponde a <em>cos'è cambiato in questo
+          workspace il mese scorso</em>: la domanda più importante quando un numero cambia e nessuno sa
+          perché. <b>Git resta facoltativo</b>: anche senza, puoi cercare quei file e condividerli con un collega.</p>
       </div>
       <div>
         <h3>L'SQL è il sorgente</h3>
@@ -91,27 +93,28 @@
       </div>
       <div>
         <h3>Prima di cancellare qualcosa</h3>
-        <p>Chiedere a Zoho Analytics da cosa dipende una vista, trecento volte a mano, è il modo in cui quella
-          domanda non viene mai fatta. Zoost la fa una volta sola per tutto - e chiama la risposta un
-          <em>candidato</em>, perché un link condiviso o un export schedulato quel grafo non li vede.</p>
+        <p>Chiedere a mano da cosa dipende ciascuna di trecento viste significa, quasi sempre, non farlo affatto.
+          Zoost interroga tutte le viste in una volta sola e presenta il risultato come un elenco di
+          <em>candidati</em>, perché il grafo non vede link condivisi o export schedulati.</p>
       </div>
       <div>
         <h3>Cosa hai costruito tu e cosa ci ha messo Zoho</h3>
         <p>In un workspace collegato metà delle tabelle sono arrivate da una sincronizzazione e non sono mai state
-          tue. Il modello ER di Zoho Analytics sa quali, e l'elenco delle viste le segna - così quello che conti
-          è il tuo lavoro, non tutto quanto.</p>
+          tue. Il modello ER di Zoho Analytics permette di riconoscerle e Zoost le segnala nell'elenco, così
+          puoi distinguere ciò che hai costruito tu dal resto del workspace.</p>
       </div>
       <div>
         <h3>Più workspace, uno accanto all'altro</h3>
-        <p>Una cartella di lavoro, una sottocartella per workspace, ognuno legato a quello da cui è arrivato. Se fai consulenza ne tieni rispecchiati quattro insieme, e il pannello prende il workspace dalla
-          scheda su cui sei: a quale cliente stai guardando risponde il browser, non la tua memoria.</p>
+        <p>Una cartella di lavoro, una sottocartella per workspace, ciascuna legata all'originale. Se fai
+          consulenza puoi tenerne rispecchiati quattro insieme: il pannello riconosce il workspace dalla
+          scheda aperta, senza affidarsi alla tua memoria per capire su quale cliente stai lavorando.</p>
       </div>
     </div>
   
       <figure class="shot">
         <img src="/img/analytics-panel.webp?v=6face73fe7" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il pannello Zoost accanto a Zoho Analytics: ogni vista del workspace con tipo, colonne e date, e sotto l'SQL della query table selezionata.">
-        <figcaption><b>Tutto il workspace in un elenco</b> - tipo, cartella, numero di colonne e le due date - con sotto l'SQL di quello che selezioni.</figcaption>
+        <figcaption><b>Tutto il workspace in un elenco</b>: tipo, cartella, numero di colonne e due date distinte. Sotto compare l'SQL della vista selezionata.</figcaption>
       </figure>
     </div>
 </section>
@@ -128,8 +131,8 @@
             <span class="k">dentro i nomi delle colonne</span>, così trovi quale tabella porta un certo campo.</li>
           <li>Quando è cambiato il design e quando si sono aggiornati i dati, tenuti distinti: sono due fatti
             diversi.</li>
-          <li>Le tabelle arrivate da una sincronizzazione sono segnate, così quello che conti è il <em>tuo</em>
-            lavoro.</li>
+          <li>Le tabelle provenienti da una sincronizzazione sono segnalate, così puoi distinguere il
+            <em>tuo</em> lavoro dal resto.</li>
         </ul>
       </div>
 
@@ -139,7 +142,7 @@
           <li>Colonne e tipi di dato Zoho per ogni tabella e query table.</li>
           <li>Un report non ha colonne sue, quindi Zoost risale a quello su cui è costruito e ne mostra la
             struttura - <span class="k">dicendoti di chi è</span>.</li>
-          <li><span class="k">Le chiavi esterne di ogni colonna, in tutte e due le direzioni</span>: dove punta lei e chi punta a lei. Ogni nome è cliccabile.</li>
+          <li><span class="k">Le chiavi esterne di ogni colonna, in entrambe le direzioni</span>: dove punta la colonna e quali altre colonne puntano a questa. Ogni nome è cliccabile.</li>
         </ul>
       </div>
 
@@ -149,12 +152,12 @@
           <li>Un <code>.sql</code> per query table - l'unica cosa qui dentro che qualcuno ha scritto davvero, la parte su cui <code>git diff</code> ha qualcosa da dire.</li>
           <li>Da qualsiasi vista, <b>Open in Zoho ↗</b>: il pannello costruisce l'indirizzo di quella
             vista e ti ci porta. Legge Zoho, non lo pilota.</li>
-          <li>Cerchi dentro tutte le query in una volta sola, dal pannello: il selettore <b>in: SQL</b>
-            accanto alla casella di ricerca entra dentro tutte e ti mostra la riga che corrisponde. Sono
+          <li>Puoi cercare in tutte le query con una sola operazione dal pannello: il selettore <b>in: SQL</b>
+            accanto alla casella di ricerca esamina ogni query e mostra la riga corrispondente. Sono
             anche file sul tuo disco, quindi <code>grep</code> e il tuo editor rispondono alla stessa
             domanda.</li>
-          <li>Ognuna registra le tabelle che legge e quali loro colonne tocca, così «se tolgo questa colonna, cosa
-            si rompe» ha una risposta.</li>
+          <li>Per ogni query table Zoost registra le tabelle lette e le colonne coinvolte, così puoi rispondere
+            alla domanda: «Se elimino questa colonna, che cosa si rompe?»</li>
         </ul>
       </div>
 
@@ -162,7 +165,7 @@
         <h3>Un diagramma ER che resta leggibile</h3>
         <ul>
           <li>Tabelle come riquadri, relazioni come frecce, il join scritto esattamente come lo scrive Zoho.</li>
-          <li>Metti a fuoco una tabella e ti allontani da lì; clicca un arco per isolare una singola relazione.</li>
+          <li>Metti a fuoco una tabella ed espandi il diagramma a partire da lì; fai clic su un arco per isolare una singola relazione.</li>
           <li>Spaziatura e dimensione delle etichette si regolano al volo con due slider. Salvi in PDF e lo
         stampi grande quanto una parete.</li>
         </ul>
@@ -182,8 +185,8 @@
       <div class="card">
         <h3>Export e un assistente opzionale</h3>
         <ul>
-          <li>Tutto il workspace come un unico file HTML, o in Markdown - che si porta dietro i vincoli del dialetto
-            SQL di Zoho Analytics, così un assistente non scrive query che non possono girare.</li>
+          <li>Tutto il workspace in un unico file HTML oppure in Markdown, insieme ai vincoli del dialetto
+            SQL di Zoho Analytics, per evitare che un assistente proponga query incompatibili.</li>
           <li>Una finestra dove decidi tu, sezione per sezione, cosa può uscire dalla tua macchina.</li>
           <li>Con una chiave tua, un assistente che esplora <em>il tuo</em> workspace - e mai le tue righe, perché
             Zoost non le legge.</li>
@@ -196,13 +199,13 @@
       <figure class="shot">
         <img src="/img/analytics-columns.webp?v=fab266c67b" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Le colonne di una tabella con i tipi di dato di Zoho, e le chiavi esterne che entrano e che escono.">
-        <figcaption><b>Una colonna alla volta.</b> Il tipo come lo dichiara Zoho Analytics, con le sue chiavi esterne nelle due direzioni: cosa punta questa colonna e chi punta a lei.</figcaption>
+        <figcaption><b>Una colonna alla volta.</b> Il tipo dichiarato da Zoho Analytics e le chiavi esterne in entrambe le direzioni: dove punta questa colonna e quali colonne puntano a lei.</figcaption>
       </figure>
     
       <figure class="shot">
         <img src="/img/analytics-er.webp?v=af0a04683f" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il diagramma ER del workspace: le tabelle come riquadri con le loro colonne, unite dalle relazioni.">
-        <figcaption><b>Il diagramma ER.</b> Ogni join scritto come lo scrive Zoho Analytics, non riscritto con parole mie - metti a fuoco una tabella e cammina da lì.</figcaption>
+        <figcaption><b>Il diagramma ER.</b> Ogni join conserva la forma usata da Zoho Analytics. Metti a fuoco una tabella e parti da lì per esplorare le relazioni.</figcaption>
       </figure>
     </div>
 </section>
@@ -215,10 +218,9 @@
         <h3>Non chiama nessun endpoint di scrittura</h3>
         <p>Non crea, non modifica e non cancella nessuna vista. Un endpoint che chiama è una POST il cui
           URL contiene <code>CREATE</code> - <code>ZDBCreateERD.ma</code>, la chiamata che restituisce il
-          modello ER del workspace, la stessa che fa la schermata del diagramma di Zoho Analytics. Da qui
-          esce quella richiesta; cosa conservi un server dopo non è una cosa che un'estensione possa
-          dimostrare, e <a href="/it/nerd#undocumented-interfaces">la pagina nerd</a> lo dice invece di
-          sorvolare.</p>
+          modello ER del workspace, la stessa usata dalla schermata del diagramma di Zoho Analytics. Zoost
+          può dimostrare quale richiesta invia, non cosa faccia poi il server: la
+          <a href="/it/nerd#undocumented-interfaces">pagina nerd</a> esplicita questo limite.</p>
       </div>
       <div>
         <h3>Non legge mai le tue righe</h3>
@@ -229,7 +231,7 @@
       <div>
         <h3>Le definizioni dei report non sono coperte</h3>
         <p>Quali colonne un grafico mette su quale asse e come le aggrega, arriverebbero saldate insieme alla serie
-          calcolata - i tuoi dati. Quindi quell'endpoint non viene chiamato, e questo buco resta scritto qui.</p>
+          calcolata, cioè ai tuoi dati. Per questo Zoost non chiama quell'endpoint e dichiara qui il limite.</p>
       </div>
       <div>
         <h3>Non valida l'SQL</h3>
@@ -264,7 +266,7 @@
       di lavoro un workspace di dati inventati, così apri l'albero, i diagrammi e gli export prima di puntare
       Zoost su qualcosa di tuo. Nessun tab Zoho, nessun account: è generato e non scaricato, tutto ciò che
       parlerebbe con la piattaforma è disabilitato e lo cancelli come qualsiasi altro workspace. <a href="/it/try"><b>Perché conta e come valutarlo così &rarr;</b></a></p>
-    <p class="note" style="margin-top:24px">Su cosa si regge, i due endpoint che deliberatamente non chiama mai e come verificarlo: <a href="/it/nerd">la pagina nerd</a>.</p>
+    <p class="note" style="margin-top:24px">Su quali interfacce si basa, quali due endpoint esclude deliberatamente e come verificarlo: <a href="/it/nerd">la pagina nerd</a>.</p>
     <p class="note" style="margin-top:8px">Gira tutto dentro il tuo browser, con la sessione Zoho che hai già aperta. Nessun account, nessuna telemetria, nessun server fra te e il tuo workspace. Le uniche cose che escono dalla tua macchina sono
       quello che scegli di mandare a un provider AI e una segnalazione che hai letto e inviato tu - mai le righe delle tue tabelle.</p>
   

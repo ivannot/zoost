@@ -47,10 +47,9 @@
 <div class="wrap">
 
   <h1>AI e Zoost</h1>
-  <p class="sub">Il workbench è completo anche senza un modello AI: la maggior parte delle volte si
-    usa così. Questa pagina parla degli altri casi: cosa può fare un assistente con quello che Zoost ha
-    già scritto su disco, cosa aggiunge quello integrato che un file non può dare e a che punto
-    non serve più una API key.</p>
+  <p class="sub">Il workbench è completo anche senza un modello AI, e nella maggior parte dei casi si
+    usa proprio così. Questa pagina spiega cosa può fare un assistente con i file già scritti da Zoost,
+    cosa offre in più quello integrato e quando una API key non serve affatto.</p>
   <p class="note" data-it-only>I nomi dei controlli restano in inglese, perché l'estensione è in
     inglese: <b>Export</b>, <b>Settings</b>, <b>Forget</b> sono i pulsanti che troverai davvero.</p>
 
@@ -69,10 +68,10 @@
   </div>
 
   <h2 id="senza-niente-di-tutto-questo">Funziona senza niente di tutto questo</h2>
-  <p>Zoost rispecchia in file di testo sulla tua macchina quello che hai costruito dentro Zoho CRM o
-    Zoho Analytics, poi ti dà le cose che la piattaforma non dà: l'albero di tutto insieme, diagrammi
-    che puoi mettere a fuoco e stampare, la ricerca testuale su ogni file, un audit che ti dice cosa
-    non è più referenziato da niente e due export.</p>
+  <p>Zoost trasforma ciò che hai costruito in Zoho CRM o Zoho Analytics in file di testo sulla tua
+    macchina. Su quei file costruisce ciò che manca nella piattaforma: una vista d'insieme, diagrammi
+    esplorabili e stampabili, la ricerca su tutti i file, un audit degli elementi che non risultano più
+    referenziati e due tipi di export.</p>
   <p>Niente di tutto questo passa da un modello, da una chiave o da un account. Se non apri mai
     l'assistente non ti manca nulla: è stato aggiunto a un workbench che già funzionava. Lo dico
     all'inizio e non alla fine perché uno strumento che ha senso solo dopo che hai comprato una chiave
@@ -88,16 +87,16 @@
   </div>
   <div class="box">
     <h3>Markdown - per un modello</h3>
-    <p>Lo stesso contenuto nella forma che un modello linguistico digerisce senza fatica: titoli,
-      tabelle, blocchi di codice, niente grafica da attraversare. È il file che incolli in una chat.</p>
+    <p>Lo stesso contenuto in un formato facile da interpretare per un modello linguistico: titoli,
+      tabelle e blocchi di codice, senza elementi grafici da decodificare. È il file da allegare a una chat.</p>
   </div>
   <p>Prima di scrivere l'uno o l'altro, una finestra ti chiede cosa può finirci dentro - funzioni,
     schema dei moduli, dettaglio dei layout, relazioni, workflow, schedulazioni, connessioni, health -
     con il codice sorgente Deluge come voce a parte, segnalata, perché è la parte sensibile. Ci sono
     due preset, <b>Everything</b> e <b>Share-safe</b>. La scelta viene ricordata. Una sezione i cui
     dati sono più vecchi degli altri arriva già deselezionata, con la data e il motivo.</p>
-  <p>Un export è un file che esce dalla macchina. La decisione su cosa contiene si prende quindi una
-    volta sola, con calma, in un posto dove la vedi tutta.</p>
+  <p>Un export è un file destinato a uscire dalla macchina. Per questo scegli cosa includere in un'unica
+    finestra, con calma e con tutte le opzioni davanti.</p>
 
   <figure class="shot">
     <img src="/img/crm-export.webp?v=5d232b8ebe" width="1760" height="1100" loading="lazy" decoding="async"
@@ -109,24 +108,24 @@
   <p>Porti il file Markdown all'assistente che già usi - Claude, ChatGPT, Gemini, Copilot - e fai lì la
     tua domanda. Nel browser o nella sua app da computer o da telefono: è un
     file in ogni caso. Nessuna chiave, nessuna configurazione, niente da accendere dentro Zoost.</p>
-  <p>Funziona meglio di quanto la gente si aspetti. Preferisco dirlo piuttosto che aggirarlo. L'org
+  <p>Funziona meglio di quanto ci si aspetti, ed è importante dirlo chiaramente. L'org
     di esempio che Zoost porta con sé - i 296 file elencati uno per uno su <a href="/it/try">Prova</a>,
-    sorgenti Deluge compresi - sta in circa 200 KB di testo: un modello di oggi li tiene tutti
-    insieme senza fatica.</p>
+    sorgenti Deluge compresi - occupa circa 200 KB di testo, una quantità che un modello attuale può
+    gestire per intero senza difficoltà.</p>
   <p>Quindi se la domanda è "spiegami cosa fa questa funzione" oppure "riassumimi questi workflow per
     la nota di passaggio", questa strada ti dà un modello più grande, una vera finestra di chat, una
     conversazione che puoi tenere.</p>
   <div class="note">
     <p>C'è un limite strutturale, ed è quello che decide tutto il resto della pagina. L'export è una
-      fotografia con uno scope scelto prima. Quello che hai lasciato fuori è invisibile al modello in un
-      modo che il modello non ha modo di rilevare: quindi risponde lo stesso, con lo stesso tono
-      sicuro, su un'org di cui ha visto una parte.</p>
+      fotografia con un perimetro deciso in anticipo. Il modello non vede ciò che hai escluso e non può
+      nemmeno accorgersi dell'assenza: risponderà comunque, con la stessa sicurezza, anche se ha visto
+      solo una parte dell'org.</p>
   </div>
 
   <h2 id="cosa-aggiunge-l-assistente-integrato">Cosa aggiunge l'assistente integrato</h2>
-  <p>All'assistente dentro il pannello non viene consegnata l'org. Gli viene consegnato un
-    <b>vocabolario</b> - i nomi di quello che esiste - e una serie di <b>strumenti che leggono lo specchio
-    che hai sul disco</b>, con cui andarsi a prendere da solo il resto.</p>
+  <p>L'assistente nel pannello non riceve l'intera org. Riceve un <b>vocabolario</b>, cioè i nomi degli
+    elementi esistenti, e una serie di <b>strumenti che leggono il mirror sul disco</b>. Con questi può
+    recuperare da solo soltanto le informazioni necessarie.</p>
   <div class="box">
     <h3>Zoost - workbench for Zoho CRM</h3>
     <p class="tools"><code>list_functions</code> <code>get_function</code> <code>who_calls</code>
@@ -140,37 +139,36 @@
       <code>get_sql</code> <code>search_sql</code> <code>search_columns</code>
       <code>get_relations</code> <code>who_uses</code> <code>orphans</code></p>
   </div>
-  <p>Ogni chiamata che fa viene scritta nella chat mentre succede, così quello che ha letto è una cosa
-    che vedi invece di una cosa che dichiara. Ne derivano quattro conseguenze. Insieme sono tutta la
-    differenza.</p>
-  <p><b>La scala.</b> L'org non deve entrare da nessuna parte. Quello che viaggia con ogni messaggio è
+  <p>Ogni chiamata compare nella chat mentre avviene, così puoi vedere ciò che l'assistente ha letto
+    invece di doverti fidare di una dichiarazione. Da questo derivano quattro differenze concrete.</p>
+  <p><b>La scala.</b> Non occorre inviare l'intera org. Con ogni messaggio viaggia
     l'indice dei nomi, limitato a 72.000 caratteri per impostazione predefinita ma regolabile. Sotto
     il titolo della chat il pannello scrive la dimensione reale del workspace che hai aperto, in
     caratteri e token approssimativi.</p>
-  <p>Quando un'org è troppo grande per essere nominata per intero, cosa resta fuori è deciso, non
+  <p>Quando un'org è troppo grande per essere descritta per intero, ciò che resta fuori segue una regola precisa, non
     casuale. L'elenco delle funzioni non viene mai lasciato fuori - in Zoho Analytics, gli oggetti
-    dati - perché è il vocabolario a cui tutto il resto si riferisce. E quello che manca viene
+    dati - perché sono il vocabolario a cui tutto il resto si riferisce. Inoltre, ciò che manca viene
     dichiarato come mancante: così l'assistente non conclude che una cosa non esiste solo perché non
     gliel'hanno fatta vedere.</p>
   <p><b>Sa cosa stai guardando.</b> Selezioni una funzione, un workflow o una query table e chiedi
     "questo cosa fa?" senza premesse. La selezione fa parte della domanda.</p>
   <p><b>È sempre aggiornato.</b> Non c'è nessuna fotografia da rifare dopo il prossimo pull.</p>
-  <p><b>Sta dove nasce la domanda.</b> Nella pratica è la conseguenza che pesa di più ed è la più
+  <p><b>È disponibile dove nasce la domanda.</b> Nella pratica è il vantaggio più importante e anche il più
     facile da trascurare. Zoost esiste perché le domande su un'org smettano di dover arrivare a chi la
     amministra. Chi ha la domanda spesso non è chi costruirebbe un export, aprirebbe una chat e
-    scriverebbe il contesto: cliccherà una scheda, oppure chiederà a un collega. Un file sul disco
-    quel problema non lo risolve; una scheda sì.</p>
+    scriverebbe il contesto: più probabilmente aprirà una scheda o chiederà a un collega. Un file sul
+    disco non riduce questo attrito; una scheda integrata nel pannello sì.</p>
 
   <figure class="shot">
     <img src="/img/crm-ai.webp?v=59bbf20838" width="1760" height="1100" loading="lazy" decoding="async"
          alt="L'assistente dentro il pannello Zoost, con la riga di contesto sotto il titolo che mostra quanto viene spedito a ogni messaggio.">
-    <figcaption><b>L'assistente, nel pannello.</b> Sotto il titolo c'è la dimensione dell'indice che viaggia con ogni messaggio, in caratteri e token: la manopola e il suo costo nello stesso posto.</figcaption>
+    <figcaption><b>L'assistente, nel pannello.</b> Sotto il titolo trovi la dimensione dell'indice inviato con ogni messaggio, espressa in caratteri e token: il controllo e il relativo costo sono visibili nello stesso punto.</figcaption>
   </figure>
 
   <figure class="shot">
     <img src="/img/analytics-ai.webp?v=0a1279212c" width="1760" height="1100" loading="lazy" decoding="async"
          alt="L'assistente nel pannello Zoost Analytics, con gli strumenti che chiama elencati mentre li usa.">
-    <figcaption><b>Lo stesso assistente, un prodotto più in là.</b> In Zoho Analytics legge strutture, segue una chiave esterna e apre l'SQL di una query - nove strumenti; ogni chiamata viene scritta mentre succede.</figcaption>
+    <figcaption><b>Lo stesso assistente in Zoost Analytics.</b> Legge le strutture, segue una chiave esterna e apre l'SQL di una query attraverso nove strumenti; ogni chiamata compare mentre avviene.</figcaption>
   </figure>
 
   <h2 id="quando-serve-una-api-key">Quando serve una API key</h2>
@@ -187,15 +185,15 @@
       <tr><td class="k" data-label="La tua situazione">Preferisci che niente esca dalla macchina senza che tu guardi</td><td data-label="Cosa farei io">L'export - e leggi il file prima di incollarlo</td></tr>
     </tbody>
   </table>
-  <p>L'affermazione che vale la pena fare è più piccola di "c'è l'AI dentro", ed è quella che regge se
-    qualcuno va a controllare: <b>l'assistente integrato compra recupero e vicinanza, non
-    conoscenza.</b> Nessun fatto sulla tua org è raggiungibile da uno dei due e non dall'altro:
-    lo specchio è lo stesso specchio. Se suona come una promessa modesta, è quella esatta. Preferisco che tu
-    la trovi qui piuttosto che scoprirla dopo.</p>
+  <p>La promessa utile è più precisa di «c'è l'AI»: <b>l'assistente integrato offre accesso mirato alle
+    informazioni e vicinanza al punto in cui lavori, non conoscenze aggiuntive.</b> L'export e
+    l'assistente partono dallo stesso mirror e possono raggiungere gli stessi fatti. È una promessa
+    volutamente misurata, ma è quella corretta.</p>
 
   <h2 id="perche-una-chiave-tua">Perché una chiave tua</h2>
   <p>Perché non esiste un server Zoost. La richiesta parte dal tuo browser e arriva direttamente ad
-    Anthropic o a OpenAI, con la tua chiave e addebitata sul tuo account. Da me non passa niente: non c'è niente di mio da cui possa passare: nessun backend, nessun account, nessun log.</p>
+    Anthropic o a OpenAI, usando la tua chiave e il tuo account. Da me non passa nulla: Zoost non ha
+    backend, account o log attraverso cui far transitare la richiesta.</p>
   <div class="box">
     <h3>Cos'è una API key, visto che il resto della pagina la dà per scontata</h3>
     <p>Anthropic e OpenAI vendono due cose diverse. Una è la chat con cui parli già - Claude,
@@ -255,20 +253,20 @@
     parlando.</p>
 
   <h3>Quanto costa</h3>
-  <p>Non scrivo i prezzi: sono dei fornitori e si muovono. Quello che decide i tuoi è l'indice, che
+  <p>Non indico i prezzi perché appartengono ai fornitori e cambiano. Il tuo costo dipende dall'indice, che
     viaggia con ogni messaggio e di cui il pannello ti mostra la dimensione, più quanti passi di
     strumento serve una risposta. Le risposte degli strumenti sono limitate e ti dicono come restringere
     la domanda invece di restituire novecento righe. Il limite di spesa impostalo: quella parte non è
     una stima.</p>
-  <p>C'è un terzo fattore ed è quello che sfugge, perché il controllo che lo governa sembra pulizia.
+  <p>C'è un terzo fattore facile da trascurare, perché il relativo controllo sembra servire solo a fare pulizia.
     <b>Tutta la conversazione viene rimandata a ogni messaggio</b> - le tue domande, le risposte e ogni funzione, vista o file SQL che l'agente ha aperto strada facendo. Niente la sfoltisce. Quindi
     la decima domanda di un thread costa più della prima, per materiale che con quella
     domanda non c'entra niente.</p>
-  <p><b class="ui">Clear</b> è quello che governa questa cosa. Non serve solo a ripulire il riquadro:
-    è il controllo che hai su quanta storia ti stai portando dietro a pagamento. Svuotalo quando
-    cambi argomento e ti compra due cose insieme - una chiamata più economica e una risposta più a fuoco, perché il modello smette di leggere intorno a un'indagine precedente per arrivare alla tua
-    domanda. Anche cambiare workspace lo svuota, per un motivo diverso: quel thread parlava di
-    un'altra org.</p>
+  <p><b class="ui">Clear</b> gestisce proprio questo aspetto. Non si limita a ripulire il riquadro:
+    decide quanta cronologia viene reinviata e quindi pagata. Usalo quando cambi argomento: riduci il
+    costo della chiamata e aiuti il modello a concentrarsi sulla nuova domanda, senza trascinarsi dietro
+    un'indagine precedente. Anche il cambio di workspace svuota la chat, perché quella conversazione
+    riguardava un'altra org.</p>
 
   <h3>Proteggere la chiave</h3>
   <p>Di base la chiave è salvata in chiaro nel profilo del tuo browser. Chrome non dà alle estensioni
@@ -280,7 +278,7 @@
     nessun reset, nessun deposito. Se la perdi, il pulsante <b>Forget</b> di ciascun fornitore
     cancella quella chiave così puoi incollarne una nuova; <b>Remove the protection</b> toglie tutto
     con un controllo solo.</p>
-  <p>È disattivata di default, detta invece che decisa. Su una macchina personale una
+  <p>La protezione è disattivata per impostazione predefinita, così puoi decidere tu. Su una macchina personale una
     passphrase a sessione vale poco; su una condivisa vale molto. Nessuno tranne te può valutarlo.</p>
 
   <h2 id="cosa-non-fa">Cosa non fa</h2>

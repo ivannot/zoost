@@ -49,9 +49,10 @@
 <div class="hero">
   <div class="wrap">
     <p class="eyebrow"><b>Zoost CRM</b><span>Zoost - workbench for Zoho CRM</span></p>
-      <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
-    <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama chi, di quali moduli si tengono per mano e di quale automazione scatta e quando. Tutta la tua org Zoho CRM sul tuo disco, da cercare in un colpo solo - e senza che venga chiamato
-      un solo endpoint capace di crearci, modificarci o cancellarci qualcosa.</p>
+      <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>Con una mappa che mostra come è collegata.</span></h1>
+    <p class="lead">Ogni funzione Deluge diventa un file su cui puoi fare un diff. La mappa mostra chi chiama chi,
+      quali moduli sono collegati e quali automazioni scattano, e quando. Hai l'intera org Zoho CRM sul
+      tuo disco e puoi cercarla tutta insieme, senza chiamare alcun endpoint che crei, modifichi o cancelli dati.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
@@ -69,25 +70,25 @@
     <h2>Perché esiste</h2>
     <div class="why">
       <div>
-        <h3>Una storia per tutto quello che scarichi</h3>
+        <h3>Uno storico per tutto ciò che scarichi</h3>
         <p>Lo storico che Zoho CRM tiene copre una <em>funzione</em> per volta, solo dentro Zoho.
           Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow e cosa fanno
           scattare, schedulazioni, connessioni - arriva sul tuo disco come file che si leggono con un editor qualsiasi
-          (sorgenti, JSON). Mettici Git sopra e uno storico ce l'ha anche tutto il resto: un solo diff ti dice
-          <em>cos'è cambiato in quest'org il mese scorso</em>, su ogni tipo insieme, invece che una
+          (sorgenti e JSON). Aggiungi Git e anche tutto il resto acquista uno storico: un solo diff ti dice
+          <em>cos'è cambiato in quest'org il mese scorso</em>, considerando ogni tipo di elemento invece di una
           funzione alla volta. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì e li
-          cerchi e li passi a un collega comunque.</p>
+          puoi cercare o condividere con un collega.</p>
       </div>
       <div>
         <h3>Tutta l'org in un colpo solo</h3>
-        <p>Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un posto solo dove puoi
-          muoverti, e in un documento solo da girare a chi l'estensione non ce l'ha.</p>
+        <p>Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un unico posto da
+          esplorare, e in un unico documento da condividere con chi non ha l'estensione.</p>
       </div>
       <div>
         <h3>Non è un editor, per scelta</h3>
         <p>Zoost non sostituisce l'editor di Zoho. Continui a scrivere dove Zoho compila e valida.
-          Zoost è l'altra metà: muoversi, incrociare i riferimenti, la mappa e il controllo di salute per cui
-          nell'editor non c'è spazio - e, con Git, uno storico delle parti che Zoho non versiona.</p>
+          Zoost completa quel lavoro: ti permette di navigare, incrociare i riferimenti, leggere la mappa e
+          controllare lo stato dell'org. Con Git, conserva anche lo storico delle parti che Zoho non versiona.</p>
       </div>
       <div>
         <h3>Un grep su tutta l'org</h3>
@@ -97,8 +98,8 @@
       </div>
       <div>
                 <h3>Quei nomi che tocca sempre ripescare</h3>
-        <p>L'API name di una related list non è l'API&nbsp;name di nessuno dei due moduli - ed è quello che
-          <code>getRelatedRecords()</code> pretende. Zoost le cataloga tutte, con la chiamata già pronta da copiare.</p>
+        <p>L'API name di una related list non coincide con quello di nessuno dei due moduli, ma è proprio il
+          valore richiesto da <code>getRelatedRecords()</code>. Zoost li cataloga tutti e prepara la chiamata da copiare.</p>
       </div>
       <div>
         <h3>Più org, una accanto all'altra</h3>
@@ -114,7 +115,7 @@
       <figure class="shot">
         <img src="/img/crm-panel.webp?v=e98e234f0e" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il pannello laterale di Zoost aperto accanto a Zoho CRM, con l'elenco delle funzioni Deluge di un'org, i namespace e lo stato.">
-        <figcaption><b>L'idea è tutta qui.</b> Il pannello sta accanto a Zoho CRM ed elenca tutte le funzioni dell'org in una volta, con il namespace, la dimensione e se la copia locale è aggiornata.</figcaption>
+        <figcaption><b>L'idea è tutta qui.</b> Il pannello affianca Zoho CRM e mostra insieme tutte le funzioni dell'org, con namespace, dimensione e stato della copia locale.</figcaption>
       </figure>
     </div>
 </section>
@@ -130,7 +131,7 @@
           <li>Sorgente Deluge in cartelle per namespace, pronto per Git. Salvi, crei o cancelli una funzione in Zoho e la cartella ti segue mentre lavori.</li>
           <li><span class="k">Ricerca full-text su tutte le funzioni insieme</span> - quanto di più simile a un
             <code>grep</code> sulla tua org: qualcosa che Zoho non offre.</li>
-          <li>Ognuna si porta dietro la sua lunghezza, le chiamate API che fa, chi l'ha toccata per ultimo e le
+          <li>Per ognuna vedi la lunghezza, le chiamate API, chi l'ha modificata per ultimo e le
         connessioni che usa.</li>
         </ul>
       </div>
@@ -138,14 +139,14 @@
       <div class="card">
         <h3>La mappa</h3>
         <ul>
-          <li><span class="k">Graph</span>: chi chiama una funzione e cosa chiama lei. Ci cammini dentro a forza di clic.</li>
+          <li><span class="k">Graph</span>: chi chiama una funzione e quali funzioni vengono chiamate da lei. Puoi percorrere il grafo con un clic dopo l'altro.</li>
           <li><span class="k">Diagramma ER</span>: moduli come tabelle, lookup come frecce. Ne metti uno a fuoco,
             ti allontani, lo stampi grande quanto una parete.</li>
           <li>Nel codice, le chiamate ad altre funzioni sono cliccabili: salti alla definizione e torni indietro.</li>
           <li><span class="k">Quali moduli una funzione legge e quali scrive</span> - preso dalle chiamate
             stesse - e la domanda girata: apri un modulo e vedi quali funzioni lo toccano. Una chiamata che
-            nomina il modulo attraverso una variabile viene contata e dichiarata, quindi ogni elenco è un
-            minimo e mai una promessa.</li>
+            indica il modulo tramite una variabile viene comunque contata e segnalata. Per questo gli elenchi
+            rappresentano sempre un minimo, mai una copertura garantita.</li>
         </ul>
       </div>
 
@@ -165,7 +166,7 @@
           <li>Workflow con trigger, criteri e le funzioni che invocano; schedulazioni con frequenza e stato.</li>
           <li><span class="k">Quali regole non scattano subito</span>, quanto aspettano e quando ognuna è stata
             eseguita l'ultima volta.</li>
-          <li>Il catalogo delle connessioni dell'org, con quante funzioni usano ciascuna - così sai cosa puoi cancellare senza pentirtene.</li>
+          <li>Il catalogo delle connessioni dell'org, con il numero di funzioni che usa ciascuna: un dato utile prima di decidere cosa eliminare.</li>
         </ul>
       </div>
 
@@ -189,7 +190,7 @@
       <div class="card">
         <h3>Export e un assistente opzionale</h3>
         <ul>
-          <li>Tutta l'org come un unico file HTML che sta in piedi da solo, o in Markdown per darlo in pasto a un'AI.</li>
+          <li>Tutta l'org in un unico file HTML autonomo, oppure in Markdown da fornire a un assistente AI.</li>
           <li>Una finestra dove decidi tu, sezione per sezione, cosa può uscire dalla tua macchina. Il codice
         sorgente lo devi includere apposta.</li>
           <li>Con una chiave tua, un assistente che legge <em>la tua</em> org invece di tirare a indovinare - e che
@@ -226,7 +227,7 @@
       parlerebbe con la piattaforma è disabilitato e lo cancelli come qualsiasi altro workspace. <a href="/it/try"><b>Perché conta e come valutarlo così &rarr;</b></a></p>
     <p class="note">Guida completa, inclusa la configurazione della chiave API e la risoluzione dei problemi:
       <a href="/it/docs-crm"><b>Come si usa Zoost CRM</b></a>.</p>
-    <p class="note">Su cosa si regge, cosa si rifiuta di fare e come verificarlo:
+    <p class="note">Su quali interfacce si basa, cosa si rifiuta di fare e come verificarlo:
       <a href="/it/nerd">la pagina nerd</a>.</p>
     <p class="note">Ti serve una sessione Zoho CRM aperta nello stesso browser. Zoost usa la tua sessione e i tuoi
       permessi esistenti - vede esattamente quello che vedi tu, niente di più.</p>

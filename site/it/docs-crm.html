@@ -56,8 +56,8 @@
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
   <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.47.0</span> · aggiornata il <span class="dd" data-stamp="updated">27 agosto 2026</span></p>
 
-  <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
-    che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
+  <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
+    nel pannello ritrovi esattamente le parole usate in questa guida. La
     <a href="/docs-crm" hreflang="en">versione inglese di questa guida</a> è quella di riferimento se una frase qui
     non ti torna.</p>
 
@@ -83,13 +83,13 @@
   </div>
 
   <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
-  <p class="box"><b>No, con due eccezioni che fai partire tu.</b> Zoost non ha server e non ha account.
-    Quello che legge da Zoho CRM viene scritto direttamente in una cartella sul tuo disco e resta lì. Non
-    c'è nessuna forma di analytics o di tracciamento, e niente esce se non premi qualcosa:
+  <p class="box"><b>No, salvo due eccezioni che attivi tu.</b> Zoost non ha server né account.
+    I dati letti da Zoho CRM vengono scritti direttamente in una cartella sul tuo disco e restano lì.
+    Non ci sono analytics o sistemi di tracciamento, e nulla esce senza una tua azione:
     l'<b>assistente AI</b>, descritto qui sotto, e <b>Report this problem</b>, che ti mostra tutta la
     segnalazione e la manda solo quando premi Send.</p>
-  <p>L'eccezione è l'<b>assistente AI</b>, ed è spento finché non incolli una chiave API tua. Una volta
-    attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che
+  <p>La prima eccezione è l'<b>assistente AI</b>, che resta spento finché non inserisci una tua chiave API. Una volta
+    attivato, le informazioni necessarie per risponderti partono dal browser e vanno direttamente al provider
     hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
     lascialo spento: tutto il resto funziona esattamente allo stesso modo. La
     <a href="/it/privacy">privacy policy</a> elenca cosa viene conservato, dove e perché.</p>
@@ -98,9 +98,9 @@
   <p>Tre cose, e tutto il resto discende da queste.</p>
   <table>
     <tbody>
-      <tr><td class="k">Cartella di lavoro</td><td>Una cartella sul tuo disco che scegli una volta sola. Tutto quello che Zoost scrive sta lì dentro.</td></tr>
+      <tr><td class="k">Cartella di lavoro</td><td>Una cartella sul tuo disco, scelta una volta sola, che raccoglie tutti i file scritti da Zoost.</td></tr>
       <tr><td class="k">Workspace</td><td>Una sottocartella, una per org Zoho, creata per te. Contiene funzioni, schema, automazioni e connessioni di quell'org come file leggibili (sorgente, JSON).</td></tr>
-      <tr><td class="k">Pull</td><td>L'azione che riempie un workspace a partire da Zoho. Zoost legge soltanto da Zoho - non riscrive mai indietro.</td></tr>
+      <tr><td class="k">Pull</td><td>L'azione che riempie il workspace con ciò che legge da Zoho. Non modifica mai la piattaforma.</td></tr>
     </tbody>
   </table>
   <p>Zoost non è un editor. Il Deluge continui a scriverlo in Zoho, dove compila e viene validato. Zoost ti
@@ -117,9 +117,9 @@
     <li>Apri una scheda di Zoho CRM e apri il pannello laterale di Zoost (l'icona dell'estensione).</li>
     <li>Clicca <b class="ui">📁 Set working folder…</b> e scegli una <b>cartella dedicata e vuota</b>.
       Per esempio <code>~/Documents/Zoost</code>.</li>
-    <li>Clicca <b class="ui">+ Workspace</b>. Zoost crea la sottocartella per l'org della scheda attiva, chiamata
-      <code>crm/instance[-sandbox]-orgid</code>, e la seleziona. Ogni prodotto Zoost tiene la propria
-      sottocartella dentro la cartella di lavoro, così una cartella sola li serve tutti.</li>
+    <li>Fai clic su <b class="ui">+ Workspace</b>. Zoost crea la sottocartella per l'org della scheda attiva, chiamata
+      <code>crm/instance[-sandbox]-orgid</code>, e la seleziona. Ogni prodotto Zoost usa una propria
+      sottocartella, quindi una sola cartella di lavoro può contenerli tutti.</li>
     <li>Clicca <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>.</li>
   </ol>
   <p><b class="ui">+ Sample</b> è l'altra via d'ingresso e non richiede nessun tab Zoho: scrive nella
@@ -149,9 +149,9 @@
   </div>
   <p>Chrome non mantiene i permessi sul filesystem fra una riapertura e l'altra del pannello laterale: è
     così che funziona la File System Access API del browser per le estensioni, non è un bug. Zoost lo
-    ripristina al tuo primo click in un punto qualsiasi del pannello, quindi normalmente non te ne accorgi.
+    ripristina al primo clic in un punto qualsiasi del pannello, quindi normalmente non te ne accorgi.
     Se ha bisogno di te, il pulsante della cartella diventa ambra e si legge
-    <b class="ui">🔓 Grant access</b> - un click, e non si apre nessun selettore di file.</p>
+    <b class="ui">🔓 Grant access</b>: basta un clic e non si apre alcun selettore di file.</p>
 
   <h3>Dare un nome a un workspace</h3>
   <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto:
@@ -191,7 +191,7 @@
   <p>Un modulo che ha layout riceve un selettore <b class="ui">Layout:</b> sopra la tabella dei campi -
     <b>All fields (flat)</b> oppure un layout per volta, con quelli nascosti segnalati - e
     <b class="ui">View ↗</b> accanto apre quel layout in Zoho. Zoost ti mostra cosa contiene il layout;
-    Zoho e' il posto dove si cambia.</p>
+    Zoho è il posto in cui apportare le modifiche.</p>
 
   <figure class="shot">
     <img src="/img/crm-workflows.webp?v=a9a8aa4153" width="1760" height="1100" loading="lazy" decoding="async"
@@ -311,18 +311,18 @@ git commit -m "baseline"</code></pre>
     <b class="ui">↓</b> camminano fra le funzioni che sono a schermo - quelle che la ricerca e il
     filtro per tipo hanno lasciato, mai dentro un gruppo chiuso - e ne aprono una come farebbe un
     clic; <b class="ui">Home</b> e <b class="ui">End</b> vanno ai due estremi.</p>
-  <p>Seguire un link e' solo meta' del lavoro, quindi il pannello tiene una <b>cronologia</b>, come
-    fa un browser. Nel riquadro di dettaglio, <b class="ui">◂</b> torna indietro di un passo e
-    <b class="ui">▸</b> va avanti. L'intera catena e' una vista a se': il comando <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg> History</b>, accanto ad <b class="ui">AI</b> nella barra,
-    la apre al posto dell'elenco - tutto quello che hai aperto, dal piu' recente, con evidenziato il
-    punto in cui sei e l'ora di apertura - cosi' puoi saltare direttamente a un passo di qualche
-    tappa fa invece di premere quattro volte indietro. Risponde alla stessa ricerca dell'elenco che sostituisce, e
-    <b class="ui">Name</b> alterna i nomi visualizzati e interni anche qui, e <b class="ui">Clear</b> la svuota
-    senza chiudere quello che stai leggendo. <b class="ui">Alt</b> con <b class="ui">←</b> o
+  <p>Seguire un link è solo metà del lavoro, perciò il pannello conserva una <b>cronologia</b> simile a
+    quella del browser. Nel riquadro di dettaglio, <b class="ui">◂</b> torna indietro di un passaggio e
+    <b class="ui">▸</b> va avanti. Il comando <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg> History</b>, accanto ad <b class="ui">AI</b> nella barra,
+    apre la sequenza completa al posto dell'elenco. Gli elementi visitati compaiono dal più recente,
+    con l'ora di apertura e quello corrente evidenziato, così puoi tornare direttamente a un passaggio
+    precedente. La vista usa la stessa ricerca dell'elenco; <b class="ui">Name</b> alterna anche qui i
+    nomi visualizzati e quelli interni, mentre <b class="ui">Clear</b> svuota la cronologia senza
+    chiudere ciò che stai leggendo. <b class="ui">Alt</b> con <b class="ui">←</b> o
     <b class="ui">→</b> fa lo stesso da tastiera. Ogni comando compare solo quando ha davvero dove
     portarti. Un passo verso un'area che il tuo ruolo Zoho non concede viene rifiutato con una spiegazione, invece di aprire una lista vuota.
-    La catena attraversa le schede, quindi una regola raggiunta da una funzione e' a un passo da
-    essa; chiudere il riquadro non la perde, e solo il cambio di workspace la azzera - i passi
+    La cronologia attraversa le schede, quindi una regola raggiunta da una funzione resta a un passo
+    da quella funzione. Chiudere il riquadro non la cancella; solo il cambio di workspace la azzera, perché i passaggi
     nominerebbero i file di un'altra organizzazione.</p>
 
   <figure class="shot">
@@ -452,8 +452,35 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Emphasis: relations</b> spinge i riquadri dei moduli sullo sfondo e porta avanti i
       nomi delle relazioni.</li>
     <li><b>Clicca un arco</b> per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.</li>
-    <li><b class="ui">Fit</b> inquadra tutto il disegno nella finestra, e <b>ridimensionare la finestra lo fa da sé</b> - a meno che tu non abbia spostato o zoomato, nel qual caso la vista che hai scelto resta e <b class="ui">Fit</b> te la restituisce. La tab riporta quanti riquadri il diagramma disegnerebbe, e segue i filtri: vedi una categoria spenta riportare il grafo entro il limite prima di chiederlo. Due numeri, entrambi misurati, con due ruoli diversi. Oltre <b>80</b> il disegno si affolla - fino a lì il layout ha tenuto ogni riquadro libero da ogni altro sui grafi su cui è stato provato, e oltre quella soglia i riquadri iniziano a coprirsi - quindi il conteggio diventa ambra e lo dice, e il diagramma viene disegnato comunque: la scelta è tua, non nostra. Oltre <b>800</b> non viene disegnato, perché è il layout stesso a non essere più sostenibile: 400 riquadri richiedono circa 1,3 secondi, 800 circa 3,6, 1200 circa sette. Quel tetto è un default e non una regola - la pagina delle impostazioni ti permette di alzarlo, e dice cosa stai scambiando: più grafo, non un disegno migliore. Spegni una categoria, o metti un focus, e il conteggio scende insieme. <b>Doppio click sul vuoto per zoomarci sopra</b> - il punto che clicchi finisce al centro, e <b class="ui">Fit</b> è la via di ritorno. <b>Togli un riquadro dal disegno</b> con il <b class="ui">−</b> dove un arco lo tocca - un arco unisce due riquadri, quindi ne porta uno per estremità: quello su questo riquadro toglie il riquadro dall'altra parte, e quello laggiù fa lo stesso con questo. Se ne va con lui tutto ciò che il riquadro da cui hai cliccato non raggiunge più senza di lui, quindi ciò che resta raggiungibile per un'altra strada resta, e il tooltip dice cosa sparisce e quanto è prima che tu prema. Passandoci sopra li elenca per nome - ognuno nel colore che il suo riquadro ha nel disegno, così distingui un workflow da una funzione senza leggere - perché allo zoom a cui li leggi buona parte di quello che la cascata porta via è fuori schermo. Quello che è a schermo viene evidenziato nello stesso momento. Un <b class="ui">+</b> nello stesso punto lo riporta indietro. Cliccare l'arco offre entrambe le direzioni dalla scheda, per nome. Nasconde senza rifare il layout, quindi si combina con quello che hai sistemato, e mettere a fuoco qualcosa che hai tolto lo rimette. <b>Trascina un riquadro per spostarlo.</b> Il layout automatico è un punto di partenza - oltre ottanta riquadri si affolla comunque, e sei tu a sapere quali due devono stare vicini. Gli archi spariscono durante il trascinamento e vengono ridisegnati dove lasci, il rilascio dice quanti riquadri stai coprendo, e <b class="ui">Re-layout</b> butta via la disposizione. Quello che sistemi è quello che <b class="ui">Save PDF</b> stampa. Cambiare un filtro rifà il layout, e i riquadri che hai spostato tengono il loro posto mentre vengono posizionati solo i nuovi - la riga in basso dice quanti per parte. Un nuovo arrivato che finisce sopra uno dei tuoi si sposta lui: quello che hai messo tu resta dove l'hai messo, e cede il passo solo ciò che non hai posizionato. Due riquadri che hai sovrapposto <i>tu</i> restano sovrapposti - il rilascio ti ha già detto che uno copre l'altro, e disfarlo sarebbe scavalcare una tua scelta. <b class="ui">Layout ⚙</b> espone spaziatura, apertura, distanza e dimensione delle etichette come slider dal
-      vivo. Non esiste un valore giusto - denso o arioso dipende da cosa stai guardando.</li>
+    <li><b class="ui">Fit</b> adatta l'intero disegno alla finestra. Anche il ridimensionamento della
+      finestra lo adatta automaticamente, tranne dopo uno spostamento o uno zoom manuale: in quel caso
+      Zoost conserva la vista scelta da te e puoi ripristinare l'inquadratura completa con <b class="ui">Fit</b>.
+      La scheda mostra il numero di riquadri che verrebbero disegnati e aggiorna il conteggio quando
+      cambi i filtri, così puoi sapere in anticipo se una selezione rientra nei limiti. Oltre <b>80</b>
+      riquadri il disegno può diventare affollato: il numero diventa color ambra, ma Zoost lascia a te
+      la scelta e genera comunque il diagramma. Oltre <b>800</b>, invece, il layout non viene calcolato:
+      400 riquadri richiedono circa 1,3 secondi, 800 circa 3,6 e 1.200 circa sette. Puoi aumentare questa
+      soglia nelle impostazioni, sapendo che vedrai una porzione più ampia del grafo, non necessariamente
+      un disegno più leggibile. Disattivare una categoria o impostare un focus riduce subito il conteggio.
+      <b>Fai doppio clic su un punto vuoto per ingrandire quella zona</b>; il punto scelto viene portato
+      al centro e <b class="ui">Fit</b> ripristina la vista completa. Per <b>rimuovere un ramo</b>, usa il
+      <b class="ui">−</b> all'estremità di un arco: il comando nasconde il riquadro all'altra estremità e
+      tutti gli elementi che non sarebbero più raggiungibili senza di lui. Gli elementi raggiungibili
+      anche da un altro percorso restano visibili. Prima del clic, il tooltip indica quanti riquadri
+      spariranno e, al passaggio del puntatore, ne elenca i nomi con gli stessi colori del diagramma.
+      Quelli già visibili vengono anche evidenziati. Il <b class="ui">+</b> nello stesso punto ripristina
+      il ramo; facendo clic sull'arco puoi scegliere entrambe le direzioni per nome. Questa operazione
+      nasconde gli elementi senza rifare il layout, quindi non annulla la disposizione manuale. Se metti
+      a fuoco un elemento nascosto, Zoost lo rende di nuovo visibile.
+      <b>Trascina un riquadro per spostarlo.</b> Durante il trascinamento gli archi scompaiono e vengono
+      ridisegnati al rilascio; a quel punto Zoost indica quanti riquadri risultano coperti.
+      <b class="ui">Re-layout</b> elimina tutte le modifiche manuali. <b class="ui">Save PDF</b> stampa
+      esattamente la disposizione corrente. Quando cambi filtro, i riquadri già spostati restano al loro
+      posto e il layout sistema solo quelli nuovi. Se un nuovo riquadro si sovrappone a uno posizionato
+      da te, viene spostato il nuovo; se invece sei stato tu a sovrapporne due, Zoost rispetta la scelta.
+      <b class="ui">Layout ⚙</b> permette di regolare in tempo reale spaziatura, apertura, distanza e
+      dimensione delle etichette. Non esiste un valore adatto a ogni grafo: scegli in base alla densità
+      del disegno che stai osservando.</li>
     <li><b class="ui">File ▾</b> raccoglie ciò che esce dalla finestra. <b class="ui">Save PDF</b> lo stampa
       a dimensione da parete. <b class="ui">Save arrangement…</b> scrive la disposizione che hai fatto -
       quali riquadri stanno dove, quali rami hai piegato - in un file normale, e <b class="ui">Load
@@ -528,10 +555,10 @@ git commit -m "baseline"</code></pre>
     solo, sotto <b class="ui">Actions</b>, con un filtro <b class="ui">Kind</b>, perché rispondono a
     una domanda sola: cosa succede quando la regola scatta e quali regole fanno scattare questo.</p>
     <p>Una regola porta anche quello che ha fatto davvero. <b class="ui">Show executions (last 30 days)</b>,
-    nel dettaglio della regola, chiede a Zoho quante volte e' partita in quella finestra e mostra la
-    risposta sotto al pulsante. E' una misura e non un giudizio: una regola che non e' mai partita puo'
-    essere giusta e in attesa, e una che e' partita moltissimo puo' non servire a niente. Zoho tiene
-    trenta giorni, quindi la finestra e' quella - non una scelta nostra.</p>
+    nel dettaglio della regola, chiede a Zoho quante volte è stata eseguita negli ultimi 30 giorni e
+    mostra la risposta sotto al pulsante. È una misura, non un giudizio: una regola mai eseguita può
+    essere corretta e semplicemente in attesa, mentre una eseguita moltissime volte può non essere più
+    utile. La finestra di 30 giorni dipende dai dati conservati da Zoho, non da una scelta di Zoost.</p>
 <p>Quello che rende l'elenco utile è un dato che ognuno di questi oggetti porta con sé: se Zoho lo
     considera <b>in uso</b>. In un'org vera circa la metà non lo è - misurato su una: 85 notifiche su
     200, 50 field update su 97, 27 task su 56. Sono <b>candidati</b>, esattamente come una funzione
@@ -841,12 +868,12 @@ git commit -m "baseline"</code></pre>
     da <b class="ui">⚙ Settings → Data centre</b>, dove sta il default.</p>
   <p>Il fondo del pannello resta raggiungibile sotto quella schermata: Settings, Help e About restano
     a un clic mentre il resto è fermo.</p>
-  <p><b>Le impostazioni aperte in due finestre.</b> La pagina delle impostazioni e' una scheda come
-    le altre, quindi puo' essere aperta due volte - o restare aperta mentre il pannello scrive la
-    stessa impostazione. Se una sezione cambia altrove mentre la stai modificando, quella sezione lo
-    dice e offre <b class="ui">Take theirs</b>, che ricarica quello che e' stato salvato, e
-    <b class="ui">Keep mine</b>, che tiene quello che hai scritto perche' tu possa salvarci sopra di
-    proposito. Nulla viene deciso al posto tuo e nulla viene sovrascritto alle tue spalle.</p>
+  <p><b>Le impostazioni aperte in due finestre.</b> La pagina delle impostazioni è una scheda come
+    le altre, quindi può essere aperta due volte o restare aperta mentre il pannello modifica la
+    stessa impostazione. Se una sezione cambia altrove mentre la stai modificando, Zoost lo segnala e
+    offre <b class="ui">Take theirs</b>, che ricarica ciò che è stato salvato, e
+    <b class="ui">Keep mine</b>, che conserva le tue modifiche perché tu possa sovrascrivere
+    consapevolmente la versione salvata. Nulla viene deciso al posto tuo e nulla viene sovrascritto alle tue spalle.</p>
 
   <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>

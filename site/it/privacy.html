@@ -58,12 +58,14 @@
 
   <div class="box">
     <h2 class="h3">In breve</h2>
-    <p>Lo sviluppatore non raccoglie niente. Zoost non ha server, non ha account, non ha analytics e non
-      ha nessuna forma di tracciamento. I tuoi dati si muovono fra il tuo browser, il prodotto Zoho su cui sei già dentro e una cartella sul tuo disco. L'unica eccezione è l'assistente AI opzionale, che manda quello che gli serve per risponderti al provider AI che configuri <em>tu</em>, con una
-      chiave API <em>tua</em>. <b>Escono due cose, e solo se sei tu a farle uscire:</b> quella, e
-      <b>Report this problem</b>, che manda allo sviluppatore una segnalazione che hai letto per intero
+    <p>Lo sviluppatore non raccoglie nulla. Zoost non ha server, account, analytics né sistemi di
+      tracciamento. I dati si spostano solo tra il tuo browser, il prodotto Zoho in cui hai già eseguito
+      l'accesso e una cartella sul tuo disco. L'unica eccezione è l'assistente AI facoltativo: invia al
+      provider configurato da <em>te</em> le informazioni necessarie per rispondere, usando una chiave
+      API <em>tua</em>. <b>Solo due cose possono uscire, e soltanto per tua scelta:</b> la richiesta
+      all'assistente e <b>Report this problem</b>, che manda allo sviluppatore una segnalazione letta per intero
       e che diventa una issue pubblica - descritta in <a href="#travel">Dove viaggiano i dati</a>. Nient'altro
-      parte per nessun posto, e niente parte senza un click tuo.</p>
+      viene inviato altrove e nulla parte senza un tuo clic.</p>
   </div>
 
   <h2>0. Quali estensioni copre</h2>
@@ -91,7 +93,7 @@
   <p>Di conseguenza non è né titolare né responsabile del trattamento di quei dati: il titolare è la
     tua organizzazione, esattamente come lo era prima che Zoost venisse installato.</p>
   <p>È scritto qui perché chi deve valutare l'estensione non sia costretto a dedurlo. Non è un parere
-    legale, e ognuno dei fatti su cui si regge si può controllare nel manifest e nel sorgente. L'unica
+    legale, e ciascuno dei fatti su cui si basa può essere verificato nel manifest e nel sorgente. L'unica
     eccezione è questo sito, spiegata al §8.</p>
   <p>Zoost non è affiliato, approvato, sponsorizzato né supportato da Zoho Corporation. I dati che
     stanno dentro i tuoi prodotti Zoho restano regolati dal tuo contratto con Zoho e dalle policy della
@@ -103,11 +105,15 @@
     ospitato altrove. Non viene trasmesso niente in background, a scadenze fisse o in caso di errore.</p>
   <p>Esiste un solo canale, e parte da un tuo clic. Quando qualcosa fallisce, il pannello può preparare
     una <b>segnalazione</b> e aprire <a href="/report" hreflang="en">zoost.it/report</a> (in inglese)
-    in una finestra a parte, mettendo il testo nella casella di quella pagina - dentro il contenuto
+    in una finestra separata, inserendo il testo nella casella della pagina, quindi nel contenuto
     della pagina, mai nell'indirizzo, così non ne resta traccia nella cronologia del tuo browser.
     Aprire quella pagina è una visita ordinaria a questo sito, coperta dal §8; la segnalazione è
     ancora sulla tua macchina, davanti a te, e parte solo quando premi invia. Da lì diventa una
-    <b>issue pubblica</b> sul repository di Zoost su GitHub, ed è permanente. Quella pagina si può usare anche senza pannello: chi ci arriva da un link scrive il problema con parole sue e manda quello, che è quello che ha chi non ha un account GitHub al posto di aprire una issue - l'altra strada è una mail, che non è pubblica. Non porta nessun trace, e la issue che apre lo dice nella prima riga.</p>
+    <b>issue pubblica</b> nel repository GitHub di Zoost, dove resta in modo permanente. La pagina può
+    essere usata anche senza il pannello: chi non ha un account GitHub può descrivere il problema con
+    parole proprie e inviarlo al posto di aprire direttamente una issue. In alternativa può scrivere
+    un'email, che non è pubblica. In questo caso non viene allegato alcun trace e la prima riga della
+    issue lo dichiara.</p>
   <p>Cosa può contenere la segnalazione è un elenco fisso deciso nel codice, non una raccolta di
     quello che c'è in giro: le versioni di estensione e browser, l'errore e in quale file di Zoost è
     successo, le ultime righe che ha mostrato la barra di stato e dei contatori - quante funzioni,
@@ -169,7 +175,7 @@
           pannello possa proporre di aprirlo invece di crearne un secondo prima di avere il permesso
           di guardare nella cartella. Due cose minori senza alcun peso: quanto hai trascinato in altezza
           i riquadri di anteprima e dettaglio, e un orario che la pagina delle impostazioni scrive quando
-          salvi, cosi' un pannello aperto sa di dover rileggere invece di interrogare in continuazione.</td>
+          salvi, così un pannello aperto sa di dover rileggere invece di interrogare in continuazione.</td>
         <td data-label="Perché">Le impostazioni devono sopravvivere al riavvio del browser.</td>
       </tr>
       <tr>
@@ -225,7 +231,7 @@
       di Zoho - definizioni dei workflow, schedulazioni, azioni di
       automazione (nome, tipo, il campo che un aggiornamento scrive - nome API, etichetta e tipo - e il
       valore che ci scrive, i campi che un'azione di tipo task riempie e cosa ci mette, il nome del modello di email che una notifica manda, quanti layout ha un modulo, e di un
-      webhook il metodo e l'host - mai il percorso ne' la query string, che possono
+      webhook il metodo e l'host - mai il percorso né la query string, che possono
       contenere per intero una credenziale di pubblicazione),
       nomi delle connessioni, loro connettori, se Zoho le riporta come connesse e <b>gli scope concessi a ciascuna</b> (mai i segreti o i
       token, che Zoost non legge mai), quello
@@ -236,8 +242,8 @@
       destinazione è possibile per quello che manda l'assistente: all'estensione è concesso l'accesso di rete
       a quelle due origini, al tuo prodotto Zoho e a <code>zoost.it</code> - che non riceve nulla tranne una
       segnalazione che hai scritto, letto per intero e mandato tu, dalla pagina che il pannello ti apre davanti.</p>
-    <p>Per <b>Zoost Analytics</b> vale lo stesso con un insieme diverso: il nome del workspace e il suo id Zoho, nomi delle viste e di che tipo
-      e' ciascuna, la cartella in
+    <p>Per <b>Zoost Analytics</b> vale lo stesso con un insieme diverso: il nome del workspace e il suo id Zoho, i nomi delle viste e il tipo di
+      ciascuna, la cartella in
       cui stanno, la loro descrizione, nomi e tipi
       delle colonne, relazioni fra tabelle, grafo delle dipendenze, quando il disegno di una vista e i suoi
       dati sono stati cambiati l'ultima volta, <b>il nome che Zoho registra come proprietario di una
@@ -372,9 +378,9 @@
     issue pubblica ed è descritta nella sezione 2. Due cose sulla richiesta vanno dette qui, perché
     riguardano te e non la segnalazione: a Turnstile di Cloudflare viene passato il tuo indirizzo IP
     per fare il controllo, e l'endpoint tiene un <b>contatore</b>, perché da uno stesso indirizzo non
-    se ne aprano più di cinque al giorno da un solo indirizzo. Quel contatore è uno
-    smorzatore e non un lucchetto: sta in un archivio a consistenza eventuale e viene letto attraverso
-    una cache, quindi più segnalazioni mandate negli stessi secondi possono passare insieme. Quello che
+    se ne aprano più di cinque al giorno dallo stesso indirizzo. Quel contatore serve a ridurre gli abusi,
+    non a imporre un blocco assoluto: è conservato in un archivio a consistenza eventuale e letto tramite
+    una cache, quindi più segnalazioni inviate a pochi secondi di distanza potrebbero passare insieme. A
     limita davvero una raffica è il controllo anti-abuso che sta davanti. Quel contatore è conservato su un <b>hash con
     sale</b> dell'indirizzo e scade dopo 24 ore: il tuo indirizzo non viene scritto da nessuna parte, e
     quello che viene scritto non può essere ricondotto a lui - nemmeno da chi legge l'archivio. Della
@@ -383,7 +389,7 @@
     servito da Cloudflare, che ne è insieme la rete e l'hosting. Come qualunque server web, il suo edge
     tiene normali log delle richieste - indirizzo IP, ora, URL, user agent - e ne conta il numero senza
     impostare cookie né identificatori. Quello è un trattamento di dati personali, per quanto minimo; per quel trattamento il titolare è lo sviluppatore, sulla base del legittimo interesse a servire e
-    proteggere il sito. Sopra non ci viene costruito niente: nessun cookie, nessun tracker, nessuna
+    proteggere il sito. Questi dati non vengono usati per costruire altro: nessun cookie, nessun tracker, nessuna
     profilazione, nessuna mailing list, niente di qui viene collegato a quello che fa l'estensione.
     I tempi di conservazione sono quelli di Cloudflare; nessuna esportazione dei log è attiva e lo sviluppatore non ne
     tiene copia. Per esercitare un diritto su questo, o anche solo per chiedere:
