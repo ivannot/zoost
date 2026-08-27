@@ -436,6 +436,29 @@ footer .legal{line-height:1.65;margin:10px 0 0}
   main table[data-labelled] td.p{white-space:normal;overflow-wrap:anywhere}
 }
 
+/* The comment above leaves a headerless table as a grid, on the argument that its first cell is the
+   label and stacking would throw the pairing away. That holds while the two columns are comparable
+   and stops holding on a phone: measured at 375px on the home page, the labels took **243px** and
+   the sentences beside them **118px**, with 31px of the table still off the screen. The pairing is
+   not thrown away by stacking, because a key/value pair has an order - the key stays directly above
+   the value it names, which is how the labelled tables already read. So below 520px, where there is
+   no width left to divide, these stop being grids too; above it they are grids, because two columns
+   still fit. */
+@media (max-width:520px){
+  main table:not([data-labelled]),
+  main table:not([data-labelled]) tbody,
+  main table:not([data-labelled]) tr,
+  main table:not([data-labelled]) td{display:block;width:auto}
+  main table:not([data-labelled]){overflow-x:visible}
+  main table:not([data-labelled]) tr{border-bottom:1px solid var(--line);padding:10px 0}
+  main table:not([data-labelled]) tr:last-child{border-bottom:0}
+  main table:not([data-labelled]) td{border:0;padding:0}
+  /* The nowrap protected a two-word key from breaking mid-phrase while it shared a line with the
+     value; with the whole width to itself it has nothing to protect, and a long key - a command, a
+     path - would run past the phone instead of past the next column. */
+  main table:not([data-labelled]) td.k{white-space:normal;overflow-wrap:anywhere;margin-bottom:3px}
+}
+
 /* The table of contents every guide draws. Three rules, copied into ten pages - the shape that has
  * already cost this site four classes rendering as nothing when a page used one defined beside its
  * first user. Moving it here is proven and not argued: all 23 pages were photographed before and
