@@ -488,7 +488,7 @@ const META_INDEX = 'functions/meta-index.json';
 // `{"fresh":1,"cached":0}`. **Changing what the extractor writes means moving this line, in the
 // same commit** - the test below holds the readers to it, but only a person can know the meaning
 // changed.
-const SUMMARY_V = 7;   // 7 also caches the explicit directory tree of compiled function projects
+const SUMMARY_V = 8;   // 8 carries the publish state; 7 cached the directory tree of function projects
 const META_SV = 5;   // v5 adds what Zoho is running: the deploy time and whether a draft is pending
 /** Has Zoho's copy moved since this one was fetched?
  *
@@ -1799,7 +1799,11 @@ async function showFunctionRuntime(row, box) {
   // Compare with the exact file that owned the box when the request began. In a compiled project
   // `row.path` is the entry point, while Details may have been opened from config.json or a nested
   // source: comparing those two discarded a correct answer without drawing anything.
-  if (!previewCurrent(mine, op) || currentPath !== viewedPath) return;
+  // Three ways for the answer to be late: another item opened, another workspace, or the box
+  // itself replaced - the name toggle redraws #pvcallers while Zoho is answering, and a detached
+  // box swallows the answer while the one on screen stays empty, with the window select then
+  // refusing to re-ask because the box it reads is blank.
+  if (!box.isConnected || !previewCurrent(mine, op) || currentPath !== viewedPath) return;
   if (!r || !r.ok) { box.innerHTML = `<div class="rtnote">Zoho did not answer: ${escHtml((r && r.error) || 'unknown')}</div>`; return; }
   const when = (s) => escHtml(String(s || '').slice(0, 16));
   // Three states per half, and they are not the same: read and empty, read and refused, not read.
@@ -2176,6 +2180,10 @@ async function rebuildTree() {
     row.stale = (s.sv || 0) < META_SV || movedInZoho(row.listUpdated, s.listUpdated);
     row.fetchedAgainst = s.listUpdated || null;
     row.updatedTime = s.updatedTime || null;
+    // Same fields, same rule as `stale` two lines up: only in the slow path, whether a function
+    // showed its publish state depended on which of the two paths had loaded the workspace.
+    row.deployed_on = s.deployed_on ?? null;
+    row.is_draft_available = s.is_draft_available ?? null;
     if (s.namespace) row.namespace = s.namespace;
     if (s.display_name) row.display_name = s.display_name;
   }
@@ -2327,6 +2335,12 @@ async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
       e.mirrorFiles = r.mirrorFiles || [r.path, e.metaPath];
       e.mirrorDirectories = r.mirrorDirectories || [];
       e.language = r.language || 'deluge';
+      // The publish state travels with the summary or it exists only until the panel is closed:
+      // the fast path serves every reopen from this file, and a field stored nowhere but the
+      // sidecar is a field the reopen never sees. Found by a review driving the shipped panel -
+      // every chip empty on reopen, back after a Refresh, gone again on the next open.
+      e.deployed_on = r.deployed_on ?? null;
+      e.is_draft_available = r.is_draft_available ?? null;
     });
   }, op);
   // Only the metas this pass actually described, and only the meta half: the source-derived facts
@@ -5509,6 +5523,12 @@ function dropWorkspaceState() {
   // have exactly the same shape. `downloadMissingWf` is the one that acts on it rather than drawing
   // it - it writes `workflows/<id>.json` for ids belonging to the org you left, into the folder of
   // the one you are in.
+  // The Language filter is derived from what the workspace holds, so it belongs to the workspace:
+  // carried across, Language = Java in an all-Deluge org drew an empty list under advice naming a
+  // control that was not even on screen. The fold state of a project's Files tree goes with it -
+  // the root is a workspace-relative path, identical across two mirrors of the same org, so the
+  // next workspace's project arrived with this one's folders closed.
+  langFilter = 'all'; projCollapsed = new Set(); projRootOpen = '';
   treeData = []; index = new Map();
   moduleData = []; workflowData = []; wfIndex = new Map(); scheduleData = [];
   actionData = []; connectionData = [];

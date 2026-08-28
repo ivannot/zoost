@@ -389,6 +389,7 @@ function deluge(ns, name, params, calls) {
       // The summary is keyed by the *primary* file, which for a project is its entry point and not
       // a `.dg` - the same key `saveMetaIndex()` writes, or the panel would rebuild it on every load.
       projMeta[root + file] = { id: id, sv: 5, updatedTime: null, listUpdated: null,
+                                deployed_on: PUBLISH[k].deployed_on, is_draft_available: PUBLISH[k].is_draft_available,
                                 namespace: ns, display_name: labelOf(name), language: language,
                                 metaPath: 'functions/' + ns + '/' + api + '.meta.json',
                                 mirrorFiles: [root + 'config.json', root + file,
@@ -405,13 +406,17 @@ function deluge(ns, name, params, calls) {
     list.forEach(([ns, name], i) => {
       const api = snake(name);
       metaIndex['functions/' + ns + '/' + api + '.dg'] = {
-        id: String(9000 + i), sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 2,
+        // The same number the panel compares against (META_SV, 5): this line said 2 while the
+        // sidecars said 5, and 120 of 123 rows opened marked «older data - click to refresh» on a
+        // workspace written seconds earlier that can never reach Zoho. The two deliberate stale
+        // edge cases keep their 1.
+        id: String(9000 + i), sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 5,
         updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00', listUpdated: LIST_MS(i),
         namespace: ns, display_name: labelOf(name),
       };
     });
     Object.assign(metaIndex, projMeta);   // the projects belong to the same summary
-    J('functions/meta-index.json', { v: 7, sv: 5, files: metaIndex });
+    J('functions/meta-index.json', { v: 8, sv: 5, files: metaIndex });
 
     // Forty plausible values, composed rather than invented one at a time - the same rule the
     // function names follow.
@@ -631,6 +636,28 @@ function deluge(ns, name, params, calls) {
         const fi = list.findIndex(([a, b]) => a === ns && b === nm);
         return { id: fi >= 0 ? String(9000 + fi) : null, name: fi >= 0 ? index[fi].display_name : nm, count: n };
       }),
+      // The month beside the day, the shape a real pull stores: without it the thirty-day group in
+      // the health view and both reports could never be seen on the sample - or in any screenshot,
+      // which is rendered from it. The counts are the day's, scaled the way a month plausibly
+      // scales a day, and the window is echoed the way Zoho echoes it, org timezone included.
+      month: { from: '2026-07-09T00:00:00+02:00', to: '2026-08-08T00:00:00+02:00',
+               timezone: '(GMT+2:0) Central European Summer Time (Europe/Rome)', top: RUNS.length,
+               runs: RUNS.map(([fn, n]) => {
+                 const [ns, nm] = fn.split('.');
+                 const fi = list.findIndex(([a, b]) => a === ns && b === nm);
+                 return { id: fi >= 0 ? String(9000 + fi) : null,
+                          name: fi >= 0 ? index[fi].display_name : nm, count: n * 23 };
+               }),
+               daily: (() => {
+                 // Thirty real calendar days: 9-31 July, then 1-7 August. A generator that counted
+                 // past the 31st would put «2026-07-38» in a fixture meant to have the real shape.
+                 const day = (d) => (d < 23 ? '2026-07-' + String(9 + d).padStart(2, '0')
+                                            : '2026-08-0' + (d - 22));
+                 return { success: Array.from({ length: 30 }, (_, d) => (
+                            { day: day(d), count: 280 + (d * 7) % 90 })),
+                          failure: Array.from({ length: 30 }, (_, d) => (
+                            { day: day(d), count: d % 11 === 3 ? 2 : 0 })) };
+               })() },
       failures: FAILURES.map(([fn, reason, count, comp, cat], i) => {
         const [ns, nm] = fn.split('.');
         const fi = list.findIndex(([a, b]) => a === ns && b === nm);

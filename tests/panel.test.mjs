@@ -6213,8 +6213,9 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(at > 0);
     assert.match(fn, /viewedPath = currentPath/,
       'why=the request does not remember the exact project file whose detail owns its answer');
-    assert.match(fn.slice(at, at + 1200), /if \(!previewCurrent\(mine, op\) \|\| currentPath !== viewedPath\) return;/,
-      'why=an answer about one function is drawn into the detail of another');
+    assert.match(fn.slice(at, at + 2000), /if \(!box\.isConnected \|\| !previewCurrent\(mine, op\) \|\| currentPath !== viewedPath\) return;/,
+      'why=an answer about one function is drawn into the detail of another, or into a box the name '
+      + 'toggle detached while Zoho was answering - the on-screen one then stays empty for ever');
     assert.doesNotMatch(fn, /currentPath !== row\.path/,
       'why=a correct answer is discarded when Details was opened from a secondary project file');
   });
@@ -6240,6 +6241,7 @@ for (const app of ['crm', 'analytics']) {
       escHtml: (s) => String(s),
       toBridge: async () => ({ ok: true, window: 'past_24_hours', logs: [], revisions: [] }),
     };
+    box.isConnected = true;   // what a box that is actually in the document answers
     const m = load([sliceFn(REL, 'showFunctionRuntime')], g);
     await m.showFunctionRuntime({ id: '7', language: 'nodejs_22',
       path: 'functions/standalone/sync.files/index.js' }, box);
@@ -6434,6 +6436,67 @@ for (const app of ['crm', 'analytics']) {
     const s = load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
     assert.equal(s.from.slice(0, 10), '2026-08-05');
     assert.equal(s.to.slice(0, 10), '2026-08-21');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// What an asked-for review found by driving the shipped panel, each verified and fixed the same
+// day. Three of the four are one shape: a value that exists only on one of two paths, or in one of
+// two lifetimes, so whether the reader saw it depended on which path happened to run.
+{
+  const REL = 'apps/crm/sidepanel.js';
+
+  test('the publish state survives closing the panel', () => {
+    // The 1.48.0 feature was invisible on every reopen: the chips came from the sidecar, read only
+    // by the slow path, and the summary the fast path serves every reopen from did not carry the
+    // two fields - so Live/Draft showed after a Refresh and vanished on the next open.
+    const src = read(REL);
+    const w = src.indexOf('const written = updateMetaIndex((files) => {');
+    assert.ok(w > 0);
+    const writer = src.slice(w, w + 1800);
+    assert.match(writer, /e\.deployed_on = r\.deployed_on \?\? null;/,
+      'why=the summary does not store the publish state, so a reopen cannot show it');
+    const f = src.indexOf('row.stale = (s.sv || 0) < META_SV');
+    assert.ok(f > 0, 'the fast path is gone');
+    assert.match(src.slice(f, f + 900), /row\.deployed_on = s\.deployed_on \?\? null;/,
+      'why=the fast path serves a reopen without the publish state - visible only after Refresh');
+    // And the summary version moved with its fields, so a summary written before them is re-derived
+    // once instead of being served as current without them.
+    assert.match(src, /const SUMMARY_V = 8;/,
+      'why=an old summary without the fields is served as current, and the chips stay empty');
+  });
+
+  test('what a workspace derives, a workspace change resets', () => {
+    // Language = Java carried into an all-Deluge org drew an empty list under advice naming a
+    // control that was not on screen; a project tree arrived with another workspace's folders
+    // closed, because the root is a workspace-relative path and two mirrors share it.
+    const body = sliceFn(REL, 'dropWorkspaceState');
+    assert.match(body, /langFilter = 'all';/,
+      'why=the language filter survives into a workspace that may not offer its value');
+    assert.match(body, /projCollapsed = new Set\(\); projRootOpen = '';/,
+      'why=the fold state of one workspace project dresses the next one');
+  });
+
+  test('the sample summary is as fresh as the sidecars it summarises', () => {
+    // The generator wrote sv 2 into the summary while the sidecars said 5 and META_SV is 5: 120 of
+    // 123 rows opened marked «older data - click to refresh» on a workspace written seconds
+    // earlier that can never reach Zoho. Derived, so the next META_SV bump cannot re-open it.
+    const metaSv = Number((read(REL).match(/const META_SV = (\d+)/) || [])[1]);
+    const sample = read('apps/crm/sample-org.js');
+    const line = sample.match(/id: String\(9000 \+ i\), sv: \(o\.edgeCases[^\n]+\? 1 : (\d+),/);
+    assert.ok(line, 'the sample summary line moved');
+    assert.equal(Number(line[1]), metaSv,
+      `why=the sample summary stamps ${line[1]} while the panel compares against ${metaSv} - every row opens stale`);
+    const v = sample.match(/functions\/meta-index\.json', \{ v: (\d+), sv: (\d+)/);
+    const panelV = Number((read(REL).match(/const SUMMARY_V = (\d+)/) || [])[1]);
+    assert.equal(Number(v[1]), panelV, 'why=the sample summary is a version the panel re-derives and rewrites');
+    assert.equal(Number(v[2]), metaSv);
+    // And the sample's month has thirty real calendar days: a generator that counted past the 31st
+    // put «2026-07-38» in a fixture meant to have the real shape.
+    for (const m of sample.matchAll(/'2026-07-' \+ String\(9 \+ d\)/g)) {
+      const around = sample.slice(m.index - 300, m.index);
+      assert.match(around, /d < 23/, 'why=the daily series walks past the end of July');
+    }
   });
 }
 

@@ -131,6 +131,10 @@
       ty: 'boolean|byte|char|double|float|int|long|short|void|Boolean|Double|Integer|List|Long|Map|Object|String',
     },
     javascript: {
+      // A stated limit rather than a discovered one: `//` inside a JS regex literal - escaped
+      // slashes in a URL pattern, say - reads as a line comment from there to the end of the line.
+      // Telling a regex literal from division needs parser state a per-line tokenizer does not
+      // have, and colouring is all this does: the output stays escaped and balanced either way.
       com: '//[^\\n]*|/\\*[\\s\\S]*?\\*/',
       str: '`(?:[^`\\\\]|\\\\.)*`|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'',
       kw: 'async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|from|function|if|import|in|instanceof|let|new|of|return|static|super|switch|this|throw|try|typeof|var|void|while|with|yield|true|false|null|undefined',
