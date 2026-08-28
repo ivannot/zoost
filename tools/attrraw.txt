@@ -39,4 +39,4 @@ b07595ae0886b91b  apps/crm/sidepanel.js:1687: title="${(st.chars / 1024).toFixed
 bb8f8240f2601514  apps/crm/sidepanel.js:1688: title="${st.zoho}" is not attribute-escaped
 536777999679a23a  apps/crm/sidepanel.js:1688: title="${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}" is not attribute-escaped
 1fdcc594d1fcf9e2  apps/crm/sidepanel.js:1689: class="${stCls}" is not attribute-escaped
-1d15fc75d8adb2f2  apps/crm/sidepanel.js:2819: class="${kind}" is not attribute-escaped
+1d15fc75d8adb2f2  apps/crm/sidepanel.js:2825: class="${kind}" is not attribute-escaped

@@ -5817,14 +5817,32 @@ for (const app of ['crm', 'analytics']) {
       'why=the address is built from something other than the joined id');
   });
 
+  test('opening one function hands that exact address to the navigator even with no tab open', async () => {
+    let opened = null;
+    const g = {
+      encodeURIComponent, String, console,
+      bound: { base: 'https://crm.zoho.eu', instance: 'yourinstance' }, lastCtx: null,
+      sampleRefuse: () => false, setStatus: () => {}, MSG: { noTarget: 'none', openingFns: 'opening' },
+      goToZoho: async (url) => { opened = url; return 7; },
+    };
+    const { reveal } = load([sliceFn(REL, 'functionsUrl'), sliceFn(REL, 'functionUrl'), sliceFn(REL, 'reveal')], g);
+    await reveal({ uiId: THEIRS, displayName: 'Run it' });
+    assert.equal(opened,
+      `https://crm.zoho.eu/crm/yourinstance/settings/functions?functionId=${THEIRS}&tab=overview`,
+      'the no-tab branch rebuilt the old functions-list URL and then claimed the function was open');
+  });
+
   test('the pull learns the mapping, and cannot fail because of it', () => {
     const src = read(REL);
-    const at = src.indexOf("const ui = await toBridge({ cmd: 'functionUiIds' });");
+    const at = src.indexOf("ui = await toBridge({ cmd: 'functionUiIds' });");
     assert.ok(at > 0, 'why=the pull no longer asks for the mapping');
-    const after = src.slice(at, at + 400);
+    const before = src.slice(Math.max(0, at - 120), at + 500);
+    const after = src.slice(at, at + 500);
     assert.ok(/carryUiIds\(merged, \(ui && ui\.map\) \|\| \{\}, op\)/.test(after),
       'why=an answer that failed is read as a map, or a partial one replaces what is stored');
-    assert.ok(!/throw|bridgeError/.test(after), 'why=a pull can now fail over an optional mapping');
+    assert.match(before, /try \{ ui = await[\s\S]*catch \(_\)/,
+      'why=a transport failure in the optional mapping can fail an otherwise successful pull');
+    assert.ok(!/throw|bridgeError/.test(after), 'why=a refused optional mapping is promoted to a pull failure');
   });
 
   test('the bridge reports a refusal and never raises one', async () => {
@@ -6177,7 +6195,8 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
         querySelectorAll: () => rows,
       }),
     };
-    const { syncTreeTo } = load([sliceFn('apps/crm/sidepanel.js', 'revealRow'),
+    const { syncTreeTo } = load([sliceConst('apps/crm/sidepanel.js', 'functionRowForPath'),
+                                 sliceFn('apps/crm/sidepanel.js', 'revealRow'),
                                  sliceFn('apps/crm/sidepanel.js', 'syncTreeTo')], ctx);
     syncTreeTo(path);
     return { ctx, rows };
@@ -17601,7 +17620,8 @@ test('pruning a compiled function removes the files named by its sidecar, never 
   const rel = 'apps/crm/sidepanel.js';
   const removed = [], writes = [];
   const ctx = {
-    index: new Map(), treeData: [], failedRemovals: new Set(), currentPath: null,
+    index: new Map(), treeData: [], failedRemovals: new Set(),
+    currentPath: 'functions/standalone/run_job.files/config.json',
     sanitize: (x) => x, setStatus: () => {}, renderTree: () => {}, updateMissingButton: () => {},
     $: () => ({ classList: { remove() {} } }), String, Map, Set, Array, JSON, RegExp, Error,
     beginWorkspaceOp: () => ({ current: () => true, say: () => {},
@@ -17625,6 +17645,7 @@ test('pruning a compiled function removes the files named by its sidecar, never 
   ]);
   assert.ok(!removed.includes('functions/standalone/run_job.files'), 'a non-empty project directory was passed to a non-recursive removal');
   assert.equal(JSON.parse(writes[0][1]).length, 0, 'the deleted project remained in functions/index.json');
+  assert.equal(ctx.currentPath, null, 'the preview kept showing a secondary file after its function was deleted');
 });
 
 test('compiled projects are recovered and cached by sidecar, and never highlighted as Deluge', () => {
@@ -17636,6 +17657,16 @@ test('compiled projects are recovered and cached by sidecar, and never highlight
   const open = sliceApp('crm', 'openFile');
   assert.match(open, /delugeSource && window\.highlightDeluge/, 'a Java, Python or Node file is sent through the Deluge highlighter');
   assert.match(src, /row\.mirrorFiles = cachedFiles/, 'a cached project forgets the files that code search must inspect');
+});
+
+test('a secondary project file still resolves to its one function row', () => {
+  const row = { id: 'p1', path: 'functions/standalone/run.files/src/main.py',
+    mirrorFiles: ['functions/standalone/run.files/src/main.py', 'functions/standalone/run.files/config.json'] };
+  const { functionRowForPath } = load([sliceConst('apps/crm/sidepanel.js', 'functionRowForPath')],
+    { treeData: [row], Array, console });
+  assert.equal(functionRowForPath('functions/standalone/run.files/config.json').id, 'p1',
+    'search can open config.json, but selection and Open in Zoho then forget which function owns it');
+  assert.equal(functionRowForPath('functions/standalone/other.files/config.json'), undefined);
 });
 
 // ---------------------------------------------------------------------------------------------

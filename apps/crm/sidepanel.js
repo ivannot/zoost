@@ -2495,6 +2495,12 @@ function setPvName(label, path) {
   $('pvfile').title = f && !same ? f.title : '';
 }
 
+// A project has one row and several files. Search opens the exact file that matched, so resolving
+// only `row.path` loses the function as soon as that file is not the chosen primary one (most visibly
+// on config.json): the tree selection, the name and «Open in Zoho» all disappear together.
+const functionRowForPath = (path) => treeData.find((e) => e.path === path
+  || (Array.isArray(e.mirrorFiles) && e.mirrorFiles.includes(path)));
+
 // The list follows whatever the preview is showing. Marking the row was already here; what was
 // missing is everything a reader needs for that mark to *mean* anything - it was reported as the
 // selection staying uncoordinated after jumping from one function to another through a call in the
@@ -2505,7 +2511,8 @@ function setPvName(label, path) {
 // marked where nobody can see it; and the keyboard went on stepping from where *it* had been, so
 // the next arrow jumped back to the previous function.
 function syncTreeTo(path) {
-  const e = treeData.find((x) => x.path === path);
+  const e = functionRowForPath(path);
+  const rowPath = (e && e.path) || path;
   // `ns`, spelled the way the tree spells it: `collapsed` is shared with the modules list, which
   // prefixes its keys, and a test holds that difference. Same key, same name for it.
   const ns = e && e.namespace;
@@ -2513,9 +2520,9 @@ function syncTreeTo(path) {
     collapsed.delete(ns);                 // opened, because you asked to look at what is inside it
     renderTree();
   }
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
-  stepAnchor = path;                      // the arrows carry on from what you are looking at
-  const row = [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === path);
+  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === rowPath));
+  stepAnchor = rowPath;                   // the arrows carry on from the function whose file you are looking at
+  const row = [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === rowPath);
   revealRow(row, $('tree'), '.grp');
 }
 
@@ -2536,7 +2543,7 @@ async function openFile(path, line = null, byClick = false) {
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Functions in Zoho \u2197'; $('pvfind').title = 'Open Zoho\u0027s own functions page. It no longer types this name into their search box: the newer functions interface is addressed by URL, and this product does not script somebody else\u0027s page.'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
-  const trow = treeData.find((x) => x.path === path);
+  const trow = functionRowForPath(path);
   // The button says which of the two it does. It opened the list and said so; with the mapping
   // pulled it opens this function, and a label that still said «Functions in Zoho» would be a
   // control describing the behaviour it used to have.
@@ -3226,7 +3233,10 @@ async function reveal(fn) {
   // empty, `zohoTabId()` fails all three of its tests, and `goToZoho` opens a *second* tab. One
   // click on «Functions in Zoho» with no CRM tab open left two identical tabs.
   setStatus(MSG.openingFns, 'busy');
-  const at = (await zohoTabId()) ? await goToZoho(url) : await openTargetZoho(false);
+  // `goToZoho` already creates a tab when none exists. Going through `openTargetZoho` on that branch
+  // rebuilt the old list URL and silently discarded `one`, then announced that the function itself
+  // was open. One destination, handed to the one navigator on both branches.
+  const at = await goToZoho(url);
   if (!at) return;
   setStatus(one ? `\u00ab${fn.displayName || fn.name || fn.apiName}\u00bb is open in Zoho.`
                 : `Zoho\u0027s functions are open - look for \u00ab${fn.displayName || fn.name || fn.apiName}\u00bb.`, 'ok');
@@ -3240,7 +3250,7 @@ async function revealFromPreview(action) {
   if (currentPath && currentPath.startsWith('modules/')) {
     const m = moduleData.find((x) => x.path === currentPath); if (!m) return; if (action === 'filter') await openModuleLayouts(m.gen); else await openModulePage(m.gen, m.navigable, m.label); return;
   }
-  const e = treeData.find((x) => x.path === currentPath); if (!e) return;
+  const e = functionRowForPath(currentPath); if (!e) return;
   const info = index.get(e.id);
   try { await reveal({ id: e.id, uiId: e.uiId, name: info?.name || e.api_name, displayName: e.display_name, apiName: e.api_name }); }
   catch (err) { setStatus('Find failed: ' + err.message, 'warn'); }
@@ -3420,7 +3430,9 @@ let stepAnchor = null;      // where the keyboard is, which the DOM learns a tic
 function applySelection(byClick) {
   if (!currentPath) return;
   const box = $('tree'); if (!box) return;
-  const row = [...box.querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === currentPath);
+  const owner = functionRowForPath(currentPath);
+  const rowPath = (owner && owner.path) || currentPath;
+  const row = [...box.querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === rowPath);
   if (!row) return;
   // **Arriving** is not **stepping**, and they want different things. `revealRow()` scrolls the least
   // it can - the right answer for the arrows, where a list that jumps under you is worse than one
@@ -4150,7 +4162,9 @@ async function pullAll() {
     // *lose* what an earlier pull learnt - a map that came back short would otherwise take away
     // every «open this function» the previous one had earned, which is the partial-data rule this
     // repository keeps re-learning in new clothes.
-    const ui = await toBridge({ cmd: 'functionUiIds' });
+    let ui = null;
+    try { ui = await toBridge({ cmd: 'functionUiIds' }); }
+    catch (_) { /* optional: a transport failure must not turn a successful function census red */ }
     if (!op.current()) return;
     await carryUiIds(merged, (ui && ui.map) || {}, op);
     if (!op.current()) return;
@@ -4636,7 +4650,7 @@ async function pruneFunction(id, entry = null) {
   if (!op.current()) return false;
   index.delete(key);
   treeData = treeData.filter((e) => String(e.id) !== key);
-  if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
+  if (paths.includes(currentPath)) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
   renderTree(); updateMissingButton();
   // A failure that is forgotten is a file nobody will ever come back to: the index has already been
   // rewritten without it, so the next reconciliation cannot see it is still there. Kept by path, and
@@ -4742,7 +4756,7 @@ async function syncOneNow(id) {
     if (ent) { ent.path = written.primary; ent.mirrorFiles = written.paths; ent.downloaded = true; ent.error = false;
                ent.fetchedAgainst = written.listUpdated; ent.updatedTime = written.updatedTime;
                updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
-    if (currentPath === written.primary) await openFile(currentPath);
+    if (written.paths.includes(currentPath)) await openFile(currentPath);
     setStatus(`Synced: ${written.primary}`, 'ok');
   } catch (e) { setStatus(`Sync failed for ${id}: ${e.message}`, 'warn'); }
 }
