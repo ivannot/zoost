@@ -5086,6 +5086,15 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(movedInZoho(null, 1773397259000), false, 'a list that said nothing is not evidence');
     assert.equal(movedInZoho(1773397259000, '2026-03-13 11:20:59.0'), true,
       'the string form must never be handed to this - the call sites are what keep the pair honest');
+    // And the shape that made this reappear: a list that does not say `updatedTime` in milliseconds.
+    // Both sides then hold the same text, `Number()` makes both `NaN`, and `NaN !== NaN` is true - so
+    // the pair said «moved» about a function nobody had touched, on every load, with no pull able to
+    // clear it. Reported from an org as «Refresh 8 outdated» that always came back.
+    const SAID = '2026-03-13 11:20:59.0';
+    assert.equal(movedInZoho(SAID, SAID), false,
+      'two readings of the same instant, said the same way, read as moved - and no pull can clear it');
+    assert.equal(movedInZoho(SAID, '2026-03-14 09:00:00.0'), true,
+      'a function edited in Zoho is missed when the list does not speak in milliseconds');
     const src = read('apps/crm/sidepanel.js');
     assert.ok(!/row\.listUpdated\s*!==\s*meta\.updatedTime/.test(src),
       'why=crm compares an epoch against a formatted string again');

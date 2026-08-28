@@ -470,7 +470,15 @@ const META_SV = 3;   // v3 records language/runtime and every file in a compiled
  * Absence on either side is not a measurement: a sidecar written before this field existed says
  * nothing about when it was fetched, and claiming freshness we cannot know is worse than silence.
  */
-const movedInZoho = (listMs, fetchedMs) => !!(listMs && fetchedMs && Number(listMs) !== Number(fetchedMs));
+// Equality before arithmetic, and it is not a shortcut. `Number()` of anything that is not a number
+// is `NaN`, and `NaN !== NaN` is *true* - so two readings that are the same value written the same
+// way, which is exactly what a sidecar copied from the list holds, came out «moved» on every load,
+// for ever, with no pull able to clear it. Reported as «Refresh 8 outdated» that always came back,
+// on the functions of an org whose list gives `updatedTime` in a shape that is not milliseconds.
+// It is the same rule the pair below already carries: what cannot be measured is not evidence, and
+// a value identical to the one beside it is not evidence of a change either.
+const movedInZoho = (listMs, fetchedMs) => !!(listMs && fetchedMs && String(listMs) !== String(fetchedMs)
+  && Number(listMs) !== Number(fetchedMs));
 // A deletion is a write: what was read from that path is no longer what is there. It goes through
 // the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
 // diagram without the pull having to remember.
