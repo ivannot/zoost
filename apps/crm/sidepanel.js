@@ -107,7 +107,7 @@ const passTypeRow = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.re
 // The same reasoning one line up, for the language: written once so the three places that ask
 // cannot disagree, and combined here so a call site cannot apply one filter and forget the other -
 // which is how a list and the sentence explaining it come to describe different filters.
-const passLangRow = (e) => langFilter === 'all' || String(e.language || 'deluge') === langFilter;
+const passLangRow = (e) => langFilter === 'all' || langFamily(e.language) === langFilter;
 const passRow = (e) => passTypeRow(e) && passLangRow(e);
 // The data centre to fall back on when the panel knows neither a workspace nor a tab. It is a
 // display-only copy of a setting, so it is read into a URL and never written from here.
@@ -398,6 +398,24 @@ const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 // every language Zoho lists is downloaded.
 const isDeluge = (lang) => !lang || /^deluge/i.test(String(lang));
 const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_/g, ' '));
+// Zoho spells a language with its runtime in it - `java`, `java17`, `nodejs`, `nodejs_22`,
+// `python_3_12` - and that is the right thing to *record*: a mirror that flattened it would lose
+// which runtime a function is compiled for. It is the wrong thing to put in a menu, where it became
+// six entries and two of them read «nodejs 22» and «python 3 12». The family is what somebody
+// filters or sorts by; the version stays on the row, in the details and in both reports.
+const LANG_FAMILY = [
+  ['deluge', 'Deluge', /^deluge/i],
+  ['java', 'Java', /^java/i],
+  ['nodejs', 'Node.js', /^node/i],
+  ['python', 'Python', /^py/i],
+];
+// Ordered as above rather than alphabetically: Deluge is what almost every org has, and a list that
+// buries it under Java reads as though the others were the usual case.
+const langFamily = (lang) => (LANG_FAMILY.find(([, , re]) => re.test(String(lang || 'deluge')))
+  || [String(lang || 'deluge')])[0];
+// A language nobody here has a name for keeps the name Zoho gave it: inventing a family for it
+// would be a guess, and «what is this?» is better asked with their word than with ours.
+const langFamilyLabel = (fam) => (LANG_FAMILY.find(([k]) => k === fam) || [])[1] || String(fam);
 const fnMetaPath = (folder, stem) => `functions/${folder}/${stem}.meta.json`;
 const fnProjectRoot = (folder, stem) => `functions/${folder}/${stem}.files`;
 const fnDefaultPath = (folder, stem, language) => isDeluge(language)
@@ -1672,7 +1690,9 @@ function fnRowEl(e) {
   const st = e.stats;
   // Its own slot and its own class, not a widening of `.rr`: those four badge classes are shared
   // with rows in Modules and Connections, and reusing one would change two tabs nobody looked at.
-  const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langLabel(e.language).slice(0, 4)) : ''}</span>`;
+  // The family on the row, Zoho's own spelling in the tooltip: «java17» is a fact about the
+  // function and belongs somewhere, but `slice(0, 4)` of it put «pyth» in a column.
+  const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langFamilyLabel(langFamily(e.language))) : ''}</span>`;
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
@@ -1687,6 +1707,7 @@ function fnRowEl(e) {
   // own tooltip and in both reports. `modified` keeps its column, because a date sort over a line
   // count is the same defect one entry along.
   const sortShown = treeSort === 'modified' ? String(e.updatedTime || '').slice(0, 10)
+    : treeSort === 'language' ? langFamilyLabel(langFamily(e.language))
     : st ? st.lines + 'L' : '';
   const wide = treeSort === 'modified' ? ' rfw' : '';
   const lineSlot = `<span class="rest rfl${wide}"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${escHtml(sortShown)}</span>`;
@@ -1722,6 +1743,11 @@ const TREE_SORTS = {
   lines: { label: 'lines', get: (e) => (e.stats ? e.stats.lines : -1) },
   calls: { label: 'outbound calls', get: (e) => (e.stats ? e.stats.apiCalls : -1) },
   modified: { label: 'last modified', get: (e) => (e.updatedTime ? (Date.parse(String(e.updatedTime).replace(' ', 'T')) || 0) : -1) },
+  // Sorted by the family and not by Zoho's spelling, so `java` and `java17` sit together instead of
+  // being separated by whatever sorts between them. The row shows the family while this is the
+  // sort, which is the rule the size sort was removed under: a list ordered by something it does
+  // not show reads as a list that is not ordered.
+  language: { label: 'language', get: (e) => langFamilyLabel(langFamily(e.language)), text: true },
 };
 function renderTree() {
   if (viewMode !== 'functions') return;
@@ -1770,15 +1796,25 @@ function renderTree() {
     const dir = treeSortDir === 'asc' ? 1 : -1;
     const list = shown.slice().sort((a, b) => {
       const va = sorter.get(a), vb = sorter.get(b);
+      // A word is not a number, and `va - vb` over two of them is `NaN` - which compares false
+      // against everything and leaves the list in whatever order it arrived, looking sorted.
+      if (sorter.text) {
+        const c = String(va).localeCompare(String(vb));
+        return c ? dir * c : labelOf(a).localeCompare(labelOf(b));
+      }
       // Rows with no data yet stay at the bottom whichever way we sort: ascending would otherwise
       // open the list with the functions we know nothing about.
       if ((va < 0) !== (vb < 0)) return va < 0 ? 1 : -1;
       if (va !== vb) return dir * (va - vb);
       return labelOf(a).localeCompare(labelOf(b));
     });
-    const noData = list.filter((e) => sorter.get(e) < 0).length;
+    // «Without data» is about a measurement nobody has taken yet. Every function has a language,
+    // so counting `< 0` over a word would report all of them or none, depending on the word.
+    const noData = sorter.text ? 0 : list.filter((e) => sorter.get(e) < 0).length;
     const hdr = document.createElement('div'); hdr.className = 'srhdr';
-    hdr.textContent = `${list.length} function(s) by ${sorter.label}, ${treeSortDir === 'asc' ? 'lowest' : 'highest'} first`
+    const order = sorter.text ? (treeSortDir === 'asc' ? 'A to Z' : 'Z to A')
+      : `${treeSortDir === 'asc' ? 'lowest' : 'highest'} first`;
+    hdr.textContent = `${list.length} function(s) by ${sorter.label}, ${order}`
       + (noData ? ` · ${noData} without data (not downloaded yet)` : '');
     tree.appendChild(hdr);
     list.forEach((e) => tree.appendChild(fnRowEl(e)));
@@ -3273,7 +3309,11 @@ function buildTypeChips() {
   // in gets none. An org that is all Deluge - which is most of them - sees no control at all rather
   // than a dropdown with one thing in it.
   if (viewMode === 'functions') {
-    const langs = [...new Set(treeData.map((e) => String(e.language || 'deluge')))].sort();
+    // Families, in the order they are declared: six entries where two read «nodejs 22» and
+    // «python 3 12» is a menu that shows Zoho's internal spelling to somebody choosing a language.
+    const seen = new Set(treeData.map((e) => langFamily(e.language)));
+    const langs = LANG_FAMILY.map(([k]) => k).filter((k) => seen.has(k))
+      .concat([...seen].filter((k) => !LANG_FAMILY.some(([n]) => n === k)).sort());
     if (langs.length > 1) {
       // Same rule as the filter above: a value the new list cannot offer is dropped, or the list
       // filters everything out with no way back - which is what happens on the workspace next door.
@@ -3281,7 +3321,7 @@ function buildTypeChips() {
       const ll = document.createElement('span'); ll.className = 'fsellbl'; ll.textContent = 'Language';
       const ls = document.createElement('select'); ls.className = 'filtersel';
       ls.setAttribute('aria-label', 'Language filter');
-      [['all', 'All'], ...langs.map((k) => [k, langLabel(k)])].forEach(([k, l]) => {
+      [['all', 'All'], ...langs.map((k) => [k, langFamilyLabel(k)])].forEach(([k, l]) => {
         const o = document.createElement('option'); o.value = k; o.textContent = l; ls.appendChild(o);
       });
       ls.value = langFilter;
@@ -3301,14 +3341,17 @@ function buildTypeChips() {
     ss.setAttribute('aria-label', acts ? 'Sort actions' : 'Sort functions');
     (acts
       ? [['name', 'Kind, then name'], ['rules', 'Rules that fire it'], ['module', 'Module'], ['modified', MSG.lastModified]]
-      : [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['modified', MSG.lastModified]])
+      : [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['language', 'Language'], ['modified', MSG.lastModified]])
       .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
     ss.value = acts ? actionSort : treeSort;
     const dirBtn = document.createElement('button'); dirBtn.className = 'sortdir';
     const paintDir = () => {
       const asc = (acts ? actionSortDir : treeSortDir) === 'asc';
       dirBtn.textContent = asc ? '↑' : '↓';
-      const byName = acts ? (actionSort === 'name' || actionSort === 'module') : treeSort === 'name';
+      // A word reads A to Z; a number reads biggest-first. `language` is a word, and the button
+      // that flips the direction has to offer the pair the reader is actually choosing between.
+      const byName = acts ? (actionSort === 'name' || actionSort === 'module')
+        : (treeSort === 'name' || (TREE_SORTS[treeSort] && TREE_SORTS[treeSort].text));
       dirBtn.title = byName
         ? (asc ? 'A to Z - click for Z to A' : 'Z to A - click for A to Z')
         : (asc ? 'Lowest first - click for highest first' : 'Highest first - click for lowest first');
@@ -3318,7 +3361,7 @@ function buildTypeChips() {
     // names read A→Z, numbers read biggest-first.
     ss.onchange = () => {
       if (acts) { actionSort = ss.value; actionSortDir = (actionSort === 'name' || actionSort === 'module') ? 'asc' : 'desc'; }
-      else { treeSort = ss.value; treeSortDir = treeSort === 'name' ? 'asc' : 'desc'; }
+      else { treeSort = ss.value; treeSortDir = (treeSort === 'name' || (TREE_SORTS[treeSort] && TREE_SORTS[treeSort].text)) ? 'asc' : 'desc'; }
       paintDir(); (acts ? renderActions() : renderTree());
     };
     dirBtn.onclick = () => {

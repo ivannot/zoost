@@ -5680,16 +5680,19 @@ for (const app of ['crm', 'analytics']) {
     { api_name: 'e', namespace: 'standalone', rest: false },   // a row from a mirror written before the field
   ];
   const bench = (typeFilter, langFilter) => {
-    const g = { Object, String, console, typeFilter, langFilter };
-    const m = load([sliceConst(REL, 'passTypeRow'), sliceConst(REL, 'passLangRow'),
+    const g = { Object, String, Array, console, typeFilter, langFilter };
+    const m = load([sliceConst(REL, 'LANG_FAMILY'), sliceConst(REL, 'langFamily'),
+                    sliceConst(REL, 'passTypeRow'), sliceConst(REL, 'passLangRow'),
                     sliceConst(REL, 'passRow')], g);
     return rows.filter(m.passRow).map((r) => r.api_name).join('');
   };
 
   test('the language filter holds the list to one language', () => {
     assert.equal(bench('all', 'all'), 'abcde');
-    assert.equal(bench('all', 'python_3_12'), 'c');
-    assert.equal(bench('all', 'java17'), 'd');
+    // The menu offers families, because «java» and «java17» are one answer to «which language»
+    // and two entries in a menu is Zoho's internal spelling shown to somebody choosing one.
+    assert.equal(bench('all', 'python'), 'c');
+    assert.equal(bench('all', 'java'), 'd');
     // A row written before the mirror recorded a language is Deluge, which is what it was: every
     // function was Deluge then. Treating the absence as its own value would hide those rows behind
     // a filter nothing offers.
@@ -5699,9 +5702,9 @@ for (const app of ['crm', 'analytics']) {
   test('the two filters narrow together, and neither cancels the other', () => {
     // The reason it is a second control: this question cannot be asked of one dropdown.
     assert.equal(bench('standalone', 'deluge'), 'ae');
-    assert.equal(bench('automation', 'java17'), 'd');
+    assert.equal(bench('automation', 'java'), 'd');
     assert.equal(bench('rest', 'deluge'), 'b');
-    assert.equal(bench('automation', 'python_3_12'), '', 'a pair that matches nothing must match nothing');
+    assert.equal(bench('automation', 'python'), '', 'a pair that matches nothing must match nothing');
   });
 
   test('every place that draws or searches the list applies both filters', () => {
@@ -5866,6 +5869,55 @@ for (const app of ['crm', 'analytics']) {
     // which this product refuses in both directions.
     assert.match(asked[0], /fields=id%2Cdependent_id(&|$)/,
       'why=it asks for more than the two fields it needs');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Families, not Zoho's spelling. The menu had six entries and two of them read «nodejs 22» and
+// «python 3 12» - reported from the panel, and the right complaint: `nodejs_22` is what the mirror
+// must *record*, because which runtime a function is compiled for is a fact about it, and it is not
+// what somebody choosing a language should be shown.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const m = load([sliceConst(REL, 'LANG_FAMILY'), sliceConst(REL, 'langFamily'),
+                  sliceConst(REL, 'langFamilyLabel')], { String, Array, console });
+
+  test('every language Zoho lists falls into one of the four', () => {
+    // Derived from the shipped list, so a language added to the walk cannot quietly become a fifth
+    // entry in the menu without somebody deciding that is what it should be.
+    const asked = [...sliceConst('apps/crm/content-bridge.js', 'LANGUAGES').matchAll(/'([a-z0-9_]+)'/g)]
+      .map((x) => x[1]);
+    assert.ok(asked.length >= 5, asked.join(','));
+    const families = new Set(asked.map(m.langFamily));
+    assert.equal([...families].sort().join(','), 'deluge,java,nodejs,python');
+    assert.equal(m.langFamily('java'), m.langFamily('java17'), 'two Java runtimes, two menu entries');
+    assert.equal(m.langFamily('nodejs'), m.langFamily('nodejs_22'), 'two Node runtimes, two menu entries');
+  });
+
+  test('the labels are the words a reader uses', () => {
+    assert.equal(m.langFamilyLabel(m.langFamily('python_3_12')), 'Python');
+    assert.equal(m.langFamilyLabel(m.langFamily('nodejs_22')), 'Node.js');
+    assert.equal(m.langFamilyLabel(m.langFamily(null)), 'Deluge', 'a row with no language is Deluge');
+  });
+
+  test('a language nobody here has a name for keeps the name Zoho gave it', () => {
+    // Inventing a family for something unrecognised would be a guess wearing a label. «go» is not a
+    // language this product knows, and saying so with their own word is the honest answer.
+    assert.equal(m.langFamily('go'), 'go');
+    assert.equal(m.langFamilyLabel('go'), 'go');
+  });
+
+  test('sorting by language orders by the family and not by the spelling', () => {
+    // `java` and `java17` must sit together. Sorting on Zoho's string would separate them by
+    // whatever sorts between the two, which is a list that looks shuffled inside each language.
+    const g = { String, Array, console, Date,
+                langFamily: m.langFamily, langFamilyLabel: m.langFamilyLabel };
+    const { TREE_SORTS } = load([sliceConst(REL, 'TREE_SORTS')], g);
+    const key = TREE_SORTS.language;
+    assert.ok(key && key.text, 'why=language sorts as a number, and `a - b` over two words is NaN');
+    assert.equal(key.get({ language: 'java17' }), key.get({ language: 'java' }));
+    assert.equal(key.get({ language: 'nodejs_22' }), 'Node.js');
+    assert.equal(key.get({ language: null }), 'Deluge');
   });
 }
 
@@ -18613,6 +18665,7 @@ test('the function row shows what the list is sorted by', () => {
                 treeSort: sort, currentPath: null,
                 escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
                 labelOf: (e) => e.display_name, isDeluge: () => true, langLabel: () => 'Deluge',
+                langFamily: (l) => String(l || 'deluge'), langFamilyLabel: (f) => (f === 'deluge' ? 'Deluge' : String(f)),
                 MSG: { notHere: 'x', hereRepull: 'y', failed: 'z', clickRetry: '', notMirrored: () => '' },
                 fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
     const m = load([sliceFn(rel, 'fnRowEl')], g);
@@ -18624,6 +18677,10 @@ test('the function row shows what the list is sorted by', () => {
   assert.match(shown('modified'), /^2026-08-14$/,
                `sorted by date the row shows «${shown('modified')}» - a line count under a list ordered `
                + 'by date reads as an order that is not there, which is the defect this case exists for');
+  // And the criterion added after it: a list ordered by language shows the language, not a line
+  // count. It is the same rule the size sort was removed under, applied on the way in this time.
+  assert.equal(shown('language'), 'Deluge',
+               `sorted by language the row shows «${shown('language')}»`);
   // The two that already have a column of their own keep the line count.
   assert.equal(shown('lines'), '16L', 'sorting by lines stopped showing lines');
   assert.equal(shown('calls'), '16L', 'the calls sort has its own column and this one should not change');
@@ -18632,7 +18689,8 @@ test('the function row shows what the list is sorted by', () => {
   // Derived, and the rule the size sort was removed under: every criterion the list offers is either
   // a column the row already has, or one this slot shows. A sort by something invisible is what made a
   // correct order read as a broken one.
-  const { TREE_SORTS } = load([sliceConst(rel, 'TREE_SORTS')], { console });
+  const { TREE_SORTS } = load([sliceConst(rel, 'TREE_SORTS')],
+                              { console, langFamily: () => 'java', langFamilyLabel: () => 'Java' });
   const own = new Set(['name', 'lines', 'calls']);
   for (const key of Object.keys(TREE_SORTS)) {
     if (own.has(key)) continue;
