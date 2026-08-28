@@ -95,10 +95,20 @@ function sampleRefuse() {
   return true;
 }
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
+// Which language the list is held to. Its own variable and not a value of `typeFilter`, because the
+// two are orthogonal: «the automation namespace» and «written in Python» are different questions and
+// a reader wants to ask them together. `all` here means every language, the same word the other
+// filters use for the same idea.
+let langFilter = 'all';
 // What the Type chip lets through - written once, because three places asked it and one of them now
 // has to *say* what it excluded. Three copies of a predicate are three chances for the sentence
 // about a filter to describe a different filter from the one that ran.
 const passTypeRow = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter);
+// The same reasoning one line up, for the language: written once so the three places that ask
+// cannot disagree, and combined here so a call site cannot apply one filter and forget the other -
+// which is how a list and the sentence explaining it come to describe different filters.
+const passLangRow = (e) => langFilter === 'all' || String(e.language || 'deluge') === langFilter;
+const passRow = (e) => passTypeRow(e) && passLangRow(e);
 // The data centre to fall back on when the panel knows neither a workspace nor a tab. It is a
 // display-only copy of a setting, so it is read into a URL and never written from here.
 let zohoDc = 'zoho.com';
@@ -1726,7 +1736,7 @@ function renderTree() {
   }
   const term = $('find').value.trim().toLowerCase();
   const shown = treeData
-    .filter(passTypeRow)
+    .filter(passRow)
     .filter((e) => !connFilterSet || connFilterSet.has(e.path))
   // A function carries **three** names and Zoho means a different thing by each: `display_name`
   // («LearningObjects - Upsert User DELETE»), `api_name` (a lowercased slug), and `name` - the
@@ -1750,8 +1760,8 @@ function renderTree() {
     // org while the box looks like the only thing in the way. Named, the reader clears the right
     // one; unnamed, «No matches» is a true sentence about a list that was never looked at.
     m.innerHTML = treeData.length
-      ? `<b>No matches.</b>${typeFilter && typeFilter !== 'all'
-        ? ` The type filter is holding the list to ${treeData.filter(passTypeRow).length} of ${treeData.length} function(s) - set <b>Type</b> to <b>All</b> to search them all.` : ''}`
+      ? `<b>No matches.</b>${(typeFilter !== 'all' || langFilter !== 'all')
+        ? ` The ${narrowingName()} holding the list to ${treeData.filter(passRow).length} of ${treeData.length} function(s) - set them to <b>All</b> to search them all.` : ''}`
       : (emptyReason() || '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to mirror this org.');
     tree.appendChild(m); return;
   }
@@ -1987,6 +1997,12 @@ async function rebuildTree() {
   }
   if (!current()) return;
   renderTree(); updateMissingButton(); attachFnStats();
+  // The Language control is derived from what the workspace holds, and the filter bar is built on a
+  // mode switch - which happens *before* this. Without this line the control appeared only after the
+  // reader touched a tab, which is the shape of every dead control this panel has had: present in
+  // the code, absent on screen, and nothing saying so. It is cheap and the values it holds survive a
+  // rebuild by design, which is what the filter above was rewritten for.
+  if (viewMode === 'functions') buildTypeChips();
   if (stale_summary) await saveMetaIndex(metaPaths, op);
   if (!current()) return;
   // Put down here, not when Refresh was pressed: the pass that re-read everything has now written
@@ -3161,6 +3177,12 @@ function setCurFilter(k) {
   else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k;
   else if (viewMode === 'actions') actionFilter = k; else connCatFilter = k;
 }
+// Which of the two is narrowing, named. «The type filter» over a list held down by the language one
+// sends the reader to clear a control that is already at All, and «No matches» stays on screen.
+function narrowingName() {
+  const on = [typeFilter !== 'all' && 'type', langFilter !== 'all' && 'language'].filter(Boolean);
+  return on.length === 2 ? 'type and language filters are' : `${on[0]} filter is`;
+}
 function buildTypeChips() {
   const wrap = $('typechips'); wrap.innerHTML = '';
   const defs = viewMode === 'functions'
@@ -3199,6 +3221,30 @@ function buildTypeChips() {
     (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : viewMode === 'actions' ? renderActions() : renderConnections());
   };
   wrap.appendChild(lbl); wrap.appendChild(sel);
+  // The language control, on the one list that has more than one. Derived from what is in the
+  // workspace and not from a written list, for the reason the Actions kinds carry above: a language
+  // Zoho adds tomorrow gets a filter without anyone remembering, and a language nothing is written
+  // in gets none. An org that is all Deluge - which is most of them - sees no control at all rather
+  // than a dropdown with one thing in it.
+  if (viewMode === 'functions') {
+    const langs = [...new Set(treeData.map((e) => String(e.language || 'deluge')))].sort();
+    if (langs.length > 1) {
+      // Same rule as the filter above: a value the new list cannot offer is dropped, or the list
+      // filters everything out with no way back - which is what happens on the workspace next door.
+      if (langFilter !== 'all' && !langs.includes(langFilter)) langFilter = 'all';
+      const ll = document.createElement('span'); ll.className = 'fsellbl'; ll.textContent = 'Language';
+      const ls = document.createElement('select'); ls.className = 'filtersel';
+      ls.setAttribute('aria-label', 'Language filter');
+      [['all', 'All'], ...langs.map((k) => [k, langLabel(k)])].forEach(([k, l]) => {
+        const o = document.createElement('option'); o.value = k; o.textContent = l; ls.appendChild(o);
+      });
+      ls.value = langFilter;
+      ls.onchange = () => { langFilter = ls.value; runSearch(); };
+      wrap.appendChild(ll); wrap.appendChild(ls);
+    } else if (langFilter !== 'all') {
+      langFilter = 'all';   // the control is gone; a filter nobody can see must not still be running
+    }
+  }
   // Two lists have columns worth sorting by, and they get the same control - one built here rather
   // than a second one written beside it, or the two would drift the way every duplicated thing in
   // this panel has. What differs is the keys and the state each list keeps.
@@ -3903,7 +3949,7 @@ async function contentSearch() {
   // narrowing in the same situation; this is the same fact in the same voice.
   let searched = 0;
   for (const e of treeData) {
-    if (!e.downloaded || !passTypeRow(e)) continue;
+    if (!e.downloaded || !passRow(e)) continue;
     searched++;
     const cached = cache.get(e.id); if (!cached) continue;
     const sources = Array.isArray(cached) ? cached : [{ path: e.path, code: cached }];
@@ -3929,10 +3975,12 @@ async function contentSearch() {
   results.sort((a, b) => b.count - a.count || labelOf(a.e).localeCompare(labelOf(b.e)));
   tree.innerHTML = '';
   if (!results.length) {
-    const narrowing = typeFilter === 'all' ? 'The search box was' : 'The type filter and the search box were';
+    const narrowing = (typeFilter === 'all' && langFilter === 'all')
+      ? 'The search box was' : `The ${narrowingName()} and the search box were`;
     tree.innerHTML = `<div class="treemsg"><b>No matches for "${escHtml(term)}".</b> `
       + `${narrowing} applied to ${searched} of ${treeData.length} function(s) - the rest were not searched. `
-      + `${typeFilter === 'all' ? 'Only downloaded source is searched.' : 'Set Type to All to search them.'}</div>`;
+      + `${(typeFilter === 'all' && langFilter === 'all') ? 'Only downloaded source is searched.'
+           : 'Set them to All to search them.'}</div>`;
     return;
   }
   const total = results.reduce((n, r) => n + r.count, 0);

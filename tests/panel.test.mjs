@@ -5666,6 +5666,88 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The Language filter on the functions list. Asked for once Java, Python and Node reached the
+// mirror: «un filtro per linguaggio, così come il sort». It is its own control and not a value of
+// the Type one, because «the automation namespace» and «written in Python» are different questions
+// and a reader asks them together.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const rows = [
+    { api_name: 'a', namespace: 'standalone', language: 'deluge', rest: false },
+    { api_name: 'b', namespace: 'automation', language: 'deluge', rest: true },
+    { api_name: 'c', namespace: 'standalone', language: 'python_3_12', rest: false },
+    { api_name: 'd', namespace: 'automation', language: 'java17', rest: false },
+    { api_name: 'e', namespace: 'standalone', rest: false },   // a row from a mirror written before the field
+  ];
+  const bench = (typeFilter, langFilter) => {
+    const g = { Object, String, console, typeFilter, langFilter };
+    const m = load([sliceConst(REL, 'passTypeRow'), sliceConst(REL, 'passLangRow'),
+                    sliceConst(REL, 'passRow')], g);
+    return rows.filter(m.passRow).map((r) => r.api_name).join('');
+  };
+
+  test('the language filter holds the list to one language', () => {
+    assert.equal(bench('all', 'all'), 'abcde');
+    assert.equal(bench('all', 'python_3_12'), 'c');
+    assert.equal(bench('all', 'java17'), 'd');
+    // A row written before the mirror recorded a language is Deluge, which is what it was: every
+    // function was Deluge then. Treating the absence as its own value would hide those rows behind
+    // a filter nothing offers.
+    assert.equal(bench('all', 'deluge'), 'abe');
+  });
+
+  test('the two filters narrow together, and neither cancels the other', () => {
+    // The reason it is a second control: this question cannot be asked of one dropdown.
+    assert.equal(bench('standalone', 'deluge'), 'ae');
+    assert.equal(bench('automation', 'java17'), 'd');
+    assert.equal(bench('rest', 'deluge'), 'b');
+    assert.equal(bench('automation', 'python_3_12'), '', 'a pair that matches nothing must match nothing');
+  });
+
+  test('every place that draws or searches the list applies both filters', () => {
+    // The defect this prevents has happened here twice with the Type filter alone: a list held down
+    // by a filter, and a sentence that names a different one - or a search that quietly ignores it.
+    const src = read(REL);
+    assert.equal((src.match(/passTypeRow\(/g) || []).length, 1,
+      'why=something asks the type filter on its own again - the pair is `passRow`');
+    for (const site of ['.filter(passRow)', 'treeData.filter(passRow).length', '!passRow(e)']) {
+      assert.ok(src.includes(site), `why=${site} is gone - a list or a search that ignores a filter`);
+    }
+  });
+
+  test('the sentence names the filter that is actually narrowing', () => {
+    // «The type filter is holding the list» over a list held by the language one sends the reader to
+    // clear a control already at All, and «No matches» stays where it is.
+    const g = { Object, String, console, typeFilter: 'all', langFilter: 'java17' };
+    const m = load([sliceFn(REL, 'narrowingName')], g);
+    assert.equal(m.narrowingName(), 'language filter is');
+    const g2 = { Object, String, console, typeFilter: 'rest', langFilter: 'all' };
+    assert.equal(load([sliceFn(REL, 'narrowingName')], g2).narrowingName(), 'type filter is');
+    const g3 = { Object, String, console, typeFilter: 'rest', langFilter: 'java17' };
+    assert.equal(load([sliceFn(REL, 'narrowingName')], g3).narrowingName(), 'type and language filters are');
+  });
+
+  test('a control that cannot be seen is not left running', () => {
+    // The bar is built on a mode switch and the languages come from the workspace, so a workspace
+    // with one language shows no control - and must not still be filtering by a value chosen in the
+    // one before it. Both halves are in the same block, and both were written for the same defect.
+    const src = read(REL);
+    const at = src.indexOf("ll.textContent = 'Language'");
+    assert.ok(at > 0, 'why=the Language control is gone');
+    const block = src.slice(at - 1200, at + 1600);
+    assert.ok(/langs\.length > 1/.test(block), 'why=an org with one language gets a dropdown of one');
+    assert.ok(/!langs\.includes\(langFilter\)\) langFilter = 'all'/.test(block),
+      'why=a language the new workspace does not have would filter every row out, with no way back');
+    assert.ok(/langFilter = 'all';\s+\/\/ the control is gone/.test(block),
+      'why=the control disappears and its filter keeps running');
+    // And it is rebuilt when the workspace has finished loading, or it appears only after the
+    // reader happens to touch a tab - which is the dead-control shape this panel knows well.
+    assert.ok(/if \(viewMode === 'functions'\) buildTypeChips\(\);/.test(src),
+      'why=nothing rebuilds the filter bar once the tree is loaded');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same
