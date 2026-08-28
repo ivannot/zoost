@@ -80,7 +80,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 ## Feature highlights
 
 **Local, Git-friendly version control**
-- Pull every supported Zoho CRM function runtime. Deluge stays a `.dg` source; Java, Python and Node
+- Pull Zoho CRM functions in the six runtimes Zoost asks for - Deluge, Java, Java 17, Node.js, Node.js 22 and Python 3.12. Deluge stays a `.dg` source; Java, Python and Node
   keep every project file under `<name>.files/`; each function has a `.meta.json` sidecar under
   `functions/<namespace>/`. The preview keeps the function as one item and gives it a **Files**
   tab holding a tree that opens and closes, so every source, manifest and nested path Zoho returns

@@ -58,7 +58,8 @@ Stated here rather than buried, because it is the part an assessment needs.
   extension has one POST of the same kind: `/crm/v8/Functions__s/bulk`, the call Zoho's own newer
   functions page uses to list them. It is asked for two fields - a function's record id in that
   module and the `dependent_id` that joins it to the id already mirrored - so the panel can open one
-  function in that interface, which addresses it by the first. It lists; it does not create.
+  function in that interface, which addresses it by the first. What is claimed is what Zoost sends: a
+  listing, asking for two field names.
 - **They never read customer records.** Zoho CRM: no contacts, no deals, no notes - only the
   definitions of what you built. Zoho Analytics: never the rows inside a table; the endpoints that
   would return cell values exist and are deliberately never called.
