@@ -130,7 +130,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     const t = nodes[ns + '.' + name] || ((_hByName[name] || []).length === 1 ? _hByName[name][0] : null);
     return t ? { href: '#' + fnAnchor(fnKey(t)), label: t.display_name || t.name } : null;
   };
-  const hl = (c, lang) => (isDelugeLang(lang) && window.highlightDeluge ? window.highlightDeluge(c, codeResolve) : esc(c));
+  // The report shows what the panel shows, colours included - a project file printed as grey text
+  // here would make the export the lesser copy the panel warns about. `name` is the file inside the
+  // project, because that is what says whether it is Java, Python or a JSON manifest beside them;
+  // the function's own language cannot, since one project holds more than one kind of file.
+  const hl = (c, lang, name) => (isDelugeLang(lang) && window.highlightDeluge ? window.highlightDeluge(c, codeResolve)
+    : (window.sourceLanguage && window.highlightSource && window.sourceLanguage(name)
+       ? window.highlightSource(c, window.sourceLanguage(name)) : esc(c)));
   // **Above the function chapter, because that is where it is first used.** A module named in a
   // function's Reads / Writes / Reached-by-URL line has a section of its own in this document, and
   // those three lines printed it as text - a name the reader can see and not follow, in a file whose
@@ -179,7 +185,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       : f.code === null || f.code === undefined
         ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
         : (!isDelugeLang(f.language) && f.sources && f.sources.length)
-          ? f.sources.map((source) => `<p><code>${esc(source.name)}</code></p><pre class="code">${hl(source.code, f.language)}</pre>`).join('')
+          ? f.sources.map((source) => `<p><code>${esc(source.name)}</code></p><pre class="code">${hl(source.code, f.language, source.name)}</pre>`).join('')
           : `<pre class="code">${hl(f.code, f.language)}</pre>`);
 
   // workflow <-> function wiring

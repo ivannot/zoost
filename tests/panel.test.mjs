@@ -5499,6 +5499,92 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The other three languages. Zoho compiles Java, Python and Node function projects, and their files
+// were mirrored and then shown as plain text beside a coloured Deluge source - reported from the
+// panel as «sembrano proprio orfani quei file», which is what a file the product holds and does not
+// read looks like. Same refusal as the SQL highlighter: comments, strings, numbers and a fixed
+// keyword list, and nothing that would be a guess about somebody else's code.
+{
+  const win = {};
+  vm.runInContext(read('apps/crm/highlight.js'), vm.createContext({ window: win }));
+  const { highlightSource, sourceLanguage } = win;
+
+  test('what a project file is, is read from its name', () => {
+    assert.equal(sourceLanguage('functions/misc/sync.files/Main.java'), 'java');
+    assert.equal(sourceLanguage('a/b/handler.py'), 'python');
+    for (const p of ['index.js', 'index.mjs', 'server.cjs', 'package.json']) {
+      assert.equal(sourceLanguage(p), 'javascript', p);
+    }
+    // A file the panel cannot claim to read says so by returning nothing, and is then printed as it
+    // is - never coloured by whichever set of keywords happened to be nearest.
+    assert.equal(sourceLanguage('notes.txt'), null);
+    assert.equal(sourceLanguage(''), null);
+  });
+
+  test('it escapes before it colours', () => {
+    const out = highlightSource('var x = "<img src=x onerror=alert(1)>";', 'javascript');
+    assert.ok(!/<img/.test(out), out);
+    assert.ok(out.includes('&lt;img'), out);
+  });
+
+  test('a hash inside a Python string is not the start of a comment', () => {
+    // The ordering the patterns encode. Matched the other way round, everything after the first `#`
+    // in a string is grey to the end of the line - and the line is code.
+    const out = highlightSource('# why\nreturn "a # b"', 'python');
+    assert.equal((out.match(/c-com/g) || []).length, 1, out);
+    assert.ok(/c-str/.test(out), out);
+  });
+
+  test('a Java comment, type, string and number are told apart', () => {
+    const out = highlightSource('// why\nString s = "x"; int n = 42;', 'java');
+    assert.ok(/c-com">\/\/ why/.test(out), out);
+    assert.ok(/c-type">String/.test(out), out);
+    assert.ok(/c-num">42/.test(out), out);
+    assert.ok(/c-str/.test(out), out);
+  });
+
+  test('a Node template literal is one string, backticks and all', () => {
+    const out = highlightSource('const a = `x${1}y`; // done', 'javascript');
+    assert.equal((out.match(/c-str/g) || []).length, 1, out);
+    assert.ok(/c-kw">const/.test(out), out);
+    assert.ok(/c-com/.test(out), out);
+  });
+
+  test('a word inside a name is not a keyword', () => {
+    // «format» starts with «for». A loose match paints half a word and reads as a defect in the
+    // file being looked at, which is the worst thing a highlighter can do to somebody else's code.
+    assert.ok(!/c-kw">for</.test(highlightSource('int format = 1;', 'java')));
+    assert.ok(!/c-kw">in</.test(highlightSource('index = 1', 'python')));
+  });
+
+  test('a language nobody here reads is printed, not guessed at', () => {
+    assert.equal(highlightSource('a & b', 'cobol'), 'a &amp; b');
+    assert.equal(highlightSource('', 'java'), '');
+  });
+
+  test('every language the mirror can hold has a highlighter, and the panel asks for it', () => {
+    // Derived from the shipped list, so a language Zoho adds tomorrow is a finding here rather than
+    // a file that quietly comes out grey. `deluge` has its own, richer one above.
+    const langs = sliceConst('apps/crm/content-bridge.js', 'LANGUAGES');
+    const asked = [...langs.matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]);
+    assert.ok(asked.length >= 5, langs);
+    const EXT = { deluge: 'x.dg', java: 'x.java', java17: 'x.java', nodejs: 'x.js', nodejs_22: 'x.js',
+                  python_3_12: 'x.py' };
+    for (const lang of asked) {
+      const probe = EXT[lang];
+      assert.ok(probe, `why=${lang} is asked of Zoho and no file extension here stands for it`);
+      if (lang === 'deluge') continue;
+      assert.ok(sourceLanguage(probe), `why=a ${lang} file would be shown uncoloured`);
+    }
+    // And the two places a source is drawn both reach for it, or the report is the lesser copy.
+    assert.ok(/window\.highlightSource\(code, otherLang\)/.test(read('apps/crm/sidepanel.js')),
+      'why=the panel draws a project file as plain text');
+    assert.ok(/window\.highlightSource\(c, window\.sourceLanguage\(name\)\)/.test(read('apps/crm/export.js')),
+      'why=the HTML export draws a project file as plain text');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same

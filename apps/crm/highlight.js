@@ -103,6 +103,77 @@
     return marks;
   }
 
+  // ---------------------------------------------------------------------------------------------
+  // The other three languages a function can be written in. Zoho compiles Java, Python and Node
+  // projects now, and their files were mirrored and then drawn as a grey wall of text beside a
+  // Deluge source that is coloured - «orfani», reported from the panel, and the right word: the
+  // product was holding those files rather than reading them.
+  //
+  // It colours what can be established by reading and nothing else: comments, strings, numbers and
+  // a fixed keyword list per language. No calls, no links, no types inferred - the Deluge
+  // highlighter below earns those from a namespace the panel actually holds, and there is no such
+  // knowledge here. The same rule, and the same words, as the SQL highlighter in the other product:
+  // better one highlight less than one that is wrong.
+  const LANG = {
+    // Ordered, and the order is the meaning: a `#` inside a string is not a comment, so the strings
+    // that can hold one are matched first. Python's triple quote comes before its single quote for
+    // the same reason, and a Java text block before an ordinary string.
+    python: {
+      com: '#[^\\n]*',
+      str: '[rRbBfFuU]{0,2}(?:"""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\'|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\')',
+      kw: 'and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|match|nonlocal|not|or|pass|raise|return|try|while|with|yield|True|False|None',
+      ty: 'bool|bytes|dict|float|int|list|object|set|str|tuple',
+    },
+    java: {
+      com: '//[^\\n]*|/\\*[\\s\\S]*?\\*/',
+      str: '"""[\\s\\S]*?"""|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'',
+      kw: 'abstract|assert|break|case|catch|class|const|continue|default|do|else|enum|extends|final|finally|for|goto|if|implements|import|instanceof|interface|native|new|package|private|protected|public|record|return|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|var|volatile|while|yield|true|false|null',
+      ty: 'boolean|byte|char|double|float|int|long|short|void|Boolean|Double|Integer|List|Long|Map|Object|String',
+    },
+    javascript: {
+      com: '//[^\\n]*|/\\*[\\s\\S]*?\\*/',
+      str: '`(?:[^`\\\\]|\\\\.)*`|"(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'',
+      kw: 'async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|from|function|if|import|in|instanceof|let|new|of|return|static|super|switch|this|throw|try|typeof|var|void|while|with|yield|true|false|null|undefined',
+      ty: 'Array|Boolean|Date|Error|JSON|Map|Number|Object|Promise|RegExp|Set|String',
+    },
+  };
+  // What a file is, from its name, because that is all the panel knows about a file inside a
+  // project: the sidecar names the language of the *function*, and a project holds a config or a
+  // manifest beside its source. `json` reads as JavaScript on purpose - its strings, its numbers and
+  // its three keywords are exactly the subset that matches.
+  const BY_EXT = { java: 'java', py: 'python', pyw: 'python', js: 'javascript', mjs: 'javascript',
+                   cjs: 'javascript', ts: 'javascript', json: 'javascript' };
+  window.sourceLanguage = function (path) {
+    const m = String(path || '').match(/\.(\w+)$/);
+    return (m && BY_EXT[m[1].toLowerCase()]) || null;
+  };
+  const RES = {};
+  function reFor(lang) {
+    if (!RES[lang]) {
+      const d = LANG[lang];
+      RES[lang] = new RegExp('(?<com>' + d.com + ')|(?<str>' + d.str + ')'
+        + '|\\b(?<num>\\d[\\d_]*\\.?\\d*(?:[eE][+-]?\\d+)?[LlFfDd]?)\\b'
+        + '|\\b(?<kw>' + d.kw + ')\\b|\\b(?<ty>' + d.ty + ')\\b', 'g');
+    }
+    return RES[lang];
+  }
+  /** One file of a compiled function project, coloured. `language` is what `sourceLanguage()` said. */
+  window.highlightSource = function (code, language) {
+    const re = LANG[language] && reFor(language);
+    if (!re) return esc(String(code));   // a language nobody here reads is shown as it is, never guessed at
+    let out = '', last = 0, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(code))) {
+      if (m[0] === '') { re.lastIndex++; continue; }   // a zero-length match would loop for ever
+      out += esc(code.slice(last, m.index));
+      const g = m.groups;
+      const cls = g.com ? 'c-com' : g.str ? 'c-str' : g.num ? 'c-num' : g.kw ? 'c-kw' : 'c-type';
+      out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+      last = re.lastIndex;
+    }
+    return out + esc(code.slice(last));
+  };
+
   window.highlightDeluge = function (code, resolve, linkFor) {
     let out = '', last = 0, m;
     const marks = argMarks(code);

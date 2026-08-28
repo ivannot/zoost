@@ -2503,8 +2503,14 @@ async function openFile(path, line = null, byClick = false) {
     return target && _known.has(target) ? target : null;
   };
   const delugeSource = /\.dg$/i.test(path) && (!trow || isDeluge(trow.language));
+  // Deluge is the one this panel *knows* - it resolves calls into links from the org's own graph.
+  // A project file gets the colours and nothing more, because there is no such knowledge to spend on
+  // it; showing it as plain text next to a coloured sibling is what made those files look like
+  // something the product was merely holding.
+  const otherLang = !delugeSource && window.sourceLanguage && window.sourceLanguage(path);
   $('pvcode').innerHTML = delugeSource && window.highlightDeluge
     ? window.highlightDeluge(code, _resolve, _linkFor)
+    : otherLang && window.highlightSource ? window.highlightSource(code, otherLang)
     : escHtml(code);
   $('pvcode').querySelectorAll('a.c-link[data-file]').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
   $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });

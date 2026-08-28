@@ -36,7 +36,7 @@ beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	93c4caeb5852	e1a5052dd09d	divergent
+buildExportHtml	4d389b366dc5	e1a5052dd09d	divergent
 buildExportMarkdown	f5986b99e1f9	f5d0fbdf2c0e	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
