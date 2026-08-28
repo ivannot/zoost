@@ -1197,6 +1197,39 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
                             f'store/{c[1]}/whatsnew/{c[2]}.md')
         self.assertTrue(rows, 'no ledger row was checked — the parse or the floors are wrong')
 
+    def test_notes_for_a_tagged_version_still_say_what_that_version_shipped(self):
+        """Release notes are written once and published once, and then they are a record.
+
+        Found on the day a release was being cut: `store/crm/whatsnew/1.47.0.md` had been rewritten
+        after `crm-v1.47.0` was tagged, so the file described the *next* version's work under the
+        published one's number. The GitHub Release body was built at tag time and is right; the file
+        beside it was not, and it is what anybody reads in the repository - and what a later release
+        would have been written on top of.
+
+        The tag is the record: what the file says now must be what it said when it was published. A
+        version whose notes need correcting after the fact is a different problem and would be
+        visible here, which is the point.
+        """
+        tags = subprocess.run(['git', 'tag'], cwd=ROOT, capture_output=True, text=True).stdout.split()
+        checked = 0
+        for tag in tags:
+            m = re.fullmatch(r'(crm|analytics)-v(\d+\.\d+\.\d+)', tag)
+            if not m:
+                continue
+            app, version = m.group(1), m.group(2)
+            rel = f'store/{app}/whatsnew/{version}.md'
+            at_tag = subprocess.run(['git', 'show', f'{tag}:{rel}'], cwd=ROOT,
+                                    capture_output=True, text=True)
+            if at_tag.returncode:
+                continue          # tagged before the convention: nothing to compare
+            now = (ROOT / rel)
+            self.assertTrue(now.is_file(), f'{rel} was published with {tag} and is gone')
+            self.assertEqual(now.read_text(encoding='utf-8'), at_tag.stdout,
+                             f'{rel} differs from what {tag} published. Those notes are a record of '
+                             f'what that version shipped; new work belongs in the next version file.')
+            checked += 1
+        self.assertGreater(checked, 3, 'no tagged release notes were compared - the parse is wrong')
+
 
 class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
     """Turning on a 404 page silently took `/api/versions` away.

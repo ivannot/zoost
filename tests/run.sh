@@ -32,7 +32,7 @@ trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
 NODE_EXPECTED=1061
-PY_EXPECTED=407
+PY_EXPECTED=408
 cd "$(dirname "$0")/.."
 
 # The machine that runs this is not the machine the extensions are loaded on: Chrome there reads
