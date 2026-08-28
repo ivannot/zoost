@@ -1738,6 +1738,11 @@ function publishSentence(st) {
 // One function's runtime record, on request. Never in a pull and never on disk: it is per function,
 // so on a real org it would be three hundred requests, and what it answers is «what happened
 // lately» - a question whose answer is different a minute later. The panel says both.
+// The windows the runtime box offers. The tokens are Zoho's and were measured; the labels are ours.
+// Kept beside the box that shows them rather than in the bridge, which is where the tokens live: one
+// list of values, one list of words, and neither invents the other.
+const RUNTIME_WINDOWS = [['past_24_hours', 'Last 24 hours'], ['last_month', 'Last 30 days']];
+let runtimeWindow = 'past_24_hours';
 async function showFunctionRuntime(row, box) {
   if (!box || !row) return;
   // The same guard every other path to Zoho carries: a workspace bound to one org and a tab showing
@@ -1746,7 +1751,7 @@ async function showFunctionRuntime(row, box) {
   if (!zohoReady()) { box.innerHTML = `<div class="rtnote">${escHtml(MSG.wrongTab)}</div>`; return; }
   const mine = previewLoad, op = beginWorkspaceOp();
   box.innerHTML = '<div class="rtnote">Asking Zoho…</div>';
-  const r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language });
+  const r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language, period: runtimeWindow });
   // The reader may have moved on while Zoho answered, and this box belongs to what is on screen.
   if (!previewCurrent(mine, op) || currentPath !== row.path) return;
   if (!r || !r.ok) { box.innerHTML = `<div class="rtnote">Zoho did not answer: ${escHtml((r && r.error) || 'unknown')}</div>`; return; }
@@ -1755,7 +1760,8 @@ async function showFunctionRuntime(row, box) {
   const half = (rows, why, none, draw) => (why ? `<div class="rtnote">${escHtml(why)}</div>`
     : !rows ? `<div class="rtnote">${escHtml(MSG.notReadYet)}</div>`
     : !rows.length ? `<div class="rtnote">${none}</div>` : draw(rows));
-  const logs = half(r.logs, r.logsWhy, 'No execution in the last 24 hours.', (rows) =>
+  const label = (RUNTIME_WINDOWS.find(([k]) => k === (r.window || runtimeWindow)) || [, 'this window'])[1];
+  const logs = half(r.logs, r.logsWhy, `No execution in ${escHtml(String(label).toLowerCase())}.`, (rows) =>
     '<table class="rt"><thead><tr><th>When</th><th>From</th><th>Result</th><th>ms</th></tr></thead><tbody>'
     + rows.map((x) => `<tr><td>${when(x.at)}</td><td>${escHtml(x.from || '')}</td>`
         + `<td class="${x.status === 'success' ? 'rtok' : 'rtbad'}">${escHtml(x.status || '?')}</td>`
@@ -1769,7 +1775,12 @@ async function showFunctionRuntime(row, box) {
         + `<td>${escHtml(x.by || '')}</td><td>${escHtml(x.message || '')}</td></tr>`).join('')
     + '</tbody></table>');
   box.innerHTML = `<div class="rtnote">Read from Zoho just now - not part of the mirror, and not in the reports.</div>`
-    + `<b>Last executions (24h)</b>${logs}<b>Revisions</b>${revs}`;
+    // The window is named where the rows are, not only in the control that chose it: a table headed
+    // «24h» over a month of executions is the defect this panel removed a sort for.
+    + `<b>Executions \u00b7 ${escHtml(label)}</b>${logs}`
+    // Revisions carry no window: Zoho answers the whole history, and heading them with the period
+    // the reader picked would say this is the part of it that falls inside those days.
+    + `<b>Revisions \u00b7 all of them</b>${revs}`;
 }
 
 // One row builder, shared by the grouped and the sorted-flat rendering, so the two cannot drift.
@@ -3107,9 +3118,21 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
       const go = document.createElement('button'); go.className = 'lbtn';
       go.textContent = 'Runtime in Zoho \u21bb';
       go.title = 'Ask Zoho what this function did lately: its last executions and its revision history. Read now, not stored.';
+      // Which window, chosen the way Zoho's own page lets you choose it. It sits beside the button
+      // rather than inside the answer: changing it before asking is the ordinary case, and a control
+      // that only appears after the first answer cannot be used for the first one.
+      const win = document.createElement('select'); win.className = 'filtersel';
+      win.setAttribute('aria-label', 'Runtime window');
+      RUNTIME_WINDOWS.forEach(([k, l]) => {
+        const o = document.createElement('option'); o.value = k; o.textContent = l; win.appendChild(o);
+      });
+      win.value = runtimeWindow;
       const out = document.createElement('div');
+      // Remembered across functions, not reset per open: a reader who works in months is asking the
+      // same question of the next function, and re-choosing it every time is the control apologising.
+      win.onchange = () => { runtimeWindow = win.value; if (out.innerHTML) void showFunctionRuntime(_row, out); };
       go.onclick = () => { void showFunctionRuntime(_row, out); };
-      wrap.appendChild(go); wrap.appendChild(out); box.appendChild(wrap);
+      wrap.appendChild(go); wrap.appendChild(win); wrap.appendChild(out); box.appendChild(wrap);
     }
     wireFnChips(box, (a) => openFile(a.dataset.file));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));

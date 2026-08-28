@@ -6185,7 +6185,8 @@ for (const app of ['crm', 'analytics']) {
     const fn = sliceFn(REL, 'showFunctionRuntime');
     assert.match(fn, /const half = \(rows, why, none, draw\)/,
       'why=the three states are told apart somewhere else, or not at all');
-    assert.match(fn, /No execution in the last 24 hours/);
+    assert.match(fn, /No execution in \$\{escHtml\(String\(label\)\.toLowerCase\(\)\)\}/,
+      'why=the empty sentence names a window the reader may not have asked for');
     assert.match(fn, /Zoho keeps no revision history for this function/);
     assert.match(fn, /MSG\.notReadYet/);
   });
@@ -6196,7 +6197,7 @@ for (const app of ['crm', 'analytics']) {
     const fn = sliceFn(REL, 'showFunctionRuntime');
     const at = fn.indexOf("await toBridge({ cmd: 'functionRuntime'");
     assert.ok(at > 0);
-    assert.match(fn.slice(at, at + 260), /if \(!previewCurrent\(mine, op\) \|\| currentPath !== row\.path\) return;/,
+    assert.match(fn.slice(at, at + 420), /if \(!previewCurrent\(mine, op\) \|\| currentPath !== row\.path\) return;/,
       'why=an answer about one function is drawn into the detail of another');
   });
 
@@ -6211,6 +6212,54 @@ for (const app of ['crm', 'analytics']) {
       'why=logic is being built on a sentence written in whatever language the org is in');
     // The id is digits and the language is a word: both go into a path.
     assert.match(body, /replace\(\/\\D\/g, ''\)/, 'why=an id from a row is put in a URL unchecked');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Which window the runtime box asks for. It was fixed at the last 24 hours, which is the wrong
+// default for a question about what a function does - reported the same way the org-wide reading
+// was: «sarebbe più utile poter scegliere, esattamente come fa Zoho».
+//
+// The tokens are Zoho's and were measured; this project does not invent another product's
+// vocabulary, which it has paid for once - `language=nodejs` was a guess and shipped a pull that
+// found nothing.
+{
+  const REL = 'apps/crm/sidepanel.js', B = 'apps/crm/content-bridge.js';
+
+  test('the panel offers what the bridge is willing to send, and nothing else', () => {
+    const words = load([sliceConst(REL, 'RUNTIME_WINDOWS')], { console }).RUNTIME_WINDOWS;
+    const tokens = load([sliceConst(B, 'RUNTIME_WINDOWS')], { console }).RUNTIME_WINDOWS;
+    assert.equal(JSON.stringify(words.map(([k]) => k)), JSON.stringify([...tokens]),
+      'why=a window is offered that the bridge refuses to send, or one is sendable and never offered');
+    assert.ok(words.every(([, l]) => l && l.length > 3), 'a window with no words on it');
+  });
+
+  test('a window that is not one of them is not put in a URL', () => {
+    // What arrives at the bridge has crossed a boundary. The list is the check, and the day is the
+    // fallback: an unknown token would otherwise be interpolated into the path of a request.
+    const body = read(B).slice(read(B).indexOf('async function functionRuntime'), read(B).indexOf('async function functionRuntime') + 900);
+    assert.match(body, /RUNTIME_WINDOWS\.includes\(period\) \? period : RUNTIME_WINDOWS\[0\]/,
+      'why=a period from a message goes into a request unchecked');
+    assert.match(body, /period=\$\{win\}/, 'why=the checked value is not the one sent');
+  });
+
+  test('the rows are headed by the window they are of', () => {
+    // The defect a sort was removed for, in another shape: "24h" written over a month of executions
+    // is a list measured by something it does not show.
+    const fn = sliceFn(REL, 'showFunctionRuntime');
+    assert.match(fn, /Executions \\u00b7 \$\{escHtml\(label\)\}/, 'why=the table is headed by a fixed window');
+    // Revisions carry no period - Zoho answers the whole history - so they must not borrow the label.
+    assert.match(fn, /Revisions \\u00b7 all of them/,
+      'why=the revision list is headed by a window it was not filtered by');
+  });
+
+  test('the choice survives the next function', () => {
+    // A reader working in months asks the same question of the next function; re-choosing it every
+    // time is the control apologising for itself.
+    const src = read(REL);
+    assert.match(src, /^let runtimeWindow = 'past_24_hours';$/m,
+      'why=the chosen window is per open, so it resets under the reader');
+    assert.match(src, /win\.onchange = \(\) => \{ runtimeWindow = win\.value;/);
   });
 }
 

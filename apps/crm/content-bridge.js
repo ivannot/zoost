@@ -50,6 +50,11 @@
   // How many executions one function's detail asks for. Its own number: this is a page of rows a
   // person reads, not a walk that has to be complete.
   const RUNTIME_LOGS = 40;
+  // The windows the logs endpoint is asked for, and the only ones: a period is a token in a URL, and
+  // this project does not invent another product's vocabulary - `language=nodejs` was guessed once
+  // and shipped a pull that found nothing. These two were measured on a real org; if Zoho's own menu
+  // offers more, one capture of it adds them here and nowhere else.
+  const RUNTIME_WINDOWS = ['past_24_hours', 'last_month'];
   const BASE = location.origin;
   // One cookie by name. `split('=')[1]` was what this did, and it truncates at the first `=` inside
   // the *value* - which is padding on anything base64, and a silent one: the request goes out with
@@ -517,14 +522,17 @@
    *  logs, and a compiled function has no revisions at all - measured, `revisions` returns 204 for a
    *  Node function while a Deluge one returns its whole history.
    */
-  async function functionRuntime(id, language) {
+  async function functionRuntime(id, language, period) {
     const fid = String(id || '').replace(/\D/g, '');
     if (!fid) return { ok: false, why: 'no function id' };
     const lang = String(language || 'deluge').replace(/[^\w]/g, '');
-    const out = { ok: true, logs: null, revisions: null };
+    // Chosen from the list, never taken from the message: what arrives here has crossed a boundary,
+    // and a period goes into a URL. An unknown one falls back to the day rather than being sent.
+    const win = RUNTIME_WINDOWS.includes(period) ? period : RUNTIME_WINDOWS[0];
+    const out = { ok: true, window: win, logs: null, revisions: null };
     try {
       const j = await api(`/crm/v2.2/settings/functions/${fid}/logs`
-        + `?period=past_24_hours&page=1&per_page=${RUNTIME_LOGS}&language=${lang}`);
+        + `?period=${win}&page=1&per_page=${RUNTIME_LOGS}&language=${lang}`);
       out.logs = j === NO_CONTENT ? [] : list(j, 'function_logs', 'function_logs').map((r) => ({
         at: r.executed_time || null, status: r.status || null,
         // Milliseconds, as Zoho reports them. Left as the number they sent: turning it into «1.8s»
@@ -1358,7 +1366,7 @@
     // Asked once per functions pull, after the list: it is a map from what we mirror to what the
     // newer interface calls the same function, and nothing else depends on it.
     if (msg?.cmd === 'functionUiIds') return reply(functionUiIds());
-    if (msg?.cmd === 'functionRuntime') return reply(functionRuntime(msg.id, msg.language));
+    if (msg?.cmd === 'functionRuntime') return reply(functionRuntime(msg.id, msg.language, msg.period));
     if (msg?.cmd === 'listWorkflows') return reply(listWorkflows());
     if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));
     if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
