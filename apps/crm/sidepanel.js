@@ -1735,6 +1735,43 @@ function publishSentence(st) {
   return st.draft ? `Published ${when}, with an unpublished draft since`
                   : `Published ${when}`;
 }
+// One function's runtime record, on request. Never in a pull and never on disk: it is per function,
+// so on a real org it would be three hundred requests, and what it answers is «what happened
+// lately» - a question whose answer is different a minute later. The panel says both.
+async function showFunctionRuntime(row, box) {
+  if (!box || !row) return;
+  // The same guard every other path to Zoho carries: a workspace bound to one org and a tab showing
+  // another is a question this panel refuses rather than answers about the wrong one.
+  if (mismatchRefuse()) return;
+  if (!zohoReady()) { box.innerHTML = `<div class="rtnote">${escHtml(MSG.wrongTab)}</div>`; return; }
+  const mine = previewLoad, op = beginWorkspaceOp();
+  box.innerHTML = '<div class="rtnote">Asking Zoho…</div>';
+  const r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language });
+  // The reader may have moved on while Zoho answered, and this box belongs to what is on screen.
+  if (!previewCurrent(mine, op) || currentPath !== row.path) return;
+  if (!r || !r.ok) { box.innerHTML = `<div class="rtnote">Zoho did not answer: ${escHtml((r && r.error) || 'unknown')}</div>`; return; }
+  const when = (s) => escHtml(String(s || '').slice(0, 16));
+  // Three states per half, and they are not the same: read and empty, read and refused, not read.
+  const half = (rows, why, none, draw) => (why ? `<div class="rtnote">${escHtml(why)}</div>`
+    : !rows ? `<div class="rtnote">${escHtml(MSG.notReadYet)}</div>`
+    : !rows.length ? `<div class="rtnote">${none}</div>` : draw(rows));
+  const logs = half(r.logs, r.logsWhy, 'No execution in the last 24 hours.', (rows) =>
+    '<table class="rt"><thead><tr><th>When</th><th>From</th><th>Result</th><th>ms</th></tr></thead><tbody>'
+    + rows.map((x) => `<tr><td>${when(x.at)}</td><td>${escHtml(x.from || '')}</td>`
+        + `<td class="${x.status === 'success' ? 'rtok' : 'rtbad'}">${escHtml(x.status || '?')}</td>`
+        + `<td>${x.ms == null ? '' : escHtml(String(x.ms))}</td></tr>`).join('')
+    + '</tbody></table>');
+  // Measured: a compiled function answers 204 here while a Deluge one returns its whole history, so
+  // «none» is said in words rather than left as an empty table that reads like a missing feature.
+  const revs = half(r.revisions, r.revisionsWhy, 'Zoho keeps no revision history for this function.', (rows) =>
+    '<table class="rt"><thead><tr><th>#</th><th>When</th><th>Who</th><th>Zoho note</th></tr></thead><tbody>'
+    + rows.map((x) => `<tr><td>${escHtml(String(x.n ?? ''))}</td><td>${when(x.at)}</td>`
+        + `<td>${escHtml(x.by || '')}</td><td>${escHtml(x.message || '')}</td></tr>`).join('')
+    + '</tbody></table>');
+  box.innerHTML = `<div class="rtnote">Read from Zoho just now - not part of the mirror, and not in the reports.</div>`
+    + `<b>Last executions (24h)</b>${logs}<b>Revisions</b>${revs}`;
+}
+
 // One row builder, shared by the grouped and the sorted-flat rendering, so the two cannot drift.
 function fnRowEl(e) {
   const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
@@ -2969,10 +3006,15 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
       : '<b>Called by</b> - none';
     // Above the references, because «is Zoho running this?» is asked before «what calls it?» - and
     // for a compiled function it is the first thing that explains an edit that changed nothing.
-    const pub = publishState(functionRowForPath(path));
+    const _row = functionRowForPath(path);
+    const pub = publishState(_row);
     if (pub) {
       html = `<div class="publine${pub.deployed ? '' : ' pubdraft'}">${escHtml(publishSentence(pub))}</div>` + html;
     }
+    // What Zoho knows about this function at *runtime*, asked only when somebody asks. It is per
+    // function - three hundred requests on a real org - so it is a button and not a pull, and the
+    // box below it says that what it shows is a live reading rather than part of the mirror.
+
     const ap = node.associated_place || [];
     if (ap.length) {
       const byType = {};
@@ -3055,6 +3097,20 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
     if (node.updatedTime) modBits.push(escHtml(String(node.updatedTime).slice(0, 16)));
     if (modBits.length) html += `<div class="modline">Last modified ${modBits.join(' \u00b7 ')}</div>`;
     box.innerHTML = html;
+    // Declared, not a `.then` inside the handler: this reads Zoho and then writes into the box, and
+    // a callback is a scope the race checker cannot enter.
+    // Built rather than written into the markup: this box is inside `#pvcallers`, whose contents the
+    // next open replaces, and an id reached for later would be an id that has gone. The panel has
+    // paid for that shape once already, with the callers box inside `#pvtable`.
+    if (_row && _row.id) {
+      const wrap = document.createElement('div'); wrap.className = 'rtwrap';
+      const go = document.createElement('button'); go.className = 'lbtn';
+      go.textContent = 'Runtime in Zoho \u21bb';
+      go.title = 'Ask Zoho what this function did lately: its last executions and its revision history. Read now, not stored.';
+      const out = document.createElement('div');
+      go.onclick = () => { void showFunctionRuntime(_row, out); };
+      wrap.appendChild(go); wrap.appendChild(out); box.appendChild(wrap);
+    }
     wireFnChips(box, (a) => openFile(a.dataset.file));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
     // A module chip opens the module, the way a function chip opens the function. It is the whole

@@ -4628,7 +4628,10 @@ for (const [app, fns] of [
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
            // `reconcileNow` is what reaches Zoho, which is what has to refuse.
-           'reconcileNow']],
+           'reconcileNow',
+           // A reading rather than a pull - the last executions and the revisions of one function,
+           // asked when somebody presses for them - and it reaches Zoho, so it refuses like the rest.
+           'showFunctionRuntime']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
@@ -6150,6 +6153,64 @@ for (const app of ['crm', 'analytics']) {
     const at = h.indexOf('const sum = (rows)');
     assert.ok(at > 0, 'why=the series is summed somewhere else');
     assert.match(h.slice(at, at + 220), /some\(\(x\) => x\.count == null\) \? null/);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// One function's runtime record, on request. Zoho keeps two readings per function that this mirror
+// does not hold - the last executions, and who changed it when - and they are *per function*: on an
+// org of three hundred that is three hundred requests. So it is a button, not a pull, nothing is
+// written to disk, and the box says both.
+{
+  const REL = 'apps/crm/sidepanel.js';
+
+  test('it is asked for, never pulled, and never written', () => {
+    const panel = read(REL), bridge = read('apps/crm/content-bridge.js');
+    // Not in any pull: the command appears once, in the handler behind the button.
+    assert.equal((panel.match(/cmd: 'functionRuntime'/g) || []).length, 1,
+      'why=the runtime reading is asked from more than one place - one of them is a pull');
+    assert.ok(!/functions\/runtime|op\.write\([^)]*runtime/.test(panel),
+      'why=a live reading is being written into the mirror');
+    // And the panel says what it is, because a reader cannot tell a live answer from a stored one.
+    assert.match(sliceFn(REL, 'showFunctionRuntime'),
+      /not part of the mirror, and not in the reports/,
+      'why=a live reading is shown as though it were part of the mirror');
+    // The bridge asks for a page of rows, not a walk: this is something a person reads.
+    assert.match(bridge, /const RUNTIME_LOGS = \d+;/);
+  });
+
+  test('read-and-empty, refused, and never-read are three different sentences', () => {
+    // Measured: `revisions` answers 204 for a compiled function while a Deluge one returns its whole
+    // history. An empty table there reads like a broken feature; «Zoho keeps none» reads like Zoho.
+    const fn = sliceFn(REL, 'showFunctionRuntime');
+    assert.match(fn, /const half = \(rows, why, none, draw\)/,
+      'why=the three states are told apart somewhere else, or not at all');
+    assert.match(fn, /No execution in the last 24 hours/);
+    assert.match(fn, /Zoho keeps no revision history for this function/);
+    assert.match(fn, /MSG\.notReadYet/);
+  });
+
+  test('the answer is dropped if the reader has moved on', () => {
+    // It awaits Zoho and then writes into a box that belongs to what is on screen - the shape this
+    // panel has been caught by more than once.
+    const fn = sliceFn(REL, 'showFunctionRuntime');
+    const at = fn.indexOf("await toBridge({ cmd: 'functionRuntime'");
+    assert.ok(at > 0);
+    assert.match(fn.slice(at, at + 260), /if \(!previewCurrent\(mine, op\) \|\| currentPath !== row\.path\) return;/,
+      'why=an answer about one function is drawn into the detail of another');
+  });
+
+  test('Zoho own words are shown, never parsed', () => {
+    // `commit_message` is written by Zoho in the org's language - «Creazione in corso …» from an
+    // Italian org. It is printed as their sentence; nothing is derived from it.
+    const bridge = read('apps/crm/content-bridge.js');
+    const at = bridge.indexOf('async function functionRuntime');
+    const body = bridge.slice(at, at + 1800);
+    assert.match(body, /message: r\.commit_message \|\| null/);
+    assert.ok(!/commit_message.*(match|includes|split|test)/.test(body),
+      'why=logic is being built on a sentence written in whatever language the org is in');
+    // The id is digits and the language is a word: both go into a path.
+    assert.match(body, /replace\(\/\\D\/g, ''\)/, 'why=an id from a row is put in a URL unchecked');
   });
 }
 

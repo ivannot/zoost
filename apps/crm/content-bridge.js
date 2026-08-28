@@ -47,6 +47,9 @@
   // 100 is what Zoho's own page asks for; 8,000 functions before the bound is a ceiling nothing real
   // reaches, and a walk that hits it says so rather than returning a map with holes in it.
   const UI_ID_PAGE = 100;
+  // How many executions one function's detail asks for. Its own number: this is a page of rows a
+  // person reads, not a walk that has to be complete.
+  const RUNTIME_LOGS = 40;
   const BASE = location.origin;
   // One cookie by name. `split('=')[1]` was what this did, and it truncates at the first `=` inside
   // the *value* - which is padding on anything base64, and a silent one: the request goes out with
@@ -501,6 +504,43 @@
                map, partial: Object.keys(map).length > 0 };
     }
     return { ok: true, map, capped, pages: page };
+  }
+
+  /** One function's runtime record, read when somebody asks for it and never in a pull.
+   *
+   *  Two readings Zoho keeps per function and this mirror does not hold: the last executions - when,
+   *  from what, how long, and whether they worked - and the history of who changed it. They are
+   *  **per function**: on an org of three hundred that is three hundred requests, which is why this
+   *  is not part of any pull and is not written to disk. It is a live lookup, and the panel says so.
+   *
+   *  Both may answer 204, and the two do not mean the same thing: a function nobody has run has no
+   *  logs, and a compiled function has no revisions at all - measured, `revisions` returns 204 for a
+   *  Node function while a Deluge one returns its whole history.
+   */
+  async function functionRuntime(id, language) {
+    const fid = String(id || '').replace(/\D/g, '');
+    if (!fid) return { ok: false, why: 'no function id' };
+    const lang = String(language || 'deluge').replace(/[^\w]/g, '');
+    const out = { ok: true, logs: null, revisions: null };
+    try {
+      const j = await api(`/crm/v2.2/settings/functions/${fid}/logs`
+        + `?period=past_24_hours&page=1&per_page=${RUNTIME_LOGS}&language=${lang}`);
+      out.logs = j === NO_CONTENT ? [] : list(j, 'function_logs', 'function_logs').map((r) => ({
+        at: r.executed_time || null, status: r.status || null,
+        // Milliseconds, as Zoho reports them. Left as the number they sent: turning it into «1.8s»
+        // here would be this panel deciding what precision the reader wanted.
+        ms: finiteCount(r.execution_time), from: r.component_type || null }));
+    } catch (e) { out.logsWhy = e.message; }
+    try {
+      const j = await api(`/crm/v9/settings/functions/${fid}/revisions`);
+      out.revisions = j === NO_CONTENT ? [] : list(j, 'revisions', 'revisions').map((r) => ({
+        n: r.revision ?? null, at: r.modified_time || null,
+        by: (r.modified_by && r.modified_by.name) || null,
+        // Zoho writes this itself, in the org's language - «Creazione in corso …» from an Italian
+        // org. It is shown as what it is, their sentence, and nothing is derived from it.
+        message: r.commit_message || null }));
+    } catch (e) { out.revisionsWhy = e.message; }
+    return out;
   }
 
   // A file path comes from Zoho and becomes a path below the selected workspace. Refuse, rather
@@ -1318,6 +1358,7 @@
     // Asked once per functions pull, after the list: it is a map from what we mirror to what the
     // newer interface calls the same function, and nothing else depends on it.
     if (msg?.cmd === 'functionUiIds') return reply(functionUiIds());
+    if (msg?.cmd === 'functionRuntime') return reply(functionRuntime(msg.id, msg.language));
     if (msg?.cmd === 'listWorkflows') return reply(listWorkflows());
     if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));
     if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
