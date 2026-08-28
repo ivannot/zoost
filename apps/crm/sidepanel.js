@@ -1176,7 +1176,14 @@ async function writeFunctionMirror(f, op, listUpdated) {
   const stale = previous.filter((p) => !keep.has(p) && !p.endsWith('.meta.json'));
   const cleanup = stale.length ? await removeFunctionPaths(stale, op) : { failed: 0, moved: false };
   if (cleanup.moved) throw new Error(WS_MOVED);
-  return { primary, metaPath, paths, cleanupFailed: cleanup.failed };
+  // What went into the sidecar, handed back rather than left for the caller to remember. The row is
+  // the panel's memory of this copy and the summary index is written *from the row*, so a caller
+  // that updates one and not the other leaves the two files disagreeing about the same download -
+  // which is what «Refresh 8 outdated» was: the sidecar carried the new reading, the summary still
+  // carried the old one, and the fast path compares the summary. No pull could clear it, because
+  // every pull repeated it.
+  return { primary, metaPath, paths, cleanupFailed: cleanup.failed,
+           listUpdated: f.meta.listUpdated, updatedTime: f.meta.updatedTime || null };
 }
 // The shorthands every render path uses: they read and write the workspace on screen, which is the
 // one they mean. A path that survives an await must take an op instead.
@@ -4582,7 +4589,11 @@ async function syncOneNow(id) {
     // workspace's, and marking it downloaded gave one org's row the other org's path.
     if (!op.current()) return;
     const ent = treeData.find((x) => x.id === String(id));
-    if (ent) { ent.path = written.primary; ent.mirrorFiles = written.paths; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
+    // `null` above is deliberate and the row has to say the same thing: a summary that kept the
+    // previous reading would describe a copy the sidecar describes differently.
+    if (ent) { ent.path = written.primary; ent.mirrorFiles = written.paths; ent.downloaded = true; ent.error = false;
+               ent.fetchedAgainst = written.listUpdated; ent.updatedTime = written.updatedTime;
+               updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (currentPath === written.primary) await openFile(currentPath);
     setStatus(`Synced: ${written.primary}`, 'ok');
   } catch (e) { setStatus(`Sync failed for ${id}: ${e.message}`, 'warn'); }
@@ -5700,6 +5711,8 @@ async function downloadOne(entry) {
     if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
     entry.path = written.primary; entry.mirrorFiles = written.paths; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
+    // From what was written, never from what this function believed it was about to write.
+    entry.fetchedAgainst = written.listUpdated; entry.updatedTime = written.updatedTime;
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, language: f.meta.language, runtime: f.meta.runtime, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
     return true;
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }

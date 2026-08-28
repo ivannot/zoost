@@ -5585,6 +5585,87 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// «Refresh 8 outdated» that came back after every pull, and after closing and reopening the panel.
+// Reported twice, and the second time with the author's own mirror: eight Deluge functions, the
+// eight he had edited in Zoho between two pulls, and no pull could clear them.
+//
+// The two files that describe a downloaded copy disagreed. `downloadOne` wrote the *new* reading
+// into the sidecar and left the row - the panel's memory of that copy - carrying the old one; the
+// summary index is written from the row, and the fast path on the next open compares the summary.
+// So the fresh copy read as outdated, for ever, and refreshing it repeated the same pair.
+//
+// Driven, not read: the shipped `downloadOne` and `saveMetaIndex` run against a stub Zoho, and what
+// is asserted is that the sidecar on disk and the summary say the same thing about the same file.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  // The two values are the ones measured in that mirror: the list had moved on by about four hours.
+  const NEW = 1787751201000, OLD = 1787735515000;
+
+  const bench = () => {
+    const disk = new Map();
+    let summary = {};
+    const row = { id: '1', path: 'functions/standalone/x.dg', metaPath: 'functions/standalone/x.meta.json',
+                  namespace: 'standalone', api_name: 'x', display_name: 'X', language: 'deluge',
+                  category: 'standalone', source: 'crm',
+                  downloaded: true, stale: true, listUpdated: NEW, fetchedAgainst: OLD, updatedTime: 'before' };
+    const treeData = [row];
+    const op = { current: () => true,
+                 read: async (p) => { if (!disk.has(p)) throw new Error('no such file'); return disk.get(p); },
+                 write: async (p, c) => { disk.set(p, c); } };
+    const g = {
+      Object, Array, Set, Map, JSON, String, Number, Boolean, Error, Promise, console,
+      WS_MOVED: 'moved', META_SV: 3, treeData, index: new Map(),
+      _dirtyMeta: new Set(), dirtyMeta: new Set(), dir: {},
+      MSG: { folder: 'folder' }, setStatus: () => {},
+      isDeluge: (l) => !l || /^deluge/i.test(String(l)),
+      fnMetaPath: (f, s) => `functions/${f}/${s}.meta.json`,
+      fnProjectRoot: (f, s) => `functions/${f}/${s}.files`,
+      pathsFromMeta: (meta, mp) => [mp.replace(/\.meta\.json$/, '.dg'), mp],
+      removeFunctionPaths: async () => ({ failed: 0, moved: false }),
+      updateMetaIndex: (mutate) => { mutate(summary); return Promise.resolve(true); },
+      beginWorkspaceOp: () => op,
+      mismatchRefuse: () => false,
+      ensurePerm: async () => true,
+      // Zoho, answering with the function as it is *now*.
+      toBridge: async () => ({ ok: true, file: { folder: 'standalone', stem: 'x', dg: 'info "hi";',
+        meta: { id: '1', name: 'x', api_name: 'x', nameSpace: 'standalone', language: 'deluge',
+                updatedTime: 'after', sv: 3 } } }),
+    };
+    const m = load([sliceFn(REL, 'writeFunctionMirror'), sliceFn(REL, 'saveMetaIndex'),
+                    sliceFn(REL, 'downloadOne'), sliceConst(REL, 'errText')], g);
+    return { m, op, disk, row, read: () => summary };
+  };
+
+  test('the sidecar and the summary describe the same download', async () => {
+    const b = bench();
+    assert.equal(await b.m.downloadOne(b.row), true, 'the stub Zoho answered and the write refused');
+    await b.m.saveMetaIndex(['functions/standalone/x.meta.json'], b.op);
+    const sidecar = JSON.parse(b.disk.get('functions/standalone/x.meta.json'));
+    const summarised = b.read()['functions/standalone/x.dg'];
+    assert.ok(summarised, 'the summary does not name the file that was just written');
+    assert.equal(summarised.listUpdated, sidecar.listUpdated,
+      `the summary says ${summarised.listUpdated} and the sidecar says ${sidecar.listUpdated} about the same `
+      + 'copy - the load path that reads the summary will call it outdated, and every refresh repeats it');
+    assert.equal(summarised.updatedTime, sidecar.updatedTime,
+      'the same disagreement in the other field the two files both carry');
+    // And the row, which is what both were written from, holds what actually went to disk.
+    assert.equal(b.row.fetchedAgainst, NEW, 'the row still remembers the reading it was fetched against before');
+    assert.equal(b.row.stale, false);
+  });
+
+  test('a sync of one function does not leave the summary claiming a check nobody made', () => {
+    // The other write path fetches a function that was *just saved* in Zoho, so it deliberately
+    // records no list reading - the list this panel holds predates the save. The row has to say the
+    // same, or the summary keeps a value the sidecar does not have and the pair means nothing.
+    const src = read(REL);
+    const at = src.indexOf('const written = await writeFunctionMirror(f, op, null);');
+    assert.ok(at > 0, 'why=the sync path is gone or writes something else');
+    assert.ok(/ent\.fetchedAgainst = written\.listUpdated/.test(src.slice(at, at + 900)),
+      'why=the sync path updates the sidecar and leaves the row remembering the previous reading');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same
