@@ -2976,6 +2976,15 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
     # the helper rather than its arguments would let a second endpoint through the same door for
     # ever. What is exceptional is the endpoint, so the endpoint is what is written down.
     ALLOWED_POST = {
+        'crm/content-bridge.js': {
+            'helper': 'apiPostJson',
+            'endpoints': ('/crm/v8/Functions__s/bulk',),
+            'why': 'lists the functions module and asks for two fields - the record id and the '
+                   '`dependent_id` that joins it to the id this product already mirrors - so that '
+                   'the panel can open one function in the newer Zoho interface, which addresses it '
+                   'by that record id. It is the method Zoho\'s own page uses for that list; it '
+                   'creates, edits and deletes nothing, and the two fields are all it asks for',
+        },
         'analytics/content-bridge.js': {
             'helper': 'post',
             'endpoints': ('/ZDBCreateERD.ma?ZDBACTION=CREATEDATABASEERD',),

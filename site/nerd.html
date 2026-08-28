@@ -74,6 +74,13 @@
       <br><br>Separately it watches the page for <b>one</b> thing: the URL and method of the request
       that saves a function, so the local copy can follow when you save. It reads no headers and no
       response bodies, and alters nothing the page sends or receives.</p>
+    <p>One request to Zoho CRM is a <b>POST</b>, and it is named here rather than left to be found:
+      <code>/crm/v8/Functions__s/bulk</code>, which is how Zoho's own newer functions page lists
+      them. It is asked for two fields - the id of the function's record in that module, and the
+      <code>dependent_id</code> that joins it to the id this mirror already holds - because the newer
+      interface addresses a function by the first and this product only had the second. It creates
+      nothing; the method is theirs. A POST is not a write because of its method, and what can be
+      claimed is what Zoost sends.</p>
     <p>Two token families, and they are not interchangeable: the <code>/crm/</code> endpoints want
       <code>crmcsrfparam</code> with the <code>CT_CSRF_TOKEN</code> cookie, the <code>/deluge/</code>
       ones want <code>drepn</code> with the <code>drecn</code> cookie. The prefix is not the cookie's

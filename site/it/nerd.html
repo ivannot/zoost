@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:2385645818bbfc74 -->
+<!-- translated-from: site/nerd.html sha256:f3c5520f2b62354d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -75,6 +75,13 @@
       Separatamente osserva la pagina per <b>una</b> cosa sola: URL e metodo della richiesta che salva
       una funzione, così la copia sul disco ti segue quando salvi. Non legge nessun header e nessun
       corpo di risposta, e non altera niente di quello che la pagina invia o riceve.</p>
+    <p>Una richiesta verso Zoho CRM è una <b>POST</b>, ed è nominata qui invece di lasciarla trovare:
+      <code>/crm/v8/Functions__s/bulk</code>, cioè il modo in cui la nuova pagina delle funzioni di
+      Zoho le elenca. Le vengono chiesti due campi - l'id del record della funzione in quel modulo e
+      il <code>dependent_id</code> che lo lega all'id che questo mirror ha già - perché la nuova
+      interfaccia indirizza una funzione con il primo e questo prodotto aveva solo il secondo. Non
+      crea niente; il metodo è loro. Una POST non è una scrittura per via del metodo, e quello che si
+      può affermare è cosa Zoost manda.</p>
     <p>Due famiglie di token, non intercambiabili: gli endpoint <code>/crm/</code> vogliono
       <code>crmcsrfparam</code> con il cookie <code>CT_CSRF_TOKEN</code>, quelli <code>/deluge/</code>
       vogliono <code>drepn</code> con il cookie <code>drecn</code>. Il prefisso non è il nome del cookie, e darlo per scontato è costato una giornata: di solito i due

@@ -5748,6 +5748,128 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Opening the one function in Zoho's newer interface. Two id spaces, and the join between them.
+//
+// Measured on a real org: the functions endpoint this product mirrors from answers ids of its own,
+// and the page's URL wants the id of the record in the `Functions__s` module. Zoho's own list
+// carries both - `dependent_id` is the id we already hold - and the pull asks for that pair. 100 of
+// 100 on the first page joined, which is why this is a mapping and not a guess.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const OURS = '145319000001224001', THEIRS = '534982000055514190';
+
+  test('the address is built from the record id, and from nothing else', () => {
+    const g = { encodeURIComponent, String, console,
+                bound: { base: 'https://crm.zoho.eu', instance: 'yourinstance' }, lastCtx: null };
+    const { functionUrl } = load([sliceFn(REL, 'functionUrl')], g);
+    assert.equal(functionUrl(THEIRS),
+      `https://crm.zoho.eu/crm/yourinstance/settings/functions?functionId=${THEIRS}&tab=overview`);
+    // The `viewId` their own links carry is not sent: it was measured to be unnecessary, and a
+    // parameter nobody needs is one more thing that can be wrong.
+    assert.ok(!functionUrl(THEIRS).includes('viewId'));
+    // No id, no address - the caller then opens the list, which is what it did for everyone before.
+    assert.equal(functionUrl(null), null);
+    assert.equal(functionUrl(''), null);
+    assert.equal(load([sliceFn(REL, 'functionUrl')], { encodeURIComponent, String, console, bound: null, lastCtx: null })
+      .functionUrl(THEIRS), null, 'an address was built with no workspace and no tab to build it from');
+  });
+
+  test('a map that came back short does not take away what an earlier pull learnt', async () => {
+    // The partial-data rule, in its newest clothes. A role that loses the module, a page that times
+    // out, an org mid-migration: the fresh map is empty and every «open this function» the previous
+    // pull earned would go with it.
+    const g = { JSON, Array, String, Object, console };
+    const { carryUiIds } = load([sliceFn(REL, 'carryUiIds')], g);
+    const stored = [{ id: '1', uiId: 'A' }, { id: '2', uiId: 'B' }];
+    const op = { read: async () => JSON.stringify(stored) };
+    const entries = [{ id: '1' }, { id: '2' }, { id: '3' }];
+    await carryUiIds(entries, { '2': 'B2', '3': 'C' }, op);
+    assert.equal(entries[0].uiId, 'A', 'a function the map did not answer for lost the id it had');
+    assert.equal(entries[1].uiId, 'B2', 'a fresh answer must win over the stored one');
+    assert.equal(entries[2].uiId, 'C', 'a function seen for the first time did not get its id');
+  });
+
+  test('nothing to carry is not a failure', async () => {
+    const { carryUiIds } = load([sliceFn(REL, 'carryUiIds')], { JSON, Array, String, Object, console });
+    const entries = [{ id: '1' }];
+    // A first pull has no index to read, and a corrupt one must not stop a pull either.
+    await carryUiIds(entries, {}, { read: async () => { throw new Error('no such file'); } });
+    assert.equal(entries[0].uiId, undefined);
+    await carryUiIds(entries, { '1': THEIRS }, { read: async () => 'not json at all' });
+    assert.equal(entries[0].uiId, THEIRS);
+  });
+
+  test('the id we mirror is never sent as the id that interface wants', () => {
+    // The defect this whole mapping exists to avoid, and it was measured before it could be shipped:
+    // the two spaces look alike and neither is checkable by eye.
+    const g = { encodeURIComponent, String, console, bound: { base: 'https://crm.zoho.eu', instance: 'yourinstance' }, lastCtx: null };
+    const { functionUrl } = load([sliceFn(REL, 'functionUrl')], g);
+    const src = read(REL);
+    assert.ok(!functionUrl(THEIRS).includes(OURS));
+    // `reveal` must ask the row for `uiId`, not for `id`: they are both there, and one of them
+    // addresses the wrong function or none.
+    const at = src.indexOf('async function reveal(fn)');
+    assert.ok(at > 0, 'why=reveal is gone');
+    assert.ok(/functionUrl\(fn\.uiId\)/.test(src.slice(at, at + 400)),
+      'why=the address is built from something other than the joined id');
+  });
+
+  test('the pull learns the mapping, and cannot fail because of it', () => {
+    const src = read(REL);
+    const at = src.indexOf("const ui = await toBridge({ cmd: 'functionUiIds' });");
+    assert.ok(at > 0, 'why=the pull no longer asks for the mapping');
+    const after = src.slice(at, at + 400);
+    assert.ok(/carryUiIds\(merged, \(ui && ui\.map\) \|\| \{\}, op\)/.test(after),
+      'why=an answer that failed is read as a map, or a partial one replaces what is stored');
+    assert.ok(!/throw|bridgeError/.test(after), 'why=a pull can now fail over an optional mapping');
+  });
+
+  test('the bridge reports a refusal and never raises one', async () => {
+    // Driven, because «it returns instead of throwing» is a property of every path through it and
+    // not of one line. An org without that interface answers INVALID_MODULE on the very first call;
+    // a role without the module is refused on the listing; both must come back as «no ids».
+    const B = 'apps/crm/content-bridge.js';
+    const bench = (api, apiPostJson) => load(
+      [sliceConst(B, 'UI_ID_PAGE'), sliceConst(B, 'MAX_PAGES_WIDE'), sliceFn(B, 'functionUiIds')],
+      { encodeURIComponent, String, Object, Error, Promise, console, api, apiPostJson });
+    const refuse = async () => { const e = new Error('INVALID_MODULE'); e.code = 'INVALID_MODULE'; throw e; };
+    const boom = () => { throw new Error('apiPostJson must not be reached'); };
+    const first = await bench(refuse, boom).functionUiIds();
+    assert.equal(first.ok, false);
+    // Compared as text: an object built inside the vm has another realm's prototype, which is a
+    // trap this suite has already paid for once.
+    assert.equal(JSON.stringify(first.map), '{}', 'a refusal came back carrying a map');
+    assert.equal(first.step, 'view');
+
+    // The listing refused after the view answered: what was read so far is reported as partial
+    // rather than handed over as if it were the whole org.
+    const view = async () => ({ modules: [{ last_accessed_views: [{ custom_view: { id: 'V1' } }] }] });
+    const second = await bench(view, refuse).functionUiIds();
+    assert.equal(second.ok, false);
+    assert.equal(second.step, 'list');
+
+    // And the ordinary case, paginated the way Zoho's own page is: two pages, joined by id.
+    const pages = [
+      { data: [{ id: 'A', dependent_id: '1' }, { id: 'B', dependent_id: '2' }], info: { more_records: true } },
+      { data: [{ id: 'C', dependent_id: '3' }], info: { more_records: false } },
+    ];
+    const asked = [];
+    const post = async (path) => { asked.push(path); return pages[asked.length - 1]; };
+    const good = await bench(view, post).functionUiIds();
+    assert.equal(good.ok, true);
+    assert.equal(JSON.stringify(good.map), JSON.stringify({ 1: 'A', 2: 'B', 3: 'C' }));
+    assert.equal(asked.length, 2, 'the second page was not asked for');
+    assert.ok(asked[0].includes('cvid=V1') && asked[0].includes('page=1'), asked[0]);
+    assert.ok(asked[1].includes('page=2'), asked[1]);
+    // Two fields and no more. This is a read of somebody's org: asking for the label, the source or
+    // the author because they happen to be available would be fetching data nothing here shows,
+    // which this product refuses in both directions.
+    assert.match(asked[0], /fields=id%2Cdependent_id(&|$)/,
+      'why=it asks for more than the two fields it needs');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same

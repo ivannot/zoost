@@ -1886,6 +1886,10 @@ async function rebuildTree() {
       const row = { path, metaPath: fnMetaPath(sanitize(e.namespace), sanitize(e.api_name)), api_name: e.api_name, display_name: e.display_name || e.api_name,
                     namespace: e.namespace, rest: e.rest, id, category: e.category, source: e.source,
                     language: e.language || 'deluge', runtime: e.runtime || null, mirrored: true,
+                    // What the newer Zoho interface calls this function, when a pull has learnt it.
+                    // Absent is an ordinary state - an org on the old interface, or a pull from
+                    // before this existed - and the button falls back to the list.
+                    uiId: e.uiId || null,
                     downloaded: false, stale: false, error: false, updatedTime: null,
                     // What Zoho's list said, kept apart from what the sidecar says: the two
                     // disagreeing is exactly the fact «stale» exists to carry.
@@ -2497,6 +2501,13 @@ async function openFile(path, line = null, byClick = false) {
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Functions in Zoho \u2197'; $('pvfind').title = 'Open Zoho\u0027s own functions page. It no longer types this name into their search box: the newer functions interface is addressed by URL, and this product does not script somebody else\u0027s page.'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
   const trow = treeData.find((x) => x.path === path);
+  // The button says which of the two it does. It opened the list and said so; with the mapping
+  // pulled it opens this function, and a label that still said «Functions in Zoho» would be a
+  // control describing the behaviour it used to have.
+  if (trow && trow.uiId) {
+    $('pvfind').textContent = MSG.openInZoho;
+    $('pvfind').title = 'Open this function in Zoho, by URL. An org without the newer functions interface is redirected by Zoho to the functions list.';
+  }
   if (trow) navNames({ display: trow.display_name, api: trow.api_name });
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
   pvTabsFor('function');
@@ -2884,10 +2895,39 @@ window.addEventListener('mousemove', (e) => {
 // rejection is not a decision, it is an omission, so the intent is written where it happens.
 window.addEventListener('mouseup', () => { if (dragY) { dragY = false; document.body.style.userSelect = ''; void chrome.storage.local.set({ previewH: $('preview').style.height }).catch(() => {}); } });
 
+/** Put each function's id in the newer interface on its index row, keeping what is already known.
+ *
+ *  Two sources, and the fresh one does not outrank the old one by being fresh: a map that answered
+ *  for 100 of 300 functions is not a statement that the other 200 have no record. So a row takes the
+ *  new value when there is one and keeps the previous one otherwise, and a function Zoho no longer
+ *  lists is not carried at all - it is not in `entries` to begin with.
+ */
+async function carryUiIds(entries, map, op) {
+  let previous = {};
+  try {
+    const old = JSON.parse(await op.read('functions/index.json'));
+    if (Array.isArray(old)) old.forEach((e) => { if (e && e.uiId) previous[String(e.id)] = String(e.uiId); });
+  } catch (_) { }   // no index yet, or one that will not parse: there is nothing to carry, which is not a failure
+  entries.forEach((e) => {
+    const fresh = map[String(e.id)];
+    const kept = fresh || previous[String(e.id)];
+    if (kept) e.uiId = String(kept);
+  });
+  return entries;
+}
 // ---------- reveal (auto-navigate to Functions page, then filter) ----------
 function functionsUrl() {
   const base = bound?.base || lastCtx?.origin; const inst = bound?.instance || lastCtx?.instance;
   return base && inst ? `${base}/crm/${inst}/settings/functions/myFunctions` : null;
+}
+/** The one function, in Zoho's newer interface. Measured: `?functionId=<record id>&tab=overview`
+ *  opens it, the `viewId` their own links carry is not needed, and an org that does not have that
+ *  interface is redirected by Zoho to the functions list - which is where this used to stop. So the
+ *  worst case of a stale id is the old behaviour, not an error page. */
+function functionUrl(uiId) {
+  const base = bound?.base || lastCtx?.origin; const inst = bound?.instance || lastCtx?.instance;
+  return base && inst && uiId
+    ? `${base}/crm/${inst}/settings/functions?functionId=${encodeURIComponent(uiId)}&tab=overview` : null;
 }
 /** «Go to Zoho CRM» is about the platform, not about this workspace's org - and it was
  *  `${base}/crm/${instance}/`, which is a claim about which org you will land in. Reported: log out
@@ -3129,15 +3169,20 @@ $('mmgo').onclick = () => switchTab();   // mismatch: log out current session an
  * show. A reader on the old interface lands on the list, which is exactly where the typing left them
  * anyway; a reader on the new one gets whatever that address resolves to.
  *
- * **No deep link to the one function, and that is a limit rather than an oversight.** The new
- * interface addresses a function by an id from its own module, and the id this product holds is that
- * record's `dependent_id` - measured across the fifteen functions present in two captures of one
- * org, fifteen of fifteen. Sending the id we have would address the wrong function, or none. Until
- * that mapping is pulled the certain thing is the list, and the certain thing is what ships.
+ * **The deep link exists now, and it exists because the mapping is pulled rather than guessed.**
+ * The newer interface addresses a function by the id of its record in the `Functions__s` module,
+ * and the id this product holds is that record's `dependent_id` - measured across a whole org, 100
+ * of 100 on the first page. The pull asks Zoho's own list for the pair and puts it on the index row;
+ * where it is missing - an org on the old interface, a role without the module, a workspace mirrored
+ * before this existed - the list is still what opens, which is what this function did for everyone
+ * until today. Nothing is constructed from an id that has not been joined.
  */
 async function reveal(fn) {
   if (sampleRefuse()) return;
-  const url = functionsUrl();
+  // The one function when the mapping is known, the list when it is not. Both are constructed
+  // addresses and neither touches their page.
+  const one = functionUrl(fn.uiId);
+  const url = one || functionsUrl();
   if (!url) { setStatus(MSG.noTarget, 'warn'); return; }
   // **One navigation, not two.** `openTargetZoho` *is* `goToZoho(functionsUrl())`, so the second
   // call was redundant on the branch where a tab existed and worse on the branch where none did:
@@ -3147,7 +3192,8 @@ async function reveal(fn) {
   setStatus(MSG.openingFns, 'busy');
   const at = (await zohoTabId()) ? await goToZoho(url) : await openTargetZoho(false);
   if (!at) return;
-  setStatus(`Zoho\u0027s functions are open - look for \u00ab${fn.displayName || fn.name || fn.apiName}\u00bb.`, 'ok');
+  setStatus(one ? `\u00ab${fn.displayName || fn.name || fn.apiName}\u00bb is open in Zoho.`
+                : `Zoho\u0027s functions are open - look for \u00ab${fn.displayName || fn.name || fn.apiName}\u00bb.`, 'ok');
 }
 
 
@@ -3160,7 +3206,7 @@ async function revealFromPreview(action) {
   }
   const e = treeData.find((x) => x.path === currentPath); if (!e) return;
   const info = index.get(e.id);
-  try { await reveal({ id: e.id, name: info?.name || e.api_name, displayName: e.display_name, apiName: e.api_name }); }
+  try { await reveal({ id: e.id, uiId: e.uiId, name: info?.name || e.api_name, displayName: e.display_name, apiName: e.api_name }); }
   catch (err) { setStatus('Find failed: ' + err.message, 'warn'); }
 }
 $('pvreveal').onclick = () => revealFromPreview('edit');
@@ -4053,6 +4099,17 @@ async function pullAll() {
       endPull(); return;
     }
     const merged = await mergeUnanswered(r.entries, r.unanswered, op);
+    if (!op.current()) return;
+    // Which record the newer Zoho interface calls each of these functions. Optional by
+    // construction: an org without that interface answers `INVALID_MODULE`, a role without the
+    // module is refused, and either way the pull carries on and the panel keeps opening the
+    // functions list the way it always has. Never a reason to fail a pull, and never a reason to
+    // *lose* what an earlier pull learnt - a map that came back short would otherwise take away
+    // every «open this function» the previous one had earned, which is the partial-data rule this
+    // repository keeps re-learning in new clothes.
+    const ui = await toBridge({ cmd: 'functionUiIds' });
+    if (!op.current()) return;
+    await carryUiIds(merged, (ui && ui.map) || {}, op);
     if (!op.current()) return;
     await op.write('functions/index.json', JSON.stringify(merged, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho

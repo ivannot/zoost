@@ -43,6 +43,10 @@
   // a walk that never ends, well past where the platform's own limits sit.
   const MAX_PAGES = 400;          // functions: 50 a page, so 20,000
   const MAX_PAGES_WIDE = 40;      // workflows and schedules: 200 a page, so 8,000
+  // Its own, for the reason written above: this walk reads two strings per function, not a source.
+  // 100 is what Zoho's own page asks for; 8,000 functions before the bound is a ceiling nothing real
+  // reaches, and a walk that hits it says so rather than returning a map with holes in it.
+  const UI_ID_PAGE = 100;
   const BASE = location.origin;
   // One cookie by name. `split('=')[1]` was what this did, and it truncates at the first `=` inside
   // the *value* - which is padding on anything base64, and a silent one: the request goes out with
@@ -409,6 +413,94 @@
       return apiText(path, primed ? true : 'unprimed');
     }
     throw apiError(res.status, path, message, code);
+  }
+
+  // A **read** sent as POST, and the only one this extension makes to Zoho CRM.
+  //
+  // Zoho's newer functions interface addresses a function by an id this product does not hold: the
+  // functions endpoint we mirror from answers ids of its own (`1453…`), and the page's URL wants the
+  // id of the record in the `Functions__s` module (`5349…`). Measured on a real org, on the same
+  // 100 functions: two id spaces, and Zoho's own list is what joins them - each record carries
+  // `dependent_id`, which *is* the id we already have.
+  //
+  // The method is theirs, not a choice: that list is served by `POST /crm/v8/Functions__s/bulk` with
+  // the query carrying the view, the page and the fields, and an empty body. It creates nothing -
+  // the same shape as the Zoho Analytics call whose URL says `CREATE` and returns a diagram - and
+  // like that one it is named on the nerd page rather than left for a reader to find. What can be
+  // claimed is what Zoost *sends*; a POST is not a write because of its method, and this one asks
+  // for two fields and writes nothing.
+  async function apiPostJson(path, retried) {
+    // An empty multipart body, which is what the page sends. `fetch` writes the boundary itself.
+    const res = await fetch(BASE + safePath(path),
+                            { method: 'POST', headers: headers(), body: new FormData(), credentials: 'include' });
+    if (res.status === 204) return NO_CONTENT;
+    if (res.ok) return res.json();
+    const { message, code } = await errorDetail(res);
+    if (!retried && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
+      const primed = await warmDeluge();
+      return apiPostJson(path, primed ? true : 'unprimed');
+    }
+    throw apiError(res.status, path, message, code);
+  }
+
+  /** Which record in the newer interface each mirrored function is, or nothing at all.
+   *
+   *  Everything here is optional by construction. An org that does not have that interface answers
+   *  `INVALID_MODULE`, a role that cannot see the module is refused, and both mean the same thing to
+   *  the panel: no ids, and the button keeps opening the functions list the way it always has. It is
+   *  never allowed to fail a pull - what it does not know it says, and says which step did not
+   *  answer, because «no ids» and «nobody asked» are different facts.
+   */
+  async function functionUiIds() {
+    let cvid = null, step = 'view';
+    try {
+      // The view the module lists through. Their page reads the one it used last; a session that has
+      // never opened that page has none, and then the module's own views are asked for and the
+      // default is taken - which is «All Functions», and is a property of the module rather than of
+      // anybody's history.
+      const pref = await api('/crm/v8/settings/modules/Functions__s/actions/view_preference_configurations');
+      const mods = (pref && pref.modules) || [];
+      const last = ((mods[0] || {}).last_accessed_views || [])[0];
+      cvid = (last && last.custom_view && last.custom_view.id) || null;
+      if (!cvid) {
+        step = 'views';
+        const views = await api('/crm/v8/settings/custom_views?module=Functions__s');
+        const all = (views && views.custom_views) || [];
+        const def = all.find((v) => v.default) || all.find((v) => v.system_name === 'ALLVIEWS') || all[0];
+        cvid = (def && def.id) || null;
+      }
+      if (!cvid) return { ok: false, why: 'no view to list the functions module through', step, map: {} };
+    } catch (e) {
+      return { ok: false, why: e.message, code: e.code || null, forbidden: !!e.forbidden, step, map: {} };
+    }
+    const map = {};
+    let page = 1, capped = false;
+    try {
+      while (true) {
+        // Two fields, which is the whole of what this is for. Its own page size, not the one the
+        // other walks share: those read functions with their source and this reads two strings.
+        // The endpoint is a literal at the call site on purpose: the check that holds the first
+        // non-negotiable reads the call sites of this helper, and a path assembled elsewhere is a
+        // path it cannot see. The shape of that check decides the shape of this line, which is the
+        // right way round - a guarantee nothing can read is a sentence, not a guarantee.
+        const q = `?cvid=${encodeURIComponent(cvid)}&page=${page}&per_page=${UI_ID_PAGE}`
+          + '&fields=id%2Cdependent_id';
+        const j = await apiPostJson('/crm/v8/Functions__s/bulk' + q);
+        const rows = (j && j.data) || [];
+        rows.forEach((r) => { if (r && r.dependent_id && r.id) map[String(r.dependent_id)] = String(r.id); });
+        const info = (j && j.info) || {};
+        if (!info.more_records || !rows.length) break;
+        page++;
+        // The same bound the other wide walks carry, and surfaced the same way: a list that stopped
+        // early is a list that says so, because a partial map read as complete would leave a
+        // function silently un-openable with nothing to explain it.
+        if (page > MAX_PAGES_WIDE) { capped = true; break; }
+      }
+    } catch (e) {
+      return { ok: false, why: e.message, code: e.code || null, forbidden: !!e.forbidden, step: 'list',
+               map, partial: Object.keys(map).length > 0 };
+    }
+    return { ok: true, map, capped, pages: page };
   }
 
   // A file path comes from Zoho and becomes a path below the selected workspace. Refuse, rather
@@ -1167,6 +1259,9 @@
     // than closed over, which is what lets the work leave this listener at all.
     const reply = (p, shape) => { answer(p, sendResponse, shape); return true; };
     if (msg?.cmd === 'listFunctions') return reply(listFunctions());
+    // Asked once per functions pull, after the list: it is a map from what we mirror to what the
+    // newer interface calls the same function, and nothing else depends on it.
+    if (msg?.cmd === 'functionUiIds') return reply(functionUiIds());
     if (msg?.cmd === 'listWorkflows') return reply(listWorkflows());
     if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));
     if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
