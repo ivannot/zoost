@@ -35,6 +35,7 @@ e93d2db5cc787f76  site/site.js: cantAsk: 'Non è stato possibile interrogare lo 
 2536222a76bde5c2  site/site.js: queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
 3c38f6d035f1fc8e  site/site.js: askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
 97b46114ddca025f  site/site.js: storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google gira ogni mezz\'ora.',
+fea522c04ade3dfc  tests/panel.test.mjs: // apart. Reported: «le funzioni non deluge hanno uno stato di pubblicazione che può essere bozza o
 03bc5bd90eed853d  tests/panel.test.mjs: // «Questo e' un ipertesto e tutto cio' che e' linkato deve essere navigabile.» The Reads, Writes and
 048b0386151a0f04  tests/tools_test.py: word; the Italian pages said eleven of them differently — «leggi ciò che viene spedito» against
 207ecf1079358a8c  tests/tools_test.py: «leggi quello che viene distribuito». Nothing wrong in either, and that is the point: a reader

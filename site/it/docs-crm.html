@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:9b9b194b2a0e6af5 -->
+<!-- translated-from: site/docs-crm.html sha256:a0f63afc9e26c57f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -284,6 +284,7 @@ git commit -m "baseline"</code></pre>
       voto</b>: la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che
       Zoho contabilizza - come pesarlo lo decidi tu, non io. Non viene chiesto niente in più a
       Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.</li>
+    <li><b class="ui">Live</b> / <b class="ui">Draft</b> sulla riga di una funzione compilata dice cosa sta girando davvero in Zoho. Le funzioni Java, Python e Node si scrivono, si salvano e poi si <em>pubblicano</em>, quindi il sorgente nel mirror può essere codice che l'org non ha mai eseguito - e sul disco le due cose sono identiche. <b>Draft</b> vuol dire mai pubblicata, <b>Draft +</b> pubblicata con una modifica successiva che non è live, e il dettaglio scrive per esteso la data di pubblicazione. Una funzione Deluge non ha questo stato e la colonna resta vuota. Sta anche in tutti e due i report.</li>
     <li><b class="ui">Language</b> tiene l'elenco alle funzioni scritte in uno solo dei linguaggi - Deluge, Java, Python o Node. Compare solo se l'org ne ha più di uno: un workspace tutto Deluge, come sono quasi tutti, non vede nessun controllo invece di un menu con una voce sola. I linguaggi offerti sono quelli che l'org usa davvero, quindi uno che Zoho aggiunge domani compare qui da solo. Stringe insieme a <b class="ui">Type</b> e non al suo posto, e la casella di ricerca cerca in quello che i due lasciano passare.</li>
     <li><b class="ui">Sort</b> riordina l'elenco per <b>Name (grouped)</b> - il default - oppure per <b>righe</b>, <b>chiamate API</b>, <b>linguaggio</b> o <b>ultima modifica</b>; il pulsante <b class="ui">↑/↓</b> accanto inverte la direzione. Scegliere un
       ordinamento imposta la direzione che quasi certamente vuoi - A→Z per i nomi, dal più grande per i

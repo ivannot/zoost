@@ -91,7 +91,8 @@ const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN',
                       'HD_CHATTIEST', 'wfValOf', 'wfOne', 'wfCrit', 'wfTiming']
   .map((k) => sliceConst('apps/crm/export.js', k))
   .concat([sliceConst('apps/crm/export.js', 'isDelugeLang'), sliceConst('apps/crm/export.js', 'langLabelOf')])
-  .concat(['healthFacts', 'wfFunctionActions'].map((k) => sliceFn('apps/crm/export.js', k)));
+  .concat(['healthFacts', 'wfFunctionActions', 'publishStateOf', 'publishTextOf', 'pubBadge']
+    .map((k) => sliceFn('apps/crm/export.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -6023,6 +6024,75 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// What Zoho is actually running. A compiled function is written, saved and then *published*, so the
+// source in the mirror can be something the org has never run - and nothing on disk tells the two
+// apart. Reported: «le funzioni non deluge hanno uno stato di pubblicazione che può essere bozza o
+// pubblicato», with a capture of both.
+//
+// Two fields, kept apart because they answer different questions: `deployed_on` is epoch
+// milliseconds as a string and `"-1"` for never, `is_draft_available` says an unpublished edit
+// exists. A function can be published *and* carry a draft - the state a single label would hide,
+// and the one a reader wondering why an edit changed nothing is looking for.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const m = load([sliceFn(REL, 'publishState'), sliceFn(REL, 'publishChip'), sliceFn(REL, 'publishSentence')],
+                 { Number, String, Date, console });
+  // The three shapes, as measured on a real org.
+  const NEVER = { deployed_on: '-1', is_draft_available: true };
+  const LIVE = { deployed_on: '1787922641896', is_draft_available: false };
+  const LIVE_DRAFT = { deployed_on: '1787922641896', is_draft_available: true };
+
+  test('never published is not the same as published', () => {
+    assert.equal(m.publishState(NEVER).deployed, null);
+    assert.equal(m.publishState(LIVE).deployed, 1787922641896);
+    // `-1` is Zoho's «never», and it is a number: read as one it is a deploy in 1969, which is what
+    // their own page prints beside it («gen 01, 1970») and exactly what this must not repeat.
+    assert.equal(m.publishChip(m.publishState(NEVER)), 'Draft');
+    assert.match(m.publishSentence(m.publishState(NEVER)), /Never published/);
+  });
+
+  test('published with a draft pending is its own state', () => {
+    assert.equal(m.publishChip(m.publishState(LIVE)), 'Live');
+    assert.equal(m.publishChip(m.publishState(LIVE_DRAFT)), 'Draft +');
+    assert.match(m.publishSentence(m.publishState(LIVE_DRAFT)), /unpublished draft/);
+    assert.doesNotMatch(m.publishSentence(m.publishState(LIVE)), /draft/);
+  });
+
+  test('a function nobody asked about says nothing', () => {
+    // Deluge functions do not carry these fields, and neither does a sidecar written before they
+    // existed. «No draft» would be a claim about a measurement never taken.
+    assert.equal(m.publishState({ language: 'deluge' }), null);
+    assert.equal(m.publishState({ deployed_on: null, is_draft_available: null }), null);
+    assert.equal(m.publishChip(null), '');
+    assert.equal(m.publishSentence(null), '');
+  });
+
+  test('the date is read from the epoch and never from the words beside it', () => {
+    // `formatted_deployed_on` arrives in the org's own language - «ago 28, 2026» from an Italian
+    // org - and this product does not depend on somebody else's localised text.
+    assert.match(m.publishSentence(m.publishState(LIVE)), /^Published \d{4}-\d{2}-\d{2}$/);
+    assert.ok(!/formatted_deployed_on/.test(read('apps/crm/content-bridge.js')
+      .replace(/\/\/[^\n]*/g, '')), 'why=the localised date is being read');
+  });
+
+  test('what the panel shows about it, the reports show too', () => {
+    // The rule this repository states about every number on screen, and the projection that has
+    // already dropped one: the graph is built from sources and knows nothing about deployment.
+    const ex = read('apps/crm/export.js');
+    for (const site of ['deployed_on: (d && d.meta.deployed_on) ?? null',
+                        'deployed_on: f.deployed_on, is_draft_available: f.is_draft_available',
+                        'publish state: ${publishTextOf(n)}']) {
+      assert.ok(ex.includes(site), `why=${site} is gone - a report that leaves the state out`);
+    }
+    const md = load([...EXPORT_PARTS], EXPORT_STUBS());
+    assert.equal(md.publishTextOf({ deployed_on: '-1' }), 'Never published');
+    assert.match(md.publishTextOf({ deployed_on: '1787922641896', is_draft_available: true }),
+                 /^Published \d{4}-\d{2}-\d{2}, unpublished draft since$/);
+    assert.equal(md.publishTextOf({}), '', 'a Deluge function is given a publish state it does not have');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same
@@ -10850,6 +10920,12 @@ for (const app of ['crm', 'analytics']) {
     4: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
         'params', 'description', 'updatedTime', 'modified_by', 'language', 'runtime', 'files',
         'directories', 'primary_file', 'associated_place', 'workflow', 'rest_api', 'connections', 'sv'],
+    // v5 adds what Zoho is *running*: when this function was last deployed, and whether an edit
+    // exists that has not been. A workspace pulled before it has neither, and is stale for it.
+    5: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
+        'params', 'description', 'updatedTime', 'modified_by', 'deployed_on', 'is_draft_available',
+        'language', 'runtime', 'files', 'directories', 'primary_file', 'associated_place', 'workflow',
+        'rest_api', 'connections', 'sv'],
   };
 
   test('the meta schema version moves when the captured fields do', () => {
@@ -18836,6 +18912,7 @@ test('the function row shows what the list is sorted by', () => {
                 escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
                 labelOf: (e) => e.display_name, isDeluge: () => true, langLabel: () => 'Deluge',
                 langFamily: (l) => String(l || 'deluge'), langFamilyLabel: (f) => (f === 'deluge' ? 'Deluge' : String(f)),
+                publishState: () => null, publishChip: () => '', publishSentence: () => '',
                 MSG: { notHere: 'x', hereRepull: 'y', failed: 'z', clickRetry: '', notMirrored: () => '' },
                 fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
     const m = load([sliceFn(rel, 'fnRowEl')], g);

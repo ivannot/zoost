@@ -85,7 +85,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   `functions/<namespace>/`. The preview keeps the function as one item and gives it a **Files**
   tab holding a tree that opens and closes, so every source, manifest and nested path Zoho returns
   can be opened directly. Explicit
-  directories and subdirectories are recorded too, including empty ones.
+  directories and subdirectories are recorded too, including empty ones. Each compiled function
+  also carries **what Zoho is running**: when it was last published, and whether an edit exists
+  that has not been - a source in the mirror can be code the org has never executed.
   One folder per kind - `functions/`, `modules/` (with `modules/layouts/` inside it),
   `workflows/`, `schedules/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
 - **Auto-sync on save**: save a function in Zoho and the local file updates automatically.

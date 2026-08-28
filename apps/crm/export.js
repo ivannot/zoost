@@ -45,6 +45,35 @@ const HD_CHATTIEST = 'invokeurl, zoho.crm and other Zoho service tasks, counted 
 // Kept to one expression so the two answers cannot part company on a value neither has seen.
 const isDelugeLang = (lang) => !lang || /^deluge/i.test(String(lang));
 const langLabelOf = (lang) => (isDelugeLang(lang) ? 'Deluge' : String(lang).replace(/_/g, ' '));
+// The same two fields the panel reads, and the same refusal to collapse them: a function can be
+// published *and* carry a draft, and `null` means Zoho was never asked rather than «no».
+function publishStateOf(f) {
+  const raw = f && f.deployed_on, draft = f && f.is_draft_available;
+  if (raw == null && draft == null) return null;
+  const ms = Number(raw);
+  const deployed = Number.isFinite(ms) && ms > 0 ? ms : null;
+  return { deployed, draft: !!draft };
+}
+// Built here rather than inline in the card: a template literal nested inside an attribute inside
+// another template literal is markup no checker can read, and `htmlcheck` said so - correctly. What
+// it inspects now is one call whose two variable parts are a fixed word and an escaped sentence.
+function pubBadge(f) {
+  const st = publishStateOf(f);
+  if (!st) return '';
+  // `escHtml` and not `esc`: the short name is a *local* of `buildExportHtml`, so a helper written
+  // beside it at module level reads it as undefined - which `node --check` accepts, the unit test
+  // accepts (its stub supplies one), and only running the export finds. That is this repository's
+  // own rule arriving again: a builder that produces a shipped artefact must be executed by
+  // something. The browser probe went red on the report never being written.
+  return `<span class="badge ${st.deployed ? 'ok' : 'no'}">${escHtml(publishTextOf(f))}</span>`;
+}
+function publishTextOf(f) {
+  const st = publishStateOf(f);
+  if (!st) return '';
+  if (!st.deployed) return 'Never published';
+  const when = new Date(st.deployed).toISOString().slice(0, 10);
+  return st.draft ? `Published ${when}, unpublished draft since` : `Published ${when}`;
+}
 const wfValOf = (g) => { const v = g.value; if (g.type === 'field' && v && v.api_name) return v.api_name; if (v === '${EMPTY}' || v === '${empty}') return 'empty'; return v == null ? '' : String(v); };
 const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
 const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
@@ -239,6 +268,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         + `</div>` : '';
       fnHtml += `<section class="item" id="${escA(fnAnchor(fnKey(f)))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
+        + pubBadge(f)
         + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.mirrored === false ? `<span class="badge no">${esc(langLabelOf(f.language))}, source unavailable</span>`
           // Two facts, one badge: «not downloaded» is a pull that has not happened and this is a
           // language nothing here reads. The block below already tells them apart; the badge that
@@ -586,7 +616,12 @@ async function loadExportData(op = beginWorkspaceOp()) {
     // downloaded, and the report tells its reader to run a pull that will change nothing.
     fns.push({ id: e.id, name: (d && d.meta.name) || e.name || e.api_name, api_name: e.api_name,
                language: e.language || 'deluge', mirrored: true,
-               display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, sources, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d && isDelugeLang(e.language) ? fnStats(code) : null });
+               display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, sources, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d && isDelugeLang(e.language) ? fnStats(code) : null,
+               // Whether Zoho is running this. It is on the row and in the detail, so it is here:
+               // a report that leaves it out is the lesser copy of the panel, and this one is about
+               // a compiled function whose source may never have been published.
+               deployed_on: (d && d.meta.deployed_on) ?? null,
+               is_draft_available: (d && d.meta.is_draft_available) ?? null });
   }
   const mods = [];
   for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); try { m._layouts = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
@@ -710,7 +745,12 @@ function buildExportMarkdown(d, scope) {
                                 // whether there was one to read.
                                 language: f.language, mirrored: f.mirrored, source_files: f.sources,
                                 display_name: f.display_name, associated_place: f.associated_place,
-                                connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime }))
+                                connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime,
+                                // Same reason as the two above: the graph is built from sources and
+                                // knows nothing about what Zoho is running. Left out here, both
+                                // reports print nothing and look complete - which is the shape this
+                                // projection has already been caught by.
+                                deployed_on: f.deployed_on, is_draft_available: f.is_draft_available }))
     .sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
   const notDown = fnList.filter((n) => n.mirrored !== false && !n.downloaded).length;
   // Its own number, because «not downloaded» invites a pull and this does not.
@@ -744,7 +784,7 @@ function buildExportMarkdown(d, scope) {
   md += CONTENTS;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
-  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source unavailable` : n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
+  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${publishTextOf(n) ? ' \u00b7 ' + publishTextOf(n) : ''}${n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source unavailable` : n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
   mods.slice().sort(byField('api_name')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
   if (wfs.length) {
@@ -763,6 +803,10 @@ function buildExportMarkdown(d, scope) {
   fnList.forEach((n) => {
     md += `### ${n.namespace}.${n.name}\n\n`;
     md += `- api_name: \`${n.api_name || ''}\`${n.return_type ? ` \u00b7 returns ${n.return_type}` : ''}${n.rest ? ' \u00b7 REST-enabled' : ''}\n`;
+    // On the row, in the detail, in the HTML report - so here. A compiled function whose source was
+    // never published is the case this answers, and a Markdown report that left it out would send
+    // its reader to look at code the org is not running.
+    if (publishTextOf(n)) md += `- publish state: ${publishTextOf(n)}\n`;
     if (n.calls && n.calls.length) md += `- calls: ${n.calls.join(', ')}\n`;
     if (n.called_by && n.called_by.length) md += `- called by: ${n.called_by.join(', ')}\n`;
     if (n.associated_place && n.associated_place.length) md += `- used in: ${n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}`).join('; ')}\n`;

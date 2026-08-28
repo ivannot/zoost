@@ -200,6 +200,8 @@ apps/crm/export.js	org
 apps/crm/export.js	p._type
 apps/crm/export.js	p.name ? ' ' + p.name : ''
 apps/crm/export.js	params(n)
+apps/crm/export.js	publishTextOf(n)
+apps/crm/export.js	publishTextOf(n) ? ' \u00b7 ' + publishTextOf(n) : ''
 apps/crm/export.js	r.child ? '`' + _mdCell(r.child) + '`' : ''
 apps/crm/export.js	r.child ? modLink(r.child) : ''
 apps/crm/export.js	r.count == null ? 'unknown' : r.count
@@ -254,6 +256,7 @@ apps/crm/export.js	w.name
 apps/crm/export.js	wfHtml
 apps/crm/export.js	wfValOf(g)
 apps/crm/export.js	what
+apps/crm/export.js	when
 apps/crm/export.js	withheld
 apps/crm/export.js	wsc.count
 apps/crm/export.js	wsc.count || ''

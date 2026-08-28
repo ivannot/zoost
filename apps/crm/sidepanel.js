@@ -489,7 +489,7 @@ const META_INDEX = 'functions/meta-index.json';
 // same commit** - the test below holds the readers to it, but only a person can know the meaning
 // changed.
 const SUMMARY_V = 7;   // 7 also caches the explicit directory tree of compiled function projects
-const META_SV = 4;   // v4 records language/runtime and every file and directory in a function project
+const META_SV = 5;   // v5 adds what Zoho is running: the deploy time and whether a draft is pending
 /** Has Zoho's copy moved since this one was fetched?
  *
  * **Both arguments must come from the same source.** The org *list* reports `updatedTime` as epoch
@@ -1702,6 +1702,39 @@ async function filterByConnection(name) {
   if (viewMode !== 'functions') setMode('functions'); else renderTree();
 }
 function clearConnectionFilter() { connectionFilter = null; connFilterSet = null; renderTree(); }
+/** What Zoho is actually running for this function, from the two fields it answers with.
+ *
+ *  A compiled function is written, saved and then *published*: the source on disk can be something
+ *  the org has never run, and nothing on disk distinguishes the two. `deployed_on` is epoch
+ *  milliseconds as a string and `"-1"` for never; `is_draft_available` says an unpublished edit
+ *  exists. They are different questions, so this answers both rather than collapsing them into one
+ *  word - a function can be published *and* carry a draft, which is the state a reader most needs
+ *  to see and the one a single label would hide.
+ *
+ *  Absence is its own answer. Deluge functions do not carry these fields, and neither does a sidecar
+ *  written before this existed: `null` means nobody asked, which this panel never prints as «no».
+ */
+function publishState(meta) {
+  const raw = meta && meta.deployed_on;
+  const draft = meta && meta.is_draft_available;
+  if (raw == null && draft == null) return null;
+  const ms = Number(raw);
+  const deployed = Number.isFinite(ms) && ms > 0 ? ms : null;
+  return { deployed, never: raw != null && !deployed, draft: !!draft };
+}
+/** The one word for a list, and the sentence for a detail. Two readers, two lengths, one source. */
+function publishChip(st) {
+  if (!st) return '';
+  if (!st.deployed) return 'Draft';
+  return st.draft ? 'Draft +' : 'Live';
+}
+function publishSentence(st) {
+  if (!st) return '';
+  if (!st.deployed) return 'Never published - Zoho is running nothing for this function yet';
+  const when = new Date(st.deployed).toISOString().slice(0, 10);
+  return st.draft ? `Published ${when}, with an unpublished draft since`
+                  : `Published ${when}`;
+}
 // One row builder, shared by the grouped and the sorted-flat rendering, so the two cannot drift.
 function fnRowEl(e) {
   const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
@@ -1721,6 +1754,10 @@ function fnRowEl(e) {
   // The family on the row, Zoho's own spelling in the tooltip: «java17» is a fact about the
   // function and belongs somewhere, but `slice(0, 4)` of it put «pyth» in a column.
   const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langFamilyLabel(langFamily(e.language))) : ''}</span>`;
+  // Whether Zoho is running this, on the row. Its own slot for the same reason every other one has
+  // one: a slot that appears and disappears moves the numbers beside it down the whole list.
+  const pub = publishState(e);
+  const pubSlot = `<span class="rest rpb${pub && !pub.deployed ? ' rpbd' : ''}"${pub ? ` title="${escA(publishSentence(pub))}"` : ''}>${escHtml(publishChip(pub))}</span>`;
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
@@ -1740,7 +1777,7 @@ function fnRowEl(e) {
   const wide = treeSort === 'modified' ? ' rfw' : '';
   const lineSlot = `<span class="rest rfl${wide}"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${escHtml(sortShown)}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
-  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
+  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${pubSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   // Both go through a declaration, because a `.then(cb)` is a scope the race checker cannot enter -
   // and this callback redraws a row after an await, which is the exact shape it exists to look at.
   el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else void fetchThenRedrawRow(e); };
@@ -1896,6 +1933,10 @@ async function refineRowFromMeta(mp, op, byPath, byId, index) {
     row.mirrorFiles = pathsFromMeta(meta, mp);
     row.mirrorDirectories = directoriesFromMeta(meta, mp);
     row.language = meta.language || row.language || 'deluge';
+    // Read from the sidecar, which is where the detail put them: the org *list* does not carry
+    // them, so a row knows this only once its function has been downloaded - the same as its stats.
+    row.deployed_on = meta.deployed_on ?? null;
+    row.is_draft_available = meta.is_draft_available ?? null;
     row.mirrored = true;
     row.downloaded = !row.pathChanged;
     // Three reasons to re-fetch, each its own fact: an older sidecar schema, a rename, and a
@@ -2926,6 +2967,12 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
         + callers.map((id) => `<a class="wf-fn" data-file="${escA(g.nodes[id].file)}" title="${escA(g.nodes[id].display_name || g.nodes[id].name || '')}">\u0192 ${escHtml(nm(id))}</a>`).join('')
         + '</div>'
       : '<b>Called by</b> - none';
+    // Above the references, because «is Zoho running this?» is asked before «what calls it?» - and
+    // for a compiled function it is the first thing that explains an edit that changed nothing.
+    const pub = publishState(functionRowForPath(path));
+    if (pub) {
+      html = `<div class="publine${pub.deployed ? '' : ' pubdraft'}">${escHtml(publishSentence(pub))}</div>` + html;
+    }
     const ap = node.associated_place || [];
     if (ap.length) {
       const byType = {};

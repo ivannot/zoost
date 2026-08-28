@@ -230,6 +230,12 @@
      .rest still carries margin-left:auto and pushes the whole group to the right edge. */
   .f .rest.rlg{min-width:30px;text-align:right;color:#7dd3fc}
   .f .rest.rr{min-width:26px;text-align:right}
+  /* Whether Zoho is running this function. Amber for a draft, because «written and never published»
+     is the state somebody is looking for when they wonder why an edit changed nothing. */
+  .f .rest.rpb{min-width:34px;text-align:right;color:var(--ok)}
+  #pvcallers .publine{margin:0 0 6px;font-weight:600;color:var(--ok)}
+  #pvcallers .publine.pubdraft{color:#f59e0b}
+  .f .rest.rpb.rpbd{color:#f59e0b}
   .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
   .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
   /* A date needs more room than a count; only the «last modified» sort asks for it. */

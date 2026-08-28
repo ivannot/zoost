@@ -561,6 +561,19 @@
       nameSpace: fn.nameSpace, category: fn.category, source: fn.source,
       return_type: fn.return_type, params: fn.params || [],
       description: fn.description || '', updatedTime: fn.updatedTime, modified_by: fn.modified_by || null,
+      // **Whether Zoho is running this, and whether there is an edit it is not running.** A compiled
+      // function is written, saved and then *published*, so a mirror that showed only the source was
+      // showing something that may never have been deployed - and both states look identical on
+      // disk. Measured on an org holding one of each: `deployed_on` is epoch milliseconds as a
+      // string, or `"-1"` for never, and `is_draft_available` says an unpublished edit exists. The
+      // two are kept apart because they answer different questions and a published function can
+      // carry a draft as well.
+      //
+      // `formatted_deployed_on` sits beside them in the response and is deliberately not read: it
+      // is formatted in the org's own language - «ago 28, 2026» arrived from an Italian org - and
+      // this product does not depend on somebody else's localised text.
+      deployed_on: fn.deployed_on == null ? null : String(fn.deployed_on),
+      is_draft_available: fn.is_draft_available == null ? null : !!fn.is_draft_available,
       language: fn.language || fallback?.language || 'deluge', runtime: fn.runtime || fallback?.runtime || null,
       files: null, directories: null, primary_file: null,
       associated_place: fn.associated_place ?? null, workflow: fn.workflow || '',
@@ -568,7 +581,7 @@
       // Connections the function uses. connectionLinkName is the join key - the exact name that
       // appears in invokeurl [...connection:"..."], and the `name` in the org's connections catalogue.
       connections: (fn.connections || []).map((c) => ({ name: c.connectionLinkName, label: c.connectionName || c.connectionLinkName, service: c.serviceName || null, scopes: c.scopes || [] })).filter((c) => c.name),
-      sv: 4,   // v4 records every mirrored project file and explicit directory
+      sv: 5,   // v5 adds `deployed_on` and `is_draft_available` - what Zoho is actually running
     };
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
