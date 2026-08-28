@@ -533,18 +533,25 @@
     const body = await api(base + `getFileList?${query}`);
     const listed = list(body && body.data, 'functionFiles', 'zce/function/getFileList');
     const files = [];
+    const directories = [];
     const seen = new Set();
+    const directorySet = new Set();
+    const rememberDirectory = (path) => {
+      if (!directorySet.has(path)) { directorySet.add(path); directories.push(path); }
+    };
     for (const item of listed) {
-      if (item && item.isDirectory) continue;
       const path = projectPath(item && (item.fullPath || item.id || item.text));
       if (seen.has(path)) throw new Error(`Zoho returned the function file «${path}» more than once.`);
       seen.add(path);
+      const parts = path.split('/');
+      for (let i = 1; i < parts.length; i++) rememberDirectory(parts.slice(0, i).join('/'));
+      if (item && item.isDirectory) { rememberDirectory(path); continue; }
       const content = await apiText(base + `code?${query}&fileName=${encodeURIComponent(path)}`);
       files.push({ path, content });
     }
     if (!files.length) throw new Error('Zoho returned an empty function project.');
     const config = /(^|\/)config\.json$/i;
-    return { files, primary: (files.find((f) => !config.test(f.path)) || files[0]).path };
+    return { files, directories, primary: (files.find((f) => !config.test(f.path)) || files[0]).path };
   }
   function toFile(fn, fallback) {
     const ns = fn.nameSpace || fallback?.namespace || fn.category || 'misc';
@@ -555,13 +562,13 @@
       return_type: fn.return_type, params: fn.params || [],
       description: fn.description || '', updatedTime: fn.updatedTime, modified_by: fn.modified_by || null,
       language: fn.language || fallback?.language || 'deluge', runtime: fn.runtime || fallback?.runtime || null,
-      files: null, primary_file: null,
+      files: null, directories: null, primary_file: null,
       associated_place: fn.associated_place ?? null, workflow: fn.workflow || '',
       rest_api: (fn.rest_api || []).map((r) => ({ type: r.type, active: r.active })),
       // Connections the function uses. connectionLinkName is the join key - the exact name that
       // appears in invokeurl [...connection:"..."], and the `name` in the org's connections catalogue.
       connections: (fn.connections || []).map((c) => ({ name: c.connectionLinkName, label: c.connectionName || c.connectionLinkName, service: c.serviceName || null, scopes: c.scopes || [] })).filter((c) => c.name),
-      sv: 3,   // v3 records the runtime and, for compiled functions, every mirrored project file
+      sv: 4,   // v4 records every mirrored project file and explicit directory
     };
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
@@ -728,8 +735,10 @@
     if (requested !== 'deluge') {
       const project = await projectFiles(fn);
       file.files = project.files;
+      file.directories = project.directories;
       file.primary = project.primary;
       file.meta.files = project.files.map((f) => f.path);
+      file.meta.directories = project.directories;
       file.meta.primary_file = project.primary;
     }
     return file;

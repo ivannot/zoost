@@ -426,6 +426,11 @@ function pathsFromMeta(meta, metaPath) {
   const root = base + '.files/';
   return (meta && Array.isArray(meta.files) ? meta.files.map((p) => root + p) : []).concat(metaPath);
 }
+function directoriesFromMeta(meta, metaPath) {
+  if (isDeluge(meta && meta.language)) return [];
+  const root = metaPath.replace(/\.meta\.json$/, '.files/');
+  return meta && Array.isArray(meta.directories) ? meta.directories.map((p) => root + p) : [];
+}
 function primaryFromMeta(meta, metaPath) {
   if (isDeluge(meta && meta.language)) return metaPath.replace(/\.meta\.json$/, '.dg');
   const files = Array.isArray(meta && meta.files) ? meta.files : [];
@@ -483,8 +488,8 @@ const META_INDEX = 'functions/meta-index.json';
 // `{"fresh":1,"cached":0}`. **Changing what the extractor writes means moving this line, in the
 // same commit** - the test below holds the readers to it, but only a person can know the meaning
 // changed.
-const SUMMARY_V = 6;   // 6 identifies project sidecars and their files; older summaries are re-derived
-const META_SV = 3;   // v3 records language/runtime and every file in a compiled function project
+const SUMMARY_V = 7;   // 7 also caches the explicit directory tree of compiled function projects
+const META_SV = 4;   // v4 records language/runtime and every file and directory in a function project
 /** Has Zoho's copy moved since this one was fetched?
  *
  * **Both arguments must come from the same source.** The org *list* reports `updatedTime` as epoch
@@ -1152,12 +1157,17 @@ function beginWorkspaceOp() {
     root, gen, current,
     read: (p) => through(() => readFileAt(root, p)),
     write: (p, body) => through(() => writeFileAt(root, p, body)),
+    mkdir: (p) => through(() => ensureDirectoryAt(root, p)),
     remove: (p) => through(() => removeFileAt(root, p)),
     // Progress belongs to a workspace as much as a write does. Reported: a pull started in one org
     // kept counting «Downloading 214/900» into the panel after the user had opened another workspace,
     // so the work looked like it was happening *there*. It says nothing once it is not there.
     say: (msg, kind) => { if (current()) setStatus(msg, kind); },
   };
+}
+async function ensureDirectoryAt(root, rel) {
+  if (root !== dir) throw new Error(WS_MOVED);
+  await dirFor(rel.split('/').filter(Boolean), true, root);
 }
 async function writeFileAt(root, rel, content) {
   if (root !== dir) throw new Error(WS_MOVED);
@@ -1179,17 +1189,28 @@ async function readFileAt(root, rel) {
  * files whose writes have already completed. */
 async function writeFunctionMirror(f, op, listUpdated) {
   const metaPath = fnMetaPath(f.folder, f.stem);
-  let previous = [];
-  try { const old = JSON.parse(await op.read(metaPath)); previous = pathsFromMeta(old, metaPath); } catch (_) {}
+  let previous = [], previousDirectories = [];
+  try {
+    const old = JSON.parse(await op.read(metaPath));
+    previous = pathsFromMeta(old, metaPath);
+    previousDirectories = directoriesFromMeta(old, metaPath);
+  } catch (_) {}
   let primary;
   if (isDeluge(f.meta && f.meta.language)) {
     primary = `functions/${f.folder}/${f.stem}.dg`;
     if (!op.current()) throw new Error(WS_MOVED);
     await op.write(primary, f.dg || '');
-    f.meta.files = null; f.meta.primary_file = null;
+    f.meta.files = null; f.meta.directories = null; f.meta.primary_file = null;
   } else {
     if (!Array.isArray(f.files) || !f.files.length) throw new Error('Zoho returned no files for this function project.');
     const projectRoot = fnProjectRoot(f.folder, f.stem) + '/';
+    const projectDirectories = Array.isArray(f.directories) ? f.directories
+      : (Array.isArray(f.meta.directories) ? f.meta.directories : []);
+    f.meta.directories = projectDirectories;
+    for (const path of projectDirectories.slice().sort((a, b) => a.split('/').length - b.split('/').length)) {
+      if (!op.current()) throw new Error(WS_MOVED);
+      await op.mkdir(projectRoot + path);
+    }
     for (const item of f.files) {
       if (!op.current()) throw new Error(WS_MOVED);
       await op.write(projectRoot + item.path, item.content);
@@ -1204,13 +1225,20 @@ async function writeFunctionMirror(f, op, listUpdated) {
   const stale = previous.filter((p) => !keep.has(p) && !p.endsWith('.meta.json'));
   const cleanup = stale.length ? await removeFunctionPaths(stale, op) : { failed: 0, moved: false };
   if (cleanup.moved) throw new Error(WS_MOVED);
+  const directories = directoriesFromMeta(f.meta, metaPath);
+  const keepDirectories = new Set(directories);
+  const staleDirectories = previousDirectories.filter((p) => !keepDirectories.has(p))
+    .sort((a, b) => b.split('/').length - a.split('/').length);
+  const directoryCleanup = staleDirectories.length
+    ? await removeFunctionPaths(staleDirectories, op) : { failed: 0, moved: false };
+  if (directoryCleanup.moved) throw new Error(WS_MOVED);
   // What went into the sidecar, handed back rather than left for the caller to remember. The row is
   // the panel's memory of this copy and the summary index is written *from the row*, so a caller
   // that updates one and not the other leaves the two files disagreeing about the same download -
   // which is what «Refresh 8 outdated» was: the sidecar carried the new reading, the summary still
   // carried the old one, and the fast path compares the summary. No pull could clear it, because
   // every pull repeated it.
-  return { primary, metaPath, paths, cleanupFailed: cleanup.failed,
+  return { primary, metaPath, paths, directories, cleanupFailed: cleanup.failed + directoryCleanup.failed,
            listUpdated: f.meta.listUpdated, updatedTime: f.meta.updatedTime || null };
 }
 // The shorthands every render path uses: they read and write the workspace on screen, which is the
@@ -1866,6 +1894,7 @@ async function refineRowFromMeta(mp, op, byPath, byId, index) {
     if (!row.pathChanged) row.path = dg;
     row.metaPath = mp;
     row.mirrorFiles = pathsFromMeta(meta, mp);
+    row.mirrorDirectories = directoriesFromMeta(meta, mp);
     row.language = meta.language || row.language || 'deluge';
     row.mirrored = true;
     row.downloaded = !row.pathChanged;
@@ -1962,6 +1991,7 @@ async function rebuildTree() {
         const id = String(meta.id == null ? p : meta.id);
         const stem = p.split('/').pop().replace(/\.meta\.json$/, '');
         const row = { path, metaPath: p, mirrorFiles: pathsFromMeta(meta, p),
+                      mirrorDirectories: directoriesFromMeta(meta, p),
                       api_name: meta.api_name || meta.name || stem,
                       display_name: meta.display_name || meta.api_name || meta.name || stem,
                       namespace: meta.nameSpace || p.split('/')[1], language: meta.language || 'deluge',
@@ -2000,6 +2030,7 @@ async function rebuildTree() {
     if (row.path !== cachedPath) byPath.delete(row.path);
     row.path = cachedPath; byPath.set(cachedPath, row);
     row.metaPath = mp; row.mirrorFiles = cachedFiles;
+    row.mirrorDirectories = (s && s.mirrorDirectories) || [];
     if (s.language) row.language = s.language;
     row.downloaded = true;
     // The same rule as the slow path below. It was only there, so whether a workspace reported
@@ -2156,6 +2187,7 @@ async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
       e.namespace = r.namespace || ''; e.display_name = r.display_name || '';
       e.metaPath = r.metaPath || r.path.replace(/\.dg$/, '.meta.json');
       e.mirrorFiles = r.mirrorFiles || [r.path, e.metaPath];
+      e.mirrorDirectories = r.mirrorDirectories || [];
       e.language = r.language || 'deluge';
     });
   }, op);
@@ -2502,6 +2534,8 @@ const functionRowForPath = (path) => treeData.find((e) => e.path === path
   || (Array.isArray(e.mirrorFiles) && e.mirrorFiles.includes(path)));
 const projectFilesOf = (row) => (!row || isDeluge(row.language) ? []
   : (row.mirrorFiles || []).filter((p) => !p.endsWith('.meta.json')));
+const projectDirectoriesOf = (row) => (!row || isDeluge(row.language) ? []
+  : (row.mirrorDirectories || []));
 
 /** Show every file Zoho returned for this compiled function, without turning files into functions.
  *  The selected value is the exact workspace path: choosing one follows the same preview path as a
@@ -2509,15 +2543,24 @@ const projectFilesOf = (row) => (!row || isDeluge(row.language) ? []
 function showProjectFiles(row, path) {
   const bar = $('pvfiles'), select = $('pvfileselect'), count = $('pvfilecount');
   const files = projectFilesOf(row);
+  const directories = projectDirectoriesOf(row);
   select.innerHTML = '';
-  files.forEach((file) => {
+  const root = ((row && row.metaPath) || '').replace(/\.meta\.json$/, '.files/');
+  const entries = directories.map((value) => ({ value, directory: true }))
+    .concat(files.map((value) => ({ value, directory: false })))
+    .sort((a, b) => a.value.localeCompare(b.value));
+  entries.forEach(({ value, directory }) => {
     const option = document.createElement('option');
-    option.value = file;
-    option.textContent = file.includes('.files/') ? file.split('.files/').slice(1).join('.files/') : file.split('/').pop();
+    option.value = value;
+    const relative = root && value.startsWith(root) ? value.slice(root.length) : value.split('/').pop();
+    option.textContent = directory ? `▸ ${relative}/` : relative;
+    option.disabled = directory;
     select.appendChild(option);
   });
-  bar.dataset.available = files.length > 1 ? '1' : '';
-  count.textContent = files.length ? `${files.length} files` : '';
+  bar.dataset.available = (files.length > 1 || directories.length) ? '1' : '';
+  const fileWord = files.length === 1 ? 'file' : 'files';
+  const folderWord = directories.length === 1 ? 'folder' : 'folders';
+  count.textContent = files.length ? `${files.length} ${fileWord} · ${directories.length} ${folderWord}` : '';
   if (files.includes(path)) select.value = path;
   select.onchange = files.length > 1 ? () => openFile(select.value, null, true) : null;
   bar.style.display = (bar.dataset.available && pvKind === 'function' && pvTab === 'code') ? 'flex' : 'none';
@@ -4648,17 +4691,28 @@ async function pruneFunction(id, entry = null) {
     ? `functions/${sanitize(entry.namespace)}/${sanitize(entry.api_name)}.meta.json`
     : (row && row.metaPath) || (deluge ? path.replace(/\.dg$/, '.meta.json') : path.replace(/\.files(?:\/.*)?$/, '.meta.json'));
   let paths = (row && row.mirrorFiles) || (entry && entry.mirrorFiles);
+  let directories = (row && row.mirrorDirectories) || (entry && entry.mirrorDirectories) || [];
   if (!paths && deluge) paths = [path, metaPath];
   if (!paths) {
-    // A project directory is not a removable file, and the browser API does not remove non-empty
-    // directories recursively. The sidecar is the authoritative manifest of every mirrored file.
-    try { paths = pathsFromMeta(JSON.parse(await op.read(metaPath)), metaPath); }
+    // The sidecar is the authoritative manifest of every mirrored file and explicit directory.
+    // Directories are removed deepest first and never recursively, so a local file Zoho did not
+    // return cannot be erased as collateral damage.
+    try {
+      const meta = JSON.parse(await op.read(metaPath));
+      paths = pathsFromMeta(meta, metaPath);
+      directories = directoriesFromMeta(meta, metaPath);
+    }
     catch (_) {
       if (op.current()) op.say(`Could not read ${metaPath.split('/').pop()} - project files were left untouched.`, 'warn');
       return false;
     }
   }
-  for (const p of paths) {
+  const sources = paths.filter((p) => p !== metaPath);
+  const projectRoot = deluge ? null : metaPath.replace(/\.meta\.json$/, '.files');
+  const removals = sources.concat(directories.slice().sort((a, b) => b.split('/').length - a.split('/').length));
+  if (projectRoot) removals.push(projectRoot);
+  removals.push(metaPath); // last: until then the manifest can still describe a partial removal
+  for (const p of removals) {
     if (!op.current()) return false;
     // The exact path that failed, not the function's. Keeping only the `.dg` meant a retry that
     // found it already gone, dropped the entry, and left the `.meta.json` on disk for ever.
@@ -4785,6 +4839,7 @@ async function syncOneNow(id) {
     // `null` above is deliberate and the row has to say the same thing: a summary that kept the
     // previous reading would describe a copy the sidecar describes differently.
     if (ent) { ent.path = written.primary; ent.mirrorFiles = written.paths; ent.downloaded = true; ent.error = false;
+               ent.mirrorDirectories = written.directories;
                ent.fetchedAgainst = written.listUpdated; ent.updatedTime = written.updatedTime;
                updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (written.paths.includes(currentPath)) await openFile(currentPath);
@@ -5902,7 +5957,7 @@ async function downloadOne(entry) {
     }
     entry.previousPath = null; entry.pathChanged = false;
     if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
-    entry.path = written.primary; entry.mirrorFiles = written.paths; entry.namespace = f.folder;
+    entry.path = written.primary; entry.mirrorFiles = written.paths; entry.mirrorDirectories = written.directories; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     // From what was written, never from what this function believed it was about to write.
     entry.fetchedAgainst = written.listUpdated; entry.updatedTime = written.updatedTime;

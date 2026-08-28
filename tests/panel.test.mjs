@@ -3514,7 +3514,7 @@ test('the sample workspace has the shape the pull writes, field for field', () =
   const meta = JSON.parse(files[`functions/${fn.namespace}/${fn.api_name}.meta.json`]);
   for (const k of ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source',
                    'return_type', 'params', 'description', 'updatedTime', 'modified_by',
-                   'language', 'runtime', 'files', 'primary_file', 'associated_place', 'workflow',
+                   'language', 'runtime', 'files', 'directories', 'primary_file', 'associated_place', 'workflow',
                    'rest_api', 'connections', 'sv']) {
     assert.ok(k in meta, `the function meta has no ${k}`);
   }
@@ -5614,13 +5614,14 @@ for (const app of ['crm', 'analytics']) {
                  write: async (p, c) => { disk.set(p, c); } };
     const g = {
       Object, Array, Set, Map, JSON, String, Number, Boolean, Error, Promise, console,
-      WS_MOVED: 'moved', META_SV: 3, treeData, index: new Map(),
+      WS_MOVED: 'moved', META_SV: 4, treeData, index: new Map(),
       _dirtyMeta: new Set(), dirtyMeta: new Set(), dir: {},
       MSG: { folder: 'folder' }, setStatus: () => {},
       isDeluge: (l) => !l || /^deluge/i.test(String(l)),
       fnMetaPath: (f, s) => `functions/${f}/${s}.meta.json`,
       fnProjectRoot: (f, s) => `functions/${f}/${s}.files`,
       pathsFromMeta: (meta, mp) => [mp.replace(/\.meta\.json$/, '.dg'), mp],
+      directoriesFromMeta: () => [],
       removeFunctionPaths: async () => ({ failed: 0, moved: false }),
       updateMetaIndex: (mutate) => { mutate(summary); return Promise.resolve(true); },
       beginWorkspaceOp: () => op,
@@ -5629,7 +5630,7 @@ for (const app of ['crm', 'analytics']) {
       // Zoho, answering with the function as it is *now*.
       toBridge: async () => ({ ok: true, file: { folder: 'standalone', stem: 'x', dg: 'info "hi";',
         meta: { id: '1', name: 'x', api_name: 'x', nameSpace: 'standalone', language: 'deluge',
-                updatedTime: 'after', sv: 3 } } }),
+                updatedTime: 'after', sv: 4 } } }),
     };
     const m = load([sliceFn(REL, 'writeFunctionMirror'), sliceFn(REL, 'saveMetaIndex'),
                     sliceFn(REL, 'downloadOne'), sliceConst(REL, 'errText')], g);
@@ -10764,6 +10765,9 @@ for (const app of ['crm', 'analytics']) {
     3: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
         'params', 'description', 'updatedTime', 'modified_by', 'language', 'runtime', 'files',
         'primary_file', 'associated_place', 'workflow', 'rest_api', 'connections', 'sv'],
+    4: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
+        'params', 'description', 'updatedTime', 'modified_by', 'language', 'runtime', 'files',
+        'directories', 'primary_file', 'associated_place', 'workflow', 'rest_api', 'connections', 'sv'],
   };
 
   test('the meta schema version moves when the captured fields do', () => {
@@ -17573,7 +17577,9 @@ test('a compiled function is fetched as every file in its Zoho project', async (
       calls.push(path);
       return { data: { functionFiles: [
         { fullPath: 'src', isDirectory: true },
+        { fullPath: 'src/lib', isDirectory: true },
         { fullPath: 'src/main.py', isDirectory: false },
+        { fullPath: 'empty', isDirectory: true },
         { fullPath: 'config.json', isDirectory: false },
       ] } };
     },
@@ -17586,6 +17592,8 @@ test('a compiled function is fetched as every file in its Zoho project', async (
   assert.equal(got.primary, 'src/main.py', 'config.json was chosen as the code file shown for the function');
   assert.equal(got.files.map((f) => `${f.path}:${f.content.length}`).join(','),
                'src/main.py:24,config.json:21', 'one of the returned project files or its exact text was lost');
+  assert.equal(got.directories.join(','), 'src,src/lib,empty',
+    'an explicit directory or empty subproject folder was discarded');
   assert.equal(calls.filter((p) => p.includes('/code?')).length, 2, 'the source endpoint was not called once per file');
   assert.ok(calls.every((p) => p.includes('functionName=run_job') && p.includes('repositoryName=standalone')),
             'the project request is not keyed by the function API name and category observed in Zoho');
@@ -17604,19 +17612,30 @@ test('the mirror writes all compiled files before the sidecar that describes the
   const writes = [];
   const m = load([
     sliceConst(rel, 'isDeluge'), sliceConst(rel, 'fnMetaPath'), sliceConst(rel, 'fnProjectRoot'),
-    sliceFn(rel, 'pathsFromMeta'), sliceFn(rel, 'writeFunctionMirror'),
+    sliceFn(rel, 'pathsFromMeta'), sliceFn(rel, 'directoriesFromMeta'), sliceFn(rel, 'writeFunctionMirror'),
   ], { String, RegExp, Array, JSON, Error, WS_MOVED: 'moved' });
+  const directories = [];
   const f = { folder: 'standalone', stem: 'run_job', primary: 'src/main.py',
     files: [{ path: 'src/main.py', content: 'print(1)\n' }, { path: 'config.json', content: '{}\n' }],
-    meta: { language: 'python_3_12', files: ['src/main.py', 'config.json'], primary_file: 'src/main.py' } };
-  const got = await m.writeFunctionMirror(f, { current: () => true, write: async (p, v) => writes.push([p, v]) }, 77);
+    directories: ['src', 'src/lib', 'empty'],
+    meta: { language: 'python_3_12', files: ['src/main.py', 'config.json'],
+      directories: ['src', 'src/lib', 'empty'], primary_file: 'src/main.py' } };
+  const got = await m.writeFunctionMirror(f, { current: () => true,
+    read: async () => { throw new Error('absent'); },
+    mkdir: async (p) => directories.push(p),
+    write: async (p, v) => writes.push([p, v]) }, 77);
+  assert.deepEqual(directories, [
+    'functions/standalone/run_job.files/src',
+    'functions/standalone/run_job.files/empty',
+    'functions/standalone/run_job.files/src/lib',
+  ], 'project directories were not created parent first before the files');
   assert.equal(writes.map((x) => x[0]).join(','),
     'functions/standalone/run_job.files/src/main.py,functions/standalone/run_job.files/config.json,functions/standalone/run_job.meta.json');
   assert.equal(got.primary, 'functions/standalone/run_job.files/src/main.py');
   assert.equal(JSON.parse(writes[2][1]).listUpdated, 77);
 });
 
-test('pruning a compiled function removes the files named by its sidecar, never its directory', async () => {
+test('pruning a compiled function removes its files and explicit directories deepest first', async () => {
   const rel = 'apps/crm/sidepanel.js';
   const removed = [], writes = [];
   const ctx = {
@@ -17626,7 +17645,8 @@ test('pruning a compiled function removes the files named by its sidecar, never 
     $: () => ({ classList: { remove() {} } }), String, Map, Set, Array, JSON, RegExp, Error,
     beginWorkspaceOp: () => ({ current: () => true, say: () => {},
       read: async (p) => p.endsWith('.meta.json')
-        ? JSON.stringify({ language: 'python_3_12', files: ['src/main.py', 'config.json'] })
+        ? JSON.stringify({ language: 'python_3_12', files: ['src/main.py', 'config.json'],
+          directories: ['src', 'src/lib', 'empty'] })
         : JSON.stringify([{ id: 'p1' }]),
       remove: async (p) => { removed.push(p); },
       write: async (p, value) => { writes.push([p, value]); },
@@ -17634,16 +17654,20 @@ test('pruning a compiled function removes the files named by its sidecar, never 
   };
   vm.createContext(ctx);
   vm.runInContext([
-    sliceConst(rel, 'isDeluge'), sliceFn(rel, 'pathsFromMeta'), sliceFn(rel, 'pruneFunction'),
+    sliceConst(rel, 'isDeluge'), sliceFn(rel, 'pathsFromMeta'), sliceFn(rel, 'directoriesFromMeta'),
+    sliceFn(rel, 'pruneFunction'),
   ].join('\n'), ctx);
   const ok = await vm.runInContext("pruneFunction('p1', { id: 'p1', namespace: 'standalone', api_name: 'run_job', language: 'python_3_12' })", ctx);
   assert.equal(ok, true);
   assert.deepEqual(removed, [
     'functions/standalone/run_job.files/src/main.py',
     'functions/standalone/run_job.files/config.json',
+    'functions/standalone/run_job.files/src/lib',
+    'functions/standalone/run_job.files/src',
+    'functions/standalone/run_job.files/empty',
+    'functions/standalone/run_job.files',
     'functions/standalone/run_job.meta.json',
   ]);
-  assert.ok(!removed.includes('functions/standalone/run_job.files'), 'a non-empty project directory was passed to a non-recursive removal');
   assert.equal(JSON.parse(writes[0][1]).length, 0, 'the deleted project remained in functions/index.json');
   assert.equal(ctx.currentPath, null, 'the preview kept showing a secondary file after its function was deleted');
 });
@@ -17676,13 +17700,15 @@ test('the preview offers every file in a compiled function project', () => {
     'functions/standalone/run.files/lib/helper.js',
     'functions/standalone/run.files/config.json',
     'functions/standalone/run.meta.json',
-  ] };
-  const { projectFilesOf } = load([sliceConst(rel, 'isDeluge'), sliceConst(rel, 'projectFilesOf')],
+  ], mirrorDirectories: ['functions/standalone/run.files/lib', 'functions/standalone/run.files/empty'] };
+  const { projectFilesOf, projectDirectoriesOf } = load([
+    sliceConst(rel, 'isDeluge'), sliceConst(rel, 'projectFilesOf'), sliceConst(rel, 'projectDirectoriesOf')],
     { String, RegExp, Array, console });
   assert.equal(JSON.stringify(projectFilesOf(row)), JSON.stringify(row.mirrorFiles.slice(0, 3)),
     'the file switcher shows only the primary source, or mistakes the sidecar for project code');
   assert.equal(projectFilesOf({ language: 'deluge', mirrorFiles: ['functions/a.dg'] }).length, 0,
     'a one-file Deluge function was dressed up as a project');
+  assert.equal(projectDirectoriesOf(row).length, 2, 'empty project directories are invisible in the preview');
 
   const src = read(rel), html = read('apps/crm/sidepanel.html');
   assert.match(src, /showProjectFiles\(trow, path\)/, 'opening a function never fills the project-file selector');

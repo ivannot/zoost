@@ -301,7 +301,7 @@ function deluge(ns, name, params, calls) {
         ? (EDGE.unresolved[ns + '.' + name] || []).concat(EDGE.ambiguous[ns + '.' + name] || [])
         : [];
       out['functions/' + ns + '/' + api + '.dg'] = deluge(ns, name, params, calls.concat(extra));
-      // toFile()'s meta, field for field. sv is 3 - the current META_SV - and 1 for the ones that are
+      // toFile()'s meta, field for field. sv is 4 - the current META_SV - and 1 for the ones that are
       // meant to read as stale.
       J('functions/' + ns + '/' + api + '.meta.json', {
         id: id, name: name, display_name: labelOf(name), api_name: api,
@@ -318,8 +318,8 @@ function deluge(ns, name, params, calls) {
           ? [{ type: 'GET', active: true }] : [],
         connections: CONNECTIONS.filter((c) => c[2].includes(ns + '.' + name))
           .map((c) => ({ name: c[0], label: c[1], service: 'custom', scopes: [] })),
-        files: null, primary_file: null,
-        sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 3,
+        files: null, directories: null, primary_file: null,
+        sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 4,
       });
       index.push({ id: id, api_name: api, name: name, display_name: labelOf(name),
                    namespace: ns, category: cat, source: 'crm', language: 'deluge', runtime: 'Deluge',
@@ -374,18 +374,19 @@ function deluge(ns, name, params, calls) {
         return_type: null, params: [], description: '', updatedTime: null,
         listUpdated: null, modified_by: AUTHOR, associated_place: null, workflow: '',
         rest_api: [], connections: [],
-        files: ['config.json', file], primary_file: file, sv: 3,
+        files: ['config.json', file], directories: [], primary_file: file, sv: 4,
       });
       index.push({ id: id, api_name: api, name: name, display_name: labelOf(name),
                    namespace: ns, category: 'standalone', source: 'crm',
                    language: language, runtime: runtime, updatedTime: null, rest: false });
       // The summary is keyed by the *primary* file, which for a project is its entry point and not
       // a `.dg` - the same key `saveMetaIndex()` writes, or the panel would rebuild it on every load.
-      projMeta[root + file] = { id: id, sv: 3, updatedTime: null, listUpdated: null,
+      projMeta[root + file] = { id: id, sv: 4, updatedTime: null, listUpdated: null,
                                 namespace: ns, display_name: labelOf(name), language: language,
                                 metaPath: 'functions/' + ns + '/' + api + '.meta.json',
                                 mirrorFiles: [root + 'config.json', root + file,
-                                              'functions/' + ns + '/' + api + '.meta.json'] };
+                                              'functions/' + ns + '/' + api + '.meta.json'],
+                                mirrorDirectories: [] };
       say(list.length + k + 1, list.length + PROJECTS.length, 'functions');
     });
     J('functions/index.json', index);
@@ -403,7 +404,7 @@ function deluge(ns, name, params, calls) {
       };
     });
     Object.assign(metaIndex, projMeta);   // the projects belong to the same summary
-    J('functions/meta-index.json', { v: 1, sv: 3, files: metaIndex });
+    J('functions/meta-index.json', { v: 7, sv: 4, files: metaIndex });
 
     // Forty plausible values, composed rather than invented one at a time - the same rule the
     // function names follow.

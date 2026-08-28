@@ -33,7 +33,7 @@ asideWidth	e38e10836248	e38e10836248	identical
 askFrame	3dcad4e94815	fdb572847247	divergent
 askScope	d27f77a79c58	5a0012715e71	divergent
 beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
-beginWorkspaceOp	3e914ff41de0	bd3315e93edb	divergent
+beginWorkspaceOp	bda7cf29077d	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
 buildExportHtml	4d389b366dc5	e1a5052dd09d	divergent
