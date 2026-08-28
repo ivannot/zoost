@@ -1223,7 +1223,7 @@ function mirrorNote() {
   const unread = c.notMirrorable || 0;
   if (!c.notInMirror && !unread) return '';
   const why = [c.notInMirror ? `${escA(c.notInMirror)} did not download` : '',
-               unread ? `${escA(unread)} ${unread === 1 ? 'is' : 'are'} in a language Zoost does not read` : '']
+               unread ? `${escA(unread)} ${unread === 1 ? 'is' : 'are'} outside the Deluge call analysis` : '']
     .filter(Boolean).join(', and ');
   // Escaped although they are counts: «it is a number» is a belief about the value, and the checker
   // that reads this line is built to refuse exactly that argument. It costs nothing to be right.

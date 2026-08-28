@@ -130,7 +130,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     const t = nodes[ns + '.' + name] || ((_hByName[name] || []).length === 1 ? _hByName[name][0] : null);
     return t ? { href: '#' + fnAnchor(fnKey(t)), label: t.display_name || t.name } : null;
   };
-  const hl = (c) => (window.highlightDeluge ? window.highlightDeluge(c, codeResolve) : esc(c));
+  const hl = (c, lang) => (isDelugeLang(lang) && window.highlightDeluge ? window.highlightDeluge(c, codeResolve) : esc(c));
   // **Above the function chapter, because that is where it is first used.** A module named in a
   // function's Reads / Writes / Reached-by-URL line has a section of its own in this document, and
   // those three lines printed it as text - a name the reader can see and not follow, in a file whose
@@ -174,11 +174,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // function whose source Zoho does not serve this extension at all: the reader runs the pull it
   // names and nothing changes. The report says which of the three it is looking at.
   const srcBlock = (f) => (
-    f.mirrored === false ? `<p class="note">${esc(langLabelOf(f.language))} function - Zoost lists it and does not read this kind of code. Only Deluge sources are mirrored; this one is in Zoho.</p>`
+    f.mirrored === false ? `<p class="note">${esc(langLabelOf(f.language))} function - this older workspace entry has no local source. Pull again to mirror its project files.</p>`
       : !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
       : f.code === null || f.code === undefined
         ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
-        : `<pre class="code">${hl(f.code)}</pre>`);
+        : (!isDelugeLang(f.language) && f.sources && f.sources.length)
+          ? f.sources.map((source) => `<p><code>${esc(source.name)}</code></p><pre class="code">${hl(source.code, f.language)}</pre>`).join('')
+          : `<pre class="code">${hl(f.code, f.language)}</pre>`);
 
   // workflow <-> function wiring
   const fnById = {}, fnByName = {};
@@ -231,7 +233,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         + `</div>` : '';
       fnHtml += `<section class="item" id="${escA(fnAnchor(fnKey(f)))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
-        + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.mirrored === false ? `<span class="badge no">${esc(langLabelOf(f.language))}, source not read</span>`
+        + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.mirrored === false ? `<span class="badge no">${esc(langLabelOf(f.language))}, source unavailable</span>`
           // Two facts, one badge: «not downloaded» is a pull that has not happened and this is a
           // language nothing here reads. The block below already tells them apart; the badge that
           // labels the card did not, so the two arrived under the same word.
@@ -407,7 +409,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       ? `<div class="hxcov"><b>Read from your mirror:</b> ${esc(g.counts.nodes)} of ${esc(g.counts.inOrg)} functions. ${esc(g.counts.notInMirror)} could not be downloaded, and a function called only from one of those is counted here as having no caller.</div>`
       : '')
     + ((g && g.counts && g.counts.notMirrorable)
-      ? `<div class="hxcov"><b>${esc(g.counts.notMirrorable)} function(s) are listed without their source</b> - Zoost reads Deluge sources only - so they make no calls here, and anything only they call appears below as having no caller.</div>`
+      ? `<div class="hxcov"><b>${esc(g.counts.notMirrorable)} mirrored function(s) are outside the Deluge analysis</b> - their Java, Python or Node files are in the workspace, but Zoost does not infer calls from those languages yet.</div>`
       : '')
     + (scope.functions ? '' : `<div class="hxcov"><b>Functions were not included in this export.</b> The lists below still name them, because the audit is about them - but there is nothing here to link to. Export again with Functions ticked to read them.</div>`)
     + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
@@ -544,7 +546,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
 async function loadExportData(op = beginWorkspaceOp()) {
     const metaById = new Map();
   for await (const p of walk(op.root)) {
-    if (p.endsWith('.meta.json')) { try { const m = JSON.parse(await op.read(p)); metaById.set(String(m.id), { meta: m, dg: p.replace(/\.meta\.json$/, '.dg') }); } catch (_) {} }
+    if (p.endsWith('.meta.json')) { try {
+      const m = JSON.parse(await op.read(p));
+      const base = p.replace(/\.meta\.json$/, '');
+      const paths = isDelugeLang(m.language) ? [base + '.dg'] : (m.files || []).map((f) => base + '.files/' + f);
+      metaById.set(String(m.id), { meta: m, paths });
+    } catch (_) {} }
   }
   let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
   const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, name: v.meta.name, language: v.meta.language, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
@@ -553,8 +560,16 @@ async function loadExportData(op = beginWorkspaceOp()) {
     // `null` and not `''`: a source that could not be read is not an empty one, and `fnStats`
     // tells the two apart now - so a function whose fetch failed no longer reports «0 lines, 0
     // outbound calls» in a report somebody reads without the extension.
-    const d = metaById.get(String(e.id)); let code = null;
-    if (d) { try { code = await op.read(d.dg); } catch (_) {} }
+    const d = metaById.get(String(e.id)); let code = null, sources = null;
+    if (d) { try {
+      const parts = [];
+      for (let i = 0; i < d.paths.length; i++) {
+        const text = await op.read(d.paths[i]);
+        parts.push({ name: (d.meta.files && d.meta.files[i]) || d.paths[i].split('/').pop(), path: d.paths[i], code: text });
+      }
+      sources = parts;
+      code = parts.map((part) => part.code).join('\n\n');
+    } catch (_) {} }
     // **The identity, and what this mirror holds of it.** These five used to be dropped here, and
     // everything downstream that needs them reads a report built by this loader: `resolveFn`
     // matches a workflow's action by `id` and by `name`, so with both absent every function
@@ -564,8 +579,8 @@ async function loadExportData(op = beginWorkspaceOp()) {
     // them a function whose source Zoho does not serve us reads as one that simply has not been
     // downloaded, and the report tells its reader to run a pull that will change nothing.
     fns.push({ id: e.id, name: (d && d.meta.name) || e.name || e.api_name, api_name: e.api_name,
-               language: e.language || 'deluge', mirrored: isDelugeLang(e.language),
-               display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
+               language: e.language || 'deluge', mirrored: true,
+               display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, sources, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d && isDelugeLang(e.language) ? fnStats(code) : null });
   }
   const mods = [];
   for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); try { m._layouts = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
@@ -687,7 +702,7 @@ function buildExportMarkdown(d, scope) {
                                 // Carried after the spread of `f.node`, which has neither: the graph
                                 // holds only what a source read produced, and these two are about
                                 // whether there was one to read.
-                                language: f.language, mirrored: f.mirrored,
+                                language: f.language, mirrored: f.mirrored, source_files: f.sources,
                                 display_name: f.display_name, associated_place: f.associated_place,
                                 connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime }))
     .sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
@@ -701,7 +716,9 @@ function buildExportMarkdown(d, scope) {
   const wfFns = (w) => [...new Set(wfFunctionActions(w).map((a) => a.name))];
   let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
-  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''}${notRead ? ` (${notRead} in a language Zoost does not read - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
+  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''}`
+    + (notRead ? ' (' + String(notRead) + ' outside the Deluge static analysis)' : '')
+    + ` \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho CRM: ${freshnessLine()}\n\n`;
   // What is in this file, not what was ticked. The line listed the scope, and the scope included
   // `health`, which this report had no chapter for - so a reader, and the assistant this file is
@@ -721,7 +738,7 @@ function buildExportMarkdown(d, scope) {
   md += CONTENTS;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
-  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source not read` : n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
+  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source unavailable` : n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
   mods.slice().sort(byField('api_name')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
   if (wfs.length) {
@@ -756,7 +773,7 @@ function buildExportMarkdown(d, scope) {
     if (n.modified_by || n.updatedTime) md += `- modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''}\n`;
     // An empty fence would read as a function with no body. Not downloaded is a different fact from
     // empty, and this report has one job: never to let the two look alike.
-    md += n.mirrored === false ? `\n- source: not read - ${langLabelOf(n.language)} is listed by Zoost and its code is not mirrored; only Deluge sources are\n\n`
+    md += n.mirrored === false ? `\n- source: unavailable in this older workspace entry - pull again to mirror its project files\n\n`
         : !n.downloaded ? '\n- source: not downloaded - run Pull all, or ↻ Refresh, to fetch it\n\n'
         // The third state, which this line had two of. A function whose file could not be read
         // got an empty fence - «a function with no body», which the comment above forbids in those
@@ -765,7 +782,14 @@ function buildExportMarkdown(d, scope) {
         : (n.source_code === null || n.source_code === undefined)
           ? '\n- source: could not be read from the workspace folder - the function exists, this copy does not'
           + '\n\n'
-        : scope.code ? ('\n```deluge\n' + String(n.source_code).replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
+        : scope.code ? ((!isDelugeLang(n.language) && n.source_files && n.source_files.length)
+          ? '\n' + n.source_files.map((source) => {
+              const ext = String(source.name || '').split('.').pop().toLowerCase();
+              const lang = ext === 'py' ? 'python' : ext === 'js' || ext === 'mjs' || ext === 'cjs' ? 'javascript'
+                : ext === 'java' ? 'java' : ext === 'json' ? 'json' : '';
+              return `#### \`${String(source.name).replace(/`/g, '\\`')}\`\n\n\`\`\`${lang}\n${String(source.code).replace(/```/g, '`\u200b``')}\n\`\`\``;
+            }).join('\n\n') + '\n\n'
+          : ('\n```' + (isDelugeLang(n.language) ? 'deluge' : String(n.language || '').replace(/_.*/, '')) + '\n' + String(n.source_code).replace(/```/g, '`\u200b``') + '\n```\n\n')) : '\n';
   });
   // Relation-first catalogue: this is the section an LLM should hit when asked
   // \"how do I read the related data of a contact?\"
@@ -970,7 +994,7 @@ function buildExportMarkdown(d, scope) {
     } else if (g && g.counts && g.counts.notInMirror > 0) {
       md += `> **Read from your mirror:** ${g.counts.nodes} of ${g.counts.inOrg} functions. ${g.counts.notInMirror} could not be downloaded, and a function called only from one of those is counted here as having no caller.\n\n`;
     }
-    if (g && g.counts && g.counts.notMirrorable) md += `> **${g.counts.notMirrorable} function(s) are listed without their source** - Zoost reads Deluge sources only - so they make no calls here, and anything only they call appears below as having no caller.\n\n`;
+    if (g && g.counts && g.counts.notMirrorable) md += `> **${g.counts.notMirrorable} mirrored function(s) are outside the Deluge analysis** - their Java, Python or Node files are in the workspace, but calls from those languages are not inferred yet.\n\n`;
     if (!scope.functions) md += '> **Functions were not included in this export.** The lists below still name them, because the audit is about them.\n\n';
     md += '> **Coverage.** Analyzed: function-to-function calls, workflows, schedules, and each function\'s *associated_place* (blueprint, button, ...). **Not** analyzed: custom client scripts, approval/assignment/scoring rules. Items are **candidates to review**, never automatic deletions.\n\n';
     const sec = (title, rows, desc) => {

@@ -80,7 +80,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 ## Feature highlights
 
 **Local, Git-friendly version control**
-- Pull all Deluge functions to `.dg` source + `.meta.json` sidecars under `functions/<namespace>/`.
+- Pull every supported Zoho CRM function runtime. Deluge stays a `.dg` source; Java, Python and Node
+  keep every project file under `<name>.files/`; each function has a `.meta.json` sidecar under
+  `functions/<namespace>/`.
   One folder per kind - `functions/`, `modules/` (with `modules/layouts/` inside it),
   `workflows/`, `schedules/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
 - **Auto-sync on save**: save a function in Zoho and the local file updates automatically.
@@ -290,7 +292,7 @@ uses read-only tools to fetch exact code and schemas on demand - so it sees the 
 piece at a time, only when needed. Answers reflect the **current** version of the code; there's a
 single persistent conversation you clear yourself (switching functions never wipes it).
 
-**Data note.** When the AI is enabled, the relevant Deluge source and org structure are sent to
+**Data note.** When the AI is enabled, the relevant function source and org structure are sent to
 your chosen LLM provider as context. This is opt-in (no key = no calls). Choose a provider whose
 data-handling you're comfortable with; providers typically don't train on API data, and some
 offer zero-retention.
@@ -440,7 +442,8 @@ like to support development:
   static (it does not know how often a branch runs, or that a call sits inside a loop), and it only
   sees `invokeurl` and the documented `zoho.<service>.*` tasks. Read them as "worth a look", never
   as a score.
-- **Connection usage counts cover Deluge functions only.** A connection may also be used by Zoho Flow,
+- **Call, module and connection analysis covers Deluge functions only.** Java, Python and Node project
+  files are mirrored and searchable, but Zoost does not yet infer calls or module usage from them. A connection may also be used by Zoho Flow,
   Circuits, widgets or client scripts, which Zoost does not read - so "unused" means "unused by your
   functions", a candidate to review, not a verdict.
 - **What your Zoho role allows can only be discovered by asking.** There is no reliable way to know

@@ -4,10 +4,30 @@
 
 # Decisions: the mirror, what is captured, and what a refusal means
 
+## Function mirror: single-file Deluge, multi-file compiled runtimes
+
+Zoho returns Deluge source in the function detail as one script. Java, Python and Node functions use
+the ZCE project API instead: first `getFileList`, then one `code` request for every non-directory
+entry. The function API name is `functionName`; its category is `repositoryName`.
+
+The local layout is additive, so existing workspaces and Git histories remain readable:
+
+- `functions/<namespace>/<name>.dg` for Deluge;
+- `functions/<namespace>/<name>.files/<Zoho relative path>` for every Java, Python or Node project file;
+- `functions/<namespace>/<name>.meta.json` for both shapes. Schema v3 records `language`, `runtime`,
+  `files` and `primary_file`.
+
+Paths returned by Zoho are untrusted. Absolute paths, empty segments, `.` and `..` are refused before
+anything is written. The sidecar is committed only after every source file, and files no longer in
+Zoho's list are removed after the new sidecar is in place. Full-text search and exports include all
+project files. The call graph, module reads/writes and connection usage remain a Deluge-only static
+analysis until parsers for the other languages exist; that limitation is reported as an analysis
+boundary, never as source missing from the mirror.
+
 **One folder per kind, one `index.json` in each, and no underscores.** A CRM workspace is:
 
 ```
-functions/<namespace>/<name>.dg + .meta.json      modules/<Module>.json              workflows/<id>.json
+functions/<namespace>/<name>.dg or .files/ + .meta.json  modules/<Module>.json       workflows/<id>.json
 functions/index.json                              modules/index.json                 workflows/index.json
 schedules/index.json                              modules/layouts/<Module>.json      connections/index.json
 export/                                           modules/layouts/index.json

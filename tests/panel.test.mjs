@@ -2492,7 +2492,8 @@ test("every per-kind index is <kind>/index.json, and both apps agree on the name
 test('functions are written under functions/<namespace>/, not in the workspace root', () => {
   const src = crmPanel();
   assert.ok(src.includes('`functions/${f.folder}/${f.stem}.dg`'), 'the sync path is not under functions/');
-  assert.ok(src.includes('`functions/${f.folder}/${f.stem}.meta.json`'), 'the sidecar is not under functions/');
+  assert.ok(src.includes('`functions/${folder}/${stem}.meta.json`'), 'the sidecar is not under functions/');
+  assert.ok(src.includes('`functions/${folder}/${stem}.files`'), 'compiled function projects are not under functions/');
   assert.ok(!/[^/]\$\{f\.folder\}\/\$\{f\.stem\}\.dg/.test(src.replace(/functions\/\$\{f\.folder\}/g, 'X')),
     'a path still writes a namespace folder at the root');
 });
@@ -3513,7 +3514,8 @@ test('the sample workspace has the shape the pull writes, field for field', () =
   const meta = JSON.parse(files[`functions/${fn.namespace}/${fn.api_name}.meta.json`]);
   for (const k of ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source',
                    'return_type', 'params', 'description', 'updatedTime', 'modified_by',
-                   'associated_place', 'workflow', 'rest_api', 'connections', 'sv']) {
+                   'language', 'runtime', 'files', 'primary_file', 'associated_place', 'workflow',
+                   'rest_api', 'connections', 'sv']) {
     assert.ok(k in meta, `the function meta has no ${k}`);
   }
   const SV = +crmPanel().match(/const META_SV = (\d+)/)[1];
@@ -5264,7 +5266,7 @@ for (const app of ['crm', 'analytics']) {
     const crm = read('apps/crm/sidepanel.js');
     assert.equal((crm.match(/paintFindMarks\(\$\('pvcode'\), findMarkRe\(\)\)/g) || []).length, 2,
       'why=the CRM preview is painted on open or on search change, but not both');
-    assert.ok(/openFile\(r\.e\.path, r\.lineNo, true\)/.test(crm),
+    assert.ok(/openFile\(r\.path, r\.lineNo, true\)/.test(crm),
       'why=a search hit opens the file at the top instead of at its line');
     const an = read('apps/analytics/sidepanel.js');
     assert.equal((an.match(/paintFindMarks\(.*pre\.sql.*findMarkRe\(\)\)/g) || []).length, 2,
@@ -7442,7 +7444,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // So: the names are asserted to exist before they are counted, and the *order* is checked rather
     // than the totals - three checks and two writes passed the old comparison whatever their
     // positions. Every effect must have a guard between it and the effect before it.
-    for (const [name, effects] of [['async function syncOneNow', ['op.write(']],
+    for (const [name, effects] of [['async function writeFunctionMirror', ['op.write(']],
                                    ['async function pruneFunction', ['op.remove(']]]) {
       const body = fn(name);
       assert.ok(body.length > 200, `${name}: the slice is empty - renamed or moved, so this tests nothing`);
@@ -9003,19 +9005,19 @@ test('crm: a module resync publishes only what it managed to write', () => {
     // asserted now is the pair being like-for-like, and the behaviour lives in movedInZoho's cases.
     assert.ok(/movedInZoho\(row\.listUpdated, meta\.listUpdated\)/.test(src),
               'the two timestamps are never compared, so an edited function is never stale');
-    assert.ok(/f\.meta\.listUpdated = entry\.listUpdated \|\| null/.test(src),
+    assert.ok(/writeFunctionMirror\(f, op, entry\.listUpdated \|\| null\)/.test(src),
               'nothing records what the list said when the copy was fetched, so there is no pair to compare');
   });
 
   test('a renamed function is re-fetched at its new path, and the old pair goes only after both writes', () => {
-    assert.ok(/row\.pathChanged = row\.path !== dg;/.test(src),
+    assert.ok(/row\.pathChanged = row\.metaPath/.test(src),
               'a sidecar found by id at another path still counts as downloaded');
     assert.ok(/row\.downloaded = !row\.pathChanged;/.test(src), 'the rename does not mark the new path as missing');
     assert.ok(/!e\.downloaded \|\| e\.stale \|\| e\.pathChanged/.test(src),
               'downloadMissing does not pick a rename up');
     const dl = sliceApp('crm', 'downloadOne');
-    const rm = dl.indexOf('removeFunctionPaths([entry.previousPath');
-    const writes = dl.indexOf('.meta.json`, JSON.stringify(f.meta');
+    const rm = dl.indexOf('removeFunctionPaths(entry.previousFiles');
+    const writes = dl.indexOf('writeFunctionMirror(f, op');
     assert.ok(rm > 0, 'the old pair of a rename is never removed - a live id means no prune takes it');
     assert.ok(rm > writes, 'the old pair is removed before both new files are written');
   });
@@ -10308,6 +10310,9 @@ for (const app of ['crm', 'analytics']) {
     2: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
         'params', 'description', 'updatedTime', 'modified_by', 'associated_place', 'workflow',
         'rest_api', 'connections', 'sv'],
+    3: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
+        'params', 'description', 'updatedTime', 'modified_by', 'language', 'runtime', 'files',
+        'primary_file', 'associated_place', 'workflow', 'rest_api', 'connections', 'sv'],
   };
 
   test('the meta schema version moves when the captured fields do', () => {
@@ -10705,13 +10710,14 @@ test('both exports say which kind of missing source it is', () => {
 
   // From wherever that chain now begins: a third branch was added in front of it, and anchoring on
   // the old first line made this fail for the length of one condition rather than for anything real.
-  const md = src.slice(src.indexOf("md += n.mirrored === false ?"), src.indexOf("```\\n\\n') : '\\n';") + 20);
+  const mdStart = src.indexOf("md += n.mirrored === false ?");
+  const md = src.slice(mdStart, src.indexOf("  });", mdStart));
   assert.ok(md.length > 50, 'the Markdown source block has moved - this check no longer reads it');
   assert.match(md, /could not be read/, 'the Markdown export emits an empty fence for an unread file');
   assert.match(md, /not downloaded/, 'the Markdown export cannot tell «not downloaded»');
-  // The third: a language this build does not read is not a download that has not happened.
-  assert.match(md, /does not read|not read/, 'the Markdown export cannot tell «not a language we read»');
-  assert.match(html[1], /mirrored === false/, 'the HTML export cannot tell «not a language we read»');
+  // The third: an older workspace entry with no source is not a download that has not happened.
+  assert.match(md, /older workspace entry|source: unavailable/, 'the Markdown export cannot identify the legacy source gap');
+  assert.match(html[1], /mirrored === false/, 'the HTML export cannot identify the legacy source gap');
 
   // And the two must not disagree about what an *empty* file is: it keeps its fence in Markdown and
   // its <pre> in HTML, because a file that is there and is empty is a fact about the function.
@@ -17105,6 +17111,101 @@ test('the function list asks for every language Zoho serves', async () => {
                + 'statement about the org and must not become one');
 });
 
+test('a compiled function is fetched as every file in its Zoho project', async () => {
+  const rel = 'apps/crm/content-bridge.js';
+  const calls = [];
+  const m = load([sliceFn(rel, 'projectPath'), sliceFn(rel, 'projectFiles')], {
+    String, Error, Set, Array, RegExp, encodeURIComponent,
+    orgId: () => '123456789',
+    list: (body, field) => body[field],
+    api: async (path) => {
+      calls.push(path);
+      return { data: { functionFiles: [
+        { fullPath: 'src', isDirectory: true },
+        { fullPath: 'src/main.py', isDirectory: false },
+        { fullPath: 'config.json', isDirectory: false },
+      ] } };
+    },
+    apiText: async (path) => {
+      calls.push(path);
+      return path.includes('main.py') ? 'def run():\n    return 1\n' : '{"runtime":"python"}\n';
+    },
+  });
+  const got = await m.projectFiles({ api_name: 'run_job', category: 'standalone' });
+  assert.equal(got.primary, 'src/main.py', 'config.json was chosen as the code file shown for the function');
+  assert.equal(got.files.map((f) => `${f.path}:${f.content.length}`).join(','),
+               'src/main.py:24,config.json:21', 'one of the returned project files or its exact text was lost');
+  assert.equal(calls.filter((p) => p.includes('/code?')).length, 2, 'the source endpoint was not called once per file');
+  assert.ok(calls.every((p) => p.includes('functionName=run_job') && p.includes('repositoryName=standalone')),
+            'the project request is not keyed by the function API name and category observed in Zoho');
+});
+
+test('a Zoho project file cannot escape its function folder', () => {
+  const m = load([sliceFn('apps/crm/content-bridge.js', 'projectPath')], { String, Error });
+  for (const bad of ['../outside.js', '/absolute.py', 'src//main.java', 'src/./main.js', 'src\\..\\outside.js', 'src/bad\nname.js']) {
+    assert.throws(() => m.projectPath(bad), /malformed/, `${bad} would be written outside or ambiguously inside the project`);
+  }
+  assert.equal(m.projectPath('src/lib/main.js'), 'src/lib/main.js');
+});
+
+test('the mirror writes all compiled files before the sidecar that describes them', async () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const writes = [];
+  const m = load([
+    sliceConst(rel, 'isDeluge'), sliceConst(rel, 'fnMetaPath'), sliceConst(rel, 'fnProjectRoot'),
+    sliceFn(rel, 'pathsFromMeta'), sliceFn(rel, 'writeFunctionMirror'),
+  ], { String, RegExp, Array, JSON, Error, WS_MOVED: 'moved' });
+  const f = { folder: 'standalone', stem: 'run_job', primary: 'src/main.py',
+    files: [{ path: 'src/main.py', content: 'print(1)\n' }, { path: 'config.json', content: '{}\n' }],
+    meta: { language: 'python_3_12', files: ['src/main.py', 'config.json'], primary_file: 'src/main.py' } };
+  const got = await m.writeFunctionMirror(f, { current: () => true, write: async (p, v) => writes.push([p, v]) }, 77);
+  assert.equal(writes.map((x) => x[0]).join(','),
+    'functions/standalone/run_job.files/src/main.py,functions/standalone/run_job.files/config.json,functions/standalone/run_job.meta.json');
+  assert.equal(got.primary, 'functions/standalone/run_job.files/src/main.py');
+  assert.equal(JSON.parse(writes[2][1]).listUpdated, 77);
+});
+
+test('pruning a compiled function removes the files named by its sidecar, never its directory', async () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const removed = [], writes = [];
+  const ctx = {
+    index: new Map(), treeData: [], failedRemovals: new Set(), currentPath: null,
+    sanitize: (x) => x, setStatus: () => {}, renderTree: () => {}, updateMissingButton: () => {},
+    $: () => ({ classList: { remove() {} } }), String, Map, Set, Array, JSON, RegExp, Error,
+    beginWorkspaceOp: () => ({ current: () => true, say: () => {},
+      read: async (p) => p.endsWith('.meta.json')
+        ? JSON.stringify({ language: 'python_3_12', files: ['src/main.py', 'config.json'] })
+        : JSON.stringify([{ id: 'p1' }]),
+      remove: async (p) => { removed.push(p); },
+      write: async (p, value) => { writes.push([p, value]); },
+    }),
+  };
+  vm.createContext(ctx);
+  vm.runInContext([
+    sliceConst(rel, 'isDeluge'), sliceFn(rel, 'pathsFromMeta'), sliceFn(rel, 'pruneFunction'),
+  ].join('\n'), ctx);
+  const ok = await vm.runInContext("pruneFunction('p1', { id: 'p1', namespace: 'standalone', api_name: 'run_job', language: 'python_3_12' })", ctx);
+  assert.equal(ok, true);
+  assert.deepEqual(removed, [
+    'functions/standalone/run_job.files/src/main.py',
+    'functions/standalone/run_job.files/config.json',
+    'functions/standalone/run_job.meta.json',
+  ]);
+  assert.ok(!removed.includes('functions/standalone/run_job.files'), 'a non-empty project directory was passed to a non-recursive removal');
+  assert.equal(JSON.parse(writes[0][1]).length, 0, 'the deleted project remained in functions/index.json');
+});
+
+test('compiled projects are recovered and cached by sidecar, and never highlighted as Deluge', () => {
+  const src = crmPanel();
+  const rebuild = sliceApp('crm', 'rebuildTree');
+  assert.match(rebuild, /byMeta\.set\(row\.metaPath, row\)/, 'an indexed project cannot be matched to its sidecar');
+  assert.match(rebuild, /primaryFromMeta\(meta, p\)/, 'recovery without functions\/index.json invents a .dg path');
+  assert.match(rebuild, /knownByMeta\.get\(mp\)/, 'the summary cache still looks up every project as .dg');
+  const open = sliceApp('crm', 'openFile');
+  assert.match(open, /delugeSource && window\.highlightDeluge/, 'a Java, Python or Node file is sent through the Deluge highlighter');
+  assert.match(src, /row\.mirrorFiles = cachedFiles/, 'a cached project forgets the files that code search must inspect');
+});
+
 // ---------------------------------------------------------------------------------------------
 // A function whose source this mirror does not hold is its own state everywhere it is counted.
 //
@@ -17247,6 +17348,9 @@ test('the export loader keeps a function identity and its language', async () =>
     ]),
     'functions/automation/notify_Owner.meta.json': JSON.stringify({ id: 'd1', name: 'notify_Owner', api_name: 'notify_Owner', display_name: 'Notify owner', nameSpace: 'automation' }),
     'functions/automation/notify_Owner.dg': 'info 1;',
+    'functions/standalone/runIt.meta.json': JSON.stringify({ id: 'n1', name: 'runIt', api_name: 'runIt', display_name: 'runIt', nameSpace: 'standalone', language: 'nodejs_22', files: ['index.js', 'config.json'] }),
+    'functions/standalone/runIt.files/index.js': 'exports.run = () => 1;',
+    'functions/standalone/runIt.files/config.json': '{"runtime":"nodejs"}',
   };
   const g = { console, Object, Map, Set, Array, JSON, String, Number, Promise, RegExp,
               beginWorkspaceOp: () => ({ root: {}, current: () => true,
@@ -17264,9 +17368,9 @@ test('the export loader keeps a function identity and its language', async () =>
   assert.equal(del.name, 'notify_Owner', 'the api-level name is dropped, and a rule names a function by it');
   const node = d.fns.find((f) => f.api_name === 'runIt');
   assert.equal(node.language, 'nodejs_22', 'the language is dropped, so the report cannot say what it is');
-  assert.equal(node.mirrored, false,
-               'the report cannot tell «not downloaded» from «not a language we read», and tells the '
-               + 'reader to run a pull that will change nothing');
+  assert.equal(node.mirrored, true, 'a mirrored Node project was still labelled as source Zoost cannot read');
+  assert.match(node.code, /exports\.run/);
+  assert.match(node.code, /runtime/);
   assert.equal(del.mirrored, true, 'a Deluge function was marked as one this build does not read');
 });
 
@@ -17591,7 +17695,7 @@ test('the diagram says how many functions are in the mirror, not how many boxes 
                'a graph from before this field existed lost its coverage sentence');
   // And the sentence appears at all when the only absence is a language this build does not read.
   assert.match(say({ nodes: 168, fnNodes: 120, inOrg: 122, notInMirror: 0, notMirrorable: 2 }),
-               /does not read/, 'the one surface where «no caller» is a picture said nothing');
+               /outside the Deluge call analysis/, 'the one surface where «no caller» is a picture said nothing');
   assert.equal(say({ nodes: 120, fnNodes: 120, inOrg: 120, notInMirror: 0, notMirrorable: 0 }), '',
                'a complete mirror carries a caveat about nothing');
 });
@@ -17706,7 +17810,7 @@ test('the export badge does not call an unreadable language a missed download', 
   assert.ok(!/>not downloaded</.test(head),
             'the card badges a language nothing here reads with the same word as a pull that has not '
             + 'happened - two facts, one label, in the document handed to somebody who cannot check');
-  assert.match(head, /source not read/, 'and it does not say what it is');
+  assert.match(head, /source unavailable/, 'and it does not say what it is');
 
   const md = m.buildExportMarkdown({ fns, mods: [], g, wfs: [], scheds: [], conns: [], fails: { failures: [] }, acts: [], actUsers: {} }, MD_SCOPE);
   const line = md.split('\n').find((l) => l.includes('standalone.syncLedger'));

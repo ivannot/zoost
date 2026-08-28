@@ -16,7 +16,7 @@ Zoost - workbench for Zoho CRM
 ## 2. Short description (manifest `description`, max 132)
 
 ```
-Independent, unofficial: mirror your Zoho CRM Deluge to local files for Git, plus the call graph, module schema and workflows.
+Mirror Zoho CRM functions - Deluge, Java, Python and Node - to local files for Git, with search, schema and Deluge call graphs.
 ```
 
 ---
@@ -32,9 +32,9 @@ WHAT IT DOES
 
 - Judge it before you give it access to anything. "+ Sample" writes a workspace of invented data into your working folder - a couple of hundred Deluge functions with real call chains, modules with lookups, workflows, schedules and connections - so you can open the tree, the graph, the audit and the exports without a Zoho tab and without an account. It is generated, never fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other workspace.
 
-- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
+- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Deluge functions are plain .dg files; Java, Python and Node functions keep every file in a project folder, with a .meta.json sidecar for each function. Git is optional: without it the mirror is still ordinary files you can search and hand over. Functions and project files removed in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
-- Search across every function at once. Full-text search over all your Deluge sources, literal or regular expression - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it. Named patterns - an email address, Zoho's 18-digit record id, and any you add - are one click away and yours to manage.
+- Search across every function at once. Full-text search over all mirrored Deluge, Java, Python and Node files, literal or regular expression - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it. Named patterns - an email address, Zoho's 18-digit record id, and any you add - are one click away and yours to manage.
 
 - Auto-sync on save. Save a function in the native Zoho editor and the matching local file updates by itself, so your working copy always mirrors production.
 
@@ -77,7 +77,7 @@ Zoost reads from the Zoho CRM instance you are already signed in to and writes t
 
 The first is a problem report: if something breaks you can press Report this problem, read the whole report in the page, cut anything you want out of it, and send it - it becomes a public issue. Nothing is sent unless you press Send.
 
-The second is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including Deluge source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
+The second is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including function source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
 
 Zoost calls no endpoint that creates, edits or deletes anything in Zoho CRM. It reads metadata and function source only, through the session you are already signed in to, using the same internal interfaces the Zoho CRM web app uses - those are not documented by Zoho and can change, in which case a feature stops and says so rather than guessing. It does not read, download or export your Zoho CRM records - no contacts, no deals, no customer data.
 
@@ -111,9 +111,9 @@ Zoost is an independent, unofficial developer tool. It is not affiliated with, e
 ## 4. Single purpose description (max 1000)
 
 ```
-Zoost has one purpose: to give a Zoho CRM administrator or developer a local mirror of their own org's Deluge code and configuration - read from Zoho into a folder of their own - and the tools to navigate and document it.
+Zoost gives a Zoho CRM administrator or developer a local mirror of their org's function code and configuration, plus the tools to navigate and document it.
 
-Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows, schedules and the org's connection catalogue, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an ER diagram, the related-list API names, which functions use which connection, which functions read and write each module, a health audit and offline exports.
+Using the Zoho CRM session already open, it reads Deluge, Java, Python and Node function sources, module and layout metadata, related lists, workflows, schedules and the connection catalogue, then writes plain files into a folder the user selects. The mirror provides source search, a Deluge call graph, an ER diagram, related-list API names, Deluge connection and module usage, a health audit and offline exports.
 
 Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM records, and does nothing on any other website.
 ```
@@ -139,7 +139,7 @@ What is kept: the selected AI engine, model id and API key (optional; encrypted 
 
 chrome.storage.session holds the decrypted API key while protection is unlocked, and the diagram data on its way to that window - removed when it is read. Both memory-only, cleared when the browser closes.
 
-No browsing data, no Zoho CRM data and no personal information go into storage. The mirrored Deluge sources are ordinary files in the user's own folder.
+No browsing data, Zoho CRM data or personal information go into extension storage. Mirrored function sources are files in the user's folder.
 ```
 
 ## 7. scripting justification (max 1000)

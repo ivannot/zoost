@@ -4,7 +4,7 @@
   "version": "1.47.0",
   "short_name": "Zoost CRM",
   "homepage_url": "https://zoost.it",
-  "description": "Independent, unofficial: mirror your Zoho CRM Deluge to local files for Git, plus the call graph, module schema and workflows.",
+  "description": "Mirror Zoho CRM functions - Deluge, Java, Python and Node - to local files for Git, with search, schema and Deluge call graphs.",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'"
   },

@@ -396,7 +396,7 @@ CRM = """
       await Promise.all([saveGraphFacts(nodes2, g2), saveMetaIndex(metaPaths2)]);
       s2 = JSON.parse(await readFile('functions/meta-index.json'));
       e2 = s2.files[p2] || {};
-      if (e2.sv !== 2 || !Array.isArray(e2.refs)) say(`the other order loses something too: sv=${e2.sv} refs=${Array.isArray(e2.refs)}`);
+      if (e2.sv !== META_SV || !Array.isArray(e2.refs)) say(`the other order loses something too: sv=${e2.sv} refs=${Array.isArray(e2.refs)}`);
       row2.stale = was;
     }
 
@@ -603,7 +603,8 @@ CRM = """
       if (!c0.get(src.id)) say('the source cache does not hold the function it was asked about');
       await writeFile(src.path, 'void s(){ standalone.log(); }  // rewritten by the probe\\n');
       const c1 = await getCodeCache();
-      if (!/rewritten by the probe/.test(c1.get(src.id) || ''))
+      const reread = c1.get(src.id) || [];
+      if (!reread.some((source) => /rewritten by the probe/.test(source.code)))
         say('searching in: code still holds the text from before the file was rewritten');
     }
 

@@ -398,6 +398,62 @@
     }
     throw apiError(res.status, path, message, code);
   }
+  // The ZCE source endpoint answers with the file bytes as text, not JSON. Keep the same session,
+  // CSRF recovery and refusal semantics as `api()`; only the successful body shape differs.
+  async function apiText(path, retried) {
+    const res = await fetch(BASE + safePath(path), { headers: headers(), credentials: 'include' });
+    if (res.ok) return res.text();
+    const { message, code } = await errorDetail(res);
+    if (!retried && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
+      const primed = await warmDeluge();
+      return apiText(path, primed ? true : 'unprimed');
+    }
+    throw apiError(res.status, path, message, code);
+  }
+
+  // A file path comes from Zoho and becomes a path below the selected workspace. Refuse, rather
+  // than rewrite, anything that could escape its function folder or collide after normalisation.
+  function projectPath(value) {
+    const p = String(value || '').replace(/\\/g, '/');
+    const parts = p.split('/');
+    if (!p || p.startsWith('/') || /[\x00-\x1f\x7f]/.test(p) || parts.some((x) => !x || x === '.' || x === '..')) {
+      throw new Error('Zoho returned a malformed function file path; nothing was written for it.');
+    }
+    return parts.join('/');
+  }
+
+  function detailLanguage(language) {
+    const l = String(language || 'deluge').toLowerCase();
+    if (l.startsWith('java')) return 'java';
+    if (l.startsWith('python')) return 'python';
+    if (l.startsWith('node')) return 'nodejs';
+    return 'deluge';
+  }
+
+  async function projectFiles(fn) {
+    const org = orgId();
+    if (!org) throw new Error('The Zoho org id is not available on this page.');
+    const functionName = fn.api_name || fn.name;
+    const repositoryName = fn.category || fn.nameSpace;
+    if (!functionName || !repositoryName) throw new Error('Zoho did not identify the function project.');
+    const base = `/crm/${encodeURIComponent(org)}/zce/function/`;
+    const query = `functionName=${encodeURIComponent(functionName)}&repositoryName=${encodeURIComponent(repositoryName)}&isDeployed=false`;
+    const body = await api(base + `getFileList?${query}`);
+    const listed = list(body && body.data, 'functionFiles', 'zce/function/getFileList');
+    const files = [];
+    const seen = new Set();
+    for (const item of listed) {
+      if (item && item.isDirectory) continue;
+      const path = projectPath(item && (item.fullPath || item.id || item.text));
+      if (seen.has(path)) throw new Error(`Zoho returned the function file «${path}» more than once.`);
+      seen.add(path);
+      const content = await apiText(base + `code?${query}&fileName=${encodeURIComponent(path)}`);
+      files.push({ path, content });
+    }
+    if (!files.length) throw new Error('Zoho returned an empty function project.');
+    const config = /(^|\/)config\.json$/i;
+    return { files, primary: (files.find((f) => !config.test(f.path)) || files[0]).path };
+  }
   function toFile(fn, fallback) {
     const ns = fn.nameSpace || fallback?.namespace || fn.category || 'misc';
     const stem = (fn.api_name || fn.name || 'unknown').replace(/[^\w.\-]/g, '_');
@@ -406,12 +462,14 @@
       nameSpace: fn.nameSpace, category: fn.category, source: fn.source,
       return_type: fn.return_type, params: fn.params || [],
       description: fn.description || '', updatedTime: fn.updatedTime, modified_by: fn.modified_by || null,
+      language: fn.language || fallback?.language || 'deluge', runtime: fn.runtime || fallback?.runtime || null,
+      files: null, primary_file: null,
       associated_place: fn.associated_place ?? null, workflow: fn.workflow || '',
       rest_api: (fn.rest_api || []).map((r) => ({ type: r.type, active: r.active })),
       // Connections the function uses. connectionLinkName is the join key - the exact name that
       // appears in invokeurl [...connection:"..."], and the `name` in the org's connections catalogue.
       connections: (fn.connections || []).map((c) => ({ name: c.connectionLinkName, label: c.connectionName || c.connectionLinkName, service: c.serviceName || null, scopes: c.scopes || [] })).filter((c) => c.name),
-      sv: 2,   // meta schema version - bump when new fields are captured, so old copies re-fetch (backfill)
+      sv: 3,   // v3 records the runtime and, for compiled functions, every mirrored project file
     };
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
@@ -510,6 +568,7 @@
       // reader's business and ours: a mirror that recorded the query value would say nothing had
       // changed on the day Zoho moves it.
       language: f.language || 'deluge',
+      runtime: f.runtime || null,
       rest: (f.rest_api || []).some((r) => r.active),
       // Measured on a captured list response: the org list carries `updatedTime`, and dropping it
       // here is what left «Pull all» unable to see a function edited by a colleague - the sidecar's
@@ -568,10 +627,20 @@
     }));
     return { total: raw.length, entries, capped };
   }
-  async function fetchOne(id, category, source) {
-    const q = []; if (category) q.push('category=' + encodeURIComponent(category)); q.push('language=deluge'); if (source) q.push('source=' + encodeURIComponent(source));
+  async function fetchOne(id, category, source, language, runtime) {
+    const requested = detailLanguage(language);
+    const q = []; if (category) q.push('category=' + encodeURIComponent(String(category).toLowerCase())); q.push('language=' + encodeURIComponent(requested)); if (source) q.push('source=' + encodeURIComponent(source));
     const d = await api(`/crm/v2/settings/functions/${encodeURIComponent(id)}?${q.join('&')}`); const fn = list(d, 'functions', 'functions/' + id)[0];
-    return fn ? toFile(fn) : null;
+    if (!fn) return null;
+    const file = toFile(fn, { category, source, language, runtime });
+    if (requested !== 'deluge') {
+      const project = await projectFiles(fn);
+      file.files = project.files;
+      file.primary = project.primary;
+      file.meta.files = project.files.map((f) => f.path);
+      file.meta.primary_file = project.primary;
+    }
+    return file;
   }
 
   async function pullModules() {
@@ -1103,7 +1172,7 @@
     if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
     if (msg?.cmd === 'listSchedules') return reply(listSchedules());
     if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));
-    if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source), (file) => ({ ok: true, file }));
+    if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source, msg.language, msg.runtime), (file) => ({ ok: true, file }));
     if (msg?.cmd === 'pullModules') return reply(pullModules());
     if (msg?.cmd === 'pullFailures') return reply(pullFailures());
     if (msg?.cmd === 'pullActions') return reply(pullActions());

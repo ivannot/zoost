@@ -314,8 +314,7 @@ const MSG = {
   // languages and this mirror reads the source of one of them; the others are listed and named, and
   // that is all this build claims. Saying the wrong missing thing is worse than saying nothing,
   // because the reader goes and does it and nothing changes.
-  notMirrored: (lang) => `${lang} function - Zoost lists it and does not read this kind of code yet. `
-    + 'Only Deluge sources are mirrored; open this one in Zoho.',
+  notMirrored: (lang) => `${lang} function - this older workspace entry has no local source. Pull again to mirror its project files.`,
   hereRepull: 'In workspace - click to re-download from Zoho',
   failed: 'Failed: ',
   // The twin already had this name; the CRM had the string twice and nothing said so, because the
@@ -384,15 +383,27 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // place on the first version of this line.
 const escQ = (s) => String(s).replace(/[\u0022\u0027]/g, (c) => (c === '\u0022' ? '&quot;' : '&#39;'));
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
-// **Which functions this mirror actually holds the source of.** Zoho compiles functions in six
-// languages and serves them all through one list endpoint; only Deluge arrives with its source in
-// the record. The rest keep theirs elsewhere - a Node function's is a folder, fetched a file at a
-// time from another endpoint - and reading any of that is not built. What *is* built is saying so:
-// they are all listed, every one carries its language, and every place that would otherwise say «run
-// Pull all to fetch it» says the true thing instead. A function nobody can see is worse than one we
-// cannot download, because the reader cannot tell it is missing.
+// Deluge is a single source file; Java, Python and Node are projects. The distinction remains useful
+// for static analysis (the Deluge parser must not be run over another language), not for mirroring:
+// every language Zoho lists is downloaded.
 const isDeluge = (lang) => !lang || /^deluge/i.test(String(lang));
 const langLabel = (lang) => (isDeluge(lang) ? 'Deluge' : String(lang).replace(/_/g, ' '));
+const fnMetaPath = (folder, stem) => `functions/${folder}/${stem}.meta.json`;
+const fnProjectRoot = (folder, stem) => `functions/${folder}/${stem}.files`;
+const fnDefaultPath = (folder, stem, language) => isDeluge(language)
+  ? `functions/${folder}/${stem}.dg` : fnProjectRoot(folder, stem);
+function pathsFromMeta(meta, metaPath) {
+  const base = metaPath.replace(/\.meta\.json$/, '');
+  if (isDeluge(meta && meta.language)) return [base + '.dg', metaPath];
+  const root = base + '.files/';
+  return (meta && Array.isArray(meta.files) ? meta.files.map((p) => root + p) : []).concat(metaPath);
+}
+function primaryFromMeta(meta, metaPath) {
+  if (isDeluge(meta && meta.language)) return metaPath.replace(/\.meta\.json$/, '.dg');
+  const files = Array.isArray(meta && meta.files) ? meta.files : [];
+  const primary = meta && meta.primary_file || files[0];
+  return primary ? metaPath.replace(/\.meta\.json$/, '.files/') + primary : metaPath.replace(/\.meta\.json$/, '.files');
+}
 // What the second ask could not read, kept until there is a status line to put it on. One value,
 // written by both pulls that list functions and consumed where the count is reported - a flag
 // written by several and read by none is a shape this repository has already paid for once.
@@ -444,8 +455,8 @@ const META_INDEX = 'functions/meta-index.json';
 // `{"fresh":1,"cached":0}`. **Changing what the extractor writes means moving this line, in the
 // same commit** - the test below holds the readers to it, but only a person can know the meaning
 // changed.
-const SUMMARY_V = 5;   // 5 adds `listUpdated` per file; a 4 is re-derived from the folder rather than misread
-const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
+const SUMMARY_V = 6;   // 6 identifies project sidecars and their files; older summaries are re-derived
+const META_SV = 3;   // v3 records language/runtime and every file in a compiled function project
 /** Has Zoho's copy moved since this one was fetched?
  *
  * **Both arguments must come from the same source.** The org *list* reports `updatedTime` as epoch
@@ -908,7 +919,7 @@ function showAbout() {
     // twin's wording is the one that survived that argument, so this is the twin's wording with this
     // product's own nouns - and both now name the report page, which neither did.
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
-    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and their Deluge source, module and field names including the values inside a picklist, workflow and schedule names, what an automation action does - the field it writes and the value, the fields a task fills in, the email template it sends, a webhook's method and host - the name Zoho records as having last changed a function or a connection and when, connection names with their connectors and scopes, and what Zoho reports about failed runs - are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the org it needs - function names and source code, module and field names including the values inside a picklist, workflow and schedule names, what an automation action does - the field it writes and the value, the fields a task fills in, the email template it sends, a webhook's method and host - the name Zoho records as having last changed a function or a connection and when, connection names with their connectors and scopes, and what Zoho reports about failed runs - are sent directly from your browser to the provider you configured, and to no one else. `
     + `Records are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine, except a problem report you write, read in full and send yourself. `
     + `Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
   $('scrim').classList.add('on'); panelInert(true); $('aboutdlg').classList.add('on');
@@ -1013,7 +1024,12 @@ const noteWrite = (rel) => {
   // memory of whoever caused it, or the next write path added inherits nothing.
   if (rel.startsWith('failures/')) { failIndex = null; healthData = null; return; }
   if (!rel.startsWith('functions/')) return;
-  if (rel.endsWith('.meta.json')) _dirtyMeta.add(rel.replace(/\.meta\.json$/, '.dg'));
+  if (rel.endsWith('.meta.json')) {
+    // Keep the legacy `.dg` key for Deluge summaries, and the sidecar itself for project summaries
+    // whose primary file can only be learned from that sidecar.
+    _dirtyMeta.add(rel.replace(/\.meta\.json$/, '.dg'));
+    _dirtyMeta.add(rel);
+  }
   // `aiConnCache` rides with `graphCache` in **every** branch that drops it, not only where its
   // own source moved. A module write cannot change which functions use a connection, so one of
   // the three is redundant - and the redundancy costs rebuilding a small map from a graph that
@@ -1025,7 +1041,9 @@ const noteWrite = (rel) => {
   // is, and a pull that changed one function left `get_connection` answering «used by 3» from the
   // cache while the graph would have said 4. The rule this function states in its own comment two
   // branches up: invalidation derives from the write, never from the memory of whoever caused it.
-  else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; aiConnCache = null; }
+  else if (rel.endsWith('.dg') || rel.includes('.files/')) {
+    _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; aiConnCache = null;
+  }
 };
 // The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
 // root again - two calls to the browser's file system before the one that does the work - so half of
@@ -1118,6 +1136,39 @@ async function readFileAt(root, rel) {
   const d = await dirFor(parts.slice(0, -1), false, root);
   const fh = await d.getFileHandle(parts[parts.length - 1]);
   return (await fh.getFile()).text();
+}
+
+/** Write one function in the shape Zoho serves it: one `.dg` for Deluge, every returned file below
+ * `<name>.files/` for compiled runtimes. Metadata is written last, so a sidecar always describes
+ * files whose writes have already completed. */
+async function writeFunctionMirror(f, op, listUpdated) {
+  const metaPath = fnMetaPath(f.folder, f.stem);
+  let previous = [];
+  try { const old = JSON.parse(await op.read(metaPath)); previous = pathsFromMeta(old, metaPath); } catch (_) {}
+  let primary;
+  if (isDeluge(f.meta && f.meta.language)) {
+    primary = `functions/${f.folder}/${f.stem}.dg`;
+    if (!op.current()) throw new Error(WS_MOVED);
+    await op.write(primary, f.dg || '');
+    f.meta.files = null; f.meta.primary_file = null;
+  } else {
+    if (!Array.isArray(f.files) || !f.files.length) throw new Error('Zoho returned no files for this function project.');
+    const projectRoot = fnProjectRoot(f.folder, f.stem) + '/';
+    for (const item of f.files) {
+      if (!op.current()) throw new Error(WS_MOVED);
+      await op.write(projectRoot + item.path, item.content);
+    }
+    primary = projectRoot + (f.primary || f.files[0].path);
+  }
+  f.meta.listUpdated = listUpdated == null ? null : listUpdated;
+  if (!op.current()) throw new Error(WS_MOVED);
+  await op.write(metaPath, JSON.stringify(f.meta, null, 2));
+  const paths = pathsFromMeta(f.meta, metaPath);
+  const keep = new Set(paths);
+  const stale = previous.filter((p) => !keep.has(p) && !p.endsWith('.meta.json'));
+  const cleanup = stale.length ? await removeFunctionPaths(stale, op) : { failed: 0, moved: false };
+  if (cleanup.moved) throw new Error(WS_MOVED);
+  return { primary, metaPath, paths, cleanupFailed: cleanup.failed };
 }
 // The shorthands every render path uses: they read and write the workspace on screen, which is the
 // one they mean. A path that survives an await must take an op instead.
@@ -1596,7 +1647,7 @@ function fnRowEl(e) {
   const st = e.stats;
   // Its own slot and its own class, not a widening of `.rr`: those four badge classes are shared
   // with rows in Modules and Connections, and reusing one would change two tabs nobody looked at.
-  const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${unmirrored ? escHtml(langLabel(e.language).slice(0, 4)) : ''}</span>`;
+  const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langLabel(e.language).slice(0, 4)) : ''}</span>`;
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
@@ -1736,7 +1787,7 @@ let treeLoad = 0;
 async function refineRowFromMeta(mp, op, byPath, byId, index) {
   try {
     const meta = JSON.parse(await op.read(mp));
-    const dg = mp.replace(/\.meta\.json$/, '.dg');
+    const dg = primaryFromMeta(meta, mp);
     // By path, then by id - both from a Map. The second lookup used to be a `treeData.find()`,
     // which is linear, and it fires exactly when the two disagree: a file whose name the index
     // does not predict. On a workspace of five thousand that turned the load into twenty-five
@@ -1748,8 +1799,14 @@ async function refineRowFromMeta(mp, op, byPath, byId, index) {
     // Found by id at another path: the function was renamed in Zoho, so the file on disk is the
     // *old* pair. Marking it downloaded - which this did - meant the new path was never fetched
     // and the old pair never pruned (its id is still live, so the pull's prune keeps it).
-    row.pathChanged = row.path !== dg;
+    row.pathChanged = row.metaPath ? row.metaPath !== mp : (isDeluge(meta.language) && row.path !== dg);
     row.previousPath = row.pathChanged ? dg : null;
+    row.previousFiles = row.pathChanged ? pathsFromMeta(meta, mp) : null;
+    if (!row.pathChanged) row.path = dg;
+    row.metaPath = mp;
+    row.mirrorFiles = pathsFromMeta(meta, mp);
+    row.language = meta.language || row.language || 'deluge';
+    row.mirrored = true;
     row.downloaded = !row.pathChanged;
     // Three reasons to re-fetch, each its own fact: an older sidecar schema, a rename, and a
     // source that changed in Zoho while nobody was watching - the list's `updatedTime` against
@@ -1795,20 +1852,20 @@ async function rebuildTree() {
   let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
   if (!current()) return;
   index = new Map();
-  const byPath = new Map(), byId = new Map();
+  const byPath = new Map(), byId = new Map(), byMeta = new Map();
   if (idx && idx.length) {
     treeData = idx.map((e) => {
       const id = String(e.id);
-      const path = `functions/${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
-      index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
-      const row = { path, api_name: e.api_name, display_name: e.display_name || e.api_name,
+      const path = fnDefaultPath(sanitize(e.namespace), sanitize(e.api_name), e.language);
+      index.set(id, { path, category: e.category, source: e.source, language: e.language || 'deluge', runtime: e.runtime || null, name: e.name, rest: e.rest });
+      const row = { path, metaPath: fnMetaPath(sanitize(e.namespace), sanitize(e.api_name)), api_name: e.api_name, display_name: e.display_name || e.api_name,
                     namespace: e.namespace, rest: e.rest, id, category: e.category, source: e.source,
-                    language: e.language || 'deluge', mirrored: isDeluge(e.language),
+                    language: e.language || 'deluge', runtime: e.runtime || null, mirrored: true,
                     downloaded: false, stale: false, error: false, updatedTime: null,
                     // What Zoho's list said, kept apart from what the sidecar says: the two
                     // disagreeing is exactly the fact «stale» exists to carry.
                     listUpdated: e.updatedTime || null };
-      byPath.set(path, row); byId.set(id, row);
+      byPath.set(path, row); byId.set(id, row); byMeta.set(row.metaPath, row);
       return row;
     });
     renderTree();
@@ -1825,21 +1882,33 @@ async function rebuildTree() {
     if (!p.startsWith('functions/') || !p.endsWith('.meta.json')) continue;
     metaPaths.push(p);
     const dg = p.replace(/\.meta\.json$/, '.dg');
-    const row = byPath.get(dg);
+    const row = byMeta.get(p) || byPath.get(dg);
     if (row) row.downloaded = true;
   }
   if (!current()) return;
   if (!treeData.length) {
     // No index: a legacy workspace, or one whose index could not be read. The tree is what is on
     // disk, and the metas below are the only source for it - so it stays empty until they arrive.
-    metaPaths.forEach((p) => {
-      const dg = p.replace(/\.meta\.json$/, '.dg');
-      const row = { path: dg, api_name: dg.split('/').pop().replace(/\.dg$/, ''),
-                    display_name: dg.split('/').pop().replace(/\.dg$/, ''), namespace: dg.split('/')[1],
-                    rest: false, id: dg, category: '', source: '', downloaded: true, stale: false,
-                    error: false, updatedTime: null };
-      byPath.set(dg, row); treeData.push(row);
-    });
+    for (const p of metaPaths) {
+      try {
+        const meta = JSON.parse(await op.read(p));
+        if (!current()) return;
+        const path = primaryFromMeta(meta, p);
+        const id = String(meta.id == null ? p : meta.id);
+        const stem = p.split('/').pop().replace(/\.meta\.json$/, '');
+        const row = { path, metaPath: p, mirrorFiles: pathsFromMeta(meta, p),
+                      api_name: meta.api_name || meta.name || stem,
+                      display_name: meta.display_name || meta.api_name || meta.name || stem,
+                      namespace: meta.nameSpace || p.split('/')[1], language: meta.language || 'deluge',
+                      runtime: meta.runtime || null, rest: (meta.rest_api || []).some((r) => r.active),
+                      id, category: meta.category || '', source: meta.source || '', mirrored: true,
+                      downloaded: true, stale: (meta.sv || 0) < META_SV, error: false,
+                      updatedTime: meta.updatedTime || null, fetchedAgainst: meta.listUpdated || null };
+        byPath.set(path, row); byId.set(id, row); byMeta.set(p, row); treeData.push(row);
+      } catch (_) {
+        // `refineRowFromMeta` below records the unreadable sidecar once and keeps it out of the tree.
+      }
+    }
   }
   renderTree(); updateMissingButton();
 
@@ -1853,12 +1922,20 @@ async function rebuildTree() {
   try { summary = JSON.parse(await op.read(META_INDEX)); } catch (_) {}
   if (!current()) return;
   const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
+  const knownByMeta = new Map(Object.entries(known).map(([path, value]) => [value.metaPath || path.replace(/\.dg$/, '.meta.json'), { path, value }]));
   const missing = [];
   for (const mp of metaPaths) {
     const dg = mp.replace(/\.meta\.json$/, '.dg');
-    const s = known[dg];
-    const row = byPath.get(dg);
-    if (!s || !row || dirtyMeta.has(dg)) { missing.push(mp); continue; }
+    const hit = knownByMeta.get(mp);
+    const s = hit && hit.value;
+    const row = byMeta.get(mp) || byPath.get(dg);
+    const cachedPath = hit && hit.path;
+    const cachedFiles = (s && s.mirrorFiles) || (cachedPath ? [cachedPath, mp] : []);
+    if (!s || !row || dirtyMeta.has(dg) || dirtyMeta.has(mp) || dirtyMeta.has(cachedPath) || cachedFiles.some((p) => dirtyMeta.has(p))) { missing.push(mp); continue; }
+    if (row.path !== cachedPath) byPath.delete(row.path);
+    row.path = cachedPath; byPath.set(cachedPath, row);
+    row.metaPath = mp; row.mirrorFiles = cachedFiles;
+    if (s.language) row.language = s.language;
     row.downloaded = true;
     // The same rule as the slow path below. It was only there, so whether a workspace reported
     // anything outdated depended on which of the two paths had loaded it.
@@ -1996,7 +2073,8 @@ function updateMetaIndex(mutate, suppliedOp = null) {
 }
 
 async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
-  const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
+  const metaOnDisk = new Set(metaPaths);
+  const onDisk = new Set(treeData.filter((r) => metaOnDisk.has(r.metaPath || r.path.replace(/\.dg$/, '.meta.json'))).map((r) => r.path));
   const written = updateMetaIndex((files) => {
     Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // gone from the folder
     treeData.forEach((r) => {
@@ -2005,13 +2083,21 @@ async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
       e.id = String(r.id); e.sv = r.stale ? 1 : META_SV; e.updatedTime = r.updatedTime || null;
       e.listUpdated = r.fetchedAgainst || null;   // what the list said when this copy was fetched
       e.namespace = r.namespace || ''; e.display_name = r.display_name || '';
+      e.metaPath = r.metaPath || r.path.replace(/\.dg$/, '.meta.json');
+      e.mirrorFiles = r.mirrorFiles || [r.path, e.metaPath];
+      e.language = r.language || 'deluge';
     });
   }, op);
   // Only the metas this pass actually described, and only the meta half: the source-derived facts
   // belong to `saveGraphFacts()` and are not this writer's to declare done. And only if the write
   // happened: a mark cleared over a refused write is a file nothing will ever read again.
   if (!(await written) || !op.current()) return;
-  metaPaths.forEach((mp) => _dirtyMeta.delete(mp.replace(/\.meta\.json$/, '.dg')));
+  treeData.forEach((r) => {
+    if (!metaOnDisk.has(r.metaPath)) return;
+    _dirtyMeta.delete(r.metaPath);
+    _dirtyMeta.delete(r.path);
+    (r.mirrorFiles || []).forEach((p) => _dirtyMeta.delete(p));
+  });
 }
 
 // The tree is built from .meta.json alone; the stats need the sources. Fill them in after the first
@@ -2205,10 +2291,8 @@ async function loadGraph(op = beginWorkspaceOp()) {
   // than zero when the index cannot be read: «nobody looked» is not «nothing missing», which is the
   // distinction this panel spent the day learning in four other places.
   //
-  // **And a function this mirror cannot hold is not a function that failed to download.** The index
-  // lists every language now, and folding those into `notInMirror` would turn «could not be
-  // downloaded» - a sentence about a fixable failure - into a permanent number nothing can move,
-  // printed under the audit as though a retry would clear it. They are counted, and counted apart.
+  // Compiled-runtime files are mirrored, but the call graph remains a Deluge static analysis. Keep
+  // those functions out of the "download failed" count and name the analysis boundary separately.
   let inOrg = null, notMirrorable = 0, unreadFns = [];
   try {
     const idx = JSON.parse(await op.read('functions/index.json'));
@@ -2410,7 +2494,8 @@ async function openFile(path, line = null, byClick = false) {
     const target = rl && (rl.module || rl.connected_module);
     return target && _known.has(target) ? target : null;
   };
-  $('pvcode').innerHTML = window.highlightDeluge
+  const delugeSource = /\.dg$/i.test(path) && (!trow || isDeluge(trow.language));
+  $('pvcode').innerHTML = delugeSource && window.highlightDeluge
     ? window.highlightDeluge(code, _resolve, _linkFor)
     : escHtml(code);
   $('pvcode').querySelectorAll('a.c-link[data-file]').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
@@ -3739,7 +3824,12 @@ function markLine(line, re, escFn) {
  * that has gone since the tree was drawn is not an error to report.
  */
 async function readSourceInto(m, e, op) {
-  try { m.set(e.id, await op.read(e.path)); } catch (_) {}
+  try {
+    const paths = (e.mirrorFiles || [e.path]).filter((p) => !p.endsWith('.meta.json'));
+    const sources = [];
+    for (const p of paths) sources.push({ path: p, code: await op.read(p) });
+    m.set(e.id, sources);
+  } catch (_) {}
 }
 
 /** Every source, once. Searching text means having read it - there is no index that spares this, and
@@ -3794,23 +3884,26 @@ async function contentSearch() {
   for (const e of treeData) {
     if (!e.downloaded || !passTypeRow(e)) continue;
     searched++;
-    const code = cache.get(e.id); if (!code) continue;
-    let idx = -1, count = 0;
-    if (rx) {
-      const re = rx.re; re.lastIndex = 0; let m;
-      while ((m = re.exec(code))) {
-        if (!m[0]) { re.lastIndex++; if (re.lastIndex > code.length) break; continue; }
-        if (idx < 0) idx = m.index;
-        count++;
+    const cached = cache.get(e.id); if (!cached) continue;
+    const sources = Array.isArray(cached) ? cached : [{ path: e.path, code: cached }];
+    for (const source of sources) {
+      const code = source.code; let idx = -1, count = 0;
+      if (rx) {
+        const re = rx.re; re.lastIndex = 0; let m;
+        while ((m = re.exec(code))) {
+          if (!m[0]) { re.lastIndex++; if (re.lastIndex > code.length) break; continue; }
+          if (idx < 0) idx = m.index;
+          count++;
+        }
+        if (idx < 0) continue;
+      } else {
+        const lc = code.toLowerCase(); idx = lc.indexOf(tl); if (idx < 0) continue;
+        let i = idx; while (i >= 0) { count++; i = lc.indexOf(tl, i + tl.length); }
       }
-      if (idx < 0) continue;
-    } else {
-      const lc = code.toLowerCase(); idx = lc.indexOf(tl); if (idx < 0) continue;
-      let i = idx; while (i >= 0) { count++; i = lc.indexOf(tl, i + tl.length); }
+      const ls = code.lastIndexOf('\n', idx) + 1; let le = code.indexOf('\n', idx); if (le < 0) le = code.length;
+      const lineNo = code.slice(0, idx).split('\n').length;
+      results.push({ e, path: source.path, count, lineNo, line: code.slice(ls, le).trim().slice(0, 140) });
     }
-    const ls = code.lastIndexOf('\n', idx) + 1; let le = code.indexOf('\n', idx); if (le < 0) le = code.length;
-    const lineNo = code.slice(0, idx).split('\n').length;
-    results.push({ e, count, lineNo, line: code.slice(ls, le).trim().slice(0, 140) });
   }
   results.sort((a, b) => b.count - a.count || labelOf(a.e).localeCompare(labelOf(b.e)));
   tree.innerHTML = '';
@@ -3825,10 +3918,11 @@ async function contentSearch() {
   const hdr = document.createElement('div'); hdr.className = 'srhdr'; hdr.textContent = `${total} match(es) in ${results.length} file(s)`; tree.appendChild(hdr);
   const hlRe = rx ? rx.re : new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
   results.forEach((r) => {
-    const el = document.createElement('div'); el.className = 'sr'; el.dataset.path = r.e.path;
+    const el = document.createElement('div'); el.className = 'sr'; el.dataset.path = r.path;
     const hi = markLine(r.line, hlRe, escHtml);
-    el.innerHTML = `<div class="srname">${escHtml(labelOf(r.e))} <span class="srcount">${r.count}</span></div><div class="srline"><span class="srln">${r.lineNo}</span> ${hi}</div>`;
-    el.onclick = () => openFile(r.e.path, r.lineNo, true);   // at the match's line, not the top
+    const fileName = r.path === r.e.path ? '' : ` · ${r.path.split('/').pop()}`;
+    el.innerHTML = `<div class="srname">${escHtml(labelOf(r.e) + fileName)} <span class="srcount">${r.count}</span></div><div class="srline"><span class="srln">${r.lineNo}</span> ${hi}</div>`;
+    el.onclick = () => openFile(r.path, r.lineNo, true);   // the exact project file and line that matched
     tree.appendChild(el);
   });
 }
@@ -3896,13 +3990,13 @@ async function pullAll() {
     const liveIds = new Set(merged.map((e) => String(e.id))); const rmF = [];
     for await (const p of walk(op.root)) {
       if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
-      if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p.replace(/\.meta\.json$/, '.dg')); rmF.push(p); } } catch (_) {} }
+      if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) rmF.push(...pathsFromMeta(mm, p)); } catch (_) {} }
     }
     // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
     // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
     const removed = await removeFunctionPaths(rmF, op);
     if (removed.moved) return;
-    const prunedF = removed.removed.filter((p) => p.endsWith('.dg')).length;
+    const prunedF = removed.removed.filter((p) => p.endsWith('.meta.json')).length;
     // If you were reading one of the functions the pull has just pruned, the pane is showing
     // something that no longer exists - in Zoho or on disk. Reported: it stayed open, with the code
     // of a deleted function in it. It closes with the file, the same way a live deletion closes it.
@@ -4328,13 +4422,29 @@ async function pruneFunction(id, entry = null) {
   const info = index.get(key);
   const row = treeData.find((e) => String(e.id) === key);
   const fromEntry = entry && entry.namespace && entry.api_name
-    ? `functions/${sanitize(entry.namespace)}/${sanitize(entry.api_name)}.dg` : null;
+    ? `functions/${sanitize(entry.namespace)}/${sanitize(entry.api_name)}${(!entry.language || /^deluge/i.test(String(entry.language))) ? '.dg' : '.files'}` : null;
   const path = fromEntry || (info && info.path) || (row && row.path);
   if (!path) return true;
   let whole = true;
   // The folder this removal belongs to. Two files, two removals, awaits inside each: without this
   // the source went from one workspace and the metadata from the next.
-  for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) {
+  const language = (entry && entry.language) || (row && row.language) || 'deluge';
+  const deluge = !language || /^deluge/i.test(String(language));
+  const metaPath = entry && entry.namespace && entry.api_name
+    ? `functions/${sanitize(entry.namespace)}/${sanitize(entry.api_name)}.meta.json`
+    : (row && row.metaPath) || (deluge ? path.replace(/\.dg$/, '.meta.json') : path.replace(/\.files(?:\/.*)?$/, '.meta.json'));
+  let paths = (row && row.mirrorFiles) || (entry && entry.mirrorFiles);
+  if (!paths && deluge) paths = [path, metaPath];
+  if (!paths) {
+    // A project directory is not a removable file, and the browser API does not remove non-empty
+    // directories recursively. The sidecar is the authoritative manifest of every mirrored file.
+    try { paths = pathsFromMeta(JSON.parse(await op.read(metaPath)), metaPath); }
+    catch (_) {
+      if (op.current()) op.say(`Could not read ${metaPath.split('/').pop()} - project files were left untouched.`, 'warn');
+      return false;
+    }
+  }
+  for (const p of paths) {
     if (!op.current()) return false;
     // The exact path that failed, not the function's. Keeping only the `.dg` meant a retry that
     // found it already gone, dropped the entry, and left the `.meta.json` on disk for ever.
@@ -4441,7 +4551,7 @@ async function syncOneNow(id) {
   if (!info) { await reconcileFunctions(); return; }
   try {
     setStatus(`Save detected (${id}), syncing…`, 'busy');
-    const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source });
+    const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source, language: info?.language, runtime: info?.runtime });
     if (!op.current()) return;             // you moved: this answer belongs to a folder we have left
     if (!r?.ok || !r.file) throw new Error(r?.error || 'detail not found');
     const f = r.file;
@@ -4449,21 +4559,18 @@ async function syncOneNow(id) {
     // folder can change between the source and its metadata - and it did, leaving one file in each
     // workspace. Checked again rather than trusted from a moment ago.
     if (!op.current()) return;
-    await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
-    if (!op.current()) return;
     // Deliberately nothing: this ran because the function was *just saved* in Zoho, so the org list
     // this panel holds predates the save. Writing that value would claim this copy had been checked
     // against a list that has not seen the change - a claim in the direction that hides one. The
     // next pull refreshes both sides and the pair becomes meaningful again.
-    f.meta.listUpdated = null;
-    await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    const written = await writeFunctionMirror(f, op, null);
     // The memory is an effect too: after the last write the row looked up in `treeData` is the new
     // workspace's, and marking it downloaded gave one org's row the other org's path.
     if (!op.current()) return;
     const ent = treeData.find((x) => x.id === String(id));
-    if (ent) { ent.path = `functions/${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
-    if (currentPath === `functions/${f.folder}/${f.stem}.dg`) await openFile(currentPath);
-    setStatus(`Synced: functions/${f.folder}/${f.stem}.dg`, 'ok');
+    if (ent) { ent.path = written.primary; ent.mirrorFiles = written.paths; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
+    if (currentPath === written.primary) await openFile(currentPath);
+    setStatus(`Synced: ${written.primary}`, 'ok');
   } catch (e) { setStatus(`Sync failed for ${id}: ${e.message}`, 'warn'); }
 }
 
@@ -5554,14 +5661,13 @@ async function downloadOne(entry) {
   if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
   const info = index.get(entry.id) || {};
   try {
-    const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source });
+    const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source, language: entry.language || info.language, runtime: entry.runtime || info.runtime });
     if (!r?.ok || !r.file) throw new Error(r?.error || 'not found');
     const f = r.file;
-    await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
     // What the list said about this function at the moment it was fetched, kept beside what the
     // detail said. Two sources, two shapes - the comparison that decides «outdated» needs the pair.
-    f.meta.listUpdated = entry.listUpdated || null;
-    await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    const written = await writeFunctionMirror(f, op, entry.listUpdated || null);
+    entry.cleanupFailed = written.cleanupFailed || 0;
     // The files are safe - the writer refuses a folder that is not this op's - and `index` and the
     // row are not: they are the panel's memory of the workspace *on screen*, so publishing into them
     // after the last await puts one org's function into another org's index and lights its row.
@@ -5571,16 +5677,16 @@ async function downloadOne(entry) {
     // now, and only now: both new files are written, so the new path is authoritative. A removal
     // that fails keeps the old pair - readable is better than gone - and the next load will mark
     // the rename again, so the retry is free.
-    if (entry.previousPath && entry.previousPath !== `functions/${f.folder}/${f.stem}.dg`) {
-      const cleanup = await removeFunctionPaths([entry.previousPath, entry.previousPath.replace(/\.dg$/, '.meta.json')], op);
+    if (entry.previousPath && entry.previousPath !== written.primary) {
+      const cleanup = await removeFunctionPaths(entry.previousFiles || [entry.previousPath, entry.previousPath.replace(/\.dg$/, '.meta.json')], op);
       if (cleanup.moved) return false;
-      entry.cleanupFailed = cleanup.failed;
+      entry.cleanupFailed += cleanup.failed;
     }
     entry.previousPath = null; entry.pathChanged = false;
     if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
-    entry.path = `functions/${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
+    entry.path = written.primary; entry.mirrorFiles = written.paths; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
-    index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
+    index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, language: f.meta.language, runtime: f.meta.runtime, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
     return true;
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
@@ -5629,7 +5735,7 @@ async function downloadMissing() {
     // On one line, and it has to stay on one: the check that every op-holding caller hands its op on
     // reads a call up to the first newline, so a break here reads as a call that dropped the
     // workspace. It went red on exactly that, which is the guard being strict rather than wrong.
-    const onDisk = treeData.filter((r) => r.downloaded).map((r) => r.path.replace(/\.dg$/, '.meta.json'));
+    const onDisk = treeData.filter((r) => r.downloaded).map((r) => r.metaPath || r.path.replace(/\.dg$/, '.meta.json'));
     if (ok) await saveMetaIndex(onDisk, op);
     if (!op.current()) return;
     updateMissingButton();

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:2a3c2ca89f935011 -->
+<!-- translated-from: site/docs-crm.html sha256:76252ad7e1a2195a -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.47.0</span> · aggiornata il <span class="dd" data-stamp="updated">27 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.47.0</span> · aggiornata il <span class="dd" data-stamp="updated">28 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -208,7 +208,7 @@ git commit -m "baseline"</code></pre>
     <p>Quello che ti ritrovi su disco:</p>
   <table>
     <tbody>
-      <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>un sorgente <code>.dg</code> e un <code>.meta.json</code> a fianco per ogni funzione Deluge, nel namespace che le dà Zoho</td></tr>
+      <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>le funzioni Deluge come file <code>.dg</code>; quelle Java, Python e Node come progetti <code>&lt;nome&gt;.files/</code>, con tutti i file restituiti da Zoho. Ogni funzione ha anche il proprio <code>.meta.json</code></td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>il censimento: ogni funzione con namespace, id e dove è agganciata</td></tr>
       <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist. Nel pannello una picklist mostra il <b>numero</b> di valori e si apre verso il basso con un clic, uno per riga: quaranta opzioni su una riga facevano scorrere la tabella di lato senza fine</td></tr>
       <tr><td class="k"><code>modules/layouts/</code></td><td>un file per modulo, con le sezioni e i campi di ogni layout - sotto i moduli che descrivono</td></tr>
@@ -217,6 +217,10 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k"><code>export/</code></td><td>i report che generi</td></tr>
     </tbody>
   </table>
+  <p class="note">Il mirror conserva tutti i file dei progetti Java, Python e Node e la ricerca
+    full-text li include. Il grafo delle chiamate, i moduli letti o scritti e l'uso delle connessioni
+    restano invece un'analisi statica del Deluge: per gli altri linguaggi Zoost non ricava ancora
+    queste relazioni.</p>
   <p class="note">Una cartella per tipo, un <code>index.json</code> dentro ciascuna e le funzioni sotto
     <code>functions/</code> così un namespace Deluge non può mai scontrarsi con una cartella creata da
     Zoost. Prima di Zoost CRM 1.13 i namespace stavano nella radice del workspace e le altre cartelle

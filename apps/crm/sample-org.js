@@ -301,11 +301,11 @@ function deluge(ns, name, params, calls) {
         ? (EDGE.unresolved[ns + '.' + name] || []).concat(EDGE.ambiguous[ns + '.' + name] || [])
         : [];
       out['functions/' + ns + '/' + api + '.dg'] = deluge(ns, name, params, calls.concat(extra));
-      // toFile()'s meta, field for field. sv is 2 - the current META_SV - and 1 for the ones that are
-      // meant to read as stale; 3 would be *newer* than the panel understands.
+      // toFile()'s meta, field for field. sv is 3 - the current META_SV - and 1 for the ones that are
+      // meant to read as stale.
       J('functions/' + ns + '/' + api + '.meta.json', {
         id: id, name: name, display_name: labelOf(name), api_name: api,
-        nameSpace: ns, category: cat, source: 'crm',
+        nameSpace: ns, category: cat, source: 'crm', language: 'deluge', runtime: 'Deluge',
         return_type: params.length ? 'map' : 'void',
         params: params.map((p) => ({ name: p, type: 'string' })),
         description: '', updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
@@ -318,10 +318,11 @@ function deluge(ns, name, params, calls) {
           ? [{ type: 'GET', active: true }] : [],
         connections: CONNECTIONS.filter((c) => c[2].includes(ns + '.' + name))
           .map((c) => ({ name: c[0], label: c[1], service: 'custom', scopes: [] })),
-        sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 2,
+        files: null, primary_file: null,
+        sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 3,
       });
       index.push({ id: id, api_name: api, name: name, display_name: labelOf(name),
-                   namespace: ns, category: cat, source: 'crm',
+                   namespace: ns, category: cat, source: 'crm', language: 'deluge', runtime: 'Deluge',
                    updatedTime: LIST_MS(i),
                    rest: name === 'exportCsv' || name === 'openTicket' });
       say(i + 1, list.length, 'functions');
@@ -340,7 +341,7 @@ function deluge(ns, name, params, calls) {
         namespace: ns, display_name: labelOf(name),
       };
     });
-    J('functions/meta-index.json', { v: 1, sv: 2, files: metaIndex });
+    J('functions/meta-index.json', { v: 1, sv: 3, files: metaIndex });
 
     // Forty plausible values, composed rather than invented one at a time - the same rule the
     // function names follow.

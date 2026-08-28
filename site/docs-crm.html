@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.47.0</span> · updated <span class="dd" data-stamp="updated">27 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.47.0</span> · updated <span class="dd" data-stamp="updated">28 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -192,7 +192,7 @@ git commit -m "baseline"</code></pre>
     <p>What you get on disk:</p>
   <table>
     <tbody>
-      <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>one <code>.dg</code> source and one <code>.meta.json</code> sidecar per Deluge function, in the namespace Zoho gives it</td></tr>
+      <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>Deluge functions as <code>.dg</code> files; Java, Python and Node functions as <code>&lt;name&gt;.files/</code> projects containing every file Zoho returns. Each function also has a <code>.meta.json</code> sidecar</td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>the census: every function with its namespace, id and where it is wired</td></tr>
       <tr><td class="k"><code>modules/</code></td><td>one file per module - fields, types, lookup targets, picklist values. In the panel a picklist shows its <b>count</b> and opens downwards on a click, one value per line: forty options on one line made the table scroll sideways with no end</td></tr>
       <tr><td class="k"><code>modules/layouts/</code></td><td>one file per module, with the sections and the fields on each layout - under the modules they describe</td></tr>
@@ -201,6 +201,9 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
     </tbody>
   </table>
+  <p class="note">The mirror preserves every file in Java, Python and Node projects. Full-text search
+    includes them. The call graph, module reads and writes, and connection usage remain a Deluge static
+    analysis; Zoost does not infer those relationships from the other languages yet.</p>
   <p class="note">One folder per kind, one <code>index.json</code> inside each, and functions under
     <code>functions/</code> so a Deluge namespace can never collide with a folder Zoost creates. Before
     Zoost CRM 1.13 the namespaces sat in the workspace root and the other folders carried a leading
