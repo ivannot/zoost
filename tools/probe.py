@@ -516,6 +516,30 @@ CRM = """
       }
     }
 
+    // A compiled function is a project, not the one file chosen as its primary source. The sample
+    // carries Java, Python and Node projects so this drives the actual selector: every mirrored
+    // source appears, and choosing a companion file opens that exact path without losing the
+    // function row that owns it.
+    {
+      const project = treeData.find((e) => e.downloaded
+        && (e.mirrorFiles || []).filter((p) => !p.endsWith('.meta.json')).length > 1);
+      if (!project) say('the sample has no multi-file function project to open');
+      else {
+        await openFile(project.path); await settle();
+        const files = project.mirrorFiles.filter((p) => !p.endsWith('.meta.json'));
+        const select = $('pvfileselect');
+        if (!select || select.options.length !== files.length)
+          say(`the project selector shows ${select ? select.options.length : 0} of ${files.length} files`);
+        const other = files.find((p) => p !== project.path);
+        if (select && other) {
+          select.value = other; select.dispatchEvent(new Event('change')); await settle();
+          if (currentPath !== other) say('choosing a companion project file did not open that file');
+          if (!functionRowForPath(currentPath) || functionRowForPath(currentPath).id !== project.id)
+            say('a companion project file lost the function row that owns it');
+        }
+      }
+    }
+
     // Refresh says «read every file again». It used to re-read only the rows the panel was holding -
     // the functions tree's - so pressing it from another tab did nothing at all. Driven here from
     // Modules, with a source rewritten behind the panel's back, which is exactly the write Refresh

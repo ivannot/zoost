@@ -82,7 +82,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 **Local, Git-friendly version control**
 - Pull every supported Zoho CRM function runtime. Deluge stays a `.dg` source; Java, Python and Node
   keep every project file under `<name>.files/`; each function has a `.meta.json` sidecar under
-  `functions/<namespace>/`.
+  `functions/<namespace>/`. The preview keeps the function as one item and provides a project-file
+  selector, so every source, manifest and nested path Zoho returns can be opened directly.
   One folder per kind - `functions/`, `modules/` (with `modules/layouts/` inside it),
   `workflows/`, `schedules/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
 - **Auto-sync on save**: save a function in Zoho and the local file updates automatically.

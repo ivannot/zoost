@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:3168b9470ff78cfb -->
+<!-- translated-from: site/docs-crm.html sha256:15c3b0b6ba11b02f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -217,10 +217,11 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k"><code>export/</code></td><td>i report che generi</td></tr>
     </tbody>
   </table>
-  <p class="note">Il mirror conserva tutti i file dei progetti Java, Python e Node e la ricerca
-    full-text li include. Il grafo delle chiamate, i moduli letti o scritti e l'uso delle connessioni
-    restano invece un'analisi statica del Deluge: per gli altri linguaggi Zoost non ricava ancora
-    queste relazioni.</p>
+  <p class="note">Il mirror conserva tutti i file dei progetti Java, Python e Node. Apri la funzione
+    una volta, poi usa <b class="ui">Project files</b> sopra il sorgente per passare dal codice ai
+    manifest e ai percorsi annidati; anche la ricerca full-text li comprende tutti. Il grafo delle
+    chiamate, i moduli letti o scritti e l'uso delle connessioni restano invece un'analisi statica del
+    Deluge: per gli altri linguaggi Zoost non ricava ancora queste relazioni.</p>
   <p class="note">Una cartella per tipo, un <code>index.json</code> dentro ciascuna e le funzioni sotto
     <code>functions/</code> così un namespace Deluge non può mai scontrarsi con una cartella creata da
     Zoost. Prima di Zoost CRM 1.13 i namespace stavano nella radice del workspace e le altre cartelle

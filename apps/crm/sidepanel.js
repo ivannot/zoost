@@ -2500,6 +2500,28 @@ function setPvName(label, path) {
 // on config.json): the tree selection, the name and «Open in Zoho» all disappear together.
 const functionRowForPath = (path) => treeData.find((e) => e.path === path
   || (Array.isArray(e.mirrorFiles) && e.mirrorFiles.includes(path)));
+const projectFilesOf = (row) => (!row || isDeluge(row.language) ? []
+  : (row.mirrorFiles || []).filter((p) => !p.endsWith('.meta.json')));
+
+/** Show every file Zoho returned for this compiled function, without turning files into functions.
+ *  The selected value is the exact workspace path: choosing one follows the same preview path as a
+ *  full-text search result, so nested folders and empty companion files need no special case. */
+function showProjectFiles(row, path) {
+  const bar = $('pvfiles'), select = $('pvfileselect'), count = $('pvfilecount');
+  const files = projectFilesOf(row);
+  select.innerHTML = '';
+  files.forEach((file) => {
+    const option = document.createElement('option');
+    option.value = file;
+    option.textContent = file.includes('.files/') ? file.split('.files/').slice(1).join('.files/') : file.split('/').pop();
+    select.appendChild(option);
+  });
+  bar.dataset.available = files.length > 1 ? '1' : '';
+  count.textContent = files.length ? `${files.length} files` : '';
+  if (files.includes(path)) select.value = path;
+  select.onchange = files.length > 1 ? () => openFile(select.value, null, true) : null;
+  bar.style.display = (bar.dataset.available && pvKind === 'function' && pvTab === 'code') ? 'flex' : 'none';
+}
 
 // The list follows whatever the preview is showing. Marking the row was already here; what was
 // missing is everything a reader needs for that mark to *mean* anything - it was reported as the
@@ -2554,6 +2576,7 @@ async function openFile(path, line = null, byClick = false) {
   if (trow) navNames({ display: trow.display_name, api: trow.api_name });
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
   pvTabsFor('function');
+  showProjectFiles(trow, path);
   let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
   const lines = code.split('\n').length;
@@ -2637,6 +2660,8 @@ function setPvTab(which) {
   // module, where there is no code at all - visible in a picture published on the site. It is the
   // defect the comment above `PV_KINDS` describes, made once more by the same route.
   $('codecopy').style.display = (pvKind === 'function' && pvTab === 'code') ? '' : 'none';
+  const projectBar = $('pvfiles');
+  if (projectBar) projectBar.style.display = (projectBar.dataset.available && pvKind === 'function' && pvTab === 'code') ? 'flex' : 'none';
   const k = PV_KINDS[pvKind]; if (!k) return;
   Object.entries(k.panes).forEach(([tab, panes]) => panes.forEach(([id, shown]) => {
     const el = $(id); if (el) el.style.display = tab === pvTab ? shown : 'none';
@@ -2657,6 +2682,12 @@ function pvTabsFor(kind) {
   if (kind !== 'module' && callers && home && callers.previousElementSibling !== home) home.after(callers);
   $('pvtabs').hidden = !pvKind;
   if (!pvKind) $('codecopy').style.display = 'none';   // a workflow, a schedule, a connection: no code
+  if (kind !== 'function') {
+    $('pvfiles').dataset.available = '';
+    $('pvfiles').style.display = 'none';
+    $('pvfileselect').innerHTML = '';
+    $('pvfilecount').textContent = '';
+  }
   $('pvtabsr').innerHTML = '';        // the diagram control belongs to the item being left
   if (pvKind) { $('pvtab_code').textContent = PV_KINDS[pvKind].first; setPvTab('code'); }
   else { $('pvcallers').style.display = ''; }

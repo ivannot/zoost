@@ -17669,6 +17669,29 @@ test('a secondary project file still resolves to its one function row', () => {
   assert.equal(functionRowForPath('functions/standalone/other.files/config.json'), undefined);
 });
 
+test('the preview offers every file in a compiled function project', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const row = { language: 'nodejs_22', mirrorFiles: [
+    'functions/standalone/run.files/index.js',
+    'functions/standalone/run.files/lib/helper.js',
+    'functions/standalone/run.files/config.json',
+    'functions/standalone/run.meta.json',
+  ] };
+  const { projectFilesOf } = load([sliceConst(rel, 'isDeluge'), sliceConst(rel, 'projectFilesOf')],
+    { String, RegExp, Array, console });
+  assert.equal(JSON.stringify(projectFilesOf(row)), JSON.stringify(row.mirrorFiles.slice(0, 3)),
+    'the file switcher shows only the primary source, or mistakes the sidecar for project code');
+  assert.equal(projectFilesOf({ language: 'deluge', mirrorFiles: ['functions/a.dg'] }).length, 0,
+    'a one-file Deluge function was dressed up as a project');
+
+  const src = read(rel), html = read('apps/crm/sidepanel.html');
+  assert.match(src, /showProjectFiles\(trow, path\)/, 'opening a function never fills the project-file selector');
+  assert.match(sliceFn(rel, 'showProjectFiles'), /openFile\(select\.value, null, true\)/,
+    'choosing a project file does not open that exact nested path');
+  for (const id of ['pvfiles', 'pvfileselect', 'pvfilecount'])
+    assert.match(html, new RegExp(`id="${id}"`), `${id} is wired in the panel but absent from its page`);
+});
+
 // ---------------------------------------------------------------------------------------------
 // A function whose source this mirror does not hold is its own state everywhere it is counted.
 //

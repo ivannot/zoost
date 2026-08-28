@@ -201,9 +201,11 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
     </tbody>
   </table>
-  <p class="note">The mirror preserves every file in Java, Python and Node projects. Full-text search
-    includes them. The call graph, module reads and writes, and connection usage remain a Deluge static
-    analysis; Zoost does not infer those relationships from the other languages yet.</p>
+  <p class="note">The mirror preserves every file in Java, Python and Node projects. Open the function
+    once, then use <b class="ui">Project files</b> above the source to move between its code, manifests
+    and nested paths; full-text search includes them all. The call graph, module reads and writes, and
+    connection usage remain a Deluge static analysis; Zoost does not infer those relationships from
+    the other languages yet.</p>
   <p class="note">One folder per kind, one <code>index.json</code> inside each, and functions under
     <code>functions/</code> so a Deluge namespace can never collide with a folder Zoost creates. Before
     Zoost CRM 1.13 the namespaces sat in the workspace root and the other folders carried a leading
