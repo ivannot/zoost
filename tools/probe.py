@@ -527,15 +527,39 @@ CRM = """
       else {
         await openFile(project.path); await settle();
         const files = project.mirrorFiles.filter((p) => !p.endsWith('.meta.json'));
-        const select = $('pvfileselect');
-        if (!select || select.options.length !== files.length)
-          say(`the project selector shows ${select ? select.options.length : 0} of ${files.length} files`);
+        // The files are a tab now, not a bar above the code: it has to be *offered* and it has to
+        // open. A pane nothing can reach is the dead-control shape this panel has had twice.
+        const tab = $('pvtab_files');
+        if (!tab || tab.style.display === 'none') say('a project function offers no Files tab');
+        tab.click(); await settle();
+        const rows = () => [...$('pvfiles').querySelectorAll('.pfrow')];
+        const fileRows = () => rows().filter((e) => !e.classList.contains('pfdir'));
+        if (!rows().length) say('the Files tab is empty on a function that has a project');
         const other = files.find((p) => p !== project.path);
-        if (select && other) {
-          select.value = other; select.dispatchEvent(new Event('change')); await settle();
-          if (currentPath !== other) say('choosing a companion project file did not open that file');
-          if (!functionRowForPath(currentPath) || functionRowForPath(currentPath).id !== project.id)
-            say('a companion project file lost the function row that owns it');
+        if (other) {
+          // Every folder open, so the file is reachable: what is asserted is that choosing it opens
+          // that exact nested path and keeps the function row that owns it.
+          const target = fileRows().find((e) => other.endsWith(e.textContent.trim()));
+          if (!target) say('a companion project file has no row in the Files tree');
+          else {
+            target.click(); await settle();
+            if (currentPath !== other) say('choosing a companion project file did not open that file');
+            if (!functionRowForPath(currentPath) || functionRowForPath(currentPath).id !== project.id)
+              say('a companion project file lost the function row that owns it');
+            if ($('pvbody').style.display === 'none') say('choosing a file left the reader on the tree');
+          }
+        }
+        // A folder closes and takes its children with it, and opens again. A tree that only draws is
+        // a list with markers on it.
+        tab.click(); await settle();
+        const dir = rows().find((e) => e.classList.contains('pfdir'));
+        if (dir) {
+          const before = fileRows().length;
+          dir.click(); await settle();
+          if (fileRows().length >= before) say('closing a project folder hid none of its files');
+          const dir2 = rows().find((e) => e.classList.contains('pfdir'));
+          if (dir2) { dir2.click(); await settle(); }
+          if (fileRows().length !== before) say('re-opening a project folder did not bring its files back');
         }
       }
     }
@@ -594,16 +618,40 @@ CRM = """
 
     // Clicking a row you can already see must not move the list. Reported: the row jumped to the
     // top under the finger that had just touched it.
+    //
+    // **With the detail pane already open**, and that is the whole check rather than a detail of it.
+    // Run with the pane closed, the click opens it, the list goes from 372px to 68px, and the reveal
+    // then brings the selected row into a box that is a fifth of the size - which moved `scrollTop`
+    // by 13 and was reported here as the defect. It is not one: it is this panel's oldest recorded
+    // sequence, «list drawn -> reveal -> pane opens -> box 401..469», and a check that cannot tell
+    // it from a jump is a check that fires on correct behaviour. The pane is opened first so the
+    // only thing left that can move the list is the click.
     {
+      const anyRow = rows()[0];
+      if (anyRow) { anyRow.click(); await settle(); }
       const vis = rows().filter((e) => {
         const r = e.getBoundingClientRect(), b = $('tree').getBoundingClientRect();
         return r.top >= b.top && r.bottom <= b.bottom;
       });
       if (vis.length > 1) {
         const before = $('tree').scrollTop;
-        vis[vis.length - 1].click(); await settle();
+        const target = vis[vis.length - 1];
+        const grp = [...$('tree').querySelectorAll('.grp')]
+          .map((g) => g.getBoundingClientRect()).find((r) => r.height);
+        const tr = target.getBoundingClientRect();
+        const seq = 'row ' + Math.round(tr.top) + '..' + Math.round(tr.bottom)
+          + ', sticky header ' + (grp ? Math.round(grp.top) + '..' + Math.round(grp.bottom) : 'none')
+          + ', box ' + Math.round($('tree').getBoundingClientRect().top) + '..'
+          + Math.round($('tree').getBoundingClientRect().bottom);
+        const hBefore = $('tree').scrollHeight, rhBefore = Math.round(tr.height);
+        target.click(); await settle();
+        const after2 = target.getBoundingClientRect();
         if ($('tree').scrollTop !== before)
-          say(`clicking a visible row moved the list from ${before} to ${$('tree').scrollTop}`);
+          say(`clicking a visible row moved the list from ${before} to ${$('tree').scrollTop} - ${seq}`
+              + `; list height ${hBefore} -> ${$('tree').scrollHeight}`
+              + `; row height ${rhBefore} -> ${Math.round(after2.height)}`
+              + `; row now ${Math.round(after2.top)}..${Math.round(after2.bottom)}`
+              + `; box now ${Math.round($('tree').getBoundingClientRect().top)}..${Math.round($('tree').getBoundingClientRect().bottom)}`);
       }
     }
 

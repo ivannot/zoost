@@ -586,14 +586,20 @@
   /* The height of the buttons it stands with, measured against them: 28px beside their 22 read
      as a control that had wandered in from another row. */
   #codecopy{margin-left:auto;height:22px;padding:0 8px;display:inline-flex;align-items:center}
-  /* One function row, several source files. The project stays one function in the census and gets
-     its own file switcher here, immediately above the file it changes. Long nested paths belong in
-     the native select, where they can be read without taking width away from the code. */
-  #pvfiles{display:none;align-items:center;gap:7px;padding:5px 10px;border-bottom:1px solid var(--border);
-    background:#0f1522;font:10.5px var(--sans);color:var(--muted)}
-  #pvfiles select{flex:1;min-width:0;background:var(--tree);color:var(--ink);border:1px solid var(--line);
-    border-radius:6px;padding:3px 6px;font:10.5px var(--mono)}
-  #pvfilecount{flex:none;font-variant-numeric:tabular-nums}
+  /* One function row, several source files. The project stays one function in the census and gets a
+     tab of its own here - a tree that opens and closes, because a project carries folders and a flat
+     list of nested paths is not something anybody reads. It is a pane like Code and Details, so it
+     scrolls inside the preview instead of taking height from the list above it. */
+  #pvfiles{display:none;flex:1;min-height:0;overflow:auto;padding:6px 4px;font:11.5px/1.7 var(--mono)}
+  #pvfiles .pfrow{display:flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;
+    color:var(--ink);cursor:pointer;white-space:nowrap}
+  #pvfiles .pfrow:hover{background:var(--tree)}
+  #pvfiles .pfrow.on{background:var(--sel-soft)}
+  #pvfiles .pfdir{color:var(--muted)}
+  /* The marker column is always there, empty on a file: without it every file sits one character
+     left of its own folder's children and the indentation stops meaning depth. */
+  #pvfiles .pfmk{flex:none;width:9px;color:var(--muted)}
+  #pvfiles .pfempty{color:var(--muted);padding:6px 10px}
   #pvbody{flex:1;display:flex;overflow:auto;min-height:0}
   /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
      Settings, Help and About were unreachable - and Settings is where somebody who has just
@@ -758,6 +764,12 @@
              `zoho.crm.getRelatedRecords()` needs) so they get a tab of their own, which is also what
              the Analytics panel already does with Columns | SQL | Relations. Hidden for a function, which has
              none: a strip that shows a tab leading nowhere is worse than three of them. -->
+        <!-- A compiled function is several files, and they were a dropdown above the code: fine for
+             three, unusable for a project with a `node_modules` in it - «se ci sono tanti file il
+             menu a tendina diventa inutilizzabile». It is a tab like the others now, holding a tree
+             that opens and closes, and choosing a file shows it under Code. Absent for a Deluge
+             function, which is one file: a tab leading to an empty pane is worse than no tab. -->
+        <button class="dtab" id="pvtab_files" data-pv="files">Files</button>
         <button class="dtab" id="pvtab_rel" data-pv="rel">Related lists</button>
         <button class="dtab" id="pvtab_info" data-pv="info">Details</button>
         <button id="codecopy" class="lbtn icon" style="display:none" title="Copy this code to the clipboard" aria-label="Copy code"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg></button>
@@ -767,7 +779,7 @@
            the Details pane, under the names - see pvTabsFor(). The anchor is what takes it back. -->
       <span id="pvcallershome" hidden></span>
       <div id="pvcallers"></div>
-      <div id="pvfiles"><span>Project structure</span><select id="pvfileselect" aria-label="Project file or directory"></select><span id="pvfilecount"></span></div>
+      <div id="pvfiles" role="tree" aria-label="Project files"></div>
       <div id="pvbody"><pre id="pvgutter"></pre><pre id="pvcode"></pre></div>
       <div id="pvtable"></div>
     </div>

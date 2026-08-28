@@ -460,10 +460,12 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
 // «You struggle to see the whole detail, there is no room.» They have a tab now, and the strip is
 // derived from the kind's panes rather than from a pair of ids, so the fourth costs nothing.
 
-test('crm: a module has three detail tabs and a function has two', () => {
+test('crm: a module has three detail tabs, and a function has two or three', () => {
   const kinds = load([sliceConst('apps/crm/sidepanel.js', 'PV_KINDS')]).PV_KINDS;
   assert.deepEqual(Object.keys(kinds.module.panes), ['code', 'rel', 'info']);
-  assert.deepEqual(Object.keys(kinds.function.panes), ['code', 'info']);
+  // `files` is declared by the kind and offered by the *item*: a Deluge function is one file and
+  // gets two tabs, a compiled project gets three. The condition is asserted in the case below.
+  assert.deepEqual(Object.keys(kinds.function.panes), ['code', 'files', 'info']);
   // Each pane names elements that exist in the markup, or a tab leads nowhere.
   const html = read('apps/crm/sidepanel.html');
   const rendered = read('apps/crm/modules.js');
@@ -478,10 +480,36 @@ test('crm: a module has three detail tabs and a function has two', () => {
 test('crm: a tab the kind does not declare is absent, not disabled', () => {
   // The panel's rule everywhere else, and «Related lists» on a function would open an empty pane.
   const fn = sliceFn('apps/crm/sidepanel.js', 'setPvTab');
-  assert.match(fn, /b\.style\.display = \(kinds && kinds\.panes\[tab\]\) \? '' : 'none'/,
+  assert.match(fn, /b\.style\.display = has\(tab\) \? '' : 'none'/,
     'a kind without the tab still shows its button');
-  assert.match(fn, /pvTab = \(kinds && kinds\.panes\[which\]\) \? which : 'code'/,
+  assert.match(fn, /pvTab = has\(which\) \? which : 'code'/,
     'asking for a tab this kind does not have must land on the first, not on nothing');
+  // One predicate for both, or the strip and the fallback answer differently about the same tab -
+  // which is a button that is there and a pane that is not, or the other way round.
+  assert.match(fn, /const has = \(tab\) =>[\s\S]*?pvfiles'\)\.dataset\.available/,
+    'why=Files is offered by the kind rather than by the item, so a Deluge function gets an empty tab');
+});
+
+test('crm: the Files tab is there for a project and gone for a single-file function', () => {
+  // Driven, because «offered» is a property of the strip after an open and not of a line: the flag
+  // is written by the tree and read by the strip, and the two were in the wrong order once.
+  const rel = 'apps/crm/sidepanel.js';
+  const made = {};
+  const el = (id) => (made[id] ||= { id, style: {}, dataset: {}, classList: { toggle() {} },
+                                     innerHTML: '', textContent: '' });
+  const g = { console, Object, String, $: el, pvKind: 'function', pvTab: 'code' };
+  const m = load([sliceConst(rel, 'PV_KINDS'), sliceConst(rel, 'PV_TABS'), sliceFn(rel, 'setPvTab')], g);
+  el('pvfiles').dataset.available = '';
+  m.setPvTab('code');
+  assert.equal(el('pvtab_files').style.display, 'none', 'a Deluge function offers a Files tab');
+  el('pvfiles').dataset.available = '1';
+  m.setPvTab('files');
+  assert.equal(el('pvtab_files').style.display, '', 'a project offers no Files tab');
+  // And asking for a tab that is not there lands on Code rather than on an empty pane.
+  el('pvfiles').dataset.available = '';
+  m.setPvTab('files');
+  assert.equal(el('pvtab_code').classList && el('pvbody').style.display, 'flex',
+    'why=the reader was left on a pane the item does not have');
 });
 
 test('crm: an element that outlives a render is not inside what the render replaces', () => {
@@ -5937,6 +5965,60 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(key.get({ language: 'java17' }), key.get({ language: 'java' }));
     assert.equal(key.get({ language: 'nodejs_22' }), 'Node.js');
     assert.equal(key.get({ language: null }), 'Deluge');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Walking back into a compiled project. Reported: history behaves differently once you are inside
+// the files of a Java or Node function.
+//
+// A step records `currentPath`, and inside a project that is a file - `x.files/lib/helper.js` -
+// which is no row's `path`: a row's path is the project's entry point. `navOpen` looked the step up
+// by exact path, found nothing, and answered «that is no longer here» about a file the mirror was
+// holding and the reader had just been looking at.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const PRIMARY = 'functions/standalone/sync.files/index.js';
+  const NESTED = 'functions/standalone/sync.files/lib/helper.js';
+  const row = { id: '7', path: PRIMARY, metaPath: 'functions/standalone/sync.meta.json',
+                language: 'nodejs_22', downloaded: true, mirrored: true,
+                mirrorFiles: [PRIMARY, NESTED, 'functions/standalone/sync.meta.json'] };
+
+  const bench = () => {
+    const opened = [];
+    const g = { console, Object, String, Array, Date,
+                treeData: [row], viewMode: 'functions',
+                setMode: () => {}, selectRow: () => {}, setStatus: () => {},
+                fetchThenRedrawRow: () => {}, langLabel: () => 'Node.js',
+                MSG: { navGone: 'gone' }, tabReachable: () => true,
+                navKind: () => 'function',
+                rebuildWorkflows: async () => {}, rebuildSchedules: async () => {},
+                rebuildConnections: async () => {}, rebuildActions: async () => {},
+                rebuildModules: async () => {}, openModule: () => {},
+                openFile: async (p) => { opened.push(p); } };
+    const m = load([sliceConst(REL, 'isDeluge'), sliceConst(REL, 'functionRowForPath'),
+                    sliceFn(REL, 'navOpen')], g);
+    return { m, opened, said: () => g.MSG };
+  };
+
+  test('a step back onto a file inside a project opens that file', async () => {
+    const b = bench();
+    await b.m.navOpen(NESTED);
+    assert.deepEqual(b.opened.slice(), [NESTED],
+      'the step was answered with «no longer here» about a file the mirror holds');
+  });
+
+  test('the entry point of a project still walks back to itself', async () => {
+    const b = bench();
+    await b.m.navOpen(PRIMARY);
+    assert.deepEqual(b.opened.slice(), [PRIMARY]);
+  });
+
+  test('a path belonging to no function is still gone', async () => {
+    // The widening must not turn «this file is not in the mirror» into an open of something else.
+    const b = bench();
+    await b.m.navOpen('functions/standalone/other.dg');
+    assert.deepEqual(b.opened.slice(), [], 'a step onto a path nothing owns opened a file');
   });
 }
 
@@ -17711,11 +17793,19 @@ test('the preview offers every file in a compiled function project', () => {
   assert.equal(projectDirectoriesOf(row).length, 2, 'empty project directories are invisible in the preview');
 
   const src = read(rel), html = read('apps/crm/sidepanel.html');
-  assert.match(src, /showProjectFiles\(trow, path\)/, 'opening a function never fills the project-file selector');
-  assert.match(sliceFn(rel, 'showProjectFiles'), /openFile\(select\.value, null, true\)/,
+  assert.match(src, /showProjectFiles\(trow, path\)/, 'opening a function never fills the project tree');
+  const fn = sliceFn(rel, 'showProjectFiles');
+  assert.match(fn, /openFile\(f\.path, null, true\)/,
     'choosing a project file does not open that exact nested path');
-  for (const id of ['pvfiles', 'pvfileselect', 'pvfilecount'])
+  // The tree is built before the strip is drawn, or the Files tab describes the item before this one.
+  const at = src.indexOf('showProjectFiles(trow, path);');
+  assert.ok(at > 0 && src.indexOf("pvTabsFor('function');", at) > at,
+    'why=the strip is drawn before the tab it has to offer knows whether it exists');
+  for (const id of ['pvfiles', 'pvtab_files'])
     assert.match(html, new RegExp(`id="${id}"`), `${id} is wired in the panel but absent from its page`);
+  // The dropdown it replaces: unusable the moment a project has a `node_modules` in it, and nothing
+  // must quietly bring it back.
+  assert.ok(!/pvfileselect|pvfilecount/.test(src + html), 'the project dropdown is back');
 });
 
 // ---------------------------------------------------------------------------------------------

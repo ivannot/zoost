@@ -82,8 +82,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 **Local, Git-friendly version control**
 - Pull every supported Zoho CRM function runtime. Deluge stays a `.dg` source; Java, Python and Node
   keep every project file under `<name>.files/`; each function has a `.meta.json` sidecar under
-  `functions/<namespace>/`. The preview keeps the function as one item and provides a project-file
-  selector, so every source, manifest and nested path Zoho returns can be opened directly. Explicit
+  `functions/<namespace>/`. The preview keeps the function as one item and gives it a **Files**
+  tab holding a tree that opens and closes, so every source, manifest and nested path Zoho returns
+  can be opened directly. Explicit
   directories and subdirectories are recorded too, including empty ones.
   One folder per kind - `functions/`, `modules/` (with `modules/layouts/` inside it),
   `workflows/`, `schedules/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
@@ -322,7 +323,7 @@ offer zero-retention.
   so. Both reports state the per-area dates whether or not anything is behind.
 - **Pull · Wiring · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**
-  dropdown - name (grouped by namespace) or lines / API calls / size / last modified, which sorts
+  dropdown - name (grouped by namespace) or lines / API calls / language / last modified, which sorts
   flat - plus a **↑/↓** button for the direction.
 
 **Context bar** shows the active Zoho tab (`instance · org · prod|sandbox`) and whether it matches

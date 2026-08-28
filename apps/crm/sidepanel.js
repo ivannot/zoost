@@ -2537,35 +2537,70 @@ const projectFilesOf = (row) => (!row || isDeluge(row.language) ? []
 const projectDirectoriesOf = (row) => (!row || isDeluge(row.language) ? []
   : (row.mirrorDirectories || []));
 
-/** Show every file Zoho returned for this compiled function, without turning files into functions.
- *  The selected value is the exact workspace path: choosing one follows the same preview path as a
- *  full-text search result, so nested folders and empty companion files need no special case. */
+// Which folders the reader has closed, and for which function. A project is opened, walked and left;
+// carrying one project's closed folders into the next would close folders that are not the same
+// folders. Keyed by the project root, so going back to a function finds it as it was left.
+let projCollapsed = new Set(), projRootOpen = '';
+/** The project as a tree: folders that open and close, files that open in the Code pane.
+ *
+ *  It was a `<select>` above the code, which is fine for three files and unusable for a project with
+ *  a `node_modules` in it - reported that way. A tree is what a folder of files is, so this draws
+ *  one: every node is a row, a folder toggles, a file opens. Directories Zoho returned empty are
+ *  drawn too, because «this folder is here and has nothing in it» is a fact about the project and
+ *  the reader would otherwise wonder where it went.
+ */
 function showProjectFiles(row, path) {
-  const bar = $('pvfiles'), select = $('pvfileselect'), count = $('pvfilecount');
-  const files = projectFilesOf(row);
-  const directories = projectDirectoriesOf(row);
-  select.innerHTML = '';
+  const box = $('pvfiles');
+  const files = projectFilesOf(row), directories = projectDirectoriesOf(row);
   const root = ((row && row.metaPath) || '').replace(/\.meta\.json$/, '.files/');
-  const entries = directories.map((value) => ({ value, directory: true }))
-    .concat(files.map((value) => ({ value, directory: false })))
-    .sort((a, b) => a.value.localeCompare(b.value));
-  entries.forEach(({ value, directory }) => {
-    const option = document.createElement('option');
-    option.value = value;
-    const relative = root && value.startsWith(root) ? value.slice(root.length) : value.split('/').pop();
-    option.textContent = directory ? `▸ ${relative}/` : relative;
-    option.disabled = directory;
-    select.appendChild(option);
+  box.dataset.available = (files.length > 1 || directories.length) ? '1' : '';
+  box.innerHTML = '';
+  if (!box.dataset.available) { projRootOpen = ''; return; }
+  if (projRootOpen !== root) { projRootOpen = root; projCollapsed = new Set(); }
+  const rel = (p) => (root && p.startsWith(root) ? p.slice(root.length) : p.split('/').pop());
+  // One node per path segment, folders before files at each level and each side by name - the order
+  // a file manager uses, and the only one in which a reader can find anything.
+  const tree = { dirs: new Map(), files: [] };
+  const dirAt = (parts) => parts.reduce((node, part) => {
+    if (!node.dirs.has(part)) node.dirs.set(part, { dirs: new Map(), files: [] });
+    return node.dirs.get(part);
+  }, tree);
+  directories.forEach((d) => { const parts = rel(d).split('/').filter(Boolean); if (parts.length) dirAt(parts); });
+  files.forEach((f) => {
+    const parts = rel(f).split('/').filter(Boolean);
+    const name = parts.pop();
+    dirAt(parts).files.push({ name, path: f });
   });
-  bar.dataset.available = (files.length > 1 || directories.length) ? '1' : '';
-  const fileWord = files.length === 1 ? 'file' : 'files';
-  const folderWord = directories.length === 1 ? 'folder' : 'folders';
-  count.textContent = files.length ? `${files.length} ${fileWord} · ${directories.length} ${folderWord}` : '';
-  if (files.includes(path)) select.value = path;
-  select.onchange = files.length > 1 ? () => openFile(select.value, null, true) : null;
-  bar.style.display = (bar.dataset.available && pvKind === 'function' && pvTab === 'code') ? 'flex' : 'none';
+  const draw = (node, prefix, depth) => {
+    [...node.dirs.keys()].sort().forEach((name) => {
+      const here = prefix + name + '/';
+      const closed = projCollapsed.has(here);
+      const el = document.createElement('div');
+      el.className = 'pfrow pfdir'; el.style.paddingLeft = (8 + depth * 12) + 'px';
+      el.setAttribute('role', 'treeitem'); el.setAttribute('aria-expanded', String(!closed));
+      el.innerHTML = `<span class="pfmk">${closed ? '▸' : '▾'}</span><span>${escHtml(name)}/</span>`;
+      el.onclick = () => {
+        closed ? projCollapsed.delete(here) : projCollapsed.add(here);
+        showProjectFiles(row, currentPath);
+      };
+      box.appendChild(el);
+      if (!closed) draw(node.dirs.get(name), here, depth + 1);
+    });
+    node.files.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach((f) => {
+      const el = document.createElement('div');
+      el.className = 'pfrow' + (f.path === path ? ' on' : '');
+      el.style.paddingLeft = (8 + depth * 12) + 'px';
+      el.setAttribute('role', 'treeitem'); el.title = rel(f.path);
+      el.innerHTML = `<span class="pfmk"></span><span>${escHtml(f.name)}</span>`;
+      // Opening a file lands on the pane that shows it: `openFile` draws the strip, and the strip
+      // starts on Code. Leaving the reader on the tree would be a control that answers somewhere
+      // they are not looking.
+      el.onclick = () => { void openFile(f.path, null, true); };
+      box.appendChild(el);
+    });
+  };
+  draw(tree, '', 0);
 }
-
 // The list follows whatever the preview is showing. Marking the row was already here; what was
 // missing is everything a reader needs for that mark to *mean* anything - it was reported as the
 // selection staying uncoordinated after jumping from one function to another through a call in the
@@ -2618,8 +2653,11 @@ async function openFile(path, line = null, byClick = false) {
   }
   if (trow) navNames({ display: trow.display_name, api: trow.api_name });
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
-  pvTabsFor('function');
+  // The tree is built *before* the strip is drawn: whether the Files tab exists is read from what
+  // this item has, and `pvTabsFor` is what asks. The other way round the strip described the item
+  // before this one - which is the stale-projection defect this panel keeps meeting.
   showProjectFiles(trow, path);
+  pvTabsFor('function');
   let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
   const lines = code.split('\n').length;
@@ -2674,7 +2712,9 @@ async function openFile(path, line = null, byClick = false) {
  *  showing a function's tabs. */
 let pvTab = 'code', pvKind = null;
 const PV_KINDS = {
-  function: { first: 'Code', panes: { code: [['pvbody', 'flex']], info: [['pvcallers', '']] } },
+  // `files` is declared here and *offered* only when the item has a project - see `setPvTab`. A
+  // Deluge function is one file, and a tab leading to an empty pane is a control that lies.
+  function: { first: 'Code', panes: { code: [['pvbody', 'flex']], files: [['pvfiles', 'block']], info: [['pvcallers', '']] } },
   // `pvcallers` is on both kinds now: on a function it is what calls it, on a module it is what
   // reads and writes it. Same pane, same question - what relates to the thing on screen.
   //
@@ -2685,17 +2725,21 @@ const PV_KINDS = {
   module: { first: 'Fields', panes: { code: [['pvfields', '']], rel: [['pvrels', '']],
                                       info: [['pvdetails', ''], ['pvcallers', '']] } },
 };
-const PV_TABS = { code: 'pvtab_code', rel: 'pvtab_rel', info: 'pvtab_info' };
+const PV_TABS = { code: 'pvtab_code', files: 'pvtab_files', rel: 'pvtab_rel', info: 'pvtab_info' };
 function setPvTab(which) {
   // Derived from the kind's own panes rather than from a pair of ids: the strip was two buttons and a
   // boolean, so a third tab meant a third `if` in four places. What a kind has is what it declares.
   const kinds = PV_KINDS[pvKind];
-  pvTab = (kinds && kinds.panes[which]) ? which : 'code';
+  // Files is the one tab whose existence depends on the *item* and not on its kind: a function is
+  // one file or a project, and only the second has anything to show. Asked in one place, so the
+  // strip and the fallback below cannot disagree about whether it is there.
+  const has = (tab) => !!(kinds && kinds.panes[tab] && (tab !== 'files' || $('pvfiles').dataset.available));
+  pvTab = has(which) ? which : 'code';
   Object.entries(PV_TABS).forEach(([tab, id]) => {
     const b = $(id); if (!b) return;
     // A tab a kind does not have is absent, not disabled: the panel's rule everywhere else, and a
     // «Related lists» on a function would lead to an empty pane.
-    b.style.display = (kinds && kinds.panes[tab]) ? '' : 'none';
+    b.style.display = has(tab) ? '' : 'none';
     b.classList.toggle('active', tab === pvTab);
   });
   // The copy control belongs to the pane that holds code, so it follows the strip like every other
@@ -2703,8 +2747,6 @@ function setPvTab(which) {
   // module, where there is no code at all - visible in a picture published on the site. It is the
   // defect the comment above `PV_KINDS` describes, made once more by the same route.
   $('codecopy').style.display = (pvKind === 'function' && pvTab === 'code') ? '' : 'none';
-  const projectBar = $('pvfiles');
-  if (projectBar) projectBar.style.display = (projectBar.dataset.available && pvKind === 'function' && pvTab === 'code') ? 'flex' : 'none';
   const k = PV_KINDS[pvKind]; if (!k) return;
   Object.entries(k.panes).forEach(([tab, panes]) => panes.forEach(([id, shown]) => {
     const el = $(id); if (el) el.style.display = tab === pvTab ? shown : 'none';
@@ -2725,11 +2767,10 @@ function pvTabsFor(kind) {
   if (kind !== 'module' && callers && home && callers.previousElementSibling !== home) home.after(callers);
   $('pvtabs').hidden = !pvKind;
   if (!pvKind) $('codecopy').style.display = 'none';   // a workflow, a schedule, a connection: no code
+  // The pane belongs to the item being left, like every other. Cleared here rather than by whoever
+  // opens the next one: this runs on every open and knows the kind, so nothing has to remember.
   if (kind !== 'function') {
-    $('pvfiles').dataset.available = '';
-    $('pvfiles').style.display = 'none';
-    $('pvfileselect').innerHTML = '';
-    $('pvfilecount').textContent = '';
+    $('pvfiles').dataset.available = ''; $('pvfiles').style.display = 'none'; $('pvfiles').innerHTML = '';
   }
   $('pvtabsr').innerHTML = '';        // the diagram control belongs to the item being left
   if (pvKind) { $('pvtab_code').textContent = PV_KINDS[pvKind].first; setPvTab('code'); }
@@ -3681,7 +3722,11 @@ async function navOpen(p) {
   // every other branch answers `gone()`. A step to a function whose source this mirror does not hold
   // says which of the two it is, in the same words the row does, instead of closing the pane.
   goMode('functions');
-  const fe = treeData.find((x) => x.path === p);
+  // **By the row that owns the path, not by the path itself.** A step onto a file inside a compiled
+  // project - `x.files/lib/helper.js` - is not any row's `path`, which is the project's entry point,
+  // so this answered «that is no longer here» about a file the mirror was holding and the reader had
+  // just been looking at. Reported as history behaving differently inside a Java or Node project.
+  const fe = functionRowForPath(p);
   if (fe && fe.mirrored === false) { selectRow(p); setStatus(MSG.notMirrored(langLabel(fe.language)), 'warn'); return; }
   if (fe && !fe.downloaded) { selectRow(p); return void fetchThenRedrawRow(fe); }
   if (!fe) return gone();
