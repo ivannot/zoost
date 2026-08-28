@@ -6211,7 +6211,11 @@ async function pullFailures() {
     // shape says the rest.
     if (!op.current()) return;
     await op.write('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null,
-      runs: r.runs || null, credits: r.credits || null, capped: !!r.capped, failures: r.failures || [] }, null, 2));
+      runs: r.runs || null, credits: r.credits || null, capped: !!r.capped,
+      // The month beside the day, and stored under its own key rather than replacing it: everything
+      // that reads this file today speaks in the last twenty-four hours, and a key that quietly
+      // changed window would move every number on screen without a word.
+      month: r.month || null, failures: r.failures || [] }, null, 2));
     await noteAccess('failures', null, op);
     // No view of its own: a failure is a property of a function, not a kind of object, so it shows
     // where that dimension belongs - in the function's own detail, and in the health view, which is

@@ -1185,7 +1185,41 @@
       const row = (d.dashboard || [])[0] || {};
       if (row.count != null || row.used != null) credits = { limit: row.count ?? null, used: row.used ?? null };
     } catch (_) { credits = null; }
-    return { failures, capped, usage, runs, credits, at: iso(to) };
+    // **The same four readings over a month, beside the day.** Twenty-four hours answers «is
+    // something failing right now»; it is the wrong window for «what does this org actually run» -
+    // measured on a real org, one function shows 6,853 executions over a month and single digits
+    // over a day, and a reader looking for what matters would have been shown the noise. The day is
+    // kept because the health view already speaks in it and a number that changes meaning without
+    // saying so is worse than a missing one.
+    //
+    // The daily rows are kept as rows, not summed. They are a thirty-point series - «when did this
+    // org run, and when did it fail» - and the sum of it was the only thing this ever stored.
+    let month = null;
+    try {
+      const mTo = new Date(), mFrom = new Date(mTo.getTime() - 30 * 24 * 3600 * 1000);
+      const range = `&period=last_month&from=${encodeURIComponent(iso(mFrom))}&to=${encodeURIComponent(iso(mTo))}`;
+      const daily = {};
+      for (const status of ['success', 'failure']) {
+        const u = await api('/crm/v2/settings/functions/dashboard/top_usage?type=usage_pattern'
+          + `&component_type=functions&status=${status}${range}`);
+        daily[status] = list(u, 'top_usage', 'top_usage')
+          .map((x) => ({ day: x.value || '', count: finiteCount(x.count) }))
+          .filter((x) => x.day);
+      }
+      const r = await api(`/crm/v2/settings/functions/dashboard/top_usage?type=function_most_used${range}`);
+      const rows = list(r, 'top_usage', 'top_usage');
+      // Zoho echoes the window it actually counted, with the *org's* timezone rather than this
+      // browser's. What is stored is their answer: the dates we asked for are not necessarily the
+      // days they measured, and a report that printed ours would be describing the wrong fortnight.
+      const info = (r && r.info) || {};
+      month = { from: info.from || null, to: info.to || null, timezone: info.timezone || null,
+                // A top list, not a census. Carried as a count so whatever shows it can say so.
+                top: rows.length,
+                runs: rows.map((x) => ({ id: x.function_id ? String(x.function_id) : null,
+                                         name: x.value || '', count: finiteCount(x.count) })),
+                daily };
+    } catch (_) { month = null; }   // unknown, never an empty month: an empty one reads as «nothing ran»
+    return { failures, capped, usage, runs, credits, month, at: iso(to) };
   }
 
   // The MAIN world is the page's, so anything running in it can send this - the check is what the

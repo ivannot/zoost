@@ -21,6 +21,8 @@ apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
 apps/crm/export.js	REPORT_FILTER_JS
 apps/crm/export.js	String(a.id)
 apps/crm/export.js	String(a.name || '').toLowerCase()
+apps/crm/export.js	String(fails.month.from || '').slice(0, 10) || 'the last 30 days'
+apps/crm/export.js	String(fails.month.to || '').slice(0, 10) || 'now'
 apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
 apps/crm/export.js	String(source.code).replace(/```/g, '`\u200b``')
 apps/crm/export.js	String(source.name).replace(/`/g, '\\`')
@@ -247,6 +249,7 @@ apps/crm/export.js	tim ? ` (${tim})` : ''
 apps/crm/export.js	title
 apps/crm/export.js	toc
 apps/crm/export.js	usesLinks
+apps/crm/export.js	w
 apps/crm/export.js	w.active ? '' : ' (inactive)'
 apps/crm/export.js	w.active ? '' : '<span class="badge no">inactive</span>'
 apps/crm/export.js	w.active ? '\u25cf' : ''

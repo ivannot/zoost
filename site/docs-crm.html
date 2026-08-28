@@ -588,7 +588,7 @@ git commit -m "baseline"</code></pre>
 
   <p><b>Size &amp; calls</b> used to hold only proxies: how long a function is, how many outbound
     calls it makes. Those cover every function and cost nothing to compute, but they are a guess at
-    what a function costs. Zoho knows the answer, and Zoost now asks: <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull runtime</b> at the top of the view re-reads only that - what is failing and how often things ran - instead of <b class="ui">Pull all</b>, which would fetch the whole org again to refresh one reading. <b>Most run, measured</b> lists
+    what a function costs. Zoho knows the answer, and Zoost now asks: <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull runtime</b> at the top of the view re-reads only that - what is failing and how often things ran - instead of <b class="ui">Pull all</b>, which would fetch the whole org again to refresh one reading. <b>Most run over a month, measured</b> lists the busiest functions over the last thirty days - the window that answers «what does this org actually run», where a day answers «is something failing now». Zoost stores the window Zoho says it counted, in the org's own timezone, rather than the dates it asked for. <b>Most run, measured</b> lists
     the busiest functions with how many times each actually ran in the last 24 hours, and how much
     the org spent against its ceiling over the same period. The static rows carry the measured number
     beside them, so a function that is long <em>and</em> runs two hundred times a day is visible as

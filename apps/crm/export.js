@@ -532,6 +532,20 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
               + `<td>${esc(r.count == null ? 'unknown' : String(r.count))}</td></tr>`).join('')
           + '</tbody></table>'
         : '')
+    // The month, beside the day and saying so. The panel shows both windows; a report that carried
+    // only the day would be the lesser copy of it - and the day is the window in which almost
+    // nothing has run yet, so it is the one that misleads on its own.
+    + (((fails.month && fails.month.runs) || []).length
+        ? `<p class="note">The busiest ${esc(String(fails.month.runs.length))} functions between `
+          + `${esc(String(fails.month.from || '').slice(0, 10) || 'the last 30 days')} and `
+          + `${esc(String(fails.month.to || '').slice(0, 10) || 'now')}`
+          + `${fails.month.timezone ? ' (' + esc(String(fails.month.timezone)) + ')' : ''}, as Zoho counted them - `
+          + 'a top list, not every function, and frequency is not cost.</p>'
+          + '<table><thead><tr><th>Function</th><th>Runs over the window</th></tr></thead><tbody>'
+          + fails.month.runs.map((r) => `<tr><td>${linkByName(r.name || String(r.id || '?'))}</td>`
+              + `<td>${esc(r.count == null ? 'unknown' : String(r.count))}</td></tr>`).join('')
+          + '</tbody></table>'
+        : '')
     + (failRows.length
         ? '<table><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
           + failRows.map((f) => `<tr><td>${linkByName(f.name)}</td><td>${esc(f.componentType || '')}</td><td>${esc(String(f.count))}</td>`
@@ -1021,6 +1035,14 @@ function buildExportMarkdown(d, scope) {
         + 'the expensive one.\n\n';
       md += '| function | runs in 24h |\n|---|---|\n';
       md += fails.runs.map((r) => `| ${_mdCell(r.name || r.id)} | ${r.count == null ? 'unknown' : r.count} |`).join('\n') + '\n\n';
+    }
+    if (((fails.month && fails.month.runs) || []).length) {
+      const w = `${String(fails.month.from || '').slice(0, 10) || 'the last 30 days'} to `
+        + `${String(fails.month.to || '').slice(0, 10) || 'now'}`;
+      md += `The busiest ${fails.month.runs.length} functions between ${w}, as Zoho counted them - a top `
+        + 'list, not every function, and frequency is not cost.\n\n';
+      md += '| function | runs over the window |\n|---|---|\n';
+      md += fails.month.runs.map((r) => `| ${_mdCell(r.name || r.id)} | ${r.count == null ? 'unknown' : r.count} |`).join('\n') + '\n\n';
     }
     if (failRows.length) {
       md += '| function | invoked by | times | last failure | reason |\n|---|---|---|---|---|\n';

@@ -6093,6 +6093,67 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The month beside the day. «Is something failing right now» is a question about the last 24 hours;
+// «what does this org actually run» is not, and until now only the first window was read. Measured
+// on a real org: the busiest function shows four figures over a month and single digits over a day,
+// so a reader looking for what matters was being shown the noise.
+{
+  const REL = 'apps/crm/health.js';
+  test('both windows are kept, and each says which one it is', () => {
+    // The day is not replaced. Everything that reads this file speaks in 24 hours, and a key that
+    // quietly changed window would move every number on screen without a word.
+    const src = read('apps/crm/sidepanel.js');
+    assert.match(src, /month: r\.month \|\| null/, 'why=the month is not stored');
+    assert.match(src, /runs: r\.runs \|\| null/, 'why=the day was replaced rather than joined');
+    const h = read(REL);
+    assert.match(h, /Most run, measured/, 'why=the 24h group is gone');
+    assert.match(h, /Most run over a month, measured/, 'why=the month has no group of its own');
+  });
+
+  test('the window shown is the one Zoho says it counted', () => {
+    // Their `info` echoes the org's timezone; the dates we send are computed from this browser's
+    // clock, which is not necessarily the same day. Printing ours would describe another fortnight.
+    const b = read('apps/crm/content-bridge.js');
+    const at = b.indexOf('let month = null;');
+    assert.ok(at > 0, 'why=the month reading is gone from the bridge');
+    const body = b.slice(at, at + 1800);
+    assert.match(body, /from: info\.from \|\| null/, 'why=the stored window is the one we asked for');
+    assert.match(body, /timezone: info\.timezone \|\| null/);
+    // A refusal is «nobody looked», never «nothing ran» - the rule every measured half here carries.
+    assert.match(body, /catch \(_\) \{ month = null; \}/,
+      'why=a month that could not be read comes back as an empty one, which reads as «nothing ran»');
+  });
+
+  test('a top list is not a census, and the sentence says so', () => {
+    const h = read(REL);
+    const at = h.indexOf('const monthDesc = mo');
+    assert.ok(at > 0);
+    const body = h.slice(at, at + 700);
+    assert.match(body, /a top list, not every function, and frequency is not cost/);
+    assert.match(body, /successful and .*failed execution/, 'why=the daily series is read and never shown');
+    assert.match(body, /MSG\.notReadYet/, 'why=«not read» and «nothing ran» are the same sentence');
+  });
+
+  test('what the panel shows about the month, both reports show', () => {
+    const ex = read('apps/crm/export.js');
+    assert.match(ex, /The busiest \$\{esc\(String\(fails\.month\.runs\.length\)\)\} functions between/,
+      'why=the HTML report drops the month');
+    assert.match(ex, /runs over the window/, 'why=the Markdown report drops the month');
+    // And the day's caveat is not silently reused for a different window.
+    assert.match(ex, /a top list, not every function, and frequency is not cost/);
+  });
+
+  test('the sum of a series with an unreadable day is not a number', () => {
+    // The «unknown, never zero» rule, applied to the series rather than to the total: one day whose
+    // count did not read makes the sum a guess, and a guess printed as a total is worse than none.
+    const h = read(REL);
+    const at = h.indexOf('const sum = (rows)');
+    assert.ok(at > 0, 'why=the series is summed somewhere else');
+    assert.match(h.slice(at, at + 220), /some\(\(x\) => x\.count == null\) \? null/);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same

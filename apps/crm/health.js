@@ -183,6 +183,34 @@ async function buildHealth(op = beginWorkspaceOp()) {
     const cnt = r.count == null ? 'an unknown number of' : escHtml(String(r.count));
     return { html: `${who} <span class="meta">${cnt} run(s) in 24h${st}</span>` };
   });
+  // The same reading over a month, which is the window that answers «what does this org run». A day
+  // is the right window for «is something failing now» and the wrong one for this: measured on a
+  // real org, the busiest function shows four figures over a month and single digits over a day.
+  // Both are kept and each says its own window, because a number whose meaning changes silently is
+  // worse than one that is missing.
+  const mo = fx.month || null;
+  const monthRun = ((mo && mo.runs) || []).map((r) => {
+    const n = fnById[String(r.id || '')] || fnByName[String(r.name || '').toLowerCase()];
+    const who = n ? fnLink(n) : `<b>${escHtml(r.name || '?')}</b>`;
+    const cnt = r.count == null ? 'an unknown number of' : escHtml(String(r.count));
+    return { html: `${who} <span class="meta">${cnt} run(s)</span>` };
+  });
+  // Zoho's own answer about which days it counted, and in whose timezone - not the dates this
+  // browser asked for, which are computed from a clock that may not be the org's.
+  const sum = (rows) => ((rows || []).some((x) => x.count == null) ? null
+    : (rows || []).reduce((n, x) => n + x.count, 0));
+  const monthWindow = mo && mo.from && mo.to
+    ? `${escHtml(String(mo.from).slice(0, 10))} to ${escHtml(String(mo.to).slice(0, 10))}`
+    + (mo.timezone ? ` (${escHtml(String(mo.timezone))})` : '') : 'the last 30 days';
+  const okRuns = mo && sum(mo.daily && mo.daily.success);
+  const badRuns = mo && sum(mo.daily && mo.daily.failure);
+  const monthDesc = mo
+    ? `The busiest ${(mo.runs || []).length} functions between ${monthWindow}, as Zoho counted them - `
+      + 'a top list, not every function, and frequency is not cost.'
+      + (okRuns == null && badRuns == null ? ''
+         : ` Over that window Zoho counted ${okRuns == null ? 'an unknown number of' : escHtml(String(okRuns))}`
+           + ` successful and ${badRuns == null ? 'an unknown number of' : escHtml(String(badRuns))} failed execution(s).`)
+    : MSG.notReadYet;
   const runsDesc = fx.runs
     ? `The busiest ${fx.runs.length} functions in the 24 hours before ${escHtml(fmtDate(fx.at))}, as Zoho counted them - not every function, and not a ranking of anything but frequency.`
       + (fx.credits && (fx.credits.used != null || fx.credits.limit != null)
@@ -230,6 +258,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
 
   const groups = [
     { id: 'mostrun', tab: 'size', title: 'Most run, measured', desc: runsDesc, bad: false, items: mostRun },
+    { id: 'monthrun', tab: 'size', title: 'Most run over a month, measured', desc: monthDesc, bad: false, items: monthRun },
     { id: 'failing', tab: 'functions', title: 'Failing in Zoho', desc: failDesc, bad: true, items: failing },
     { id: 'biggest', tab: 'size', title: MSG.hBiggest,
       desc: MSG.hBiggestDesc + ' ' + MSG.hRankedOver(withStats.length, nodes.length), bad: false, items: biggest },
