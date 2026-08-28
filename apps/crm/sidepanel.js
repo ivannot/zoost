@@ -1732,8 +1732,8 @@ function publishSentence(st) {
   if (!st) return '';
   if (!st.deployed) return 'Never published - Zoho is running nothing for this function yet';
   const when = new Date(st.deployed).toISOString().slice(0, 10);
-  return st.draft ? `Published ${when}, with an unpublished draft since`
-                  : `Published ${when}`;
+  return st.draft ? `Published on ${when}, with unpublished changes`
+                  : `Published on ${when}`;
 }
 // One function's runtime record, on request. Never in a pull and never on disk: it is per function,
 // so on a real org it would be three hundred requests, and what it answers is «what happened
@@ -1761,6 +1761,12 @@ function runtimeSpan() {
   const zone = (off < 0 ? '-' : '+') + p2(off / 60) + ':' + p2(off % 60);
   const a = runtimeFrom <= runtimeTo ? runtimeFrom : runtimeTo;
   const b = runtimeFrom <= runtimeTo ? runtimeTo : runtimeFrom;
+  // `min` and `max` constrain the picker, not text typed into the field. Hold the value to the same
+  // window here before it crosses into a request, or a manually entered old date is offered even
+  // though Zoho no longer keeps an answer for it.
+  const day = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  const today = day(new Date()), floor = day(new Date(Date.now() - RUNTIME_KEPT_DAYS * 86400000));
+  if (a < floor || b > today) return null;
   return { period: a === b ? 'specific_date' : 'custom',
            from: `${a}T00:00:00${zone}`, to: `${b}T23:59:59${zone}` };
 }
@@ -1770,19 +1776,30 @@ async function showFunctionRuntime(row, box) {
   // another is a question this panel refuses rather than answers about the wrong one.
   if (mismatchRefuse()) return;
   if (!zohoReady()) { box.innerHTML = `<div class="rtnote">${escHtml(MSG.wrongTab)}</div>`; return; }
-  const mine = previewLoad, op = beginWorkspaceOp();
+  const mine = previewLoad, op = beginWorkspaceOp(), viewedPath = currentPath;
   box.innerHTML = '<div class="rtnote">Asking Zoho…</div>';
   // «Dates…» is not a window on its own: it is whichever of their two ranged ones the pair of dates
   // turns out to be. Chosen here, so the bridge is handed a period it knows and a range it can check.
   const span = runtimeWindow === 'custom' ? runtimeSpan() : null;
   if (runtimeWindow === 'custom' && !span) {
-    box.innerHTML = '<div class="rtnote">Pick both dates first.</div>'; return;
+    box.innerHTML = '<div class="rtnote">Pick both dates within the last 30 days.</div>'; return;
   }
-  const r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language,
-                             period: span ? span.period : runtimeWindow,
-                             from: span ? span.from : null, to: span ? span.to : null });
+  let r;
+  try {
+    r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language,
+                         period: span ? span.period : runtimeWindow,
+                         from: span ? span.from : null, to: span ? span.to : null });
+  } catch (e) {
+    if (previewCurrent(mine, op) && currentPath === viewedPath) {
+      box.innerHTML = `<div class="rtnote">Could not ask Zoho: ${escHtml((e && e.message) || String(e))}</div>`;
+    }
+    return;
+  }
   // The reader may have moved on while Zoho answered, and this box belongs to what is on screen.
-  if (!previewCurrent(mine, op) || currentPath !== row.path) return;
+  // Compare with the exact file that owned the box when the request began. In a compiled project
+  // `row.path` is the entry point, while Details may have been opened from config.json or a nested
+  // source: comparing those two discarded a correct answer without drawing anything.
+  if (!previewCurrent(mine, op) || currentPath !== viewedPath) return;
   if (!r || !r.ok) { box.innerHTML = `<div class="rtnote">Zoho did not answer: ${escHtml((r && r.error) || 'unknown')}</div>`; return; }
   const when = (s) => escHtml(String(s || '').slice(0, 16));
   // Three states per half, and they are not the same: read and empty, read and refused, not read.
@@ -6305,7 +6322,7 @@ function updateMissingButton() {
 // workflows, schedules, connections - it is an *event about a function*, and giving it a sibling
 // tab put it a level too high. It shows in the two places that dimension belongs: on the function
 // itself, and in the health view, which already answers «what is wrong across this org».
-let failIndex = null;   // {at, usage, byName:Map} - built once per read, dropped when a pull replaces it
+let failIndex = null;   // {at, usage, runs, month, byName:Map} - built once per read, dropped on pull
 async function failuresIndex(op = beginWorkspaceOp()) {
   if (!op.current()) return null;
   if (failIndex) return failIndex;
@@ -6316,6 +6333,7 @@ async function failuresIndex(op = beginWorkspaceOp()) {
   }
   if (!op.current()) return null;
   failIndex = { at: (d && d.at) || null, usage: (d && d.usage) || null, runs: (d && d.runs) || null,
+                month: (d && d.month) || null,
                 credits: (d && d.credits) || null, capped: !!(d && d.capped), byName, all: (d && d.failures) || [] };
   return failIndex;
 }

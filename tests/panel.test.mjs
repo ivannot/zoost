@@ -6057,7 +6057,7 @@ for (const app of ['crm', 'analytics']) {
   test('published with a draft pending is its own state', () => {
     assert.equal(m.publishChip(m.publishState(LIVE)), 'Live');
     assert.equal(m.publishChip(m.publishState(LIVE_DRAFT)), 'Draft +');
-    assert.match(m.publishSentence(m.publishState(LIVE_DRAFT)), /unpublished draft/);
+    assert.match(m.publishSentence(m.publishState(LIVE_DRAFT)), /unpublished changes/);
     assert.doesNotMatch(m.publishSentence(m.publishState(LIVE)), /draft/);
   });
 
@@ -6073,7 +6073,7 @@ for (const app of ['crm', 'analytics']) {
   test('the date is read from the epoch and never from the words beside it', () => {
     // `formatted_deployed_on` arrives in the org's own language - «ago 28, 2026» from an Italian
     // org - and this product does not depend on somebody else's localised text.
-    assert.match(m.publishSentence(m.publishState(LIVE)), /^Published \d{4}-\d{2}-\d{2}$/);
+    assert.match(m.publishSentence(m.publishState(LIVE)), /^Published on \d{4}-\d{2}-\d{2}$/);
     assert.ok(!/formatted_deployed_on/.test(read('apps/crm/content-bridge.js')
       .replace(/\/\/[^\n]*/g, '')), 'why=the localised date is being read');
   });
@@ -6090,7 +6090,7 @@ for (const app of ['crm', 'analytics']) {
     const md = load([...EXPORT_PARTS], EXPORT_STUBS());
     assert.equal(md.publishTextOf({ deployed_on: '-1' }), 'Never published');
     assert.match(md.publishTextOf({ deployed_on: '1787922641896', is_draft_available: true }),
-                 /^Published \d{4}-\d{2}-\d{2}, unpublished draft since$/);
+                 /^Published on \d{4}-\d{2}-\d{2}, with unpublished changes$/);
     assert.equal(md.publishTextOf({}), '', 'a Deluge function is given a publish state it does not have');
   });
 }
@@ -6154,6 +6154,20 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(at > 0, 'why=the series is summed somewhere else');
     assert.match(h.slice(at, at + 220), /some\(\(x\) => x\.count == null\) \? null/);
   });
+
+  test('the monthly reading reaches the health view from disk', async () => {
+    const month = { from: '2026-07-29', to: '2026-08-28', runs: [{ id: '7', count: 42 }],
+                    daily: { success: [], failure: [] } };
+    const g = {
+      failIndex: null, Map, String, Array, JSON,
+      beginWorkspaceOp: () => ({ current: () => true,
+        read: async () => JSON.stringify({ at: '2026-08-28', month, failures: [] }) }),
+    };
+    const m = load([sliceFn('apps/crm/sidepanel.js', 'failuresIndex')], g);
+    const got = await m.failuresIndex(g.beginWorkspaceOp());
+    assert.equal(JSON.stringify(got.month), JSON.stringify(month),
+      'why=the pull stores the month but Workspace health always reports it as not read');
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -6197,8 +6211,40 @@ for (const app of ['crm', 'analytics']) {
     const fn = sliceFn(REL, 'showFunctionRuntime');
     const at = fn.indexOf("await toBridge({ cmd: 'functionRuntime'");
     assert.ok(at > 0);
-    assert.match(fn.slice(at, at + 420), /if \(!previewCurrent\(mine, op\) \|\| currentPath !== row\.path\) return;/,
+    assert.match(fn, /viewedPath = currentPath/,
+      'why=the request does not remember the exact project file whose detail owns its answer');
+    assert.match(fn.slice(at, at + 1200), /if \(!previewCurrent\(mine, op\) \|\| currentPath !== viewedPath\) return;/,
       'why=an answer about one function is drawn into the detail of another');
+    assert.doesNotMatch(fn, /currentPath !== row\.path/,
+      'why=a correct answer is discarded when Details was opened from a secondary project file');
+  });
+
+  test('a refused live lookup is shown in its own box', () => {
+    const fn = sliceFn(REL, 'showFunctionRuntime');
+    assert.match(fn, /try \{\s*r = await toBridge\(\{ cmd: 'functionRuntime'/,
+      'why=a messaging failure becomes an unhandled rejected promise');
+    assert.match(fn, /Could not ask Zoho:/,
+      'why=the live lookup fails without telling the reader');
+  });
+
+  test('a runtime answer opened from a nested project file is drawn', async () => {
+    const nested = 'functions/standalone/sync.files/lib/helper.js';
+    const box = { innerHTML: '' };
+    const g = {
+      console, String, Array, Date, Number, Promise,
+      currentPath: nested, previewLoad: 4, runtimeWindow: 'past_24_hours',
+      RUNTIME_WINDOWS: [['past_24_hours', 'Last 24 hours']],
+      MSG: { wrongTab: 'wrong tab', notReadYet: 'not read' },
+      mismatchRefuse: () => false, zohoReady: () => true,
+      beginWorkspaceOp: () => ({}), previewCurrent: () => true, runtimeSpan: () => null,
+      escHtml: (s) => String(s),
+      toBridge: async () => ({ ok: true, window: 'past_24_hours', logs: [], revisions: [] }),
+    };
+    const m = load([sliceFn(REL, 'showFunctionRuntime')], g);
+    await m.showFunctionRuntime({ id: '7', language: 'nodejs_22',
+      path: 'functions/standalone/sync.files/index.js' }, box);
+    assert.match(box.innerHTML, /Executions/,
+      'why=the response was discarded because the nested file is not the project entry point');
   });
 
   test('Zoho own words are shown, never parsed', () => {
@@ -6297,7 +6343,7 @@ for (const app of ['crm', 'analytics']) {
   const REL = 'apps/crm/sidepanel.js';
   const bench = (from, to, offsetMinutes = -120) => {
     const g = { String, Number, Math, Date: class extends Date { getTimezoneOffset() { return offsetMinutes; } },
-                console, runtimeFrom: from, runtimeTo: to };
+                console, runtimeFrom: from, runtimeTo: to, RUNTIME_KEPT_DAYS: 30 };
     return load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
   };
 
@@ -6327,7 +6373,12 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(bench('2026-08-13', ''), null);
     assert.equal(bench('', '2026-08-13'), null);
     // And the panel says so instead of asking Zoho for a window with one end.
-    assert.match(sliceFn(REL, 'showFunctionRuntime'), /Pick both dates first/);
+    assert.match(sliceFn(REL, 'showFunctionRuntime'), /Pick both dates within the last 30 days/);
+  });
+
+  test('a typed date outside Zoho retention is not sent', () => {
+    assert.equal(bench('2000-01-01', '2000-01-02'), null);
+    assert.equal(bench('2999-01-01', '2999-01-02'), null);
   });
 
   test('the offset is the reader own, and written out', () => {
@@ -6379,7 +6430,7 @@ for (const app of ['crm', 'analytics']) {
     // The second half: the attributes bind the picker, not the keyboard, and these fields can be
     // typed into. Asserted on values rather than on the wiring.
     const g = { String, Number, Math, Date: class extends Date { getTimezoneOffset() { return -120; } },
-                console, runtimeFrom: '2026-08-21', runtimeTo: '2026-08-05' };
+                console, runtimeFrom: '2026-08-21', runtimeTo: '2026-08-05', RUNTIME_KEPT_DAYS: 30 };
     const s = load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
     assert.equal(s.from.slice(0, 10), '2026-08-05');
     assert.equal(s.to.slice(0, 10), '2026-08-21');

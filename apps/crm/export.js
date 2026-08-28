@@ -72,7 +72,7 @@ function publishTextOf(f) {
   if (!st) return '';
   if (!st.deployed) return 'Never published';
   const when = new Date(st.deployed).toISOString().slice(0, 10);
-  return st.draft ? `Published ${when}, unpublished draft since` : `Published ${when}`;
+  return st.draft ? `Published on ${when}, with unpublished changes` : `Published on ${when}`;
 }
 const wfValOf = (g) => { const v = g.value; if (g.type === 'field' && v && v.api_name) return v.api_name; if (v === '${EMPTY}' || v === '${empty}') return 'empty'; return v == null ? '' : String(v); };
 const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
