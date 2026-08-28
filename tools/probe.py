@@ -1457,8 +1457,22 @@ PULL_CRM = r"""
       if (!path.startsWith(base + 'functions/') || !path.endsWith('.meta.json')) continue;
       const meta = JSON.parse(fs.read(path));
       const rel = path.slice((base + 'functions/').length);
-      src[String(meta.id)] = { folder: rel.split('/')[0], stem: rel.split('/').pop().replace(/\.meta\.json$/, ''),
-                               dg: fs.read(path.replace(/\.meta\.json$/, '.dg')), meta };
+      const stem = rel.split('/').pop().replace(/\.meta\.json$/, '');
+      const one = { folder: rel.split('/')[0], stem, meta };
+      // A compiled function is served the way the bridge serves it - the files of the project and
+      // which one is the entry point - and not as a `.dg` that is not there. The stub used to read
+      // one anyway: `fs.read` answered `undefined`, the writer refused a project with no files, and
+      // the pull ended «3 still missing» about the three the sample had just gained. A stub that is
+      // behind the product turns a working path into a defect report, which is the way round nobody
+      // catches quickly.
+      if (Array.isArray(meta.files) && meta.files.length) {
+        const root = path.replace(/\.meta\.json$/, '.files/');
+        one.files = meta.files.map((f) => ({ path: f, content: fs.read(root + f) }));
+        one.primary = meta.primary_file || meta.files[0];
+      } else {
+        one.dg = fs.read(path.replace(/\.meta\.json$/, '.dg'));
+      }
+      src[String(meta.id)] = one;
     }
     if (!Object.keys(src).length) say('the fixture has no functions to serve');
 
@@ -1492,16 +1506,28 @@ PULL_CRM = r"""
     const line = $('stxt').textContent;
     if (/still missing|failed|could not/i.test(line)) say('the pull ended on: ' + line);
     const after = fs.dump().filter((p) => p.startsWith(base + 'functions/'));
+    // One source per function, and a compiled one is a project rather than a `.dg` - counting only
+    // `.dg` would report «120 against 123» about a pull that wrote all three projects correctly.
+    // The count is per *function*, which is what the org lists: its sidecar plus at least one file.
     const dg = after.filter((p) => p.endsWith('.dg')).length;
-    if (dg !== fxIndex.length) say(dg + ' sources written against ' + fxIndex.length + ' in the org');
-    const metas = after.filter((p) => p.endsWith('.meta.json')).length;
-    if (metas !== dg) say(metas + ' sidecars against ' + dg + ' sources - a pair is half written');
+    const projects = new Set(after.filter((p) => /\.files\//.test(p)).map((p) => p.split('.files/')[0])).size;
+    if (dg + projects !== fxIndex.length) {
+      say(dg + ' source(s) and ' + projects + ' project(s) written against ' + fxIndex.length + ' in the org');
+    }
+    // A sidecar belongs to a `.dg` or to a project, and the pairing is what says a write finished
+    // half way. `.files/config.json` is a file *of* a project, never a sidecar, so it is not counted.
+    const metas = after.filter((p) => p.endsWith('.meta.json') && !/\.files\//.test(p)).length;
+    if (metas !== dg + projects) {
+      say(metas + ' sidecars against ' + (dg + projects) + ' function(s) - a pair is half written');
+    }
     // The summary index the panel reads on every open: written by the pull, and checked against the
     // folder walk on load. If it is missing or short, the next open re-derives it in silence and the
     // fast path this repository measured is gone without anything saying so.
     const summary = JSON.parse(fs.read(base + 'functions/meta-index.json') || '{}');
-    if (Object.keys(summary.files || {}).length !== dg)
-      say('the summary index names ' + Object.keys(summary.files || {}).length + ' of ' + dg + ' files');
+    if (Object.keys(summary.files || {}).length !== dg + projects) {
+      say('the summary index names ' + Object.keys(summary.files || {}).length
+          + ' of ' + (dg + projects) + ' function(s)');
+    }
     // And a source is the source, not an empty file with the right name.
     const one = after.find((p) => p.endsWith('.dg'));
     if (!(fs.read(one) || '').trim()) say(one + ' came out empty');

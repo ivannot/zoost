@@ -327,6 +327,67 @@ function deluge(ns, name, params, calls) {
                    rest: name === 'exportCsv' || name === 'openTicket' });
       say(i + 1, list.length, 'functions');
     });
+    // ---- the three languages that are not Deluge ----
+    // Zoho compiles Java, Python and Node functions, and a workspace that holds one is a different
+    // shape on disk: a `.files` folder of sources with a `config.json` beside them, and a sidecar
+    // that names every file rather than pointing at a single `.dg`. The sample had none, so nothing
+    // here - not a picture, not the probe, not a reader trying the product - ever met that shape,
+    // and the panel's own handling of it could only be checked against a real org. That is the gap
+    // this closes; the sources are deliberately short, because what is being shown is the shape.
+    //
+    // `updatedTime` is absent on purpose, and it is not laziness: measured on a real org, the list
+    // says nothing about when a compiled function last changed. A fixture that invented one would
+    // hide the branch where the panel has nothing to compare and must say so instead of guessing.
+    const PROJECTS = [
+      ['syncCatalogue', 'java17', 'Java 17', 'SyncCatalogue.java',
+       'public class SyncCatalogue {\n'
+       + '    // Sample function - invented, and never run against anything.\n'
+       + '    public static String execute(String orderId) {\n'
+       + '        int retries = 3;\n'
+       + '        String status = "queued";\n'
+       + '        return status + " " + orderId + " (" + retries + ")";\n'
+       + '    }\n}\n'],
+      ['tidyExport', 'python_3_12', 'Python 3.12', 'tidy_export.py',
+       '# Sample function - invented, and never run against anything.\n'
+       + 'def execute(rows):\n'
+       + '    kept = [r for r in rows if r.get("status") != "draft"]\n'
+       + '    return {"kept": len(kept), "note": "a # inside a string is not a comment"}\n'],
+      ['notifyShipment', 'nodejs_22', 'Node.js 22', 'notify_shipment.js',
+       '// Sample function - invented, and never run against anything.\n'
+       + 'module.exports = async function (context, basicIO) {\n'
+       + '  const order = basicIO.getParameter("orderId") || "none";\n'
+       + '  basicIO.write(`shipment ${order} notified`);\n'
+       + '};\n'],
+    ];
+    const projMeta = {};
+    PROJECTS.forEach(([name, language, runtime, file, source], k) => {
+      const api = snake(name), id = String(9500 + k), ns = 'standalone';
+      const root = 'functions/' + ns + '/' + api + '.files/';
+      out[root + file] = source;
+      // Zoho's own project descriptor, in the shape it writes it: the entry point and the name.
+      // It is mirrored like any other file of the project, and the panel reads it as JavaScript.
+      J(root + 'config.json', { router: [{ path: '/', action: api }], name: api, type: 0,
+                                connector: [], dependencies: [] });
+      J('functions/' + ns + '/' + api + '.meta.json', {
+        id: id, name: name, display_name: labelOf(name), api_name: api,
+        nameSpace: ns, category: 'standalone', source: 'crm', language: language, runtime: runtime,
+        return_type: null, params: [], description: '', updatedTime: null,
+        listUpdated: null, modified_by: AUTHOR, associated_place: null, workflow: '',
+        rest_api: [], connections: [],
+        files: ['config.json', file], primary_file: file, sv: 3,
+      });
+      index.push({ id: id, api_name: api, name: name, display_name: labelOf(name),
+                   namespace: ns, category: 'standalone', source: 'crm',
+                   language: language, runtime: runtime, updatedTime: null, rest: false });
+      // The summary is keyed by the *primary* file, which for a project is its entry point and not
+      // a `.dg` - the same key `saveMetaIndex()` writes, or the panel would rebuild it on every load.
+      projMeta[root + file] = { id: id, sv: 3, updatedTime: null, listUpdated: null,
+                                namespace: ns, display_name: labelOf(name), language: language,
+                                metaPath: 'functions/' + ns + '/' + api + '.meta.json',
+                                mirrorFiles: [root + 'config.json', root + file,
+                                              'functions/' + ns + '/' + api + '.meta.json'] };
+      say(list.length + k + 1, list.length + PROJECTS.length, 'functions');
+    });
     J('functions/index.json', index);
     // The summary a pull leaves behind, so the sample workspace has the shape of a real mirror and
     // not one file fewer. The panel checks it against the folder anyway - see rebuildTree() - but a
@@ -341,6 +402,7 @@ function deluge(ns, name, params, calls) {
         namespace: ns, display_name: labelOf(name),
       };
     });
+    Object.assign(metaIndex, projMeta);   // the projects belong to the same summary
     J('functions/meta-index.json', { v: 1, sv: 3, files: metaIndex });
 
     // Forty plausible values, composed rather than invented one at a time - the same rule the

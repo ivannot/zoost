@@ -62,6 +62,10 @@ function callGraph(files, meta) {
     const id = f.namespace + '.' + f.name;
     const m = read('functions/' + f.namespace + '/' + f.api_name + '.meta.json');
     const src = files['functions/' + f.namespace + '/' + f.api_name + '.dg'];
+    // The panel builds this from the `.dg` files on disk, so a Java, Python or Node function is not
+    // a node here either - the graph is a Deluge static analysis and says so. Reading the index
+    // instead of the folder is what made this throw the day the sample grew its first project.
+    if (src === undefined) continue;
     const re = new RegExp(String.raw`\b(${meta.namespaces.join('|')})\.([A-Za-z_]\w*)\s*\(`, 'g');
     // Resolved the way graph-core does it: a call that names nothing is unresolved, and that is a
     // measurement of the source rather than a field anybody wrote down.

@@ -51,6 +51,21 @@ def _load(path):
     return d
 
 
+def _project_files(crm) -> int:
+    """Files that belong to a compiled function project: its sources and its sidecar.
+
+    Counted from the folder rather than from the index, for the same reason the rest of this tool
+    counts: the index is a claim, and what the page describes is what «+ Sample» wrote.
+    """
+    n = 0
+    for d in (crm / "functions").rglob("*.files"):
+        if d.is_dir():
+            n += len([f for f in d.rglob("*") if f.is_file()])
+            if (d.parent / (d.name[:-6] + ".meta.json")).is_file():
+                n += 1
+    return n
+
+
 def measure() -> dict:
     """What the delivered sample holds, counted rather than remembered."""
     CRM, AN = delivered()
@@ -67,7 +82,13 @@ def measure() -> dict:
     return {
         "crm": {
             "total": files(CRM),
-            "functions": len(fns), "functions.files": files(CRM / "functions"),
+            # Deluge and the compiled projects are counted apart, because the page states them
+            # apart and one number covering both would let either drift unnoticed. A project is a
+            # `.files` folder, which is what the mirror writes for Java, Python and Node.
+            "functions": len([f for f in fns if (f.get("language") or "deluge") == "deluge"]),
+            "functions.files": files(CRM / "functions") - _project_files(CRM),
+            "projects": len([f for f in fns if (f.get("language") or "deluge") != "deluge"]),
+            "projects.files": _project_files(CRM),
             "modules": len(_load(CRM / "modules/index.json")), "modules.files": files(CRM / "modules"),
             "workflows": len(_load(CRM / "workflows/index.json")), "workflows.files": files(CRM / "workflows"),
             "schedules": len(_load(CRM / "schedules/index.json")), "schedules.files": files(CRM / "schedules"),
@@ -103,6 +124,7 @@ def measure() -> dict:
 CLAIMS = [
     (r'Zoost CRM\s*-\s*(\d+)\s*fil', "crm.total"),
     (r'(\d+)\s*(?:Deluge functions|funzioni Deluge)', "crm.functions"),
+    (r'(\d+)\s*(?:compiled function projects|progetti di funzioni compilate)', "crm.projects"),
     (r'(\d+)\s*(?:modules|moduli)\b', "crm.modules"),
     (r'(\d+)\s*(?:workflows|workflow)\b', "crm.workflows"),
     (r'(\d+)\s*(?:schedules|schedulazioni)\b', "crm.schedules"),
@@ -136,6 +158,7 @@ PAGES = ["site/try.html", "site/it/try.html"]
 # checklist wearing a script's clothes, and this check has no way to know what a new row claims.
 ROW_KEYS = [
     (r'deluge|funzioni deluge', "functions.files"),
+    (r'compiled function project|progetti di funzioni compilate', "projects.files"),
     (r'\bmodul', "modules.files"),
     (r'workflow', "workflows.files"),
     (r'schedul', "schedules.files"),
