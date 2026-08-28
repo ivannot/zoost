@@ -6346,6 +6346,47 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The two ends of a chosen range, and the two ways they are kept in order. Reported from the panel:
+// the fields looked like text boxes asking for `dd/mm/yyyy`, and nothing said that «to» cannot come
+// before «from».
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const src = read(REL);
+
+  test('the calendar opens on the field, not only on its icon', () => {
+    // A date input *is* a calendar; what it is not is obviously one, because it draws like a text
+    // box with a small icon at one end. Clicking anywhere in it opens the picker.
+    assert.match(src, /d\.onclick = \(\) => \{ try \{ d\.showPicker\(\); \} catch \(_\) \{ \} \};/,
+      'why=the field invites typing a date instead of picking one');
+  });
+
+  test('the control does not offer a range that runs backwards', () => {
+    // Not offering it is nothing for the reader to read; refusing afterwards is a sentence they
+    // have to. Both are here, and this is the first half.
+    assert.match(src, /d1\.max = earlier\(today, runtimeTo\);/, 'why=the end can be picked before the start');
+    assert.match(src, /d2\.min = later\(floor, runtimeFrom\);/, 'why=the start can be picked after the end');
+    // Both ends are also bounded by what Zoho keeps: measured, thirty days, and today at the top.
+    // A range outside it can only come back empty, and offering it is the panel inviting that.
+    assert.match(src, /d1\.min = floor;/); assert.match(src, /d2\.max = today;/);
+    assert.match(src, /^const RUNTIME_KEPT_DAYS = 30;$/m, 'why=the retention window is not written down');
+    // Applied when the box is built, or the limits only exist after the first change.
+    const at = src.indexOf('const limit = () =>');
+    assert.match(src.slice(at, at + 1600), /\n      limit\(\);/, 'why=the limits are wired and never applied');
+    assert.match(src.slice(at, at + 1600), /limit\(\); \};/, 'why=picking a date does not move the other end limit');
+  });
+
+  test('and a typed range is still put in order', () => {
+    // The second half: the attributes bind the picker, not the keyboard, and these fields can be
+    // typed into. Asserted on values rather than on the wiring.
+    const g = { String, Number, Math, Date: class extends Date { getTimezoneOffset() { return -120; } },
+                console, runtimeFrom: '2026-08-21', runtimeTo: '2026-08-05' };
+    const s = load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
+    assert.equal(s.from.slice(0, 10), '2026-08-05');
+    assert.equal(s.to.slice(0, 10), '2026-08-21');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // The SQL highlighter. Its whole design is a refusal: it colours what can be established by
 // reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
 // everything else alone. «Better one highlight less than one that is wrong», which is the same

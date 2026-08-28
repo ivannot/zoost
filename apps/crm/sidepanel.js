@@ -1744,6 +1744,10 @@ function publishSentence(st) {
 const RUNTIME_WINDOWS = [['past_24_hours', 'Last 24 hours'], ['today', 'Today'], ['yesterday', 'Yesterday'],
                          ['last_month', 'Last 30 days'], ['custom', 'Dates\u2026']];
 let runtimeWindow = 'past_24_hours', runtimeFrom = '', runtimeTo = '';
+// How far back Zoho keeps a function's executions. Measured on a real org rather than documented:
+// on 28 August the oldest day its own picker would accept was 29 July. It bounds the calendar, and
+// nothing else - a range outside it would be refused by Zoho, and the point is not to offer it.
+const RUNTIME_KEPT_DAYS = 30;
 /** The two ends of a chosen range, in the shape Zoho's own page sends: a local datetime with the
  *  offset written out, the first day from midnight and the last to the second before the next.
  *
@@ -3161,12 +3165,39 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
       // The two date fields, present only for the window that uses them: a control with nothing to
       // do is one the reader has to work out the irrelevance of.
       const d1 = document.createElement('input'), d2 = document.createElement('input');
+      // The two ends cannot cross, and the control is what says so: `max` on the first and `min` on
+      // the second means the calendar simply does not offer a day that would invert the range.
+      // Refusing afterwards is a sentence the reader has to read; not offering it is nothing to
+      // read. The ordering in `runtimeSpan()` stays as the second half of the same rule - these
+      // fields can still be typed into, and a typed range is not bound by either attribute.
+      // **And Zoho keeps thirty days.** Reported from the platform: on 28 August the oldest day it
+      // would accept was 29 July. So the calendar is bounded at both ends - no day before the floor
+      // and none after today - and a reader is not offered a range that can only come back empty
+      // with nothing saying why. It is the same thirty days the org-wide reading uses, arrived at
+      // from the other side: their `last_month` and their retention are the same window.
+      const day = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const today = day(new Date()), floor = day(new Date(Date.now() - RUNTIME_KEPT_DAYS * 86400000));
+      const later = (a, b) => (a && b ? (a > b ? a : b) : a || b);
+      const earlier = (a, b) => (a && b ? (a < b ? a : b) : a || b);
+      const limit = () => {
+        d1.min = floor; d1.max = earlier(today, runtimeTo);
+        d2.min = later(floor, runtimeFrom); d2.max = today;
+      };
       [d1, d2].forEach((d, i) => {
         d.type = 'date'; d.className = 'rtdate';
+        d.title = i ? 'To this day, included' : 'From this day, included';
         d.setAttribute('aria-label', i ? 'To date' : 'From date');
         d.value = i ? runtimeTo : runtimeFrom;
-        d.onchange = () => { if (i) runtimeTo = d.value; else runtimeFrom = d.value; };
+        // A date field is a calendar already; what it is not is *obviously* one, because it draws
+        // like a text box with a small icon at one end - «sarebbe meglio avere un calendar su cui
+        // scegliere». Clicking anywhere in it opens the picker, so the field behaves like the thing
+        // it is instead of inviting somebody to type `dd/mm/yyyy`. Guarded: `showPicker` throws
+        // without a user gesture, and this is one, but a browser that does not have it must not
+        // take the click down with it.
+        d.onclick = () => { try { d.showPicker(); } catch (_) { } };
+        d.onchange = () => { if (i) runtimeTo = d.value; else runtimeFrom = d.value; limit(); };
       });
+      limit();
       const showDates = () => { const on = win.value === 'custom'; d1.style.display = d2.style.display = on ? '' : 'none'; };
       win.onchange = () => { runtimeWindow = win.value; showDates(); if (out.innerHTML) void showFunctionRuntime(_row, out); };
       showDates();
