@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:064bbc45f5d14425 -->
+<!-- translated-from: site/nerd.html sha256:2830e7ebc92ff636 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -79,9 +79,9 @@
       <code>/crm/v8/Functions__s/bulk</code>, cioè il modo in cui la nuova pagina delle funzioni di
       Zoho le elenca. Le vengono chiesti due campi - l'id del record della funzione in quel modulo e
       il <code>dependent_id</code> che lo lega all'id che questo mirror ha già - perché la nuova
-      interfaccia indirizza una funzione con il primo e questo prodotto aveva solo il secondo. Quello che
-      si può dire è cosa manda Zoost - un elenco, con due nomi di campo sopra - e il metodo è loro. Una POST non è una scrittura per via del metodo, e quello che si
-      può affermare è cosa Zoost manda.</p>
+      interfaccia identifica una funzione con il primo e questo prodotto aveva solo il secondo. Il metodo lo
+      ha scelto Zoho, e il metodo da solo non fa di una POST una scrittura: quello che si può
+      affermare è cosa Zoost manda - un elenco, che chiede due nomi di campo.</p>
     <p>Due famiglie di token, non intercambiabili: gli endpoint <code>/crm/</code> vogliono
       <code>crmcsrfparam</code> con il cookie <code>CT_CSRF_TOKEN</code>, quelli <code>/deluge/</code>
       vogliono <code>drepn</code> con il cookie <code>drecn</code>. Il prefisso non è il nome del cookie, e darlo per scontato è costato una giornata: di solito i due
@@ -99,8 +99,8 @@
     tuo disco. Un'estensione del browser non può dimostrare cosa conservi poi il server, quindi Zoost
     non lo afferma. Se questa distinzione conta per la tua
     valutazione, confronta il workspace prima e dopo, e l'audit trail se il tuo piano ne ha uno. È
-    nominata qui perché chi controlla alla lettera l'affermazione «non scrive» la troverà, e trovarla
-    senza averla vista dichiarata, potrebbe considerarla una contraddizione.</p>
+    nominata qui perché chi controlla alla lettera l'affermazione «non scrive» la troverà, e se la trovasse
+    senza averla vista dichiarata potrebbe considerarla una contraddizione.</p>
   </div>
 
   <div class="box">
@@ -212,9 +212,9 @@
     file che Google riceve è quello costruito e firmato; resta a mano il click su Submit, che non
     sposta byte. Quello che non è coperto è l'altro capo: Google reimpacchetta e rifirma ogni
     estensione, quindi quello che distribuisce non è identico byte per byte a quello che è stato
-    caricato. Si chiude confrontando l'estensione installata con il tag.</p>
-  <p>Il tag della versione che <em>hai tu</em>, però: quella che <code>chrome://extensions</code>
-    dichiara. Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi
+    caricato. Si chiude confrontando l'estensione installata con il tag - il tag della versione che <em>hai
+    tu</em>, quella che <code>chrome://extensions</code> dichiara.</p>
+  <p> Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi
     sempre avanti rispetto a quello che lo Store distribuisce.</p>
   <p>E una versione ancora in revisione non è distribuita affatto: confrontarla con quel tag dà una
     differenza che non dice niente né dell'uno né dell'altro file.</p>

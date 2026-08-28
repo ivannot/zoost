@@ -1,0 +1,12 @@
+{
+  "router": [
+    {
+      "path": "/",
+      "action": "tidy_Export"
+    }
+  ],
+  "name": "tidy_Export",
+  "type": 0,
+  "connector": [],
+  "dependencies": []
+}

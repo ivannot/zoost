@@ -6,6 +6,8 @@
   "nameSpace": "schedule",
   "category": "scheduler",
   "source": "crm",
+  "language": "deluge",
+  "runtime": "Deluge",
   "return_type": "void",
   "params": [],
   "description": "",
@@ -23,5 +25,8 @@
       "scopes": []
     }
   ],
-  "sv": 2
+  "files": null,
+  "directories": null,
+  "primary_file": null,
+  "sv": 5
 }

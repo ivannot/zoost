@@ -1,0 +1,12 @@
+{
+  "router": [
+    {
+      "path": "/",
+      "action": "sync_Catalogue"
+    }
+  ],
+  "name": "sync_Catalogue",
+  "type": 0,
+  "connector": [],
+  "dependencies": []
+}

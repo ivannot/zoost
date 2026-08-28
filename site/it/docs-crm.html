@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:0bedef8b7d670309 -->
+<!-- translated-from: site/docs-crm.html sha256:75c2701690cf8cb2 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -90,7 +90,7 @@
     segnalazione e la manda solo quando premi Send.</p>
   <p>La prima eccezione è l'<b>assistente AI</b>, che resta spento finché non inserisci una tua chiave API. Una volta
     attivato, le informazioni necessarie per risponderti partono dal browser e vanno direttamente al provider
-    hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
+    che hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
     lascialo spento: tutto il resto funziona esattamente allo stesso modo. La
     <a href="/it/privacy">privacy policy</a> elenca cosa viene conservato, dove e perché.</p>
 
@@ -165,11 +165,11 @@
     solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
     <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
     Svuota il campo per tornare al nome della piattaforma.</p>
-  <p>Mentre una pull è in corso, l'elenco dei workspace e i suoi pulsanti sono spenti, e
+  <p>Mentre un pull è in corso, l'elenco dei workspace e i suoi pulsanti sono spenti, e
     scegliere un altro workspace viene rifiutato con <em>Pull in progress</em>. Un'operazione, un
-    workspace: una pull scrive molti file per diversi minuti, e lasciare che la destinazione cambi
+    workspace: un pull scrive molti file per diversi minuti, e lasciare che la destinazione cambi
     sotto di lei a metà è il modo in cui mezza org finisce nella cartella di un'altra.
-    Aspetta che la pull finisca - l'elenco torna da solo.</p>
+    Aspetta che il pull finisca - l'elenco torna da solo.</p>
 
   <h2 id="pull">3. Pull e sincronizzazione</h2>
   <ul>
@@ -284,9 +284,9 @@ git commit -m "baseline"</code></pre>
       voto</b>: la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che
       Zoho contabilizza - come pesarlo lo decidi tu, non io. Non viene chiesto niente in più a
       Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.</li>
-    <li><b class="ui">Runtime in Zoho ↻</b>, nei <b class="ui">Details</b> di una funzione, chiede a Zoho cosa ha fatto ultimamente quella funzione: le ultime esecuzioni nella finestra che scegli accanto al bottone - <b>Last 24 hours</b>, <b>Today</b>, <b>Yesterday</b>, <b>Last 30 days</b>, oppure <b>Dates…</b> per un intervallo qualsiasi fra due giorni, scelti da un calendario che non ti propone una fine prima dell'inizio, né un giorno fuori dai trenta che Zoho conserva, e la tabella è intestata con la finestra o con le date stesse - con quando, da cosa, se sono andate a buon fine e quanti millisecondi sono durate, e la storia delle revisioni, che Zoho restituisce intera e non per periodo, con la nota che Zoho scrive per ognuna. Viene letto nel momento in cui premi ed è <b>fuori dal mirror</b>: non viene salvato, non entra nei report, ed è una richiesta per funzione - per questo è un bottone e non qualcosa che un pull fa per trecento funzioni. Una funzione compilata non ha storia delle revisioni e il riquadro lo dice, invece di mostrare una tabella vuota.</li>
-    <li><b class="ui">Live</b> / <b class="ui">Draft</b> sulla riga di una funzione compilata dice cosa sta girando davvero in Zoho. Le funzioni Java, Python e Node si scrivono, si salvano e poi si <em>pubblicano</em>, quindi il sorgente nel mirror può essere codice che l'org non ha mai eseguito - e sul disco le due cose sono identiche. <b>Draft</b> vuol dire mai pubblicata, <b>Draft +</b> pubblicata con una modifica successiva che non è live, e il dettaglio scrive per esteso la data di pubblicazione. Una funzione Deluge non ha questo stato e la colonna resta vuota. Sta anche in tutti e due i report.</li>
-    <li><b class="ui">Language</b> tiene l'elenco alle funzioni scritte in uno solo dei linguaggi - Deluge, Java, Python o Node. Compare solo se l'org ne ha più di uno: un workspace tutto Deluge non vede nessun controllo invece di un menu con una voce sola. I linguaggi offerti sono quelli che l'org usa davvero, quindi uno che Zoho aggiunge domani compare qui da solo. Stringe insieme a <b class="ui">Type</b> e non al suo posto, e la casella di ricerca cerca in quello che i due lasciano passare.</li>
+    <li><b class="ui">Runtime in Zoho ↻</b>, nei <b class="ui">Details</b> di una funzione, chiede a Zoho cosa ha fatto ultimamente quella funzione. Le esecuzioni arrivano nella finestra che scegli accanto al bottone - <b>Last 24 hours</b>, <b>Today</b>, <b>Yesterday</b>, <b>Last 30 days</b>, oppure <b>Dates…</b> per un intervallo qualsiasi fra due giorni, scelti da un calendario che non ti propone una fine prima dell'inizio né un giorno fuori dai trenta che Zoho conserva - e la tabella, intestata con la finestra o con le date stesse, dice per ognuna quando è partita, da cosa, se è andata a buon fine e quanti millisecondi è durata. Sotto c'è la storia delle revisioni, che Zoho restituisce intera e non per periodo, con la nota che Zoho scrive per ognuna. Viene letto nel momento in cui premi ed è <b>fuori dal mirror</b>: non viene salvato, non entra nei report, ed è una richiesta per funzione - per questo è un bottone e non qualcosa che un pull fa per trecento funzioni. Una funzione compilata non ha storia delle revisioni e il riquadro lo dice, invece di mostrare una tabella vuota.</li>
+    <li><b class="ui">Live</b> / <b class="ui">Draft</b> sulla riga di una funzione compilata dice cosa sta girando davvero in Zoho. Le funzioni Java, Python e Node si scrivono, si salvano e poi si <em>pubblicano</em>, quindi il sorgente nel mirror può essere codice che l'org non ha mai eseguito - e niente, sul disco, distingue le due. <b>Draft</b> vuol dire mai pubblicata, <b>Draft +</b> pubblicata con una modifica successiva che non è live, e il dettaglio scrive per esteso la data di pubblicazione. Una funzione Deluge non ha questo stato e la colonna resta vuota. Lo stato compare anche in tutti e due i report.</li>
+    <li><b class="ui">Language</b> restringe l'elenco alle funzioni scritte in un linguaggio - Deluge, Java, Python o Node. Compare solo se l'org ne ha più di uno: un workspace tutto Deluge non vede nessun controllo invece di un menu con una voce sola. I linguaggi offerti sono quelli che l'org usa davvero, quindi uno che Zoho aggiunge domani compare qui da solo. Restringe insieme a <b class="ui">Type</b>, non al suo posto, e la casella di ricerca cerca in quello che i due lasciano passare.</li>
     <li><b class="ui">Sort</b> riordina l'elenco per <b>Name (grouped)</b> - il default - oppure per <b>righe</b>, <b>chiamate API</b>, <b>linguaggio</b> o <b>ultima modifica</b>; il pulsante <b class="ui">↑/↓</b> accanto inverte la direzione. Scegliere un
       ordinamento imposta la direzione che quasi certamente vuoi - A→Z per i nomi, dal più grande per i
       numeri - e puoi invertirla. Un ordinamento numerico lascia cadere il raggruppamento per namespace e
@@ -575,7 +575,7 @@ git commit -m "baseline"</code></pre>
     orfana: Zoho risponde per le regole che conosce, e qualcosa fatto scattare da altrove sarebbe
     identico. Il filtro è <b class="ui">Attached to nothing</b>, e lo stesso elenco compare
     nell'audit di salute sotto <b>Wiring</b>.</p>
-  <p>Le colonne sono incolonnate lungo tutto l'elenco - il modulo a cui appartiene l'azione e quante
+  <p>Le colonne restano allineate lungo tutto l'elenco - il modulo a cui appartiene l'azione e quante
     regole la fanno scattare - e <b class="ui">Sort</b> riordina per <b>Kind, then name</b> (il
     default), <b>Rules that fire it</b>, <b>Module</b> o <b>Last modified</b>; il pulsante
     <b class="ui">↑/↓</b> accanto inverte la direzione. Come nell'elenco delle funzioni, qualsiasi

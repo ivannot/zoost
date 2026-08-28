@@ -1,0 +1,30 @@
+{
+  "id": "9501",
+  "name": "tidyExport",
+  "display_name": "Tidy export",
+  "api_name": "tidy_Export",
+  "nameSpace": "standalone",
+  "category": "standalone",
+  "source": "crm",
+  "language": "python_3_12",
+  "runtime": "Python 3.12",
+  "return_type": null,
+  "params": [],
+  "description": "",
+  "updatedTime": null,
+  "listUpdated": null,
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "files": [
+    "config.json",
+    "tidy_export.py"
+  ],
+  "directories": [],
+  "primary_file": "tidy_export.py",
+  "sv": 5,
+  "deployed_on": "1783593000000",
+  "is_draft_available": false
+}

@@ -1,0 +1,12 @@
+{
+  "router": [
+    {
+      "path": "/",
+      "action": "notify_Shipment"
+    }
+  ],
+  "name": "notify_Shipment",
+  "type": 0,
+  "connector": [],
+  "dependencies": []
+}

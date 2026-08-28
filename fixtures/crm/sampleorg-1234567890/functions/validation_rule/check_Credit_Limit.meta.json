@@ -6,6 +6,8 @@
   "nameSpace": "validation_rule",
   "category": "crmfundamentals",
   "source": "crm",
+  "language": "deluge",
+  "runtime": "Deluge",
   "return_type": "map",
   "params": [
     {
@@ -29,5 +31,8 @@
   "workflow": "",
   "rest_api": [],
   "connections": [],
-  "sv": 2
+  "files": null,
+  "directories": null,
+  "primary_file": null,
+  "sv": 5
 }

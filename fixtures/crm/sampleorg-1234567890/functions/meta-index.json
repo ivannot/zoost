@@ -1,6 +1,6 @@
 {
-  "v": 1,
-  "sv": 2,
+  "v": 7,
+  "sv": 5,
   "files": {
     "functions/standalone/log.dg": {
       "id": "9000",
@@ -961,6 +961,54 @@
       "listUpdated": 1783069200000,
       "namespace": "button",
       "display_name": "Refresh quotes"
+    },
+    "functions/standalone/sync_Catalogue.files/SyncCatalogue.java": {
+      "id": "9500",
+      "sv": 5,
+      "updatedTime": null,
+      "listUpdated": null,
+      "namespace": "standalone",
+      "display_name": "Sync catalogue",
+      "language": "java17",
+      "metaPath": "functions/standalone/sync_Catalogue.meta.json",
+      "mirrorFiles": [
+        "functions/standalone/sync_Catalogue.files/config.json",
+        "functions/standalone/sync_Catalogue.files/SyncCatalogue.java",
+        "functions/standalone/sync_Catalogue.meta.json"
+      ],
+      "mirrorDirectories": []
+    },
+    "functions/standalone/tidy_Export.files/tidy_export.py": {
+      "id": "9501",
+      "sv": 5,
+      "updatedTime": null,
+      "listUpdated": null,
+      "namespace": "standalone",
+      "display_name": "Tidy export",
+      "language": "python_3_12",
+      "metaPath": "functions/standalone/tidy_Export.meta.json",
+      "mirrorFiles": [
+        "functions/standalone/tidy_Export.files/config.json",
+        "functions/standalone/tidy_Export.files/tidy_export.py",
+        "functions/standalone/tidy_Export.meta.json"
+      ],
+      "mirrorDirectories": []
+    },
+    "functions/standalone/notify_Shipment.files/notify_shipment.js": {
+      "id": "9502",
+      "sv": 5,
+      "updatedTime": null,
+      "listUpdated": null,
+      "namespace": "standalone",
+      "display_name": "Notify shipment",
+      "language": "nodejs_22",
+      "metaPath": "functions/standalone/notify_Shipment.meta.json",
+      "mirrorFiles": [
+        "functions/standalone/notify_Shipment.files/config.json",
+        "functions/standalone/notify_Shipment.files/notify_shipment.js",
+        "functions/standalone/notify_Shipment.meta.json"
+      ],
+      "mirrorDirectories": []
     }
   }
 }

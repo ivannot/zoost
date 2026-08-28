@@ -1,0 +1,30 @@
+{
+  "id": "9502",
+  "name": "notifyShipment",
+  "display_name": "Notify shipment",
+  "api_name": "notify_Shipment",
+  "nameSpace": "standalone",
+  "category": "standalone",
+  "source": "crm",
+  "language": "nodejs_22",
+  "runtime": "Node.js 22",
+  "return_type": null,
+  "params": [],
+  "description": "",
+  "updatedTime": null,
+  "listUpdated": null,
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "files": [
+    "config.json",
+    "notify_shipment.js"
+  ],
+  "directories": [],
+  "primary_file": "notify_shipment.js",
+  "sv": 5,
+  "deployed_on": "1782980100000",
+  "is_draft_available": true
+}

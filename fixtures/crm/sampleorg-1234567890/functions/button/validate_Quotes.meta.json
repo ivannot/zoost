@@ -6,6 +6,8 @@
   "nameSpace": "button",
   "category": "custombutton",
   "source": "crm",
+  "language": "deluge",
+  "runtime": "Deluge",
   "return_type": "void",
   "params": [],
   "description": "",
@@ -16,5 +18,8 @@
   "workflow": "",
   "rest_api": [],
   "connections": [],
-  "sv": 2
+  "files": null,
+  "directories": null,
+  "primary_file": null,
+  "sv": 5
 }

@@ -81,7 +81,7 @@
     no analytics and no tracking of any kind, and nothing leaves unless you press something: the
     <b>AI assistant</b>, described below, and <b>Report this problem</b>, which shows you the whole report
     and sends it only when you press Send.</p>
-  <p>The exception is the <b>AI assistant</b>, and it is off until you paste in your own API key. Once you
+  <p>The first exception is the <b>AI assistant</b>, and it is off until you paste in your own API key. Once you
     enable it, what it needs to answer you is sent from your browser directly to the provider you chose -
     Anthropic or OpenAI - and to nobody else. If your organisation does not allow that, leave it off:
     everything else works exactly the same. The <a href="/privacy">privacy policy</a> lists what is
@@ -215,7 +215,7 @@ git commit -m "baseline"</code></pre>
     <b class="ui">Pull all</b>. <b>Nothing is migrated and nothing is deleted for you</b> - the old
     folders are yours to remove.</p>
 
-  <p>From then on, pull and <code>git diff</code> tells you exactly what changed in the org since last time -
+  <p>From then on, pull, and <code>git diff</code> tells you exactly what changed in the org since last time -
     including schema changes, because module and layout metadata are stored as JSON.</p>
 
   <h2 id="read">5. Reading your org</h2>
@@ -263,9 +263,9 @@ git commit -m "baseline"</code></pre>
       comment does not inflate the number. These are <b>counts, not a score</b>: length measures verbosity,
       not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not mine.
       Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
-    <li><b class="ui">Runtime in Zoho ↻</b>, in a function's <b class="ui">Details</b>, asks Zoho what that one function did lately: its last executions over the window you pick beside the button - <b>Last 24 hours</b>, <b>Today</b>, <b>Yesterday</b>, <b>Last 30 days</b>, or <b>Dates…</b> for any span between two days, picked from a calendar that will not offer an end before the start, nor a day outside the thirty Zoho keeps, and the table is headed by the window or by the dates themselves - with when, from what, whether they worked and how many milliseconds each took, and its revision history, which Zoho answers whole rather than by period, with Zoho's own note for each. It is read at the moment you press it and is <b>not part of the mirror</b>: it is not stored, it is not in the reports, and it is one request per function, which is why it is a button rather than something a pull does for three hundred functions. A compiled function has no revision history and the box says so rather than showing an empty table.</li>
+    <li><b class="ui">Runtime in Zoho ↻</b>, in a function's <b class="ui">Details</b>, asks Zoho what that one function did lately. The executions come over the window you pick beside the button - <b>Last 24 hours</b>, <b>Today</b>, <b>Yesterday</b>, <b>Last 30 days</b>, or <b>Dates…</b> for any span between two days, picked from a calendar that will not offer an end before the start, nor a day outside the thirty Zoho keeps - and the table, headed by the window or by the dates themselves, shows when each ran, from what, whether it worked and how many milliseconds it took. Below it is the revision history, which Zoho answers whole rather than by period, with Zoho's own note for each. It is read at the moment you press it and is <b>not part of the mirror</b>: it is not stored, it is not in the reports, and it is one request per function, which is why it is a button rather than something a pull does for three hundred functions. A compiled function has no revision history and the box says so rather than showing an empty table.</li>
     <li><b class="ui">Live</b> / <b class="ui">Draft</b> on a compiled function's row is what Zoho is actually running. Java, Python and Node functions are written, saved and then <em>published</em>, so the source in the mirror can be code the org has never run - and nothing on disk tells the two apart. <b>Draft</b> means never published, <b>Draft +</b> means published with a later edit that is not live, and the detail spells out the publication date. A Deluge function has no such state and the column stays empty for it. Both reports carry it too.</li>
-    <li><b class="ui">Language</b> holds the list to functions written in one of them - Deluge, Java, Python or Node. It appears only when the org has more than one: a workspace that is all Deluge gets no control rather than a menu with one entry in it. The languages offered are the ones this org actually uses, so one Zoho adds later turns up here on its own. It narrows alongside <b class="ui">Type</b> rather than instead of it, and the search box searches what the two of them leave.</li>
+    <li><b class="ui">Language</b> narrows the list to functions written in one language - Deluge, Java, Python or Node. It appears only when the org has more than one: a workspace that is all Deluge gets no control rather than a menu with one entry in it. The languages offered are the ones this org actually uses, so one Zoho adds later turns up here on its own. It narrows alongside <b class="ui">Type</b> rather than instead of it, and the search box searches what the two of them leave.</li>
     <li><b class="ui">Sort</b> reorders the list by <b>Name (grouped)</b> - the default - or by <b>lines</b>, <b>API calls</b>, <b>language</b> or <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
       sets the direction you almost certainly want - A→Z for names, biggest first for numbers - and you can
       reverse it. A numeric sort drops the namespace grouping and shows one flat list, with the namespace

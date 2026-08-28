@@ -1,0 +1,30 @@
+{
+  "id": "9500",
+  "name": "syncCatalogue",
+  "display_name": "Sync catalogue",
+  "api_name": "sync_Catalogue",
+  "nameSpace": "standalone",
+  "category": "standalone",
+  "source": "crm",
+  "language": "java17",
+  "runtime": "Java 17",
+  "return_type": null,
+  "params": [],
+  "description": "",
+  "updatedTime": null,
+  "listUpdated": null,
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "files": [
+    "config.json",
+    "SyncCatalogue.java"
+  ],
+  "directories": [],
+  "primary_file": "SyncCatalogue.java",
+  "sv": 5,
+  "deployed_on": "-1",
+  "is_draft_available": true
+}

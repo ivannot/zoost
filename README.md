@@ -8,7 +8,7 @@ then layers navigation, diagrams, search, which functions read and write each mo
 audit that states its own blind spots, exports
 and an optional AI
 assistant on top of that mirror. None of them calls a Zoho endpoint that changes anything - the
-one POST it makes computes an ER model and is named on the nerd page. Everything runs in
+two POSTs they make return data and are both named on the nerd page. Everything runs in
 your browser.
 
 | | What it mirrors | |
@@ -48,7 +48,7 @@ mine.
 
 If you are about to depend on this for something that matters, read the code - that is precisely
 why it is here - and keep in mind that it calls no endpoint that creates, edits or deletes anything in
-Zoho, so the worst it can do to your org is nothing. The one call that is a POST is named on
+Zoho, so the worst it can do to your org is nothing. The two calls that are POSTs are named on
 [the nerd page](https://zoost.it/nerd): `ZDBCreateERD.ma`, which returns a Zoho Analytics workspace's
 ER model. What can be claimed from a browser is what Zoost sends, never what a server does with it. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull
 request, and [SECURITY.md](SECURITY.md) before reporting a vulnerability.

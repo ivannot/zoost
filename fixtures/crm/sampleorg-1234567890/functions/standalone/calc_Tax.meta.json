@@ -6,6 +6,8 @@
   "nameSpace": "standalone",
   "category": "standalone",
   "source": "crm",
+  "language": "deluge",
+  "runtime": "Deluge",
   "return_type": "map",
   "params": [
     {
@@ -32,5 +34,8 @@
       "scopes": []
     }
   ],
-  "sv": 2
+  "files": null,
+  "directories": null,
+  "primary_file": null,
+  "sv": 5
 }
