@@ -6206,7 +6206,10 @@ for (const app of ['crm', 'analytics']) {
     // Italian org. It is printed as their sentence; nothing is derived from it.
     const bridge = read('apps/crm/content-bridge.js');
     const at = bridge.indexOf('async function functionRuntime');
-    const body = bridge.slice(at, at + 1800);
+    // The window is wide enough to reach the second half of the function, which is where the
+    // revisions are read. A slice that stops short passes by not looking, which is the shape this
+    // suite has already been fooled by.
+    const body = bridge.slice(at, bridge.indexOf('\n  }\n', at));
     assert.match(body, /message: r\.commit_message \|\| null/);
     assert.ok(!/commit_message.*(match|includes|split|test)/.test(body),
       'why=logic is being built on a sentence written in whatever language the org is in');
@@ -6226,21 +6229,42 @@ for (const app of ['crm', 'analytics']) {
 {
   const REL = 'apps/crm/sidepanel.js', B = 'apps/crm/content-bridge.js';
 
-  test('the panel offers what the bridge is willing to send, and nothing else', () => {
+  test('every window the panel offers is one the bridge will send', () => {
     const words = load([sliceConst(REL, 'RUNTIME_WINDOWS')], { console }).RUNTIME_WINDOWS;
-    const tokens = load([sliceConst(B, 'RUNTIME_WINDOWS')], { console }).RUNTIME_WINDOWS;
-    assert.equal(JSON.stringify(words.map(([k]) => k)), JSON.stringify([...tokens]),
-      'why=a window is offered that the bridge refuses to send, or one is sendable and never offered');
-    assert.ok(words.every(([, l]) => l && l.length > 3), 'a window with no words on it');
+    const tokens = [...load([sliceConst(B, 'RUNTIME_WINDOWS')], { console }).RUNTIME_WINDOWS];
+    for (const [k, l] of words) {
+      assert.ok(tokens.includes(k), `why=the panel offers «${k}» and the bridge refuses to send it`);
+      assert.ok(l && l.length > 3, `a window with no words on it: ${k}`);
+    }
+    // `specific_date` is not offered by name: it *is* a one-day range, and the panel picks between
+    // the two from the dates rather than showing the reader Zoho's implementation.
+    const ranged = [...load([sliceConst(B, 'RUNTIME_RANGED')], { console }).RUNTIME_RANGED];
+    assert.deepEqual([...ranged].sort(), ['custom', 'specific_date']);
+    assert.ok(!words.some(([k]) => k === 'specific_date'), 'why=the reader is asked to choose a shape');
+    const chooses = sliceFn(REL, 'runtimeSpan');
+    assert.match(chooses, /a === b \? 'specific_date' : 'custom'/,
+      'why=a one-day range is sent as something Zoho did not send for it');
+    // And every named window the bridge will send is reachable, or it is a capability nobody has.
+    for (const t of tokens.filter((x) => !ranged.includes(x))) {
+      assert.ok(words.some(([k]) => k === t), `why=the bridge sends «${t}» and nothing offers it`);
+    }
   });
 
   test('a window that is not one of them is not put in a URL', () => {
     // What arrives at the bridge has crossed a boundary. The list is the check, and the day is the
     // fallback: an unknown token would otherwise be interpolated into the path of a request.
-    const body = read(B).slice(read(B).indexOf('async function functionRuntime'), read(B).indexOf('async function functionRuntime') + 900);
+    const src = read(B), at = src.indexOf('async function functionRuntime');
+    const body = src.slice(at, src.indexOf('\n  }\n', at));
     assert.match(body, /RUNTIME_WINDOWS\.includes\(period\) \? period : RUNTIME_WINDOWS\[0\]/,
       'why=a period from a message goes into a request unchecked');
-    assert.match(body, /period=\$\{win\}/, 'why=the checked value is not the one sent');
+    assert.match(body, /period=\$\{win\}\$\{span\}/, 'why=the checked value is not the one sent');
+    // The two ends of a range cross the same boundary and end in the same URL: they are held to a
+    // shape, and a ranged window without one falls back to the day rather than asking for «custom»
+    // with nothing to bound it.
+    assert.match(body, /RUNTIME_STAMP\.test\(String\(from\)\) && RUNTIME_STAMP\.test\(String\(to\)\)/,
+      'why=a datetime from a message goes into a request unchecked');
+    assert.match(body, /\} else \{ win = RUNTIME_WINDOWS\[0\]; \}/,
+      'why=a range that is not a range is still asked for');
   });
 
   test('the rows are headed by the window they are of', () => {
@@ -6257,9 +6281,67 @@ for (const app of ['crm', 'analytics']) {
     // A reader working in months asks the same question of the next function; re-choosing it every
     // time is the control apologising for itself.
     const src = read(REL);
-    assert.match(src, /^let runtimeWindow = 'past_24_hours';$/m,
+    assert.match(src, /^let runtimeWindow = 'past_24_hours', runtimeFrom = '', runtimeTo = '';$/m,
       'why=the chosen window is per open, so it resets under the reader');
     assert.match(src, /win\.onchange = \(\) => \{ runtimeWindow = win\.value;/);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A range, not only a named window. Their own menu offers «Ultime 24 ore, Oggi, Ieri, Ultimi 30
+// giorni, Data specifica, Cliente», and a capture of it settled what each one sends: four names,
+// plus `specific_date` and `custom`, both carrying `start_datetime` and `end_datetime` as a local
+// datetime with the offset written out. Nothing here was guessed - two of these tokens were the
+// obvious English words and that is exactly why they were measured before being sent.
+{
+  const REL = 'apps/crm/sidepanel.js';
+  const bench = (from, to, offsetMinutes = -120) => {
+    const g = { String, Number, Math, Date: class extends Date { getTimezoneOffset() { return offsetMinutes; } },
+                console, runtimeFrom: from, runtimeTo: to };
+    return load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
+  };
+
+  test('one day is a specific date, two are a custom range', () => {
+    // Measured: their page sends the same pair of datetimes for «Data specifica», with the same day
+    // at both ends. So the panel offers one control and picks the shape, rather than asking the
+    // reader which of Zoho's two words they meant.
+    assert.equal(bench('2026-08-13', '2026-08-13').period, 'specific_date');
+    assert.equal(bench('2026-08-05', '2026-08-21').period, 'custom');
+  });
+
+  test('a day runs from its midnight to the second before the next', () => {
+    const s = bench('2026-08-13', '2026-08-13');
+    assert.equal(s.from, '2026-08-13T00:00:00+02:00');
+    assert.equal(s.to, '2026-08-13T23:59:59+02:00');
+  });
+
+  test('dates picked the wrong way round are still a range', () => {
+    // A reader picks the end first as often as not, and «no rows» would be the answer to a range
+    // that runs backwards - a true answer to a question nobody asked.
+    const s = bench('2026-08-21', '2026-08-05');
+    assert.equal(s.from.slice(0, 10), '2026-08-05');
+    assert.equal(s.to.slice(0, 10), '2026-08-21');
+  });
+
+  test('half a range is not a range', () => {
+    assert.equal(bench('2026-08-13', ''), null);
+    assert.equal(bench('', '2026-08-13'), null);
+    // And the panel says so instead of asking Zoho for a window with one end.
+    assert.match(sliceFn(REL, 'showFunctionRuntime'), /Pick both dates first/);
+  });
+
+  test('the offset is the reader own, and written out', () => {
+    // Their page sends a local datetime with the zone spelled; UTC would ask for a different day at
+    // either end of it, which is the whole reason the offset is there.
+    assert.equal(bench('2026-08-13', '2026-08-13', 0).from, '2026-08-13T00:00:00+00:00');
+    assert.equal(bench('2026-08-13', '2026-08-13', 330).from, '2026-08-13T00:00:00-05:30');
+  });
+
+  test('the table is headed by the days, not by the word on the control', () => {
+    // «Dates…» is what the menu says; it is not an answer about what is in the table.
+    assert.match(sliceFn(REL, 'showFunctionRuntime'),
+      /span \? `\$\{span\.from\.slice\(0, 10\)\} to \$\{span\.to\.slice\(0, 10\)\}`/,
+      'why=a chosen range is headed with the name of the control that chose it');
   });
 }
 

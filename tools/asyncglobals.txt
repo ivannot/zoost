@@ -162,4 +162,6 @@ apps/crm/sidepanel.js	refineRowFromMeta	unreadableMetas
 apps/crm/sidepanel.js	runSyncSlot	syncAgain
 apps/crm/sidepanel.js	runSyncSlot	syncBusy
 apps/crm/sidepanel.js	runSyncSlot	syncing
+apps/crm/sidepanel.js	showCallers	runtimeFrom
+apps/crm/sidepanel.js	showCallers	runtimeTo
 apps/crm/sidepanel.js	showCallers	runtimeWindow

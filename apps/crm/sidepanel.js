@@ -1741,8 +1741,25 @@ function publishSentence(st) {
 // The windows the runtime box offers. The tokens are Zoho's and were measured; the labels are ours.
 // Kept beside the box that shows them rather than in the bridge, which is where the tokens live: one
 // list of values, one list of words, and neither invents the other.
-const RUNTIME_WINDOWS = [['past_24_hours', 'Last 24 hours'], ['last_month', 'Last 30 days']];
-let runtimeWindow = 'past_24_hours';
+const RUNTIME_WINDOWS = [['past_24_hours', 'Last 24 hours'], ['today', 'Today'], ['yesterday', 'Yesterday'],
+                         ['last_month', 'Last 30 days'], ['custom', 'Dates\u2026']];
+let runtimeWindow = 'past_24_hours', runtimeFrom = '', runtimeTo = '';
+/** The two ends of a chosen range, in the shape Zoho's own page sends: a local datetime with the
+ *  offset written out, the first day from midnight and the last to the second before the next.
+ *
+ *  One control for both of their ranged windows, because `specific_date` **is** a `custom` of one
+ *  day - measured: their page sends the same pair of datetimes for it, with the same day at both
+ *  ends. Offering two controls for that would be showing the reader Zoho's implementation. */
+function runtimeSpan() {
+  if (!runtimeFrom || !runtimeTo) return null;
+  const off = -new Date().getTimezoneOffset();
+  const p2 = (n) => String(Math.floor(Math.abs(n))).padStart(2, '0');
+  const zone = (off < 0 ? '-' : '+') + p2(off / 60) + ':' + p2(off % 60);
+  const a = runtimeFrom <= runtimeTo ? runtimeFrom : runtimeTo;
+  const b = runtimeFrom <= runtimeTo ? runtimeTo : runtimeFrom;
+  return { period: a === b ? 'specific_date' : 'custom',
+           from: `${a}T00:00:00${zone}`, to: `${b}T23:59:59${zone}` };
+}
 async function showFunctionRuntime(row, box) {
   if (!box || !row) return;
   // The same guard every other path to Zoho carries: a workspace bound to one org and a tab showing
@@ -1751,7 +1768,15 @@ async function showFunctionRuntime(row, box) {
   if (!zohoReady()) { box.innerHTML = `<div class="rtnote">${escHtml(MSG.wrongTab)}</div>`; return; }
   const mine = previewLoad, op = beginWorkspaceOp();
   box.innerHTML = '<div class="rtnote">Asking Zoho…</div>';
-  const r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language, period: runtimeWindow });
+  // «Dates…» is not a window on its own: it is whichever of their two ranged ones the pair of dates
+  // turns out to be. Chosen here, so the bridge is handed a period it knows and a range it can check.
+  const span = runtimeWindow === 'custom' ? runtimeSpan() : null;
+  if (runtimeWindow === 'custom' && !span) {
+    box.innerHTML = '<div class="rtnote">Pick both dates first.</div>'; return;
+  }
+  const r = await toBridge({ cmd: 'functionRuntime', id: row.id, language: row.language,
+                             period: span ? span.period : runtimeWindow,
+                             from: span ? span.from : null, to: span ? span.to : null });
   // The reader may have moved on while Zoho answered, and this box belongs to what is on screen.
   if (!previewCurrent(mine, op) || currentPath !== row.path) return;
   if (!r || !r.ok) { box.innerHTML = `<div class="rtnote">Zoho did not answer: ${escHtml((r && r.error) || 'unknown')}</div>`; return; }
@@ -1760,7 +1785,10 @@ async function showFunctionRuntime(row, box) {
   const half = (rows, why, none, draw) => (why ? `<div class="rtnote">${escHtml(why)}</div>`
     : !rows ? `<div class="rtnote">${escHtml(MSG.notReadYet)}</div>`
     : !rows.length ? `<div class="rtnote">${none}</div>` : draw(rows));
-  const label = (RUNTIME_WINDOWS.find(([k]) => k === (r.window || runtimeWindow)) || [, 'this window'])[1];
+  // A range says which days it is of; a named window says its name. «Dates…» over a table would be
+  // the control's word rather than an answer.
+  const label = span ? `${span.from.slice(0, 10)} to ${span.to.slice(0, 10)}`
+    : (RUNTIME_WINDOWS.find(([k]) => k === (r.window || runtimeWindow)) || [, 'this window'])[1];
   const logs = half(r.logs, r.logsWhy, `No execution in ${escHtml(String(label).toLowerCase())}.`, (rows) =>
     '<table class="rt"><thead><tr><th>When</th><th>From</th><th>Result</th><th>ms</th></tr></thead><tbody>'
     + rows.map((x) => `<tr><td>${when(x.at)}</td><td>${escHtml(x.from || '')}</td>`
@@ -3130,9 +3158,21 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
       const out = document.createElement('div');
       // Remembered across functions, not reset per open: a reader who works in months is asking the
       // same question of the next function, and re-choosing it every time is the control apologising.
-      win.onchange = () => { runtimeWindow = win.value; if (out.innerHTML) void showFunctionRuntime(_row, out); };
+      // The two date fields, present only for the window that uses them: a control with nothing to
+      // do is one the reader has to work out the irrelevance of.
+      const d1 = document.createElement('input'), d2 = document.createElement('input');
+      [d1, d2].forEach((d, i) => {
+        d.type = 'date'; d.className = 'rtdate';
+        d.setAttribute('aria-label', i ? 'To date' : 'From date');
+        d.value = i ? runtimeTo : runtimeFrom;
+        d.onchange = () => { if (i) runtimeTo = d.value; else runtimeFrom = d.value; };
+      });
+      const showDates = () => { const on = win.value === 'custom'; d1.style.display = d2.style.display = on ? '' : 'none'; };
+      win.onchange = () => { runtimeWindow = win.value; showDates(); if (out.innerHTML) void showFunctionRuntime(_row, out); };
+      showDates();
       go.onclick = () => { void showFunctionRuntime(_row, out); };
-      wrap.appendChild(go); wrap.appendChild(win); wrap.appendChild(out); box.appendChild(wrap);
+      wrap.appendChild(go); wrap.appendChild(win); wrap.appendChild(d1); wrap.appendChild(d2);
+      wrap.appendChild(out); box.appendChild(wrap);
     }
     wireFnChips(box, (a) => openFile(a.dataset.file));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));

@@ -54,7 +54,12 @@
   // this project does not invent another product's vocabulary - `language=nodejs` was guessed once
   // and shipped a pull that found nothing. These two were measured on a real org; if Zoho's own menu
   // offers more, one capture of it adds them here and nowhere else.
-  const RUNTIME_WINDOWS = ['past_24_hours', 'last_month'];
+  const RUNTIME_WINDOWS = ['past_24_hours', 'today', 'yesterday', 'last_month', 'specific_date', 'custom'];
+  // The two that carry a range, and the shape it has to be in: a local datetime with the offset
+  // spelled out, which is what their own page sends. Anything else is not sent at all - these
+  // values arrive across a boundary and end up in a URL.
+  const RUNTIME_RANGED = ['specific_date', 'custom'];
+  const RUNTIME_STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
   const BASE = location.origin;
   // One cookie by name. `split('=')[1]` was what this did, and it truncates at the first `=` inside
   // the *value* - which is padding on anything base64, and a silent one: the request goes out with
@@ -522,17 +527,25 @@
    *  logs, and a compiled function has no revisions at all - measured, `revisions` returns 204 for a
    *  Node function while a Deluge one returns its whole history.
    */
-  async function functionRuntime(id, language, period) {
+  async function functionRuntime(id, language, period, from, to) {
     const fid = String(id || '').replace(/\D/g, '');
     if (!fid) return { ok: false, why: 'no function id' };
     const lang = String(language || 'deluge').replace(/[^\w]/g, '');
     // Chosen from the list, never taken from the message: what arrives here has crossed a boundary,
     // and a period goes into a URL. An unknown one falls back to the day rather than being sent.
-    const win = RUNTIME_WINDOWS.includes(period) ? period : RUNTIME_WINDOWS[0];
+    let win = RUNTIME_WINDOWS.includes(period) ? period : RUNTIME_WINDOWS[0];
+    // A ranged window without a well-formed range is not a window: it falls back to the day rather
+    // than asking Zoho for «custom» and letting them decide what that means with nothing to bound it.
+    let span = '';
+    if (RUNTIME_RANGED.includes(win)) {
+      if (RUNTIME_STAMP.test(String(from)) && RUNTIME_STAMP.test(String(to))) {
+        span = `&start_datetime=${encodeURIComponent(from)}&end_datetime=${encodeURIComponent(to)}`;
+      } else { win = RUNTIME_WINDOWS[0]; }
+    }
     const out = { ok: true, window: win, logs: null, revisions: null };
     try {
       const j = await api(`/crm/v2.2/settings/functions/${fid}/logs`
-        + `?period=${win}&page=1&per_page=${RUNTIME_LOGS}&language=${lang}`);
+        + `?period=${win}${span}&page=1&per_page=${RUNTIME_LOGS}&language=${lang}`);
       out.logs = j === NO_CONTENT ? [] : list(j, 'function_logs', 'function_logs').map((r) => ({
         at: r.executed_time || null, status: r.status || null,
         // Milliseconds, as Zoho reports them. Left as the number they sent: turning it into «1.8s»
@@ -1366,7 +1379,7 @@
     // Asked once per functions pull, after the list: it is a map from what we mirror to what the
     // newer interface calls the same function, and nothing else depends on it.
     if (msg?.cmd === 'functionUiIds') return reply(functionUiIds());
-    if (msg?.cmd === 'functionRuntime') return reply(functionRuntime(msg.id, msg.language, msg.period));
+    if (msg?.cmd === 'functionRuntime') return reply(functionRuntime(msg.id, msg.language, msg.period, msg.from, msg.to));
     if (msg?.cmd === 'listWorkflows') return reply(listWorkflows());
     if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));
     if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
