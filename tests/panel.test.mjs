@@ -13975,6 +13975,8 @@ test('an edit then a Save writes, in every section of both settings pages', asyn
                               SCOPE_SV: 2, MSG: { readFailed: 'read failed' },
                               toast: (t) => said.push(String(t)),
                               saveKeys: async (o) => { writes.push(o); return true; },
+                              rebase: () => {},
+                rebase: () => {}, paintDirty: () => {},
                               stamp: async () => {},
                               loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
                               loadTabs: async () => {}, loadLay: async () => {}, loadRx: async () => {} }, seed);
@@ -14277,6 +14279,7 @@ test('a settings page does not announce success over an AI engine that cannot ru
     const el = (id) => ({ value: vals[id] === undefined ? '' : vals[id], checked: false, textContent: '',
                           hidden: true, classList: { add() {}, remove() {}, toggle() {} }, focus() {}, select() {} });
     const g = { console, Object, Math, Number, JSON, Promise, Set, Date, Array, String,
+                rebase: () => {}, paintDirty: () => {}, markDirty: () => {},
                 $: el, toast: (t, bad) => said.push([String(t), !!bad]), MSG: { readFailed: 'READFAIL' },
                 aiLoadFailed: false,   // the read succeeded; the refusal under test is about the form
                 saveKeys: async () => true, stamp: async () => {}, loadAi: async () => {},
@@ -15389,6 +15392,7 @@ test('crm: diagram defaults saved in Settings are applied by either graph', asyn
     Object, Promise, Number, Math, Array, String, JSON, console,
     lay: { margin: 60, spread: 42, gap: 8, fs: 10, sub: true }, drawMax: 800,
     saveKeys: async (o) => { Object.assign(stored, JSON.parse(JSON.stringify(o))); return true; },
+    rebase: () => {}, paintDirty: () => {},
     stamp: async () => {}, toast: () => {},
     chrome: { storage: { local: { get: async () => JSON.parse(JSON.stringify(stored)) } } },
     layLoadFailed: false,   // the read succeeded, which is what lets this Save write at all
@@ -16715,14 +16719,18 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
   });
   assert.equal(warmed, 2, 'the retry warmed more than once for one call');
 
-  // The other half: the primer itself refused, so the retry went out under the conditions that had
-  // just been rejected and its failure is not a second piece of evidence.
+  // The other half: the refresh could not read the token, so the retry went out carrying exactly
+  // what had just been rejected and its failure is not a second piece of evidence. The sentence
+  // names *that* - it used to name «the Zoho CRM call made to refresh it», whose outcome this code
+  // deliberately discards and which, since the primer was added, is usually a 200.
   g.warmDeluge = async () => { warmed++; return false; };
   answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
   answers.push({ status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' });
   await assert.rejects(() => api('/deluge/api/connections', 'drepn'), (e) => {
-    assert.match(e.message, /the Zoho CRM call made to refresh it failed too/,
+    assert.match(e.message, /the token the page itself uses could not be read either/,
                  `the refusal reads «${e.message}» - it claims a refresh happened when it did not`);
+    assert.doesNotMatch(e.message, /Zoho CRM call made to refresh/,
+                        'it names a request whose outcome is discarded, and which usually succeeded');
     return true;
   });
 
@@ -17535,6 +17543,7 @@ test('a Save refuses over an unread section and works over a read one', async ()
     const g = { console, Object, Set, Array, Number, Math, JSON, Boolean, String,
                 MSG: { readFailed: 'read failed' }, toast: () => {},
                 saveKeys: async (o) => { writes.push(...Object.keys(o)); return true; },
+    rebase: () => {}, paintDirty: () => {},
                 stamp: async () => {}, markEngine: () => {}, mergeKeys: (a) => a,
                 readCfgForWrite: async () => ({}), engineLabel: () => 'x', aiForget: new Set(),
                 loadAi: async () => {}, layToUI: () => {}, erPreview: () => {},
@@ -18357,7 +18366,7 @@ test('the preview offers every file in a compiled function project', () => {
 // The two cases are the pair: the refusal is re-read as a refusal when the token is known good, and
 // the cookie diagnostic still fires when it is not - that diagnostic was written for a real failure
 // and deleting it would trade one blind spot for another.
-test('a deluge refusal carrying a token the CRM just accepted is a refusal, not a token fault', async () => {
+test('a deluge refusal with a good token is said calmly, and is still not a role verdict', async () => {
   const REL = 'apps/crm/content-bridge.js';
   // The page's token is what both families carry once anything has read it, which is the shape of
   // the capture: one value everywhere. So the cookie and ConstantsInitial.do agree here.
@@ -18387,13 +18396,29 @@ test('a deluge refusal carrying a token the CRM just accepted is a refusal, not 
   await m.api('/crm/v2/settings/functions?type=org');   // the ordinary read that vouches for the token
   const err = await m.api('/deluge/api/connections', 'drepn').then(() => null, (e) => e);
   assert.ok(err, 'the deluge call succeeded - this case has lost its subject');
-  assert.equal(err.forbidden, true,
-               'a refusal no retry can help is still reported as a failure, so the tab stays, the '
-               + 'emergency button is offered, and the reader is told to report a bug that is not one');
   assert.ok(err.note && !/CSRF|cookie/i.test(err.note),
             `the sentence shown to the reader is still the alarming one: ${JSON.stringify(err.note)}`);
   assert.doesNotMatch(String(err.message), /cookies on this page/,
                       'the cookie jar is still being dumped at a reader whose token is fine');
+
+  // **And it is not a role verdict.** Zoho answered INVALID_CSRF_TOKEN and never said «no
+  // permission»; promoting it hid the tab, dated a verdict into the workspace, made later pulls skip
+  // the area and took away the /emergency pointer - all on an inference. Worse, once the recovery
+  // took the reading itself the three conditions were true by construction, so the test meant «the
+  // recovery ran» rather than «something else accepted this token».
+  assert.ok(!err.forbidden,
+            'the refusal is recorded as a role verdict again: the tab disappears, later pulls skip '
+            + 'the area, and /emergency - which is where a platform change belongs - is suppressed');
+  assert.ok(err.diag && err.diag.what === 'csrf' && Array.isArray(err.diag.cookies),
+            'the evidence does not travel, so the problem report carries nothing about why');
+
+  // The panel says the calm sentence for a failure that has one, rather than the raw endpoint.
+  const said = load([sliceFn('apps/crm/sidepanel.js', 'pullFailMessage')],
+                    { tabLabel: (a) => a, friendlyError: (e) => String(e.message) })
+    .pullFailMessage('connections', { note: err.note, status: 400, message: err.message });
+  assert.match(said, /may not have access/, `the reader is shown the raw failure again: ${said}`);
+  assert.doesNotMatch(said, /INVALID_CSRF_TOKEN|deluge/,
+                      `the endpoint and the code are back on the status line: ${said}`);
 });
 
 // **And the evidence must not be a coincidence of spelling.** `tokenOf` strips the prefix, so the
@@ -18601,11 +18626,28 @@ test('a refused area is asked again by the next pull, once, and only when asked 
 
   // And it is spent by the pull that acts on it: «once» is the whole difference between this and
   // re-asking every refused area on every pull, which is the shape the author refused.
-  assert.match(body, /await takeRecheck\(todo\.map\(\(t\) => t\.id\)\)/,
+  assert.match(body, /await takeRecheck\(/,
                'nothing spends the request, so one tick re-asks Zoho on every pull for ever');
   const take = sliceFn(rel, 'takeRecheck');
   assert.match(take, /ids\.filter\(\(id\) => tabPrefs\.recheck\.includes\(id\)\)/,
                'it writes even when this run spent nothing, which is a settings write per pull');
+
+  // **Spent on what was asked, not on what ran.** Two ways that differed: a Pull all in another
+  // workspace put the same area in the run for the ordinary reason and consumed the request - the
+  // verdict is per workspace, the tick is per install - and a run whose runners bail before reaching
+  // Zoho spent it having asked nothing at all. Derived from the verdict moving, which cannot happen
+  // without a request.
+  assert.doesNotMatch(body, /takeRecheck\(todo\.map/,
+                      'the whole run is spent, so a pull of a workspace that never refused the area '
+                      + 'consumes a request meant for the one that did');
+  assert.match(body, /const asked = todo\.filter\(\(t\) => wantsRecheck\(t\.id\)\)/,
+               'nothing separates the areas that are in the run because of a tick');
+  assert.match(body, /takeRecheck\(asked\.filter\(\(id\) => \(tabAccess\[id\] \|\| \{\}\)\.at !== askedBefore\[id\]\)\)/,
+               'a run that reached no runner still spends the tick, so the reader ticks it again '
+               + 'with nothing saying why');
+  const before = body.indexOf('const askedBefore');
+  assert.ok(before > 0 && before < body.indexOf('await runners['),
+            'the «before» reading is taken after the run has started moving the verdicts it compares');
 
   // Settings offers it where there is something to overturn, saves it with its siblings, and talks
   // to nothing: the version that talked to the panel is what died on the folder permission.
@@ -18692,8 +18734,11 @@ test('a change undone is not an unsaved change, in both products', () => {
     const sec = { dataset: { section: 'aicfg' }, querySelectorAll: () => [box], querySelector: () => null };
     const g = { console, Object, Set, Map, Array, String, JSON, dirty: new Set(),
                 invalidateSectionLoads: () => {}, paintDirty: () => {},
+                // `EXTRA_STATE` reads what a section keeps outside its controls; this one drives
+                // the AI section, whose extra state is the set of providers marked for removal.
+                aiForget: new Set(), tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
                 document: { querySelectorAll: () => [sec], querySelector: (q) => (q.includes('aicfg') ? sec : null) } };
-    const m = load([sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'),
+    const m = load([sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'), sliceConst(rel, 'EXTRA_STATE'),
                     sliceFn(rel, 'snapshotOf'), sliceFn(rel, 'rebase'), sliceFn(rel, 'markDirty')], g);
 
     m.rebase('aicfg');                       // the page has just read this section
@@ -18726,6 +18771,113 @@ test('a change undone is not an unsaved change, in both products', () => {
     assert.ok(taker.indexOf('await SECTIONS[key].reload()') < taker.indexOf('rebase(k)'),
               `${app}: the baseline is taken before the redraw, so «Take theirs» leaves the page `
               + 'believing the edits it discarded are what is stored');
+
+    // **And a write is not that moment either.** Three handlers re-read their section straight
+    // after saving - a key is stored trimmed or encrypted, a number clamped, the engine moved - so
+    // baselining the form as the user left it recorded a value the redraw was about to replace, and
+    // the section then reported an unsaved change that no undo could clear. `saveKeys` does not
+    // rebase; the handlers do, after their redraw.
+    assert.doesNotMatch(sliceFn(rel, 'saveKeys'), /rebase\(/,
+                        `${app}: the write baselines the form again, so a value the redraw is about `
+                        + 'to change is recorded as «what is stored»');
+    const ai = sliceFn(rel, app === 'crm' ? 'onSaveAi' : 'saveAi');
+    assert.ok(ai.indexOf('await loadAi()') < ai.lastIndexOf("rebase('aicfg')"),
+              `${app}: the AI section is baselined before it is redrawn from disk`);
+
+    // **A partial write is not a saved section.** Changing the engine stores `active` and nothing
+    // else, and `saveKeys` clears the mark for every key it wrote - so the page said «nothing to
+    // save» over an API key that was still only in the form, and closing the tab lost it.
+    assert.match(sliceFn(rel, 'onAiengine'), /markDirty\('aicfg'\)/,
+                 `${app}: switching the engine reports the section as saved over edits it did not write`);
+
+    // A refused write puts the mark back, and the page has to show it: the only other signal is a
+    // toast that is gone in two seconds.
+    const writer = sliceFn(rel, 'saveKeys');
+    // The catch block alone: sliced from `catch` to the end it swallowed the success path's own
+    // repaint and passed with the failure path silent - the check reading past its own subject.
+    const failed = writer.slice(writer.indexOf('catch'), writer.indexOf('return false;'));
+    assert.match(failed, /paintDirty\(\)/,
+                 `${app}: a save that failed leaves an idle button over a section it has just marked `
+                 + 'as having unsaved edits');
+  }
+});
+
+// **A section redrawn from another window has to be re-baselined, and the key that changed is not
+// always the section.** `tabAccessView` is registered in SECTIONS - it shares `loadTabs` with
+// `tabPrefs` - and has no `[data-section]` element of its own, so rebasing *it* is a no-op while the
+// Tabs form has just been redrawn. Every pull that publishes a verdict left that baseline describing
+// rows which no longer exist, and the next edit in Tabs was «Unsaved changes» for ever, undo
+// included - the exact defect this machinery was written to remove, surviving on the one path that
+// redraws without a save. Found by two readers independently.
+test('a section redrawn from another window is compared against what it now shows', async () => {
+  const rel = 'apps/crm/options.js';
+  // The Tabs form, whose contents the reload replaces - as `loadTabs` does when the panel publishes
+  // a refusal and two checkboxes redraw disabled.
+  let shown = 'before';
+  const sec = { dataset: { section: 'tabPrefs' },
+                querySelectorAll: () => [{ type: 'text', value: shown, dataset: {}, id: 'row' }],
+                querySelector: () => null };
+  const boxed = [];
+  const g = { console, Object, Set, Map, Array, String, JSON, Promise,
+              dirty: new Set(), wasOwn: () => false,
+              conflictBox: (k, on) => boxed.push([k, on]),
+              paintDirty: () => {}, invalidateSectionLoads: () => {},
+              SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
+              aiForget: new Set(), tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
+              loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
+              loadRx: async () => {}, loadLay: async () => {},
+              // The reload redraws the section, which is the whole point of the path under test.
+              loadTabs: async () => { shown = 'after'; },
+              document: { querySelector: (q) => (q.includes('tabPrefs') ? sec : null),
+                          querySelectorAll: () => [sec] } };
+  const m = load([sliceConst(rel, 'SECTIONS'), sliceConst(rel, 'LOAD_FLAG'), sliceConst(rel, '_loadSeq'),
+                  sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'), sliceConst(rel, 'EXTRA_STATE'),
+                  sliceFn(rel, 'markLoadCancelled'), sliceFn(rel, 'invalidateSectionLoads'),
+                  sliceFn(rel, 'snapshotOf'), sliceFn(rel, 'rebase'), sliceFn(rel, 'markDirty'),
+                  sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'otherWindowChanged')], g);
+
+  m.rebase('tabPrefs');                         // the page read this section at startup
+  const was = m.baseline.get('tabPrefs');
+  // The panel publishes a verdict: `tabAccessView` alone, which shares the Tabs reload.
+  await m.otherWindowChanged({ tabAccessView: { newValue: {} } }, 'local');
+  assert.notEqual(m.baseline.get('tabPrefs'), was,
+                  'the Tabs baseline still describes the rows the reload replaced, so the next edit '
+                  + 'there reports «Unsaved changes» for ever and undoing it cannot clear it');
+
+  // And with the baseline right, an edit and its undo behave.
+  shown = 'typed'; m.markDirty('tabPrefs');
+  assert.equal(g.dirty.has('tabPrefs'), true, 'an edit after the redraw is not noticed');
+  shown = 'after'; m.markDirty('tabPrefs');
+  assert.equal(g.dirty.has('tabPrefs'), false, 'undoing it does not clear, which is the reported defect');
+  assert.deepEqual(boxed, [], 'a section nobody edited raised a conflict box');
+});
+
+// **A fingerprint that reads the controls misses the state a section keeps elsewhere**, and two
+// edits went missing in it: «Show all» over a tab that is hidden *and* refused - both boxes are
+// drawn forced off, so the lists it empties are invisible - and «Forget this key» for a provider
+// whose key is encrypted, where the fields were already blank. Both were reported as «nothing to
+// save» over a change Save would have written.
+test('what a section will write is what is compared, including the parts no control holds', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const g = { console, Object, Set, Map, Array, String, JSON,
+                aiForget: new Set(), tabOrderCur: ['a'], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [] };
+    const m = load([sliceConst(rel, 'EXTRA_STATE'), sliceFn(rel, 'snapshotOf')], g);
+    const sec = (name) => ({ dataset: { section: name }, querySelectorAll: () => [] });
+
+    const before = m.snapshotOf(sec('aicfg'));
+    g.aiForget.add('anthropic');
+    assert.notEqual(m.snapshotOf(sec('aicfg')), before,
+                    `${app}: marking a provider's key for removal moves nothing, so the page says `
+                    + 'there is nothing to save over a removal Save would write');
+
+    if (app === 'crm') {
+      const t0 = m.snapshotOf(sec('tabPrefs'));
+      g.tabHiddenCur = ['workflows'];
+      assert.notEqual(m.snapshotOf(sec('tabPrefs')), t0,
+                      'hiding a tab whose boxes are drawn forced off - a refused one - moves nothing, '
+                      + 'so «Show all» over it reports no change and Save writes one');
+    }
   }
 });
 

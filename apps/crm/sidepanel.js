@@ -830,6 +830,12 @@ function pullFailMessage(area, e) {
       + `${e.status ? ` (Zoho answered ${e.status})` : ''}. `
       + 'Nothing was pulled for it, and the tab is hidden - Settings says why, and lets you check again.';
   }
+  // **A failure that knows what to say says it.** Not every refusal arrives as a 401 or a 403 - the
+  // deluge runtime answers INVALID_CSRF_TOKEN to a user it will not serve - and for a while that was
+  // promoted to a role verdict, which hid the tab on an inference Zoho never made. It is a failure
+  // like any other now; what it keeps is its own sentence, so the reader gets the calm true thing
+  // rather than «400 on /deluge/api/ui/v1/…» followed by the page's cookie names.
+  if (e && e.note) return `${tabLabel(area)}: ${e.note}${e.status ? ` (Zoho answered ${e.status})` : ''}.`;
   // Through `friendlyError` for the same reason as the Analytics twin: a pull is minutes of
   // network work and Chrome lets the folder permission lapse while it runs, so the last stage
   // throws `NotAllowedError: The request is not allowed by the user agent…` and this printed it
@@ -6213,6 +6219,10 @@ async function pullEverything() {
   // again» outranks both reasons an area is otherwise left out: the verdict, and the pull switch
   // Settings forces off beside it - it is an explicit instruction about this one area.
   const todo = TABS.filter((t) => wantsRecheck(t.id) || (!isForbidden(t.id) && isPulled(t.id)));
+  // Which areas are in this run *because* of a tick, and what their verdict said before it started.
+  // Both are read here, before the first await: `tabAccess` moves as the run goes.
+  const asked = todo.filter((t) => wantsRecheck(t.id)).map((t) => t.id);
+  const askedBefore = {}; asked.forEach((id) => { askedBefore[id] = (tabAccess[id] || {}).at; });
   let done = 0;
   for (const t of TABS) {
     // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
@@ -6238,9 +6248,15 @@ async function pullEverything() {
     done++;
   }
   if (!op.current()) return;
-  // Spent on what this run actually asked, not on what was ticked: an area the loop never reached -
-  // a workspace switched away from, a run stopped - keeps its request for the pull that does ask.
-  await takeRecheck(todo.map((t) => t.id));
+  // **Spent on what this run actually asked Zoho, which is narrower than what was ticked and
+  // narrower again than what ran.** Two ways it was wrong, both found by a reader: a Pull all in
+  // *another* workspace consumed the request, because the verdict is per workspace and the tick is
+  // per install, so an area granted there was in the run for the ordinary reason and the id matched;
+  // and a run whose runners bail before reaching Zoho - a closed tab, a folder permission dismissed -
+  // spent it having asked nothing. Derived from the event instead: an area was asked only if it
+  // recorded a verdict during this run, which is what `noteAccess` writes and the one thing that
+  // cannot be true without a request.
+  await takeRecheck(asked.filter((id) => (tabAccess[id] || {}).at !== askedBefore[id]));
   if (!op.current()) return;
   // The last area closes with its own line and then this runs - rebuilding a tree of thousands of
   // rows, which is the second place the panel looked stuck at the end of a pull.

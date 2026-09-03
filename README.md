@@ -459,11 +459,13 @@ like to support development:
   question every time, so **Settings -> Tabs** carries an **ask again** tick per refused row, saved
   with the section like every other control there: the next pull then includes that area once, and
   what Zoho answers becomes the new record. A verdict is a record of what was asked, not a permanent
-  fact. Only an outright HTTP refusal counts: an area that fails for another reason
-  is reported as a failure and stays visible. One endpoint refuses in other words - the connections
-  catalogue answers `400 INVALID_CSRF_TOKEN` to a user it will not serve - and that counts as a
-  refusal too, but only when the same token is being accepted by every other read in the session,
-  which is the measurement that separates it from an actual token failure. A role can also list the
+  fact. Only an outright HTTP refusal counts - Zoho saying so with a 401 or a 403: an area that fails
+  for another reason is reported as a failure and stays visible, and that includes the connections
+  catalogue, which answers `400 INVALID_CSRF_TOKEN` to a user it will not serve without ever saying
+  «no permission». What Zoost does there is decide the *sentence*, not the verdict: when an ordinary
+  Zoho CRM read in the same session is accepting the very token that call carried, the token cannot
+  be the problem, and you are told so plainly instead of being shown the page's cookie names. A role
+  can also list the
   functions and refuse their **source**, one function at a time: those rows keep their name, namespace
   and language, carry a grey `⊘` with the day it was asked, and are not counted by "Complete missing",
   which could only be refused again. That verdict is recorded per workspace like an area's, and every

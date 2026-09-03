@@ -191,6 +191,7 @@ async function loseLock() {
   try { await chrome.storage.session.remove('aikeys'); } catch (_) {}
   aiPassChanging = false;
   await loadAi();
+  rebase('aicfg'); paintDirty();   // same reason: the form has just been redrawn from disk
   toast(`Protection removed. Paste the ${names} API key in again, then save.`, true);
 }
 
@@ -410,6 +411,8 @@ async function saveAi() {
   // drift - which is what left two empty passphrase boxes on screen after a successful save, reading
   // as "it did not take".
   await loadAi();
+  // After the redraw: this is the moment the form and the store agree, and the only one.
+  rebase('aicfg'); paintDirty();
 }
 
 function layToUI() {
@@ -451,6 +454,7 @@ async function onSaveLay() {
   try { prev = (await chrome.storage.local.get('erParams')).erParams || {}; }
   catch (_) { toast(MSG.readFailed, true); return; }
   if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
+  rebase('erParams'); paintDirty();
   toast('Diagram defaults saved.');
 }
 $('saveLay').onclick = onSaveLay;
@@ -511,6 +515,12 @@ async function onAiengine() {
   c.active = $('aiengine').value;
   prevEngine = c.active;
   if (!await saveKeys({ aicfg: c })) return;
+  // **A partial write is not a saved section.** This stores `active` and nothing else, so a key
+  // typed and not yet saved is still only in the form - and `saveKeys` clears the section's mark
+  // for every key it wrote. The page then said «nothing to save» over an API key that closing
+  // the tab would lose. The mark is recomputed against the baseline, which this write did not
+  // move, so a pending edit survives the engine changing under it.
+  markDirty('aicfg');
   toast(`Engine set to ${engineLabel(c.active)}.`);
 }
 $('aiengine').onchange = onAiengine;
@@ -548,6 +558,7 @@ async function loadDc() {
 }
 async function onZohoDc() {
   if (!await saveKeys({ zohoDc: $('zohoDc').value })) return;
+  rebase('zohoDc'); paintDirty();
   toast('Data centre saved.');
 }
 $('zohoDc').onchange = onZohoDc;
@@ -675,6 +686,7 @@ async function onSaveRx() {
   // No settingsStamp here: the panel reads this list fresh every time the menu opens, so there is
   // nothing cached anywhere to tell about the change.
   if (!await saveKeys({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) })) return;
+  rebase('rxShortcuts'); paintDirty();
   toast('Patterns saved.');
 }
 $('saveRx').onclick = onSaveRx;
@@ -775,6 +787,14 @@ function markDirty(key) {
   paintDirty();
 }
 
+/** State a section will write that no control on the page holds. See the CRM twin: «Forget this
+ *  key» records a provider in `aiForget` and blanks fields that were already blank for an encrypted
+ *  key, so the removal moved no fingerprint and went unmarked.
+ */
+const EXTRA_STATE = {
+  aicfg: () => JSON.stringify([...aiForget].sort()),
+};
+
 /** What a section's form looks like now, as one comparable string.
  *
  *  **«Unsaved changes» has to mean «different from what is stored», not «touched».** Reported from
@@ -788,10 +808,11 @@ function markDirty(key) {
  *  by typing - change the fingerprint when they move.
  */
 function snapshotOf(sec) {
-  return JSON.stringify([...sec.querySelectorAll('input, select, textarea')].map((el) => [
+  const extra = EXTRA_STATE[sec.dataset.section];
+  return JSON.stringify([extra ? extra() : '', [...sec.querySelectorAll('input, select, textarea')].map((el) => [
     el.dataset.id || el.dataset.pull || el.dataset.recheck || el.id || el.name || '',
     el.type === 'checkbox' || el.type === 'radio' ? !!el.checked : el.value,
-  ]));
+  ])]);
 }
 const sectionEl = (key) => document.querySelector(`[data-section="${key}"]`);
 const baseline = new Map();
@@ -865,10 +886,20 @@ async function saveKeys(obj) {
     await chrome.storage.local.set(obj);
   } catch (e) {
     keys.forEach((k) => { ownWrite.delete(k); dirty.add(k); });
+    // The mark went back and the paint did not follow it, so a Save pressed over a section
+    // that happened to match the disk left an idle button and no words - the failure said only a
+    // toast, which is gone in two seconds.
+    paintDirty();
     toast(MSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
     return false;
   }
-  keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); rebase(k); });
+  // **Not `rebase` here.** A write is not the moment the form and the store agree: three of
+  // these handlers re-read the section straight afterwards, and one writes only part of it.
+  // Baselining the form as the user left it recorded a value that had just been trimmed,
+  // clamped, encrypted or blanked as «what is stored», and the section then reported an
+  // unsaved change for ever - one that undoing could not clear. The callers rebase after
+  // their redraw; `takeTheirs` already did it that way and had the case that says so.
+  keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
   paintDirty();
   return true;
 }
@@ -945,8 +976,13 @@ async function otherWindowChanged(ch, area) {
     if (peer) conflictBox(peer, true);
     else {
       try { await SECTIONS[key].reload(); } catch (_) {}
-      // The form now shows what is stored, so that is the new baseline.
-      rebase(key);
+      // Every key that shares the reload, not the one that changed: `tabAccessView` has no
+      // section element of its own, so rebasing *it* is a no-op while `loadTabs` has just
+      // redrawn the Tabs form. Every pull that publishes a verdict left that baseline
+      // describing rows that no longer exist, and the next edit there was unsaveable-looking
+      // for ever - the very defect this machinery was written to remove, on the one path
+      // that redraws without going through a save. `takeTheirs` walks the reload; so does this.
+      Object.keys(SECTIONS).forEach((k) => { if (SECTIONS[k].reload === SECTIONS[key].reload) rebase(k); });
       // **Asked again, because the answer above is from before the await.** An edit that arrived
       // while the read was in flight has already stopped that read from drawing - see
       // `invalidateSectionLoads` - so what is left is telling the reader their form and the disk have

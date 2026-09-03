@@ -430,31 +430,41 @@
     // to be incomplete and the remaining cause is unidentified. Nothing is guessed here: what the
     // request actually carried is reported, so the next occurrence arrives as evidence instead of as
     // three words that fit every explanation.
-    // **A token Zoho is accepting elsewhere cannot be why Zoho refused this.** Measured, on a
-    // reduced-privilege user in a real org: one token for the whole session, 179 answers of 200 from
-    // `/crm/`, and this endpoint refusing it twice. What is left is the endpoint refusing the
-    // *request* - for that user, on that data centre - and it is a refusal like a 403, deterministic
-    // and unhelped by any retry. So it becomes one, and the cookie diagnostic below is kept for the
-    // case it was actually written for: a token nothing has accepted.
+    // **What the evidence decides is the sentence, and only that.** A token this session is having
+    // accepted cannot be why Zoho refused: measured on a reduced-privilege user in a real org - one
+    // token for the whole session, 179 answers of 200 from `/crm/`, and this endpoint refusing it
+    // twice. `warmDeluge` now takes that reading rather than waiting for one, so it holds even when
+    // Connections is the only area pulled.
     //
-    // What is verified and what is not, said here rather than implied: that the token is good is
-    // measured; that the *role* is the reason is the likeliest remaining cause and is worded as a
-    // possibility, because Zoho never said so.
-    // **And it has to be the token Zoho sends to *this* family, or the evidence is a coincidence.**
-    // `tokenOf` strips the prefix, so `crmcsrfparam=X` and `drepn=X` compare equal - and X being
-    // accepted by the CRM API says nothing when X is the CRM family's own cookie, sent to the deluge
-    // runtime by the fallback in `csrfToken`. That is the *known* failure this file already
-    // documents, with a diagnostic of its own, and it would have been relabelled «your user may not
-    // have access». The page's token is the one value measured to serve both families - one token,
-    // two prefixes - so it is the only one whose acceptance transfers between them.
+    // **It does not decide that the role is the reason, and for a while it did.** Promoting this to
+    // `forbidden` hid the tab, dated a role verdict into the workspace, made later pulls skip the
+    // area and suppressed the /emergency pointer - on an inference, because Zoho answered
+    // INVALID_CSRF_TOKEN and never said «no permission». Worse, once the primer existed the three
+    // conditions became true *by construction*: the recovery fetches the page token, the primer has
+    // it accepted, the retry sends it back, so the test that was meant to mean «something else
+    // accepted this» came to mean «the recovery ran». A conclusion that produces its own antecedent
+    // is not a measurement. Found by a reader with no memory of writing it, reproduced against both
+    // revisions with one scripted server.
+    //
+    // So: 401 and 403 are what Zoho *states*, and they alone are refusals. This is a failure - the
+    // tab stays, later pulls retry it, /emergency is offered because a platform change is one of the
+    // causes still standing - and what the reading buys is that the reader is told the calm true
+    // thing instead of a cookie jar. The evidence travels as `diag` for the problem report either
+    // way, which is the one place it was being lost.
+    //
+    // Known and not fixed: two `/deluge/` recoveries overlapping would have the second skip the
+    // primer, so one failure could carry this sentence and its twin the cookie one. Nothing overlaps
+    // today - `pullConnections` is the only deluge caller and `pullBusy` serialises the pulls.
     if (res.status === 400 && message === 'INVALID_CSRF_TOKEN'
         && tokenOf(h) && tokenOf(h) === _tokenAccepted && tokenOf(h) === _pageCsrf) {
-      const e = apiError(res.status, path, `${message} - the same token was accepted by every other `
-        + 'read in this session, so this is Zoho refusing the request rather than a token fault', code);
-      e.forbidden = true;
+      const e = apiError(res.status, path, `${message} - the same token was accepted by an ordinary `
+        + 'Zoho CRM read in this session, so this is not a token fault', code);
       // The sentence the reader gets. The one built above is precise about the evidence and reads as
-      // an incident; this says what it means for them and what to do with it.
+      // an incident; this says what it means for them, hedged where the knowledge stops.
       e.note = 'Zoho refused this read - this Zoho user may not have access to it';
+      let jar = [];
+      try { jar = document.cookie.split('; ').map((c) => c.split('=')[0]).filter(Boolean).sort(); } catch (_) {}
+      e.diag = { what: 'csrf', from: lastCsrfFrom, shape: lastCsrfShape, cookies: jar };
       throw e;
     }
     if (res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
@@ -468,7 +478,12 @@
       const e = apiError(res.status, path,
         `${message} - the token was read from ${lastCsrfFrom} (${lastCsrfShape || 'no value'})`
         + `; cookies on this page: ${jar.join(' ') || '(none readable)'}`
-        + (retried === 'unprimed' ? ', and the Zoho CRM call made to refresh it failed too' : ', and it was still refused after a refresh'),
+        // **It names the thing that actually did not happen.** `primed` is whether the *page's own
+        // token* could be read, and the sentence said «the Zoho CRM call made to refresh it failed
+        // too» - about a call whose outcome is deliberately discarded, and which since the primer
+        // was added is usually a 200. A false sentence in the one message somebody pastes into a
+        // report is worse than no sentence.
+        + (retried === 'unprimed' ? ', and the token the page itself uses could not be read either' : ', and it was still refused after a refresh'),
         code);
       // **The same three facts, carried as fields rather than as prose.** The sentence above is
       // written to be read on the status line; it does not survive the problem report, which is the
