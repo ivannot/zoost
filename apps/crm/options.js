@@ -104,6 +104,26 @@ async function onPickRoot() {
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
 }
 $('pickRoot').onclick = onPickRoot;
+/** Ask the panel to forget one area's verdict, so its next pull asks Zoho again.
+ *
+ *  A **named declaration** rather than an async arrow on the handler: `tools/asynccheck.py` matches
+ *  a declaration at the start of a line, so an anonymous one is a scope the checker cannot enter -
+ *  and this writes shared state after an await, which is the exact shape it exists to look at. The
+ *  ceiling for such scopes is zero and the suite holds it.
+ *
+ *  The timestamp is load-bearing: `storage.onChanged` fires on a *change*, so pressing the button
+ *  twice with an identical value would be one event and the second press would do nothing.
+ */
+async function askRecheck(b) {
+  const id = b.dataset.recheck;
+  b.disabled = true;
+  try {
+    await chrome.storage.local.set({ tabRecheck: { area: id, ws: tabAccessCur.ws || null, at: Date.now() } });
+    // What this page can honestly report is that it asked: the panel does the work, and it may not
+    // even be open. It says so itself when it has.
+    b.textContent = 'Asked';
+  } catch (_) { b.disabled = false; }
+}
 async function onClearRoot() {
   if (!confirm('Forget the working folder?\n\nNothing on disk is deleted - Zoost simply stops using it until you pick one again.')) return;
   await window.idbHandle.set('rootDir', null);
@@ -724,8 +744,12 @@ function renderTabs() {
     // A refused tab is not a checkbox. Offering to "show" something Zoho will not answer for would be
     // a control that cannot do what it says - the same reason a refused tab is absent from the panel
     // rather than greyed out there.
+    // **«Pull again to re-check» was not true**, and nothing could make it true: a refused area is
+    // skipped by «Pull all», its tab is gone with its own Pull button, and both boxes below are
+    // disabled - so a role granted since stayed refused until somebody deleted `.zoost.json`. The
+    // sentence now names the control beside it, which is the one thing here that does what it says.
     const why = denied
-      ? `${a.note || 'Not granted to your Zoho role'}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
+      ? `${a.note || 'Not granted to your Zoho role'}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. If your role has changed since, press Check again.`
       : def.note;
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped
@@ -733,6 +757,7 @@ function renderTabs() {
     row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${escA(id)}" title="Show this tab in the side panel">
       <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
       <label class="pl" title="Include this type when you click Pull all"><input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabNoPullCur.includes(id)) ? '' : 'checked'} data-pull="${escA(id)}">pull</label>
+      ${denied ? `<button class="mv" data-recheck="${escA(id)}" title="Forget what Zoho answered for this area, so the next pull asks again">Check again</button>` : ''}
       <button class="mv" data-up="${escA(id)}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
       <button class="mv" data-down="${escA(id)}" ${i === tabOrderCur.length - 1 ? 'disabled' : ''} title="Move down">↓</button>`;
     box.appendChild(row);
@@ -755,6 +780,9 @@ function renderTabs() {
     const id = c.dataset.pull;
     tabNoPullCur = c.checked ? tabNoPullCur.filter((x) => x !== id) : tabNoPullCur.concat([id]);
   }));
+  // A request the panel carries out, named with the workspace it is about: this page has no folder
+  // handle, and the verdict belongs to one org. See `askRecheck`.
+  box.querySelectorAll('[data-recheck]').forEach((b) => (b.onclick = () => void askRecheck(b)));
   box.querySelectorAll('[data-up]').forEach((b) => (b.onclick = () => move(b.dataset.up, -1)));
   box.querySelectorAll('[data-down]').forEach((b) => (b.onclick = () => move(b.dataset.down, 1)));
 

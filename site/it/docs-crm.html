@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:776bc8d02471d46b -->
+<!-- translated-from: site/docs-crm.html sha256:4732b26c04226658 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -251,8 +251,11 @@ git commit -m "baseline"</code></pre>
     Zoost lo scopre facendo il pull. Se Zoho rifiuta un'area, il pull lo dice a parole invece di mostrare un
     codice di stato, per quell'area non viene scritto niente, e la sua scheda sparisce invece di restarsene
     lì disattivata. Il motivo, e la data in cui è stato chiesto, stanno in
-    <b class="ui">⚙ Settings → Tabs</b>, dove <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> riproverà. I ruoli sono
-    per org: un workspace che rifiuta un'area non dice niente sul prossimo.</p>
+    <b class="ui">⚙ Settings → Tabs</b>, accanto a un pulsante <b class="ui">Check again</b>. I pull
+    successivi saltano apposta un'area rifiutata - rifare a ogni pull una domanda già risposta sono mille
+    richieste per un solo cambio di ruolo - quindi è quel pulsante a dimenticare la risposta e a far
+    tornare la scheda, perché il pull successivo la chieda. Premilo quando qualcuno ti comunica che il tuo
+    ruolo è cambiato. I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.</p>
   <p>La stessa pagina è dove scegli <b>quali schede mostrare e in che ordine</b> - il pannello è stretto, e
     un tipo che non guardi mai è solo d'intralcio. Ogni riga ha un secondo interruttore, <b>pull</b>, per una domanda diversa: se Zoost debba proprio chiedere quel tipo a Zoho. Spegnere una scheda spegne anche
     quello, perché quasi sempre una scheda si spegne per un'area che l'account non può leggere e chiederla

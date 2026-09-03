@@ -234,8 +234,11 @@ git commit -m "baseline"</code></pre>
     connections catalogue depends on your role, and there is no way to ask in advance - so Zoost finds out
     by pulling. If Zoho refuses an area, the pull says so in plain words instead of showing a status code,
     nothing is written for it, and its tab disappears rather than sitting there greyed out. The reason,
-    and the date it was asked, are in <b class="ui">⚙ Settings → Tabs</b>, where <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>
-    will check again. Roles are per org: a workspace that refuses an area says nothing about the next one.</p>
+    and the date it was asked, are in <b class="ui">⚙ Settings → Tabs</b>, next to a <b class="ui">Check again</b>
+    button. Later pulls skip a refused area on purpose - re-asking an answered question on every pull is a
+    thousand requests for one role change - so that button is what forgets the answer and brings the tab
+    back, for the next pull to ask. Press it when someone tells you your role has changed. Roles are per
+    org: a workspace that refuses an area says nothing about the next one.</p>
   <p>The same page is where you choose <b>which tabs to show at all, and in what order</b> - the panel is
     narrow, and a type you never look at is only in the way. Each row has a second switch, <b>pull</b>, for
     the separate question of whether Zoost should ask Zoho for that type at all. Turning a tab off clears

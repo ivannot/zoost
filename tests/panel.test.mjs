@@ -18527,6 +18527,80 @@ test('a function whose source the role refuses is an answer, not a retryable fai
 });
 
 // ---------------------------------------------------------------------------------------------
+// **A refused area was a dead end, and two sentences promised it was not.** «Pull all» skips it on
+// purpose, its tab is gone with its own Pull button, and Settings disabled both of its boxes - so a
+// role granted since never came back, and the only way out was deleting `.zoost.json` by hand. The
+// author chose the shape: not a re-ask on every pull - «a thousand pulls of pointless calls for one
+// role change» - but a deliberate act, because nobody discovers a role change by accident.
+test('a refused area can be forgotten on request, and only for the workspace it belongs to', async () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const mk = (over) => {
+    const said = []; let wrote = null; let drew = 0, removed = 0;
+    const g = Object.assign({
+      console, Object, String, Date, Promise,
+      beginWorkspaceOp: () => ({ current: () => true }),
+      patchCfg: async (o) => { wrote = o; },
+      publishAccess: () => {}, renderTabs: () => { drew++; },
+      // The request is consumed once carried out, so the stub has to offer the removal too.
+      chrome: { storage: { local: { remove: async () => { removed++; } } } },
+      setStatus: (t, k) => said.push([t, k]),
+      tabLabel: (a) => a[0].toUpperCase() + a.slice(1),
+      errText: (e) => String(e && e.message),
+      wsList: [{ id: 'w1', name: 'acme' }], activeWsId: 'w1',
+      tabAccess: { connections: { state: 'forbidden', status: 400 }, modules: { state: 'ok' } },
+    }, over);
+    return { m: load([sliceFn(rel, 'recheckArea')], g), g, said: () => said, wrote: () => wrote,
+             drew: () => drew, removed: () => removed };
+  };
+
+  const ok = mk();
+  await ok.m.recheckArea({ area: 'connections', ws: 'acme', at: 1 });
+  assert.deepEqual(Object.keys(ok.wrote().access), ['modules'],
+                   'the verdict was not forgotten, so the area stays refused for ever and the tab '
+                   + 'never comes back - which is the reported dead end');
+  assert.equal(ok.wrote().access.connections, undefined, 'the refusal is still on record');
+  assert.ok(ok.drew() > 0, 'the tab row was not redrawn, so the tab does not come back until a reload');
+  assert.equal(ok.removed(), 1,
+               'the request stays on the reader machine after being carried out, and a panel opened '
+               + 'later reads a stale one as new');
+  const line = ok.said()[0][0];
+  assert.match(line, /Zoho has not been asked/,
+               `the panel claims access it has not proved: ${JSON.stringify(line)}`);
+
+  // The oldest trap in this panel, in a new place: Settings is a second window, so the click can
+  // arrive after the reader has moved to another folder.
+  const moved = mk({ wsList: [{ id: 'w2', name: 'other' }], activeWsId: 'w2' });
+  await moved.m.recheckArea({ area: 'connections', ws: 'acme', at: 1 });
+  assert.equal(moved.wrote(), null,
+               'the request of one workspace cleared the verdict of another');
+
+  // And it only ever forgets: an area nobody has refused is not given an answer here.
+  const none = mk();
+  await none.m.recheckArea({ area: 'schedules', ws: 'acme', at: 1 });
+  assert.equal(none.wrote(), null, 'a verdict was written for an area that had none');
+
+  // The request reaches it. Settings has no folder handle, so it asks and the panel acts - and the
+  // routing sits before `applySettingsChange` returns on the keys it does not recognise.
+  const apply = sliceFn(rel, 'applySettingsChange');
+  const route = apply.indexOf('ch.tabRecheck');
+  assert.ok(route > 0, 'nothing routes the request, so the button in Settings does nothing at all');
+  assert.ok(route < apply.indexOf('if (!ch.settingsStamp) return;'),
+            'the request is read after the early return that fires for a key arriving on its own, '
+            + 'which is exactly how this one arrives');
+
+  // Settings offers it only where there is something to forget, and the sentence names it rather
+  // than promising a pull that skips the area.
+  // Comments blanked: the subject is what the page renders, and this function's comment quotes the
+  // sentence being removed - a check that reads its own explanation as evidence proves nothing.
+  const tabs = sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(tabs, /denied \? `<button class="mv" data-recheck=/,
+               'the button is drawn for every row, or for none - it belongs to a refused one');
+  assert.doesNotMatch(tabs, /Pull again to re-check/,
+                      'Settings still sends the reader to a pull that skips the area on purpose');
+  assert.match(tabs, /press Check again/i, 'the sentence no longer names the control that does the work');
+});
+
+// ---------------------------------------------------------------------------------------------
 // **A refusal has to outlive the run that heard it, and this one did not.** Reported after the fix
 // above, from the same org: the pull ends by rebuilding the tree from `functions/index.json`, which
 // knows nothing about what Zoho refused, so «Complete missing (16)» came back over sixteen functions

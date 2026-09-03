@@ -455,8 +455,10 @@ like to support development:
   in advance whether a user may read Deluge functions or the connections catalogue, so Zoost finds
   out by pulling: an area Zoho refuses (401/403) is recorded per workspace with the date, its tab is
   hidden, and the reason is stated in **Settings → Tabs**. Roles are per org, so another workspace
-  may grant what this one refuses. Pull again to re-check - a verdict is a record of what was asked,
-  not a permanent fact. Only an outright HTTP refusal counts: an area that fails for another reason
+  may grant what this one refuses. Later pulls skip a refused area rather than re-asking an answered
+  question every time, so **Settings -> Tabs** carries a **Check again** button per refused row: it
+  forgets the answer and brings the tab back, and the next pull is what asks Zoho. A verdict is a
+  record of what was asked, not a permanent fact. Only an outright HTTP refusal counts: an area that fails for another reason
   is reported as a failure and stays visible. One endpoint refuses in other words - the connections
   catalogue answers `400 INVALID_CSRF_TOKEN` to a user it will not serve - and that counts as a
   refusal too, but only when the same token is being accepted by every other read in the session,
