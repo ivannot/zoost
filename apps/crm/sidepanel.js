@@ -710,6 +710,7 @@ async function loadTabPrefs() {
         // Absent in preferences saved before this existed: those said nothing about pulling, so the
         // honest reading is "pull everything", not "skip whatever happens to be hidden today".
         nopull: (Array.isArray(p.nopull) ? p.nopull : []).filter((id) => TAB[id]),
+        recheck: (Array.isArray(p.recheck) ? p.recheck : []).filter((id) => TAB[id]),
       };
     }
   } catch (_) {}
@@ -744,53 +745,6 @@ function publishAccess() {
   const w = (wsList || []).find((x) => x.id === activeWsId);
   void chrome.storage.local.set({ tabAccessView: { ws: (w && w.name) || null, access: tabAccess } })
     .catch(() => {});
-}
-
-/** Forget one area's verdict, on request, so the next pull asks Zoho again.
- *
- *  **A refusal was a dead end, and two sentences promised it was not.** «Pull all» skips a refused
- *  area on purpose - re-asking an answered question on every pull is a thousand pointless requests
- *  for one role change - the tab is gone with its own Pull button, and Settings disabled both of its
- *  boxes. So a role that had since been granted never came back, and the only way out was deleting
- *  `.zoost.json` by hand. Reported by the author, who also said what the right shape is: nobody
- *  discovers a role change by accident, they are told about it, so the re-check belongs to a
- *  deliberate act and not to a cadence. The same rule as every cache here - invalidation derives
- *  from the event, never from the clock.
- *
- *  It only ever *forgets*. «No measurement» is the state that makes an area visible again, which is
- *  what this panel already does for an area nobody has asked about, so nothing here claims access
- *  that has not been proved: the pull that follows is what asks Zoho.
- *
- *  The workspace is named in the request and checked here, because a verdict belongs to an org and
- *  Settings is a second window: the click can arrive after the reader has moved to another folder,
- *  and clearing that one's Connections would be this panel's oldest bug in a new place.
- */
-async function recheckArea(req) {
-  const area = req && req.area;
-  if (!area || !tabAccess[area]) return;
-  const op = beginWorkspaceOp();
-  const w = (wsList || []).find((x) => x.id === activeWsId);
-  if (req.ws && req.ws !== ((w && w.name) || null)) return;
-  const next = Object.assign({}, tabAccess); delete next[area];
-  // One shape for both messages, the sibling's: the guard is an early return, so nothing here says
-  // anything about a workspace the reader has left. Written first with an inline guard on one and a
-  // return on the other, and the derived check that refuses a function guarding one message and not
-  // its neighbour caught it - the mixed form is how this comes back.
-  try { await patchCfg({ access: next }, op); }
-  catch (e) {
-    if (!op.current()) return;
-    setStatus(`Could not clear the ${tabLabel(area)} verdict: ${errText(e)}`, 'bad');
-    return;
-  }
-  if (!op.current()) return;
-  tabAccess = next;
-  publishAccess();
-  renderTabs();
-  // Consumed, not kept. It is a request that has been carried out, and leaving it on the reader's
-  // machine would be one more thing stored for no reason - and a second panel opening later would
-  // read a stale one as new. Removal fires the listener again with no `newValue`, which is a no-op.
-  void chrome.storage.local.remove('tabRecheck').catch(() => {});
-  setStatus(`${tabLabel(area)} is back - Zoho has not been asked again yet. Pull it to find out.`, 'warn');
 }
 
 // A bridge reply is a plain object, so rebuilding an Error from it drops `forbidden` unless it is
@@ -1355,7 +1309,10 @@ const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
 
 // What the user chose: which tabs to show and in what order. A preference, stored per install and
 // not per workspace - unlike the access verdicts, which are a property of one org's roles.
-let tabPrefs = { order: TABS.map((t) => t.id), hidden: [], nopull: [] };
+// `recheck` holds the areas the reader has asked Zoost to put back to Zoho *once*, despite a
+// refusal on record. It is a preference like the other three, saved in Settings with Save, and it
+// is consumed by the pull that acts on it - see `takeRecheck`.
+let tabPrefs = { order: TABS.map((t) => t.id), hidden: [], nopull: [], recheck: [] };
 // What Zoho answered, for the workspace currently open: area -> { state, status, at }.
 // 'ok' | 'forbidden' | 'failed'. Empty until a pull has actually asked.
 let tabAccess = {};
@@ -1400,6 +1357,28 @@ function staleReason(id) {
   return 'the last pull did not refresh it';
 }
 const isForbidden = (id) => accessOf(id) === 'forbidden';
+// «Ask Zoho about this one again, once.» Only meaningful where there is a verdict to overturn, so a
+// tick left behind on an area that is no longer refused is not an instruction to keep asking - it is
+// spent by the next pull either way, and this makes it harmless in the meantime.
+const wantsRecheck = (id) => isForbidden(id) && tabPrefs.recheck.includes(id);
+/** Spend the requests this run has acted on, so «once» means once.
+ *
+ *  Written back into the same preference Settings owns, because that is where the tick is: leaving
+ *  it set would turn one deliberate act into an area re-asked on every pull for ever, which is the
+ *  cost the author refused when he chose this shape over «Pull all re-asks everything».
+ *
+ *  Best-effort and silent. Failing to clear it costs one extra request on the next pull; failing the
+ *  pull over it would cost the pull.
+ */
+async function takeRecheck(ids) {
+  const spent = ids.filter((id) => tabPrefs.recheck.includes(id));
+  if (!spent.length) return;
+  const next = Object.assign({}, tabPrefs, { recheck: tabPrefs.recheck.filter((id) => !spent.includes(id)) });
+  try {
+    await chrome.storage.local.set({ tabPrefs: { order: next.order, hidden: next.hidden, nopull: next.nopull, recheck: next.recheck } });
+    tabPrefs = next;
+  } catch (_) { /* one more request next time is the whole cost */ }
+}
 const isHiddenByUser = (id) => tabPrefs.hidden.includes(id);
 // Hiding a tab and skipping its pull are separate on purpose, but they are not equally likely: most
 // people who turn a tab off do it because they cannot read that area anyway, and leaving it in the
@@ -6229,15 +6208,25 @@ async function pullEverything() {
   // What this pull will actually do, counted before it starts: the areas your Zoho role allows and
   // your settings ask for. A «3 of 6» that silently meant «3 of whatever is left» would be worse
   // than no number at all.
-  const todo = TABS.filter((t) => !isForbidden(t.id) && isPulled(t.id));
+  // The same condition as the loop below, or the count and the act part company - «3 of 6» over a
+  // run that does seven is the number this line's own comment calls worse than none. A ticked «ask
+  // again» outranks both reasons an area is otherwise left out: the verdict, and the pull switch
+  // Settings forces off beside it - it is an explicit instruction about this one area.
+  const todo = TABS.filter((t) => wantsRecheck(t.id) || (!isForbidden(t.id) && isPulled(t.id)));
   let done = 0;
   for (const t of TABS) {
     // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
     // so without this the remaining areas would carry on pulling the tab's org into the folder the
     // user had just opened, which is only refused if that folder is already bound to another org.
     if (!op.current()) return;
-    if (isForbidden(t.id)) continue;
-    if (!isPulled(t.id)) { skipped.push(t.id); continue; }
+    // A refused area is skipped, because re-asking an answered question on every pull is a thousand
+    // pointless requests for one role change - unless the reader has ticked «ask again» in Settings
+    // for it, which is the one thing that says a role may have moved. It is spent here: one pull
+    // asks, and what Zoho answers this time becomes the record.
+    if (!wantsRecheck(t.id)) {
+      if (isForbidden(t.id)) continue;
+      if (!isPulled(t.id)) { skipped.push(t.id); continue; }
+    }
     // Said here, before the runner is called, and not left to the runner to say. Every one of them
     // asks for the folder permission, then the tab's context, then reads the config - three or four
     // awaits, seconds on a cold bridge - before its own first message replaces this line. Until then
@@ -6248,6 +6237,10 @@ async function pullEverything() {
     try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
     done++;
   }
+  if (!op.current()) return;
+  // Spent on what this run actually asked, not on what was ticked: an area the loop never reached -
+  // a workspace switched away from, a run stopped - keeps its request for the pull that does ask.
+  await takeRecheck(todo.map((t) => t.id));
   if (!op.current()) return;
   // The last area closes with its own line and then this runs - rebuilding a tree of thousands of
   // rows, which is the second place the panel looked stuck at the end of a pull.
@@ -6804,9 +6797,6 @@ async function applySettingsChange(ch, area) {
     } else renderTabs();
   }
   if (ch.zohoDc) zohoDc = ch.zohoDc.newValue || zohoDc;
-  // A request, not a verdict: Settings has no folder handle and no business acquiring one, so it
-  // asks and the panel - which owns `.zoost.json` - does it.
-  if (ch.tabRecheck && ch.tabRecheck.newValue) await recheckArea(ch.tabRecheck.newValue);
   if (!ch.settingsStamp) return;
   await loadScope();
   aiEngineChrome();

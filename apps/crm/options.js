@@ -104,26 +104,6 @@ async function onPickRoot() {
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
 }
 $('pickRoot').onclick = onPickRoot;
-/** Ask the panel to forget one area's verdict, so its next pull asks Zoho again.
- *
- *  A **named declaration** rather than an async arrow on the handler: `tools/asynccheck.py` matches
- *  a declaration at the start of a line, so an anonymous one is a scope the checker cannot enter -
- *  and this writes shared state after an await, which is the exact shape it exists to look at. The
- *  ceiling for such scopes is zero and the suite holds it.
- *
- *  The timestamp is load-bearing: `storage.onChanged` fires on a *change*, so pressing the button
- *  twice with an identical value would be one event and the second press would do nothing.
- */
-async function askRecheck(b) {
-  const id = b.dataset.recheck;
-  b.disabled = true;
-  try {
-    await chrome.storage.local.set({ tabRecheck: { area: id, ws: tabAccessCur.ws || null, at: Date.now() } });
-    // What this page can honestly report is that it asked: the panel does the work, and it may not
-    // even be open. It says so itself when it has.
-    b.textContent = 'Asked';
-  } catch (_) { b.disabled = false; }
-}
 async function onClearRoot() {
   if (!confirm('Forget the working folder?\n\nNothing on disk is deleted - Zoost simply stops using it until you pick one again.')) return;
   await window.idbHandle.set('rootDir', null);
@@ -714,6 +694,11 @@ let tabsLoadFailed = 'never';
 let tabOrderCur = TAB_IDS.slice();
 let tabHiddenCur = [];
 let tabNoPullCur = [];
+// The areas the reader has asked Zoost to put back to Zoho once, despite a refusal on record. A
+// preference like the three above and saved with them, deliberately: every other control in this
+// section is «edit the form, then Save», and a button that acted on its own made one row obey a
+// different rule from its neighbours. Reported in those words - «non mi sembra intuitivo».
+let tabRecheckCur = [];
 let tabAccessCur = { ws: null, access: {} };
 
 const dayOf = (iso) => {
@@ -749,15 +734,29 @@ function renderTabs() {
     // disabled - so a role granted since stayed refused until somebody deleted `.zoost.json`. The
     // sentence now names the control beside it, which is the one thing here that does what it says.
     const why = denied
-      ? `${a.note || 'Not granted to your Zoho role'}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. If your role has changed since, press Check again.`
+      // **What happens next, said at the moment it is decided.** Ticking the box and pressing Save
+      // changes nothing on screen - the tab comes back only if Zoho grants the area, which is what
+      // the *pull* asks - and with the row still reading «tick ask again» afterwards there was
+      // nothing to tell the reader that the tick had taken and what was left to do. Reported by the
+      // author, who ticked, saved, and watched for a tab that was never going to appear yet.
+      ? `${a.note || 'Not granted to your Zoho role'}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. `
+        + (tabRecheckCur.includes(id)
+          ? 'Zoost will ask about it in the next Pull all; the tab comes back only if Zoho grants it.'
+          : 'Later pulls skip it - tick ask again, then Save, to put it in the next one.')
       : def.note;
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped
     // whatever these say, and a control that cannot do what it says is worse than no control.
-    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${escA(id)}" title="Show this tab in the side panel">
+    // **A refused row read as «shown».** The box is disabled and was drawn ticked, so pressing
+    // «Show all» - which empties the hidden list - made it look as though the tab had come back
+    // while the panel went on hiding it, because the panel hides it for the verdict and not for
+    // this preference. Reported as «non capisco il comportamento». It says what is true: not shown,
+    // and not yours to change until Zoho answers otherwise - which is what the sentence beside it
+    // is for. The pull switch next to it has read this way since it was written.
+    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabHiddenCur.includes(id)) ? '' : 'checked'} data-id="${escA(id)}" title="${denied ? 'Zoho refused this area, so the panel hides its tab whatever this says' : 'Show this tab in the side panel'}">
       <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
       <label class="pl" title="Include this type when you click Pull all"><input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabNoPullCur.includes(id)) ? '' : 'checked'} data-pull="${escA(id)}">pull</label>
-      ${denied ? `<button class="mv" data-recheck="${escA(id)}" title="Forget what Zoho answered for this area, so the next pull asks again">Check again</button>` : ''}
+      ${denied ? `<label class="pl" title="Ask Zoho about this area once more on the next Pull all, in case your role has changed. Spent by that pull."><input type="checkbox" ${tabRecheckCur.includes(id) ? 'checked' : ''} data-recheck="${escA(id)}">ask again</label>` : ''}
       <button class="mv" data-up="${escA(id)}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
       <button class="mv" data-down="${escA(id)}" ${i === tabOrderCur.length - 1 ? 'disabled' : ''} title="Move down">↓</button>`;
     box.appendChild(row);
@@ -780,9 +779,14 @@ function renderTabs() {
     const id = c.dataset.pull;
     tabNoPullCur = c.checked ? tabNoPullCur.filter((x) => x !== id) : tabNoPullCur.concat([id]);
   }));
-  // A request the panel carries out, named with the workspace it is about: this page has no folder
-  // handle, and the verdict belongs to one org. See `askRecheck`.
-  box.querySelectorAll('[data-recheck]').forEach((b) => (b.onclick = () => void askRecheck(b)));
+  // A form edit like every other in this section: it takes effect when you press Save, and the
+  // pull that follows is what asks Zoho. Nothing here talks to the platform or to the workspace -
+  // this page has no folder handle, and the first version of this control died on exactly that.
+  box.querySelectorAll('input[data-recheck]').forEach((c) => (c.onchange = () => {
+    const id = c.dataset.recheck;
+    tabRecheckCur = c.checked ? tabRecheckCur.concat([id]) : tabRecheckCur.filter((x) => x !== id);
+    renderTabs();   // the sentence beside it says what happens next, and it has just changed
+  }));
   box.querySelectorAll('[data-up]').forEach((b) => (b.onclick = () => move(b.dataset.up, -1)));
   box.querySelectorAll('[data-down]').forEach((b) => (b.onclick = () => move(b.dataset.down, 1)));
 
@@ -820,6 +824,7 @@ async function loadTabs() {
       tabOrderCur = known.concat(TAB_IDS.filter((id) => !known.includes(id)));   // a tab added later must appear, not vanish
       tabHiddenCur = p.hidden.filter((id) => TAB_IDS.includes(id));
       tabNoPullCur = (Array.isArray(p.nopull) ? p.nopull : []).filter((id) => TAB_IDS.includes(id));
+      tabRecheckCur = (Array.isArray(p.recheck) ? p.recheck : []).filter((id) => TAB_IDS.includes(id));
     }
     if (st && st.tabAccessView) tabAccessCur = st.tabAccessView;
     tabsLoadFailed = false;
@@ -829,11 +834,16 @@ async function loadTabs() {
 async function onSaveTabs() {
   // Nothing is written over an order this page never managed to read.
   if (tabsLoadFailed) { toast(loadState(tabsLoadFailed), true); return; }
-  if (!await saveKeys({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } })) return;
+  if (!await saveKeys({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur, recheck: tabRecheckCur } })) return;
   await stamp();
   toast('Tabs saved.');
 }
 $('saveTabs').onclick = onSaveTabs;
+// It restores the order and turns every tab back on; it cannot show one Zoho has refused, and does
+// not pretend to - the refused rows redraw exactly as they were. `ask again` is left alone on
+// purpose: it is a request about the platform, not a display preference, and «Show all» quietly
+// queueing calls to Zoho would be a button doing more than it says.
+$('tabReset').title = 'Show every tab and restore the built-in order. An area Zoho refused stays hidden until it answers otherwise.';
 $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); markDirty('tabPrefs'); };
 
 
@@ -1099,7 +1109,42 @@ function invalidateSectionLoads(key) {
   // its place. Recorded as what it is, so the refusal afterwards names the cause that happened.
   markLoadCancelled(key);
 }
-function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); }
+function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); paintDirty(); }
+
+/** Paint every Save button from the one set that knows: `dirty`.
+ *
+ *  **A Save that looks the same whether or not there is anything to save tells you nothing**, and
+ *  every one of them was `class="primary"` in the markup - permanently the brightest thing in its
+ *  section, so the moment it actually wanted pressing looked exactly like the hour before. Reported
+ *  as the reason the page is not intuitive, with the alternative stated: highlight it, or drop it
+ *  and save on every keystroke. Five of these sections hold composite state - an order, a list of
+ *  patterns, a set of switches - where saving each edit as it is typed writes half-finished forms,
+ *  so the button stays and learns to ask.
+ *
+ *  Derived, never toggled at the call sites: the two places that change `dirty` call this, and the
+ *  paint is a function of the set. Toggling by hand is how one of eight sites gets forgotten, which
+ *  is the defect this page has already recorded about its own marks.
+ *
+ *  The word is there as well as the colour: a state carried by colour alone is one some readers do
+ *  not receive.
+ */
+function paintDirty() {
+  document.querySelectorAll('[data-section]').forEach((sec) => {
+    const b = sec.querySelector('button[id^="save"]');
+    if (!b) return;
+    const pending = dirty.has(sec.dataset.section);
+    b.classList.toggle('primary', pending);
+    b.classList.toggle('pending', pending);
+    let note = sec.querySelector('.unsaved');
+    if (pending && !note) {
+      note = document.createElement('span');
+      note.className = 'unsaved';
+      note.textContent = 'Unsaved changes';
+      b.parentNode.insertBefore(note, b.nextSibling);
+    } else if (!pending && note) note.remove();
+  });
+}
+
 
 /** One key, one write, and every mark that describes the outcome moved by the write that happened.
  *
@@ -1128,6 +1173,7 @@ async function saveKeys(obj) {
     return false;
   }
   keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
+  paintDirty();
   return true;
 }
 /** Which key of this section has unsaved edits, if any.
@@ -1174,6 +1220,7 @@ async function takeTheirs(key) {
   // edit is exactly what a read now refuses to overwrite, which would make «Take theirs» the
   // one button that does nothing.
   Object.keys(SECTIONS).forEach((k) => { if (SECTIONS[k].reload === SECTIONS[key].reload) dirty.delete(k); });
+  paintDirty();
   await SECTIONS[key].reload();
   // **The same window, through the other door.** A reader who presses «Take theirs» and then types
   // while the read is still in flight was having the box closed over a form that had unsaved edits in

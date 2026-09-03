@@ -6762,7 +6762,6 @@ class EveryStoredKeyIsAccountedFor(unittest.TestCase):
         'sampleWs': 'the sample workspace',
         'tabPrefs': 'which side-panel tabs you show',
         'tabAccessView': 'access record',
-        'tabRecheck': 're-check request',
         'zohoDc': 'fallback Zoho data centre',
         'rootDir': 'handle for the working folder',
         'activeWs': 'which workspace was last active',

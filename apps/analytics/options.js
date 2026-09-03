@@ -765,7 +765,42 @@ function invalidateSectionLoads(key) {
   // its place. Recorded as what it is, so the refusal afterwards names the cause that happened.
   markLoadCancelled(key);
 }
-function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); }
+function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); paintDirty(); }
+
+/** Paint every Save button from the one set that knows: `dirty`.
+ *
+ *  **A Save that looks the same whether or not there is anything to save tells you nothing**, and
+ *  every one of them was `class="primary"` in the markup - permanently the brightest thing in its
+ *  section, so the moment it actually wanted pressing looked exactly like the hour before. Reported
+ *  as the reason the page is not intuitive, with the alternative stated: highlight it, or drop it
+ *  and save on every keystroke. Five of these sections hold composite state - an order, a list of
+ *  patterns, a set of switches - where saving each edit as it is typed writes half-finished forms,
+ *  so the button stays and learns to ask.
+ *
+ *  Derived, never toggled at the call sites: the two places that change `dirty` call this, and the
+ *  paint is a function of the set. Toggling by hand is how one of eight sites gets forgotten, which
+ *  is the defect this page has already recorded about its own marks.
+ *
+ *  The word is there as well as the colour: a state carried by colour alone is one some readers do
+ *  not receive.
+ */
+function paintDirty() {
+  document.querySelectorAll('[data-section]').forEach((sec) => {
+    const b = sec.querySelector('button[id^="save"]');
+    if (!b) return;
+    const pending = dirty.has(sec.dataset.section);
+    b.classList.toggle('primary', pending);
+    b.classList.toggle('pending', pending);
+    let note = sec.querySelector('.unsaved');
+    if (pending && !note) {
+      note = document.createElement('span');
+      note.className = 'unsaved';
+      note.textContent = 'Unsaved changes';
+      b.parentNode.insertBefore(note, b.nextSibling);
+    } else if (!pending && note) note.remove();
+  });
+}
+
 
 /** One key, one write, and every mark that describes the outcome moved by the write that happened.
  *
@@ -794,6 +829,7 @@ async function saveKeys(obj) {
     return false;
   }
   keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
+  paintDirty();
   return true;
 }
 /** Which key of this section has unsaved edits, if any.
@@ -840,6 +876,7 @@ async function takeTheirs(key) {
   // edit is exactly what a read now refuses to overwrite, which would make «Take theirs» the
   // one button that does nothing.
   Object.keys(SECTIONS).forEach((k) => { if (SECTIONS[k].reload === SECTIONS[key].reload) dirty.delete(k); });
+  paintDirty();
   await SECTIONS[key].reload();
   // **The same window, through the other door.** A reader who presses «Take theirs» and then types
   // while the read is still in flight was having the box closed over a form that had unsaved edits in

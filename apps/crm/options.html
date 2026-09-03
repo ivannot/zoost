@@ -43,6 +43,11 @@
   button:hover{border-color:var(--sel)}
   button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
   button.primary:hover{background:#2f6fe0}
+  /* A Save that has something to save says so in two ways, because a state carried by colour alone
+     is one some readers never receive. `.primary` is added by `paintDirty()`, not by the markup:
+     permanently bright, it was the loudest thing in the section at the moment it meant nothing. */
+  button.pending{box-shadow:0 0 0 2px var(--sel-soft)}
+  .unsaved{color:var(--sel);font-size:12px;align-self:center;margin-left:2px}
   button.danger{color:#f4a9a9;border-color:#5c3436}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .rxrow{display:flex;gap:8px;align-items:center;margin:0 0 8px}
@@ -227,7 +232,7 @@
     </div>
     <div class="warnbox">The assistant sends the parts of your workspace it needs - including <b>Deluge source
       code</b> - to the provider you configure. Check that this is acceptable for your organisation before use.</div>
-    <div class="row" style="margin-top:14px"><button id="saveAi" class="primary">Save AI settings</button></div>
+    <div class="row" style="margin-top:14px"><button id="saveAi">Save AI settings</button></div>
   </section>
 
   <section data-section="tabPrefs">
@@ -244,7 +249,7 @@
     <p class="sub" id="tabnote" style="display:none"></p>
     <div class="row" style="margin-top:12px">
       <button id="tabReset">Show all</button>
-      <button id="saveTabs" class="primary">Save tabs</button>
+      <button id="saveTabs">Save tabs</button>
     </div>
   </section>
 
@@ -265,7 +270,7 @@
     <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> - orphans, unresolved calls, broken automations</span></label>
     <div class="row" style="margin-top:12px">
       <button id="scFull">Everything</button><button id="scSafe">Share-safe</button>
-      <button id="saveScope" class="primary">Save defaults</button>
+      <button id="saveScope">Save defaults</button>
     </div>
   </section>
 
@@ -280,7 +285,7 @@
     <div class="row" style="margin-top:12px">
       <button id="rxAdd">Add pattern</button>
       <button id="rxRestore" style="display:none" title="Put back whichever of the two starters is missing - everything else stays exactly as it is">Restore the starters</button>
-      <button id="saveRx" class="primary">Save patterns</button>
+      <button id="saveRx">Save patterns</button>
     </div>
   </section>
 
@@ -304,7 +309,7 @@
       start covering each other whatever this is set to, which is why the count turns amber there and
       why a raised ceiling buys you more of the graph rather than a better picture of it.</p>
     <div class="slid"><span class="lt">Ceiling</span><input type="number" id="pDrawMax" min="50" max="4000" step="50"><span class="val" id="vDrawMax"></span></div>
-    <div class="row" style="margin-top:12px"><button id="layReset">Restore built-in defaults</button><button id="saveLay" class="primary">Save</button></div>
+    <div class="row" style="margin-top:12px"><button id="layReset">Restore built-in defaults</button><button id="saveLay">Save</button></div>
   </section>
 
   <!-- No About section: the panel's own About dialog is where the credits and the licence live, and

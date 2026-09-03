@@ -108,6 +108,7 @@ apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
 apps/crm/content-bridge.js	pageCsrfToken	_pageCsrf
+apps/crm/content-bridge.js	warmDeluge	_warming
 apps/crm/graphview.js	init	DATA
 apps/crm/graphview.js	init	N
 apps/crm/graphview.js	init	curFocus
@@ -165,3 +166,4 @@ apps/crm/sidepanel.js	runSyncSlot	syncing
 apps/crm/sidepanel.js	showCallers	runtimeFrom
 apps/crm/sidepanel.js	showCallers	runtimeTo
 apps/crm/sidepanel.js	showCallers	runtimeWindow
+apps/crm/sidepanel.js	takeRecheck	tabPrefs

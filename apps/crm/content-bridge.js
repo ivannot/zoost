@@ -216,6 +216,9 @@
   // every other read») says exactly what was observed. A value, not a boolean: a token Zoho rotates
   // mid-session must not inherit the last one's good name.
   let _tokenAccepted = '';
+  // `warmDeluge` is reached from `api()` and now calls it back. One flag, so a primer that is itself
+  // refused cannot start another.
+  let _warming = false;
   const tokenOf = (h) => String(h['X-ZCSRF-TOKEN'] || '').split('=').slice(1).join('=');
   function noteTokenAccepted(path, h, res) {
     if (!res || !(res.ok || res.status === 204)) return;
@@ -322,18 +325,36 @@
     // cookie fresh on each request used to make that self-correcting; dropping the memo on a refusal
     // is what puts that back.
     _pageCsrf = null;
-    if (await pageCsrfToken()) return true;
+    const got = await pageCsrfToken();
+    // **The token has to be *seen accepted*, not merely fetched.** Reported from a real org: a pull
+    // of the Connections tab alone makes no other request in that page's life, so nothing had ever
+    // recorded an acceptance and the refusal that followed fell back to the cookie diagnostic - the
+    // alarming one, about a token that was fine. The evidence this needs is one ordinary CRM read
+    // carrying the value we are about to send again, so it is taken here rather than hoped for.
+    //
+    // Through `api()`, so the acceptance is recorded where every other one is; guarded against
+    // re-entry, because this is reached *from* `api()` and a primer that itself answered
+    // INVALID_CSRF_TOKEN would call it again. Its own outcome is still not acted on: a role that
+    // cannot read schedules is no worse off for having asked, and what the next refusal means is
+    // decided by whether the token was accepted, which is a different question.
+    if (!_warming) {
+      _warming = true;
+      // Marked as already retried: a primer that is itself refused must not start a recovery of its
+      // own, or one deluge failure fans out into a second token fetch and another request. The flag
+      // above stops the re-entry; this stops the extra round trip inside it.
+      try { await api('/crm/v9/settings/automation/schedules?page=1&per_page=1', 'crmcsrfparam', true); }
+      catch (_) { /* what it answers says nothing; that it accepted the token is what is recorded */ }
+      finally { _warming = false; }
+    }
     // **And the old primer's 200 is not a refresh.** `pageCsrfToken` answers null on four paths - no
-    // instance, a refused read, a body with no `csrfToken`, a network throw - and this then fell
-    // through to the call that makes an ordinary CRM request and hopes. Its `r.ok` means «the primer
-    // got a reply», which was being read as «a token was fetched», so the retry re-sent the same
-    // cookie and the reader was told it had been refused after a refresh. That is the false
-    // diagnostic this whole branch exists to end, surviving in the half the first fix did not cover.
-    try {
-      await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
-        { headers: headers(), credentials: 'include' });
-    } catch (_) { /* the side effect is the point; its own answer says nothing about the token */ }
-    return false;
+    // instance, a refused read, a body with no `csrfToken`, a network throw - and a `true` here was
+    // once read as «a token was fetched», so the retry re-sent the same cookie and the reader was
+    // told it had been refused after a refresh. What is returned is only whether a token was
+    // actually fetched; the primer above runs either way, because its purpose is no longer to hope
+    // - it is to see the token accepted, which is what tells the next refusal apart from a fault.
+    // There was a second primer here doing the old job by raw `fetch`, and with the one above it
+    // fired twice per recovery: one request nobody had asked for, found by counting them.
+    return !!got;
   }
   // «Zoho said none» and «Zoho answered something this code does not recognise» are two different
   // facts, and `(resp.workflow_rules || [])` turned the second into the first: a response whose shape

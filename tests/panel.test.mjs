@@ -139,6 +139,9 @@ test('a refused deluge call is retried with the token the page itself uses', asy
   const answers = [
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"a":1,"csrfToken":"PAGETOKEN0000000000","b":2}' },
+    // The primer: one ordinary CRM read with the token just fetched, so a refusal that follows can
+    // be told from a token fault. Its own answer is not acted on.
+    { status: 200, ok: true, json: async () => ({ schedules: [] }) },
     { status: 200, ok: true, json: async () => ({ connections: [] }) },
   ];
   const sent = [];
@@ -157,7 +160,7 @@ test('a refused deluge call is retried with the token the page itself uses', asy
   // a ReferenceError - which is what the first run of this case was.
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
-                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, '_warming'), sliceConst(REL, 'tokenOf'),
                   sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
                   sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
                   sliceFn(REL, 'pageCsrfToken'),
@@ -834,7 +837,17 @@ test('the CRM names each area before it pulls it, and the position in the run', 
   assert.match(body, /of \$\{todo\.length\}/, 'the position must count the areas this run will do');
   // The denominator is what the run will actually do - not TABS, which includes what the role
   // refused and what settings excluded. «3 of 7» over a run of four is a wrong number, not a rough one.
-  assert.match(body, /const todo = TABS\.filter\(\(t\) => !isForbidden\(t\.id\) && isPulled\(t\.id\)\)/);
+  // Not the exact filter, which now has a third reason an area is in the run - a ticked «ask again»
+  // outranks a verdict. What must hold is that the denominator and the loop decide alike: the loop
+  // used to be spelled out again a few lines down, and the two spellings are how «3 of 7» comes to
+  // stand over a run of four.
+  const todo = /const todo = TABS\.filter\(\(t\) => ([^\n]+)\);/.exec(body);
+  assert.ok(todo, 'the run no longer counts what it will do');
+  for (const term of ['wantsRecheck(t.id)', 'isForbidden(t.id)', 'isPulled(t.id)']) {
+    assert.ok(todo[1].includes(term), `the denominator ignores ${term}, so it counts a different set from the loop`);
+    assert.ok(body.slice(body.indexOf('for (const t of TABS)')).includes(term),
+              `the loop ignores ${term}, which the denominator counted`);
+  }
 });
 
 test('the CRM says it is rebuilding the list after the last area', () => {
@@ -12567,6 +12580,8 @@ test('a refused save keeps the edits and says so', async () => {
       MSG: { saveFailed: 'Could not save: ' },
       toast: (m, bad) => said.push([m, !!bad]),
       conflictBox: () => {},
+      // The paint is derived from `dirty` and asserted in its own case; here it only has to exist.
+      paintDirty: () => {},
       chrome: { storage: { local: { set: async () => { throw new Error('QUOTA_BYTES quota exceeded'); } } } },
     };
     vm.createContext(ctx);
@@ -13946,8 +13961,12 @@ test('an edit then a Save writes, in every section of both settings pages', asyn
                         querySelectorAll: () => [], querySelector: () => null, focus() {}, select() {} });
     const g = Object.assign({ console, Object, Set, Map, Array, String, Promise, JSON, Number,
                               dirty: new Set(), _loadSeq: {}, $: () => el(),
+                              // `paintDirty` walks the page; these cases are about the dirty/save
+                              // semantics and have none, so it runs and paints nothing rather than
+                              // being replaced by a stub that could not throw.
+                              document: { querySelectorAll: () => [] },
                               SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
-                              TAB_IDS: ['functions'], tabOrderCur: ['functions'], tabHiddenCur: [], tabNoPullCur: [],
+                              TAB_IDS: ['functions'], tabOrderCur: ['functions'], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
                               scope: {}, scopeFromUI: () => {}, rxCur: [{ name: 'a', pattern: 'b' }],
                               rxProblems: () => null, renderRx: () => {}, renderTabs: () => {},
                               SCOPE_SV: 2, MSG: { readFailed: 'read failed' },
@@ -13961,7 +13980,7 @@ test('an edit then a Save writes, in every section of both settings pages', asyn
 
     const m = load([sliceConst(rel, 'SECTIONS'), sliceConst(rel, 'LOAD_FLAG'),
                     sliceFn(rel, 'markLoadCancelled'), sliceFn(rel, 'loadState'),
-                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'),
+                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'),
                     sliceFn(rel, saver)], g);
 
     const section = saver === 'onSaveRx' ? 'rxShortcuts' : saver === 'onSaveTabs' ? 'tabPrefs' : 'exportScope';
@@ -14080,7 +14099,8 @@ test('typing during a reload keeps what was typed, and says the two have parted'
               conflictBox: (k, on) => boxed.push([k, on]),
               SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
               TAB_IDS: ['functions', 'modules'],
-              tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabAccessCur: {}, tabsLoadFailed: false,
+              tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [], tabAccessCur: {}, tabsLoadFailed: false,
+              document: { querySelectorAll: () => [] },
               renderTabs: () => { drew++; },
               loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
               loadRx: async () => {}, loadLay: async () => {},
@@ -14091,7 +14111,7 @@ test('typing during a reload keeps what was typed, and says the two have parted'
   const m = load([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'), sliceConst(rel, 'SECTIONS'),
                   sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'markLoadCancelled'),
                   sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'invalidateSectionLoads'),
-                  sliceFn(rel, 'markDirty'), sliceFn(rel, 'loadTabs'),
+                  sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'), sliceFn(rel, 'loadTabs'),
                   sliceFn(rel, 'otherWindowChanged')], g);
 
   const arriving = m.otherWindowChanged({ tabPrefs: {} }, 'local');
@@ -16645,6 +16665,7 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
   const { api, NO_CONTENT } = load([
     sliceConst('apps/crm/content-bridge.js', 'NO_CONTENT'),
     sliceConst('apps/crm/content-bridge.js', '_tokenAccepted'),
+    sliceConst('apps/crm/content-bridge.js', '_warming'),
     sliceConst('apps/crm/content-bridge.js', 'tokenOf'),
     sliceFn('apps/crm/content-bridge.js', 'safePath'),
     sliceFn('apps/crm/content-bridge.js', 'apiError'),
@@ -17544,11 +17565,12 @@ test('a Save refuses over an unread section and works over a read one', async ()
 test('a read that finds an unsaved edit cancels itself', () => {
   for (const app of ['crm', 'analytics']) {
     const rel = `apps/${app}/options.js`;
-    const g = { console, Object, Set, Array, SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram' };
+    const g = { console, Object, Set, Array, SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
+                document: { querySelectorAll: () => [] } };
     for (const n of [...read(rel).matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1])) g[n] = async () => {};
     const m = load([sliceConst(rel, '_loadSeq'), sliceConst(rel, 'dirty'), sliceConst(rel, 'SECTIONS'),
                     sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'markLoadCancelled'),
-                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'),
+                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'),
                     sliceFn(rel, 'beginLoad')], g);
 
     m.LOAD_FLAG.erParams.set('loading');
@@ -17615,7 +17637,7 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
                 if (tok === live) return { ok: true, status: 200, json: async () => ({ ok: true }) };
                 return { ok: false, status: 400, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' };
               } };
-  const m = load(['NO_CONTENT', 'CSRF_COOKIES', '_org', 'lastCsrfFrom', 'lastCsrfShape', '_tokenAccepted', 'tokenOf']
+  const m = load(['NO_CONTENT', 'CSRF_COOKIES', '_org', 'lastCsrfFrom', 'lastCsrfShape', '_tokenAccepted', '_warming', 'tokenOf']
     .map((c) => sliceConst(rel, c))
     .concat(['memoValid', 'cookie', 'safePath', 'apiError', 'errorDetail', 'csrfToken', 'headers',
              'noteTokenAccepted', 'pageCsrfToken', 'warmDeluge', 'api'].map((f) => sliceFn(rel, f))), g);
@@ -17628,7 +17650,11 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
                    'a CRM-family call was refused after Zoho rotated the token and never recovered - '
                    + 'the memo it is pinned to is dropped on the deluge path only, so every area stays '
                    + 'refused until the reader reloads the Zoho tab, which nothing tells them to do');
-  assert.equal(sent.length, 2, `it sent ${sent.length} request(s); the stale one and one retry were expected`);
+  // Three, and each one is named: the stale attempt, the primer that sees the fresh token accepted -
+  // without it a refusal cannot be told from a token fault - and the retry. The number is here so a
+  // recovery that starts looping is a failure rather than a slower success.
+  assert.equal(sent.length, 3,
+               `it sent ${sent.length} request(s); the stale one, the primer and one retry were expected`);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -18337,6 +18363,7 @@ test('a deluge refusal carrying a token the CRM just accepted is a refusal, not 
     { status: 200, ok: true, json: async () => ({ functions: [] }) },              // /crm/ accepts it
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => `{"csrfToken":"${T}"}` },            // the refresh: same token
+    { status: 200, ok: true, json: async () => ({ schedules: [] }) },               // the primer accepts it
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
@@ -18349,7 +18376,7 @@ test('a deluge refusal carrying a token the CRM just accepted is a refusal, not 
               fetch: async () => answers.shift() };
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
-                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, '_warming'), sliceConst(REL, 'tokenOf'),
                   sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
                   sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
                   sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
@@ -18377,7 +18404,7 @@ test('a deluge refusal carrying the CRM family cookie is not read as a refusal o
     { status: 200, ok: true, json: async () => ({ functions: [] }) },   // /crm/ accepts CT_CSRF_TOKEN
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"no":"token here"}' }, // the page yields none
-    { status: 200, ok: true, json: async () => ({}) },                  // and warmDeluge falls back to its primer
+    { status: 200, ok: true, json: async () => ({}) },                  // the primer, which accepts the cookie
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
@@ -18389,7 +18416,7 @@ test('a deluge refusal carrying the CRM family cookie is not read as a refusal o
               fetch: async () => answers.shift() };
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
-                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, '_warming'), sliceConst(REL, 'tokenOf'),
                   sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
                   sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
                   sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
@@ -18410,6 +18437,9 @@ test('a deluge refusal with a token nothing has accepted keeps the cookie diagno
   const answers = [
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"csrfToken":"PAGETOKEN0000000000"}' },
+    // The primer, refused as well: on this path nothing ever accepts the token, which is the state
+    // the cookie diagnostic was written for and the one it must still fire on.
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
@@ -18422,7 +18452,7 @@ test('a deluge refusal with a token nothing has accepted keeps the cookie diagno
               fetch: async () => answers.shift() };
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
-                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, '_warming'), sliceConst(REL, 'tokenOf'),
                   sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
                   sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
                   sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
@@ -18529,75 +18559,122 @@ test('a function whose source the role refuses is an answer, not a retryable fai
 // ---------------------------------------------------------------------------------------------
 // **A refused area was a dead end, and two sentences promised it was not.** «Pull all» skips it on
 // purpose, its tab is gone with its own Pull button, and Settings disabled both of its boxes - so a
-// role granted since never came back, and the only way out was deleting `.zoost.json` by hand. The
-// author chose the shape: not a re-ask on every pull - «a thousand pulls of pointless calls for one
-// role change» - but a deliberate act, because nobody discovers a role change by accident.
-test('a refused area can be forgotten on request, and only for the workspace it belongs to', async () => {
+// role granted since never came back, and the only way out was deleting `.zoost.json` by hand.
+//
+// The first attempt at a way out was a button in Settings that acted at once. It was wrong twice
+// over and the author said so: it broke the page's one contract - every other control there is
+// «edit the form, then Save» - and it could not work, because the panel it asked to write has no
+// user gesture at that moment and Chrome refuses to re-grant a folder permission without one. It
+// died on `getFileHandle: The request is not allowed by the user agent`, in front of him.
+//
+// So it is a preference among its siblings, saved with Save, and the pull is what asks Zoho - a
+// pull begins with a click in the panel, which is where the permission can be granted.
+test('a refused area is asked again by the next pull, once, and only when asked for', () => {
   const rel = 'apps/crm/sidepanel.js';
-  const mk = (over) => {
-    const said = []; let wrote = null; let drew = 0, removed = 0;
-    const g = Object.assign({
-      console, Object, String, Date, Promise,
-      beginWorkspaceOp: () => ({ current: () => true }),
-      patchCfg: async (o) => { wrote = o; },
-      publishAccess: () => {}, renderTabs: () => { drew++; },
-      // The request is consumed once carried out, so the stub has to offer the removal too.
-      chrome: { storage: { local: { remove: async () => { removed++; } } } },
-      setStatus: (t, k) => said.push([t, k]),
-      tabLabel: (a) => a[0].toUpperCase() + a.slice(1),
-      errText: (e) => String(e && e.message),
-      wsList: [{ id: 'w1', name: 'acme' }], activeWsId: 'w1',
-      tabAccess: { connections: { state: 'forbidden', status: 400 }, modules: { state: 'ok' } },
-    }, over);
-    return { m: load([sliceFn(rel, 'recheckArea')], g), g, said: () => said, wrote: () => wrote,
-             drew: () => drew, removed: () => removed };
-  };
+  const wants = (access, recheck) => load([sliceFn(rel, 'wantsRecheck')], {
+    accessOf: (id) => (access[id] || {}).state || '',
+    isForbidden: undefined, tabPrefs: { recheck },
+    console, Object, String,
+  });
+  // `isForbidden` is lifted with it: the helper is one line and the pair is the whole rule.
+  const m = load([sliceConst(rel, 'isForbidden'), sliceConst(rel, 'wantsRecheck')], {
+    console, Object, String,
+    accessOf: (id) => (id === 'connections' ? 'forbidden' : 'ok'),
+    tabPrefs: { recheck: ['connections', 'modules'] },
+  });
+  assert.equal(m.wantsRecheck('connections'), true,
+               'a refused area with «ask again» ticked is not put back to Zoho, so the tick does '
+               + 'nothing and the dead end stands');
+  assert.equal(m.wantsRecheck('schedules'), false, 'an area nobody ticked is being re-asked');
+  assert.equal(m.wantsRecheck('modules'), false,
+               'a tick left on an area that is no longer refused keeps forcing it into every pull');
+  void wants;
 
-  const ok = mk();
-  await ok.m.recheckArea({ area: 'connections', ws: 'acme', at: 1 });
-  assert.deepEqual(Object.keys(ok.wrote().access), ['modules'],
-                   'the verdict was not forgotten, so the area stays refused for ever and the tab '
-                   + 'never comes back - which is the reported dead end');
-  assert.equal(ok.wrote().access.connections, undefined, 'the refusal is still on record');
-  assert.ok(ok.drew() > 0, 'the tab row was not redrawn, so the tab does not come back until a reload');
-  assert.equal(ok.removed(), 1,
-               'the request stays on the reader machine after being carried out, and a panel opened '
-               + 'later reads a stale one as new');
-  const line = ok.said()[0][0];
-  assert.match(line, /Zoho has not been asked/,
-               `the panel claims access it has not proved: ${JSON.stringify(line)}`);
+  // The run counts and the run acts on one condition. Two spellings is how «3 of 6» comes to stand
+  // over a run of seven, which is the thing this file already refuses one function along.
+  const body = read(rel).slice(read(rel).indexOf('async function pullEverything'));
+  assert.match(body, /const todo = TABS\.filter\(\(t\) => wantsRecheck\(t\.id\)/,
+               'the denominator stopped counting the areas a tick puts back into the run');
 
-  // The oldest trap in this panel, in a new place: Settings is a second window, so the click can
-  // arrive after the reader has moved to another folder.
-  const moved = mk({ wsList: [{ id: 'w2', name: 'other' }], activeWsId: 'w2' });
-  await moved.m.recheckArea({ area: 'connections', ws: 'acme', at: 1 });
-  assert.equal(moved.wrote(), null,
-               'the request of one workspace cleared the verdict of another');
+  // And it is spent by the pull that acts on it: «once» is the whole difference between this and
+  // re-asking every refused area on every pull, which is the shape the author refused.
+  assert.match(body, /await takeRecheck\(todo\.map\(\(t\) => t\.id\)\)/,
+               'nothing spends the request, so one tick re-asks Zoho on every pull for ever');
+  const take = sliceFn(rel, 'takeRecheck');
+  assert.match(take, /ids\.filter\(\(id\) => tabPrefs\.recheck\.includes\(id\)\)/,
+               'it writes even when this run spent nothing, which is a settings write per pull');
 
-  // And it only ever forgets: an area nobody has refused is not given an answer here.
-  const none = mk();
-  await none.m.recheckArea({ area: 'schedules', ws: 'acme', at: 1 });
-  assert.equal(none.wrote(), null, 'a verdict was written for an area that had none');
-
-  // The request reaches it. Settings has no folder handle, so it asks and the panel acts - and the
-  // routing sits before `applySettingsChange` returns on the keys it does not recognise.
-  const apply = sliceFn(rel, 'applySettingsChange');
-  const route = apply.indexOf('ch.tabRecheck');
-  assert.ok(route > 0, 'nothing routes the request, so the button in Settings does nothing at all');
-  assert.ok(route < apply.indexOf('if (!ch.settingsStamp) return;'),
-            'the request is read after the early return that fires for a key arriving on its own, '
-            + 'which is exactly how this one arrives');
-
-  // Settings offers it only where there is something to forget, and the sentence names it rather
-  // than promising a pull that skips the area.
-  // Comments blanked: the subject is what the page renders, and this function's comment quotes the
-  // sentence being removed - a check that reads its own explanation as evidence proves nothing.
+  // Settings offers it where there is something to overturn, saves it with its siblings, and talks
+  // to nothing: the version that talked to the panel is what died on the folder permission.
   const tabs = sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, '');
-  assert.match(tabs, /denied \? `<button class="mv" data-recheck=/,
-               'the button is drawn for every row, or for none - it belongs to a refused one');
-  assert.doesNotMatch(tabs, /Pull again to re-check/,
-                      'Settings still sends the reader to a pull that skips the area on purpose');
-  assert.match(tabs, /press Check again/i, 'the sentence no longer names the control that does the work');
+  assert.match(tabs, /denied \? `<label class="pl"[^`]*data-recheck=/,
+               'the tick is offered on rows with no verdict to overturn, or on none at all');
+  assert.doesNotMatch(tabs, /chrome\.storage|button class="mv" data-recheck/,
+                      'Settings acts by itself again - it has no folder handle, and the panel it '
+                      + 'would ask has no user gesture to re-grant one with');
+  assert.match(sliceFn('apps/crm/options.js', 'onSaveTabs'), /recheck: tabRecheckCur/,
+               'the tick is not saved with the rest of the section, so Save does not carry it');
+
+  // **And the row says what happens next**, because nothing on screen changes when you tick and
+  // save: the tab returns only if Zoho grants the area, which the pull is what asks. Reported by
+  // somebody who ticked, saved, and waited for a tab that was not coming yet.
+  // On the sentence, not on the name: `tabRecheckCur.includes(id)` also decides the tick mark and
+  // «next Pull all» is in the tooltip, so a looser pattern passed with the sentence removed - the
+  // check confirming its own spelling instead of the behaviour, met twice in this file now.
+  assert.match(tabs, /will ask about it in the next Pull all/,
+               'the row reads the same before and after the tick, so nothing tells the reader that '
+               + 'it took and what is left to do');
+  assert.match(tabs, /tick ask again, then Save/,
+               'the row no longer says how to ask, for somebody who has not ticked it');
+
+  // «Show all» cannot show an area Zoho refused, and no longer draws one as shown.
+  assert.match(tabs, /\$\{\(denied \|\| tabHiddenCur\.includes\(id\)\) \? '' : 'checked'\}/,
+               'a refused row is drawn ticked, so «Show all» makes it look as though the tab is '
+               + 'back while the panel goes on hiding it');
+});
+
+// ---------------------------------------------------------------------------------------------
+// **A Save that looks the same whether or not there is anything to save tells you nothing.** Every
+// one of them was `class="primary"` in the markup, permanently the brightest thing in its section.
+// Reported as the reason the page is not intuitive.
+test('every Save says whether it has something to save, in both products', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    const markup = read(`apps/${app}/options.html`);
+    assert.doesNotMatch(markup, /<button id="save\w+" class="primary"/,
+                        `${app}: a Save is bright in the markup, so it is bright when it means nothing`);
+
+    // Driven, not read: the paint is a function of `dirty`, and both directions matter.
+    const btn = { classList: { on: new Set(), toggle(c, v) { v ? this.on.add(c) : this.on.delete(c); } } };
+    const kids = [];
+    const sec = { dataset: { section: 'tabPrefs' }, querySelector: (q) => (q.startsWith('button') ? btn : kids[0] || null) };
+    const g = { console, Object, Set, Array, dirty: new Set(),
+                document: { querySelectorAll: () => [sec],
+                            createElement: () => ({ className: '', textContent: '', remove() { kids.length = 0; } }) } };
+    btn.parentNode = { insertBefore: (n) => kids.push(n) };
+    btn.nextSibling = null;
+    const m = load([sliceFn(rel, 'paintDirty')], g);
+
+    m.paintDirty();
+    assert.equal(btn.classList.on.has('pending'), false, `${app}: Save is marked with nothing to save`);
+    assert.equal(kids.length, 0, `${app}: the page says there are unsaved changes when there are none`);
+
+    g.dirty.add('tabPrefs');
+    m.paintDirty();
+    assert.equal(btn.classList.on.has('pending'), true, `${app}: an edit leaves Save looking idle`);
+    assert.equal(btn.classList.on.has('primary'), true, `${app}: the accent is not applied on an edit`);
+    assert.equal(kids.length, 1,
+                 `${app}: the state is carried by colour alone, which some readers never receive`);
+
+    g.dirty.delete('tabPrefs');
+    m.paintDirty();
+    assert.equal(btn.classList.on.has('pending'), false, `${app}: Save still asks after it has been pressed`);
+    assert.equal(kids.length, 0, `${app}: «Unsaved changes» outlives the save`);
+
+    // And the two places that change the set both repaint, or the paint is a memory of an older one.
+    assert.match(sliceFn(rel, 'markDirty'), /paintDirty\(\)/, `${app}: an edit does not repaint`);
+    assert.match(sliceFn(rel, 'saveKeys'), /paintDirty\(\)/, `${app}: a save does not repaint`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
