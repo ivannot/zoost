@@ -205,6 +205,23 @@
     const org = orgId(); if (org) h['X-CRM-ORG'] = org;
     return h;
   }
+  // **The one fact that tells a broken token from a refused endpoint, and it is free.**
+  // «400 INVALID_CSRF_TOKEN» is three words that fit every explanation, and the diagnostic written
+  // for them dumps the cookie jar at the reader - alarming, and wrong whenever the token is fine.
+  // A user with a reduced role produced 321 requests carrying **one** 128-character token: the CRM
+  // API answered 200 to 179 of them and the deluge runtime refused two with those three words. So
+  // the token was never the problem, and nothing had to be guessed to know it - only remembered.
+  //
+  // Recorded from `/crm/` answers only, so the sentence it licences («a token Zoho is accepting for
+  // every other read») says exactly what was observed. A value, not a boolean: a token Zoho rotates
+  // mid-session must not inherit the last one's good name.
+  let _tokenAccepted = '';
+  const tokenOf = (h) => String(h['X-ZCSRF-TOKEN'] || '').split('=').slice(1).join('=');
+  function noteTokenAccepted(path, h, res) {
+    if (!res || !(res.ok || res.status === 204)) return;
+    if (String(path).startsWith('/deluge/')) return;
+    const t = tokenOf(h); if (t) _tokenAccepted = t;
+  }
   // A refused request is a different fact from a failed one, and the panel has to be able to tell
   // them apart: "your Zoho role does not cover this" is something the user can act on, while
   // "500 on /crm/v2/…" is not. Zoho answers 401 when the session is not entitled and 403 when the
@@ -361,7 +378,9 @@
     return path;
   }
   async function api(path, csrfPrefix, retried) {
-    const res = await fetch(BASE + safePath(path), { headers: headers(csrfPrefix), credentials: 'include' });
+    const h = headers(csrfPrefix);
+    const res = await fetch(BASE + safePath(path), { headers: h, credentials: 'include' });
+    noteTokenAccepted(path, h, res);
     // 204 is an answer: «this org has none of those». It has no body, so res.json() would throw and
     // an empty area would arrive as a failure - measured on an org with no webhooks at all.
     if (res.status === 204) return NO_CONTENT;
@@ -390,6 +409,25 @@
     // to be incomplete and the remaining cause is unidentified. Nothing is guessed here: what the
     // request actually carried is reported, so the next occurrence arrives as evidence instead of as
     // three words that fit every explanation.
+    // **A token Zoho is accepting elsewhere cannot be why Zoho refused this.** Measured, on a
+    // reduced-privilege user in a real org: one token for the whole session, 179 answers of 200 from
+    // `/crm/`, and this endpoint refusing it twice. What is left is the endpoint refusing the
+    // *request* - for that user, on that data centre - and it is a refusal like a 403, deterministic
+    // and unhelped by any retry. So it becomes one, and the cookie diagnostic below is kept for the
+    // case it was actually written for: a token nothing has accepted.
+    //
+    // What is verified and what is not, said here rather than implied: that the token is good is
+    // measured; that the *role* is the reason is the likeliest remaining cause and is worded as a
+    // possibility, because Zoho never said so.
+    if (res.status === 400 && message === 'INVALID_CSRF_TOKEN' && tokenOf(h) && tokenOf(h) === _tokenAccepted) {
+      const e = apiError(res.status, path, `${message} - the same token was accepted by every other `
+        + 'read in this session, so this is Zoho refusing the request rather than a token fault', code);
+      e.forbidden = true;
+      // The sentence the reader gets. The one built above is precise about the evidence and reads as
+      // an incident; this says what it means for them and what to do with it.
+      e.note = 'Zoho refused this read - this Zoho user may not have access to it';
+      throw e;
+    }
     if (res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
       // **Which cookies the page has, by name.** The one question this failure keeps turning on is
       // whether the deluge family's own cookie is there at all - if it is, the token is stale; if it
@@ -1352,6 +1390,10 @@
   // anything the panel needs has to be named here. It carries names and counts, never a value.
   const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
     forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null,
+    // What to say to the reader when this refusal has its own words. Without it a refusal Zoho
+    // spelled differently arrives as the one generic sentence about roles, which is a cause nobody
+    // measured - the trap this file keeps naming, one field along.
+    note: (e && e.note) || null,
     diag: (e && e.diag) || null });
 
     // Only the real CRM application frame answers: CRM origin, an instance, **and an org**. The org

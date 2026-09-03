@@ -157,8 +157,10 @@ test('a refused deluge call is retried with the token the page itself uses', asy
   // a ReferenceError - which is what the first run of this case was.
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
                   sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
-                  sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'pageCsrfToken'),
+                  sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
+                  sliceFn(REL, 'pageCsrfToken'),
                   sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')],
                  Object.assign(g, { orgId: () => '1234567890' }));
 
@@ -16624,9 +16626,12 @@ test('crm: the bridge answers Zoho four ways, and none of them was ever tried', 
   };
   const { api, NO_CONTENT } = load([
     sliceConst('apps/crm/content-bridge.js', 'NO_CONTENT'),
+    sliceConst('apps/crm/content-bridge.js', '_tokenAccepted'),
+    sliceConst('apps/crm/content-bridge.js', 'tokenOf'),
     sliceFn('apps/crm/content-bridge.js', 'safePath'),
     sliceFn('apps/crm/content-bridge.js', 'apiError'),
     sliceFn('apps/crm/content-bridge.js', 'errorDetail'),
+    sliceFn('apps/crm/content-bridge.js', 'noteTokenAccepted'),
     sliceFn('apps/crm/content-bridge.js', 'api'),
   ], g);
 
@@ -17592,9 +17597,10 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
                 if (tok === live) return { ok: true, status: 200, json: async () => ({ ok: true }) };
                 return { ok: false, status: 400, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' };
               } };
-  const m = load(['NO_CONTENT', 'CSRF_COOKIES', '_org', 'lastCsrfFrom', 'lastCsrfShape'].map((c) => sliceConst(rel, c))
+  const m = load(['NO_CONTENT', 'CSRF_COOKIES', '_org', 'lastCsrfFrom', 'lastCsrfShape', '_tokenAccepted', 'tokenOf']
+    .map((c) => sliceConst(rel, c))
     .concat(['memoValid', 'cookie', 'safePath', 'apiError', 'errorDetail', 'csrfToken', 'headers',
-             'pageCsrfToken', 'warmDeluge', 'api'].map((f) => sliceFn(rel, f))), g);
+             'noteTokenAccepted', 'pageCsrfToken', 'warmDeluge', 'api'].map((f) => sliceFn(rel, f))), g);
 
   await m.api('/deluge/api/v1/connections', 'drepn');      // primes and memoises the page token
   live = 'TOKEN-B'.padEnd(40, 'B');                        // Zoho rotates while the tab sits still
@@ -18290,6 +18296,158 @@ test('the preview offers every file in a compiled function project', () => {
   // The dropdown it replaces: unusable the moment a project has a `node_modules` in it, and nothing
   // must quietly bring it back.
   assert.ok(!/pvfileselect|pvfilecount/.test(src + html), 'the project dropdown is back');
+});
+
+// ---------------------------------------------------------------------------------------------
+// **A token Zoho is accepting cannot be why Zoho refused.** Reported from a real org, by a user
+// testing with a reduced role for the first time: the connections pull ended in a paragraph naming
+// INVALID_CSRF_TOKEN, the source the token was read from, its shape, and the eight cookies on the
+// page - which reads as the extension being broken, and was measured to be wrong. In that capture
+// **one** 128-character token served all 321 requests: `/crm/` answered 200 to 179 of them and the
+// deluge runtime refused two. The token was never the problem, and nothing had to be guessed to
+// know it - only remembered, which is what nothing was doing.
+//
+// The two cases are the pair: the refusal is re-read as a refusal when the token is known good, and
+// the cookie diagnostic still fires when it is not - that diagnostic was written for a real failure
+// and deleting it would trade one blind spot for another.
+test('a deluge refusal carrying a token the CRM just accepted is a refusal, not a token fault', async () => {
+  const REL = 'apps/crm/content-bridge.js';
+  // The page's token is what both families carry once anything has read it, which is the shape of
+  // the capture: one value everywhere. So the cookie and ConstantsInitial.do agree here.
+  const T = 'ONETOKENFORTHEWHOLESESSION00';
+  const answers = [
+    { status: 200, ok: true, json: async () => ({ functions: [] }) },              // /crm/ accepts it
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+    { status: 200, ok: true, text: async () => `{"csrfToken":"${T}"}` },            // the refresh: same token
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+  ];
+  const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+              encodeURIComponent, Number,
+              instanceName: () => 'yourinstance',
+              document: { cookie: 'CT_CSRF_TOKEN=' + T + '; crmcsr=x; CSRF_TOKEN=y' },
+              cookie: (n) => (n === 'CT_CSRF_TOKEN' ? T : undefined),
+              memoValid: () => true,
+              orgId: () => '1234567890',
+              fetch: async () => answers.shift() };
+  const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
+                  sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
+                  sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
+                  sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
+
+  await m.api('/crm/v2/settings/functions?type=org');   // the ordinary read that vouches for the token
+  const err = await m.api('/deluge/api/connections', 'drepn').then(() => null, (e) => e);
+  assert.ok(err, 'the deluge call succeeded - this case has lost its subject');
+  assert.equal(err.forbidden, true,
+               'a refusal no retry can help is still reported as a failure, so the tab stays, the '
+               + 'emergency button is offered, and the reader is told to report a bug that is not one');
+  assert.ok(err.note && !/CSRF|cookie/i.test(err.note),
+            `the sentence shown to the reader is still the alarming one: ${JSON.stringify(err.note)}`);
+  assert.doesNotMatch(String(err.message), /cookies on this page/,
+                      'the cookie jar is still being dumped at a reader whose token is fine');
+});
+
+test('a deluge refusal with a token nothing has accepted keeps the cookie diagnostic', async () => {
+  const REL = 'apps/crm/content-bridge.js';
+  const answers = [
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+    { status: 200, ok: true, text: async () => '{"csrfToken":"PAGETOKEN0000000000"}' },
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+  ];
+  const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+              encodeURIComponent, Number,
+              instanceName: () => 'yourinstance',
+              document: { cookie: 'CT_CSRF_TOKEN=cookievalue; crmcsr=x' },
+              cookie: (n) => (n === 'CT_CSRF_TOKEN' ? 'cookievalue' : undefined),
+              memoValid: () => true,
+              orgId: () => '1234567890',
+              fetch: async () => answers.shift() };
+  const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
+                  sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
+                  sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
+                  sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
+
+  const err = await m.api('/deluge/api/connections', 'drepn').then(() => null, (e) => e);
+  assert.ok(err, 'the deluge call succeeded - this case has lost its subject');
+  assert.ok(err.diag && err.diag.what === 'csrf',
+            'the evidence a real token fault needs is gone: nothing carries the cookies any more');
+  assert.match(String(err.message), /cookies on this page/,
+               'the diagnostic written for an actual token failure has been traded away');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A refusal that arrived in words other than «no permission» says them, rather than being handed a
+// cause nobody measured. 401 and 403 state the reason themselves, so those keep the role sentence.
+test('a refused area is described in the words the refusal came with', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const m = load([sliceFn(rel, 'pullFailMessage')],
+                 { tabLabel: (a) => a[0].toUpperCase() + a.slice(1), friendlyError: (e) => String(e.message) });
+  const role = m.pullFailMessage('functions', { forbidden: true, status: 403 });
+  assert.match(role, /your Zoho role does not grant access/,
+               'a 403 no longer says the thing Zoho itself said');
+  const own = m.pullFailMessage('connections',
+                                { forbidden: true, status: 400, note: 'Zoho refused this read - this Zoho user may not have access to it' });
+  assert.match(own, /may not have access to it/,
+               'a refusal with its own sentence is overwritten by the generic one about roles');
+  assert.doesNotMatch(own, /your Zoho role does not grant access/,
+                      'both sentences are shown, so the reader is told two different things at once');
+  assert.match(own, /tab is hidden/, 'the refusal stopped saying what happened to the tab');
+
+  // And it has to survive the message boundary, which is where `forbidden` was lost twice before.
+  const made = load([sliceFn(rel, 'bridgeError')], { Error, MSG: { staleBridge: 'stale' } });
+  const err = made.bridgeError({ ok: false, error: '400 - INVALID_CSRF_TOKEN', status: 400,
+                                 forbidden: true, note: 'Zoho refused this read' }, 'fallback');
+  assert.equal(err.note, 'Zoho refused this read',
+               'the sentence the bridge chose does not cross into the panel, so the generic one is used');
+});
+
+// ---------------------------------------------------------------------------------------------
+// A source Zoho has already refused is not «missing». The same org that produced the capture above
+// lists 32 functions to that user and refuses the source of every one of them: `downloadOne` built a
+// bare Error from the reply and dropped `forbidden` - the fourth place that boundary could lose it -
+// so 32 answers were counted as 32 failures, the closing line told the reader to press «Complete
+// missing», and the button carried a number that pressing it could only reproduce.
+test('a function whose source the role refuses is an answer, not a retryable failure', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+  // The reply becomes an Error through the one helper that carries the two facts across.
+  const one = sliceFn(rel, 'downloadOne');
+  assert.match(one, /throw bridgeError\(r,/,
+               'downloadOne rebuilds the error by hand again, so `forbidden` dies at the boundary and '
+               + 'a refusal is indistinguishable from a failed download');
+  assert.match(one, /entry\.refused = !!\(e && e\.forbidden\)/,
+               'nothing records that this row was refused, so every count below is back to guessing');
+
+  const miss = /const miss = arr\.filter\((.+?)\)\.length;/.exec(src);
+  assert.ok(miss, '«Complete missing» no longer counts - this case has lost its subject');
+  assert.match(miss[1], /!e\.refused/,
+               'the button counts a source Zoho has already refused, so its number can never come down');
+
+  // The closing line, on the numbers of the report: 32 listed, 32 refused, none downloaded.
+  const said = [];
+  const m = load([sliceFn(rel, 'downloadMissing')], {
+    console, String, Object, Math, Number, Promise,
+    beginWorkspaceOp: () => ({ current: () => true, say: () => {} }),
+    zohoReady: () => true, setStatus: (t, k) => said.push([t, k]),
+    setPullBusy: () => {}, updateMissingButton: () => {}, updateRow: () => {},
+    saveMetaIndex: async () => {}, sleep: async () => {}, isTransient: () => false,
+    takeListGap: () => '', pullActive: false, isSample: () => false,
+    $: () => ({ disabled: false }),
+    MSG: { wrongTab: 'wrong tab' },
+    treeData: Array.from({ length: 32 }, (_, i) => ({ id: String(i), mirrored: true, downloaded: false })),
+    downloadOne: async (e) => { e.refused = true; e.error = true; return false; },
+  });
+  return m.downloadMissing().then(() => {
+    const last = said[said.length - 1];
+    assert.ok(last, 'the run says nothing at all now');
+    assert.match(last[0], /refused the source of 32/,
+                 `the closing line does not say what happened: ${JSON.stringify(last[0])}`);
+    assert.doesNotMatch(last[0], /Complete missing/,
+                        'the reader is still sent to a button that can only be refused again');
+  });
 });
 
 // ---------------------------------------------------------------------------------------------

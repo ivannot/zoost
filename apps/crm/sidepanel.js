@@ -755,6 +755,9 @@ function bridgeError(r, fallback) {
   const e = new Error(r ? ((r && r.error) || fallback) : MSG.staleBridge);
   e.status = (r && r.status) || 0;
   e.forbidden = !!(r && r.forbidden);
+  // A refusal Zoho worded in its own way carries the sentence to show for it; without one the
+  // generic role sentence is used, which is right for the 401/403 that state the reason themselves.
+  e.note = (r && r.note) || null;
   // What the bridge could say about *why*, in fields. The sentence it also builds is for the status
   // line and does not survive the problem report - see `buildReport`.
   e.diag = (r && r.diag) || null;
@@ -811,7 +814,10 @@ async function noteAccess(area, err, op) {
 // /crm/v2/settings/functions" reads as Zoost being broken, which is both alarming and wrong.
 function pullFailMessage(area, e) {
   if (e && e.forbidden) {
-    return `${tabLabel(area)}: your Zoho role does not grant access${e.status ? ` (Zoho answered ${e.status})` : ''}. `
+    // 401 and 403 say «no permission» themselves, so the role sentence is theirs. A refusal that
+    // arrived in other words brings its own, rather than being told a cause nobody measured.
+    return `${tabLabel(area)}: ${e.note || 'your Zoho role does not grant access'}`
+      + `${e.status ? ` (Zoho answered ${e.status})` : ''}. `
       + 'Nothing was pulled for it, and the tab is hidden - Settings says why, and lets you check again.';
   }
   // Through `friendlyError` for the same reason as the Analytics twin: a pull is minutes of
@@ -6214,7 +6220,12 @@ async function downloadOne(entry) {
   const info = index.get(entry.id) || {};
   try {
     const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source, language: entry.language || info.language, runtime: entry.runtime || info.runtime });
-    if (!r?.ok || !r.file) throw new Error(r?.error || 'not found');
+    // Through `bridgeError`, like every other reply: a bare Error here dropped `forbidden`, which is
+    // the fourth place that boundary could lose it and the one that mattered most - a role that can
+    // list functions but not read one refuses every download, and each was counted as a failure to
+    // be retried. Reported from a real org with a reduced role: 32 rows, 32 refusals, and a closing
+    // line telling the reader to press a button that could only refuse them again.
+    if (!r?.ok || !r.file) throw bridgeError(r, 'not found');
     const f = r.file;
     // What the list said about this function at the moment it was fetched, kept beside what the
     // detail said. Two sources, two shapes - the comparison that decides «outdated» needs the pair.
@@ -6237,12 +6248,14 @@ async function downloadOne(entry) {
     entry.previousPath = null; entry.pathChanged = false;
     if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
     entry.path = written.primary; entry.mirrorFiles = written.paths; entry.mirrorDirectories = written.directories; entry.namespace = f.folder;
-    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
+    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = ''; entry.refused = false;
     // From what was written, never from what this function believed it was about to write.
     entry.fetchedAgainst = written.listUpdated; entry.updatedTime = written.updatedTime;
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, language: f.meta.language, runtime: f.meta.runtime, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
     return true;
-  } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
+  // «Refused» is kept apart from «failed» on the row for the same reason it is kept apart on an
+  // area: one of them is worth trying again and the other is an answer.
+  } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); entry.refused = !!(e && e.forbidden); return false; }
 }
 async function downloadMissing() {
   const op = beginWorkspaceOp();   // the workspace these functions belong to
@@ -6262,7 +6275,7 @@ async function downloadMissing() {
     updateMissingButton(); return;
   }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
-  let ok = 0, fail = 0, cleanup = 0;
+  let ok = 0, fail = 0, cleanup = 0, refused = 0;
   // The longest loop in the panel - one fetch and a pause per function, so minutes on a large org,
   // and every one of those minutes is a place the workspace can change underneath. It used to run to
   // the end regardless: each download refused, each refusal counted as a failure, and it finished by
@@ -6275,6 +6288,7 @@ async function downloadMissing() {
       let done = await downloadOne(e);
       if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
       done ? ok++ : fail++;
+      if (!done && e.refused) refused++;
       if (done && e.cleanupFailed) cleanup += e.cleanupFailed;
       updateRow(e);
       await sleep(140);
@@ -6297,7 +6311,15 @@ async function downloadMissing() {
     // written, and it is a warning, because «all downloaded» over a list missing a whole language of
     // the org is the green sentence this project exists to refuse.
     const short = pullActive ? '' : takeListGap();   // in a Pull all, the run's own closing line says it
-    setStatus((fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
+    // **Advice that cannot work is worse than none**, and this was giving it to everybody whose role
+    // lists functions but will not open one: Zoho refuses every source, and the closing line named
+    // the button that had just been refused 32 times. A refusal is an answer - said as one, with the
+    // count, and \u00abComplete missing\u00bb is only offered for what pressing it could actually fetch.
+    const retryable = fail - refused;
+    setStatus((refused
+      ? `Zoho refused the source of ${refused} function${refused > 1 ? 's' : ''} - this Zoho user can list them but not read them. `
+        + `${ok ? `Downloaded ${ok}. ` : ''}${retryable ? `${retryable} other(s) still missing - use "Complete missing".` : 'Their names and details are what this workspace has.'}`
+      : fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
       : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`
       : `All ${ok} functions downloaded.`) + short,
       (fail || cleanup || short) ? 'warn' : 'ok');
@@ -6318,7 +6340,11 @@ function updateMissingButton() {
   const arr = viewMode === 'workflows' ? workflowData : treeData;
   // «Complete missing» offers to fetch what is missing, and nothing it can fetch is missing here:
   // counting these would put a number on the button that pressing it can never reduce.
-  const miss = arr.filter((e) => e.mirrored !== false && !e.downloaded).length;
+  // A source Zoho has already refused is not «missing»: pressing the button re-asks a question that
+  // has been answered, once per function, and the number it counts can never come down. Held in
+  // memory only, so a role that changes is re-tested by the next pull rather than by a memory of the
+  // last one - and the row itself still offers a retry to anybody who wants to ask again now.
+  const miss = arr.filter((e) => e.mirrored !== false && !e.downloaded && !e.refused).length;
   const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
   const n = miss + stale;
   // It downloads from Zoho, so on a sample there is nothing it could do. Absent rather than

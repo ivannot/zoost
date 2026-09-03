@@ -457,7 +457,10 @@ like to support development:
   hidden, and the reason is stated in **Settings → Tabs**. Roles are per org, so another workspace
   may grant what this one refuses. Pull again to re-check - a verdict is a record of what was asked,
   not a permanent fact. Only an outright HTTP refusal counts: an area that fails for another reason
-  is reported as a failure and stays visible.
+  is reported as a failure and stays visible. One endpoint refuses in other words - the connections
+  catalogue answers `400 INVALID_CSRF_TOKEN` to a user it will not serve - and that counts as a
+  refusal too, but only when the same token is being accepted by every other read in the session,
+  which is the measurement that separates it from an actual token failure.
 - The **force-directed layout is not attempted above 1200 nodes** (it would block the window - the
   whole path is about 2.1s at that number and about 7s at two thousand); the Explorer and a focused
   ER diagram stay fast at any size.
