@@ -12581,7 +12581,7 @@ test('a refused save keeps the edits and says so', async () => {
       toast: (m, bad) => said.push([m, !!bad]),
       conflictBox: () => {},
       // The paint is derived from `dirty` and asserted in its own case; here it only has to exist.
-      paintDirty: () => {},
+      paintDirty: () => {}, rebase: () => {},
       chrome: { storage: { local: { set: async () => { throw new Error('QUOTA_BYTES quota exceeded'); } } } },
     };
     vm.createContext(ctx);
@@ -13865,6 +13865,9 @@ test('a settings page waits for the settings it is loading', async () => {
                 $: () => ({ textContent: '', innerHTML: '', value: '' }),
                 esc: (x) => String(x), LEGAL_DISCLAIMER: 'x',
                 showRoot: async () => {},
+                // `init` ends by recording what every section now shows as its baseline; this case
+                // is about the order of the reads, and an empty page lets that step run for real.
+                document: { querySelectorAll: () => [] }, rebase: () => {}, paintDirty: () => {},
                 window: { ZOHO_ANALYTICS_SQL: { rules: [] } },
                 chrome: { runtime: { getManifest: () => ({ name: 'Zoost', version: '0.0.0' }) } } };
     for (const n of loaders) {
@@ -13964,7 +13967,7 @@ test('an edit then a Save writes, in every section of both settings pages', asyn
                               // `paintDirty` walks the page; these cases are about the dirty/save
                               // semantics and have none, so it runs and paints nothing rather than
                               // being replaced by a stub that could not throw.
-                              document: { querySelectorAll: () => [] },
+                              document: { querySelectorAll: () => [], querySelector: () => null },
                               SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
                               TAB_IDS: ['functions'], tabOrderCur: ['functions'], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
                               scope: {}, scopeFromUI: () => {}, rxCur: [{ name: 'a', pattern: 'b' }],
@@ -13980,7 +13983,7 @@ test('an edit then a Save writes, in every section of both settings pages', asyn
 
     const m = load([sliceConst(rel, 'SECTIONS'), sliceConst(rel, 'LOAD_FLAG'),
                     sliceFn(rel, 'markLoadCancelled'), sliceFn(rel, 'loadState'),
-                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'),
+                    sliceFn(rel, 'invalidateSectionLoads'), sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'), sliceFn(rel, 'snapshotOf'), sliceFn(rel, 'rebase'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'),
                     sliceFn(rel, saver)], g);
 
     const section = saver === 'onSaveRx' ? 'rxShortcuts' : saver === 'onSaveTabs' ? 'tabPrefs' : 'exportScope';
@@ -14100,7 +14103,7 @@ test('typing during a reload keeps what was typed, and says the two have parted'
               SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
               TAB_IDS: ['functions', 'modules'],
               tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [], tabAccessCur: {}, tabsLoadFailed: false,
-              document: { querySelectorAll: () => [] },
+              document: { querySelectorAll: () => [], querySelector: () => null },
               renderTabs: () => { drew++; },
               loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
               loadRx: async () => {}, loadLay: async () => {},
@@ -14111,7 +14114,7 @@ test('typing during a reload keeps what was typed, and says the two have parted'
   const m = load([sliceConst(rel, '_loadSeq'), sliceFn(rel, 'beginLoad'), sliceConst(rel, 'SECTIONS'),
                   sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'markLoadCancelled'),
                   sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'invalidateSectionLoads'),
-                  sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'), sliceFn(rel, 'loadTabs'),
+                  sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'), sliceFn(rel, 'snapshotOf'), sliceFn(rel, 'rebase'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'), sliceFn(rel, 'loadTabs'),
                   sliceFn(rel, 'otherWindowChanged')], g);
 
   const arriving = m.otherWindowChanged({ tabPrefs: {} }, 'local');
@@ -17566,11 +17569,11 @@ test('a read that finds an unsaved edit cancels itself', () => {
   for (const app of ['crm', 'analytics']) {
     const rel = `apps/${app}/options.js`;
     const g = { console, Object, Set, Array, SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
-                document: { querySelectorAll: () => [] } };
+                document: { querySelectorAll: () => [], querySelector: () => null } };
     for (const n of [...read(rel).matchAll(/async function (load[A-Z]\w*)\s*\(/g)].map((m) => m[1])) g[n] = async () => {};
     const m = load([sliceConst(rel, '_loadSeq'), sliceConst(rel, 'dirty'), sliceConst(rel, 'SECTIONS'),
                     sliceConst(rel, 'LOAD_FLAG'), sliceFn(rel, 'dirtyPeer'), sliceFn(rel, 'markLoadCancelled'),
-                    sliceFn(rel, 'invalidateSectionLoads'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'),
+                    sliceFn(rel, 'invalidateSectionLoads'), sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'), sliceFn(rel, 'snapshotOf'), sliceFn(rel, 'rebase'), sliceFn(rel, 'markDirty'), sliceFn(rel, 'paintDirty'),
                     sliceFn(rel, 'beginLoad')], g);
 
     m.LOAD_FLAG.erParams.set('loading');
@@ -18674,6 +18677,55 @@ test('every Save says whether it has something to save, in both products', () =>
     // And the two places that change the set both repaint, or the paint is a memory of an older one.
     assert.match(sliceFn(rel, 'markDirty'), /paintDirty\(\)/, `${app}: an edit does not repaint`);
     assert.match(sliceFn(rel, 'saveKeys'), /paintDirty\(\)/, `${app}: a save does not repaint`);
+  }
+});
+
+// **«Unsaved changes» must mean «different from what is stored», not «touched».** Reported from the
+// page: tick a box and the words appear; untick the same box and they stayed. `dirty` was a set of
+// sections somebody had interacted with, which is a different question from the one the words
+// answer - and the answer it gave was wrong exactly when a reader had put something back.
+test('a change undone is not an unsaved change, in both products', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/options.js`;
+    // One section, one checkbox, driven through the real helpers.
+    const box = { type: 'checkbox', checked: false, dataset: {}, id: 'flag', value: '' };
+    const sec = { dataset: { section: 'aicfg' }, querySelectorAll: () => [box], querySelector: () => null };
+    const g = { console, Object, Set, Map, Array, String, JSON, dirty: new Set(),
+                invalidateSectionLoads: () => {}, paintDirty: () => {},
+                document: { querySelectorAll: () => [sec], querySelector: (q) => (q.includes('aicfg') ? sec : null) } };
+    const m = load([sliceConst(rel, 'sectionEl'), sliceConst(rel, 'baseline'),
+                    sliceFn(rel, 'snapshotOf'), sliceFn(rel, 'rebase'), sliceFn(rel, 'markDirty')], g);
+
+    m.rebase('aicfg');                       // the page has just read this section
+    m.markDirty('aicfg');
+    assert.equal(g.dirty.has('aicfg'), false,
+                 `${app}: a section that matches what is stored is reported as unsaved`);
+
+    box.checked = true;
+    m.markDirty('aicfg');
+    assert.equal(g.dirty.has('aicfg'), true, `${app}: an actual edit is not noticed`);
+
+    box.checked = false;                     // the reader puts it back
+    m.markDirty('aicfg');
+    assert.equal(g.dirty.has('aicfg'), false,
+                 `${app}: «Unsaved changes» survives the reader undoing the change - which is the `
+                 + 'reported defect: it counts having touched the section, not having altered it');
+
+    // A section nothing has read cannot be compared, and absence is not evidence that the form
+    // matches the disk: it counts as changed, which is what the page did before this existed.
+    g.dirty.clear();
+    m.baseline.delete('aicfg');
+    m.markDirty('aicfg');
+    assert.equal(g.dirty.has('aicfg'), true,
+                 `${app}: an unread section is assumed to match the disk, so an edit made before the `
+                 + 'read landed is silently dropped by the next Save');
+
+    // The order matters: a baseline taken while the form still shows the edits records those as
+    // «stored». `takeTheirs` had it that way round for a minute.
+    const taker = sliceFn(rel, 'takeTheirs');
+    assert.ok(taker.indexOf('await SECTIONS[key].reload()') < taker.indexOf('rebase(k)'),
+              `${app}: the baseline is taken before the redraw, so «Take theirs» leaves the page `
+              + 'believing the edits it discarded are what is stored');
   }
 });
 

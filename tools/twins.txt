@@ -131,7 +131,7 @@ graphForWindow	50e566ea6668	9db12f0021b7	divergent
 graphStat	1d87798be903	0fc8a3fd40ae	divergent
 hasPerm	b2ad51545bd5	b2ad51545bd5	identical
 hueFor	14a512e6b267	14a512e6b267	identical
-init	95aac20a6c5c	15c9a8e91f96	divergent
+init	13411380dfd9	84d787c0a792	divergent
 initPositions	523e3eabcde3	523e3eabcde3	identical
 invalidateSectionLoads	666247003250	666247003250	identical
 isZohoUrl	de8efd3b2761	de8efd3b2761	identical
@@ -150,7 +150,7 @@ loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
 loadState	c9c882f79b7e	c9c882f79b7e	identical
 loadZohoDc	83d8c8288511	83d8c8288511	identical
 loseLock	0da0b6793922	0da0b6793922	identical
-markDirty	ab1ea131e26d	ab1ea131e26d	identical
+markDirty	6109091ff3ff	6109091ff3ff	identical
 markEngine	073f8c57884a	e2cfadb5389c	divergent
 markEngineOptions	6d0ea3340c88	6d0ea3340c88	identical
 markLine	0f20de90a8ec	0f20de90a8ec	identical
@@ -185,7 +185,7 @@ openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2382b4f61123	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
-otherWindowChanged	b3c64046f555	b3c64046f555	identical
+otherWindowChanged	55c738183eb8	55c738183eb8	identical
 paintDirty	30f782861649	30f782861649	identical
 paintFindMarks	5b967953a498	5b967953a498	identical
 panelInert	bc169e70b382	bc169e70b382	identical
@@ -201,6 +201,7 @@ pullAll	ed94bab7ee7b	bd1051a4299b	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
+rebase	6611b6610c49	6611b6610c49	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
@@ -228,7 +229,7 @@ rxCompile	061ffb3e51f2	061ffb3e51f2	identical
 rxDefaults	b63f0be3e4f9	b63f0be3e4f9	identical
 rxProblems	5927f3cfe8d2	5927f3cfe8d2	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
-saveKeys	03c07fcb0a98	03c07fcb0a98	identical
+saveKeys	f1068468ee49	f1068468ee49	identical
 saveSearchPattern	593f956d7d95	593f956d7d95	identical
 sayWhereTheReportWent	2075390ad7f5	604b8164ad60	divergent
 scopeFromUI	3a730daf94e4	dba5d46721f4	divergent
@@ -247,6 +248,7 @@ showAbout	38fd8a238839	0c5e6905c140	divergent
 showEmergency	cfdb73138aab	cfdb73138aab	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
+snapshotOf	4d6d0f03c147	4d6d0f03c147	identical
 statCounts	df6998dd5891	df6998dd5891	identical
 statOf	8b674948e7e6	61a9d1873462	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
@@ -254,7 +256,7 @@ stepSelection	01087cab90ac	060e86ed5417	divergent
 switchTab	147323632e4d	07e791a9cd39	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
-takeTheirs	5fcc8f888e6d	5fcc8f888e6d	identical
+takeTheirs	e157a3cfc9a3	e157a3cfc9a3	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	692c8692eeff	ae1ca2903cfa	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent

@@ -1109,7 +1109,47 @@ function invalidateSectionLoads(key) {
   // its place. Recorded as what it is, so the refusal afterwards names the cause that happened.
   markLoadCancelled(key);
 }
-function markDirty(key) { dirty.add(key); invalidateSectionLoads(key); paintDirty(); }
+function markDirty(key) {
+  // A section with no baseline - never read, or a key whose section has no element of its own -
+  // cannot be compared, so it keeps the old meaning and counts as changed. Absence is not evidence
+  // that the form matches the disk.
+  const sec = sectionEl(key);
+  const changed = !sec || !baseline.has(key) || baseline.get(key) !== snapshotOf(sec);
+  if (changed) { dirty.add(key); invalidateSectionLoads(key); } else dirty.delete(key);
+  paintDirty();
+}
+
+/** What a section's form looks like now, as one comparable string.
+ *
+ *  **«Unsaved changes» has to mean «different from what is stored», not «touched».** Reported from
+ *  the page: tick a box, the words appear; untick the same box, and they stayed - because `dirty`
+ *  was a set of sections somebody had interacted with, which is a different question from the one
+ *  the words answer.
+ *
+ *  Read from the controls rather than from each section's own variables: one function serves all of
+ *  them, in both products, and a field added tomorrow is compared without anyone remembering. The
+ *  identity of each control goes in beside its value, so the tab rows - reordered by the arrows, not
+ *  by typing - change the fingerprint when they move.
+ */
+function snapshotOf(sec) {
+  return JSON.stringify([...sec.querySelectorAll('input, select, textarea')].map((el) => [
+    el.dataset.id || el.dataset.pull || el.dataset.recheck || el.id || el.name || '',
+    el.type === 'checkbox' || el.type === 'radio' ? !!el.checked : el.value,
+  ]));
+}
+const sectionEl = (key) => document.querySelector(`[data-section="${key}"]`);
+const baseline = new Map();
+/** Record a section as it now stands: this is what «saved» looks like, for comparison.
+ *
+ *  Called where the form and the store are known to agree - after a read publishes, and after a
+ *  write succeeds - and nowhere else. A baseline taken at any other moment would make an edit
+ *  disappear.
+ */
+function rebase(key) {
+  const sec = sectionEl(key);
+  if (sec) baseline.set(key, snapshotOf(sec));
+}
+
 
 /** Paint every Save button from the one set that knows: `dirty`.
  *
@@ -1172,7 +1212,7 @@ async function saveKeys(obj) {
     toast(MSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
     return false;
   }
-  keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); });
+  keys.forEach((k) => { dirty.delete(k); conflictBox(k, false); rebase(k); });
   paintDirty();
   return true;
 }
@@ -1222,6 +1262,9 @@ async function takeTheirs(key) {
   Object.keys(SECTIONS).forEach((k) => { if (SECTIONS[k].reload === SECTIONS[key].reload) dirty.delete(k); });
   paintDirty();
   await SECTIONS[key].reload();
+  // After the redraw, not before it: a baseline taken while the form still showed the edits
+  // would record those as «what is stored».
+  Object.keys(SECTIONS).forEach((k) => { if (SECTIONS[k].reload === SECTIONS[key].reload) rebase(k); });
   // **The same window, through the other door.** A reader who presses «Take theirs» and then types
   // while the read is still in flight was having the box closed over a form that had unsaved edits in
   // it again - and the read itself no longer draws, because typing invalidated it. So the question is
@@ -1250,6 +1293,8 @@ async function otherWindowChanged(ch, area) {
     if (peer) conflictBox(peer, true);                   // your edits stand; you decide
     else {
       try { await SECTIONS[key].reload(); } catch (_) {}
+      // The form now shows what is stored, so that is the new baseline.
+      rebase(key);
       // **Asked again, because the answer above is from before the await.** An edit that arrived
       // while the read was in flight has already stopped that read from drawing - see
       // `invalidateSectionLoads` - so what is left is telling the reader their form and the disk have
@@ -1272,6 +1317,10 @@ async function init() {
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   $('legal').textContent = LEGAL_DISCLAIMER;
   await showRoot(); await loadDc(); await loadAi(); await loadScope(); await loadLay(); await loadTabs(); await loadRx();
+  // Every section now shows what is stored, which is what «no unsaved changes» means. Taken here,
+  // once, after the reads: before them there is nothing on screen to compare against.
+  document.querySelectorAll('[data-section]').forEach((sec) => rebase(sec.dataset.section));
+  paintDirty();
 }
 init();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
