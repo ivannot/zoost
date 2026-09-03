@@ -36,8 +36,8 @@ beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 beginWorkspaceOp	bda7cf29077d	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	634fd367b02a	e1a5052dd09d	divergent
-buildExportMarkdown	886680b44e4d	f5d0fbdf2c0e	divergent
+buildExportHtml	39d5f7544abd	e1a5052dd09d	divergent
+buildExportMarkdown	89b53926d677	f5d0fbdf2c0e	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildReport	596a7edd9441	596a7edd9441	identical
@@ -196,7 +196,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	b25eb61ad15e	bd1051a4299b	divergent
+pullAll	ed94bab7ee7b	bd1051a4299b	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical

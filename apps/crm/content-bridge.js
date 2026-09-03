@@ -419,7 +419,15 @@
     // What is verified and what is not, said here rather than implied: that the token is good is
     // measured; that the *role* is the reason is the likeliest remaining cause and is worded as a
     // possibility, because Zoho never said so.
-    if (res.status === 400 && message === 'INVALID_CSRF_TOKEN' && tokenOf(h) && tokenOf(h) === _tokenAccepted) {
+    // **And it has to be the token Zoho sends to *this* family, or the evidence is a coincidence.**
+    // `tokenOf` strips the prefix, so `crmcsrfparam=X` and `drepn=X` compare equal - and X being
+    // accepted by the CRM API says nothing when X is the CRM family's own cookie, sent to the deluge
+    // runtime by the fallback in `csrfToken`. That is the *known* failure this file already
+    // documents, with a diagnostic of its own, and it would have been relabelled «your user may not
+    // have access». The page's token is the one value measured to serve both families - one token,
+    // two prefixes - so it is the only one whose acceptance transfers between them.
+    if (res.status === 400 && message === 'INVALID_CSRF_TOKEN'
+        && tokenOf(h) && tokenOf(h) === _tokenAccepted && tokenOf(h) === _pageCsrf) {
       const e = apiError(res.status, path, `${message} - the same token was accepted by every other `
         + 'read in this session, so this is Zoho refusing the request rather than a token fault', code);
       e.forbidden = true;

@@ -210,6 +210,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // names and nothing changes. The report says which of the three it is looking at.
   const srcBlock = (f) => (
     f.mirrored === false ? `<p class="note">${esc(langLabelOf(f.language))} function - this older workspace entry has no local source. Pull again to mirror its project files.</p>`
+      : f.refused ? `<p class="note">Zoho refused the source of this function to the user who pulled this workspace${f.refusedAt ? ` (asked ${esc(String(f.refusedAt).slice(0, 10))})` : ''} - the list is readable to that role and the code is not.</p>`
       : !f.downloaded ? '<p class="note">Source not downloaded - run Pull all, or \u21bb Refresh, to fetch it.</p>'
       : f.code === null || f.code === undefined
         ? '<p class="note">Source could not be read from the workspace folder. The function exists; this copy of it does not.</p>'
@@ -604,6 +605,12 @@ async function loadExportData(op = beginWorkspaceOp()) {
     } catch (_) {} }
   }
   let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
+  // **The fourth absence.** A source Zoho refuses to this user reads on disk exactly like one that
+  // has not been fetched yet, so the report badged it «not downloaded» and told the reader to run a
+  // pull that changes nothing - the wrong missing thing, in the copy that goes to somebody without
+  // the extension and who therefore cannot see the panel's ⊘ and its reason. The verdict is in the
+  // workspace, where the panel reads it.
+  let denied = null; try { denied = refusalsIn(JSON.parse(await op.read(CFG))); } catch (_) {}
   const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, name: v.meta.name, language: v.meta.language, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
   const fns = [];
   for (const e of entries) {
@@ -630,6 +637,8 @@ async function loadExportData(op = beginWorkspaceOp()) {
     // downloaded, and the report tells its reader to run a pull that will change nothing.
     fns.push({ id: e.id, name: (d && d.meta.name) || e.name || e.api_name, api_name: e.api_name,
                language: e.language || 'deluge', mirrored: true,
+               refused: !!(denied && denied[String(e.id)] && !d),
+               refusedAt: (denied && denied[String(e.id)] && denied[String(e.id)].at) || null,
                display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, sources, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d && isDelugeLang(e.language) ? fnStats(code) : null,
                // Whether Zoho is running this. It is on the row and in the detail, so it is here:
                // a report that leaves it out is the lesser copy of the panel, and this one is about
@@ -758,6 +767,9 @@ function buildExportMarkdown(d, scope) {
                                 // holds only what a source read produced, and these two are about
                                 // whether there was one to read.
                                 language: f.language, mirrored: f.mirrored, source_files: f.sources,
+                                // And the same again for a refusal: the graph knows only what a
+                                // source read produced, and this is about there being none to read.
+                                refused: f.refused, refusedAt: f.refusedAt,
                                 display_name: f.display_name, associated_place: f.associated_place,
                                 connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime,
                                 // Same reason as the two above: the graph is built from sources and
@@ -838,6 +850,9 @@ function buildExportMarkdown(d, scope) {
     // An empty fence would read as a function with no body. Not downloaded is a different fact from
     // empty, and this report has one job: never to let the two look alike.
     md += n.mirrored === false ? `\n- source: unavailable in this older workspace entry - pull again to mirror its project files\n\n`
+        // The same fourth absence as the HTML twin, added in the same change: a refusal is not a
+        // download that has not happened yet, and only one of the two is worth acting on.
+        : n.refused ? `\n- source: Zoho refused it to the user who pulled this workspace${n.refusedAt ? ` (asked ${String(n.refusedAt).slice(0, 10)})` : ''} - the list is readable to that role and the code is not\n\n`
         : !n.downloaded ? '\n- source: not downloaded - run Pull all, or ↻ Refresh, to fetch it\n\n'
         // The third state, which this line had two of. A function whose file could not be read
         // got an empty fence - «a function with no body», which the comment above forbids in those

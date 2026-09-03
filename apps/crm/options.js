@@ -725,7 +725,7 @@ function renderTabs() {
     // a control that cannot do what it says - the same reason a refused tab is absent from the panel
     // rather than greyed out there.
     const why = denied
-      ? `Not granted to your Zoho role${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
+      ? `${a.note || 'Not granted to your Zoho role'}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
       : def.note;
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped
@@ -763,8 +763,11 @@ function renderTabs() {
   if (denied.length) {
     note.style.display = '';
     note.textContent = `${denied.length} of these is not available in the workspace `
-      + `${tabAccessCur.ws ? '"' + tabAccessCur.ws + '"' : 'currently open'}: Zoho refused it for your role. `
-      + 'Roles are per org, so another workspace may well grant it.';
+      // «Zoho refused it» is what was measured; «for your role» was an addition, right for the
+      // 401/403 that say so themselves and an invention for a refusal worded any other way. The row
+      // above carries the refusal's own sentence when it had one, so this stays general.
+      + `${tabAccessCur.ws ? '"' + tabAccessCur.ws + '"' : 'currently open'}: Zoho refused it. `
+      + 'Access is per org, so another workspace may well grant it.';
   } else if (!tabAccessCur.ws) {
     note.style.display = '';
     note.textContent = 'What your Zoho role allows is discovered by pulling - there is no way to ask in '

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:75c2701690cf8cb2 -->
+<!-- translated-from: site/docs-crm.html sha256:776bc8d02471d46b -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.48.0</span> · aggiornata il <span class="dd" data-stamp="updated">28 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.48.0</span> · aggiornata il <span class="dd" data-stamp="updated">3 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -894,6 +894,7 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k" data-label="Sintomo">Niente related list / nessuna matrice dei layout</td><td data-label="Causa e rimedio">Quel workspace è stato scaricato prima che esistessero. Rifai <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> e riapri il diagramma.</td></tr>
       <tr><td class="k" data-label="Sintomo">La scheda Connections è vuota</td><td data-label="Causa e rimedio">Il catalogo arriva con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (o con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> nella scheda Connections). Serve una scheda Zoho attiva e corrispondente.</td></tr>
       <tr><td class="k" data-label="Sintomo">Un modulo non ha campi e ha un <b>⊘</b> grigio</td><td data-label="Causa e rimedio">Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti. Il pannello riporta la risposta di Zoho e il giorno in cui è stata chiesta, e gli export portano la stessa nota, perché una sezione con tre tabelle vuote e nessuna spiegazione si legge come un modulo che non contiene niente. Rifare il pull richiede di nuovo, il che ha senso se nel frattempo il modulo è stato reso visibile; cambiare la risposta non è in potere di Zoost. Quel modulo non ha il pulsante del diagramma ER e non si può nemmeno aprire nella finestra del diagramma: non c'è niente da disegnare, e un diagramma vuoto si leggerebbe come «questo non è in relazione con niente».</td></tr>
+      <tr><td class="k" data-label="Sintomo">Una funzione mostra un <b>⊘</b> grigio e nessun sorgente</td><td data-label="Causa e rimedio">Zoho ha elencato quella funzione al tuo utente e ne ha rifiutato il sorgente: alcuni ruoli fanno esattamente questo, l'elenco si legge e il codice no. Restano il nome, lo spazio dei nomi e il linguaggio, con la data in cui è stato chiesto sul pallino, e <b class="ui">Complete missing</b> non la conta - un pulsante che si offre di scaricare qualcosa che Zoho ha già rifiutato può solo essere rifiutato di nuovo. Un pull le richiede tutte, quindi un ruolo concesso nel frattempo si sblocca da solo.</td></tr>
       <tr><td class="k" data-label="Sintomo">Le funzioni mostrano un pallino ambra <b>◐</b></td><td data-label="Causa e rimedio">Sono state scaricate prima che venissero catturate connessioni e autore. Clicca <b class="ui">Refresh outdated</b> nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.</td></tr>
       <tr><td class="k" data-label="Sintomo">Il grafo dice che i nodi sono troppi</td><td data-label="Causa e rimedio">Sopra qualche centinaio di nodi il layout libero non viene tentato, perché bloccherebbe la finestra. Usa <b>Explorer</b>, oppure metti a fuoco un elemento e abbassa la profondità.</td></tr>
       <tr><td class="k" data-label="Sintomo">AI: <code>401</code></td><td data-label="Causa e rimedio">Chiave sbagliata, o spazi incollati insieme alla chiave.</td></tr>

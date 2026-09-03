@@ -460,7 +460,11 @@ like to support development:
   is reported as a failure and stays visible. One endpoint refuses in other words - the connections
   catalogue answers `400 INVALID_CSRF_TOKEN` to a user it will not serve - and that counts as a
   refusal too, but only when the same token is being accepted by every other read in the session,
-  which is the measurement that separates it from an actual token failure.
+  which is the measurement that separates it from an actual token failure. A role can also list the
+  functions and refuse their **source**, one function at a time: those rows keep their name, namespace
+  and language, carry a grey `⊘` with the day it was asked, and are not counted by "Complete missing",
+  which could only be refused again. That verdict is recorded per workspace like an area's, and every
+  pull re-asks - so a role granted since clears itself.
 - The **force-directed layout is not attempted above 1200 nodes** (it would block the window - the
   whole path is about 2.1s at that number and about 7s at two thousand); the Explorer and a focused
   ER diagram stay fast at any size.

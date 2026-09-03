@@ -325,6 +325,11 @@ const MSG = {
   // that is all this build claims. Saying the wrong missing thing is worse than saying nothing,
   // because the reader goes and does it and nothing changes.
   notMirrored: (lang) => `${lang} function - this older workspace entry has no local source. Pull again to mirror its project files.`,
+  // Listed by Zoho and refused by Zoho, which is a settled answer rather than a step still to come.
+  // Not «click to retry» for the same reason as the line above: a click re-asks a question already
+  // answered, once per function. A pull is the re-check, and it says so - roles do change.
+  srcRefused: (at) => 'Zoho refused the source of this function to this user'
+    + (at ? ` (asked ${String(at).slice(0, 10)})` : '') + '. Pull again to re-check.',
   hereRepull: 'In workspace - click to re-download from Zoho',
   failed: 'Failed: ',
   // The twin already had this name; the CRM had the string twice and nothing said so, because the
@@ -788,6 +793,10 @@ async function noteAccess(area, err, op) {
   const prev = tabAccess[area] || {};
   const nextAccess = Object.assign({}, tabAccess, { [area]: {
     state, status: (err && err.status) || 0,
+    // The refusal's own words, where it had them. Without this the status line said the measured
+    // thing and Settings went on asserting «not granted to your Zoho role» about a 400 - the same
+    // invention, on the surface nobody re-read. Grep the claim, not the paragraph.
+    note: (err && err.note) || null,
     at: new Date().toISOString(),
     // `at` is when we asked; `pulledAt` is when we last actually got the data. They diverge the
     // moment an area stops being pulled, and that gap is the whole point: it is what makes a stale
@@ -851,7 +860,7 @@ async function notePullFailure(area, e, op) {
 function forbiddenNote() {
   const off = TABS.map((t) => t.id).filter(isForbidden);
   if (!off.length) return '';
-  return ` · ${off.length} area${off.length > 1 ? 's' : ''} not granted to your Zoho role (${off.map(tabLabel).join(', ')}) - hidden`;
+  return ` · ${off.length} area${off.length > 1 ? 's' : ''} refused by Zoho (${off.map(tabLabel).join(', ')}) - hidden`;
 }
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!dlgScope[k]; });
@@ -1842,6 +1851,16 @@ async function showFunctionRuntime(row, box) {
     + `<b>Revisions \u00b7 all of them</b>${revs}`;
 }
 
+// The refusals a workspace has on record, or nothing. Its own function so the read can be exercised:
+// inside `rebuildTree` it is one clause of a hundred-line load that no case can drive, and a clause
+// nothing can drive is one that goes wrong quietly - which is how the mark came to be dropped there
+// in the first place.
+const refusalsIn = (cfg) => (cfg && cfg.srcRefused && typeof cfg.srcRefused === 'object' && !Array.isArray(cfg.srcRefused))
+  ? cfg.srcRefused : null;
+// Asked of the row rather than captured, because the two renderers see it at different moments: the
+// builder draws before the download is attempted, `updateRow` repaints the instant it is refused,
+// and a click can come after either. One question, one answer, whenever it is asked.
+const isDenied = (e) => !!e && e.mirrored !== false && !e.downloaded && !!e.refused;
 // One row builder, shared by the grouped and the sorted-flat rendering, so the two cannot drift.
 function fnRowEl(e) {
   const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
@@ -1849,9 +1868,13 @@ function fnRowEl(e) {
   // A function whose source this mirror does not hold is its own state, ahead of every other: it is
   // not an error, it is not stale, and it is not «not here yet» - nothing is coming for it.
   const unmirrored = e.mirrored === false;
-  const stCls = unmirrored ? 'st-lang' : e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
-  const stCh = unmirrored ? '◇' : e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
-  const stTitle = unmirrored ? MSG.notMirrored(langLabel(e.language)) : e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? MSG.hereRepull : MSG.notHere;
+  // Refused ranks with it and above «error»: Zoho answered, and no click changes the answer. The
+  // mark is the one Modules already uses for a refused row - one vocabulary for one meaning, rather
+  // than a second glyph a reader has to learn twice.
+  const denied = isDenied(e);
+  const stCls = unmirrored ? 'st-lang' : denied ? 'st-none' : e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
+  const stCh = unmirrored ? '◇' : denied ? '⊘' : e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
+  const stTitle = unmirrored ? MSG.notMirrored(langLabel(e.language)) : denied ? MSG.srcRefused(e.refusedAt) : e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? MSG.hereRepull : MSG.notHere;
   // Every trailing slot is always emitted, empty when it has nothing to say. A slot that disappears
   // lets the next one slide into its place, and then the numbers stop lining up down the list -
   // which is the whole point of having them there.
@@ -1887,10 +1910,10 @@ function fnRowEl(e) {
   el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${pubSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   // Both go through a declaration, because a `.then(cb)` is a scope the race checker cannot enter -
   // and this callback redraws a row after an await, which is the exact shape it exists to look at.
-  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else void fetchThenRedrawRow(e); };
+  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else if (isDenied(e)) setStatus(MSG.srcRefused(e.refusedAt), 'warn'); else void fetchThenRedrawRow(e); };
   // A click on one of these used to start a download that answers nothing. It says what it is
   // instead - the same sentence the dot carries, in the place a click is asking the question.
-  el.onclick = () => { if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else if (e.downloaded) openFromTree(e.path); else void fetchThenRedrawRow(e); };
+  el.onclick = () => { if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else if (isDenied(e)) setStatus(MSG.srcRefused(e.refusedAt), 'warn'); else if (e.downloaded) openFromTree(e.path); else void fetchThenRedrawRow(e); };
   return el;
 }
 
@@ -2083,6 +2106,10 @@ async function rebuildTree() {
   graphCache = null; moduleFilesCache = null; aiConnCache = null;
   const _cfg = await opReadCfg(op); if (_cfg && current()) bound = _cfg; await cacheBinding(bound);
   if (!current()) return;
+  // Read from the config this load already has open, rather than kept as module state: there is then
+  // no copy to forget to clear when the workspace changes, which is the defect class this panel has
+  // paid for more than once.
+  const denied = refusalsIn(_cfg);
 
   // ---- 1. the index draws the tree ---------------------------------------------------------------
   // One read. It lists every function, downloaded or not, with the fields a row shows - so the panel
@@ -2104,6 +2131,13 @@ async function rebuildTree() {
                     // before this existed - and the button falls back to the list.
                     uiId: e.uiId || null,
                     downloaded: false, stale: false, error: false, updatedTime: null,
+                    // **A refusal has to outlive the run that heard it.** It was set on the row and
+                    // nowhere else, so this rebuild - which every pull ends with - dropped it, and
+                    // «Complete missing (16)» came back over sixteen functions Zoho had just refused
+                    // sixteen times. Recorded in the workspace beside the per-area verdicts, for the
+                    // same reason and with the same date: a role is a property of an org, and a
+                    // verdict is a record of what was asked rather than a permanent fact.
+                    refused: !!(denied && denied[id]), refusedAt: (denied && denied[id] && denied[id].at) || null,
                     // What Zoho's list said, kept apart from what the sidecar says: the two
                     // disagreeing is exactly the fact «stale» exists to carry.
                     listUpdated: e.updatedTime || null };
@@ -4557,7 +4591,7 @@ async function pullAll() {
     bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: _c.label || '', sample: !!_c.sample };
     await cacheBinding(bound);
     await rebuildTree();
-    await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
+    await downloadMissing(true);   // fetch each function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // **The truncation is said where it is discovered, and this line is gone.** It sat here because
@@ -4900,7 +4934,7 @@ async function reconcileNow(op) {
     let failed = 0;
     for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id, e) ? 0 : 1; }
     await rebuildTree();
-    await downloadMissing();
+    await downloadMissing(true);   // a reconcile is a pull: it re-asks what Zoho refused last time
     if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
   } catch (e) { setStatus('Could not check with Zoho: ' + errText(e), 'warn'); }
 }
@@ -6214,11 +6248,19 @@ function isTransient(msg) {
 const errText = (e) => String((e && e.message) || e || 'unknown').replace(/["'<>]/g, '').slice(0, 140);
 async function downloadOne(entry) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  // **Whether Zoho was asked at all, this time.** The three bails below happen before any request -
+  // a tab that stopped matching, a folder whose permission Chrome dropped mid-run - and they left
+  // `refused` at whatever the workspace had on record. The counter then read that as «Zoho refused
+  // 16 sources» about a run in which Zoho was never reached, and the record was renewed as though
+  // it had been. `refused` acquired a second writer when it began to be loaded from disk, and this
+  // is the reader that question was owed - «who else owns this flag».
+  entry.asked = false;
   if (mismatchRefuse()) return false;
   if (!dir) return false;
   if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
   const info = index.get(entry.id) || {};
   try {
+    entry.asked = true;
     const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source, language: entry.language || info.language, runtime: entry.runtime || info.runtime });
     // Through `bridgeError`, like every other reply: a bare Error here dropped `forbidden`, which is
     // the fourth place that boundary could lose it and the one that mattered most - a role that can
@@ -6257,7 +6299,56 @@ async function downloadOne(entry) {
   // area: one of them is worth trying again and the other is an answer.
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); entry.refused = !!(e && e.forbidden); return false; }
 }
-async function downloadMissing() {
+/** What this run learnt about which sources Zoho will not serve, written where it survives.
+ *
+ *  Derived from what was just asked, never from a memory of it: every entry the run attempted is
+ *  either recorded as refused or cleared, so a role that has been granted since clears itself on the
+ *  next pull without anybody having to notice. Entries this run did not touch are left alone - a
+ *  «Complete missing» over three functions says nothing about the other three hundred.
+ *
+ *  Silent on failure by design. This is a note about a note: losing it costs a button that reappears
+ *  once, and a pull that fails at its last step because a config write did would be a worse trade.
+ */
+async function noteSourceRefusals(attempted, op) {
+  if (!attempted.length) return;
+  try {
+    const cfg = (await opReadCfg(op)) || {};
+    if (op && !op.current()) return;
+    const map = Object.assign({}, (cfg.srcRefused && typeof cfg.srcRefused === 'object') ? cfg.srcRefused : {});
+    let moved = false;
+    for (const e of attempted) {
+      const id = String(e.id || '');
+      if (!id) continue;
+      // Only what this run actually asked about speaks. A row skipped because the tab stopped
+      // matching says nothing either way, so its record is left exactly as it was found - neither
+      // renewed nor dropped.
+      if (!e.asked) continue;
+      // The date is refreshed on every refusal, as the per-area verdict beside it is: it is when we
+      // asked, and the tooltip says «asked». Frozen at the first refusal it would name a day on
+      // which the question was not put, which is the same lie one field along.
+      if (e.refused && !e.downloaded) { map[id] = { at: new Date().toISOString() }; e.refusedAt = map[id].at; moved = true; }
+      // Cleared only by an actual success. A failure for some other reason - a bridge that has gone
+      // away, a 500 - is not evidence that the role has been granted, and dropping the record on it
+      // would put the button and its sixteen refusals straight back.
+      else if (e.downloaded && map[id]) { delete map[id]; moved = true; }
+    }
+    if (moved) await patchCfg({ srcRefused: map }, op);
+  } catch (_) { /* a record of a refusal is not worth failing a pull over */ }
+}
+/** @param {boolean} recheck - a pull re-asks what Zoho refused; the button does not.
+ *
+ *  **The button's number and what pressing it does have to be the same set.** They were not: the
+ *  count learnt to leave out what Zoho had refused and this queue did not, so a button reading
+ *  «Complete missing (2)» walked eighteen functions, sixteen of them already answered, at a request
+ *  and 140ms each - and closed by reporting refusals nobody had asked about. Reproduced by driving
+ *  both from the shipped source.
+ *
+ *  The two callers want opposite things and that is the whole of it: a pull is the re-check the row
+ *  and the settings page both promise, and if it skipped them too the record could never clear and a
+ *  role that had since been granted would stay refused for ever. So the pull asks and the button
+ *  does not.
+ */
+async function downloadMissing(recheck) {
   const op = beginWorkspaceOp();   // the workspace these functions belong to
   // It downloads, so it is refused on the wrong tab like every other pull. A guard rather than a
   // disabled button: the button is `display:none` unless something is missing, and disabling it
@@ -6266,7 +6357,8 @@ async function downloadMissing() {
   if (!zohoReady()) { setStatus(MSG.wrongTab, 'warn'); return; }
   // `mirrored` first: asking `fetchOne` for one of these answers nothing, and counting that as a
   // failed download would put a number on screen that no retry could ever bring down.
-  const pending = treeData.filter((e) => e.mirrored !== false && (!e.downloaded || e.stale || e.pathChanged));   // stale = older schema, a rename, or Zoho's updatedTime moved
+  const pending = treeData.filter((e) => e.mirrored !== false && (!e.downloaded || e.stale || e.pathChanged)
+                                    && (recheck || !isDenied(e)));   // stale = older schema, a rename, or Zoho's updatedTime moved
   if (!pending.length) {
     // Nothing to fetch is a pull outcome like any other, and it is the outcome of every pull after
     // the first - so this is where a census that came back short was dropped in silence, always.
@@ -6288,7 +6380,7 @@ async function downloadMissing() {
       let done = await downloadOne(e);
       if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
       done ? ok++ : fail++;
-      if (!done && e.refused) refused++;
+      if (!done && e.asked && e.refused) refused++;
       if (done && e.cleanupFailed) cleanup += e.cleanupFailed;
       updateRow(e);
       await sleep(140);
@@ -6305,6 +6397,8 @@ async function downloadMissing() {
     // workspace. It went red on exactly that, which is the guard being strict rather than wrong.
     const onDisk = treeData.filter((r) => r.downloaded).map((r) => r.metaPath || r.path.replace(/\.dg$/, '.meta.json'));
     if (ok) await saveMetaIndex(onDisk, op);
+    if (!op.current()) return;
+    await noteSourceRefusals(pending, op);
     if (!op.current()) return;
     updateMissingButton();
     // A census that came back short outlives the download that followed it: it is the last thing
@@ -6330,9 +6424,13 @@ function updateRow(e) {
   row.dataset.path = e.path;
   const st = row.querySelector('.st'); if (!st) return;
   const ok = e.downloaded || e.scanned;
-  st.className = 'st ' + (e.error ? 'st-err' : ok ? 'st-ok' : 'st-no');
-  st.textContent = e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
-  st.title = e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : ok ? 'In workspace - click to refresh' : MSG.notHere;
+  // The refused mark ranks above the error one here as it does in the builder: a row repainted the
+  // instant Zoho refused it showed \u27f3 and \u00abclick to retry\u00bb until the next rebuild, which is the whole
+  // of a pull - so the reader was invited to retry the thing that had just been answered.
+  const denied = isDenied(e);
+  st.className = 'st ' + (denied ? 'st-none' : e.error ? 'st-err' : ok ? 'st-ok' : 'st-no');
+  st.textContent = denied ? '\u2298' : e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
+  st.title = denied ? MSG.srcRefused(e.refusedAt) : e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : ok ? 'In workspace - click to refresh' : MSG.notHere;
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
@@ -6341,9 +6439,10 @@ function updateMissingButton() {
   // «Complete missing» offers to fetch what is missing, and nothing it can fetch is missing here:
   // counting these would put a number on the button that pressing it can never reduce.
   // A source Zoho has already refused is not «missing»: pressing the button re-asks a question that
-  // has been answered, once per function, and the number it counts can never come down. Held in
-  // memory only, so a role that changes is re-tested by the next pull rather than by a memory of the
-  // last one - and the row itself still offers a retry to anybody who wants to ask again now.
+  // has been answered, once per function, and the number it counts can never come down. The queue
+  // this button drives leaves them out on the same condition, so the number and the act are one set;
+  // a pull passes `recheck` and asks them all again, which is where a role that has since been
+  // granted clears itself.
   const miss = arr.filter((e) => e.mirrored !== false && !e.downloaded && !e.refused).length;
   const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
   const n = miss + stale;

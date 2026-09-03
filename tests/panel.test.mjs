@@ -11742,6 +11742,24 @@ test('both exports say which kind of missing source it is', () => {
   assert.match(md, /older workspace entry|source: unavailable/, 'the Markdown export cannot identify the legacy source gap');
   assert.match(html[1], /mirrored === false/, 'the HTML export cannot identify the legacy source gap');
 
+  // **The fourth**, added the day a role that lists functions and refuses their source was measured
+  // on a real org. Both reports said «not downloaded - run Pull all», which is the wrong missing
+  // thing said to the one reader who cannot see the panel's ⊘ and its reason.
+  // On the branch, not on the name: `f.refusedAt` contains `f.refused`, so a looser pattern passed
+  // with the branch removed - the check confirming its own spelling instead of the behaviour.
+  assert.match(html[1], /:\s*f\.refused\s*\?/, 'the HTML export cannot tell a refused source from an unfetched one');
+  assert.match(md, /:\s*n\.refused\s*\?/, 'the Markdown export cannot tell a refused source from an unfetched one');
+  for (const half of [html[1], md]) {
+    const refused = half.slice(half.indexOf('refused'), half.indexOf('not downloaded'));
+    assert.doesNotMatch(refused, /run Pull all|↻ Refresh/,
+                        'the refused branch still tells the reader to run a pull that cannot change it');
+  }
+  // And the loader has to put it there, or both branches are unreachable prose. It is read from the
+  // workspace config, the same place and the same shape the panel reads.
+  const led = sliceFn('apps/crm/export.js', 'loadExportData');
+  assert.match(led, /refusalsIn\(/, 'the export loader does not read the refusals, so no report can carry them');
+  assert.match(led, /refused: !!\(denied/, 'the loader reads them and does not put them on the function');
+
   // And the two must not disagree about what an *empty* file is: it keeps its fence in Markdown and
   // its <pre> in HTML, because a file that is there and is empty is a fact about the function.
   assert.ok(!/source_code \|\| ''/.test(src) && !/f\.code \|\| ''/.test(src),
@@ -18348,6 +18366,45 @@ test('a deluge refusal carrying a token the CRM just accepted is a refusal, not 
                       'the cookie jar is still being dumped at a reader whose token is fine');
 });
 
+// **And the evidence must not be a coincidence of spelling.** `tokenOf` strips the prefix, so the
+// CRM family's own cookie sent to the deluge runtime by the fallback in `csrfToken` compares equal
+// to the value the CRM API has been accepting all along - which is the *known* mismatch this file
+// documents and carries a diagnostic for, and it would have been relabelled «your user may not have
+// access». Only the page's own token is measured to serve both families, so only it transfers.
+test('a deluge refusal carrying the CRM family cookie is not read as a refusal of the user', async () => {
+  const REL = 'apps/crm/content-bridge.js';
+  const answers = [
+    { status: 200, ok: true, json: async () => ({ functions: [] }) },   // /crm/ accepts CT_CSRF_TOKEN
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+    { status: 200, ok: true, text: async () => '{"no":"token here"}' }, // the page yields none
+    { status: 200, ok: true, json: async () => ({}) },                  // and warmDeluge falls back to its primer
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
+  ];
+  const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+              encodeURIComponent, Number,
+              instanceName: () => 'yourinstance',
+              document: { cookie: 'CT_CSRF_TOKEN=cookievalue; crmcsr=x', getElementById: () => null },
+              cookie: (n) => (n === 'CT_CSRF_TOKEN' ? 'cookievalue' : undefined),
+              memoValid: () => true, orgId: () => '1234567890',
+              fetch: async () => answers.shift() };
+  const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
+                  sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
+                  sliceConst(REL, '_tokenAccepted'), sliceConst(REL, 'tokenOf'),
+                  sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
+                  sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
+                  sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
+
+  await m.api('/crm/v2/settings/functions?type=org');
+  const err = await m.api('/deluge/api/connections', 'drepn').then(() => null, (e) => e);
+  assert.ok(err, 'the deluge call succeeded - this case has lost its subject');
+  assert.ok(!err.forbidden,
+            'the CRM cookie being accepted by the CRM API was read as evidence about the deluge '
+            + 'runtime, so a token-family mismatch - ours, and fixable - is reported to the user as '
+            + 'their Zoho account not being allowed, and the tab disappears');
+  assert.ok(err.diag && err.diag.what === 'csrf',
+            'the diagnostic written for exactly this mismatch no longer fires for it');
+});
+
 test('a deluge refusal with a token nothing has accepted keeps the cookie diagnostic', async () => {
   const REL = 'apps/crm/content-bridge.js';
   const answers = [
@@ -18402,6 +18459,20 @@ test('a refused area is described in the words the refusal came with', () => {
                                  forbidden: true, note: 'Zoho refused this read' }, 'fallback');
   assert.equal(err.note, 'Zoho refused this read',
                'the sentence the bridge chose does not cross into the panel, so the generic one is used');
+
+  // **And it has to reach the other two surfaces that state the same cause.** The first fix reached
+  // the status line and left Settings asserting «not granted to your Zoho role» about a 400, and the
+  // pull's closing line saying it too - the same invention, on the surfaces nobody re-read. It is
+  // stored with the verdict, so the sentence outlives the run that heard it.
+  assert.match(sliceFn(rel, 'noteAccess'), /note: \(err && err\.note\) \|\| null/,
+               'the verdict is recorded without the words it came in, so Settings can only invent them');
+  assert.match(sliceFn('apps/crm/options.js', 'renderTabs'), /a\.note \|\|/,
+               'Settings states a cause of its own over the one Zoho gave');
+  const closing = sliceFn(rel, 'forbiddenNote');
+  assert.doesNotMatch(closing, /not granted to your Zoho role/,
+                      'the closing line of a pull names the role as the cause for every refusal, '
+                      + 'including the ones that never said so');
+  assert.match(closing, /refused by Zoho/, 'the closing line stopped saying what happened');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -18428,17 +18499,19 @@ test('a function whose source the role refuses is an answer, not a retryable fai
 
   // The closing line, on the numbers of the report: 32 listed, 32 refused, none downloaded.
   const said = [];
-  const m = load([sliceFn(rel, 'downloadMissing')], {
+  let recorded = 0;
+  const m = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'downloadMissing')], {
     console, String, Object, Math, Number, Promise,
     beginWorkspaceOp: () => ({ current: () => true, say: () => {} }),
     zohoReady: () => true, setStatus: (t, k) => said.push([t, k]),
     setPullBusy: () => {}, updateMissingButton: () => {}, updateRow: () => {},
     saveMetaIndex: async () => {}, sleep: async () => {}, isTransient: () => false,
     takeListGap: () => '', pullActive: false, isSample: () => false,
+    noteSourceRefusals: async (attempted) => { recorded = (attempted || []).length; },
     $: () => ({ disabled: false }),
     MSG: { wrongTab: 'wrong tab' },
     treeData: Array.from({ length: 32 }, (_, i) => ({ id: String(i), mirrored: true, downloaded: false })),
-    downloadOne: async (e) => { e.refused = true; e.error = true; return false; },
+    downloadOne: async (e) => { e.asked = true; e.refused = true; e.error = true; return false; },
   });
   return m.downloadMissing().then(() => {
     const last = said[said.length - 1];
@@ -18447,7 +18520,182 @@ test('a function whose source the role refuses is an answer, not a retryable fai
                  `the closing line does not say what happened: ${JSON.stringify(last[0])}`);
     assert.doesNotMatch(last[0], /Complete missing/,
                         'the reader is still sent to a button that can only be refused again');
+    assert.equal(recorded, 32,
+                 'the run heard 32 refusals and wrote none of them down, so the rebuild that ends '
+                 + 'the pull forgets them and «Complete missing» comes straight back');
   });
+});
+
+// ---------------------------------------------------------------------------------------------
+// **A refusal has to outlive the run that heard it, and this one did not.** Reported after the fix
+// above, from the same org: the pull ends by rebuilding the tree from `functions/index.json`, which
+// knows nothing about what Zoho refused, so «Complete missing (16)» came back over sixteen functions
+// that had just been refused sixteen times - and pressing it asked all sixteen again. The verdict is
+// recorded in the workspace beside the per-area ones, with the same date and the same meaning.
+test('a refused source is remembered by the workspace, not by the run', async () => {
+  const rel = 'apps/crm/sidepanel.js';
+  let written = null;
+  const cfg = { srcRefused: { keep: { at: '2026-09-01T00:00:00.000Z' },
+                              keep2: { at: '2026-09-01T00:00:00.000Z' } } };
+  const m = load([sliceFn(rel, 'noteSourceRefusals')], {
+    console, Object, String, Date,
+    opReadCfg: async () => cfg,
+    patchCfg: async (o) => { written = o; },
+  });
+  // Two shapes in one run - one refused, one that came back after having been refused - beside an id
+  // recorded earlier that this run never asked about.
+  await m.noteSourceRefusals([{ id: 'a', asked: true, refused: true, downloaded: false },
+                              { id: 'keep2', asked: true, refused: false, downloaded: true }], { current: () => true });
+  assert.ok(written && written.srcRefused, 'nothing was recorded, so the next rebuild forgets again');
+  assert.ok(written.srcRefused.a, 'the function Zoho refused is not written down');
+  assert.equal(written.srcRefused.keep2, undefined,
+               'a function that downloaded this time stays marked refused, so a role that was granted '
+               + 'never clears itself');
+  assert.ok(written.srcRefused.keep,
+            'an id this run never attempted was dropped - «Complete missing» over three functions '
+            + 'must not speak for the other three hundred');
+
+  // And nothing is written when there is nothing to say: a pull that changed no verdict must not
+  // rewrite the workspace config for the sake of it.
+  written = null;
+  await m.noteSourceRefusals([{ id: 'nothing', asked: false, refused: true, downloaded: false }], { current: () => true });
+  assert.equal(written, null, 'a run that never reached Zoho rewrote the record anyway');
+
+  // A run that did ask refreshes the date, because the tooltip says «asked» and a date frozen at the
+  // first refusal names a day on which the question was not put - the per-area verdict beside it
+  // refreshes for the same reason.
+  written = null;
+  await m.noteSourceRefusals([{ id: 'keep', asked: true, refused: true, downloaded: false }], { current: () => true });
+  assert.ok(written && written.srcRefused.keep.at !== '2026-09-01T00:00:00.000Z',
+            'the date is frozen at the first refusal, so the tooltip names a day nobody asked on');
+
+  // Only a success clears it. A bridge that has gone away is not evidence that the role was granted.
+  written = null;
+  await m.noteSourceRefusals([{ id: 'keep', asked: true, refused: false, downloaded: false }], { current: () => true });
+  assert.equal(written, null, 'a failure for some other reason drops the verdict, and the button returns');
+
+  // The half that reads it is in `rebuildTree`, which is the function that dropped the mark in the
+  // first place, and the two halves are joined by one name in a config file. Nothing executes them
+  // together here - so what is checked is the join itself, because a rename on one side is silent:
+  // the writer keeps writing, the reader keeps finding nothing, and the button comes back.
+  const r = load([sliceConst(rel, 'refusalsIn')], { Object, Array });
+  assert.deepEqual(r.refusalsIn({ srcRefused: { a: { at: 'x' } } }), { a: { at: 'x' } },
+                   'the record on disk is not read back, so the rebuild that ends every pull forgets '
+                   + 'every refusal it just heard - the reported defect exactly');
+  for (const bad of [null, undefined, {}, { srcRefused: null }, { srcRefused: 'a' }, { srcRefused: [] }])
+    assert.equal(r.refusalsIn(bad), null, `${JSON.stringify(bad)} was read as a set of refusals`);
+
+  // And the rebuild has to put it on the row: the two halves are joined by one name in a config
+  // file, and a rename on either side is silent - the writer keeps writing, the reader keeps finding
+  // nothing, and the button comes back.
+  const tree = sliceFn(rel, 'rebuildTree');
+  assert.match(tree, /refusalsIn\(_cfg\)/, 'the rebuild no longer reads the refusals the pull recorded');
+  assert.match(tree, /refused: !!\(denied && denied\[id\]\)/, 'the row is built without the mark again');
+});
+
+// **Three reviewers, three defects in the fix above, and two of them found the same one.** The mark
+// began to be loaded from disk, which gave `refused` a second writer and left every reader of it
+// still answering the old question - «who else owns this flag», in the file that asks it.
+test('what the button counts is what pressing it asks, and only this run is reported', async () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const rows = (n, extra) => Array.from({ length: n }, (_, i) => Object.assign({ id: 'r' + i, mirrored: true, downloaded: false }, extra));
+  const drive = (treeData, recheck, one) => {
+    const said = []; let attempted = null;
+    const m = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'downloadMissing')], {
+      console, String, Object, Math, Number, Promise,
+      beginWorkspaceOp: () => ({ current: () => true, say: (t, k) => said.push([t, k]) }),
+      zohoReady: () => true, setStatus: (t, k) => said.push([t, k]),
+      setPullBusy: () => {}, updateMissingButton: () => {}, updateRow: () => {},
+      saveMetaIndex: async () => {}, sleep: async () => {}, isTransient: () => false,
+      takeListGap: () => '', pullActive: false, isSample: () => false,
+      noteSourceRefusals: async (a) => { attempted = a; },
+      $: () => ({ disabled: false }), MSG: { wrongTab: 'wrong tab' },
+      treeData, downloadOne: one,
+    });
+    return m.downloadMissing(recheck).then(() => ({ said, attempted }));
+  };
+  const asked = [];
+  const answer = async (e) => { asked.push(e.id); e.asked = true; return false; };
+
+  // The button: 16 already refused on record, 2 genuinely missing. It counts 2, so it must ask 2.
+  asked.length = 0;
+  const tree = rows(16, { refused: true, refusedAt: '2026-09-01T00:00:00.000Z' }).concat(rows(2));
+  const btn = await drive(tree, undefined, answer);
+  assert.equal(asked.length, 2,
+               `the button said «Complete missing (2)» and asked Zoho ${asked.length} times - it walks `
+               + 'a different set from the one it counts, so every refusal is re-asked at a request and '
+               + '140ms each, and the closing line reports refusals nobody asked about');
+  assert.ok(btn.said.some(([t]) => /Downloading 1\/2…/.test(t)),
+            `the progress line contradicts the button: ${JSON.stringify(btn.said.map((s) => s[0]))}`);
+
+  // A pull is the re-check both the row and the settings page promise, so it asks all 18. Without
+  // this the record could never clear and a role granted since would stay refused for ever.
+  asked.length = 0;
+  await drive(rows(16, { refused: true }).concat(rows(2)), true, answer);
+  assert.equal(asked.length, 18, 'a pull no longer re-asks what Zoho refused, so the verdict is permanent');
+
+  // And nothing is reported about a run in which Zoho was never reached: `downloadOne` bails before
+  // its first request when the tab stopped matching or the folder permission lapsed, and the mark it
+  // leaves alone is the one that came off the disk.
+  asked.length = 0;
+  const bailed = await drive(rows(16, { refused: true, refusedAt: '2026-09-01T00:00:00.000Z' }).concat(rows(2)),
+                             true, async (e) => { e.asked = false; return false; });
+  const last = bailed.said[bailed.said.length - 1][0];
+  assert.doesNotMatch(last, /Zoho refused the source of/,
+                      `Zoho was not asked once, and the run blamed the role for 16 refusals: ${last}`);
+  assert.ok(bailed.attempted && bailed.attempted.length,
+            'the record was not offered the run at all, so a role granted since cannot clear');
+});
+
+// The row says it in the vocabulary the panel already has for a refusal: Modules draws ⊘ for a
+// module Zoho would not serve, so a function gets the same mark rather than a second glyph meaning
+// the same thing. Asked for in those words - «the icon already used for similar cases».
+test('a function whose source was refused is drawn as refused, not as an error', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const el = () => ({ className: '', dataset: {}, innerHTML: '', style: {},
+                      setAttribute() {}, querySelector: () => ({}), onclick: null });
+  const base = { id: 'f1', path: 'functions/ns/a.dg', api_name: 'a', display_name: 'A', namespace: 'ns',
+                 mirrored: true, downloaded: false, language: 'deluge', rest: false };
+  const draw = (row) => {
+    const g = { console, Object, String, Number, document: { createElement: el },
+                treeSort: 'name', currentPath: null,
+                escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
+                labelOf: (e) => e.display_name, isDeluge: () => true, langLabel: () => 'Deluge',
+                langFamily: () => 'deluge', langFamilyLabel: () => 'Deluge',
+                publishState: () => null, publishChip: () => '', publishSentence: () => '',
+                MSG: { notHere: 'not here', hereRepull: 'y', failed: 'Failed: ', clickRetry: ' - click to retry',
+                       notMirrored: () => '', srcRefused: (at) => 'Zoho refused the source' + (at ? ' asked ' + at : '') },
+                fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
+    const m = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'fnRowEl')], g);
+    return m.fnRowEl(row).innerHTML;
+  };
+  const refused = draw(Object.assign({}, base, { refused: true, refusedAt: '2026-09-03T17:42:31.000Z', error: true,
+                                                 errorMsg: '403 on /crm/v2/settings/functions/1234567890' }));
+  assert.match(refused, /⊘/, 'a refused function is drawn with some other mark than the one Modules uses');
+  assert.match(refused, /class="st st-none"/, 'the refused mark is not the neutral one - amber says «do something»');
+  assert.doesNotMatch(refused, /click to retry/,
+                      'the tooltip still offers a retry for a question Zoho has already answered');
+  assert.doesNotMatch(refused, /403 on/, 'the raw refusal is put in front of the reader, once per row');
+
+  // The states it must not have swallowed.
+  assert.match(draw(Object.assign({}, base)), /○/, 'a plain missing row lost its mark');
+  assert.match(draw(Object.assign({}, base, { error: true, errorMsg: '500' })), /⟳/,
+               'an ordinary failure is drawn as a refusal, so a retryable thing looks settled');
+  assert.match(draw(Object.assign({}, base, { downloaded: true, refused: true })), /●/,
+               'a function that is on disk is drawn as refused because of a mark left behind');
+
+  // Both renderers, or the row changes meaning the moment it is repainted.
+  const st = { className: '', textContent: '', title: '' };
+  const u = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'updateRow')], {
+    console, Object, String,
+    MSG: { notHere: 'not here', failed: 'Failed: ', clickRetry: ' - click to retry',
+           srcRefused: () => 'Zoho refused the source' },
+    document: { querySelector: () => ({ dataset: {}, querySelector: () => st }) },
+    escA: (x) => String(x), window: {} });
+  u.updateRow(Object.assign({}, base, { refused: true, error: true, errorMsg: '403 on x' }));
+  assert.equal(st.textContent, '⊘',
+               'the row repainted the instant Zoho refused it still shows the retry mark, for the '
+               + 'whole of the pull that follows');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -18469,7 +18717,7 @@ test('a function listed without its source is neither downloaded nor missing', (
   const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
   // Derived from the places that count: whoever decides what to fetch, and whoever puts a number on
   // «Complete missing», has to ask. Naming them here would leave the third one, added later, unasked.
-  const pending = /const pending = treeData\.filter\((.+?)\);/.exec(src);
+  const pending = /const pending = treeData\.filter\(([\s\S]+?)\);/.exec(src);
   assert.ok(pending, 'the download queue is gone - this case has lost its subject');
   assert.match(pending[1], /mirrored !== false/,
                'the queue would ask Zoho for a source that endpoint does not serve, and count the '
@@ -19481,7 +19729,7 @@ test('the function row shows what the list is sorted by', () => {
                 publishState: () => null, publishChip: () => '', publishSentence: () => '',
                 MSG: { notHere: 'x', hereRepull: 'y', failed: 'z', clickRetry: '', notMirrored: () => '' },
                 fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
-    const m = load([sliceFn(rel, 'fnRowEl')], g);
+    const m = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'fnRowEl')], g);
     const hit = /class="rest rfl[^"]*"[^>]*>([^<]*)</.exec(m.fnRowEl(row).innerHTML);
     assert.ok(hit, `${sort}: the row has no measured column at all`);
     return hit[1];

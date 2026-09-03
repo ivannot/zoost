@@ -24,6 +24,7 @@ apps/crm/export.js	String(a.name || '').toLowerCase()
 apps/crm/export.js	String(fails.month.from || '').slice(0, 10) || 'the last 30 days'
 apps/crm/export.js	String(fails.month.to || '').slice(0, 10) || 'now'
 apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
+apps/crm/export.js	String(n.refusedAt).slice(0, 10)
 apps/crm/export.js	String(source.code).replace(/```/g, '`\u200b``')
 apps/crm/export.js	String(source.name).replace(/`/g, '\\`')
 apps/crm/export.js	_mdCell((rel.module && rel.module.api_name) || rel.module || '')
@@ -172,6 +173,7 @@ apps/crm/export.js	n.modulesUnknown
 apps/crm/export.js	n.name
 apps/crm/export.js	n.namespace
 apps/crm/export.js	n.namespace ? ` \u00b7 ${_mdCell(n.namespace)}` : ''
+apps/crm/export.js	n.refusedAt ? ` (asked ${String(n.refusedAt).slice(0, 10)})` : ''
 apps/crm/export.js	n.rest ? ' \u00b7 REST' : ''
 apps/crm/export.js	n.rest ? ' \u00b7 REST-enabled' : ''
 apps/crm/export.js	n.return_type
