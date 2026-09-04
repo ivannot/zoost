@@ -327,6 +327,12 @@ const MSG = {
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
+  // Settings is a separate tab and nothing disables it while a pull runs - it was believed to be
+  // disabled, and it is not. A pull is one act, decided when it starts, so a preference saved
+  // during one belongs to the next: said here rather than left to be noticed by a run that
+  // ignored it. The change *is* applied to the panel at once; it is the run in flight that keeps
+  // the plan it began with.
+  prefsLater: 'Tab settings saved - this pull keeps the areas it started with, and the next one uses the new ones.',
   wrongTab: 'Active Zoho tab does not match this workspace.',
   lastModified: 'Last modified',
   sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
@@ -4595,6 +4601,10 @@ async function pullAll() {
       // Measured by driving the pull with a truncated list and recording the status line in order.
       await rebuildTree();
       setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
+      // Zoho answered, so the verdict moves: the record is what says «this area was asked», and a
+      // bail before it left an «ask again» unspent and a refusal on record for ever. Nothing is
+      // written to the mirror here; what Zoho said about access is.
+      await noteAccess('functions', null, op);
       endPull(); return;
     }
     const merged = await mergeUnanswered(r.entries, r.unanswered, op);
@@ -6260,25 +6270,35 @@ async function pullEverything() {
   // run that does seven is the number this line's own comment calls worse than none. A ticked «ask
   // again» outranks both reasons an area is otherwise left out: the verdict, and the pull switch
   // Settings forces off beside it - it is an explicit instruction about this one area.
-  const todo = TABS.filter((t) => wantsRecheck(t.id) || (!isForbidden(t.id) && isPulled(t.id)));
+  //
+  // **And the plan is what runs.** The loop used to walk every tab and ask these questions again on
+  // each turn, while the count above had asked them once - so a Settings page saved during the run
+  // (it is a separate tab, and nothing disables it) moved the answers underneath and the line read
+  // «7 of 6», or ended at «5 of 6». A pull is one act: what it will do is decided when it starts,
+  // and a preference saved while it runs belongs to the next one. Said to the reader rather than
+  // done silently - see `applySettingsChange`.
+  const plan = [];
+  for (const t of TABS) {
+    if (wantsRecheck(t.id)) { plan.push(t); continue; }
+    // A refused area is skipped, because re-asking an answered question on every pull is a thousand
+    // pointless requests for one role change - unless the reader has ticked «ask again» in Settings
+    // for it, which is the one thing that says a role may have moved. It is spent below: one pull
+    // asks, and what Zoho answers this time becomes the record.
+    if (isForbidden(t.id)) continue;
+    if (!isPulled(t.id)) { skipped.push(t.id); continue; }
+    plan.push(t);
+  }
+  const todo = plan;
   // Which areas are in this run *because* of a tick, and what their verdict said before it started.
   // Both are read here, before the first await: `tabAccess` moves as the run goes.
   const asked = todo.filter((t) => wantsRecheck(t.id)).map((t) => t.id);
   const askedBefore = {}; asked.forEach((id) => { askedBefore[id] = (tabAccess[id] || {}).at; });
   let done = 0;
-  for (const t of TABS) {
+  for (const t of plan) {
     // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
     // so without this the remaining areas would carry on pulling the tab's org into the folder the
     // user had just opened, which is only refused if that folder is already bound to another org.
     if (!op.current()) return;
-    // A refused area is skipped, because re-asking an answered question on every pull is a thousand
-    // pointless requests for one role change - unless the reader has ticked «ask again» in Settings
-    // for it, which is the one thing that says a role may have moved. It is spent here: one pull
-    // asks, and what Zoho answers this time becomes the record.
-    if (!wantsRecheck(t.id)) {
-      if (isForbidden(t.id)) continue;
-      if (!isPulled(t.id)) { skipped.push(t.id); continue; }
-    }
     // Said here, before the runner is called, and not left to the runner to say. Every one of them
     // asks for the folder permission, then the tab's context, then reads the config - three or four
     // awaits, seconds on a cold bridge - before its own first message replaces this line. Until then
@@ -6660,6 +6680,8 @@ async function pullWorkflows() {
     if (r.capped) {
       setStatus(`Zoho returned a partial list of workflows (stopped at ${r.total || 'the limit'}) - nothing was removed.`, 'warn');
       if (!(await loadWorkflowIndex(op))) return; if (viewMode === 'workflows') renderWorkflows();
+      // Zoho answered, so the verdict moves - the third of these, and the same reason each time.
+      await noteAccess('workflows', null, op);
       return;
     }
     if (!op.current()) return;   // you changed workspace while this was reading
@@ -6847,6 +6869,9 @@ async function applySettingsChange(ch, area) {
   if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
   if (ch.tabPrefs) {
     await loadTabPrefs();
+    // The run in flight walks the plan it built; this says so, once, instead of leaving the reader
+    // to wonder why the area they just ticked was not asked for.
+    if (pullActive) setStatus(MSG.prefsLater, 'warn');
     // Hiding the tab you are standing on has to take you off it. `renderTabs()` gives the tab you
     // are *on* a segment even when it is hidden - which is right for a jump, where a health row
     // lands you on a hidden list and a row with no segment reads as the panel having lost its

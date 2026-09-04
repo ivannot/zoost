@@ -837,17 +837,24 @@ test('the CRM names each area before it pulls it, and the position in the run', 
   assert.match(body, /of \$\{todo\.length\}/, 'the position must count the areas this run will do');
   // The denominator is what the run will actually do - not TABS, which includes what the role
   // refused and what settings excluded. «3 of 7» over a run of four is a wrong number, not a rough one.
-  // Not the exact filter, which now has a third reason an area is in the run - a ticked «ask again»
-  // outranks a verdict. What must hold is that the denominator and the loop decide alike: the loop
-  // used to be spelled out again a few lines down, and the two spellings are how «3 of 7» comes to
-  // stand over a run of four.
-  const todo = /const todo = TABS\.filter\(\(t\) => ([^\n]+)\);/.exec(body);
-  assert.ok(todo, 'the run no longer counts what it will do');
-  for (const term of ['wantsRecheck(t.id)', 'isForbidden(t.id)', 'isPulled(t.id)']) {
-    assert.ok(todo[1].includes(term), `the denominator ignores ${term}, so it counts a different set from the loop`);
-    assert.ok(body.slice(body.indexOf('for (const t of TABS)')).includes(term),
-              `the loop ignores ${term}, which the denominator counted`);
+  // **One plan, built once, and then walked.** The denominator and the loop used to ask the same
+  // three questions in two places, and a Settings page saved mid-run - it is a separate tab, and
+  // nothing disables it - moved the answers between them: «7 of 6», or a run that ended at «5 of 6».
+  // What must hold now is that nothing re-decides inside the loop.
+  // Both facts, asked separately: a character window between them is a distance, not a property,
+  // and it reported a comment as a defect twice in this file already.
+  assert.ok(body.includes('const plan = [];'), 'the run builds no plan of what it will do');
+  assert.ok(body.indexOf('const plan = [];') < body.indexOf('for (const t of plan)'),
+            'the run walks a plan it has not built yet');
+  const loop = body.slice(body.indexOf('for (const t of plan)'));
+  for (const term of ['wantsRecheck(', 'isForbidden(', 'isPulled(']) {
+    assert.ok(!loop.slice(0, loop.indexOf('await takeRecheck')).includes(term),
+              `the loop asks ${term} again while it runs, which is what let a settings save move the `
+              + 'answers underneath a run in progress');
   }
+  const plan = body.slice(body.indexOf('const plan = []'), body.indexOf('const todo = plan'));
+  for (const term of ['wantsRecheck(t.id)', 'isForbidden(t.id)', 'isPulled(t.id)'])
+    assert.ok(plan.includes(term), `the plan ignores ${term}, so it is not the set the run should do`);
 });
 
 test('the CRM says it is rebuilding the list after the last area', () => {
@@ -18650,8 +18657,8 @@ test('a refused area is asked again by the next pull, once, and only when asked 
   // The run counts and the run acts on one condition. Two spellings is how «3 of 6» comes to stand
   // over a run of seven, which is the thing this file already refuses one function along.
   const body = read(rel).slice(read(rel).indexOf('async function pullEverything'));
-  assert.match(body, /const todo = TABS\.filter\(\(t\) => wantsRecheck\(t\.id\)/,
-               'the denominator stopped counting the areas a tick puts back into the run');
+  assert.ok(body.includes('const todo = plan;'),
+            'the denominator is no longer the plan the run walks, so the two can part company');
 
   // And it is spent by the pull that acts on it: «once» is the whole difference between this and
   // re-asking every refused area on every pull, which is the shape the author refused.
@@ -18938,6 +18945,48 @@ test('an empty list says what Zoho last answered about that area', () => {
                + 'successful-but-short pull writes');
   assert.doesNotMatch(tabsSrc, /a\.state === 'failed'/,
                'it still branches on the state rather than on whether there is anything to say');
+});
+
+// **A list that stopped early is still an answer about access.** Three pulls bailed on `capped`
+// before `noteAccess`, and that record is what says «this area was asked»: an org above the paging
+// bound with «ask again» ticked never spent the tick, never overwrote the refusal, and re-asked on
+// every pull for ever with the tab never coming back. Nothing is written to the mirror on that
+// path - that part was right and stays - but what Zoho said about access is.
+test('a partial list still records that Zoho was asked', () => {
+  for (const [file, fn, area] of [['apps/crm/sidepanel.js', 'pullAll', 'functions'],
+                                  ['apps/crm/sidepanel.js', 'pullWorkflows', 'workflows'],
+                                  ['apps/crm/automation.js', 'pullSchedules', 'schedules']]) {
+    const body = sliceFn(file, fn);
+    const at = body.indexOf('r.capped');
+    assert.ok(at > 0, `${fn}: nothing handles a capped list - this case has lost its subject`);
+    // The whole block, not up to the first `return;`: two of these bail early on their own reads
+    // before reaching the record, and a slice that stopped there reported a fix that is there.
+    const bail = body.slice(at, body.indexOf('\n    }', at));
+    assert.match(bail, new RegExp(`noteAccess\\('${area}'`),
+                 `${fn}: a capped list leaves the verdict where it was, so an «ask again» is never `
+                 + 'spent and a refusal on record is never overwritten');
+    assert.doesNotMatch(bail, /op\.write\(/,
+                        `${fn}: a list that stopped early is being written as the index`);
+  }
+});
+
+// **A pull is one act, decided when it starts.** Settings is a separate tab and nothing disables it
+// while a pull runs - it was believed to be disabled, and it is not - so a save during a run used to
+// move the answers underneath a loop that asked them again on every turn. The run keeps its plan;
+// the reader is told so, once, rather than left to wonder why the area they ticked was not asked.
+test('a settings save during a pull is applied to the panel and announced, not to the run', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const src = read(rel);
+  const apply = sliceFn(rel, 'applySettingsChange');
+  assert.match(apply, /if \(pullActive\) setStatus\(MSG\.prefsLater/,
+               'a preference saved during a pull is taken in silence, and the run that ignores it '
+               + 'says nothing about why');
+  const msg = /prefsLater: '([^']+)'/.exec(src);
+  assert.ok(msg, 'the sentence is gone');
+  assert.match(msg[1], /next one/, `it does not say when the change takes effect: ${msg[1]}`);
+  assert.doesNotMatch(msg[1], /disabled|blocked/i,
+                      'it claims something is disabled during a pull, and nothing is - the settings '
+                      + 'page is a separate tab and the panel cannot reach it');
 });
 
 // **Three more ways the record of «this hide switched that pull off» went stale**, all reported by a

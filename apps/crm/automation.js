@@ -296,7 +296,16 @@ async function pullSchedules() {
     setStatus('Pulling schedules\u2026', 'busy');
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e, op); return; }
     if (!op.current()) return;   // you changed workspace while this was reading
-    if (r.capped) { setStatus('Zoho returned a partial list of schedules - nothing was replaced.', 'warn'); return; }
+    // **Zoho answered, so the verdict moves.** This bailed before `noteAccess`, and the record it
+    // leaves is what says «this area was asked» - so an «ask again» ticked for a role that had since
+    // been granted was never spent, the refusal on record was never overwritten, and the tab stayed
+    // hidden while every later pull re-asked for ever. A partial list is still an answer: nothing is
+    // written to the mirror, and what Zoho said about access is.
+    if (r.capped) {
+      setStatus('Zoho returned a partial list of schedules - nothing was replaced.', 'warn');
+      await noteAccess('schedules', null, op);
+      return;
+    }
     await op.write('schedules/index.json', JSON.stringify(r.entries, null, 2));
     if (!(await loadScheduleIndex(op))) return; if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · stopped early - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
