@@ -1,12 +1,12 @@
 {
   "checks": {
     "assistant": {
-      "at": "2026-08-26T16:05:34+00:00",
-      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
-      "note": "fatto tutti i test. si puo' procedere",
+      "at": "2026-09-04T10:05:28+00:00",
+      "commit": "3179b40ce4c26891740a911fc364f5aad45a0fac",
+      "note": "tutto verde. puoi procedere",
       "result": "pass",
       "title": "The assistant answers about the org, with a real key",
-      "version": "1.30.0"
+      "version": "1.31.0"
     },
     "export": {
       "at": "2026-08-26T16:05:34+00:00",
@@ -17,20 +17,20 @@
       "version": "1.30.0"
     },
     "fresh-profile": {
-      "at": "2026-08-26T16:05:34+00:00",
-      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
-      "note": "fatto tutti i test. si puo' procedere",
+      "at": "2026-09-04T10:05:28+00:00",
+      "commit": "3179b40ce4c26891740a911fc364f5aad45a0fac",
+      "note": "tutto verde. puoi procedere",
       "result": "pass",
       "title": "A profile that has never seen Zoost",
-      "version": "1.30.0"
+      "version": "1.31.0"
     },
     "passphrase": {
-      "at": "2026-08-26T16:05:34+00:00",
-      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
-      "note": "fatto tutti i test. si puo' procedere",
+      "at": "2026-09-04T10:05:28+00:00",
+      "commit": "3179b40ce4c26891740a911fc364f5aad45a0fac",
+      "note": "tutto verde. puoi procedere",
       "result": "pass",
       "title": "The API key under a passphrase, across a browser restart",
-      "version": "1.30.0"
+      "version": "1.31.0"
     },
     "pull-all": {
       "at": "2026-08-26T16:05:34+00:00",
@@ -41,12 +41,12 @@
       "version": "1.30.0"
     },
     "restart": {
-      "at": "2026-08-26T16:05:34+00:00",
-      "commit": "a32e61154d51315b4add4d157b68d3f08f5b665f",
-      "note": "fatto tutti i test. si puo' procedere",
+      "at": "2026-09-04T10:05:28+00:00",
+      "commit": "3179b40ce4c26891740a911fc364f5aad45a0fac",
+      "note": "tutto verde. puoi procedere",
       "result": "pass",
       "title": "A full browser restart: the folder, and what you changed in Settings",
-      "version": "1.30.0"
+      "version": "1.31.0"
     }
   }
 }
