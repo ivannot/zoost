@@ -32,6 +32,7 @@ d874573debc501f2  README.md: - Only Anthropic and OpenAI are supported.
 cd1749ea548085ba  README.md: --- ## The interface **Top bars** - **Working folder** - set once; every workspace is a subfolder inside it, identified by the org id in its own `.zoost.json` (so renaming a folder or a Zoho portal never orphans a workspace).
 88a26fcb684de52d  README.md: --- ## Versioning The manifest `version` is bumped on every release and this README tracks the feature set.
 3ac4372b407fe3fa  README.md: --- ## Which commit is on the Web Store [`RELEASES.md`](RELEASES.md) lists every version submitted to the Store with the commit it was built from and the SHA-256 of the package that was uploaded.
+5aea752ea49cfe6d  README.md: A role can also list the functions and refuse their **source**, one function at a time: those rows keep their name, namespace and language, carry a grey `⊘` with the day it was asked, and are not counted by "Complete missing", which could only be refused again.
 1290db0add430f15  README.md: About half of them are attached to nothing in a real org, and that is a candidate to review rather than a verdict.
 816ab3e0ee53463c  README.md: And because following links is only half of it, the detail pane keeps a **history** like a browser's: back, forward, and the whole chain to jump into (Alt+← / Alt+→).
 4aa992a9235fc009  README.md: Answers reflect the **current** version of the code; there's a single persistent conversation you clear yourself (switching functions never wipes it).
@@ -52,12 +53,14 @@ d35ad09ec66cd62c  README.md: It also lists the **connections** the function uses
 c833c593c07bdbfa  README.md: It is the only place an empty field means *erase* rather than *keep*, and the way out if a passphrase is lost.
 f3ab152a4ca5b497  README.md: It is written down because every other security property here is.
 e9e06dc03d49a6f2  README.md: It spans the tabs and is cleared only by changing workspace.
+fe83f80a47c9e2e1  README.md: Later pulls skip a refused area rather than re-asking an answered question every time, so **Settings -> Tabs** carries an **ask again** tick per refused row, saved with the section like every other control there: the next pull then includes that area once, and what Zoho answers becomes the new record.
 815cd6b50adc1f6d  README.md: No framework and nothing to install: node's own test runner and Python's `unittest`.
 413614e4823d7fb9  README.md: Nothing reaches me, ever.
-7a7a559cc571b9ca  README.md: Only an outright HTTP refusal counts: an area that fails for another reason is reported as a failure and stays visible.
+4f118f3871761cd6  README.md: Only an outright HTTP refusal counts - Zoho saying so with a 401 or a 403: an area that fails for another reason is reported as a failure and stays visible, and that includes the connections catalogue, which answers `400 INVALID_CSRF_TOKEN` to a user it will not serve without ever saying «no permission».
 223c32d18f8175f0  README.md: Other OpenAI-compatible endpoints (OpenRouter, Azure, local models) are deliberately **not** offered: the manifest grants host access to those two origins only, and an untested claim is worse than a missing feature.
 26fe58f2804b7114  README.md: Read them as "worth a look", never as a score.
 6bc9df1d0e2653e2  README.md: Settings therefore offers **Protect the API key with a passphrase** - PBKDF2-SHA256 then AES-GCM-256, both from the browser's own Web Crypto, with only ciphertext left on disk.
+738d8fb6fcbcf8e3  README.md: That verdict is recorded per workspace like an area's, and every pull re-asks - so a role granted since clears itself.
 824bfa2395a1a8f1  README.md: The build is reproducible, so you can check it yourself instead of taking my word: ```bash git checkout <tag> && ./build.sh <app> shasum -a 256 dist/zoost-<app>-<version>-store.zip ``` Every release from Zoho CRM 1.9.0 onward is built by GitHub Actions from the tagged commit, not on anyone's laptop, and carries a provenance attestation you can check with one command: ```bash gh attestation verify zoost-crm-1.9.0-store.zip --repo ivannot/zoost tools/verify.sh crm 1.9.0 ``` `RELEASES.md` also states what it *cannot* tell you: every Zoho CRM version before 1.9.0 predates the extension's source being in this repository, so none of them has a commit to point at - including whichever one the Store happens to be serving.
 f590caafb5d2f25b  README.md: The extension talks to your own Zoho CRM (your session) and, **only if you enable the AI**, to the LLM provider you configure.
 b20a89448f8b996d  README.md: The first two restate what Manifest V3 enforces anyway; the last two are stricter than the default and free, because nothing shipped uses a form or a `<base>`.
@@ -65,6 +68,7 @@ b20a89448f8b996d  README.md: The first two restate what Manifest V3 enforces any
 cbb4cdb9b433f57e  README.md: Turning a tab off clears it, since a tab is usually turned off for an area the account cannot read.
 a589731b8e463414  README.md: Two providers, both tested - nothing claimed that has not been tried.
 659b3230f2ddbd96  README.md: Two things leave the machine, and only when you send them: what you ask the optional AI assistant, which goes straight to the provider you configured with your own key, and a problem report you have read in full and pressed Send on at zoost.it, where it becomes a public GitHub issue.
+a1fb4f97484e7b98  README.md: What Zoost does there is decide the *sentence*, not the verdict: when an ordinary Zoho CRM read in the same session is accepting the very token that call carried, the token cannot be the problem, and you are told so plainly instead of being shown the page's cookie names.
 7c43b62a28c368c1  README.md: What can be claimed from a browser is what Zoost sends, never what a server does with it.
 2db35528e7d53ebc  README.md: What holds it together is `tools/twincheck.py`, which records every twin with a hash of each side and reports the one-sided change.
 2a4cc8fdd23a104d  README.md: Zoost never drives Zoho's interface: it navigates by URL and reads through the API - it does not script clicks it cannot be sure of.
@@ -294,6 +298,7 @@ ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 a19bfe5e2d2d68e4  site/docs-crm.html: Draft means never published, Draft + means published with a later edit that is not live, and the detail spells out the publication date.
 6579ac075b364a97  site/docs-crm.html: Each function also has a .meta.json sidecar functions/index.json the census: every function with its namespace, id and where it is wired modules/ one file per module - fields, types, lookup targets, picklist values.
 8756fe2d46f0bc32  site/docs-crm.html: Each is absent when it would do nothing.
+9b0d2daa6a6356ba  site/docs-crm.html: Each section keeps its own, and the button lights up - with the words Unsaved changes beside it - only while what is on screen differs from what is stored.
 12f98ef7c51b88b5  site/docs-crm.html: Every tool it uses is shown in the chat.
 dda479e23ee57331  site/docs-crm.html: Filter chips hide the system related lists (Notes, Attachments, Tasks…) so only your own relations remain.
 9e282c99c84b2b6c  site/docs-crm.html: Find has a scope switch attached to it: in: names matches file names, in: code runs a full-text search across every function source in the org - the closest thing to grep over your Deluge, and something Zoho does not provide.
@@ -317,6 +322,7 @@ a3e9f35b4ea9f20d  site/docs-crm.html: It is the one place where an empty field m
 bbb4881c12a0342f  site/docs-crm.html: It no longer comes and goes with the tab: the window can switch between the two drawings itself, so there is always something for it to open, and only which one follows the tab you are on.
 9564ada47e772afd  site/docs-crm.html: It says what goes and what stays before it acts: the encrypted key is removed and the protection turned off, your model names and every other setting are kept, and you paste the API key in again from your provider's dashboard.
 8de5e000fafd2693  site/docs-crm.html: Java, Python and Node functions are written, saved and then published , so the source in the mirror can be code the org has never run - and nothing on disk tells the two apart.
+c6c8d19e0ec544cb  site/docs-crm.html: Later pulls skip a refused area on purpose - re-asking an answered question on every pull is a thousand requests for one role change - so ticking that box, and pressing Save tabs , is what puts the area back into the next pull, once.
 ac0b9a1e4ccbdcf0  site/docs-crm.html: Length and outbound calls cover every function; the run counts cover the busiest few and come from Zoho.
 3aa746d9cc9ee1c9  site/docs-crm.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: a Zoho CRM instance id is exact without being memorable, and two sandboxes of the same org differ by nothing you would recognise at a glance.
 1c0ca583b59af0f9  site/docs-crm.html: Nobody can decrypt that key without the passphrase, Zoost included - this is the only way out, and it is a button rather than a sequence you have to work out.
@@ -337,6 +343,7 @@ f390c8e07ddd910d  site/docs-crm.html: Only in that position - a string anywhere 
 ce00f2abaa40258f  site/docs-crm.html: Production vs sandbox Every workspace is bound to one org, host and instance, recorded in its .zoost.json .
 203d6cb0945177f7  site/docs-crm.html: Pull (in the mode bar) refreshes only the current type - whichever of Functions, Modules, Workflows, Schedules, Actions or Connections is the active tab - faster when you just changed one thing.
 cadf7901b8ca4d73  site/docs-crm.html: Pulling again re-asks, which is worth doing if the module has since been unhidden; nothing in Zoost can change the answer.
+6f921bd678fdbf49  site/docs-crm.html: Pulling re-asks every one of them, so a role that has since been granted clears itself.
 417d35878ad4de50  site/docs-crm.html: Putting it under Git Nothing is automatic here, on purpose: it is your repository, with your conventions.
 bc92a8be1a457ff0  site/docs-crm.html: Roles are per org: a workspace that refuses an area says nothing about the next one.
 81043876b31aa0af  site/docs-crm.html: Rows highlighted in cream are fields on no layout - API-only.
@@ -349,6 +356,7 @@ ec45862413686797  site/docs-crm.html: The bar at the top of that window carries 
 6d42a2d49c48845b  site/docs-crm.html: The call graph is not only functions.
 ca34530d32a7806f  site/docs-crm.html: The dashed Only group asks the other question - «narrow to nodes that are also…» - and starts empty, because that is the truth when nothing is chosen; those three apply to functions.
 281e99b00d44b88d  site/docs-crm.html: The filter for them is Attached to nothing , and the same list appears in the health audit under Wiring .
+91a4c55e15f79593  site/docs-crm.html: The name, namespace and language are what the workspace has for it, the day it was asked is on the dot, and Complete missing does not count it - a button offering to fetch something Zoho has already refused can only be refused again.
 9c08a13a728de39d  site/docs-crm.html: The panel quotes what Zoho answered and the day it was asked, and the exports carry the same note, because a section with three empty tables and no reason reads as a module with nothing in it.
 85a769b920393cc8  site/docs-crm.html: The same action is on the Not on a Zoho tab screen, as + Sample workspace : a sample owes the platform nothing, so it opens and reads without a tab and without an account.
 559f912244b58afb  site/docs-crm.html: The same page is where you choose which tabs to show at all, and in what order - the panel is narrow, and a type you never look at is only in the way.
@@ -362,6 +370,7 @@ becfa6d34e4f50bc  site/docs-crm.html: They steer all three views, so switching C
 36aa3bc7c2a3c1f4  site/docs-crm.html: Those cover every function and cost nothing to compute, but they are a guess at what a function costs.
 e381a6dd705f05ba  site/docs-crm.html: Treat every entry as a candidate to review .
 16620d5094730468  site/docs-crm.html: Turning a tab off clears it, because most tabs are turned off for an area the account cannot read and pulling it then only produces an error - turn it back on if you mirror a type for Git without browsing it.
+4c7eecfb8382c2e7  site/docs-crm.html: Two controls save themselves as you change them, and say so: the data centre and the AI engine, each a single choice with nothing to compose.
 f2be60441d80c752  site/docs-crm.html: Usage counts only cover Deluge functions in this workspace .
 b8fa0fa990762a5e  site/docs-crm.html: What is actually failing The health audit reads the mirror and finds structural suspects - a function nothing calls, a call that resolves to nothing.
 395f32640a247a4a  site/docs-crm.html: Whatever is left out is named as left out - so it never concludes something does not exist because it was not shown it.
@@ -624,6 +633,7 @@ ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
 c4759d38fe05e15f  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei modelli e ogni altra impostazione restano; la chiave API la incolli di nuovo dalla dashboard del tuo provider.
 2e4716d3552a0532  site/it/docs-crm.html: Dopo essere uscito da un'org, quale org vuoi aprire adesso è una scelta e da qui non si deduce: un consulente con clienti su .eu , .com e .jp può benissimo volere quello che da questa macchina non ha mai aperto.
 33cbdd91bf33c142  site/it/docs-crm.html: Draft vuol dire mai pubblicata, Draft + pubblicata con una modifica successiva che non è live, e il dettaglio scrive per esteso la data di pubblicazione.
+98359655a0231aaf  site/it/docs-crm.html: Due controlli si salvano da soli mentre li cambi, e te lo dicono: il data centre e il motore AI, ognuno una scelta singola senza niente da comporre.
 fbc9c046d9b5f837  site/it/docs-crm.html: Due pulsanti coprono l'altra direzione: ↺ All rimette tutto, None spegne tutto, così un clic solo riaccende la categoria che ti serve.
 5dd1c8d4764acaac  site/it/docs-crm.html: E un modulo che nessuna automazione tocca non c'è: è un'altra domanda, a cui risponde l'audit Health .
 fde2f012bb6eb100  site/it/docs-crm.html: E un nome compare solo se è davvero un modulo di quest'org: una parola che sembra un modulo e non lo è non dice niente.
@@ -638,6 +648,7 @@ b9a20578d2d4e2c8  site/it/docs-crm.html: Entrambi i report dichiarano comunque l
 e46961abb53c0a61  site/it/docs-crm.html: I chip in alto sono insieme il filtro e la legenda dei colori, e comandano tutte e tre le viste.
 27098dfc26517577  site/it/docs-crm.html: I commenti e il testo fra virgolette vengono messi da parte prima, quindi una chiamata che hai commentato non è una freccia - e la funzione che nominava può a quel punto comparire nell'audit di salute come una che nessuno chiama.
 584366bc3ae1ca59  site/it/docs-crm.html: I conteggi d'uso coprono soltanto le funzioni Deluge di questo workspace .
+01e5697dcd20143c  site/it/docs-crm.html: I pull successivi saltano apposta un'area rifiutata - rifare a ogni pull una domanda già risposta sono mille richieste per un solo cambio di ruolo - quindi è spuntare quella casella, e premere Save tabs , a rimettere l'area nel pull successivo , una volta sola.
 2b7b3da5542f5255  site/it/docs-crm.html: I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.
 57d500e9e6b6c5b1  site/it/docs-crm.html: Il filtro è Attached to nothing , e lo stesso elenco compare nell'audit di salute sotto Wiring .
 c0337979a22febe2  site/it/docs-crm.html: Il gruppo tratteggiato Only è l'altra domanda - «restringi ai nodi che sono anche…» - e parte vuoto, perché è la verità quando non hai scelto niente; quei tre valgono per le funzioni.
@@ -687,6 +698,7 @@ f246e81f3e3acf97  site/it/docs-crm.html: Ogni funzione porta con sé la propria 
 f8f2656694c27c75  site/it/docs-crm.html: Ogni prodotto Zoost usa una propria sottocartella, quindi una sola cartella di lavoro può contenerli tutti.
 b970e0c83f0269b9  site/it/docs-crm.html: Ogni riga ha un secondo interruttore, pull , per una domanda diversa: se Zoost debba proprio chiedere quel tipo a Zoho.
 7669ebd7aaf2fe3f  site/it/docs-crm.html: Ogni sezione dichiara cosa analizza e cosa no - i client script e le regole di approvazione, per esempio, sono fuori da quello che Zoho espone.
+99610ff5412a1e77  site/it/docs-crm.html: Ogni sezione ha il suo, e il pulsante si accende - con accanto la scritta Unsaved changes - solo finché quello che vedi è diverso da quello che è memorizzato.
 ea7004a78eb39447  site/it/docs-crm.html: Ogni strumento che usa viene mostrato nella chat.
 9a4286eb7fd021e0  site/it/docs-crm.html: Ognuno dei due è assente quando non farebbe niente.
 6de5d9166bd030d8  site/it/docs-crm.html: Org index è quanta parte dell'org viene descritta all'assistente a ogni messaggio - più grande vuol dire che conosce più nomi, ed è fatturata ogni volta.
@@ -723,12 +735,14 @@ f9361537f89b4ce0  site/it/docs-crm.html: Trovare il nome di una relazione L'API 
 de13555469a0facd  site/it/docs-crm.html: Tutta la conversazione viene rimandata a ogni messaggio, quindi un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
 11bf4ce1dde20ab4  site/it/docs-crm.html: Tutti e due vengono dalla regola che hai già su disco, quindi per rispondere a «quali workflow non partono subito» non viene chiesto niente a Zoho.
 103ff924d2b7fcdd  site/it/docs-crm.html: Tutto ciò che dipende da questa connessione è già rotto.
+5cb426bc923ad45a  site/it/docs-crm.html: Tutto il resto aspetta il suo Save.
 9673f3bcc6c69fca  site/it/docs-crm.html: Tutto il resto di Zoost è locale.
 b568a66c73bc12a1  site/it/docs-crm.html: Tutto viene da quello che hai già su disco: il JSON di un workflow dice quali funzioni lancia, la riga di indice di uno schedule nomina quella che esegue, e il meta catturato di una funzione elenca le sue connessioni.
 021b613b86f5419b  site/it/docs-crm.html: Un click lo ripristina; non si apre nessun selettore di file.
 7d3e25ddadfc24a8  site/it/docs-crm.html: Un modulo nominato attraverso una variabile non si può sapere, quindi quelle chiamate vengono contate e dichiarate invece che scartate - il che rende ogni elenco un limite inferiore , mai la garanzia che nessun altro scriva lì.
 29113e00d9dd5d1b  site/it/docs-crm.html: Un modulo non ha campi e ha un ⊘ grigio Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti.
 a5111fdaa94e7fb0  site/it/docs-crm.html: Un ordinamento numerico lascia cadere il raggruppamento per namespace e mostra un elenco piatto, con il namespace che si sposta su ogni riga, perché «quali sono le più grandi» è una domanda diversa da «cosa c'è in questo namespace».
+eb1bc1ad4444c9df  site/it/docs-crm.html: Un pull le richiede tutte, quindi un ruolo concesso nel frattempo si sblocca da solo.
 47f665a8ee50a0ab  site/it/docs-crm.html: Un risultato apre il file alla sua riga , e ogni corrispondenza è dipinta dentro il sorgente che l'anteprima mostra - la stessa ricerca, seguita fino in fondo.
 476a2f5c6f932a77  site/it/docs-crm.html: Un tipo senza niente dentro non ha la sua chip.
 5353d8f8bd4b16be  site/it/docs-crm.html: Un workflow o uno schedule che fa scattare una funzione è un nodo per conto suo; lo è ogni connection che una funzione usa; lo è ogni automation action - notifiche, field update, task, webhook, comprese quelle che nessuna regola fa scattare , che sono quelle che vale la pena vedere; e lo è ogni modulo che quelle regole e quelle action toccano.
@@ -736,6 +750,7 @@ eb9293f24986f6c7  site/it/docs-crm.html: Un workflow o uno schedule che ne fa pa
 faf32999c6a419c5  site/it/docs-crm.html: Un workflow quasi mai fa il lavoro da sé: punta a qualcosa che in Zoho CRM esiste per conto suo e viene riusato da più regole - una notifica email , un field update , un task , un webhook .
 b6b84c01de8f2361  site/it/docs-crm.html: Una cartella per tipo, un index.json dentro ciascuna e le funzioni sotto functions/ così un namespace Deluge non può mai scontrarsi con una cartella creata da Zoost.
 5807e28b8f7dec1b  site/it/docs-crm.html: Una funzione creata o cancellata da un collega altrove viene riconciliata al Pull all successivo - Zoost si accorge di quello che succede davanti a lui, non è sempre in pari con la piattaforma.
+70748fcff999256f  site/it/docs-crm.html: Una funzione mostra un ⊘ grigio e nessun sorgente Zoho ha elencato quella funzione al tuo utente e ne ha rifiutato il sorgente: alcuni ruoli fanno esattamente questo, l'elenco si legge e il codice no.
 cfd0e5362f64bd4d  site/it/docs-crm.html: Una riga per related list, con l'API name che serve alla chiamata - che non è l'api_name di nessuno dei due moduli, ed è il motivo per cui questa tabella esiste.
 735db2c831c52d2b  site/it/docs-crm.html: Una volta attivato, le informazioni necessarie per risponderti partono dal browser e vanno direttamente al provider che hai scelto - Anthropic oppure OpenAI - e a nessun altro.
 9c22c57f746005e1  site/it/docs-crm.html: Una volta impostata i campi spariscono - la passphrase non è conservata, quindi non c'è niente da mostrarci dentro - e la sezione dichiara che la chiave è cifrata, con un pulsante Change passphrase per quando ne vuoi un'altra.
