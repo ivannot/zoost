@@ -18852,6 +18852,55 @@ test('a section redrawn from another window is compared against what it now show
   assert.deepEqual(boxed, [], 'a section nobody edited raised a conflict box');
 });
 
+// **Turning a tab off also stops pulling it - and turning it back on has to undo that.** Reported
+// from the page: untick «actions», «Unsaved changes» appears; tick it again and it stays. The words
+// were right and the state was surprising - hiding a tab switches its `pull` off too, deliberately
+// and visibly, and the tick only ever put the visibility back. So the section really did differ from
+// what is stored, by a switch the reader had not touched.
+test('turning a hidden tab back on restores the pull switch that hiding it turned off', () => {
+  const rel = 'apps/crm/options.js';
+  // The real handlers, wired by the real `renderTabs` onto a fake page.
+  const boxes = {};
+  const el = (tag) => ({ tag, className: '', innerHTML: '', dataset: {}, style: {},
+                         appendChild() {}, querySelector: () => ({}), querySelectorAll: () => [] });
+  const g = { console, Object, Array, String, Set, Number,
+              document: { createElement: el },
+              $: () => ({ style: {}, textContent: '', title: '' }),
+              escA: (x) => String(x), TAB_IDS: ['functions', 'actions'],
+              TAB_DEFS: [{ id: 'functions', label: 'Functions', note: '' }, { id: 'actions', label: 'Actions', note: '' }],
+              tabOrderCur: ['functions', 'actions'], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
+              tabAccessCur: { ws: null, access: {} }, tabsLoadFailed: false,
+              dayOf: () => '1 Jan 2026', markDirty: () => {}, move: () => {},
+              // The box collects the handlers the renderer attaches, which is what a click runs.
+              box: null };
+  const tabsBox = { innerHTML: '', appendChild() {},
+                    querySelectorAll: (q) => (q === 'input[data-id]' ? [boxes.show]
+                                            : q === 'input[data-pull]' ? [boxes.pull] : []) };
+  g.$ = (id) => (id === 'tablist' ? tabsBox : { style: {}, textContent: '', title: '', onclick: null });
+  boxes.show = { dataset: { id: 'actions' }, checked: true, onchange: null };
+  boxes.pull = { dataset: { pull: 'actions' }, checked: true, onchange: null };
+  const m = load([sliceConst(rel, 'pullOffByHide'), sliceFn(rel, 'renderTabs')], g);
+  m.renderTabs();
+
+  boxes.show.checked = false; boxes.show.onchange();
+  assert.deepEqual(g.tabHiddenCur, ['actions'], 'hiding a tab no longer hides it');
+  assert.deepEqual(g.tabNoPullCur, ['actions'],
+                   'hiding a tab stopped switching its pull off, which it does on purpose');
+
+  boxes.show.checked = true; boxes.show.onchange();
+  assert.deepEqual(g.tabHiddenCur, [], 'turning the tab back on no longer shows it');
+  assert.deepEqual(g.tabNoPullCur, [],
+                   'the pull switch stays off after the tab is turned back on, so the section still '
+                   + 'differs from what is stored and «Unsaved changes» survives what reads as an undo');
+
+  // And a pull the reader switched off themselves is theirs: hiding and showing does not revive it.
+  g.tabNoPullCur = ['actions']; g.tabHiddenCur = []; m.pullOffByHide.clear();
+  boxes.show.checked = false; boxes.show.onchange();
+  boxes.show.checked = true; boxes.show.onchange();
+  assert.deepEqual(g.tabNoPullCur, ['actions'],
+                   'a pull the reader had turned off is switched back on by an unrelated undo');
+});
+
 // **A fingerprint that reads the controls misses the state a section keeps elsewhere**, and two
 // edits went missing in it: «Show all» over a tab that is hidden *and* refused - both boxes are
 // drawn forced off, so the lists it empties are invisible - and «Forget this key» for a provider

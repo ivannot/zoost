@@ -710,6 +710,10 @@ let tabNoPullCur = [];
 // section is «edit the form, then Save», and a button that acted on its own made one row obey a
 // different rule from its neighbours. Reported in those words - «non mi sembra intuitivo».
 let tabRecheckCur = [];
+// Which tabs had their pull switched off *by* being hidden here, so turning them back on can undo
+// exactly that and nothing else. It describes edits made to this form, so a read from disk starts it
+// again - see `loadTabs`.
+const pullOffByHide = new Set();
 let tabAccessCur = { ws: null, access: {} };
 
 const dayOf = (iso) => {
@@ -776,13 +780,19 @@ function renderTabs() {
     const id = c.dataset.id;
     if (c.checked) {
       tabHiddenCur = tabHiddenCur.filter((x) => x !== id);
+      // **And it undoes its own side effect.** Turning the tab back on left `pull` off, so the
+      // section was still different from what is stored and «Unsaved changes» stayed after what the
+      // reader had every reason to read as an undo - reported exactly that way, and the words were
+      // right while the state was surprising. Only what *this* untick switched off is switched back:
+      // a pull the reader had turned off themselves is theirs, and is left alone.
+      if (pullOffByHide.has(id)) { tabNoPullCur = tabNoPullCur.filter((x) => x !== id); pullOffByHide.delete(id); }
     } else {
       tabHiddenCur = tabHiddenCur.concat([id]);
       // Turning a tab off also stops pulling it, and shows that it has: nine times in ten a tab is
       // turned off because that area is not readable anyway, and leaving it in the chain buys one
       // error per pull and nothing else. Shown rather than done invisibly, and you can turn the pull
       // back on for the tenth case - someone who mirrors a type for Git and never browses it.
-      if (!tabNoPullCur.includes(id)) tabNoPullCur = tabNoPullCur.concat([id]);
+      if (!tabNoPullCur.includes(id)) { tabNoPullCur = tabNoPullCur.concat([id]); pullOffByHide.add(id); }
     }
     renderTabs();
   }));
@@ -825,6 +835,10 @@ function move(id, d) {
 }
 async function loadTabs() {
   tabsLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
+  // The record describes edits made to this form; a read from disk replaces the form, so the record
+  // starts again with it. Kept without this, a tab hidden before the reload would have its pull
+  // switched back on by a later click that had not switched it off.
+  pullOffByHide.clear();
   const current = beginLoad('tabPrefs');
   try {
     const st = await chrome.storage.local.get(['tabPrefs', 'tabAccessView']);
