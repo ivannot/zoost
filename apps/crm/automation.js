@@ -440,7 +440,11 @@ async function pullActions() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.wrongTab, 'warn'); return; }
     setStatus('Pulling automation actions\u2026', 'busy');
     const r = await toBridge({ cmd: 'pullActions' });
-    if (!r?.ok) { setStatus('Actions pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
+    // It said «Actions pull failed: unknown» - `toBridge` resolves `undefined` when nothing is
+    // listening, so a reloaded Zoho tab produced the one sentence that names neither the problem
+    // nor the remedy, and `setStatus` then hid the report button. Every other pull reports through
+    // `notePullFailure`, which records the verdict, keeps the diagnostic and says the true thing.
+    if (!r?.ok) throw bridgeError(r, 'actions read failed');
     if (!op.current()) return;   // you changed workspace while this was reading
     // A kind that refused is stated rather than folded into the total: an org without webhooks and
     // an org whose role cannot read them look identical in a count.

@@ -5201,10 +5201,15 @@ for (const app of ['crm', 'analytics']) {
       assert.ok(html.includes('id="repdismiss"'), `why=${app} has no way to clear the row`);
       assert.ok(/\$\('repdismiss'\)\.onclick = \(\) => showEmergency\(false\);/.test(js),
         `why=${app} draws the control without wiring it`);
-      const fn = js.slice(js.indexOf('function showEmergency('));
-      const line = fn.slice(0, fn.indexOf('\n'));
+      // The whole declaration, not its first line: it grew a second parameter - the link and the
+      // report button answer different questions - and a check reading one line reported that as
+      // «repdismiss left behind» while the code toggles all three. A check pinned to a layout
+      // reports a rewrite as a defect, which is how a suite teaches people to edit it.
+      const at = js.indexOf('function showEmergency(');
+      const fn = js.slice(at, js.indexOf('\n}', at));
       for (const id of ['emerg', 'repopen', 'repdismiss']) {
-        assert.ok(line.includes(`'${id}'`), `why=${app} leaves ${id} behind when the row is toggled`);
+        assert.ok(fn.includes(`'${id}'`) || fn.includes(`${id}:`),
+                  `why=${app} leaves ${id} behind when the row is toggled`);
       }
     }
   });
@@ -17774,7 +17779,16 @@ test('a panel that offers a report has recorded the error it is about', () => {
     // them, and deriving that from the argument keeps a fourth call site inside the net.
     const raises = [...src.matchAll(/(?<!function )showEmergency\((?!false\))/g)].map((m) => m.index);
     assert.ok(raises.length, `${app}: nothing puts the report button on screen - this case has lost its subject`);
-    const orphan = raises.filter((i) => !/noteThrown\(/.test(src.slice(Math.max(0, i - 1200), i + 400)));
+    // **Asked of the enclosing function, not of a window of characters.** The window was 1200 wide
+    // and a comment written above the call pushed `noteThrown(` to 1225, so the check reported prose
+    // as a missing recording. What it means is «the site that raises this button recorded the error»,
+    // and the unit that answers that is the function the call is in.
+    const enclosing = (i) => {
+      const start = src.lastIndexOf('\nasync function ', i) + 1 || src.lastIndexOf('\nfunction ', i) + 1;
+      const s2 = Math.max(src.lastIndexOf('\nasync function ', i), src.lastIndexOf('\nfunction ', i));
+      return src.slice(s2 < 0 ? Math.max(0, i - 1200) : s2, i + 400) || start;
+    };
+    const orphan = raises.filter((i) => !/noteThrown\(/.test(enclosing(i)));
     assert.deepEqual(orphan, [],
                      `${app}: ${orphan.length} place(s) put the report button on screen without recording `
                      + 'what went wrong, so the report they open describes nothing');
@@ -18903,11 +18917,70 @@ test('an empty list says what Zoho last answered about that area', () => {
     assert.ok(src.includes(`emptyReason('${area}')`), `${file} does not ask about ${area}`);
   }
 
+  // **And what is not a whole area does not ask about one.** A module's own fields table is drawn
+  // inside a workspace that has every other module on disk, so the area's verdict does not describe
+  // it: with the area passed, «the last pull of this area did not succeed. Nothing is stored for it»
+  // appeared beside a list of modules the reader can see. `failed` is written by a pull that worked
+  // and came up short, which is precisely the pull that leaves one module without fields.
+  const fields = sliceFn('apps/crm/modules.js', 'renderFieldsTable').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(fields, /emptyReason\(\)/,
+               'one module\u0027s empty fields table speaks for the whole area, and says nothing is '
+               + 'stored over a workspace that is full');
+
   // And Settings says it too, on the row: «included by default» is the note for a state this area
   // is not in.
-  assert.match(sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, ''),
-               /Last pull did not succeed/,
-               'the settings row describes a healthy area over one whose last answer was a failure');
+  // **And only where Zoho gave words.** `failed` is also written by a pull that worked and came up
+  // short - one module Zoho would not describe, one stale file that would not delete - so a flat
+  // «Last pull did not succeed» sat on the row of an area whose 1,200 functions are on disk.
+  const tabsSrc = sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(tabsSrc, /a\.note\s*\n?\s*\?/,
+               'the settings row states a failure for every «failed» verdict, including the ones a '
+               + 'successful-but-short pull writes');
+  assert.doesNotMatch(tabsSrc, /a\.state === 'failed'/,
+               'it still branches on the state rather than on whether there is anything to say');
+});
+
+// **Three more ways the record of «this hide switched that pull off» went stale**, all reported by a
+// reader who drove the shipped page rather than reading it. Two doors were left open beside the one
+// that was closed, and the read that should replace the form published nothing when nothing was
+// stored - so «Take theirs» rebased over the edit it was meant to discard.
+test('the record of what a hide switched off cannot outlive the reason for it', () => {
+  const rel = 'apps/crm/options.js';
+  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+
+  // «Show all» empties the pulls without hiding anything, so nothing it leaves behind is ours.
+  const reset = /\$\('tabReset'\)\.onclick = \(\) => \{([\s\S]*?)\};/.exec(src);
+  assert.ok(reset, 'the reset control is gone - this case has lost its subject');
+  assert.match(reset[1], /pullOffByHide\.clear\(\)/,
+               '«Show all» leaves the record populated, so a later show turns back on a pull the '
+               + 'reader had set themselves');
+
+  // And touching the switch makes that pull the reader's, whichever way it goes.
+  const pullBox = src.slice(src.indexOf("input[data-pull]"), src.indexOf('}));', src.indexOf("input[data-pull]")));
+  assert.match(pullBox, /pullOffByHide\.delete\(id\)/,
+               'the reader cannot take a pull back from the record without reloading the page');
+
+  // A read publishes what is stored, and «nothing stored» is a value like any other.
+  const tabs = sliceFn(rel, 'loadTabs').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(tabs, /tabOrderCur = TAB_IDS\.slice\(\); tabHiddenCur = \[\]/,
+               'with no tabPrefs on disk the read leaves the reader\u0027s edits standing, so «Take '
+               + 'theirs» rebases over the edit it was told to discard and the page reports it saved');
+  for (const app of ['crm', 'analytics']) {
+    const lay = sliceFn(`apps/${app}/options.js`, 'loadLay').replace(/^\s*\/\/.*$/gm, '');
+    assert.match(lay, /: DRAW_MAX_DEFAULT/,
+                 `${app}: the same shape on the diagram ceiling - a typed number survives the reload `
+                 + 'that was meant to replace it, and the section then reports itself clean');
+  }
+
+  // And picking an engine, which stores the one thing it changes, must not announce an edit.
+  for (const app of ['crm', 'analytics']) {
+    const eng = sliceFn(`apps/${app}/options.js`, 'onAiengine').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(eng.indexOf('const wasDirty') < eng.indexOf('await'),
+              `${app}: whether an edit was pending is read after an await, by which time the change `
+              + 'listener has marked the section - so picking an engine always reports one');
+    assert.match(eng, /wasDirty \? markDirty\('aicfg'\) : \(rebase\('aicfg'\), paintDirty\(\)\)|if \(wasDirty\) markDirty\('aicfg'\); else \{ rebase\('aicfg'\); paintDirty\(\); \}/,
+                 `${app}: the section is left marked over a write that stored what it changed`);
+  }
 });
 
 // **Turning a tab off also stops pulling it - and turning it back on has to undo that.** Reported

@@ -482,7 +482,11 @@ async function loadLay() {
   try {
     const r = await chrome.storage.local.get('erDrawMax');
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
-    if (current() && Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
+    // Both branches, because a read publishes what is stored and «nothing stored» is a value:
+    // with only the first, a ceiling the reader had typed survived a reload that was meant to
+    // replace it - so «Take theirs» kept the typed number, stored none, and reported the section
+    // clean. The same shape as the tab arrays one file over, found the same way.
+    if (current()) drawMax = Number.isFinite(r.erDrawMax) ? Math.min(hi, Math.max(lo, r.erDrawMax)) : DRAW_MAX_DEFAULT;
   } catch (_) { layLoadFailed = 'failed'; }
   // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
   // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
@@ -499,6 +503,13 @@ async function onAiengine() {
   // The mode is saved on change; the *form* is not. Running the whole save here wrote whatever was
   // half-typed in the key fields, and once a passphrase can be required it could refuse outright -
   // leaving the selector showing an engine that was never stored. Same shape as the CRM page.
+  //
+  // **Read synchronously, before anything awaits.** The engine box is a control inside this section,
+  // so the section-level `change` listener marks it dirty as it bubbles - and the write below stores
+  // the new engine, which means the form and the store agree again. Asking afterwards therefore
+  // always answered «changed», and picking an engine announced an unsaved edit that did not exist.
+  // What has to survive is an edit the reader had *already* made.
+  const wasDirty = dirty.has('aicfg');
   const picked = $('aiengine').value;
   const missing = engineIncomplete(picked);
   if (missing) {
@@ -519,8 +530,10 @@ async function onAiengine() {
   // typed and not yet saved is still only in the form - and `saveKeys` clears the section's mark
   // for every key it wrote. The page then said «nothing to save» over an API key that closing
   // the tab would lose. The mark is recomputed against the baseline, which this write did not
-  // move, so a pending edit survives the engine changing under it.
-  markDirty('aicfg');
+  // move, so a pending edit survives the engine changing under it. An edit that was pending stays
+  // pending; a section that agreed with the store still does, because this write is what put the one
+  // thing it changed there.
+  if (wasDirty) markDirty('aicfg'); else { rebase('aicfg'); paintDirty(); }
   toast(`Engine set to ${engineLabel(c.active)}.`);
 }
 $('aiengine').onchange = onAiengine;

@@ -385,6 +385,14 @@ function markEngine() {
 // possible to change engine, see the panel ignore it, and blame the panel. It now saves on change.
 let prevEngine = 'anthropic';
 async function onAiengine() {
+  // **Read synchronously, before anything awaits.** The engine box is a control inside this
+  // section, so the section-level `change` listener marks it dirty as it bubbles - and the
+  // write below stores the new engine, which means the form and the store agree again. Asking
+  // afterwards therefore always answered «changed», and picking an engine announced an unsaved
+  // edit that did not exist: toast «Engine set to OpenAI», storage correct, Save lit. What has
+  // to survive is an edit the reader had *already* made - a key typed and not yet saved - so
+  // that is what is remembered here, and nothing else.
+  const wasDirty = dirty.has('aicfg');
   const picked = $('aiengine').value;
   const missing = engineIncomplete(picked);
   if (missing) {
@@ -406,7 +414,9 @@ async function onAiengine() {
   // for every key it wrote. The page then said «nothing to save» over an API key that closing
   // the tab would lose. The mark is recomputed against the baseline, which this write did not
   // move, so a pending edit survives the engine changing under it.
-  markDirty('aicfg');
+  // An edit that was pending stays pending; a section that agreed with the store still does,
+  // because this write is what put the one thing it changed there.
+  if (wasDirty) markDirty('aicfg'); else { rebase('aicfg'); paintDirty(); }
   await stamp();
   toast(`Engine set to ${engineLabel(c.active)}.`);
 }
@@ -557,9 +567,11 @@ async function loadScope() {
   scopeToUI();
 }
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
-// Merged over what is stored, never a replacement. This page knows nine of the twelve sections the
-// panel's export dialog has - `actions`, `addresses` and `failures` have no box here - and it also
-// does not carry `sv`, the stamp that says which build wrote the preference.
+// Merged over what is stored, never a replacement. It used to say «this page knows nine of the twelve
+// sections the panel's export dialog has»; it has had all twelve for a while, and the sentence stayed
+// - a comment describing a shape the file no longer has, which is worse than none. What is still true
+// is the reason for merging: this page does not carry `sv`, the stamp that says which build wrote the
+// preference, so a replacement would drop it.
 //
 // Replacing the object wholesale dropped all four. Then the panel's `loadScope` found `sv` missing,
 // took the preference for one written before the source-code default changed, and **set `code` back
@@ -678,7 +690,11 @@ async function loadLay() {
   try {
     const r = await chrome.storage.local.get('erDrawMax');
     const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
-    if (current() && Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
+    // Both branches, because a read publishes what is stored and «nothing stored» is a value:
+    // with only the first, a ceiling the reader had typed survived a reload that was meant to
+    // replace it - so «Take theirs» kept the typed number, stored none, and reported the section
+    // clean. The same shape as the tab arrays one file over, found the same way.
+    if (current()) drawMax = Number.isFinite(r.erDrawMax) ? Math.min(hi, Math.max(lo, r.erDrawMax)) : DRAW_MAX_DEFAULT;
   } catch (_) { layLoadFailed = 'failed'; }
   // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
   // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
@@ -761,8 +777,12 @@ function renderTabs() {
       // A pull that failed is not a refusal and the row does not treat it as one - the tab stays, the
       // boxes work - but «Pull all is included by default» over an area whose last answer was a 400
       // is the note for a state this one is not in. What Zoho last said, and when.
-      : (a.state === 'failed'
-        ? `Last pull did not succeed${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pulling again re-asks.`
+      // **Only where the refusal said something.** `failed` is also written by a pull that *worked*
+      // and came up short - one module Zoho would not describe, one stale file that would not delete -
+      // so «Last pull did not succeed» sat on the row of an area whose 1,200 functions are on disk.
+      // The verdict carries words only when Zoho gave some, and that is the case worth a sentence.
+      : (a.note
+        ? `${a.note}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pulling again re-asks.`
         : def.note);
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped
@@ -803,6 +823,10 @@ function renderTabs() {
   }));
   box.querySelectorAll('input[data-pull]').forEach((c) => (c.onchange = () => {
     const id = c.dataset.pull;
+    // Touching the switch directly makes that pull the reader's, whichever way it goes: the record
+    // is about a pull *this hide* turned off, and once they have moved it themselves it is no longer
+    // ours to restore. Without this they could not get out of the set without reloading the page.
+    pullOffByHide.delete(id);
     tabNoPullCur = c.checked ? tabNoPullCur.filter((x) => x !== id) : tabNoPullCur.concat([id]);
   }));
   // A form edit like every other in this section: it takes effect when you press Save, and the
@@ -849,6 +873,13 @@ async function loadTabs() {
     const st = await chrome.storage.local.get(['tabPrefs', 'tabAccessView']);
     if (!current()) return;
     const p = st && st.tabPrefs;
+    // **A read publishes what is stored, including «nothing».** With no `tabPrefs` on disk this left
+    // the four arrays exactly as the reader had edited them - so «Take theirs» rebased over the edit
+    // it was meant to discard, reported no unsaved changes, and the edit was lost on close without a
+    // word. `loadRx` has always reset its list; this did not.
+    if (!(p && Array.isArray(p.order) && Array.isArray(p.hidden))) {
+      tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; tabRecheckCur = [];
+    }
     if (p && Array.isArray(p.order) && Array.isArray(p.hidden)) {
       const known = p.order.filter((id) => TAB_IDS.includes(id));
       tabOrderCur = known.concat(TAB_IDS.filter((id) => !known.includes(id)));   // a tab added later must appear, not vanish
@@ -875,7 +906,11 @@ $('saveTabs').onclick = onSaveTabs;
 // purpose: it is a request about the platform, not a display preference, and «Show all» quietly
 // queueing calls to Zoho would be a button doing more than it says.
 $('tabReset').title = 'Show every tab and restore the built-in order. An area Zoho refused stays hidden until it answers otherwise.';
-$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); markDirty('tabPrefs'); };
+$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = [];
+  // The record describes «this hide switched that pull off», and this empties the pulls without
+  // hiding anything - so an id left behind made a later show turn back on a pull the reader had
+  // set themselves. Two doors, and this was the second.
+  pullOffByHide.clear(); renderTabs(); markDirty('tabPrefs'); };
 
 
 // ---------- guarding against the stale save ----------

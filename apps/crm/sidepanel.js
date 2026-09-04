@@ -283,7 +283,22 @@ function noteStep(text) {
 //
 // Cleared by every status write and set again by the one failure path that should carry it, so it
 // cannot linger over a later success. One place to clear, one place to set.
-function showEmergency(on) { for (const id of ['emerg', 'repopen', 'repdismiss']) { const e = $(id); if (e) e.classList.toggle('on', !!on); } }
+/** Raise the failure controls: the link to /emergency, and the report button beside it.
+ *
+ *  **They answer different questions and were toggled together.** «A fix may already be released» is
+ *  about the platform; «Report this problem» is about telling somebody what happened. For a refusal
+ *  the panel can explain, the first is wrong - it was the reader's own objection, «non e' un problema
+ *  applicativo» - and hiding both took the second with it. That mattered more than it looks: the one
+ *  error in this product that builds a `diag` is the one that carries a `note`, and `diag` exists for
+ *  nothing but the report. So «it is carried» and «nothing carries it» became the same thing again,
+ *  one commit after that exact sentence was written about the same button.
+ *
+ *  `report` defaults to `link`, so every caller that means «put them away» still does.
+ */
+function showEmergency(link, report = link) {
+  const on = { emerg: !!link, repopen: !!report, repdismiss: !!report };
+  for (const id of Object.keys(on)) { const e = $(id); if (e) e.classList.toggle('on', on[id]); }
+}
 // Every sentence this panel says in more than one place. Not a translation layer and not a habit to
 // extend to one-off wording: a message written out twice is two messages the moment somebody edits
 // one of them, and that had already happened here - the same lapsed folder permission was reported
@@ -866,7 +881,10 @@ async function notePullFailure(area, e, op) {
   // one question, and the reader's own objection: «non è un problema applicativo». A failure this
   // panel can explain in Zoho's terms is not one a release changes; what stays pointed at /emergency
   // is what nothing here can account for, which is the case that button was written for.
-  showEmergency(!(e && (e.forbidden || e.note)));
+  // The link only where a release could be the answer; the report button wherever there is something
+  // to report, which is every failure. A role refusal keeps neither: Zoho stated it, no release
+  // changes it, and there is nothing here for anybody to look at.
+  showEmergency(!(e && (e.forbidden || e.note)), !(e && e.forbidden));
 }
 
 // After a full pull: one line naming the areas that were refused. Said once, plainly, rather than
@@ -6598,7 +6616,12 @@ async function pullFailures() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(MSG.wrongTab);
     setStatus('Reading failures\u2026', 'busy');
-    const r = await toBridge({ cmd: 'pullFailures' }); if (!r?.ok) throw new Error(r?.error || 'failures read failed');
+    // Through `bridgeError`, like every other pull: a bare Error drops `forbidden`, `status` and
+    // the refusal's own words at the message boundary, so a role that cannot read this area was
+    // reported as «pull error: HTTP 403», the tab stayed, the verdict was recorded as a failure
+    // rather than a refusal, and every later Pull all asked again for ever. Three pulls were still
+    // doing it by hand while the helper's own comment said «every one goes through here».
+    const r = await toBridge({ cmd: 'pullFailures' }); if (!r?.ok) throw bridgeError(r, 'failures read failed');
     // One file for everything Zoho knows about how this org *runs*: what failed, how much ran, and
     // what it cost. It keeps the `failures/` name because that is what a reader looks for, and the
     // shape says the rest.
@@ -6630,7 +6653,7 @@ async function pullWorkflows() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Listing workflows\u2026', 'busy');
-    const r = await toBridge({ cmd: 'listWorkflows' }); if (!r?.ok) throw new Error(r?.error || 'list failed');
+    const r = await toBridge({ cmd: 'listWorkflows' }); if (!r?.ok) throw bridgeError(r, 'list failed');
     // Same rule the functions pull learned: a list that stopped early describes the reading, not the
     // org. Writing it as the index and pruning what is missing removes workflows that still exist -
     // and the warning came *after* the pruning, so it described rules already gone.

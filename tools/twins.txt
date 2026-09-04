@@ -143,7 +143,7 @@ layoutZoneHtml	c3b79caff8de	59b769693ab7	divergent
 linkedUnderFilter	c56b421e0c46	c56b421e0c46	identical
 loadAi	79d95a10c739	7d2baef0d524	divergent
 loadDc	e9df03bb1506	b21659f28f25	divergent
-loadLay	46c90678e1d2	46c90678e1d2	identical
+loadLay	c472a9e54baf	c472a9e54baf	identical
 loadRx	db6b4a2453f7	db6b4a2453f7	identical
 loadRxShortcuts	0c1fc69cd664	0c1fc69cd664	identical
 loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
@@ -169,7 +169,7 @@ noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 noteThrown	6c35bc6fa368	6c35bc6fa368	identical
-onAiengine	35a061aa885e	b9b5399f6e1b	divergent
+onAiengine	734a3f4ba921	7a1133599503	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
 onRepopen	8d02dae13933	8d02dae13933	identical
@@ -245,7 +245,7 @@ setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	38fd8a238839	0c5e6905c140	divergent
-showEmergency	cfdb73138aab	cfdb73138aab	identical
+showEmergency	74ef503d9c25	cfdb73138aab	divergent
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 snapshotOf	6d7095523636	6d7095523636	identical

@@ -380,7 +380,13 @@ function renderFieldsTable(m) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
     // under Related lists put the same sixty words on screen three times.
     return `<div class="empty" style="padding:12px 10px">${m.unreadable ? '<b>No fields were read.</b>'
-      : (emptyReason('modules') || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
+      // **No area here.** This is one module's fields, inside a workspace that has every other module
+      // on disk - so the area's own verdict does not apply to it, and asking for it printed «the last
+      // pull of this area did not succeed. Nothing is stored for it» beside a list of 299 modules the
+      // reader can see. `failed` is written by a pull that worked and came up short, which is exactly
+      // the pull that produces this state. The workspace-level blockers above it still apply, and
+      // those are what `emptyReason()` is being asked for.
+      : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
   }
   // Five columns, not six. The values used to have one of their own, which is what made the table
   // scroll sideways - and once they moved to a row of their own the column left behind held only the
