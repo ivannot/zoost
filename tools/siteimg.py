@@ -176,7 +176,13 @@ def render_og_card(dest: pathlib.Path) -> pathlib.Path:
                    "--virtual-time-budget=4000", "--screenshot=" + str(dest),
                    (ROOT / "tools" / "ogcard.html").as_uri()]
         try:
-            subprocess.run(command, check=True, capture_output=True, timeout=20)
+            # **A bound, not a wait - and it was fitted to a faster machine.** Twenty seconds is
+            # plenty where Chrome starts in two; on the WSL2 box this project is built on, a
+            # one-shot headless start takes 35 to 65 seconds with the machine idle and nothing
+            # else running. So the release stopped at its own step 0 twice, on a render that
+            # works: the bytes are identical every time. Raising it costs nothing when Chrome is
+            # quick, and is the difference between a slow step and a blocked publication.
+            subprocess.run(command, check=True, capture_output=True, timeout=180)
         except subprocess.TimeoutExpired:
             # Some Chrome builds finish the capture but keep the headless process alive. The timeout
             # terminates that process; a complete output file still makes this a successful render.

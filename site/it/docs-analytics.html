@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:0364e3a9cfb43a65 -->
+<!-- translated-from: site/docs-analytics.html sha256:b2b6a67b7c203d80 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://zoost.it/it/docs-analytics">
 <meta property="og:title" content="Come si usa Zoost Analytics">
 <meta property="og:description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=2ddf83aaba">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=e0bc337840">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
@@ -54,7 +54,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.30.0</span> · aggiornata il <span class="dd" data-stamp="updated">28 agosto 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.31.0</span> · aggiornata il <span class="dd" data-stamp="updated">4 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -236,7 +236,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     viste no.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-lineage.webp?v=f4ab7e88d0" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-lineage.webp?v=b188911cc1" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La scheda Lineage di una query table, con le colonne che legge e da dove.">
     <figcaption>Lineage: per ogni query table, quali colonne legge e da quale vista. È la catena che Zoho Analytics non disegna. Ogni nome è un link alla vista corrispondente, come le chiavi esterne sotto <b class="ui">Columns</b>.</figcaption>
   </figure>
@@ -348,7 +348,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     join, e ogni join si può copiare.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-er.webp?v=b8dd513340" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-er.webp?v=af0a04683f" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il diagramma ER del workspace, le tabelle unite dalle loro relazioni.">
     <figcaption>Il diagramma ER: metti a fuoco una tabella e segui le sue relazioni nel workspace.</figcaption>
   </figure>
@@ -404,7 +404,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.</p>
 
 <figure class="shot">
-    <img src="/img/analytics-search.webp?v=4f19eb9d27" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-search.webp?v=84a4d926fb" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il pannello Analytics con la ricerca su «in: SQL»: sette query table che contengono JOIN, ognuna con la riga in cui si trova.">
     <figcaption>Capitolo 8: <b>in: SQL</b> guarda dentro tutte le query del workspace in una volta
       sola - qui le sette che fanno una join, ognuna con la riga in cui sta il termine.</figcaption>
@@ -420,7 +420,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     cominciare a chiedere, non come una coda di cancellazione.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-health.webp?v=f8fd016664" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-health.webp?v=3d61503230" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La vista health con le viste che non hanno dipendenze note, accanto ai limiti dell'analisi.">
     <figcaption>Le viste senza dipendenze note, con i limiti dell'analisi dichiarati accanto al totale.</figcaption>
   </figure>
@@ -443,7 +443,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Analytics</b>, così un assistente che legge quel file non scrive query che non possono girare.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-export.webp?v=ea0ddb0172" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-export.webp?v=4f0b9cad66" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La finestra dell'export per un workspace Zoho Analytics.">
     <figcaption>Cosa può uscire dalla macchina, sezione per sezione.</figcaption>
   </figure>
@@ -551,7 +551,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-settings.webp?v=3b830e26af" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-settings.webp?v=676e8dab8c" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La pagina impostazioni con il motore AI, il modello e la chiave.">
     <figcaption>Dove si scelgono motore e chiave.</figcaption>
   </figure>
@@ -570,6 +570,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     questa scheda, altrimenti da <b class="ui">⚙ Settings → Data centre</b>, dove sta il default.</p>
   <p>Il fondo del pannello resta raggiungibile sotto quella schermata: Settings, Help e About restano
     a un clic mentre il resto è fermo.</p>
+  <p><b>Un Save che ha qualcosa da salvare lo dice.</b> Ogni sezione ha il suo, e il pulsante si
+    accende - con accanto la scritta <b>Unsaved changes</b> - solo finché quello che vedi è diverso da
+    quello che è memorizzato. Rimetti una modifica com'era e spariscono entrambi, perché la domanda a
+    cui rispondono è «è diverso?», non «ci hai messo le mani?». Qui niente si salva da solo: l'unica
+    eccezione è il data centre, una scelta singola senza niente da comporre, che si memorizza da sé e
+    te lo dice.</p>
   <p><b>Le impostazioni aperte in due finestre.</b> La pagina delle impostazioni è una scheda come
     le altre, quindi può essere aperta due volte o restare aperta mentre il pannello modifica la
     stessa impostazione. Se una sezione cambia altrove mentre la stai modificando, Zoost lo segnala e
