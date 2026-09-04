@@ -859,7 +859,14 @@ async function notePullFailure(area, e, op) {
   // A role refusal is not a platform change and no release will fix it, so the pointer would be
   // sending the reader somewhere that cannot help. Everything else is «Zoho did not answer the way
   // this expects», which is exactly the case /emergency exists for.
-  showEmergency(!(e && e.forbidden));
+  //
+  // **`forbidden` is not the whole of «no release fixes this».** A refusal Zoho worded some other way
+  // carries its own sentence, and the panel had just told the reader «this Zoho user may not have
+  // access to it» and then offered «A fix may already be released» underneath it - two answers to
+  // one question, and the reader's own objection: «non è un problema applicativo». A failure this
+  // panel can explain in Zoho's terms is not one a release changes; what stays pointed at /emergency
+  // is what nothing here can account for, which is the case that button was written for.
+  showEmergency(!(e && (e.forbidden || e.note)));
 }
 
 // After a full pull: one line naming the areas that were refused. Said once, plainly, rather than

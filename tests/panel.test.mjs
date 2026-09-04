@@ -4049,6 +4049,18 @@ test('a role refusal does not point at /emergency', async () => {
   assert.deepEqual(seen, [false]);
   await notePullFailure('workflows', new Error('Failed to fetch'));
   assert.deepEqual(seen, [false, true]);
+
+  // **And a refusal Zoho worded some other way is not a platform failure either.** The connections
+  // endpoint answers INVALID_CSRF_TOKEN to a user it will not serve; the panel says so in Zoho's own
+  // terms and then offered «A fix may already be released» underneath - two answers to one question.
+  // Reported in exactly those words: «non è un problema applicativo». A failure this panel can
+  // explain is not one a release changes; what keeps the pointer is what nothing here accounts for.
+  const explained = Object.assign(new Error('400 - INVALID_CSRF_TOKEN'),
+                                  { status: 400, note: 'Zoho refused this read - this Zoho user may not have access to it' });
+  await notePullFailure('connections', explained);
+  assert.deepEqual(seen, [false, true, false],
+                   'a refusal the panel has just explained still offers /emergency and the report '
+                   + 'button, so the reader is told two different things about one failure');
 });
 
 test('byField() sorts exactly as the arrow it replaced did', () => {
