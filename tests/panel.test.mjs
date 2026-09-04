@@ -1564,10 +1564,13 @@ test('every empty list asks what is blocking before blaming the pull', () => {
   for (const app of ['crm', 'analytics']) {
     const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
     const fn = 'emptyReason';   // one name on both sides now, and the same wording behind it
-    assert.match(src, new RegExp(`function ${fn}\\(\\)`), `${app}: nothing derives why a list is empty`);
+    // The CRM's takes the area it is being asked about - a refusal is recorded per area there, and
+    // Analytics records one per workspace - so the name is what is shared, not the arity.
+    assert.match(src, new RegExp(`function ${fn}\\(\\w*\\)`), `${app}: nothing derives why a list is empty`);
     // the three states that block before a pull ever could
     for (const guard of ['!root', '!rootGranted']) {
-      const body = src.slice(src.indexOf(`function ${fn}()`), src.indexOf('\n}', src.indexOf(`function ${fn}()`)));
+      const at = src.search(new RegExp(`function ${fn}\\(\\w*\\)`));
+      const body = src.slice(at, src.indexOf('\n}', at));
       assert.ok(body.includes(guard), `${app}: ${fn}() does not consider ${guard}`);
     }
   }
@@ -1577,7 +1580,7 @@ test('no list still tells the reader to pull without asking first', () => {
   const src = crmPanel().replace(/^\s*\/\/.*$/gm, '');
   for (const m of src.matchAll(/'<b>No [^']*<\/b> Press <b>Pull[^']*'/g)) {
     const before = src.slice(Math.max(0, m.index - 140), m.index);
-    assert.ok(before.includes('emptyReason() ||'),
+    assert.ok(/emptyReason\([^)]*\) \|\|/.test(before),
       `a list points at Pull without asking what is actually blocking`);
   }
 });
@@ -2400,7 +2403,7 @@ test('both panels say the same thing when the folder is not granted', () => {
   // compared here rather than trusted to stay in step.
   const bodies = ['crm', 'analytics'].map((app) => {
     const src = read(`apps/${app}/sidepanel.js`);
-    const i = src.indexOf('function emptyReason()');
+    const i = src.search(/function emptyReason\(\w*\)/);
     assert.ok(i > 0, `${app}: emptyReason() is gone`);
     return src.slice(i, src.indexOf('\n}', i));
   });
@@ -10806,7 +10809,7 @@ for (const app of ['crm', 'analytics']) {
     // All of them, not the first. A check about «one of a set was changed and the others were left»
     // that stops at the first failure makes the reader fix one of four and believe they are done -
     // which is the defect, one level up, in the tool written to catch it.
-    const bad = all.filter((c) => !/emptyReason\(\)/.test(c.stmt));
+    const bad = all.filter((c) => !/emptyReason\([^)]*\)/.test(c.stmt));
     assert.deepEqual(bad.map((c) => `${c.rel}:${c.line}`), [],
       `these tell the reader to press Pull without asking what is in the way - on a sample workspace ` +
       `Pull is refused by design, and with no folder access it is not the blocker:\n` +
@@ -18850,6 +18853,49 @@ test('a section redrawn from another window is compared against what it now show
   shown = 'after'; m.markDirty('tabPrefs');
   assert.equal(g.dirty.has('tabPrefs'), false, 'undoing it does not clear, which is the reported defect');
   assert.deepEqual(boxed, [], 'a section nobody edited raised a conflict box');
+});
+
+// **«Nothing pulled yet» over an area that was pulled and refused is the wrong missing thing.**
+// Reported from a real org: the Connections pull said, correctly and calmly, that Zoho had refused
+// the read - and the tab under it then read «No connections pulled yet - click Pull all», which is
+// both false and advice that had just been refused. The area *was* asked; what came back was a
+// refusal, and that is a different fact from never having asked.
+test('an empty list says what Zoho last answered about that area', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const base = { root: {}, rootGranted: true, wsList: [{ id: 'w' }], isSample: () => false, oldLayout: false,
+                 console, Object, String };
+  const reason = (access) => load([sliceFn(rel, 'emptyReason')], Object.assign({}, base, { tabAccess: access }))
+    .emptyReason('connections');
+
+  assert.equal(reason({}), null,
+               'an area nobody has pulled is given a verdict it never got, so the list stops saying '
+               + 'the ordinary «press Pull» to somebody who has not');
+  assert.equal(reason({ connections: { state: 'ok' } }), null, 'a successful pull is reported as a problem');
+
+  const failed = reason({ connections: { state: 'failed', status: 400, at: '2026-09-04T10:00:00.000Z',
+                                         note: 'Zoho refused this read - this Zoho user may not have access to it' } });
+  assert.match(failed, /may not have access/, `the refusal's own words are dropped: ${failed}`);
+  assert.match(failed, /400/, 'what Zoho answered is not carried');
+  assert.match(failed, /2026-09-04/, 'when it was asked is not carried');
+  assert.doesNotMatch(failed, /<b>/,
+                      'it carries markup, and this sentence is shown on the status line too, which '
+                      + 'renders text - the reader would see the tags');
+
+  // A refusal with no words of its own still says the true thing rather than «not pulled yet».
+  const bare = reason({ connections: { state: 'forbidden', status: 403 } });
+  assert.match(bare, /role does not grant access/, `a bare refusal says nothing useful: ${bare}`);
+
+  // Every list asks about *its own* area, or one tab explains another tab's failure.
+  for (const [file, area] of [['connections.js', 'connections'], ['modules.js', 'modules']]) {
+    const src = read(`apps/crm/${file}`);
+    assert.ok(src.includes(`emptyReason('${area}')`), `${file} does not ask about ${area}`);
+  }
+
+  // And Settings says it too, on the row: «included by default» is the note for a state this area
+  // is not in.
+  assert.match(sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, ''),
+               /Last pull did not succeed/,
+               'the settings row describes a healthy area over one whose last answer was a failure');
 });
 
 // **Turning a tab off also stops pulling it - and turning it back on has to undo that.** Reported

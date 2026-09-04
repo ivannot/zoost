@@ -33,7 +33,7 @@ async function rebuildSchedules() {
     // sample workspace Pull is refused by design, so «use Pull all» sends the reader to press a grey
     // button. The status line also stopped being 'ok' over an empty list.
     op.say(scheduleData.length ? `${scheduleData.length} schedules.`
-                                  : (emptyReason() || 'No schedules pulled yet - use Pull all.'),
+                                  : (emptyReason('schedules') || 'No schedules pulled yet - use Pull all.'),
               scheduleData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
   if (op.current()) await refreshContext();
@@ -48,7 +48,7 @@ function renderSchedules() {
     .forEach((e) => (byStatus[e.status === 'active' ? 'Active' : 'Inactive'] ||= []).push(e));
   const tree = $('tree'); tree.innerHTML = '';
   const keys = Object.keys(byStatus).sort();
-  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (scheduleData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No schedules yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
+  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (scheduleData.length ? '<b>No matches.</b>' : (emptyReason('schedules') || '<b>No schedules yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   keys.forEach((st) => {
     const list = byStatus[st].sort(byField('name'));
     const isCol = collapsed.has('sc:' + st);
@@ -204,7 +204,7 @@ function renderWorkflows() {
     .forEach((e) => (byMod[e.module || '(no module)'] ||= []).push(e));
   const tree = $('tree'); tree.innerHTML = '';
   const keys = Object.keys(byMod).sort();
-  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (workflowData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No workflows yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
+  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (workflowData.length ? '<b>No matches.</b>' : (emptyReason('workflows') || '<b>No workflows yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   // The scheduled-action count comes from the rule on disk, so a rule not downloaded yet has no
   // count - it is not a zero. Filtering on it therefore answers about part of the org, and the
   // figure states its own gap rather than letting the list look complete.
@@ -536,7 +536,7 @@ async function rebuildActions() {
     actionData = idx.map((a) => ({ ...a, path: 'actions/' + a.kind + '/' + a.id }));
     buildTypeChips();          // the kinds come from the data, so the filter is built after it loads
     renderActions();
-    op.say(actionData.length ? `${actionData.length} automation action(s).` : (emptyReason() || 'No automation actions pulled yet - click Pull all.'), actionData.length ? 'ok' : 'warn');
+    op.say(actionData.length ? `${actionData.length} automation action(s).` : (emptyReason('actions') || 'No automation actions pulled yet - click Pull all.'), actionData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus('Actions error: ' + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }
@@ -569,7 +569,7 @@ function renderActions() {
   if (!list.length) {
     // Three reasons for an empty list and they are different advice - the rule this panel applies
     // everywhere: say *the* reason, not *a* reason.
-    tree.innerHTML = '<div class="empty">' + (actionData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No automation actions yet.</b> Press <b>Pull all</b> to read them.')) + '</div>';
+    tree.innerHTML = '<div class="empty">' + (actionData.length ? '<b>No matches.</b>' : (emptyReason('actions') || '<b>No automation actions yet.</b> Press <b>Pull all</b> to read them.')) + '</div>';
     return;
   }
   if (sorter) {

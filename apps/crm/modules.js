@@ -183,7 +183,7 @@ async function rebuildModules(op = beginWorkspaceOp()) {
   if (!current()) return;
   moduleData = rows;          // published once, whole - never a list two loads are both writing into
   renderModules();
-  setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet - click Pull.'), moduleData.length ? 'ok' : 'warn');
+  setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason('modules') || 'No modules yet - click Pull.'), moduleData.length ? 'ok' : 'warn');
   await refreshContext();
 }
 // What Zoho said when it refused to describe a module, in one sentence, in one place - the row, the
@@ -215,7 +215,7 @@ function renderModules() {
     .filter((m) => !term || (m.api_name || '').toLowerCase().includes(term) || (m.label || '').toLowerCase().includes(term))
     .forEach((m) => (m.custom ? groups.Custom : groups.Standard).push(m));
   const tree = $('tree'); tree.innerHTML = '';
-  if (!groups.Standard.length && !groups.Custom.length) { tree.innerHTML = '<div class="empty">' + (moduleData.length ? '<b>No modules match.</b>' : (emptyReason() || '<b>No modules yet.</b> Press <b>Pull</b> to read them.')) + '</div>'; return; }
+  if (!groups.Standard.length && !groups.Custom.length) { tree.innerHTML = '<div class="empty">' + (moduleData.length ? '<b>No modules match.</b>' : (emptyReason('modules') || '<b>No modules yet.</b> Press <b>Pull</b> to read them.')) + '</div>'; return; }
   for (const g of ['Standard', 'Custom']) {
     const list = groups[g]; if (!list.length) continue;
     const isCol = collapsed.has('mod:' + g);
@@ -380,7 +380,7 @@ function renderFieldsTable(m) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
     // under Related lists put the same sixty words on screen three times.
     return `<div class="empty" style="padding:12px 10px">${m.unreadable ? '<b>No fields were read.</b>'
-      : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
+      : (emptyReason('modules') || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
   }
   // Five columns, not six. The values used to have one of their own, which is what made the table
   // scroll sideways - and once they moved to a row of their own the column left behind held only the
@@ -600,7 +600,7 @@ async function openCallFocus(id, depth) {
     await requirePerm(op.root);
     op.say(`Building the graph for ${id}\u2026`, 'busy');
     const g = await callGraphWithContext(op);
-    if (!g.counts.nodes) throw new Error(emptyReason() || 'No functions pulled yet - press Pull all.');
+    if (!g.counts.nodes) throw new Error(emptyReason('functions') || 'No functions pulled yet - press Pull all.');
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
     const gg = Object.assign({}, g, { focus: id, depth: Math.max(1, depth || 2) });
     if (!(await publishGraph(gg, op, ws))) return;
@@ -614,7 +614,7 @@ async function openSchemaFocus(apiName, depth) {
     await requirePerm(op.root);
     op.say(`Building relations graph for ${apiName}\u2026`, 'busy');
     const g = await buildSchemaGraph(undefined, undefined, op);   // full graph; the ER window filters by focus + depth client-side (adjustable there)
-    if (!g.counts.nodes) throw new Error(emptyReason() || 'No modules pulled yet - pull in Modules mode.');
+    if (!g.counts.nodes) throw new Error(emptyReason('modules') || 'No modules pulled yet - pull in Modules mode.');
     if (!g.nodes[apiName]) throw new Error(`Module ${apiName} not found in the schema.`);
     if (g.nodes[apiName].unreadable) throw new Error(`Zoho would not describe ${apiName}, so it has no fields and no relations to draw.`);
     g.focus = apiName; g.depth = Math.max(1, depth || 2);
@@ -628,7 +628,7 @@ async function openSchemaGraph() {
     await requirePerm(op.root);
     op.say('Building schema graph…', 'busy'); await refreshContext();
     const g = await buildSchemaGraph(undefined, undefined, op);
-    if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet - click Pull in Modules mode.'));
+    if (!g.counts.nodes) throw new Error((emptyReason('modules') || 'No modules pulled yet - click Pull in Modules mode.'));
     if (!(await publishGraph(g, op, ws))) return;
     setStatus(`Schema: ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
   } catch (e) { if ((e && e.message) !== WS_MOVED) setStatus('Schema graph error: ' + e.message, 'bad'); }

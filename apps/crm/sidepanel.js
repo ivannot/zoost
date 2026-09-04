@@ -2015,7 +2015,7 @@ function renderTree() {
     m.innerHTML = treeData.length
       ? `<b>No matches.</b>${(typeFilter !== 'all' || langFilter !== 'all')
         ? ` The ${narrowingName()} holding the list to ${treeData.filter(passRow).length} of ${treeData.length} function(s) - set them to <b>All</b> to search them all.` : ''}`
-      : (emptyReason() || '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to mirror this org.');
+      : (emptyReason('functions') || '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to mirror this org.');
     tree.appendChild(m); return;
   }
   const sorter = TREE_SORTS[treeSort];
@@ -5237,7 +5237,7 @@ function renderBlocked() {
   t.innerHTML = why ? `<div class="empty">${why}</div>` : '';
 }
 
-function emptyReason() {
+function emptyReason(area) {
   if (!root) {
     return '<b>No working folder yet.</b> Press <b>\u{1F4C1} Set working folder\u2026</b> above and pick a '
       + 'dedicated, empty folder. Every workspace lives inside it.';
@@ -5272,6 +5272,23 @@ function emptyReason() {
       + '- then delete the old <b>_index</b>, <b>_modules</b>, <b>_layouts</b>, <b>_workflows</b>, '
       + '<b>_schedules</b> and <b>_connections</b> folders, and the namespace folders sitting beside '
       + 'them. Zoost never deletes files it did not just write.';
+  }
+  // **What Zoho last answered about *this* area, when it was not «yes».** Reported from a real org:
+  // Connections was refused with a 400, the pull said so on the status line, and the tab then read
+  // «No connections pulled yet - click Pull all» - the wrong missing thing, and advice that had just
+  // been refused. The area *was* pulled; what came back was a refusal, which is a different fact
+  // from never having asked.
+  //
+  // Last of the branches because every one above blocks *all* areas and this blocks a single tab -
+  // the order this function has always been in. Plain text on purpose: it is shown on the status
+  // line as well as in the list, and the status line renders text and not markup.
+  const a = area && tabAccess[area];
+  if (a && a.state && a.state !== 'ok') {
+    return `${a.note || (a.state === 'forbidden'
+      ? 'Your Zoho role does not grant access to this area'
+      : 'The last pull of this area did not succeed')}`
+      + `${a.status ? ` (Zoho answered ${a.status})` : ''}${a.at ? `, asked ${String(a.at).slice(0, 10)}` : ''}. `
+      + 'Nothing is stored for it, and pulling again re-asks Zoho.';
   }
   return null;
 }

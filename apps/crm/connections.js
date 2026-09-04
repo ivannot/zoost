@@ -38,7 +38,7 @@ async function rebuildConnections() {
     const catNames = new Set(cat.map((c) => c.name));
     Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: 'connections/' + name, uses: usedBy[name].slice() }); });
     renderConnections();
-    op.say(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet - click Pull all.'), connectionData.length ? 'ok' : 'warn');
+    op.say(connectionData.length ? `${connectionData.length} connections.` : (emptyReason('connections') || 'No connections pulled yet - click Pull all.'), connectionData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus('Connections error: ' + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }
@@ -53,7 +53,7 @@ function renderConnections() {
   };
   const list = connectionData.filter(pass).sort((a, b) => (b.uses.length - a.uses.length) || byField('label')(a, b));
   const tree = $('tree'); tree.innerHTML = '';
-  if (!list.length) { tree.innerHTML = '<div class="empty">' + (connectionData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No connections yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
+  if (!list.length) { tree.innerHTML = '<div class="empty">' + (connectionData.length ? '<b>No matches.</b>' : (emptyReason('connections') || '<b>No connections yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   list.forEach((c) => {
     const el = document.createElement('div'); el.className = 'f'; el.dataset.path = c.path;
     el.setAttribute('aria-selected', c.path === currentPath);

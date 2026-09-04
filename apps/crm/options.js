@@ -758,7 +758,12 @@ function renderTabs() {
         + (tabRecheckCur.includes(id)
           ? 'Zoost will ask about it in the next Pull all; the tab comes back only if Zoho grants it.'
           : 'Later pulls skip it - tick ask again, then Save, to put it in the next one.')
-      : def.note;
+      // A pull that failed is not a refusal and the row does not treat it as one - the tab stays, the
+      // boxes work - but «Pull all is included by default» over an area whose last answer was a 400
+      // is the note for a state this one is not in. What Zoho last said, and when.
+      : (a.state === 'failed'
+        ? `Last pull did not succeed${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pulling again re-asks.`
+        : def.note);
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped
     // whatever these say, and a control that cannot do what it says is worse than no control.
