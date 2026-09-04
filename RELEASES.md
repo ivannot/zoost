@@ -58,6 +58,8 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | crm | 1.47.0 | `crm-v1.47.0` | `89fbd7256d2d927316f454c3c0057f9c932466a2` | `91c0ef1081a9bf996d65608f8a0ec4c452eac1608e2bd2e951a4ef035da48fc0` |
 | analytics | 1.30.0 | `analytics-v1.30.0` | `89fbd7256d2d927316f454c3c0057f9c932466a2` | `7030adbb19c2150dbb7c1ab2ed75f5b57ed48f7d9fa6e891c250c0c325ad71c0` |
 | crm | 1.48.0 | `crm-v1.48.0` | `69f46313e163c271c25e064957ff4be9461c2b76` | `89f47a8436e05bc90a185c743eaf1bfa6d6c8369a23c4a67b3d6807a77b85d6b` |
+| crm | 1.49.0 | `crm-v1.49.0` | `aae4c5e4bdb68faf59ccac24b4f2d7d73165ee20` | `23201498788bc85357c5ddfaecfc689463b5896dfa9f200d2d03f2b0911c6f81` |
+| analytics | 1.31.0 | `analytics-v1.31.0` | `aae4c5e4bdb68faf59ccac24b4f2d7d73165ee20` | `ac7fbf9b8c8004dd6cd4c951c72c2e169809386c86a89a9d555acb976c1ac975` |
 
 ## What this table cannot tell you, and why
 
