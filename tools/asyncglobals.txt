@@ -127,6 +127,7 @@ apps/crm/options.js	saveKeys	dirty
 apps/crm/options.js	saveKeys	ownWrite
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
+apps/crm/sidepanel.js	applySettingsChange	ownPrefsWrite
 apps/crm/sidepanel.js	applySettingsChange	pendingRootReload
 apps/crm/sidepanel.js	applySettingsChange	prefsSavedDuringPull
 apps/crm/sidepanel.js	applySettingsChange	root

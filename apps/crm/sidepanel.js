@@ -133,6 +133,12 @@ const expandedMods = new Set();
 let pullActive = false, pullBusy = false;
 // Set when a tab preference is saved while a pull is running, spent by the line that closes it.
 let prefsSavedDuringPull = false;
+// **The panel writes that key itself**, from inside a pull: `takeRecheck` spends a re-check by
+// rewriting `tabPrefs`, and `storage.onChanged` cannot tell whose write it was. Without this the
+// run closed by telling the reader they had saved something during it - a sentence about an act
+// nobody performed, which is the one kind of wrong this panel is least allowed to be. Reported
+// from outside. The settings page has carried the same guard, under the same name, for longer.
+let ownPrefsWrite = false;
 
 const $ = (id) => document.getElementById(id);
 const setStatus = (t, cls = '') => { noteStep(t); $('stxt').textContent = t; $('status').className = cls; showEmergency(false); };
@@ -1440,6 +1446,7 @@ async function takeRecheck(ids) {
   if (!spent.length) return;
   const next = Object.assign({}, tabPrefs, { recheck: tabPrefs.recheck.filter((id) => !spent.includes(id)) });
   try {
+    ownPrefsWrite = true;   // ours, so the run does not report it as the reader's
     await chrome.storage.local.set({ tabPrefs: { order: next.order, hidden: next.hidden, nopull: next.nopull, recheck: next.recheck } });
     tabPrefs = next;
   } catch (_) { /* one more request next time is the whole cost */ }
@@ -6908,7 +6915,8 @@ async function applySettingsChange(ch, area) {
     // the run instead: visible, and at the moment the reader can act on it. `pullBusy` is the flag
     // that matches the sentence - `pullActive` is owned by each runner, so a save landing between
     // two areas missed it entirely, which is exactly the case it was written for.
-    if (pullBusy) prefsSavedDuringPull = true;
+    if (ownPrefsWrite) ownPrefsWrite = false;
+    else if (pullBusy) prefsSavedDuringPull = true;
     // Hiding the tab you are standing on has to take you off it. `renderTabs()` gives the tab you
     // are *on* a segment even when it is hidden - which is right for a jump, where a health row
     // lands you on a hidden list and a row with no segment reads as the panel having lost its

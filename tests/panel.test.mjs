@@ -19058,6 +19058,13 @@ test('a settings save during a pull is applied to the panel and announced, not t
                + 'progress line, and both were wrong');
   assert.doesNotMatch(apply, /setStatus\(MSG\.prefsLater/,
                       'it still speaks in place of the line that shows the pull is alive');
+  // **And the panel's own write is not the reader's.** `takeRecheck` spends a re-check by rewriting
+  // `tabPrefs` from inside the run, and `storage.onChanged` cannot tell whose write it was - so the
+  // run closed by reporting a save nobody had made. Found from outside, in a review of the tree.
+  assert.match(apply, /if \(ownPrefsWrite\) ownPrefsWrite = false;\s*\n\s*else if \(pullBusy\)/,
+               'the panel reports its own write as a settings save the reader made during the pull');
+  assert.match(sliceFn(rel, 'takeRecheck'), /ownPrefsWrite = true;[\s\S]{0,200}?storage\.local\.set/,
+               'nothing marks that write as ours, so the guard above can never fire');
   const closing = sliceFn(rel, 'pullEverything');
   assert.match(closing, /prefsSavedDuringPull \? ` \u00b7 \$\{MSG\.prefsLater\}`/,
                'the run does not say it when it ends, so nothing ever says it');
