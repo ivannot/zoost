@@ -18535,7 +18535,8 @@ test('a deluge refusal with a token nothing has accepted keeps the cookie diagno
 test('a refused area is described in the words the refusal came with', () => {
   const rel = 'apps/crm/sidepanel.js';
   const m = load([sliceFn(rel, 'pullFailMessage')],
-                 { tabLabel: (a) => a[0].toUpperCase() + a.slice(1), friendlyError: (e) => String(e.message) });
+                 { areaLabel: (a) => a[0].toUpperCase() + a.slice(1), TAB: { functions: {}, connections: {} },
+                   tabLabel: (a) => a[0].toUpperCase() + a.slice(1), friendlyError: (e) => String(e.message) });
   const role = m.pullFailMessage('functions', { forbidden: true, status: 403 });
   assert.match(role, /your Zoho role does not grant access/,
                'a 403 no longer says the thing Zoho itself said');
@@ -18546,6 +18547,15 @@ test('a refused area is described in the words the refusal came with', () => {
   assert.doesNotMatch(own, /your Zoho role does not grant access/,
                       'both sentences are shown, so the reader is told two different things at once');
   assert.match(own, /tab is hidden/, 'the refusal stopped saying what happened to the tab');
+
+  // **And an area with no tab is not told about one.** `failures` has none - a failure is a property
+  // of a function - and Settings draws its rows from the tab registry, so there is no row and no
+  // «ask again» box either. Routing that pull through `bridgeError` made this branch reachable for
+  // it, and it promised all three.
+  const noTab = m.pullFailMessage('failures', { forbidden: true, status: 403 });
+  assert.doesNotMatch(noTab, /tab is hidden|Settings says why/,
+                      `an area with no tab is sent to look for one: ${noTab}`);
+  assert.match(noTab, /^Failures:/, `the bare id is shown instead of the area name: ${noTab}`);
 
   // And it has to survive the message boundary, which is where `forbidden` was lost twice before.
   const made = load([sliceFn(rel, 'bridgeError')], { Error, MSG: { staleBridge: 'stale' } });
@@ -18939,12 +18949,24 @@ test('an empty list says what Zoho last answered about that area', () => {
   // **And only where Zoho gave words.** `failed` is also written by a pull that worked and came up
   // short - one module Zoho would not describe, one stale file that would not delete - so a flat
   // «Last pull did not succeed» sat on the row of an area whose 1,200 functions are on disk.
+  // **On whether the mirror was written.** Branching on the state told a healthy area its pull had
+  // failed; branching on the refusal's *words* was worse the other way, because exactly one refusal
+  // in the extension carries any - so a 500, a 429 and a stale bridge all showed the healthy note
+  // and nothing anywhere recorded the failure. The verdict says which of the two it was.
   const tabsSrc = sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, '');
-  assert.match(tabsSrc, /a\.note\s*\n?\s*\?/,
-               'the settings row states a failure for every «failed» verdict, including the ones a '
-               + 'successful-but-short pull writes');
-  assert.doesNotMatch(tabsSrc, /a\.state === 'failed'/,
-               'it still branches on the state rather than on whether there is anything to say');
+  assert.match(tabsSrc, /a\.state !== 'ok' && !a\.stored/,
+               'the settings row either calls a short pull a failure, or says nothing about a real one');
+  assert.match(tabsSrc, /a\.note \|\| 'Last pull did not succeed'/,
+               'a refusal that came with words has them replaced by the generic sentence');
+  // And the three pulls that write the mirror and still report a gap say so, or they are read as
+  // failures again.
+  for (const [file, fn] of [['apps/crm/modules.js', 'pullModules'], ['apps/crm/sidepanel.js', 'pullAll'],
+                            ['apps/crm/sidepanel.js', 'pullWorkflows']]) {
+    const body = sliceFn(file, fn);
+    const at = body.lastIndexOf('noteAccess(');
+    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true\)/,
+                 `${fn}: a pull that wrote the mirror and came up short is recorded as one that did not`);
+  }
 });
 
 // **A list that stopped early is still an answer about access.** Three pulls bailed on `capped`
@@ -18970,6 +18992,54 @@ test('a partial list still records that Zoho was asked', () => {
   }
 });
 
+// **«Asked» and «read» are two facts, and one call was writing both.** A list Zoho returns capped is
+// an answer about access - which is why the three pulls that bail on one record a verdict - and it is
+// not data: nothing is written to the mirror there, deliberately. Stamping `pulledAt` too made a
+// workspace last pulled in May report those areas as read today, so the staleness note went quiet,
+// the export stopped un-ticking them, and the report's header dated a May file as September. Two
+// readers found it independently, thirty minutes after it was written.
+test('a pull that stored nothing does not claim to have read anything', () => {
+  const rel = 'apps/crm/sidepanel.js';
+  const run = (stored) => {
+    let wrote = null;
+    const m = load([sliceFn(rel, 'noteAccess')], {
+      console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
+      accessOf: () => 'ok', tabAccess: { workflows: { state: 'ok', pulledAt: '2026-05-01T10:00:00.000Z' } },
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      setStatus: () => {}, tabLabel: (a) => a,
+    });
+    return m.noteAccess('workflows', null, { current: () => true }, stored).then(() => wrote.access.workflows);
+  };
+
+  return run(true).then((got) => {
+    assert.notEqual(got.pulledAt, '2026-05-01T10:00:00.000Z',
+                    'an ordinary successful pull no longer records when it read the data');
+    assert.equal(got.stored, true, 'the verdict does not say whether the mirror was written');
+    return run(false);
+  }).then((capped) => {
+    assert.equal(capped.pulledAt, '2026-05-01T10:00:00.000Z',
+                 'a capped list stamps the area as read today although nothing was written - so the '
+                 + 'staleness note goes quiet and the report dates a May file as September');
+    assert.equal(capped.state, 'ok',
+                 'Zoho answered, so the access verdict has to move - that is what lets an «ask again» '
+                 + 'be spent and a refusal on record be overwritten');
+    // And the record carries the distinction, or every reader of it is back to guessing: without
+    // the field, Settings reads «not stored» for every failed verdict and calls a pull that wrote
+    // 1,200 functions a failure again.
+    assert.equal(capped.stored, false, 'the verdict does not say whether the mirror was written');
+    // And the three sites that bail on a capped list say which of the two they mean.
+    for (const [file, fn, area] of [['apps/crm/sidepanel.js', 'pullAll', 'functions'],
+                                    ['apps/crm/sidepanel.js', 'pullWorkflows', 'workflows'],
+                                    ['apps/crm/automation.js', 'pullSchedules', 'schedules']]) {
+      const body = sliceFn(file, fn);
+      const at = body.indexOf('r.capped');
+      assert.match(body.slice(at, body.indexOf('\n    }', at)),
+                   new RegExp(`noteAccess\\('${area}', null, op, false\\)`),
+                   `${fn}: a capped list still records that the data was read`);
+    }
+  });
+});
+
 // **A pull is one act, decided when it starts.** Settings is a separate tab and nothing disables it
 // while a pull runs - it was believed to be disabled, and it is not - so a save during a run used to
 // move the answers underneath a loop that asked them again on every turn. The run keeps its plan;
@@ -18977,13 +19047,26 @@ test('a partial list still records that Zoho was asked', () => {
 test('a settings save during a pull is applied to the panel and announced, not to the run', () => {
   const rel = 'apps/crm/sidepanel.js';
   const src = read(rel);
+  // **Remembered, not said in place of the progress line.** Saying it at once replaced whatever the
+  // pull was saying and cleared `busy` with it, so a save landing inside the longest single call in
+  // the product left a static line and no spinner - a working pull and a hung one looking the same,
+  // which is the one thing this panel may not do. And it keyed on `pullActive`, which each runner
+  // owns, so a save landing *between* two areas - the case it was written for - missed entirely.
   const apply = sliceFn(rel, 'applySettingsChange');
-  assert.match(apply, /if \(pullActive\) setStatus\(MSG\.prefsLater/,
-               'a preference saved during a pull is taken in silence, and the run that ignores it '
-               + 'says nothing about why');
+  assert.match(apply, /if \(pullBusy\) prefsSavedDuringPull = true;/,
+               'a preference saved during a pull is either taken in silence or announced over the '
+               + 'progress line, and both were wrong');
+  assert.doesNotMatch(apply, /setStatus\(MSG\.prefsLater/,
+                      'it still speaks in place of the line that shows the pull is alive');
+  const closing = sliceFn(rel, 'pullEverything');
+  assert.match(closing, /prefsSavedDuringPull \? ` \u00b7 \$\{MSG\.prefsLater\}`/,
+               'the run does not say it when it ends, so nothing ever says it');
+  assert.match(closing, /prefsSavedDuringPull = false;/,
+               'the flag is never spent, so every later pull repeats a sentence about a save that '
+               + 'happened during an earlier one');
   const msg = /prefsLater: '([^']+)'/.exec(src);
   assert.ok(msg, 'the sentence is gone');
-  assert.match(msg[1], /next one/, `it does not say when the change takes effect: ${msg[1]}`);
+  assert.match(msg[1], /next pull/, `it does not say when the change takes effect: ${msg[1]}`);
   assert.doesNotMatch(msg[1], /disabled|blocked/i,
                       'it claims something is disabled during a pull, and nothing is - the settings '
                       + 'page is a separate tab and the panel cannot reach it');

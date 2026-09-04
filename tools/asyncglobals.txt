@@ -128,6 +128,7 @@ apps/crm/options.js	saveKeys	ownWrite
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
 apps/crm/sidepanel.js	applySettingsChange	pendingRootReload
+apps/crm/sidepanel.js	applySettingsChange	prefsSavedDuringPull
 apps/crm/sidepanel.js	applySettingsChange	root
 apps/crm/sidepanel.js	applySettingsChange	zohoDc
 apps/crm/sidepanel.js	crmFrameId	_crmCandidates
@@ -150,6 +151,7 @@ apps/crm/sidepanel.js	openWorkflow	currentPath
 apps/crm/sidepanel.js	pickRoot	root
 apps/crm/sidepanel.js	pickRoot	rootGranted
 apps/crm/sidepanel.js	pullAll	currentPath
+apps/crm/sidepanel.js	pullEverything	prefsSavedDuringPull
 apps/crm/sidepanel.js	pullFailures	failIndex
 apps/crm/sidepanel.js	readRememberedSample	sampleWsKnown
 apps/crm/sidepanel.js	rebuildTree	aiConnCache

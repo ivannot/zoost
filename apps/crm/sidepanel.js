@@ -131,6 +131,8 @@ let scheduleData = [], scheduleFilter = 'all';
 const collapsed = new Set();
 const expandedMods = new Set();
 let pullActive = false, pullBusy = false;
+// Set when a tab preference is saved while a pull is running, spent by the line that closes it.
+let prefsSavedDuringPull = false;
 
 const $ = (id) => document.getElementById(id);
 const setStatus = (t, cls = '') => { noteStep(t); $('stxt').textContent = t; $('status').className = cls; showEmergency(false); };
@@ -332,7 +334,7 @@ const MSG = {
   // during one belongs to the next: said here rather than left to be noticed by a run that
   // ignored it. The change *is* applied to the panel at once; it is the run in flight that keeps
   // the plan it began with.
-  prefsLater: 'Tab settings saved - this pull keeps the areas it started with, and the next one uses the new ones.',
+  prefsLater: 'tab settings saved while this ran - they take effect from the next pull',
   wrongTab: 'Active Zoho tab does not match this workspace.',
   lastModified: 'Last modified',
   sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
@@ -798,7 +800,18 @@ function bridgeError(r, fallback) {
 // The date is stored with it and shown, because "forbidden" is not a permanent truth - roles change,
 // and a verdict from three months ago is a record of what was asked, not a fact about today. That is
 // also why nothing here ever hides an area *without* an answer: no measurement means visible.
-async function noteAccess(area, err, op) {
+/** @param {boolean} stored - did this run actually put the area's data on disk?
+ *
+ *  **«Asked» and «read» are two facts, and one call was writing both.** A list Zoho returns capped
+ *  is an answer about access - which is why the three pulls that bail on one record a verdict - and
+ *  it is *not* data: nothing is written to the mirror on that path, deliberately. Stamping
+ *  `pulledAt` there made a workspace last pulled in May report every one of those areas as read
+ *  today, so the staleness note went quiet, the export stopped un-ticking them, and the report's own
+ *  header printed «Workflows as of 4 September» over a file from the first of May. A report that
+ *  says a third of itself was read today when it was not is the half-truth `freshnessLine` exists to
+ *  prevent, and it was thirty minutes old. Found by a reader with no memory of writing it.
+ */
+async function noteAccess(area, err, op, stored = !err) {
   // An **area**, not a tab. The two are nearly the same list and not quite: `failures` is pulled,
   // can be refused, and has no tab of its own - a failure is a property of a function, so it shows
   // in the function's detail and in the health view. This guard read `TAB[area]`, so every
@@ -823,7 +836,15 @@ async function noteAccess(area, err, op) {
     // `at` is when we asked; `pulledAt` is when we last actually got the data. They diverge the
     // moment an area stops being pulled, and that gap is the whole point: it is what makes a stale
     // section detectable instead of silently old.
-    pulledAt: err ? (prev.pulledAt || null) : new Date().toISOString(),
+    pulledAt: stored ? new Date().toISOString() : (prev.pulledAt || null),
+    // **«It did not work» and «it worked and came up short» were the same record.** Three pulls
+    // report a gap - a module Zoho would not describe, a stale file that would not delete -
+    // with a pseudo-error, so a workspace whose 1,200 functions are all on disk was marked
+    // `failed` exactly like one whose pull was refused. Settings then either told the first that
+    // its pull had not succeeded, or - branching on the words instead - told the second nothing
+    // at all, because only one refusal in the whole extension carries words. The two events are
+    // different in one respect that nothing was writing down: whether the mirror was written.
+    stored: !!stored,
   } });
   // Disk is the authority. Publishing the optimistic value first made a failed config write hide a
   // tab until the next reopen; publishing after an overtaken write put the old org's verdict beside
@@ -845,11 +866,18 @@ async function noteAccess(area, err, op) {
 // /crm/v2/settings/functions" reads as Zoost being broken, which is both alarming and wrong.
 function pullFailMessage(area, e) {
   if (e && e.forbidden) {
+    // **Only an area with a tab is told about its tab.** `failures` has none - a failure is a
+    // property of a function, so it shows in the function's detail and in the health view - and
+    // Settings draws its rows from the tab registry, so there is no row, no «why» and no «ask
+    // again» box for it either. Routing that pull through `bridgeError` made this branch reachable
+    // for it for the first time, and it promised all three: the wrong missing thing, in the
+    // sentence a reader acts on. `areaLabel` too, or the name is the bare lowercase id.
+    //
     // 401 and 403 say «no permission» themselves, so the role sentence is theirs. A refusal that
     // arrived in other words brings its own, rather than being told a cause nobody measured.
-    return `${tabLabel(area)}: ${e.note || 'your Zoho role does not grant access'}`
-      + `${e.status ? ` (Zoho answered ${e.status})` : ''}. `
-      + 'Nothing was pulled for it, and the tab is hidden - Settings says why, and lets you check again.';
+    return `${areaLabel(area)}: ${e.note || 'your Zoho role does not grant access'}`
+      + `${e.status ? ` (Zoho answered ${e.status})` : ''}. Nothing was pulled for it`
+      + (TAB[area] ? ', and the tab is hidden - Settings says why, and lets you check again.' : '.');
   }
   // **A failure that knows what to say says it.** Not every refusal arrives as a 401 or a 403 - the
   // deluge runtime answers INVALID_CSRF_TOKEN to a user it will not serve - and for a while that was
@@ -4604,7 +4632,7 @@ async function pullAll() {
       // Zoho answered, so the verdict moves: the record is what says «this area was asked», and a
       // bail before it left an «ask again» unspent and a refusal on record for ever. Nothing is
       // written to the mirror here; what Zoho said about access is.
-      await noteAccess('functions', null, op);
+      await noteAccess('functions', null, op, false);   // asked and answered; nothing was stored
       endPull(); return;
     }
     const merged = await mergeUnanswered(r.entries, r.unanswered, op);
@@ -4667,7 +4695,7 @@ async function pullAll() {
     // above, so nothing could ever reach this. Two warnings about one fact, one of them unreachable,
     // is worse than one - it reads as cover that is not there. The live one refuses to prune and says
     // so after the tree is drawn, which is where a reader is looking.
-    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op);
+    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true);   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
@@ -6342,8 +6370,12 @@ async function pullEverything() {
   // whole org without saying so is a mirror you cannot trust.
   const note = forbiddenNote()
     + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '')
+    // A preference saved while this was running belongs to the next run - the plan was fixed when
+    // this one started - and the reader hears it here rather than in place of the progress line.
+    + (prefsSavedDuringPull ? ` · ${MSG.prefsLater}` : '')
     // The run's own last word, because five areas speak after the functions one does.
     + takeListGap();
+  prefsSavedDuringPull = false;
   if (op.current()) setStatus(summary + note, note ? 'warn' : summaryKind);
   // In a finally, because the body above calls renderers and helpers that are not individually
   // guarded - one exception used to leave `pullBusy` true and the whole panel locked until reopen.
@@ -6681,7 +6713,7 @@ async function pullWorkflows() {
       setStatus(`Zoho returned a partial list of workflows (stopped at ${r.total || 'the limit'}) - nothing was removed.`, 'warn');
       if (!(await loadWorkflowIndex(op))) return; if (viewMode === 'workflows') renderWorkflows();
       // Zoho answered, so the verdict moves - the third of these, and the same reason each time.
-      await noteAccess('workflows', null, op);
+      await noteAccess('workflows', null, op, false);   // asked and answered; nothing was stored
       return;
     }
     if (!op.current()) return;   // you changed workspace while this was reading
@@ -6708,7 +6740,7 @@ async function pullWorkflows() {
     // so the residue is what the reader sees - said, recorded, retried by the next pull for free.
     if (wfRmFail.length) setStatus($('stxt').textContent + ` \u00b7 ${wfRmFail.length} deleted rule(s) could not be removed - the next pull retries`, 'warn');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list stopped early - some workflows may be missing', 'warn');
-    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op);
+    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op, true);   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('workflows', e, op); } finally { endPull(); }
 }
 async function openWorkflowInZoho(id) {
@@ -6869,9 +6901,14 @@ async function applySettingsChange(ch, area) {
   if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
   if (ch.tabPrefs) {
     await loadTabPrefs();
-    // The run in flight walks the plan it built; this says so, once, instead of leaving the reader
-    // to wonder why the area they just ticked was not asked for.
-    if (pullActive) setStatus(MSG.prefsLater, 'warn');
+    // **Remembered, not said now.** Saying it here replaced whatever the pull was saying and cleared
+    // `busy` with it - so a save landing inside the longest single call in the product left a static
+    // warn line and no spinner for the length of a listing, and a working pull and a hung one look
+    // the same, which is the one thing this panel may not do. It is appended to the line that closes
+    // the run instead: visible, and at the moment the reader can act on it. `pullBusy` is the flag
+    // that matches the sentence - `pullActive` is owned by each runner, so a save landing between
+    // two areas missed it entirely, which is exactly the case it was written for.
+    if (pullBusy) prefsSavedDuringPull = true;
     // Hiding the tab you are standing on has to take you off it. `renderTabs()` gives the tab you
     // are *on* a segment even when it is hidden - which is right for a jump, where a health row
     // lands you on a hidden list and a row with no segment reads as the panel having lost its

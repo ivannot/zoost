@@ -777,12 +777,15 @@ function renderTabs() {
       // A pull that failed is not a refusal and the row does not treat it as one - the tab stays, the
       // boxes work - but «Pull all is included by default» over an area whose last answer was a 400
       // is the note for a state this one is not in. What Zoho last said, and when.
-      // **Only where the refusal said something.** `failed` is also written by a pull that *worked*
-      // and came up short - one module Zoho would not describe, one stale file that would not delete -
-      // so «Last pull did not succeed» sat on the row of an area whose 1,200 functions are on disk.
-      // The verdict carries words only when Zoho gave some, and that is the case worth a sentence.
-      : (a.note
-        ? `${a.note}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pulling again re-asks.`
+      // **On whether the mirror was written, which is the difference.** `failed` is also written by a
+      // pull that *worked* and came up short - one module Zoho would not describe, one stale file
+      // that would not delete - so branching on the state put «Last pull did not succeed» on the row
+      // of an area whose 1,200 functions are on disk. Branching on the refusal's *words* was worse
+      // the other way: exactly one refusal in the whole extension carries any, so every ordinary
+      // failure - a 500, a 429, a stale bridge - showed the healthy note and nothing anywhere
+      // recorded that the pull had failed at all. The verdict now says which of the two it was.
+      : (a.state !== 'ok' && !a.stored
+        ? `${a.note || 'Last pull did not succeed'}${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pulling again re-asks.`
         : def.note);
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped

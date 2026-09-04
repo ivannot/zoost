@@ -139,7 +139,7 @@ async function pullModules() {
       + (refused.length ? ` ${refused.length} module(s) Zoho would not describe - what was captured before is kept: `
         + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
-    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op);
+    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true);   // the mirror was written; the gap is what came up short in it
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
 }
 

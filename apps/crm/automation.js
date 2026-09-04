@@ -303,7 +303,7 @@ async function pullSchedules() {
     // written to the mirror, and what Zoho said about access is.
     if (r.capped) {
       setStatus('Zoho returned a partial list of schedules - nothing was replaced.', 'warn');
-      await noteAccess('schedules', null, op);
+      await noteAccess('schedules', null, op, false);   // asked and answered; nothing was stored
       return;
     }
     await op.write('schedules/index.json', JSON.stringify(r.entries, null, 2));
