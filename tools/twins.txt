@@ -56,6 +56,7 @@ computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	11d7d721e357	11d7d721e357	identical
 copyAndFlash	000329334ecb	000329334ecb	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
+createNavigationState	4ab81484aac8	4ab81484aac8	identical
 createSampleWorkspace	0df427110c34	0df427110c34	identical
 createWorkspaceForContext	331618bd02da	7b1b330a5944	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
@@ -163,10 +164,10 @@ matchArrangement	a8f7bcc97145	a8f7bcc97145	identical
 matchSpans	d4e179bbd076	d4e179bbd076	identical
 mergeKeys	ad756dd98e9a	ad756dd98e9a	identical
 mismatchRefuse	375f245e1392	fda4a5879a7f	divergent
-navClear	743d2462fe92	743d2462fe92	identical
-navHere	32db09ffc222	2541a2597e1b	divergent
+navClear	582e1e2418ff	582e1e2418ff	identical
+navHere	646042fcc766	e2d15ed53789	divergent
 navShow	2421299e7e5a	e6f5d13b2ae9	divergent
-navTo	34dc8391f4a8	7e4b2c83f68b	divergent
+navTo	b1e4310846de	9d7f6cc6f34d	divergent
 navWhen	6d2200ac5636	6d2200ac5636	identical
 noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
@@ -220,7 +221,7 @@ removeFileAt	d6514d26b3e4	1b045eb72889	divergent
 renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b47086e0e791	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
-renderNav	de56c9b9ed2d	5037a60baf16	divergent
+renderNav	5ca323768259	d849a1f86647	divergent
 renderRx	9515db04e268	9515db04e268	identical
 reportFacts	1ccc3c0ad48c	3bc8d1655e61	divergent
 reportFoot	5369198eb387	5369198eb387	identical
@@ -272,7 +273,7 @@ toggleAI	ffe8067dd5c3	70228434d9a2	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical
 tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
 updateDepthUI	77a910d07585	77a910d07585	identical
-updateNav	0e95a07d943c	e933fb891d70	divergent
+updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent

@@ -89,7 +89,6 @@ apps/analytics/sidepanel.js	grantRoot	rootGranted
 apps/analytics/sidepanel.js	listWorkspaces	rootGranted
 apps/analytics/sidepanel.js	loadFromDisk	viewsPulledAt
 apps/analytics/sidepanel.js	loadScope	expScope
-apps/analytics/sidepanel.js	navTo	navReplaying
 apps/analytics/sidepanel.js	openRxMenu	regexMode
 apps/analytics/sidepanel.js	pickRoot	root
 apps/analytics/sidepanel.js	pickRoot	rootGranted

@@ -4028,7 +4028,7 @@ function stepSelection(delta, edge) {
 // thing it is; `navOpen()` is that discrimination once, in the order `aiFocusLabel()` already uses.
 // A new tab joins the history by setting `currentPath` like its siblings, with nothing to add here.
 const NAV_MAX = 50;
-let navHist = [], navPos = -1, navReplaying = false, navSeq = 0;
+const navHistory = createNavigationState(NAV_MAX);
 
 /** Record where we have just arrived. Called by the openers, so every way in is covered - a click in
  *  the tree, an arrow key, a search result, a link in a code pane or in «Used in». A step onto the
@@ -4036,23 +4036,17 @@ let navHist = [], navPos = -1, navReplaying = false, navSeq = 0;
  *  the same name. `n` is the unique runtime id - the menu's key, and the reason a place visited
  *  twice stays two rows rather than collapsing into one. */
 function navHere(label) {
-  if (navReplaying || !currentPath) return;
-  const cur = navHist[navPos];
-  if (cur && cur.path === currentPath) { if (label) cur.label = label; updateNav(); return; }
-  // Stepping somewhere new drops what was ahead, exactly as a browser does: the forward arrow means
-  // «where I came back from», and after a turn there is no such place any more.
-  navHist = navHist.slice(0, navPos + 1);
-  navHist.push({ n: ++navSeq, path: currentPath, label: label || currentPath.split('/').pop(), at: Date.now() });
-  if (navHist.length > NAV_MAX) navHist.shift();
-  navPos = navHist.length - 1;
+  if (!currentPath) return;
+  const changed = navHistory.record(currentPath,
+    { path: currentPath, label: label || currentPath.split('/').pop() });
+  if (!changed) return;   // replay is an arrival on screen, not a new step in the walk
   updateNav();
 }
 /** The name the header ended up showing is the name the chain shows. Openers know their item's real
  *  name at different moments - some after reading the file - so the label is taken from the one
  *  funnel they all pass through rather than from six call sites that could each forget. */
 function navLabel(name) {
-  const cur = navHist[navPos];
-  if (cur && name) { cur.label = name; updateNav(); }
+  if (name && navHistory.updateCurrent({ label: name })) updateNav();
 }
 /** The names this item is known by, kept on the step itself.
  *
@@ -4063,10 +4057,9 @@ function navLabel(name) {
  *  is called.
  */
 function navNames(names) {
-  const cur = navHist[navPos];
-  if (cur && names) { cur.names = names; updateNav(); }
+  if (names && navHistory.updateCurrent({ names })) updateNav();
 }
-function navClear() { navHist = []; navPos = -1; closeNavMenu(); updateNav(); }
+function navClear() { navHistory.clear(); closeNavMenu(); updateNav(); }
 
 async function navOpen(p) {
   const find = (arr) => (arr || []).find((x) => x.path === p);
@@ -4104,21 +4097,21 @@ async function navOpen(p) {
  *  was. Pretending the step never existed would be worse: the chain is a record of where the reader
  *  went, not a claim that all of it still exists. */
 async function navTo(i) {
-  if (i < 0 || i >= navHist.length || i === navPos) return;
-  const e = navHist[i];
-  navPos = i; navShow(false); updateNav();
-  navReplaying = true;
-  try { await navOpen(e.path); } finally { navReplaying = false; }
+  const e = navHistory.startReplay(i);
+  if (!e) return;
+  navShow(false); updateNav();
+  try { await navOpen(e.path); } finally { navHistory.finishReplay(); }
 }
 
 // Each control is there only when it can do something, which is this panel's rule for the retry
 // button, for Clear and for Forget. An arrow greyed out is a control saying «not now» in a place
 // where nothing is ever going to make it work except walking somewhere first.
 function updateNav() {
-  $('pvback').classList.toggle('show', navPos > 0);
-  $('pvfwd').classList.toggle('show', navPos >= 0 && navPos < navHist.length - 1);
+  const state = navHistory.snapshot();
+  $('pvback').classList.toggle('show', state.canBack);
+  $('pvfwd').classList.toggle('show', state.canForward);
   const seg = $('navtab');
-  if (seg) seg.style.display = navHist.length ? '' : 'none';   // nowhere to go, nothing to offer
+  if (seg) seg.style.display = state.entries.length ? '' : 'none';   // nowhere to go, nothing to offer
 }
 function closeNavMenu() { navShow(false); }
 // Open it, or draw it again where it already is - the second is what the name toggle needs, and
@@ -4140,6 +4133,8 @@ function toggleNavMenu() { navShow(!navOpenNow()); }
  *  ago, not for where they started - and the step they are on is marked rather than left out. */
 function renderNav() {
   const body = $('navbody');
+  const state = navHistory.snapshot();
+  const navHist = state.entries, navPos = state.position;
   // The same search box as every other tab, filtering the same way: by the name on screen, which is
   // the one `navLabelNow()` decides. A history that ignored the box while sitting in its place would
   // be a list that looks like the others and does not behave like them.
@@ -4230,20 +4225,20 @@ $('navname').onclick = () => {
   renderNav(); renderTree(); renderModules();
 };
 $('navclear').onclick = () => {
-  const here = navHist[navPos];
-  navHist = here ? [here] : []; navPos = navHist.length - 1;
+  navHistory.keepCurrent();
   updateNav(); renderNav();
 };
 $('navx').onclick = () => navShow(false);
-$('pvback').onclick = () => navTo(navPos - 1);
-$('pvfwd').onclick = () => navTo(navPos + 1);
+$('pvback').onclick = () => navTo(navHistory.snapshot().position - 1);
+$('pvfwd').onclick = () => navTo(navHistory.snapshot().position + 1);
 // Alt+arrows, because that is what a browser answers to and the hands already know it. Left alone
 // inside a field, where the arrows belong to the text.
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && navOpenNow()) { navShow(false); return; }
   if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
-  if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(navPos - 1); }
-  else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(navPos + 1); }
+  const at = navHistory.snapshot().position;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(at - 1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(at + 1); }
 });
 
 $('tree').addEventListener('keydown', (e) => {

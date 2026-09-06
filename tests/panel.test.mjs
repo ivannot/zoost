@@ -7318,69 +7318,75 @@ test('crm: the arrows open a row the way that row opens', () => {
 // drops what was ahead. Both were verified in a real browser too; these hold them at the unit.
 {
   const stack = (app) => {
-    const ctx = { navHist: [], navPos: -1, navSeq: 0, navReplaying: false, currentPath: null,
-                  updateNav() {}, closeNavMenu() {}, setStatus() {}, status() {} };
-    const fns = load([sliceConst(`apps/${app}/sidepanel.js`, 'NAV_MAX'),
-                      sliceFn(`apps/${app}/sidepanel.js`, 'navHere')], ctx);
-    return { ctx, navHere: fns.navHere };
+    const fns = load([
+      sliceConst(`apps/${app}/sidepanel.js`, 'NAV_MAX'),
+      sliceFn(`apps/${app}/navigation.js`, 'createNavigationState'),
+    ], { Date, Object, Number });
+    let tick = 1000;
+    return fns.createNavigationState(fns.NAV_MAX, () => ++tick);
   };
-  // The CRM keys a step by path and the Analytics panel by view id, so each is driven the way its
-  // own openers call it. Everything after that is the same list and the same two rules.
-  const step = (app, ctx, navHere, key, label) => {
-    if (app === 'crm') { ctx.currentPath = key; navHere(label); } else navHere(key, label);
-  };
+  // The adapters attach a path in CRM and a view id in Analytics. The state engine deliberately
+  // knows neither shape; identity and display fields travel separately.
+  const step = (app, navigation, key, label) => navigation.record(key,
+    app === 'crm' ? { path: key, label } : { id: key, label, kind: 'view' });
 
   for (const app of ['crm', 'analytics']) {
     const at = (e) => (app === 'crm' ? e.path : e.id);
 
     test(`${app}: two arrivals are two steps, and we are on the second`, () => {
-      const { ctx, navHere } = stack(app);
-      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'b', 'B');
-      assert.equal(ctx.navHist.length, 2);
-      assert.equal(ctx.navPos, 1);
-      assert.equal(at(ctx.navHist[1]), 'b');
+      const navigation = stack(app);
+      step(app, navigation, 'a', 'A'); step(app, navigation, 'b', 'B');
+      const state = navigation.snapshot();
+      assert.equal(state.entries.length, 2);
+      assert.equal(state.position, 1);
+      assert.equal(at(state.entries[1]), 'b');
     });
 
     test(`${app}: arriving where you already are is not a step`, () => {
       // A pull re-opens what is showing; without this the chain fills with the same name.
-      const { ctx, navHere } = stack(app);
-      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'a', 'A better name');
-      assert.equal(ctx.navHist.length, 1);
-      assert.equal(ctx.navHist[0].label, 'A better name', 'the label did not follow the header');
+      const navigation = stack(app);
+      step(app, navigation, 'a', 'A'); step(app, navigation, 'a', 'A better name');
+      const state = navigation.snapshot();
+      assert.equal(state.entries.length, 1);
+      assert.equal(state.entries[0].label, 'A better name', 'the label did not follow the header');
     });
 
     test(`${app}: a step after going back drops what was ahead`, () => {
-      const { ctx, navHere } = stack(app);
-      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'b', 'B'); step(app, ctx, navHere, 'c', 'C');
-      ctx.navPos = 0;                                   // as if the reader had pressed back twice
-      step(app, ctx, navHere, 'd', 'D');
-      assert.deepEqual(ctx.navHist.map(at), ['a', 'd']);
-      assert.equal(ctx.navPos, 1);
+      const navigation = stack(app);
+      step(app, navigation, 'a', 'A'); step(app, navigation, 'b', 'B'); step(app, navigation, 'c', 'C');
+      navigation.startReplay(0); navigation.finishReplay();
+      step(app, navigation, 'd', 'D');
+      const state = navigation.snapshot();
+      assert.equal(state.entries.map(at).join(','), 'a,d');
+      assert.equal(state.position, 1);
     });
 
     test(`${app}: replaying a step does not record it again`, () => {
-      const { ctx, navHere } = stack(app);
-      step(app, ctx, navHere, 'a', 'A');
-      ctx.navReplaying = true;
-      step(app, ctx, navHere, 'b', 'B');
-      assert.equal(ctx.navHist.length, 1, 'going back wrote a new step, so back would never reach further');
+      const navigation = stack(app);
+      step(app, navigation, 'a', 'A'); step(app, navigation, 'b', 'B');
+      navigation.startReplay(0);
+      step(app, navigation, 'c', 'C');
+      navigation.finishReplay();
+      assert.equal(navigation.snapshot().entries.length, 2,
+        'going back wrote a new step, so back would never reach further');
     });
 
     test(`${app}: every step is uniquely identified for the life of the panel`, () => {
       // The author asked for an identifier where the platform gives none; this is where one is
       // honest - a handle on something we hold. The same item visited twice stays two rows.
-      const { ctx, navHere } = stack(app);
-      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'b', 'B'); step(app, ctx, navHere, 'a', 'A');
-      const ns = ctx.navHist.map((e) => e.n);
+      const navigation = stack(app);
+      step(app, navigation, 'a', 'A'); step(app, navigation, 'b', 'B'); step(app, navigation, 'a', 'A');
+      const ns = navigation.snapshot().entries.map((e) => e.n);
       assert.equal(new Set(ns).size, ns.length, 'two steps share an id, so the menu cannot tell them apart');
     });
 
     test(`${app}: the chain is capped, and it is the oldest that goes`, () => {
-      const { ctx, navHere } = stack(app);
-      for (let i = 0; i < 60; i++) step(app, ctx, navHere, 'p' + i, 'P' + i);
-      assert.equal(ctx.navHist.length, 50);
-      assert.equal(at(ctx.navHist[0]), 'p10');
-      assert.equal(ctx.navPos, 49, 'the position did not follow the drop, so back would skip');
+      const navigation = stack(app);
+      for (let i = 0; i < 60; i++) step(app, navigation, 'p' + i, 'P' + i);
+      const state = navigation.snapshot();
+      assert.equal(state.entries.length, 50);
+      assert.equal(at(state.entries[0]), 'p10');
+      assert.equal(state.position, 49, 'the position did not follow the drop, so back would skip');
     });
   }
 
@@ -7439,7 +7445,7 @@ test('crm: the arrows open a row the way that row opens', () => {
       const js = read(`apps/${app}/sidepanel.js`);
       assert.ok(new RegExp("\\$\\('navclear'\\)\\.onclick").test(js), `${app}: Clear is drawn and never wired`);
       const at = js.indexOf("$('navclear').onclick");
-      assert.ok(/navHist = here \? \[here\] : \[\]/.test(js.slice(at, at + 300)),
+      assert.ok(/navHistory\.keepCurrent\(\)/.test(js.slice(at, at + 300)),
                 `${app}: Clear does not keep the step you are on`);
     }
   });
@@ -7537,8 +7543,13 @@ test('crm: the arrows open a row the way that row opens', () => {
 {
   test('a step records when it was taken, in both panels', () => {
     for (const app of ['crm', 'analytics']) {
+      const { createNavigationState } = load([
+        sliceFn(`apps/${app}/navigation.js`, 'createNavigationState'),
+      ], { Date, Object, Number });
+      const navigation = createNavigationState(50, () => 123456);
+      navigation.record('one', { label: 'One' });
+      assert.equal(navigation.snapshot().entries[0].at, 123456, `${app}: a step carries no time`);
       const js = read(`apps/${app}/sidepanel.js`);
-      assert.ok(/navHist\.push\(\{[^}]*at: Date\.now\(\)/.test(js), `${app}: a step carries no time`);
       assert.ok(/navWhen\(e\.at\)/.test(js), `${app}: the time is recorded and never shown`);
     }
   });
@@ -11297,6 +11308,32 @@ for (const app of ['crm', 'analytics']) {
           const fin = body.search(/finally\s*\{/);
           if (fin < 0 || !new RegExp(`(?<![\\w$.])${name}\\s*(?:=\\s*false|\\(false)`).test(body.slice(fin))) {
             bad.push(`${rel} ${fn}() raises ${name} and does not release it in a finally`);
+          }
+        }
+      }
+    }
+    // A state object can own the boolean and expose a lifecycle instead of leaking the flag into
+    // its caller. The same rule still applies: every `startX()` whose matching `finishX()` appears
+    // in a finally anywhere must finish in the function that starts it. This is the navigation
+    // engine's replay guard, and keeping it here means extracting state cannot make the census blind.
+    const lifecycles = new Set();
+    for (const src of sources.values()) {
+      for (const m of src.matchAll(/finally\s*\{[^}]*?(\w+)\.finish([A-Z]\w*)\(\)/g)) {
+        lifecycles.add(`${m[1]}\t${m[2]}`);
+      }
+    }
+    for (const [rel, src] of sources) {
+      for (const lifecycle of lifecycles) {
+        const [owner, phase] = lifecycle.split('\t');
+        const raise = new RegExp(`(?<![\\w$.])${owner}\\.start${phase}\\(`, 'g');
+        for (const m of src.matchAll(raise)) {
+          const at = Math.max(src.lastIndexOf('\nasync function ', m.index), src.lastIndexOf('\nfunction ', m.index)) + 1;
+          const body = src.slice(at, src.indexOf('\n}', m.index));
+          const fn = (body.match(/^(?:async )?function (\w+)/) || [, '?'])[1];
+          pairs++;
+          const fin = body.search(/finally\s*\{/);
+          if (fin < 0 || !new RegExp(`${owner}\\.finish${phase}\\(\\)`).test(body.slice(fin))) {
+            bad.push(`${rel} ${fn}() starts ${owner}.${phase} and does not finish it in a finally`);
           }
         }
       }

@@ -95,6 +95,7 @@ CRM = """
     await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
   };
   let copied = null;
+  const navState = () => navHistory.snapshot();
   (async () => {
     // Declared before anything uses it: open the history view only if it is not already open.
     // Clicking a toggle blind is how this check once read rows out of a panel it had just closed.
@@ -115,7 +116,7 @@ CRM = """
     await until(() => currentPath && currentPath !== a, 'the second row never opened anything');
     const b = currentPath;
     if (a === b) say('two different rows opened the same path');
-    if (navHist.length !== 2) say('two steps should be two entries, got ' + navHist.length);
+    if (navState().entries.length !== 2) say('two steps should be two entries, got ' + navState().entries.length);
     const shown = (id) => getComputedStyle($(id)).display !== 'none';
     if (!shown('pvback')) say('back is not offered after two steps');
     if (shown('pvfwd')) say('forward is painted with nothing ahead');
@@ -191,8 +192,8 @@ CRM = """
         if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button lingers over a workflow, which has no code');
         // Having gone back to step 0 and then somewhere new, what was ahead is gone - a browser
         // does exactly this - so the chain is two long and we are at its end.
-        if (navHist.length !== 2 || navPos !== 1) say('the forward tail was not dropped: ' + navHist.length + '@' + navPos);
-        if (navHist[0].path !== a) say('the step behind is not the function we came from');
+        if (navState().entries.length !== 2 || navState().position !== 1) say('the forward tail was not dropped: ' + navState().entries.length + '@' + navState().position);
+        if (navState().entries[0].path !== a) say('the step behind is not the function we came from');
         $('pvback').click(); await settle();
         if (currentPath !== a) say('back across tabs landed on ' + currentPath);
         if (viewMode !== 'functions') say('back across tabs did not return to the Functions tab');
@@ -263,8 +264,8 @@ CRM = """
 
     // And it keeps saying so from another tab, where the list it could be derived from is a
     // different list entirely - which is how the chain came to show raw `.dg` file names.
-    const bad = navHist.filter((x) => !x.path);
-    if (bad.length) say('a step with no path: ' + JSON.stringify(navHist.map((x) => [x.path, x.label])));
+    const bad = navState().entries.filter((x) => !x.path);
+    if (bad.length) say('a step with no path: ' + JSON.stringify(navState().entries.map((x) => [x.path, x.label])));
     const seg0 = [...document.querySelectorAll('.seg')].find((s) => /Workflows/.test(s.textContent));
     if (seg0) {
       seg0.click(); await settle();
@@ -280,7 +281,7 @@ CRM = """
     const showing = currentPath;
     await openChain();
     document.querySelector('#navclear').click(); await settle();
-    if (navHist.length !== 1) say('Clear left ' + navHist.length + ' steps');
+    if (navState().entries.length !== 1) say('Clear left ' + navState().entries.length + ' steps');
     if (currentPath !== showing) say('Clear closed what was open');
     if (shown('pvback')) say('back is still painted after Clear');
 
@@ -884,6 +885,7 @@ AN = """
     await until(() => Date.now() - _lastMut > quiet, what || 'the panel never stopped redrawing', ms);
   };
   let copied = null;
+  const navState = () => navHistory.snapshot();
   (async () => {
     const openChain = async () => {
       if ($('navview').classList.contains('show')) return;
@@ -898,7 +900,7 @@ AN = """
     rows()[1].click(); await settle();
     const b = selectedId;
     if (a === b) say('two different rows selected the same view');
-    if (navHist.length !== 2) say('two steps should be two entries, got ' + navHist.length);
+    if (navState().entries.length !== 2) say('two steps should be two entries, got ' + navState().entries.length);
     const shown = (id) => getComputedStyle($(id)).display !== 'none';
     if (!shown('dback')) say('back is not offered after two steps');
     if (shown('dfwd')) say('forward is painted with nothing ahead');
@@ -987,8 +989,8 @@ AN = """
       const target = link.dataset.go;
       link.click(); await settle();
       if (String(selectedId) !== String(target)) say('a lineage link did not open its view');
-      if (navHist.length !== 2 || navPos !== 1) say('the forward tail was not dropped: ' + navHist.length + '@' + navPos);
-      if (String(navHist[0].id) !== String(a)) say('the step behind is not the view we came from');
+      if (navState().entries.length !== 2 || navState().position !== 1) say('the forward tail was not dropped: ' + navState().entries.length + '@' + navState().position);
+      if (String(navState().entries[0].id) !== String(a)) say('the step behind is not the view we came from');
       $('dback').click(); await settle();
       if (String(selectedId) !== String(a)) say('back from a link landed on ' + selectedId);
     }

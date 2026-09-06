@@ -2372,7 +2372,7 @@ async function openDetail(id) {
   // Every way in passes through here - a row click, an arrow key, a foreign key, a lineage entry -
   // so the history is complete without any of them knowing it exists. The kind is carried too, so
   // the chain reads «query table Funnel» rather than a bare name.
-  navHere(id, v.name); { const e = navHist[navPos]; if (e) e.kind = v.type; }
+  navHere(id, v.name, v.type);
   $('detail').classList.add('show'); $('resizer').classList.add('show');
   $('dtitle').textContent = v.name;
   // A Zoho read, so it is worded and coloured like every other Zoho read: "Pull", .zbtn. The ↻ glyph
@@ -4163,38 +4163,34 @@ function stepSelection(delta, edge) {
 // identifier minted here: it keys the menu's rows, so the same view visited twice stays two steps of
 // a walk rather than collapsing into one.
 const NAV_MAX = 50;
-let navHist = [], navPos = -1, navReplaying = false, navSeq = 0;
+const navHistory = createNavigationState(NAV_MAX);
 
-function navHere(id, label) {
-  if (navReplaying || !id) return;
-  const cur = navHist[navPos];
-  if (cur && String(cur.id) === String(id)) { if (label) cur.label = label; updateNav(); return; }
-  // A new step drops what was ahead - the forward arrow means «where I came back from».
-  navHist = navHist.slice(0, navPos + 1);
-  navHist.push({ n: ++navSeq, id: String(id), label: label || String(id), kind: '', at: Date.now() });
-  if (navHist.length > NAV_MAX) navHist.shift();
-  navPos = navHist.length - 1;
+function navHere(id, label, kind) {
+  if (!id) return;
+  const changed = navHistory.record(id,
+    { id: String(id), label: label || String(id), kind: kind || '' });
+  if (!changed) return;   // replay is an arrival on screen, not a new step in the walk
   updateNav();
 }
-function navClear() { navHist = []; navPos = -1; closeNavMenu(); updateNav(); }
+function navClear() { navHistory.clear(); closeNavMenu(); updateNav(); }
 
 /** Go to step `i`. The position moves even when the view has gone - a workspace can be pulled again
  *  with one fewer query in it - and the status line says so, the same as the twin. */
 async function navTo(i) {
-  if (i < 0 || i >= navHist.length || i === navPos) return;
-  const e = navHist[i];
-  navPos = i; navShow(false); updateNav();
-  navReplaying = true;
+  const e = navHistory.startReplay(i);
+  if (!e) return;
+  navShow(false); updateNav();
   try {
     if (viewById().get(e.id)) await openDetail(e.id);
     else status(MSG.navGone, 'warn');
-  } finally { navReplaying = false; }
+  } finally { navHistory.finishReplay(); }
 }
 
 function updateNav() {
-  $('dback').classList.toggle('show', navPos > 0);
-  $('dfwd').classList.toggle('show', navPos >= 0 && navPos < navHist.length - 1);
-  $('navtab').style.display = navHist.length ? '' : 'none';   // nowhere to go, nothing to offer
+  const state = navHistory.snapshot();
+  $('dback').classList.toggle('show', state.canBack);
+  $('dfwd').classList.toggle('show', state.canForward);
+  $('navtab').style.display = state.entries.length ? '' : 'none';   // nowhere to go, nothing to offer
 }
 // When a step was taken. A real fact rather than something to fill a row with: with a chain that
 // spans a session, «which of these two did I look at first» is a question the reader actually has,
@@ -4242,6 +4238,8 @@ function toggleNavMenu() { navShow(!navOpenNow()); }
  *  ago, not for where they started - and the step they are on is marked rather than left out. */
 function renderNav() {
   const body = $('navbody');
+  const state = navHistory.snapshot();
+  const navHist = state.entries, navPos = state.position;
   // The same search box as the list it replaces - see the twin.
   const q = ($('navfind').value || '').trim().toLowerCase();
   const rows = navHist.map((e, i) => ({ e, i }))
@@ -4265,21 +4263,21 @@ function renderNav() {
 // not to lose the thing they are reading. The step they are on is kept as the only entry, so the
 // next link still has something to come back to.
 $('navclear').onclick = () => {
-  const here = navHist[navPos];
-  navHist = here ? [here] : []; navPos = navHist.length - 1;
+  navHistory.keepCurrent();
   updateNav(); renderNav();
 };
 $('navx').onclick = () => navShow(false);
-$('dback').onclick = () => navTo(navPos - 1);
-$('dfwd').onclick = () => navTo(navPos + 1);
+$('dback').onclick = () => navTo(navHistory.snapshot().position - 1);
+$('dfwd').onclick = () => navTo(navHistory.snapshot().position + 1);
 $('navtab').onclick = () => toggleNavMenu();
 $('codecopy').onclick = () => copyCode((document.querySelector('pre.sql') || {}).textContent || '');
 $('navfind').oninput = renderNav;
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && navOpenNow()) { navShow(false); return; }
   if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
-  if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(navPos - 1); }
-  else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(navPos + 1); }
+  const at = navHistory.snapshot().position;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(at - 1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(at + 1); }
 });
 
 $('list').addEventListener('keydown', (e) => {

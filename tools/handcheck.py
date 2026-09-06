@@ -186,6 +186,16 @@ CHECKS = [
         'covers': ['apps/*/highlight.js', 'apps/analytics/analytics-sql.js', 'apps/*/sidepanel.js'],
     },
     {
+        'id': 'history',
+        'by': "probe.py: both panels walk back, forward and through the history menu",
+        'title': 'The navigation chain behaves like browser history',
+        'do': ['Open two items, go back and forward, then go back and open a different item.',
+               'Open the history menu and clear it.'],
+        'pass': ('Back and forward open the expected item; a new turn drops the old forward tail; '
+                 'the menu lists the same walk; Clear keeps only what is currently open.'),
+        'covers': ['apps/*/navigation.js', 'apps/*/sidepanel.js'],
+    },
+    {
         'id': 'passphrase',
         'title': 'The API key under a passphrase, across a browser restart',
         'do': ['In Settings, protect the key with a passphrase.',
