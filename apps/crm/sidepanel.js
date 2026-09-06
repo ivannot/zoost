@@ -5532,19 +5532,16 @@ function updateSampleButtons() {
 }
 
 let sampleBusy = false;
-async function addSampleWorkspace() {
-  if (workspaceChangeRefuse()) return;
-  if (sampleBusy) return;
-  // The button says "Sample workspace", so a successful folder choice is the first half of this
-  // same action, not a separate action the user has to discover and repeat.
-  if (!root) { await pickRoot(); if (!root) return; }
-  // **Grant first, then decide.** A click is the only context in which the permission can be
-  // re-requested, and until it is granted the panel cannot see what is in the folder - so deciding
-  // before this line means deciding on a list that is empty for a reason unrelated to the question.
-  if (!(await ensurePerm(root))) { setStatus(MSG.folder, 'warn'); return; }
-  if (!rootGranted) { rootGranted = true; await loadWorkspaces(); }
-  const have = (wsList || []).find((w) => w.binding && w.binding.sample);
-  if (have) { $('ws').value = have.id; $('offoverlay').classList.remove('show'); return activate(have, true); }
+async function refreshWorkspaceEntryAfterGrant() {
+  rootGranted = true;
+  await loadWorkspaces();
+}
+async function openSampleWorkspace(have) {
+  $('ws').value = have.id;
+  $('offoverlay').classList.remove('show');
+  return activate(have, true);
+}
+async function createSampleWorkspace() {
   sampleBusy = true;
   // The overlay is opaque and covers the status line, so it comes down before the writing starts -
   // otherwise the progress is written where nobody can read it, which is what made pressing again
@@ -5556,6 +5553,23 @@ async function addSampleWorkspace() {
     sampleBusy = false;
     updateSampleButtons();
   }
+}
+async function addSampleWorkspace() {
+  if (sampleBusy) return;
+  return runWorkspaceEntry({
+    refuse: workspaceChangeRefuse,
+    root: () => root,
+    pickRoot,
+    ensurePermission: ensurePerm,
+    permissionRefused: () => setStatus(MSG.folder, 'warn'),
+    folderWasGranted: () => rootGranted,
+    refreshAfterGrant: refreshWorkspaceEntryAfterGrant,
+    context: () => true,
+    contextMissing: () => {},
+    findExisting: () => (wsList || []).find((w) => w.binding && w.binding.sample),
+    openExisting: openSampleWorkspace,
+    create: createSampleWorkspace,
+  });
 }
 async function writeSampleWorkspace() {
   try {
@@ -5590,15 +5604,7 @@ async function writeSampleWorkspace() {
   } catch (e) { setStatus('Could not write the sample: ' + e.message, 'bad'); }
 }
 
-async function addWorkspaceForTab() {
-  if (workspaceChangeRefuse()) return;
-  if (!root) { await pickRoot(); if (!root) return; }
-  if (!(await ensurePerm(root))) { setStatus(MSG.folder, 'warn'); return; }
-  if (!rootGranted) { rootGranted = true; await loadWorkspaces(); }
-  const ctx = lastCtx && lastCtx.org ? lastCtx : await getContext();
-  if (!ctx || !ctx.org) { setStatus('Open a Zoho CRM tab first - the workspace is created for the org you are signed in to.', 'warn'); return; }
-  const have = (wsList || []).find((w) => w.binding && w.binding.org === ctx.org);
-  if (have) { $('ws').value = have.id; return activate(have, true); }
+async function createWorkspaceForContext(ctx) {
   try {
     const name = wsFolderName(ctx);
     const base = await appRoot(true);
@@ -5621,6 +5627,29 @@ async function addWorkspaceForTab() {
     setStatus(`Workspace ready: ${name} - Pull to fill it.`, 'ok');
     await loadWorkspaces();
   } catch (e) { setStatus('Add failed: ' + e.message, 'warn'); }
+}
+async function openWorkspaceForContext(have) {
+  $('ws').value = have.id;
+  return activate(have, true);
+}
+async function crmWorkspaceContextForEntry() {
+  return lastCtx && lastCtx.org ? lastCtx : getContext();
+}
+async function addWorkspaceForTab() {
+  return runWorkspaceEntry({
+    refuse: workspaceChangeRefuse,
+    root: () => root,
+    pickRoot,
+    ensurePermission: ensurePerm,
+    permissionRefused: () => setStatus(MSG.folder, 'warn'),
+    folderWasGranted: () => rootGranted,
+    refreshAfterGrant: refreshWorkspaceEntryAfterGrant,
+    context: crmWorkspaceContextForEntry,
+    contextMissing: () => setStatus('Open a Zoho CRM tab first - the workspace is created for the org you are signed in to.', 'warn'),
+    findExisting: (ctx) => (wsList || []).find((w) => w.binding && w.binding.org === ctx.org),
+    openExisting: openWorkspaceForContext,
+    create: createWorkspaceForContext,
+  });
 }
 
 /** Everything that belongs to the workspace you were in, dropped when you leave it.

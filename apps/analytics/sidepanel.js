@@ -802,17 +802,9 @@ async function selectWorkspace(w) {
   await refreshContext();
 }
 
-async function addWorkspace() {
-  if (workspaceChangeRefuse()) return;
-  if (!root) { await pickRoot(); if (!root) return; }
-  if (!(await ensurePerm(root))) { status(MSG.folder, 'warn'); return; }
-  if (!rootGranted) { rootGranted = true; await refreshWorkspaces(); }
-  if (!ctx || !ctx.workspace) return status('Open a Zoho Analytics workspace in the active tab first.', 'warn');
-  const have = (wsList || []).find((w) => String(w.id) === String(ctx.workspace));
-  if (have) { $('ws').value = have.id; return selectWorkspace(have); }
+async function createWorkspaceForContext(info) {
   setBusy(true, 'Creating the workspace folder…');
   try {
-    const info = await toBridge({ cmd: 'workspaceInfo', aboutTab: true });
     const base = await appRoot(true);
     if (!base) throw new Error(`could not create the ${APP_DIR}/ folder`);
     const folder = stemOf(info.name || 'workspace', info.workspace);
@@ -837,6 +829,36 @@ async function addWorkspace() {
     setBusy(false, 'Could not create the workspace: ' + (e.message || e));
     $('status').className = 'bad';
   }
+}
+async function refreshWorkspaceEntryAfterGrant() {
+  rootGranted = true;
+  await refreshWorkspaces();
+}
+async function openWorkspaceForContext(have) {
+  $('ws').value = have.id;
+  return selectWorkspace(have);
+}
+async function createWorkspaceForEntry() {
+  const info = await toBridge({ cmd: 'workspaceInfo', aboutTab: true });
+  return createWorkspaceForContext(info);
+}
+async function addWorkspace() {
+  return runWorkspaceEntry({
+    refuse: workspaceChangeRefuse,
+    root: () => root,
+    pickRoot,
+    ensurePermission: ensurePerm,
+    permissionRefused: () => status(MSG.folder, 'warn'),
+    folderWasGranted: () => rootGranted,
+    refreshAfterGrant: refreshWorkspaceEntryAfterGrant,
+    context: () => (ctx && ctx.workspace ? ctx : null),
+    contextMissing: () => status('Open a Zoho Analytics workspace in the active tab first.', 'warn'),
+    findExisting: (current) => (wsList || []).find((w) => String(w.id) === String(current.workspace)),
+    openExisting: openWorkspaceForContext,
+    // The fresh tab identity is needed only when no local workspace exists. `aboutTab` is the
+    // deliberately narrow mismatch exception, kept in a named entry adapter the race checker reads.
+    create: createWorkspaceForEntry,
+  });
 }
 
 // Deleting the local mirror only. The confirmation says so explicitly, because "Remove workspace"
@@ -4007,19 +4029,12 @@ function updateSampleButtons() {
 }
 
 let sampleBusy = false;
-async function addSampleWorkspace() {
-  if (workspaceChangeRefuse()) return;
-  if (sampleBusy) return;
-  // The button says "Sample workspace", so a successful folder choice is the first half of this
-  // same action, not a separate action the user has to discover and repeat.
-  if (!root) { await pickRoot(); if (!root) return; }
-  // **Grant first, then decide.** A click is the only context in which the permission can be
-  // re-requested, and until it is granted the panel cannot see what is in the folder - so deciding
-  // before this line means deciding on a list that is empty for a reason unrelated to the question.
-  if (!(await ensurePerm(root))) { status(MSG.folder, 'warn'); return; }
-  if (!rootGranted) { rootGranted = true; await refreshWorkspaces(); }
-  const have = (wsList || []).find((w) => w.cfg && w.cfg.sample);
-  if (have) { $('ws').value = have.id; $('offoverlay').classList.remove('show'); return selectWorkspace(have); }
+async function openSampleWorkspace(have) {
+  $('ws').value = have.id;
+  $('offoverlay').classList.remove('show');
+  return selectWorkspace(have);
+}
+async function createSampleWorkspace() {
   sampleBusy = true;
   // The overlay is opaque and covers the status line, so it comes down before the writing starts -
   // otherwise the progress is written where nobody can read it, which is what made pressing again
@@ -4031,6 +4046,23 @@ async function addSampleWorkspace() {
     sampleBusy = false;
     updateSampleButtons();
   }
+}
+async function addSampleWorkspace() {
+  if (sampleBusy) return;
+  return runWorkspaceEntry({
+    refuse: workspaceChangeRefuse,
+    root: () => root,
+    pickRoot,
+    ensurePermission: ensurePerm,
+    permissionRefused: () => status(MSG.folder, 'warn'),
+    folderWasGranted: () => rootGranted,
+    refreshAfterGrant: refreshWorkspaceEntryAfterGrant,
+    context: () => true,
+    contextMissing: () => {},
+    findExisting: () => (wsList || []).find((w) => w.cfg && w.cfg.sample),
+    openExisting: openSampleWorkspace,
+    create: createSampleWorkspace,
+  });
 }
 async function writeSampleWorkspace() {
   try {

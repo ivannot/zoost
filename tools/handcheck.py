@@ -155,7 +155,7 @@ CHECKS = [
         'pass': ('It writes, the tree fills, and the panel says nothing was fetched from Zoho. This is '
                  'the workspace every picture on the site is rendered from, so it is also the one a '
                  'first-time reader sees.'),
-        'covers': ['apps/*/sample-org.js', 'apps/*/workspace-view.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/sample-org.js', 'apps/*/workspace.js', 'apps/*/sidepanel.js'],
     },
     {
         'id': 'fresh-profile',

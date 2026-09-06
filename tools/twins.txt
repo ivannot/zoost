@@ -2,7 +2,7 @@
 # Every function name both products define, with a hash of each side's body. A one-sided
 # change is a fix that landed on one twin and not the other, which is what this catches.
 # name	crm	analytics	state
-addSampleWorkspace	61bad8066ce9	89d1a3272302	divergent
+addSampleWorkspace	655413012a3d	0646737879c4	divergent
 addWorkspaceView	2a8a459ba4f6	93458982cadb	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
 aiBuildSeed	63f62f1db9a3	ea3877885a9f	divergent
@@ -56,6 +56,8 @@ computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	11d7d721e357	11d7d721e357	identical
 copyAndFlash	000329334ecb	000329334ecb	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
+createSampleWorkspace	0df427110c34	0df427110c34	identical
+createWorkspaceForContext	331618bd02da	7b1b330a5944	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
 dirtyPeer	5f62d305d70c	5f62d305d70c	identical
@@ -181,8 +183,10 @@ onZohoDc	7fddfacebace	7fddfacebace	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	1ccc9b2b0408	feb5273e65ed	divergent
 openRxMenu	f5c90a637572	70c41ed10480	divergent
+openSampleWorkspace	218a5748923a	adbf10fa3978	divergent
 openSchemaGraph	6d3af7aaabaf	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
+openWorkspaceForContext	da43d67fd784	368dfecfbf70	divergent
 openZohoHome	2382b4f61123	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
@@ -207,6 +211,7 @@ redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	08e31fb8e42d	b1ed8fe54d22	divergent
+refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	4d6325a17da8	divergent
@@ -226,6 +231,7 @@ requirePerm	8477c2cb408e	8477c2cb408e	identical
 resetView	601213423bbe	f67417c0398c	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
+runWorkspaceEntry	21263fa94191	21263fa94191	identical
 rxCompile	061ffb3e51f2	061ffb3e51f2	identical
 rxDefaults	b63f0be3e4f9	b63f0be3e4f9	identical
 rxProblems	5927f3cfe8d2	5927f3cfe8d2	identical

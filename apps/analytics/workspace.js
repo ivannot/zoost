@@ -1,9 +1,36 @@
 /* Workspace entry points, without DOM or Chrome state.
  *
- * The panel supplies facts; this file turns them into the view a renderer consumes. Keeping that
- * boundary pure means a different renderer can use it later without becoming a second owner of the
- * workspace rules.
+ * The panel supplies facts and adapters; this file owns the order of the use case and turns state
+ * into the view a renderer consumes. A future renderer can use both without becoming a second owner
+ * of the workspace rules.
  */
+
+async function runWorkspaceEntry(step) {
+  if (step.refuse()) return { outcome: 'refused' };
+  let folder = step.root();
+  if (!folder) {
+    await step.pickRoot();
+    folder = step.root();
+    if (!folder) return { outcome: 'cancelled' };
+  }
+  if (!(await step.ensurePermission(folder))) {
+    step.permissionRefused();
+    return { outcome: 'permission-refused' };
+  }
+  if (!step.folderWasGranted()) await step.refreshAfterGrant();
+  const context = await step.context();
+  if (!context) {
+    step.contextMissing();
+    return { outcome: 'context-missing' };
+  }
+  const existing = step.findExisting(context);
+  if (existing) {
+    await step.openExisting(existing);
+    return { outcome: 'opened', workspace: existing };
+  }
+  const value = await step.create(context);
+  return { outcome: 'create-attempted', value };
+}
 
 function sampleWorkspaceView(have, knowable, busy) {
   const mode = have ? 'open' : knowable ? 'create' : 'unknown';

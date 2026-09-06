@@ -808,7 +808,7 @@ test('analytics: a workspace it has just created is the one it selects', () => {
   // refreshWorkspaces() picks the remembered workspace, and the remembered one was still the one you
   // were in - so «Create workspace for X» created X and put you back, mismatch bar and all. The CRM
   // twin has always remembered it first.
-  const fn = sliceFn('apps/analytics/sidepanel.js', 'addWorkspace');
+  const fn = sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForContext');
   // The permission-restoration branch now refreshes before it decides whether a workspace exists.
   // This assertion is about the newly-created workspace, so start at the write that creates it;
   // a refresh belonging to the neighbouring subject must not satisfy or fail this one.
@@ -1218,7 +1218,7 @@ test('nothing selected, or something with no focus to give, adds nothing', async
 // test-side copy: the copy survived after choosing the folder became part of the action and still
 // claimed that no folder disabled the button.
 function addButtonState(app, { root, ctx, known, busy = false }) {
-  const { addWorkspaceView } = load([sliceFn(`apps/${app}/workspace-view.js`, 'addWorkspaceView')]);
+  const { addWorkspaceView } = load([sliceFn(`apps/${app}/workspace.js`, 'addWorkspaceView')]);
   const context = ctx ? (app === 'crm' ? { org: '44', instance: 'Acme' } : { workspace: '77' }) : null;
   return addWorkspaceView(known, busy, context, root ? 'Zoost' : null, !!root,
     busy ? 'the panel is busy' : null);
@@ -3715,32 +3715,50 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
     // Both copies call the one function, and **the function decides** - not the label. A label is
     // repainted by updateWsButtons and can be stale; the report was clicking a button still reading
     // «+» and creating the sample again each time. So the check is on the action.
-    const fn = js.slice(js.indexOf('async function addSampleWorkspace()'),
-                        js.indexOf('async function writeSampleWorkspace()'));
+    const fn = sliceFn(`apps/${app}/sidepanel.js`, 'addSampleWorkspace');
     assert.ok(/w\.(binding|cfg) && w\.\1\.sample/.test(fn),
       `${app}: addSampleWorkspace does not look for one that already exists, so a stale label writes a second`);
-    // Grant *first*, then decide. Until the folder permission is granted the enumeration returns
-    // early, so `wsList` is empty for a reason that has nothing to do with the question - and the
-    // panel offered to create a sample that was sitting right there. Three reports.
-    const grant = fn.indexOf('ensurePerm(root)');
-    const decide = fn.search(/w\.(binding|cfg) && w\.(binding|cfg)\.sample/);
-    assert.ok(grant >= 0 && decide > grant,
-      `${app}: it decides whether a sample exists before the folder can be read`);
-    assert.ok(/if \(!rootGranted\) \{ rootGranted = true; await (loadWorkspaces|refreshWorkspaces)\(\)/.test(fn),
-      `${app}: the list is not re-read after the permission is granted, so it is still empty`);
-    assert.ok(/(activate\(have|selectWorkspace\(have)/.test(fn), `${app}: it cannot open the one that exists`);
+    assert.ok(/openExisting: openSampleWorkspace/.test(fn), `${app}: it cannot open the one that exists`);
     assert.ok(/if \(sampleBusy\) return;/.test(fn),
       `${app}: a second click lands while the first is still writing three hundred files`);
-    assert.ok(/offoverlay'\)\.classList\.remove\('show'\)/.test(fn),
+    assert.ok(/offoverlay'\)\.classList\.remove\('show'\)/.test(
+      sliceFn(`apps/${app}/sidepanel.js`, 'openSampleWorkspace')),
       `${app}: the overlay stays up over the progress, which is what made pressing again look reasonable`);
     // the label still has to say which of the two it will do
     const { sampleWorkspaceView } = load([
-      sliceFn(`apps/${app}/workspace-view.js`, 'sampleWorkspaceView'),
+      sliceFn(`apps/${app}/workspace.js`, 'sampleWorkspaceView'),
     ]);
     assert.equal(sampleWorkspaceView({ id: 'sample' }, true, false).overlayLabel, 'Open sample workspace',
       `${app}: the button says «+ Sample workspace» even when one already exists`);
     assert.ok(/without signing in anywhere/.test(ov),
       `${app}: the overlay does not say the sample needs no account, which is the whole point`);
+  }
+});
+
+test('the workspace use case grants and refreshes before it decides', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const { runWorkspaceEntry } = load([sliceFn(`apps/${app}/workspace.js`, 'runWorkspaceEntry')]);
+    const trace = [];
+    let root = null, granted = false;
+    const existing = { id: 'already-there' };
+    const result = await runWorkspaceEntry({
+      refuse: () => { trace.push('refuse'); return false; },
+      root: () => root,
+      pickRoot: async () => { trace.push('pick'); root = { name: 'Zoost' }; },
+      ensurePermission: async () => { trace.push('permission'); return true; },
+      permissionRefused: () => trace.push('permission-refused'),
+      folderWasGranted: () => { trace.push('granted?'); return granted; },
+      refreshAfterGrant: async () => { trace.push('refresh'); granted = true; },
+      context: async () => { trace.push('context'); return { id: 'ctx' }; },
+      contextMissing: () => trace.push('context-missing'),
+      findExisting: () => { trace.push('find'); return existing; },
+      openExisting: async () => trace.push('open'),
+      create: async () => trace.push('create'),
+    });
+    assert.deepEqual(trace, ['refuse', 'pick', 'permission', 'granted?', 'refresh', 'context', 'find', 'open'],
+      `${app}: a decision was made from the workspace list before folder access was restored`);
+    assert.equal(result.outcome, 'opened', `${app}: opening an existing workspace has no explicit outcome`);
+    assert.equal(result.workspace, existing, `${app}: the outcome loses the workspace it opened`);
   }
 });
 
@@ -3763,7 +3781,11 @@ test('choosing the folder from the sample button continues into the sample in th
       $: () => ({ value: '', disabled: false, classList: { remove() {} } }),
     };
     globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
-    const m = load([sliceFn(rel, 'addSampleWorkspace')], globals);
+    const m = load([
+      sliceFn(`apps/${app}/workspace.js`, 'runWorkspaceEntry'),
+      sliceFn(rel, 'refreshWorkspaceEntryAfterGrant'), sliceFn(rel, 'openSampleWorkspace'),
+      sliceFn(rel, 'createSampleWorkspace'), sliceFn(rel, 'addSampleWorkspace'),
+    ], globals);
     await m.addSampleWorkspace();
     assert.deepEqual(calls, ['sample written'], `${app}: the first click only chose the folder`);
   }
@@ -3795,8 +3817,14 @@ test('choosing the folder from + Workspace continues into the real workspace in 
       setStatus: () => {}, loadWorkspaces: async () => {},
     };
     globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
-    const { addWorkspaceForTab } = load(
-      [sliceFn('apps/crm/sidepanel.js', 'addWorkspaceForTab')], globals);
+    const { addWorkspaceForTab } = load([
+      sliceFn('apps/crm/workspace.js', 'runWorkspaceEntry'),
+      sliceFn('apps/crm/sidepanel.js', 'refreshWorkspaceEntryAfterGrant'),
+      sliceFn('apps/crm/sidepanel.js', 'openWorkspaceForContext'),
+      sliceFn('apps/crm/sidepanel.js', 'createWorkspaceForContext'),
+      sliceFn('apps/crm/sidepanel.js', 'crmWorkspaceContextForEntry'),
+      sliceFn('apps/crm/sidepanel.js', 'addWorkspaceForTab'),
+    ], globals);
     await addWorkspaceForTab();
     assert.equal(writes.length, 1, 'crm: the first click only chose the folder');
     assert.equal(writes[0].org, '44', 'crm: the first click wrote a different org');
@@ -3817,7 +3845,14 @@ test('choosing the folder from + Workspace continues into the real workspace in 
       $: () => ({ className: '' }), refreshWorkspaces: async () => {},
     };
     globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
-    const { addWorkspace } = load([sliceFn('apps/analytics/sidepanel.js', 'addWorkspace')], globals);
+    const { addWorkspace } = load([
+      sliceFn('apps/analytics/workspace.js', 'runWorkspaceEntry'),
+      sliceFn('apps/analytics/sidepanel.js', 'refreshWorkspaceEntryAfterGrant'),
+      sliceFn('apps/analytics/sidepanel.js', 'openWorkspaceForContext'),
+      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForContext'),
+      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForEntry'),
+      sliceFn('apps/analytics/sidepanel.js', 'addWorkspace'),
+    ], globals);
     await addWorkspace();
     assert.equal(patched.length, 1, 'analytics: the first click only asked for a working folder');
     assert.equal(patched[0].workspace, '77', 'analytics: the first click wrote a different workspace');
@@ -3836,13 +3871,20 @@ test('restoring folder access opens the workspace it finds instead of recreating
       root: { name: 'Zoost' }, rootGranted: false, wsList: [],
       lastCtx: { org: '44', origin: 'https://crm.zoho.eu', instance: 'Acme' },
       workspaceChangeRefuse: () => false, ensurePerm: async () => true,
+      pickRoot: async () => { throw new Error('CRM asked for a folder it already remembered'); },
       loadWorkspaces: async () => { globals.wsList.push(existing); }, getContext: async () => null,
       activate: async (w) => { opened.push(w); },
       $: () => ({ value: '' }), setStatus: () => {},
       appRoot: async () => { throw new Error('existing CRM workspace was recreated'); },
     };
-    const { addWorkspaceForTab } = load(
-      [sliceFn('apps/crm/sidepanel.js', 'addWorkspaceForTab')], globals);
+    const { addWorkspaceForTab } = load([
+      sliceFn('apps/crm/workspace.js', 'runWorkspaceEntry'),
+      sliceFn('apps/crm/sidepanel.js', 'refreshWorkspaceEntryAfterGrant'),
+      sliceFn('apps/crm/sidepanel.js', 'openWorkspaceForContext'),
+      sliceFn('apps/crm/sidepanel.js', 'createWorkspaceForContext'),
+      sliceFn('apps/crm/sidepanel.js', 'crmWorkspaceContextForEntry'),
+      sliceFn('apps/crm/sidepanel.js', 'addWorkspaceForTab'),
+    ], globals);
     await addWorkspaceForTab();
     assert.deepEqual(opened, [existing], 'crm: the existing workspace was not opened after re-grant');
   }
@@ -3853,12 +3895,20 @@ test('restoring folder access opens the workspace it finds instead of recreating
     const globals = {
       root: { name: 'Zoost' }, rootGranted: false, wsList: [], ctx: { workspace: '77' },
       workspaceChangeRefuse: () => false, ensurePerm: async () => true,
+      pickRoot: async () => { throw new Error('Analytics asked for a folder it already remembered'); },
       refreshWorkspaces: async () => { globals.wsList.push(existing); },
       selectWorkspace: async (w) => { opened.push(w); },
       $: () => ({ value: '' }), status: () => {}, setBusy: () => {},
       toBridge: async () => { throw new Error('existing Analytics workspace was queried as new'); },
     };
-    const { addWorkspace } = load([sliceFn('apps/analytics/sidepanel.js', 'addWorkspace')], globals);
+    const { addWorkspace } = load([
+      sliceFn('apps/analytics/workspace.js', 'runWorkspaceEntry'),
+      sliceFn('apps/analytics/sidepanel.js', 'refreshWorkspaceEntryAfterGrant'),
+      sliceFn('apps/analytics/sidepanel.js', 'openWorkspaceForContext'),
+      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForContext'),
+      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForEntry'),
+      sliceFn('apps/analytics/sidepanel.js', 'addWorkspace'),
+    ], globals);
     await addWorkspace();
     assert.deepEqual(opened, [existing], 'analytics: the existing workspace was recreated after re-grant');
     assert.equal(existing.cfg.lastPull, '2026-09-05T10:00:00Z', 'analytics: lastPull was erased');
@@ -3879,7 +3929,7 @@ test('the sample entry point stays available on a Zoho tab and states what it wi
         $: (id) => els[id],
       };
       const { updateSampleButtons } = load([
-        sliceFn(`apps/${app}/workspace-view.js`, 'sampleWorkspaceView'),
+        sliceFn(`apps/${app}/workspace.js`, 'sampleWorkspaceView'),
         sliceFn(rel, 'knownSample'), sliceConst(rel, 'sampleKnowable'),
         sliceFn(rel, 'updateSampleButtons'),
       ], globals);
@@ -3939,7 +3989,7 @@ test('the panel does not claim what it has not looked at, and a poll does not un
     assert.ok(/const sampleKnowable = \(\) => !!\(root && rootGranted\) \|\| !!sampleWsKnown;/.test(js),
       `${app}: nothing distinguishes «there is none» from «I have not looked»`);
     const { sampleWorkspaceView } = load([
-      sliceFn(`apps/${app}/workspace-view.js`, 'sampleWorkspaceView'),
+      sliceFn(`apps/${app}/workspace.js`, 'sampleWorkspaceView'),
     ]);
     assert.equal(sampleWorkspaceView(null, false, false).overlayLabel, 'Sample workspace',
       `${app}: the button still says «+ Sample workspace» when it cannot tell`);
@@ -4862,7 +4912,8 @@ for (const [app, fns] of [
     }
     // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
     // at all, so they are the two that must not refuse.
-    const unguarded = [...reach].filter((f) => !fns.includes(f) && !['toBridge', 'getContext', 'addWorkspace'].includes(f));
+    const unguarded = [...reach].filter((f) => !fns.includes(f)
+      && !['toBridge', 'getContext', 'createWorkspaceForEntry'].includes(f));
     assert.deepEqual(unguarded, [], `these reach Zoho and nothing was said about them: ${unguarded}`);
   });
 
@@ -10074,11 +10125,15 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/if \(pullBusy/.test(activateBody), 'a direct/programmatic activation bypasses the disabled selector');
     const refuse = sliceFn(`apps/${app}/sidepanel.js`, 'workspaceChangeRefuse');
     assert.ok(/if \(!pullBusy\) return false/.test(refuse), 'workspace-changing actions have no shared programmatic guard');
-    for (const fn of ['pickRoot', 'addSampleWorkspace', 'renameWorkspace']) {
+    for (const fn of ['pickRoot', 'renameWorkspace']) {
       assert.ok(/workspaceChangeRefuse\(\)/.test(sliceFn(`apps/${app}/sidepanel.js`, fn)), `${fn} bypasses the pull lock`);
     }
+    assert.ok(/if \(step\.refuse\(\)\)/.test(sliceFn(`apps/${app}/workspace.js`, 'runWorkspaceEntry')),
+      'the workspace use case does not ask its programmatic guard');
+    assert.ok(/refuse: workspaceChangeRefuse/.test(sliceFn(`apps/${app}/sidepanel.js`, 'addSampleWorkspace')),
+      'addSampleWorkspace does not give the pull guard to the use case');
     const add = app === 'crm' ? 'addWorkspaceForTab' : 'addWorkspace';
-    assert.ok(/workspaceChangeRefuse\(\)/.test(sliceFn(`apps/${app}/sidepanel.js`, add)), `${add} bypasses the pull lock`);
+    assert.ok(/refuse: workspaceChangeRefuse/.test(sliceFn(`apps/${app}/sidepanel.js`, add)), `${add} bypasses the pull lock`);
     const remove = app === 'crm'
       ? handlerOf('apps/crm/sidepanel.js', 'wsdel')
       : sliceFn('apps/analytics/sidepanel.js', 'delWorkspace');
