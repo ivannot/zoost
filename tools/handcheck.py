@@ -196,6 +196,16 @@ CHECKS = [
         'covers': ['apps/*/navigation.js', 'apps/*/sidepanel.js'],
     },
     {
+        'id': 'search-state',
+        'by': "probe.py: both panels change search subject and pattern mode; CRM also changes tab and returns",
+        'title': 'The search box keeps one coherent intent',
+        'do': ['Search names, switch to code or SQL, enable a pattern and then disable it.',
+               'In CRM, change tab and return to Functions.'],
+        'pass': ('Text, search subject and pattern mode change together; a CRM tab keeps its own '
+                 'search; disabling pattern mode does not reinterpret the pattern as literal text.'),
+        'covers': ['apps/*/search-state.js', 'apps/*/sidepanel.js'],
+    },
+    {
         'id': 'passphrase',
         'title': 'The API key under a passphrase, across a browser restart',
         'do': ['In Settings, protect the key with a passphrase.',

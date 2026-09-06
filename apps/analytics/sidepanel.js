@@ -735,7 +735,7 @@ function dropWorkspaceState() {
  *  **Clear** in the chat calls, and Clear must not empty the reader's search box. The selection and
  *  the detail pane are not here because `loadFromDisk()` already drops them on every load. */
 function resetView() {
-  $('find').value = '';
+  paintSearchControls(searchState.reset());
   if ($('healthview').classList.contains('show')) renderHealth();
   if ($('aiview').classList.contains('show')) aiContextLabel();
 }
@@ -1777,15 +1777,9 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   deps = l && l.deps ? l.deps : null; pullFailed = (l && l.failed) || [];
   sqls = {};
   sqlCache = null; sqlUnread = 0; sqlDiskUnread.clear();
-  if (searchMode === 'sql') {
-    searchMode = 'name';
-    $('smode').textContent = 'in: names';
-    $('smode').classList.remove('on');
-    $('find').placeholder = 'Find\u2026';
-    $('rxmode').style.display = $('rxpick').style.display = 'none';
-    $('rxmenu').classList.remove('show');
-  }
-  if (regexMode) { regexMode = false; $('rxmode').classList.remove('on'); }
+  // A refreshed mirror invalidates the SQL cache. Keep the words in the box, as before, but stop
+  // interpreting them as SQL or as a pattern until the reader chooses that mode again.
+  paintSearchControls(searchState.useNames(true));
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
   // **A workspace that loaded some of its files is not a workspace that loaded.** This kept the
@@ -1972,8 +1966,7 @@ function renderTypeFilter() {
 // inside the queries themselves, which is what «search across every query at once» has always meant
 // to a reader and what this panel could not do: the text is not in memory, it is read per view when
 // you open one. So the first search of a session reads every .sql file once and keeps it.
-let searchMode = 'name';        // 'name' | 'sql'
-let regexMode = false;          // the .* toggle: the search text read as a pattern, full-text mode only
+const searchState = createSearchState({ scope: 'views', fullTextScope: 'views', fullTextMode: 'sql' });
 let sqlCache = null;            // Map(id -> text), built once per workspace
 let sqlUnread = 0;              // files that would not open, reported rather than counted as misses
 const sqlDiskUnread = new Set();// ids whose index entry exists but whose last .sql open failed
@@ -2025,10 +2018,11 @@ function paintFindMarks(root, re) {
 // The active full-text search as a compiled pattern, or null when there is nothing to paint: name
 // mode, an empty box, or a pattern that does not parse.
 function findMarkRe() {
-  if (searchMode !== 'sql') return null;
-  const q = $('find').value.trim();
+  const search = searchState.snapshot();
+  if (search.mode !== 'sql') return null;
+  const q = search.text.trim();
   if (!q) return null;
-  if (!regexMode) return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
+  if (!search.regex) return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
   return rxCompile(q).re || null;
 }
 
@@ -2135,14 +2129,15 @@ async function ensureSqlCache(op = beginWorkspaceOp()) {
 }
 
 function visibleViews() {
-  const q = $('find').value.trim().toLowerCase();
+  const search = searchState.snapshot();
+  const q = search.text.trim().toLowerCase();
   let out = views;
   if (typeFilter === ORPHANS) out = out.filter(isOrphanCandidate);
   else if (typeFilter) out = out.filter((v) => v.type === typeFilter);
-  if (q && searchMode === 'sql') {
+  if (q && search.mode === 'sql') {
     // Only what has SQL can match, and only what has been read: a query whose file would not open is
     // counted by ensureSqlCache() and reported, not quietly turned into «no match».
-    const rx = regexMode ? rxCompile($('find').value.trim()) : null;
+    const rx = search.regex ? rxCompile(search.text.trim()) : null;
     // A broken pattern searched nothing, so it matches nothing: render() names the error, and this
     // empties the list so the keyboard cannot step onto rows the reader was just told do not exist.
     out = rx && rx.error ? [] : out.filter((v) => sqlCache && sqlHit(sqlCache.get(v.id), q, rx && rx.re));
@@ -2235,6 +2230,7 @@ function emptyReason() {
 }
 
 function render() {
+  const search = searchState.snapshot();
   renderTypeFilter();
   const list = $('list');
   if (!views.length) {
@@ -2247,8 +2243,8 @@ function render() {
   // The detail pane shows the same search: matches painted in the open SQL, cleared when the
   // search empties, changes mode or stops parsing - one call, because null clears.
   paintFindMarks(document.querySelector('#detail pre.sql'), findMarkRe());
-  const rawQ = $('find').value.trim();
-  if (searchMode === 'sql' && regexMode && rawQ) {
+  const rawQ = search.text.trim();
+  if (search.mode === 'sql' && search.regex && rawQ) {
     const rxErr = rxCompile(rawQ).error;
     if (rxErr) {
       // «No matches» for a pattern that never ran would be the lie this panel exists to refuse.
@@ -2268,7 +2264,7 @@ function render() {
     // coverage with the answer; this is the same fact, said in the same voice.
     const qts = views.filter((v) => v.type === 'QueryTable').length;
     const narrowing = typeFilter ? 'The type filter and the' : 'The';
-    list.innerHTML = searchMode === 'sql'
+    list.innerHTML = search.mode === 'sql'
       ? `<div class="empty"><b>No query matches.</b>
       ${narrowing} search box are narrowing ${qts} quer${qts === 1 ? 'y' : 'ies'} down to none;
       the other ${views.length - qts} view(s) have no SQL to search.
@@ -2307,12 +2303,12 @@ function render() {
   };
   // In SQL mode the row says where the term is, the way the CRM's search results do: the line, its
   // number, and how many times the term appears in that query.
-  const hlRe = rawQ && searchMode === 'sql'
-    ? (regexMode ? rxCompile(rawQ).re : new RegExp(rawQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim'))
+  const hlRe = rawQ && search.mode === 'sql'
+    ? (search.regex ? rxCompile(rawQ).re : new RegExp(rawQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim'))
     : null;
   const sqlLine = (v) => {
-    if (searchMode !== 'sql' || !sqlCache || !hlRe) return '';
-    const h = sqlHit(sqlCache.get(v.id), rawQ, regexMode ? hlRe : null);
+    if (search.mode !== 'sql' || !sqlCache || !hlRe) return '';
+    const h = sqlHit(sqlCache.get(v.id), rawQ, search.regex ? hlRe : null);
     if (!h) return '';
     return `<div class="sqlhit"><span class="n">${h.lineNo}</span>${markLine(h.line, hlRe, esc)}`
       + (h.count > 1 ? ` <span class="n">\u00d7${h.count}</span>` : '') + '</div>';
@@ -2336,7 +2332,7 @@ function render() {
     tr.onclick = () => {
       // A row opened from an SQL search opens on the SQL tab: that is where the match the reader
       // clicked for lives, painted. The same pattern as the lineage links one block down.
-      if (searchMode === 'sql' && $('find').value.trim()) detailTab = 'sql';
+      if (search.mode === 'sql' && search.text.trim()) detailTab = 'sql';
       openDetail(tr.dataset.id);
     };
   });
@@ -4291,35 +4287,40 @@ $('list').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
+function paintSearchControls(state = searchState.snapshot()) {
+  const fullText = state.mode === 'sql';
+  $('find').value = state.text;
+  $('smode').textContent = fullText ? 'in: SQL' : 'in: names';
+  $('smode').classList.toggle('on', fullText);
+  $('find').placeholder = fullText ? 'Find inside the SQL\u2026' : 'Find\u2026';
+  $('rxmode').classList.toggle('on', state.regex);
+  $('rxmode').style.display = $('rxpick').style.display = fullText ? '' : 'none';
+  if (!fullText) $('rxmenu').classList.remove('show');
+}
+
 $('find').oninput = () => {
+  const search = searchState.setText($('find').value);
   // Debounced in SQL mode only: a user-authored pattern runs over every cached query body, and
   // doing that on each keystroke means doing it on the half-typed patterns too.
-  if (searchMode === 'sql') { clearTimeout(_sqlSearchT); _sqlSearchT = setTimeout(render, 220); }
+  if (search.mode === 'sql') { clearTimeout(_sqlSearchT); _sqlSearchT = setTimeout(render, 220); }
   else render();
 };
 async function onSmode() {
   const op = beginWorkspaceOp();
-  searchMode = searchMode === 'name' ? 'sql' : 'name';
-  $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';
-  $('smode').classList.toggle('on', searchMode === 'sql');
-  $('rxmode').style.display = $('rxpick').style.display = searchMode === 'sql' ? '' : 'none';
-  if (searchMode !== 'sql') $('rxmenu').classList.remove('show');
   // Leaving full-text with the pattern on takes the pattern with it, like the toggle going off:
   // a regex read as a name filter is a search for text that does not exist. Reported.
-  if (searchMode !== 'sql' && regexMode) { regexMode = false; $('rxmode').classList.remove('on'); $('find').value = ''; }
-  $('find').placeholder = searchMode === 'name' ? 'Find\u2026' : 'Find inside the SQL\u2026';
-  if (searchMode === 'sql' && !(await ensureSqlCache(op))) return;
+  const search = searchState.toggleMode();
+  paintSearchControls(search);
+  if (search.mode === 'sql' && !(await ensureSqlCache(op))) return;
   if (!op.current()) return;
   render();
 }
 $('smode').onclick = onSmode;
 $('rxmode').onclick = () => {
-  regexMode = !regexMode;
-  $('rxmode').classList.toggle('on', regexMode);
   // Switching the toggle off clears the box: a pattern read as a literal is a search for text
   // that does not exist, and the reader would be left staring at «no matches» for \b\d{18}\b.
   // Switching it on keeps what was typed - a literal is often the seed of the pattern.
-  if (!regexMode) $('find').value = '';
+  paintSearchControls(searchState.toggleRegex());
   render();
 };
 // The saved patterns, offered where they are used. The background seeds the first two; the list
@@ -4365,11 +4366,12 @@ async function openRxMenu() {
   // says when a pattern was saved and nothing else. The Settings list keeps storage order: rows
   // being edited must not reshuffle under the hands renaming them.
   const items = (list || []).slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  const rawQ = $('find').value.trim();
+  const search = searchState.snapshot();
+  const rawQ = search.text.trim();
   // The save row exists only when there is something it could do: a pattern in the box that parses,
   // regex mode on, and a list that was actually read - saving over one that was not would overwrite
   // entries nobody has seen. A control that can do nothing goes away rather than sitting there.
-  const savable = list !== null && regexMode && rawQ && !!rxCompile(rawQ).re;
+  const savable = list !== null && search.regex && rawQ && !!rxCompile(rawQ).re;
   // A pattern already in the list is named, not re-offered: a second copy would be two menu
   // entries that search identically, and the name is how the reader finds the one they have.
   const already = savable ? items.find((x) => x.pattern === rawQ) : null;
@@ -4384,8 +4386,7 @@ async function openRxMenu() {
       // no longer offers regex would filter names by a literal `\\b\\d{18}\\b`.
       if ($('rxpick').style.display === 'none') return;
       const x = items[+b.dataset.rx];
-      $('find').value = x.pattern;
-      if (!regexMode) { regexMode = true; $('rxmode').classList.add('on'); }
+      paintSearchControls(searchState.usePattern(x.pattern));
       render();
     };
   });
@@ -4416,7 +4417,7 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('rxmenu').classList.remove('show'); });
 
-$('findclear').onclick = () => { $('find').value = ''; render(); $('find').focus(); };
+$('findclear').onclick = () => { paintSearchControls(searchState.setText('')); render(); $('find').focus(); };
 $('typesel').onchange = () => { typeFilter = $('typesel').value || null; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
@@ -4536,6 +4537,7 @@ $('help').href = DOCS_URL;   // set here, not in the markup - same as the CRM pa
 function reportFacts(err, ai) {
   const m = chrome.runtime.getManifest();
   const ua = navigator.userAgent.match(/Chrome\/(\d+)/);
+  const search = searchState.snapshot();
   return {
     product: m.name,
     version: m.version,
@@ -4543,7 +4545,7 @@ function reportFacts(err, ai) {
     message: (err && (err.message || err)) || $('statustext').textContent,
     stack: (err && err.stack) || '',
     tab: 'views' + (detailTab ? '/' + detailTab : ''),
-    search: searchMode === 'sql' ? (regexMode ? 'SQL, pattern' : 'SQL') : 'names',
+    search: search.mode === 'sql' ? (search.regex ? 'SQL, pattern' : 'SQL') : 'names',
     pullActive: !!pullBusy,
     sample: isSample(),
     counts: {

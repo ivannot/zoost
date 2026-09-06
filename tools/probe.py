@@ -668,6 +668,31 @@ CRM = """
       $('find').value = ''; $('find').dispatchEvent(new Event('input')); await settle();
     }
 
+    // Search text, its interpretation and the .* toggle are one state. Walk the controls rather
+    // than assigning the engine: this catches an adapter that changes the button but not the state,
+    // or the state but not the input a reader sees. CRM also promises one search per tab.
+    {
+      $('find').value = 'void'; $('find').dispatchEvent(new Event('input')); await settle();
+      $('smode').click(); await settle();
+      if (searchState.snapshot().mode !== 'content') say('in: code did not change the search interpretation');
+      $('rxmode').click(); await settle();
+      if (!searchState.snapshot().regex || $('find').value !== 'void') say('turning .* on did not keep the code-search seed');
+      const modules = [...$('modebar').querySelectorAll('[data-tab]')].find((b) => b.dataset.tab === 'modules');
+      const functions = [...$('modebar').querySelectorAll('[data-tab]')].find((b) => b.dataset.tab === 'functions');
+      if (modules && functions) {
+        modules.click(); await settle();
+        if ($('find').value || searchState.snapshot().mode !== 'name') say('the Functions search leaked into Modules');
+        $('find').value = 'Accounts'; $('find').dispatchEvent(new Event('input')); await settle();
+        functions.click(); await settle();
+        const restored = searchState.snapshot();
+        if ($('find').value !== 'void' || restored.mode !== 'content' || !restored.regex)
+          say('the Functions search did not come back with its text, interpretation and .* toggle');
+      }
+      $('rxmode').click(); await settle();
+      if ($('find').value || searchState.snapshot().regex) say('turning .* off left a pattern as a literal search');
+      $('smode').click(); await settle();
+    }
+
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
     // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
     // source and clears the diagram beside it, so a search after an edit answered with the text from
@@ -1221,6 +1246,17 @@ PULL_AN = r"""
 
     await pullAll();
     await wait(600);
+
+    // The Analytics search has the same state transitions, with SQL as its full-text subject.
+    // Drive the visible controls so both the engine and its DOM adapter have to agree.
+    $('find').value = 'SELECT'; $('find').dispatchEvent(new Event('input')); await settle();
+    $('smode').click(); await settle();
+    if (searchState.snapshot().mode !== 'sql') say('in: SQL did not change the search interpretation');
+    $('rxmode').click(); await settle();
+    if (!searchState.snapshot().regex || $('find').value !== 'SELECT') say('turning .* on did not keep the SQL-search seed');
+    $('rxmode').click(); await settle();
+    if ($('find').value || searchState.snapshot().regex) say('turning .* off left a pattern as a literal search');
+    $('smode').click(); await settle();
 
     // 1. It finished. The panel says so and the marker on disk says so - those two came apart exactly
     //    when this broke, which is why both are read.

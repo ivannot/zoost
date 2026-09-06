@@ -89,7 +89,6 @@ apps/analytics/sidepanel.js	grantRoot	rootGranted
 apps/analytics/sidepanel.js	listWorkspaces	rootGranted
 apps/analytics/sidepanel.js	loadFromDisk	viewsPulledAt
 apps/analytics/sidepanel.js	loadScope	expScope
-apps/analytics/sidepanel.js	openRxMenu	regexMode
 apps/analytics/sidepanel.js	pickRoot	root
 apps/analytics/sidepanel.js	pickRoot	rootGranted
 apps/analytics/sidepanel.js	readRememberedSample	sampleWsKnown
@@ -144,7 +143,6 @@ apps/crm/sidepanel.js	loadWorkspaces	rootGranted
 apps/crm/sidepanel.js	loadWorkspaces	wsList
 apps/crm/sidepanel.js	onWsdel	currentPath
 apps/crm/sidepanel.js	openFile	currentPath
-apps/crm/sidepanel.js	openRxMenu	regexMode
 apps/crm/sidepanel.js	openWorkflow	currentPath
 apps/crm/sidepanel.js	pickRoot	root
 apps/crm/sidepanel.js	pickRoot	rootGranted

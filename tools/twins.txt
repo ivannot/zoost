@@ -58,6 +58,7 @@ copyAndFlash	000329334ecb	000329334ecb	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
 createNavigationState	4ab81484aac8	4ab81484aac8	identical
 createSampleWorkspace	0df427110c34	0df427110c34	identical
+createSearchState	44136fa355b3	44136fa355b3	identical
 createWorkspaceForContext	331618bd02da	7b1b330a5944	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
@@ -126,7 +127,7 @@ erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
 escReport	2987a53e5c62	2987a53e5c62	identical
 escReportA	46ee492a3bf3	46ee492a3bf3	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
-findMarkRe	1e57d1af56a5	4b046384501d	divergent
+findMarkRe	a5e28e42df49	33abab42f44e	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	03ec3f39bd0d	03ec3f39bd0d	identical
 goToZoho	44136fa355b3	cf28ebbab779	divergent
@@ -183,7 +184,7 @@ onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	7fddfacebace	7fddfacebace	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	1ccc9b2b0408	feb5273e65ed	divergent
-openRxMenu	f5c90a637572	70c41ed10480	divergent
+openRxMenu	56e77cef3e64	353dff6f7ca2	divergent
 openSampleWorkspace	218a5748923a	adbf10fa3978	divergent
 openSchemaGraph	6d3af7aaabaf	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
@@ -194,6 +195,7 @@ orphanedByFilter	e72e15998354	6d10f2be0633	divergent
 otherWindowChanged	b0649c31fb20	b0649c31fb20	identical
 paintDirty	30f782861649	30f782861649	identical
 paintFindMarks	5b967953a498	5b967953a498	identical
+paintSearchControls	cabee6f58350	a1400f69a8cb	divergent
 panelInert	bc169e70b382	bc169e70b382	identical
 parseArrangement	f856b10b45f8	f856b10b45f8	identical
 pass	56e18c27fc90	4bb92032e77b	divergent
@@ -219,17 +221,17 @@ relRender	8c0a3634bad0	4d6325a17da8	divergent
 rememberActive	74f9a0e0cbc6	74f9a0e0cbc6	identical
 removeFileAt	d6514d26b3e4	1b045eb72889	divergent
 renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
-render	1f1f526caa02	b47086e0e791	divergent
+render	1f1f526caa02	b44d36ae2b45	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	5ca323768259	d849a1f86647	divergent
 renderRx	9515db04e268	9515db04e268	identical
-reportFacts	1ccc3c0ad48c	3bc8d1655e61	divergent
+reportFacts	3c2ae6bd3f33	248550e497da	divergent
 reportFoot	5369198eb387	5369198eb387	identical
 reportHead	38270d601c35	38270d601c35	identical
 reportMark	267dd72f6fe1	267dd72f6fe1	identical
 reportToc	bffb45a529c6	bffb45a529c6	identical
 requirePerm	8477c2cb408e	8477c2cb408e	identical
-resetView	601213423bbe	f67417c0398c	divergent
+resetView	dbd606352d0c	3b3c488fec78	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 runWorkspaceEntry	21263fa94191	21263fa94191	identical

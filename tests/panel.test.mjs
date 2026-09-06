@@ -2595,7 +2595,7 @@ test('both panels drop the conversation when the workspace changes', () => {
     assert.ok(/function resetView\(\)/.test(src), `${app} has no resetView`);
     assert.ok(/if \(!sameWs\)[\s\S]{0,200}resetView\(\)/.test(src),
       `${app} does not reset the interface when the workspace changes`);
-    for (const part of [/\$\('find'\)\.value = ''/, /healthview'\)\.classList\.contains\('show'\)/]) {
+    for (const part of [/paintSearchControls\(searchState\.reset\(\)\)/, /healthview'\)\.classList\.contains\('show'\)/]) {
       assert.ok(part.test(src.slice(src.indexOf('function resetView()'))), `${app}: resetView leaves ${part} behind`);
     }
   }
@@ -5610,13 +5610,19 @@ for (const app of ['crm', 'analytics']) {
     // Reported: the pattern stayed in the box with .* off, and a regex read as a literal is a
     // search for text that does not exist.
     for (const app of ['crm', 'analytics']) {
-      const panel = read(`apps/${app}/sidepanel.js`);
-      const h = handlerOf(`apps/${app}/sidepanel.js`, 'rxmode');
-      assert.ok(/if \(!regexMode\) \$\('find'\)\.value = '';/.test(h),
+      const { createSearchState } = load([sliceFn(`apps/${app}/search-state.js`, 'createSearchState')],
+        { Map, String });
+      const fullTextMode = app === 'crm' ? 'content' : 'sql';
+      const search = createSearchState({ scope: 'subject', fullTextScope: 'subject', fullTextMode });
+      search.setText('seed'); search.toggleMode(); search.toggleRegex();
+      assert.equal(search.snapshot().text, 'seed', 'why=' + app + ' throws away the seed when .* goes on');
+      search.toggleRegex();
+      assert.deepEqual({ text: search.snapshot().text, regex: search.snapshot().regex }, { text: '', regex: false },
         'why=' + app + ' keeps the pattern as a literal search when the toggle goes off');
       // The same rule on the other way out of full-text: the in: switch back to names.
-      const sm = handlerOf(`apps/${app}/sidepanel.js`, 'smode');
-      assert.ok(/&& regexMode\) \{ regexMode = false; \$\('rxmode'\)\.classList\.remove\('on'\); \$\('find'\)\.value = ''; \}/.test(sm),
+      search.setText('\\bID\\b'); search.toggleRegex(); search.toggleMode();
+      assert.deepEqual({ text: search.snapshot().text, mode: search.snapshot().mode, regex: search.snapshot().regex },
+        { text: '', mode: 'name', regex: false },
         'why=' + app + ' carries the pattern into the name search when the scope switch leaves full-text');
     }
   });
@@ -5628,7 +5634,7 @@ for (const app of ['crm', 'analytics']) {
       // of this slice further up. Reading only the menu would silently stop covering it.
       const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"))
         + sliceFn(`apps/${app}/sidepanel.js`, 'saveSearchPattern');
-      assert.ok(/const savable = list !== null && regexMode && rawQ && !!rxCompile\(rawQ\)\.re/.test(m),
+      assert.ok(/const savable = list !== null && search\.regex && rawQ && !!rxCompile\(rawQ\)\.re/.test(m),
         'why=' + app + ' offers Save over an unread list, or for a pattern that does not parse');
       assert.ok(/x\.name\.trim\(\)\.toLowerCase\(\) === name\.toLowerCase\(\)/.test(m),
         'why=' + app + ' saves two patterns the menu cannot tell apart');
@@ -8465,23 +8471,25 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // disorienting, which is exactly what it is: a control claiming to filter a list that never asked.
 {
   const panel = crmPanel();
-  const fn = panel.slice(panel.indexOf('function setMode'), panel.indexOf('\n}', panel.indexOf('function setMode')));
   test('each tab keeps its own Find', () => {
-    assert.ok(/findByMode\[viewMode\] = \{ text: \$\('find'\)\.value, mode: searchMode, rx: regexMode \}/.test(fn),
-              'leaving a tab throws away what was typed in it, or how it was being searched');
-    assert.ok(/regexMode = !!back\.rx/.test(fn), 'the .* toggle does not come back with the text it searched');
-    assert.ok(/\$\('find'\)\.value = back\.text/.test(fn), 'arriving on a tab does not restore its own');
-    assert.ok(/back\.mode === 'content'/.test(fn),
-              'the text comes back as a name search, so the same box means something else');
-    assert.ok(fn.indexOf("findByMode[viewMode]") < fn.indexOf('viewMode = mode'),
-              'it saves after the mode has already changed, so it saves under the wrong tab');
+    const { createSearchState } = load([sliceFn('apps/crm/search-state.js', 'createSearchState')],
+      { Map, String });
+    const search = createSearchState({ scope: 'functions', fullTextScope: 'functions', fullTextMode: 'content' });
+    search.setText('needle'); search.toggleMode(); search.toggleRegex();
+    assert.equal(JSON.stringify(search.enter('modules')), JSON.stringify({ scope: 'modules', text: '', mode: 'name', regex: false, fullText: false }),
+      'the Functions search leaks into Modules');
+    search.setText('Accounts');
+    assert.equal(JSON.stringify(search.enter('functions')),
+      JSON.stringify({ scope: 'functions', text: 'needle', mode: 'content', regex: true, fullText: true }),
+      'leaving a tab throws away what was typed in it, or how it was being searched');
+    assert.equal(search.enter('modules').text, 'Accounts', 'arriving on a tab does not restore its own');
   });
   test('no caller can draw the name view over an active content search', () => {
     // The tab round-trip restored «in: code» + the pattern and then let rebuildTree paint the
     // name-filtered tree: a regex matched zero names and the panel said «No matches.» about a
     // search it never ran. The guard lives in renderTree itself so all eighteen callers inherit it.
     const rt = panel.slice(panel.indexOf('function renderTree'), panel.indexOf('const term', panel.indexOf('function renderTree')));
-    assert.ok(/searchMode === 'content' && \$\('find'\)\.value\.trim\(\)/.test(rt),
+    assert.ok(/search\.mode === 'content' && search\.text\.trim\(\)/.test(rt),
       'why=renderTree draws names while the box is searching code');
     assert.ok(/_searchT = setTimeout\(contentSearch, 220\)/.test(rt),
       'why=the deferral does not actually re-run the search');

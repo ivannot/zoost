@@ -123,8 +123,8 @@ const previewCurrent = (mine, op) => mine === previewLoad && op.current();
 // segments and left the panel showing the same one it always had - the preference was honoured in
 // the strip and ignored by the thing the strip is for. Null until that first render, never after.
 let viewMode = null, moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
-let searchMode = 'name', codeCache = null, _searchT = null;
-let regexMode = false;          // the .* toggle: the search text read as a pattern, full-text mode only
+const searchState = createSearchState({ scope: 'functions', fullTextScope: 'functions', fullTextMode: 'content' });
+let codeCache = null, _searchT = null;
 let searchSeq = 0;              // every runSearch() bumps it, so a content search that finished late knows it
 let workflowData = [], workflowFilter = 'all', wfIndex = new Map();
 let scheduleData = [], scheduleFilter = 'all';
@@ -2044,16 +2044,17 @@ const TREE_SORTS = {
 };
 function renderTree() {
   if (viewMode !== 'functions') return;
+  const search = searchState.snapshot();
   // A content search owns the list while it is active. Every caller that repaints the tree - a
   // pull's progress, a live save, a chip, the name toggle, a tab switch restoring its stash -
   // would otherwise draw the *name* view under a box still searching code, which is how a regex
   // came back from a tab round-trip as «No matches.» over the names. Reported. Debounced through
   // the same timer as typing, so a paint storm during a pull coalesces into one search.
-  if (searchMode === 'content' && $('find').value.trim()) {
+  if (search.mode === 'content' && search.text.trim()) {
     clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220);
     return;
   }
-  const term = $('find').value.trim().toLowerCase();
+  const term = search.text.trim().toLowerCase();
   const shown = treeData
     .filter(passRow)
     .filter((e) => !connFilterSet || connFilterSet.has(e.path))
@@ -4251,28 +4252,31 @@ $('tree').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
-$('find').oninput = runSearch;
-$('findx').onclick = () => { $('find').value = ''; runSearch(); $('find').focus(); };
+function paintSearchControls(state = searchState.snapshot()) {
+  const fullText = viewMode === 'functions' && state.mode === 'content';
+  $('find').value = state.text;
+  $('smode').textContent = fullText ? 'in: code' : 'in: names';
+  $('smode').classList.toggle('on', fullText);
+  $('find').placeholder = fullText ? MSG.findInCode : MSG.findByName;
+  $('rxmode').classList.toggle('on', state.regex);
+  $('rxmode').style.display = $('rxpick').style.display = fullText ? '' : 'none';
+  if (!fullText) $('rxmenu').classList.remove('show');
+}
+
+$('find').oninput = () => { searchState.setText($('find').value); runSearch(); };
+$('findx').onclick = () => { paintSearchControls(searchState.setText('')); runSearch(); $('find').focus(); };
 $('smode').onclick = () => {
   if (viewMode !== 'functions') return;   // full-text search applies to function code only
-  searchMode = searchMode === 'name' ? 'content' : 'name';
-  $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: code';
-  $('smode').classList.toggle('on', searchMode === 'content');
-  $('rxmode').style.display = $('rxpick').style.display = searchMode === 'content' ? '' : 'none';
-  if (searchMode !== 'content') $('rxmenu').classList.remove('show');
   // Leaving full-text with the pattern on takes the pattern with it, like the toggle going off:
   // a regex read as a name filter is a search for text that does not exist. Reported.
-  if (searchMode !== 'content' && regexMode) { regexMode = false; $('rxmode').classList.remove('on'); $('find').value = ''; }
-  $('find').placeholder = searchMode === 'name' ? MSG.findByName : MSG.findInCode;
+  paintSearchControls(searchState.toggleMode());
   runSearch();
 };
 $('rxmode').onclick = () => {
-  regexMode = !regexMode;
-  $('rxmode').classList.toggle('on', regexMode);
   // Switching the toggle off clears the box: a pattern read as a literal is a search for text
   // that does not exist, and the reader would be left staring at «no matches» for \b\d{18}\b.
   // Switching it on keeps what was typed - a literal is often the seed of the pattern.
-  if (!regexMode) $('find').value = '';
+  paintSearchControls(searchState.toggleRegex());
   runSearch();
 };
 // The saved patterns, offered where they are used. The background seeds the first two; the list
@@ -4296,11 +4300,12 @@ async function openRxMenu() {
   // says when a pattern was saved and nothing else. The Settings list keeps storage order: rows
   // being edited must not reshuffle under the hands renaming them.
   const items = (list || []).slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  const rawQ = $('find').value.trim();
+  const search = searchState.snapshot();
+  const rawQ = search.text.trim();
   // The save row exists only when there is something it could do: a pattern in the box that parses,
   // regex mode on, and a list that was actually read - saving over one that was not would overwrite
   // entries nobody has seen. A control that can do nothing goes away rather than sitting there.
-  const savable = list !== null && regexMode && rawQ && !!rxCompile(rawQ).re;
+  const savable = list !== null && search.regex && rawQ && !!rxCompile(rawQ).re;
   // A pattern already in the list is named, not re-offered: a second copy would be two menu
   // entries that search identically, and the name is how the reader finds the one they have.
   const already = savable ? items.find((x) => x.pattern === rawQ) : null;
@@ -4315,8 +4320,7 @@ async function openRxMenu() {
       // no longer offers regex would filter names by a literal `\\b\\d{18}\\b`.
       if ($('rxpick').style.display === 'none') return;
       const x = items[+b.dataset.rx];
-      $('find').value = x.pattern;
-      if (!regexMode) { regexMode = true; $('rxmode').classList.add('on'); }
+      paintSearchControls(searchState.usePattern(x.pattern));
       runSearch();
     };
   });
@@ -4371,6 +4375,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('rxmenu').classList.remove('show'); });
 
 function runSearch() {
+  const search = searchState.snapshot();
   // A contentSearch cannot be cancelled once running; what can be done is make its result refuse to
   // land. Any newer search - or the render of an emptied box - moves the sequence past it.
   searchSeq++;
@@ -4382,7 +4387,7 @@ function runSearch() {
   if (viewMode === 'schedules') { renderSchedules(); return; }
   if (viewMode === 'actions') { renderActions(); return; }
   if (viewMode === 'connections') { renderConnections(); return; }
-  if (searchMode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }
+  if (search.mode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }
   else renderTree();
 }
 
@@ -4431,10 +4436,11 @@ function paintFindMarks(root, re) {
 // The active full-text search as a compiled pattern, or null when there is nothing to paint: name
 // mode, an empty box, or a pattern that does not parse.
 function findMarkRe() {
-  if (searchMode !== 'content') return null;
-  const q = $('find').value.trim();
+  const search = searchState.snapshot();
+  if (search.mode !== 'content') return null;
+  const q = search.text.trim();
   if (!q) return null;
-  if (!regexMode) return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
+  if (!search.regex) return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
   return rxCompile(q).re || null;
 }
 
@@ -4511,9 +4517,10 @@ async function getCodeCache(op = beginWorkspaceOp()) {
 }
 async function contentSearch() {
   const op = beginWorkspaceOp();
-  const term = $('find').value.trim(); const tree = $('tree');
+  const search = searchState.snapshot();
+  const term = search.text.trim(); const tree = $('tree');
   if (!term) { renderTree(); return; }
-  const rx = regexMode ? rxCompile(term) : null;
+  const rx = search.regex ? rxCompile(term) : null;
   if (rx && rx.error) {
     // «No matches» for a pattern that never ran would be the lie this panel exists to refuse.
     tree.innerHTML = `<div class="treemsg"><b>The pattern does not parse.</b> ${escHtml(rx.error)}. Nothing was searched - fix the pattern or switch .* off.</div>`;
@@ -5749,11 +5756,9 @@ function dropFileCaches() {
  *  box. Data belongs to the workspace; the view belongs to the reader - until the workspace changes
  *  underneath it, which is this. */
 function resetView() {
-  $('find').value = '';
-  // The stashes are per *tab*, not per workspace: restored across an org change they would run one
-  // org's search - text, mode and the .* toggle together - against another. All of it goes.
-  Object.keys(findByMode).forEach((k) => delete findByMode[k]);
-  regexMode = false; $('rxmode').classList.remove('on'); $('rxmenu').classList.remove('show');
+  // The saved searches are per *tab*, not per workspace: restored across an org change they would
+  // run one org's text, mode and pattern toggle against another. All of it goes together.
+  paintSearchControls(searchState.reset());
   connectionFilter = null; connFilterSet = null;
   currentPath = null; navClear();
   $('preview').classList.remove('show'); $('resizer').classList.remove('show');
@@ -6099,28 +6104,13 @@ $('wsdel').onclick = onWsdel;
 // switching from a search in Functions to Modules showed the modules matching a function's name -
 // usually none - and the reader had to notice the box was still full to understand why. Reported as
 // disorienting, and it is: the box says «I am filtering» about a list that never asked.
-const findByMode = {};
-
 function setMode(mode) {
-  // The text and *how* it is searched are one thing: putting away «needle» without «in: code» and
-  // handing it back as a name search means the same box quietly means something else on the way
-  // back. Reported. Saved and restored together.
-  if (viewMode && viewMode !== mode) findByMode[viewMode] = { text: $('find').value, mode: searchMode, rx: regexMode };
   viewMode = mode;
-  // Restored, not cleared: coming back to a tab you were searching in should find it as you left it.
-  const back = findByMode[mode] || { text: '', mode: 'name' };
-  $('find').value = back.text;
-  regexMode = !!back.rx;
-  $('rxmode').classList.toggle('on', regexMode);
-  if (mode === 'functions' && back.mode === 'content') {
-    searchMode = 'content'; $('smode').textContent = 'in: code'; $('smode').classList.add('on');
-    $('find').placeholder = MSG.findInCode;   // the label said code and the box said name
-  }
+  // Text, interpretation and pattern mode are restored as one value. The pure state object also
+  // guarantees that a non-function tab cannot inherit the code interpretation.
+  paintSearchControls(searchState.enter(mode));
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
-  if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
-  $('rxmode').style.display = $('rxpick').style.display = mode === 'functions' && searchMode === 'content' ? '' : 'none';
-  if (!(mode === 'functions' && searchMode === 'content')) $('rxmenu').classList.remove('show');
   $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
   // A jump can land on a tab the reader hid in Settings - a health row, an «Used in» link, a step of
   // the history. `renderTabs()` gives the tab you are *on* a segment even when it is hidden, and
@@ -7108,6 +7098,7 @@ setInterval(refreshContext, 5000);
 function reportFacts(err, ai) {
   const m = chrome.runtime.getManifest();
   const ua = navigator.userAgent.match(/Chrome\/(\d+)/);
+  const search = searchState.snapshot();
   return {
     product: m.name,
     version: m.version,
@@ -7115,7 +7106,7 @@ function reportFacts(err, ai) {
     message: (err && (err.message || err)) || $('stxt').textContent,
     stack: (err && err.stack) || '',
     tab: viewMode || '?',
-    search: searchMode === 'content' ? (regexMode ? 'code, pattern' : 'code') : 'names',
+    search: search.mode === 'content' ? (search.regex ? 'code, pattern' : 'code') : 'names',
     pullActive: !!pullBusy,
     sample: isSample(),
     counts: {
