@@ -1,3 +1,4 @@
+// @ts-check
 /* Workspace entry points, without DOM or Chrome state.
  *
  * The panel supplies facts and adapters; this file owns the order of the use case and turns state
@@ -5,6 +6,16 @@
  * of the workspace rules.
  */
 
+/** @typedef {{
+ * refuse: () => boolean, root: () => any, pickRoot: () => Promise<void>,
+ * ensurePermission: (folder: any) => Promise<boolean>, permissionRefused: () => void,
+ * folderWasGranted: () => boolean, refreshAfterGrant: () => Promise<void>,
+ * context: () => Promise<any>, contextMissing: () => void,
+ * findExisting: (context: any) => any, openExisting: (workspace: any) => Promise<any>,
+ * create: (context: any) => Promise<any>
+ * }} WorkspaceEntrySteps */
+
+/** @param {WorkspaceEntrySteps} step */
 async function runWorkspaceEntry(step) {
   if (step.refuse()) return { outcome: 'refused' };
   let folder = step.root();
@@ -32,6 +43,7 @@ async function runWorkspaceEntry(step) {
   return { outcome: 'create-attempted', value };
 }
 
+/** @param {any} have @param {boolean} knowable @param {boolean} busy */
 function sampleWorkspaceView(have, knowable, busy) {
   const mode = have ? 'open' : knowable ? 'create' : 'unknown';
   return {
@@ -49,6 +61,9 @@ function sampleWorkspaceView(have, knowable, busy) {
   };
 }
 
+/** @param {any} existing @param {boolean} pullBusy
+ * @param {{org?: string, instance?: string}|null} context
+ * @param {string|null} rootName @param {boolean} rootGranted */
 function addWorkspaceView(existing, pullBusy, context, rootName, rootGranted) {
   const hasContext = !!(context && context.org);
   const instance = context && context.instance;
@@ -63,11 +78,22 @@ function addWorkspaceView(existing, pullBusy, context, rootName, rootGranted) {
   };
 }
 
+/**
+ * @typedef {'ready'|'partial'|'behind'|'unavailable'|'not-read'} WorkspaceAreaStatus
+ * @typedef {'pull'|'refresh'|'retry'|'health'|null} WorkspaceIssueAction
+ * @typedef {{text: string, action: WorkspaceIssueAction}} WorkspaceIssue
+ * @typedef {{id?: string, label?: string, count?: number|null, pulledAt?: string|null,
+ *   unavailable?: boolean, partial?: boolean, behind?: boolean}} WorkspaceAreaInput
+ * @typedef {{workspace?: any, name?: string, sample?: boolean, lastPull?: string|null,
+ *   areas?: WorkspaceAreaInput[], issues?: Array<string|{text: string, action?: WorkspaceIssueAction}>}} WorkspaceOverviewInput
+ */
+
 /** A renderer-independent summary of one local workspace.
  *
  * The panel supplies only facts it has already read from disk. In particular, an absent count is
  * kept absent: the overview must not turn an unreadable or never-pulled area into a zero.
  */
+/** @param {WorkspaceOverviewInput} input */
 function workspaceOverviewModel(input = {}) {
   const areas = (input.areas || []).map((area) => {
     const status = area.unavailable ? 'unavailable'
@@ -88,7 +114,48 @@ function workspaceOverviewModel(input = {}) {
     sample: !!input.sample,
     lastPull: input.lastPull || null,
     areas,
-    issues: (input.issues || []).filter(Boolean).map(String),
+    issues: (input.issues || []).filter((issue) => typeof issue === 'string' ? !!issue : !!(issue && issue.text))
+      .map((issue) => typeof issue === 'string'
+        ? { text: issue, action: null }
+        : { text: String(issue.text), action: issue.action || null }),
     ready: areas.filter((area) => area.status === 'ready').length,
   };
+}
+
+/**
+ * The short first-use path shown inside Overview. This is deliberately a projection of facts the
+ * panel already has, not a saved tutorial flag: closing a tip must never become evidence that a
+ * pull or an exploration happened.
+ *
+ * @param {{sample?: boolean, mirrorReady?: boolean}} input
+ * @returns {{visible: boolean, nextAction: 'pull'|'browse', steps: Array<{
+ *   id: 'workspace'|'mirror'|'explore', label: string, detail: string,
+ *   state: 'done'|'current'|'pending'
+ * }>}}
+ */
+function workspaceOnboardingModel(input = {}) {
+  const sample = !!input.sample;
+  const mirrorReady = !!input.mirrorReady;
+  return {
+    // A returning real workspace opens where the reader left it. The sample remains the guided
+    // tour: it is explicitly chosen for learning and cannot be pulled from Zoho.
+    visible: sample || !mirrorReady,
+    nextAction: mirrorReady ? 'browse' : 'pull',
+    steps: [
+      { id: 'workspace', label: 'Workspace ready', detail: 'Local folder selected', state: 'done' },
+      { id: 'mirror', label: sample ? 'Sample ready' : 'Copy from Zoho',
+        detail: sample ? 'Invented data is already local' : mirrorReady ? 'Local mirror created' : 'Run Pull all',
+        state: mirrorReady ? 'done' : 'current' },
+      { id: 'explore', label: 'Open the first item',
+        detail: mirrorReady ? 'Browse, search or open the diagram' : 'Available after the first pull',
+        state: mirrorReady ? 'current' : 'pending' },
+    ],
+  };
+}
+
+/** Resolve an Overview action without giving the renderer ownership of the use case.
+ * @param {string} action @param {Record<string, Function>} handlers */
+function workspaceOverviewAction(action, handlers = {}) {
+  if (!['pull', 'refresh', 'retry', 'health', 'browse'].includes(action)) return null;
+  return typeof handlers[action] === 'function' ? handlers[action] : null;
 }

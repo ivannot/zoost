@@ -226,7 +226,7 @@ renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b44d36ae2b45	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	5ca323768259	d849a1f86647	divergent
-renderOverview	04c036a56ea6	b4bf9d1925d4	divergent
+renderOverview	3b5a68bcf76b	03efc77c4d41	divergent
 renderRx	9515db04e268	9515db04e268	identical
 reportFacts	3c2ae6bd3f33	248550e497da	divergent
 reportFoot	5369198eb387	5369198eb387	identical
@@ -288,6 +288,8 @@ wireAsideFold	f549a11bd896	f549a11bd896	identical
 wireForget	b03a0a24ed6f	b03a0a24ed6f	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
 workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
+workspaceOnboardingModel	44136fa355b3	44136fa355b3	identical
+workspaceOverviewAction	44136fa355b3	44136fa355b3	identical
 workspaceOverviewModel	44136fa355b3	44136fa355b3	identical
 writeActiveWhenStillCurrent	5d27a20f05b3	5d27a20f05b3	identical
 writeFileAt	d6a3e4360b80	d6a3e4360b80	identical

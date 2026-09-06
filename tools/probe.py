@@ -113,6 +113,9 @@ CRM = """
       if (!/^[0-9]+$/.test(card.querySelector('.ovcount').textContent.trim()))
         say('the CRM sample overview presented an area count as unknown: ' + card.textContent);
     }
+    if (document.querySelectorAll('.ovstep').length !== 3) say('the CRM sample did not draw the three-step onboarding path');
+    if (!document.querySelector('.ovstep[data-step="mirror"].done')) say('the CRM sample did not say its invented mirror is ready');
+    if (!$('ovbrowse').classList.contains('next')) say('the CRM sample did not identify Browse as the next action');
     if (getComputedStyle($('ovpull')).display !== 'none') say('the CRM sample overview offered a pull from Zoho');
     $('ovbrowse').click();
     await until(() => !$('overviewview').classList.contains('show'), 'Browse did not close the CRM overview');
@@ -970,6 +973,9 @@ AN = """
       if (!/^[0-9]+$/.test(card.querySelector('.ovcount').textContent.trim()))
         say('the Analytics sample overview presented an area count as unknown: ' + card.textContent);
     }
+    if (document.querySelectorAll('.ovstep').length !== 3) say('the Analytics sample did not draw the three-step onboarding path');
+    if (!document.querySelector('.ovstep[data-step="mirror"].done')) say('the Analytics sample did not say its invented mirror is ready');
+    if (!$('ovbrowse').classList.contains('next')) say('the Analytics sample did not identify Browse as the next action');
     if (getComputedStyle($('ovpull')).display !== 'none') say('the Analytics sample overview offered a pull from Zoho');
     $('ovbrowse').click();
     await until(() => !$('overviewview').classList.contains('show'), 'Browse did not close the Analytics overview');

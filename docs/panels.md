@@ -122,6 +122,14 @@ DOM and the shortcuts to Browse, Pull all, the diagram and Health. The sample ne
 Like Health, AI and History, the overview is one full-panel view and a workspace change redraws it;
 losing the workspace closes it so it cannot keep showing the previous folder.
 
+**The first-use path is derived, not remembered.** A new real workspace has no completed mirror, so
+Overview points at Pull all; the sample already has an invented mirror, so it points at Browse. No
+“tutorial dismissed” flag is allowed to stand in for either fact. Returning real workspaces are not
+put through onboarding again. `workspaceOnboardingModel()` owns those states and
+`workspaceOverviewAction()` is the narrow action contract shared by the DOM renderer and any future
+UI experiment. An issue in Overview is actionable only through that contract: a broken local mirror
+offers the pull that repairs it, a failed Analytics item offers Retry, and a census gap opens Health.
+
 **Anything that is not Zoho opens in its own window, never a tab.** `chrome.tabs.create` *activates*
 the new tab, so the panel suddenly finds itself looking at a non-Zoho page: the environment guard
 fires, the interface empties and the mismatch overlay appears. That is right when it means something

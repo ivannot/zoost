@@ -85,7 +85,7 @@ test('both panels: workspace overview preserves unknown and partial local covera
     ], { String, Number, Array, Object });
     const model = workspaceOverviewModel({
       workspace: {}, name: 'Acme', lastPull: '2026-09-06T10:00:00Z',
-      issues: ['', 'one file is unreadable'],
+      issues: ['', 'one file is unreadable', { text: 'Pull stopped', action: 'pull' }],
       areas: [
         { id: 'ready', label: 'Ready area', count: 12, pulledAt: '2026-09-06T10:00:00Z' },
         { id: 'unknown', label: 'Unknown area', count: undefined },
@@ -97,7 +97,41 @@ test('both panels: workspace overview preserves unknown and partial local covera
     assert.equal(model.ready, 1, app);
     assert.deepEqual(Array.from(model.areas, (area) => [area.count, area.status]),
       [[12, 'ready'], [null, 'not-read'], [7, 'partial'], [4, 'unavailable']], app);
-    assert.deepEqual(Array.from(model.issues), ['one file is unreadable'], app);
+    assert.deepEqual(Array.from(model.issues, (issue) => [issue.text, issue.action]),
+      [['one file is unreadable', null], ['Pull stopped', 'pull']], app);
+  }
+});
+
+test('both panels: onboarding names one next action without inventing progress', () => {
+  for (const app of ['crm', 'analytics']) {
+    const { workspaceOnboardingModel } = load([
+      sliceFn(`apps/${app}/workspace.js`, 'workspaceOnboardingModel'),
+    ], { String, Boolean, Array, Object });
+    const fresh = workspaceOnboardingModel({ sample: false, mirrorReady: false });
+    assert.equal(fresh.visible, true, app);
+    assert.equal(fresh.nextAction, 'pull', app);
+    assert.deepEqual(Array.from(fresh.steps, (step) => step.state), ['done', 'current', 'pending'], app);
+
+    const sample = workspaceOnboardingModel({ sample: true, mirrorReady: true });
+    assert.equal(sample.nextAction, 'browse', app);
+    assert.deepEqual(Array.from(sample.steps, (step) => step.state), ['done', 'done', 'current'], app);
+
+    const established = workspaceOnboardingModel({ sample: false, mirrorReady: true });
+    assert.equal(established.visible, false, `${app}: a normal returning workspace is forced through onboarding again`);
+    assert.equal(established.nextAction, 'browse', app);
+  }
+});
+
+test('both panels: Overview resolves only declared actions', () => {
+  for (const app of ['crm', 'analytics']) {
+    const { workspaceOverviewAction } = load([
+      sliceFn(`apps/${app}/workspace.js`, 'workspaceOverviewAction'),
+    ], { Array, Object });
+    const pull = () => 'pulled';
+    assert.equal(workspaceOverviewAction('pull', { pull }), pull, app);
+    assert.equal(workspaceOverviewAction('delete', { delete: () => 'deleted' }), null,
+      `${app}: an action outside the Overview contract reached a handler`);
+    assert.equal(workspaceOverviewAction('retry', {}), null, app);
   }
 });
 
@@ -107,6 +141,7 @@ test('analytics: an interrupted mirror is not presented as four ready empty area
     set innerHTML(value) { html = value; },
     get innerHTML() { return html; },
     querySelector: () => ({}),
+    querySelectorAll: () => [],
   };
   const elements = {
     ws: { selectedOptions: [{ textContent: 'Interrupted workspace' }] },
@@ -115,10 +150,12 @@ test('analytics: an interrupted mirror is not presented as four ready empty area
   const rel = 'apps/analytics/sidepanel.js';
   const m = load([
     sliceFn('apps/analytics/workspace.js', 'workspaceOverviewModel'),
+    sliceFn('apps/analytics/workspace.js', 'workspaceOnboardingModel'),
+    sliceFn('apps/analytics/workspace.js', 'workspaceOverviewAction'),
     sliceConst(rel, 'OVERVIEW_STATE'), sliceFn(rel, 'renderOverview'),
   ], {
     String, Number, Array, Object, Set, Date, isNaN,
-    $: (id) => elements[id], esc: String,
+    $: (id) => elements[id], esc: String, escA: String,
     dir: {}, bound: { name: 'Interrupted workspace', lastPull: '2026-09-05T10:00:00Z' },
     views: [], viewsPulledAt: null, schema: {}, relations: [], sqls: {},
     diskUnreadableAll: [], pullFailed: [], pullInterrupted: true,
@@ -140,6 +177,7 @@ test('analytics: a newly created workspace has unknown counts, not four measured
     set innerHTML(value) { html = value; },
     get innerHTML() { return html; },
     querySelector: () => ({}),
+    querySelectorAll: () => [],
   };
   const elements = {
     ws: { selectedOptions: [{ textContent: 'New workspace' }] },
@@ -148,10 +186,12 @@ test('analytics: a newly created workspace has unknown counts, not four measured
   const rel = 'apps/analytics/sidepanel.js';
   const m = load([
     sliceFn('apps/analytics/workspace.js', 'workspaceOverviewModel'),
+    sliceFn('apps/analytics/workspace.js', 'workspaceOnboardingModel'),
+    sliceFn('apps/analytics/workspace.js', 'workspaceOverviewAction'),
     sliceConst(rel, 'OVERVIEW_STATE'), sliceFn(rel, 'renderOverview'),
   ], {
     String, Number, Array, Object, Set, Date, isNaN,
-    $: (id) => elements[id], esc: String,
+    $: (id) => elements[id], esc: String, escA: String,
     dir: {}, bound: { name: 'New workspace', lastPull: null },
     views: [], viewsPulledAt: null, schema: {}, relations: [], sqls: {},
     diskUnreadableAll: [], pullFailed: [], pullInterrupted: false,
@@ -170,6 +210,7 @@ test('crm: an area excluded before its first pull is not reported as an unreadab
     set innerHTML(value) { html = value; },
     get innerHTML() { return html; },
     querySelector: () => ({}),
+    querySelectorAll: () => [],
   };
   const elements = {
     ws: { selectedOptions: [{ textContent: 'CRM workspace' }] },
@@ -179,10 +220,12 @@ test('crm: an area excluded before its first pull is not reported as an unreadab
   const rel = 'apps/crm/sidepanel.js';
   const m = load([
     sliceConst(rel, 'pulledAt'), sliceConst(rel, 'OVERVIEW_STATE'),
-    sliceFn('apps/crm/workspace.js', 'workspaceOverviewModel'), sliceFn(rel, 'renderOverview'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOverviewModel'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOnboardingModel'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOverviewAction'), sliceFn(rel, 'renderOverview'),
   ], {
     String, Number, Array, Object, Set, Date, isNaN,
-    $: (id) => elements[id], escHtml: String,
+    $: (id) => elements[id], escHtml: String, escA: String,
     beginWorkspaceOp: () => ({
       current: () => true,
       read: async (path) => { if (path === 'connections/index.json') throw missing; return '[]'; },
@@ -200,6 +243,44 @@ test('crm: an area excluded before its first pull is not reported as an unreadab
     'an intentionally excluded, never-read area was labelled as a damaged local file');
   assert.doesNotMatch(html, /local index file\(s\) could not be read/,
     'a normal missing file for an excluded area raised a false repair warning');
+});
+
+test('crm: Pull all in Overview pulls every area, not only functions', async () => {
+  const nodes = new Map();
+  const body = {
+    innerHTML: '',
+    querySelector: (selector) => {
+      if (!nodes.has(selector)) nodes.set(selector, {});
+      return nodes.get(selector);
+    },
+    querySelectorAll: () => [],
+  };
+  const elements = {
+    ws: { selectedOptions: [{ textContent: 'New CRM workspace' }] },
+    graph: { disabled: true }, health: { disabled: true }, overviewbody: body,
+  };
+  let functions = 0, everything = 0;
+  const rel = 'apps/crm/sidepanel.js';
+  const m = load([
+    sliceConst(rel, 'pulledAt'), sliceConst(rel, 'OVERVIEW_STATE'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOverviewModel'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOnboardingModel'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOverviewAction'), sliceFn(rel, 'renderOverview'),
+  ], {
+    String, Number, Array, Object, Set, Date, isNaN,
+    $: (id) => elements[id], escHtml: String, escA: String,
+    beginWorkspaceOp: () => ({ current: () => true, read: async () => '[]' }),
+    TABS: [{ id: 'functions', label: 'Functions' }], tabAccess: {}, wsLastPull: null,
+    bound: {}, dir: {}, isSample: () => false, isForbidden: () => false,
+    areaStale: () => false, unreadableMetas: [], listGap: null,
+    closeOverview: () => {}, pullAll: () => { functions++; },
+    pullEverything: () => { everything++; }, openGraph: () => {}, openHealth: () => {},
+    onRefresh: () => {},
+  });
+  await m.renderOverview();
+  nodes.get('#ovpull').onclick();
+  assert.equal(everything, 1, 'the Overview promised Pull all but did not start the all-area pull');
+  assert.equal(functions, 0, 'the all-area control silently ran the functions-only pull');
 });
 
 test('crm: the list model applies every narrowing before it orders the rows', () => {

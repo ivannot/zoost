@@ -245,7 +245,7 @@ lifted out of the panels and run in isolation, which proves the logic and not th
 1. On a Zoho CRM tab, click **+ Workspace** in the panel. On the first run the same action asks for
    one dedicated **working folder**, creates `crm/instance[-sandbox]-orgid` inside it and selects the
    workspace. Each Zoost product keeps its own subfolder, so one working folder can serve them all.
-2. The new workspace opens on **Overview**: check what is already local, then click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules, actions and connections.
+2. The new workspace opens on **Overview**. Its three-step path marks the next action: create the local mirror with **Pull all**, then browse the first item. The sample starts at Browse because its invented mirror is already local.
 3. Optional: `git init` in the workspace folder to start versioning. Everything else works without it.
 4. Explore: open a function, follow its links, open the **Wiring** diagram, run **Health** (♥), or **Export**.
 5. (Optional) **Settings → AI assistant** to set up the assistant (see below).

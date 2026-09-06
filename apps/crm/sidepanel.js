@@ -5774,10 +5774,11 @@ async function renderOverview() {
       unavailable: isForbidden(tab.id) || unreadIndexes.has(tab.id), behind: areaStale(tab.id),
       partial: tab.id === 'functions' && unreadableMetas.length > 0,
     })),
-    issues: [unreadableMetas.length ? `${unreadableMetas.length} local function file(s) could not be read.` : '',
-      unreadIndexes.size ? `${unreadIndexes.size} local index file(s) could not be read.` : '',
-      listGap ? 'The functions census has a coverage gap.' : ''],
+    issues: [unreadableMetas.length ? { text: `${unreadableMetas.length} local function file(s) could not be read.`, action: 'pull' } : '',
+      unreadIndexes.size ? { text: `${unreadIndexes.size} local index file(s) could not be read.`, action: 'pull' } : '',
+      listGap ? { text: 'The functions census has a coverage gap.', action: 'health' } : ''],
   });
+  const onboarding = workspaceOnboardingModel({ sample: model.sample, mirrorReady: model.sample || !!model.lastPull });
   const when = (value) => {
     if (!value) return 'Never pulled';
     const date = new Date(value);
@@ -5786,16 +5787,28 @@ async function renderOverview() {
   const body = $('overviewbody');
   body.innerHTML = `<div class="ovtitle">${escHtml(model.name)}</div>`
     + `<div class="ovmeta">${model.sample ? 'Sample workspace - invented data' : `Last pull: ${escHtml(when(model.lastPull))}`}</div>`
+    + (onboarding.visible ? `<section class="ovstart"><h3>Getting started</h3><div class="ovsteps">${onboarding.steps.map((step) => `<div class="ovstep ${escA(step.state)}" data-step="${escA(step.id)}"><i>${step.state === 'done' ? '✓' : step.state === 'current' ? '→' : ''}</i><b>${escHtml(step.label)}</b><small>${escHtml(step.detail)}</small></div>`).join('')}</div></section>` : '')
     + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard"><div class="ovlabel">${escHtml(area.label)}</div>`
       + `<div class="ovcount">${area.count === null ? '—' : area.count}</div><div class="ovstate ${area.status}">${OVERVIEW_STATE[area.status]}`
       + `${area.pulledAt ? ` · ${escHtml(when(area.pulledAt))}` : ''}</div></div>`).join('')}</div>`
-    + (model.issues.length ? `<div class="ovissues">${model.issues.map(escHtml).join('<br>')}</div>` : '')
-    + `<div class="ovactions"><button id="ovbrowse">Browse</button><button id="ovpull" class="zbtn"${model.sample ? ' hidden' : ''}>Pull all</button>`
+    + (model.issues.length ? `<div class="ovissues">${model.issues.map((issue) => `<button class="ovissue" data-action="${escA(issue.action || '')}"${issue.action ? '' : ' disabled'}>${escHtml(issue.text)}${issue.action ? `<span>${issue.action === 'health' ? 'Review' : 'Repair'} →</span>` : ''}</button>`).join('')}</div>` : '')
+    + `<div class="ovactions"><button id="ovbrowse"${onboarding.nextAction === 'browse' ? ' class="next"' : ''}>Browse</button><button id="ovpull" class="zbtn${onboarding.nextAction === 'pull' ? ' next' : ''}"${model.sample ? ' hidden' : ''}>Pull all</button>`
     + `<button id="ovgraph" class="lbtn"${$('graph').disabled ? ' disabled' : ''}>Wiring</button><button id="ovhealth" class="pbtn"${$('health').disabled ? ' disabled' : ''}>Health</button></div>`;
   body.querySelector('#ovbrowse').onclick = closeOverview;
-  body.querySelector('#ovpull').onclick = () => { closeOverview(); void pullAll(); };
+  body.querySelector('#ovpull').onclick = () => { closeOverview(); void pullEverything(); };
   body.querySelector('#ovgraph').onclick = () => { closeOverview(); void openGraph(); };
   body.querySelector('#ovhealth').onclick = () => { closeOverview(); void openHealth(); };
+  body.querySelectorAll('.ovissue[data-action]').forEach((button) => {
+    button.onclick = () => {
+      const run = workspaceOverviewAction(button.dataset.action, {
+        pull: () => { void pullEverything(); }, refresh: () => { void onRefresh(); },
+        health: () => { void openHealth(); },
+      });
+      if (!run) return;
+      closeOverview();
+      run();
+    };
+  });
 }
 function openOverview() {
   if (!dir) return;

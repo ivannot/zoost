@@ -434,7 +434,12 @@
   .ovcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;min-width:0}
   .ovlabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.35px}.ovcount{font:17px var(--mono);margin:3px 0}.ovstate{font-size:10.5px;color:var(--muted)}
   .ovstate.partial,.ovstate.unavailable,.ovstate.behind{color:var(--warn)}.ovissues{margin:12px 0;padding:8px 10px;border-left:2px solid var(--warn);background:var(--surface);font-size:11px;line-height:1.5}
+  .ovissue{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;padding:4px 0;width:100%;border:0;background:none;color:var(--ink);text-align:left}.ovissue + .ovissue{border-top:1px solid var(--border)}.ovissue span{color:var(--warn);white-space:nowrap}.ovissue:hover:not(:disabled){background:none;color:#fff}
+  .ovstart{margin:0 0 14px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+  .ovstart h3{margin:0 0 8px;font-size:12px}.ovsteps{display:grid;gap:6px}.ovstep{display:grid;grid-template-columns:18px 1fr;column-gap:6px;font-size:11px;color:var(--muted)}
+  .ovstep i{grid-row:1/3;width:16px;height:16px;border:1px solid var(--border);border-radius:50%;font-style:normal;text-align:center;line-height:14px}.ovstep b{color:var(--ink);font-weight:600}.ovstep small{font-size:10px}.ovstep.done i{border-color:var(--ok);color:var(--ok)}.ovstep.current i{border-color:var(--warn);color:var(--warn)}.ovstep.pending{opacity:.65}
   .ovactions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.ovactions button{font-size:11px}
+  .ovactions button.next{box-shadow:0 0 0 2px rgba(245,158,11,.22);border-color:var(--warn)}
 
   .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
   /* Only the *first* b is the heading. The rule used to hit every one, so a control named inline -
