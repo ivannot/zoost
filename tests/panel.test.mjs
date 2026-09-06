@@ -1214,27 +1214,38 @@ test('nothing selected, or something with no focus to give, adds nothing', async
 
 // ---------- absent when there is nothing to do, disabled when merely not yet ----------
 
-// The rule the panels follow, extracted so both readings of it are pinned: a permanent "no" hides
-// the control, a temporary one greys it. Mixing them is what made "+ Workspace" look broken — it
-// was disabled for a reason that would never clear.
-function addButtonState({ root, ctx, known }) {
-  return { hidden: !!known, disabled: !root || !ctx };
+// This is the first panel state that lives outside its renderer. Drive the shipped view model, not a
+// test-side copy: the copy survived after choosing the folder became part of the action and still
+// claimed that no folder disabled the button.
+function addButtonState(app, { root, ctx, known, busy = false }) {
+  const { addWorkspaceView } = load([sliceFn(`apps/${app}/workspace-view.js`, 'addWorkspaceView')]);
+  const context = ctx ? (app === 'crm' ? { org: '44', instance: 'Acme' } : { workspace: '77' }) : null;
+  return addWorkspaceView(known, busy, context, root ? 'Zoost' : null, !!root,
+    busy ? 'the panel is busy' : null);
 }
 
 test('a workspace that already exists hides the button rather than grey it', () => {
-  const st = addButtonState({ root: true, ctx: true, known: true });
-  assert.equal(st.hidden, true, 'nothing here will ever become available');
+  for (const app of ['crm', 'analytics']) {
+    const st = addButtonState(app, { root: true, ctx: true, known: true });
+    assert.equal(st.hidden, true, `${app}: nothing here will ever become available`);
+  }
 });
 
-test('the reasons that clear on their own leave it visible and disabled', () => {
-  // No working folder, no Zoho tab: both are waits, and a button that says what is missing is
-  // more use than one that has vanished.
-  assert.deepEqual(addButtonState({ root: false, ctx: true, known: false }), { hidden: false, disabled: true });
-  assert.deepEqual(addButtonState({ root: true, ctx: false, known: false }), { hidden: false, disabled: true });
+test('the workspace action can choose its folder, but cannot invent a Zoho context', () => {
+  for (const app of ['crm', 'analytics']) {
+    assert.equal(addButtonState(app, { root: false, ctx: true, known: false }).disabled, false,
+      `${app}: the action cannot start until a separate folder action has been performed`);
+    assert.equal(addButtonState(app, { root: true, ctx: false, known: false }).disabled, true,
+      `${app}: the action is enabled without a Zoho workspace to bind`);
+  }
 });
 
 test('ready to act: visible and enabled', () => {
-  assert.deepEqual(addButtonState({ root: true, ctx: true, known: false }), { hidden: false, disabled: false });
+  for (const app of ['crm', 'analytics']) {
+    const st = addButtonState(app, { root: true, ctx: true, known: false });
+    assert.equal(st.hidden, false, `${app}: a missing workspace is hidden`);
+    assert.equal(st.disabled, false, `${app}: a ready workspace action is disabled`);
+  }
 });
 
 // ---------- which links belong in the Zoho tab, and which get their own window ----------
@@ -3723,8 +3734,10 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
     assert.ok(/offoverlay'\)\.classList\.remove\('show'\)/.test(fn),
       `${app}: the overlay stays up over the progress, which is what made pressing again look reasonable`);
     // the label still has to say which of the two it will do
-    const lbl = js.slice(js.indexOf("const ob = $('offsample')"), js.indexOf("const ob = $('offsample')") + 400);
-    assert.ok(/have \? 'Open sample workspace'/.test(lbl),
+    const { sampleWorkspaceView } = load([
+      sliceFn(`apps/${app}/workspace-view.js`, 'sampleWorkspaceView'),
+    ]);
+    assert.equal(sampleWorkspaceView({ id: 'sample' }, true, false).overlayLabel, 'Open sample workspace',
       `${app}: the button says «+ Sample workspace» even when one already exists`);
     assert.ok(/without signing in anywhere/.test(ov),
       `${app}: the overlay does not say the sample needs no account, which is the whole point`);
@@ -3866,6 +3879,7 @@ test('the sample entry point stays available on a Zoho tab and states what it wi
         $: (id) => els[id],
       };
       const { updateSampleButtons } = load([
+        sliceFn(`apps/${app}/workspace-view.js`, 'sampleWorkspaceView'),
         sliceFn(rel, 'knownSample'), sliceConst(rel, 'sampleKnowable'),
         sliceFn(rel, 'updateSampleButtons'),
       ], globals);
@@ -3924,8 +3938,10 @@ test('the panel does not claim what it has not looked at, and a poll does not un
     const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
     assert.ok(/const sampleKnowable = \(\) => !!\(root && rootGranted\) \|\| !!sampleWsKnown;/.test(js),
       `${app}: nothing distinguishes «there is none» from «I have not looked»`);
-    const lbl = js.slice(js.indexOf("const ob = $('offsample')"), js.indexOf("const ob = $('offsample')") + 700);
-    assert.ok(/knowable \? '\+ Sample workspace' : 'Sample workspace'/.test(lbl),
+    const { sampleWorkspaceView } = load([
+      sliceFn(`apps/${app}/workspace-view.js`, 'sampleWorkspaceView'),
+    ]);
+    assert.equal(sampleWorkspaceView(null, false, false).overlayLabel, 'Sample workspace',
       `${app}: the button still says «+ Sample workspace» when it cannot tell`);
     assert.ok(/toggle\('show', !isSample\(\) && !sampleBusy\)/.test(js),
       `${app}: the overlay is derived without knowing a sample is being written, so the poll brings it back`);

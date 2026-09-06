@@ -1250,14 +1250,7 @@ function updateButtons() {
   // Same rule as the CRM panel, and the same reason. Analytics had no such check at all: it left
   // the button offering to "create" a workspace that already existed, and reopened the same folder.
   // Harmless, and still a control saying it will do something it will not.
-  const known = (wsList || []).some((w) => ctx && ctx.workspace && String(w.id) === String(ctx.workspace));
-  $('wsadd').hidden = known;
-  // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
-  // decided in one place, because they were decided in two and disagreed.
-  updateSampleButtons();
-  // Folder selection and a lapsed permission are handled inside the action. It grants first,
-  // refreshes the list, then opens an existing workspace or creates the missing one.
-  $('wsadd').disabled = pullBusy || busy || !ctx || !ctx.workspace;
+  const known = (wsList || []).find((w) => ctx && ctx.workspace && String(w.id) === String(ctx.workspace));
   $('wsdel').disabled = pullBusy || busy || !dir || !wsList.length;
   $('wsrename').disabled = pullBusy || busy || !dir || !wsList.length;
   // Why each is grey, in the order the states block each other - the same order `emptyReason()`
@@ -1274,11 +1267,14 @@ function updateButtons() {
       : !root ? 'no working folder yet - press the folder button'
         : !rootGranted ? 'folder access is not granted - press Grant access'
           : null;
-  $('wsadd').title = !$('wsadd').disabled
-    ? !root ? 'Choose a working folder and create the workspace in the active tab'
-      : !rootGranted ? `Grant access to ${root.name}, then open or create the workspace in the active tab`
-        : 'Create a workspace for the one in the active tab'
-    : `Cannot create a workspace: ${pullBusy || busy ? wsWhy : 'the active tab is not on a Zoho Analytics workspace'}`;
+  const addView = addWorkspaceView(known, pullBusy || busy, ctx, root && root.name, rootGranted, wsWhy);
+  $('wsadd').hidden = addView.hidden;
+  $('wsadd').disabled = addView.disabled;
+  $('wsadd').textContent = addView.label;
+  $('wsadd').title = addView.title;
+  // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
+  // decided in one place, because they were decided in two and disagreed.
+  updateSampleButtons();
   // Written out rather than looped: the check that holds this rule reads `$('id').title`, and a loop
   // over the ids hides it from the one thing that keeps it true. Two buttons, two lines.
   $('wsdel').title = !$('wsdel').disabled ? 'Remove this workspace from the folder'
@@ -3988,32 +3984,25 @@ function knownSample() {
  */
 const sampleKnowable = () => !!(root && rootGranted) || !!sampleWsKnown;
 function updateSampleButtons() {
-  const have = knownSample();
-  const knowable = sampleKnowable();
-  const title = have
-    ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
-    : knowable
-      ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
-      : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
+  const view = sampleWorkspaceView(knownSample(), sampleKnowable(), pullBusy || sampleBusy);
   const sb = $('wssample');
   if (sb) {
     sb.hidden = false;
-    sb.disabled = pullBusy || sampleBusy;
-    sb.textContent = have ? 'Open sample' : knowable ? '+ Sample' : 'Sample';
-    sb.title = title;
+    sb.disabled = view.disabled;
+    sb.textContent = view.buttonLabel;
+    sb.title = view.title;
   }
   // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
   if (ob) {
-    ob.disabled = pullBusy || sampleBusy;
+    ob.disabled = view.disabled;
     // Three states, because «+» and «Open» are both claims and there is a moment when neither can be
     // made. `+` says «there is none» and `Open` says «there is one»; with the folder unread the
     // honest label asserts nothing and the tooltip says the click will find out. This project does
     // not state what it has not measured, and a button label is a statement like any other.
-    ob.textContent = have ? 'Open sample workspace'
-      : knowable ? '+ Sample workspace' : 'Sample workspace';
-    ob.title = title;
+    ob.textContent = view.overlayLabel;
+    ob.title = view.title;
   }
 }
 

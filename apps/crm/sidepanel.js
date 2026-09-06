@@ -5509,32 +5509,25 @@ function knownSample() {
  */
 const sampleKnowable = () => !!(root && rootGranted) || !!sampleWsKnown;
 function updateSampleButtons() {
-  const have = knownSample();
-  const knowable = sampleKnowable();
-  const title = have
-    ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
-    : knowable
-      ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
-      : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
+  const view = sampleWorkspaceView(knownSample(), sampleKnowable(), pullBusy || sampleBusy);
   const sb = $('wssample');
   if (sb) {
     sb.hidden = false;
-    sb.disabled = pullBusy || sampleBusy;
-    sb.textContent = have ? 'Open sample' : knowable ? '+ Sample' : 'Sample';
-    sb.title = title;
+    sb.disabled = view.disabled;
+    sb.textContent = view.buttonLabel;
+    sb.title = view.title;
   }
   // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
   if (ob) {
-    ob.disabled = pullBusy || sampleBusy;
+    ob.disabled = view.disabled;
     // Three states, because «+» and «Open» are both claims and there is a moment when neither can be
     // made. `+` says «there is none» and `Open` says «there is one»; with the folder unread the
     // honest label asserts nothing and the tooltip says the click will find out. This project does
     // not state what it has not measured, and a button label is a statement like any other.
-    ob.textContent = have ? 'Open sample workspace'
-      : knowable ? '+ Sample workspace' : 'Sample workspace';
-    ob.title = title;
+    ob.textContent = view.overlayLabel;
+    ob.title = view.title;
   }
 }
 
@@ -5855,16 +5848,14 @@ function updateWsButtons() {
   // permanent no, and a greyed button there reads as something broken. The other three reasons -
   // no working folder, no Zoho tab, no org on the tab - all clear on their own, so the button
   // stays visible. Choosing or re-granting the folder is part of this action, not a prerequisite.
-  const known = (wsList || []).some((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
-  add.hidden = known;
+  const known = (wsList || []).find((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
+  const view = addWorkspaceView(known, pullBusy, lastCtx, root && root.name, rootGranted);
+  add.hidden = view.hidden;
   // The handler grants first, refreshes the workspace list and only then decides whether it needs to
   // create or merely open the org. That makes the first click useful without trusting an unread list.
-  add.disabled = pullBusy || !lastCtx || !lastCtx.org;
-  add.textContent = (lastCtx && lastCtx.instance) ? `+ ${lastCtx.instance}` : '+ Workspace';
-  add.title = !lastCtx ? 'Open a Zoho CRM tab first'
-    : !root ? `Choose a working folder and create the workspace for \u00ab${lastCtx.instance}\u00bb`
-      : !rootGranted ? `Grant access to ${root.name}, then open or create \u00ab${lastCtx.instance}\u00bb`
-        : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
+  add.disabled = view.disabled;
+  add.textContent = view.label;
+  add.title = view.title;
   // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
   // decided in one place, because they were decided in two and disagreed.
   updateSampleButtons();

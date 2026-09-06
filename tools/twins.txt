@@ -3,6 +3,7 @@
 # change is a fix that landed on one twin and not the other, which is what this catches.
 # name	crm	analytics	state
 addSampleWorkspace	61bad8066ce9	89d1a3272302	divergent
+addWorkspaceView	2a8a459ba4f6	93458982cadb	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
 aiBuildSeed	63f62f1db9a3	ea3877885a9f	divergent
 aiCall	3c9b4968c37f	f22e6e26de7d	divergent
@@ -229,6 +230,7 @@ rxCompile	061ffb3e51f2	061ffb3e51f2	identical
 rxDefaults	b63f0be3e4f9	b63f0be3e4f9	identical
 rxProblems	5927f3cfe8d2	5927f3cfe8d2	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
+sampleWorkspaceView	43e9d9eef7a9	43e9d9eef7a9	identical
 saveKeys	5d998c0b7cde	5d998c0b7cde	identical
 saveSearchPattern	593f956d7d95	593f956d7d95	identical
 sayWhereTheReportWent	2075390ad7f5	604b8164ad60	divergent
@@ -266,7 +268,7 @@ tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
 updateDepthUI	77a910d07585	77a910d07585	identical
 updateNav	0e95a07d943c	e933fb891d70	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
-updateSampleButtons	bbf8b0ca157e	bbf8b0ca157e	identical
+updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical
 wasOwn	137c94652f18	137c94652f18	identical
