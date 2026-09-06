@@ -50,6 +50,7 @@ closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	ce1a122bff29	ce1a122bff29	identical
 closeHealth	33e8c3372102	cae4fa6fb940	divergent
 closeNavMenu	67073a3b5d66	67073a3b5d66	identical
+closeOverview	656cfcfa6cef	656cfcfa6cef	identical
 closeScope	b272bb357c1c	5b47da8582c5	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
@@ -59,11 +60,11 @@ copyCode	b81ea73b94f0	582021ac794c	divergent
 createNavigationState	4ab81484aac8	4ab81484aac8	identical
 createSampleWorkspace	0df427110c34	0df427110c34	identical
 createSearchState	44136fa355b3	44136fa355b3	identical
-createWorkspaceForContext	331618bd02da	7b1b330a5944	divergent
+createWorkspaceForContext	7c94d5996f02	63746ab6a1c9	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
 dirtyPeer	5f62d305d70c	5f62d305d70c	identical
-dropWorkspaceState	1bc30b8e48a6	167539fa76e8	divergent
+dropWorkspaceState	11e68b98b27d	167539fa76e8	divergent
 egoStat	07126f3c9de0	07126f3c9de0	identical
 emptyReason	52a2cc9b794f	1c45640bf913	divergent
 engineIncomplete	54560440576d	54560440576d	identical
@@ -183,7 +184,8 @@ onSaveRx	65bb681487a1	65bb681487a1	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	7fddfacebace	7fddfacebace	identical
 openExternal	a7374f14d91b	a7374f14d91b	identical
-openHealth	1ccc9b2b0408	feb5273e65ed	divergent
+openHealth	01382aee1af0	75e7e407ea79	divergent
+openOverview	62403561ab54	a0362dd26a96	divergent
 openRxMenu	56e77cef3e64	353dff6f7ca2	divergent
 openSampleWorkspace	218a5748923a	adbf10fa3978	divergent
 openSchemaGraph	6d3af7aaabaf	0e79eab584fe	divergent
@@ -224,6 +226,7 @@ renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b44d36ae2b45	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	5ca323768259	d849a1f86647	divergent
+renderOverview	04c036a56ea6	b4bf9d1925d4	divergent
 renderRx	9515db04e268	9515db04e268	identical
 reportFacts	3c2ae6bd3f33	248550e497da	divergent
 reportFoot	5369198eb387	5369198eb387	identical
@@ -231,7 +234,7 @@ reportHead	38270d601c35	38270d601c35	identical
 reportMark	267dd72f6fe1	267dd72f6fe1	identical
 reportToc	bffb45a529c6	bffb45a529c6	identical
 requirePerm	8477c2cb408e	8477c2cb408e	identical
-resetView	dbd606352d0c	3b3c488fec78	divergent
+resetView	fde8898f76ba	fc53dff71bd3	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 runWorkspaceEntry	21263fa94191	21263fa94191	identical
@@ -271,7 +274,7 @@ takeTheirs	e157a3cfc9a3	e157a3cfc9a3	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	692c8692eeff	ae1ca2903cfa	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
-toggleAI	ffe8067dd5c3	70228434d9a2	divergent
+toggleAI	49d5973236dd	5726eb4df5a7	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical
 tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
 updateDepthUI	77a910d07585	77a910d07585	identical
@@ -285,9 +288,10 @@ wireAsideFold	f549a11bd896	f549a11bd896	identical
 wireForget	b03a0a24ed6f	b03a0a24ed6f	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
 workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
+workspaceOverviewModel	44136fa355b3	44136fa355b3	identical
 writeActiveWhenStillCurrent	5d27a20f05b3	5d27a20f05b3	identical
 writeFileAt	d6a3e4360b80	d6a3e4360b80	identical
-writeSampleWorkspace	61cba1747bc9	e42d55f49ab8	divergent
+writeSampleWorkspace	1ed025c383fa	edb16b0ef4f1	divergent
 wsLine	7554f7e6278f	7554f7e6278f	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent
 wsOptionTitle	71c68d9469b5	ec5f3ef6335a	divergent

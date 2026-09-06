@@ -104,6 +104,18 @@ CRM = """
       $('navtab').click(); await settle();
       await until(() => $('navview').classList.contains('show'), 'the history view never opened');
     };
+    await until(() => !$('overview').disabled, 'the workspace overview never became available');
+    $('overview').click();
+    await until(() => $('overviewview').classList.contains('show') && document.querySelectorAll('.ovcard').length === 6,
+      'the CRM overview never drew its six areas');
+    if (!document.body.classList.contains('overview-open')) say('the CRM overview did not own the panel');
+    for (const card of document.querySelectorAll('.ovcard')) {
+      if (!/^[0-9]+$/.test(card.querySelector('.ovcount').textContent.trim()))
+        say('the CRM sample overview presented an area count as unknown: ' + card.textContent);
+    }
+    if (getComputedStyle($('ovpull')).display !== 'none') say('the CRM sample overview offered a pull from Zoho');
+    $('ovbrowse').click();
+    await until(() => !$('overviewview').classList.contains('show'), 'Browse did not close the CRM overview');
     const rows = () => [...document.querySelectorAll('#tree .f')];
     // Drive the panel adapter around the pure list model. Counting only would miss an order that is
     // right in memory and wrong on screen, so the flat sort compares every path in sequence.
@@ -949,6 +961,18 @@ AN = """
       await until(() => $('navview').classList.contains('show'), 'the history view never opened');
     };
     await wait(1600);
+    await until(() => !$('overview').disabled, 'the workspace overview never became available');
+    $('overview').click();
+    await until(() => $('overviewview').classList.contains('show') && document.querySelectorAll('.ovcard').length === 4,
+      'the Analytics overview never drew its four areas');
+    if (!document.body.classList.contains('overview-open')) say('the Analytics overview did not own the panel');
+    for (const card of document.querySelectorAll('.ovcard')) {
+      if (!/^[0-9]+$/.test(card.querySelector('.ovcount').textContent.trim()))
+        say('the Analytics sample overview presented an area count as unknown: ' + card.textContent);
+    }
+    if (getComputedStyle($('ovpull')).display !== 'none') say('the Analytics sample overview offered a pull from Zoho');
+    $('ovbrowse').click();
+    await until(() => !$('overviewview').classList.contains('show'), 'Browse did not close the Analytics overview');
     const rows = () => [...document.querySelectorAll('#list tbody tr')];
     // The filter and both directions of a sort cross the new model/UI boundary here. Compare ids,
     // not labels: two equal names are legal and would make the weaker assertion pass by accident.

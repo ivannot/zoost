@@ -496,7 +496,7 @@ class GuidesDepictMarks(unittest.TestCase):
 
     def test_a_guide_that_only_spells_it_out_is_reported(self):
         page = (ROOT / 'site' / 'docs-analytics.html').read_text(encoding='utf-8')
-        stripped = re.sub(r'<b class="ui"><svg class="mk".*?</svg> (Pull all)</b>', r'<b class="ui">\1</b>',
+        stripped = re.sub(r'<b class="ui"><svg class="mk"(?:(?!</b>).)*?</svg> (Pull all)</b>', r'<b class="ui">\1</b>',
                           page, flags=re.S)
         self.assertNotEqual(stripped, page, 'the fixture no longer matches the guide')
         with tempfile.TemporaryDirectory() as d:

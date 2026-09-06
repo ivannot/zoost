@@ -1210,7 +1210,7 @@ async function aiContextLabel() {
 function toggleAI() {
   if ($('aiview').classList.contains('show')) { closeAI(); return; }
   if (!dir) return;
-  closeHealth();   // one panel at a time
+  closeHealth(); closeOverview();   // one panel at a time
   $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open'); aiEngineChrome(); aiRenderMessages();
   aiEnsureFiles().then(aiContextLabel);   // the label reads the mirror too, and fills in when its measurement lands
 }

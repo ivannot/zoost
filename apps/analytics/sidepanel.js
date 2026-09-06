@@ -738,6 +738,74 @@ function resetView() {
   paintSearchControls(searchState.reset());
   if ($('healthview').classList.contains('show')) renderHealth();
   if ($('aiview').classList.contains('show')) aiContextLabel();
+  if ($('overviewview').classList.contains('show')) renderOverview();
+}
+
+const OVERVIEW_STATE = {
+  ready: 'Ready', partial: 'Partial', behind: 'Behind', unavailable: 'Not available', 'not-read': 'Not read',
+};
+function renderOverview() {
+  // An interrupted pull deliberately clears the in-memory snapshot: zero would mean Zoho really
+  // contains no objects, while these arrays mean only «we refused to load a hybrid mirror».
+  // Ignore diagnostics from the workspace left behind as well; the interrupted marker is the one
+  // fact this snapshot can establish until Pull all replaces it.
+  const unreadable = pullInterrupted ? [] : (diskUnreadableAll || []);
+  const failed = pullInterrupted ? [] : pullFailed;
+  const unread = new Set(unreadable.map((failure) => failure.rel));
+  const lastPull = bound && bound.lastPull;
+  const knownAt = (value) => pullInterrupted ? null : value;
+  const knownCount = (value, at) => at ? value : null;
+  const viewAt = knownAt(viewsPulledAt || lastPull);
+  const snapshotAt = knownAt(lastPull);
+  const model = workspaceOverviewModel({
+    workspace: dir,
+    name: (bound && (bound.label || bound.name)) || (($('ws').selectedOptions || [])[0] || {}).textContent,
+    sample: !!(bound && bound.sample),
+    lastPull,
+    areas: [
+      { id: 'views', label: 'Views', count: unread.has('views.json') ? null : knownCount(views.length, viewAt),
+        pulledAt: viewAt, unavailable: unread.has('views.json'), partial: pullInterrupted },
+      { id: 'structure', label: 'Tables', count: unread.has('schema.json') ? null : knownCount(Object.keys(schema).length, snapshotAt),
+        pulledAt: snapshotAt, unavailable: unread.has('schema.json'), partial: pullInterrupted },
+      { id: 'relations', label: 'Relations', count: unread.has('schema.json') ? null : knownCount(relations.length, snapshotAt),
+        pulledAt: snapshotAt, unavailable: unread.has('schema.json'), partial: pullInterrupted },
+      { id: 'sql', label: 'Query SQL', count: unread.has('sql/index.json') ? null : knownCount(Object.keys(sqls).length, snapshotAt),
+        pulledAt: snapshotAt, unavailable: unread.has('sql/index.json'),
+        partial: pullInterrupted || failed.some((failure) => failure.stage === 'sql') },
+    ],
+    issues: [pullInterrupted ? 'The last pull was interrupted; Pull all repairs the local mirror.' : '',
+      unreadable.length ? `${unreadable.length} local file(s) could not be read.` : '',
+      failed.length ? `${failed.length} item(s) could not be read from Zoho in the last pull.` : ''],
+  });
+  const when = (value) => {
+    if (!value) return 'Never pulled';
+    const date = new Date(value);
+    return isNaN(date) ? String(value) : date.toLocaleString();
+  };
+  const body = $('overviewbody');
+  body.innerHTML = `<div class="ovtitle">${esc(model.name)}</div>`
+    + `<div class="ovmeta">${model.sample ? 'Sample workspace - invented data' : `Last pull: ${esc(when(model.lastPull))}`}</div>`
+    + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard"><div class="ovlabel">${esc(area.label)}</div>`
+      + `<div class="ovcount">${area.count === null ? '—' : area.count}</div><div class="ovstate ${area.status}">${OVERVIEW_STATE[area.status]}`
+      + `${area.pulledAt ? ` · ${esc(when(area.pulledAt))}` : ''}</div></div>`).join('')}</div>`
+    + (model.issues.length ? `<div class="ovissues">${model.issues.map(esc).join('<br>')}</div>` : '')
+    + `<div class="ovactions"><button id="ovbrowse">Browse</button><button id="ovpull" class="zbtn"${model.sample ? ' hidden' : ''}>Pull all</button>`
+    + `<button id="ovgraph" class="lbtn"${$('graph').disabled ? ' disabled' : ''}>ER diagram</button><button id="ovhealth" class="pbtn"${$('health').disabled ? ' disabled' : ''}>Health</button></div>`;
+  body.querySelector('#ovbrowse').onclick = closeOverview;
+  body.querySelector('#ovpull').onclick = () => { closeOverview(); void pullAll(); };
+  body.querySelector('#ovgraph').onclick = () => { closeOverview(); void openSchemaGraph(); };
+  body.querySelector('#ovhealth').onclick = () => { closeOverview(); openHealth(); };
+}
+function openOverview() {
+  if (!dir) return;
+  closeAI(); closeHealth(); navShow(false);
+  $('overviewview').classList.add('show'); $('overview').classList.add('on');
+  document.body.classList.add('overview-open');
+  renderOverview();
+}
+function closeOverview() {
+  $('overviewview').classList.remove('show'); $('overview').classList.remove('on');
+  document.body.classList.remove('overview-open');
 }
 
 // Which workspace the panel should reopen on, remembered in IndexedDB. Two selections overlapping -
@@ -796,7 +864,15 @@ async function selectWorkspace(w) {
     selectedId = null; navClear();
     $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   }
-  if (!(await loadFromDisk(op))) return;
+  const loaded = await loadFromDisk(op);
+  if (!op.current()) return;
+  if (!loaded) {
+    // The interrupted-mirror path is a valid state of the newly selected workspace, not a reason
+    // to leave the old workspace's overlay and filters on screen.
+    if (!sameWs) resetView();
+    else if ($('overviewview').classList.contains('show')) renderOverview();
+    return;
+  }
   if (!sameWs) resetView();   // after the load: Health is rendered from what is now in memory
   if (!op.current()) return;
   await refreshContext();
@@ -825,6 +901,7 @@ async function createWorkspaceForContext(info) {
       : `Workspace ${info.workspace} created - Zoho Analytics gave it no name. Press ✎ to name it, then Pull all.`);
     $('status').className = 'ok';
     await refreshWorkspaces();
+    openOverview();
   } catch (e) {
     setBusy(false, 'Could not create the workspace: ' + (e.message || e));
     $('status').className = 'bad';
@@ -1266,6 +1343,7 @@ async function openZohoHome() {
 }
 
 function updateButtons() {
+  if (!dir) closeOverview();
   renderGoDc();                      // the list it offers is the workspaces, so it moves with them
   $('ws').disabled = pullBusy;
   $('wsroot').disabled = pullBusy;
@@ -1304,6 +1382,9 @@ function updateButtons() {
   $('wsrename').title = !$('wsrename').disabled ? 'Give this workspace a name of your own'
     : `Cannot name a workspace: ${wsWhy || 'none is selected'}`;
   $('pull').disabled = busy || !dir || !guardOk();
+  $('overview').disabled = busy || !dir;
+  $('overview').title = !$('overview').disabled ? 'Workspace overview - local coverage and shortcuts'
+    : `Cannot open overview: ${busy ? BUSY : 'no workspace is open'}`;
   // Absent, not disabled, when there is nothing to retry - the CRM's equivalent does the same.
   // A greyed button still says "there is something here you cannot have", which is misleading
   // when there is no something. The label carries the count, so the button is self-explaining.
@@ -1754,8 +1835,12 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   if (ps && ps.state === 'writing') {
     if (!op.current()) return false;
     views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; viewsPulledAt = null; pullFailed = [];
+    diskUnreadable = null; diskUnreadableAll = [];
     pullInterrupted = true;
     render();
+    // `render()` returns early for an empty list; controls from the previous workspace must not
+    // remain enabled over a snapshot this loader has explicitly refused.
+    updateButtons();
     status('The last pull was interrupted mid-write, so the files on disk describe two different moments - run Pull all to repair the mirror.', 'warn');
     return false;
   }
@@ -3404,7 +3489,7 @@ async function aiContextLabel() {
 function toggleAI() {
   if ($('aiview').classList.contains('show')) { closeAI(); return; }
   if (!views.length) return;
-  closeHealth();   // one panel at a time
+  closeHealth(); closeOverview();   // one panel at a time
   $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open');
   aiEngineChrome(); aiRenderMessages();
   aiEnsureFiles().then(aiContextLabel);   // the label reads the mirror too, and fills in when its measurement lands
@@ -3817,7 +3902,7 @@ function renderHealth() {
 }
 // `#health.on` is in this panel's own stylesheet and nothing ever set it, so the audit button stayed
 // unlit while the AI button beside it lights - the rule was dead CSS and the twin did it right.
-function openHealth() { renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); $('health').classList.add('on'); }
+function openHealth() { closeOverview(); renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); $('health').classList.add('on'); }
 function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); $('health').classList.remove('on'); }
 
 // ---------- about ----------
@@ -4061,6 +4146,7 @@ async function writeSampleWorkspace() {
     }
     status(`Sample workspace written - ${Object.keys(files).length} files in \u00ab${gen.folderName()}\u00bb. Nothing was fetched from Zoho Analytics.`, 'ok');
     await refreshWorkspaces();
+    openOverview();
   } catch (e) { status('Could not write the sample: ' + e.message, 'bad'); }
 }
 $('wsdel').onclick = delWorkspace;
@@ -4393,12 +4479,14 @@ $('findclear').onclick = () => { paintSearchControls(searchState.setText('')); r
 $('typesel').onchange = () => { typeFilter = $('typesel').value || null; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
+$('overview').onclick = () => ($('overviewview').classList.contains('show') ? closeOverview() : openOverview());
+$('overviewx').onclick = closeOverview;
 $('graph').onclick = () => openSchemaGraph();
 $('export').onclick = () => doExport('html');
 $('exportmd').onclick = () => doExport('md');
 $('retry').onclick = retryFailed;
 $('refresh').onclick = refreshLocal;
-$('health').onclick = () => ($('healthview').classList.contains('show') ? closeHealth() : (closeAI(), openHealth()));
+$('health').onclick = () => ($('healthview').classList.contains('show') ? closeHealth() : (closeAI(), closeOverview(), openHealth()));
 $('askai').onclick = toggleAI;
 $('aix').onclick = closeAI;
 $('aiclear').onclick = aiClear;

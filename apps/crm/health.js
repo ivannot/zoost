@@ -298,7 +298,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
 async function openHealth() {
   const op = beginWorkspaceOp();   // an audit of the whole mirror takes as long as the mirror is big
   if (!dir) return;
-  closeAI();   // one panel at a time
+  closeAI(); closeOverview();   // one panel at a time
   $('healthview').classList.add('show'); $('health').classList.add('on'); document.body.classList.add('health-open');   // lit button + violet frame + covers the tabs, mirroring Ask AI
   $('healthbody').innerHTML = '<div class="hd">Analyzing\u2026</div>';
   healthSay('');                             // a verdict from the last time this was open is not one about now

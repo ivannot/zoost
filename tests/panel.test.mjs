@@ -78,6 +78,130 @@ function analyticsListModel() {
   return load([sliceFn(rel, 'selectAnalyticsViews')], { String, Array, Object });
 }
 
+test('both panels: workspace overview preserves unknown and partial local coverage', () => {
+  for (const app of ['crm', 'analytics']) {
+    const { workspaceOverviewModel } = load([
+      sliceFn(`apps/${app}/workspace.js`, 'workspaceOverviewModel'),
+    ], { String, Number, Array, Object });
+    const model = workspaceOverviewModel({
+      workspace: {}, name: 'Acme', lastPull: '2026-09-06T10:00:00Z',
+      issues: ['', 'one file is unreadable'],
+      areas: [
+        { id: 'ready', label: 'Ready area', count: 12, pulledAt: '2026-09-06T10:00:00Z' },
+        { id: 'unknown', label: 'Unknown area', count: undefined },
+        { id: 'partial', label: 'Partial area', count: 7, pulledAt: 'now', partial: true, behind: true },
+        { id: 'blocked', label: 'Blocked area', count: 4, pulledAt: 'then', unavailable: true, partial: true },
+      ],
+    });
+    assert.equal(model.visible, true, app);
+    assert.equal(model.ready, 1, app);
+    assert.deepEqual(Array.from(model.areas, (area) => [area.count, area.status]),
+      [[12, 'ready'], [null, 'not-read'], [7, 'partial'], [4, 'unavailable']], app);
+    assert.deepEqual(Array.from(model.issues), ['one file is unreadable'], app);
+  }
+});
+
+test('analytics: an interrupted mirror is not presented as four ready empty areas', () => {
+  let html = '';
+  const body = {
+    set innerHTML(value) { html = value; },
+    get innerHTML() { return html; },
+    querySelector: () => ({}),
+  };
+  const elements = {
+    ws: { selectedOptions: [{ textContent: 'Interrupted workspace' }] },
+    graph: { disabled: false }, health: { disabled: false }, overviewbody: body,
+  };
+  const rel = 'apps/analytics/sidepanel.js';
+  const m = load([
+    sliceFn('apps/analytics/workspace.js', 'workspaceOverviewModel'),
+    sliceConst(rel, 'OVERVIEW_STATE'), sliceFn(rel, 'renderOverview'),
+  ], {
+    String, Number, Array, Object, Set, Date, isNaN,
+    $: (id) => elements[id], esc: String,
+    dir: {}, bound: { name: 'Interrupted workspace', lastPull: '2026-09-05T10:00:00Z' },
+    views: [], viewsPulledAt: null, schema: {}, relations: [], sqls: {},
+    diskUnreadableAll: [], pullFailed: [], pullInterrupted: true,
+    closeOverview: () => {}, pullAll: () => {}, openSchemaGraph: () => {},
+    openHealth: () => {},
+  });
+  m.renderOverview();
+  assert.equal((html.match(/class="ovcount">—/g) || []).length, 4,
+    'an interrupted mirror was cleared in memory, but the Overview turned those unknown counts into four zeroes');
+  assert.equal((html.match(/class="ovstate partial">Partial/g) || []).length, 4,
+    'all four cards describe one interrupted snapshot and none may claim Ready');
+  assert.doesNotMatch(html, /class="ovstate ready">Ready/,
+    'the old workspace date made cleared arrays look like a complete empty mirror');
+});
+
+test('analytics: a newly created workspace has unknown counts, not four measured zeroes', () => {
+  let html = '';
+  const body = {
+    set innerHTML(value) { html = value; },
+    get innerHTML() { return html; },
+    querySelector: () => ({}),
+  };
+  const elements = {
+    ws: { selectedOptions: [{ textContent: 'New workspace' }] },
+    graph: { disabled: true }, health: { disabled: true }, overviewbody: body,
+  };
+  const rel = 'apps/analytics/sidepanel.js';
+  const m = load([
+    sliceFn('apps/analytics/workspace.js', 'workspaceOverviewModel'),
+    sliceConst(rel, 'OVERVIEW_STATE'), sliceFn(rel, 'renderOverview'),
+  ], {
+    String, Number, Array, Object, Set, Date, isNaN,
+    $: (id) => elements[id], esc: String,
+    dir: {}, bound: { name: 'New workspace', lastPull: null },
+    views: [], viewsPulledAt: null, schema: {}, relations: [], sqls: {},
+    diskUnreadableAll: [], pullFailed: [], pullInterrupted: false,
+    closeOverview: () => {}, pullAll: () => {}, openSchemaGraph: () => {},
+    openHealth: () => {},
+  });
+  m.renderOverview();
+  assert.equal((html.match(/class="ovcount">—/g) || []).length, 4,
+    'before the first pull, an empty array means no measurement rather than a measured zero');
+  assert.equal((html.match(/class="ovstate not-read">Not read/g) || []).length, 4);
+});
+
+test('crm: an area excluded before its first pull is not reported as an unreadable index', async () => {
+  let html = '';
+  const body = {
+    set innerHTML(value) { html = value; },
+    get innerHTML() { return html; },
+    querySelector: () => ({}),
+  };
+  const elements = {
+    ws: { selectedOptions: [{ textContent: 'CRM workspace' }] },
+    graph: { disabled: false }, health: { disabled: false }, overviewbody: body,
+  };
+  const missing = new Error('missing'); missing.name = 'NotFoundError';
+  const rel = 'apps/crm/sidepanel.js';
+  const m = load([
+    sliceConst(rel, 'pulledAt'), sliceConst(rel, 'OVERVIEW_STATE'),
+    sliceFn('apps/crm/workspace.js', 'workspaceOverviewModel'), sliceFn(rel, 'renderOverview'),
+  ], {
+    String, Number, Array, Object, Set, Date, isNaN,
+    $: (id) => elements[id], escHtml: String,
+    beginWorkspaceOp: () => ({
+      current: () => true,
+      read: async (path) => { if (path === 'connections/index.json') throw missing; return '[]'; },
+    }),
+    TABS: [{ id: 'functions', label: 'Functions' }, { id: 'connections', label: 'Connections' }],
+    tabAccess: { functions: { pulledAt: '2026-09-06T10:00:00Z' } },
+    wsLastPull: '2026-09-06T10:00:00Z', bound: {}, dir: {},
+    isSample: () => false, isForbidden: () => false, areaStale: () => false,
+    unreadableMetas: [], listGap: null,
+    closeOverview: () => {}, pullEverything: () => {}, openGraph: () => {},
+    openHealth: () => {},
+  });
+  await m.renderOverview();
+  assert.match(html, /<div class="ovlabel">Connections<\/div><div class="ovcount">—<\/div><div class="ovstate not-read">Not read/,
+    'an intentionally excluded, never-read area was labelled as a damaged local file');
+  assert.doesNotMatch(html, /local index file\(s\) could not be read/,
+    'a normal missing file for an excluded area raised a false repair warning');
+});
+
 test('crm: the list model applies every narrowing before it orders the rows', () => {
   const model = crmListModel();
   const rows = [

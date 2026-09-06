@@ -64,3 +64,33 @@ function addWorkspaceView(existing, actionBusy, context, rootName, rootGranted, 
       : `Cannot create a workspace: ${blockedByBusy ? busyReason : 'the active tab is not on a Zoho Analytics workspace'}`,
   };
 }
+
+/** A renderer-independent summary of one local workspace.
+ *
+ * The panel supplies only facts it has already read from disk. In particular, an absent count is
+ * kept absent: the overview must not turn an unreadable or never-pulled area into a zero.
+ */
+function workspaceOverviewModel(input = {}) {
+  const areas = (input.areas || []).map((area) => {
+    const status = area.unavailable ? 'unavailable'
+      : area.partial ? 'partial'
+        : area.behind ? 'behind'
+          : area.pulledAt ? 'ready' : 'not-read';
+    return {
+      id: String(area.id || ''),
+      label: String(area.label || area.id || ''),
+      count: Number.isFinite(area.count) ? area.count : null,
+      pulledAt: area.pulledAt || null,
+      status,
+    };
+  });
+  return {
+    visible: !!input.workspace,
+    name: String(input.name || 'Workspace'),
+    sample: !!input.sample,
+    lastPull: input.lastPull || null,
+    areas,
+    issues: (input.issues || []).filter(Boolean).map(String),
+    ready: areas.filter((area) => area.status === 'ready').length,
+  };
+}

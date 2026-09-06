@@ -113,6 +113,7 @@
   #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
   #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
   #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
+  #overview.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
   #belowbar{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
   /* What the history covers: everything the tab row controls. Written with the id repeated so
      it outranks `#preview.show`, which is an id selector of its own. */
@@ -201,6 +202,17 @@
      same one: what is styled is «a link inside the health view», which both have. It was `.hrow a`,
      which is the CRM's markup wearing the rule. */
   #healthbody a{color:var(--accent);text-decoration:none;cursor:pointer} #healthbody a:hover{text-decoration:underline}
+  #overviewview{display:none;position:absolute;inset:0;z-index:6;background:var(--bg);flex-direction:column}
+  #overviewview.show{display:flex}
+  #overviewview .ovhead{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  #overviewview .ovx{cursor:pointer;color:var(--muted)}
+  #overviewbody{flex:1;overflow:auto;padding:14px 12px;color:var(--ink)}
+  .ovtitle{font-size:16px;font-weight:650;margin-bottom:3px}.ovmeta{font-size:11px;color:var(--muted);margin-bottom:14px}
+  .ovgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .ovcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;min-width:0}
+  .ovlabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.35px}.ovcount{font:17px var(--mono);margin:3px 0}.ovstate{font-size:10.5px;color:var(--muted)}
+  .ovstate.partial,.ovstate.unavailable,.ovstate.behind{color:var(--warn)}.ovissues{margin:12px 0;padding:8px 10px;border-left:2px solid var(--warn);background:var(--surface);font-size:11px;line-height:1.5}
+  .ovactions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.ovactions button{font-size:11px}
   .hrow .meta{color:var(--muted);font-size:10.5px}
   .hnone{font-size:11px;color:#54d199}
   /* The status line lives inside #belowbar and this view covers it, so anything setStatus()
@@ -352,6 +364,7 @@
      visibly shorter than the words beside them, which is the sort of thing you notice without
      being able to name it. */
   button.icon{padding:6px 8px}
+  #overview.icon{padding-left:3px;padding-right:3px}
   button.glyph{font-size:15px;line-height:14px;padding:6px 8px}
   /* 14px, not 13: the line box a word makes here is 14px, so a 13px block left the marked
      buttons one pixel shorter than their neighbours. The drawing is unchanged - only its box. */
@@ -374,6 +387,8 @@
   .abtn:hover:not(:disabled){background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
   body.ai-open .wsgroup > button:not(#askai){opacity:.32;pointer-events:none}
   body.health-open .wsgroup > button:not(#health){opacity:.32;pointer-events:none}
+  body.overview-open .wsgroup > button:not(#overview){opacity:.32;pointer-events:none}
+  body.ai-open #overview, body.health-open #overview, body.nav-open #overview{opacity:.32;pointer-events:none}
   /* The history is the third view of this kind, so it behaves like the other two: while it is
      open every other control in the toolbar is dimmed and inert. Asked for three times, and it
      was the half that was missing - the view covered the panel and left the buttons above it live. */
@@ -386,11 +401,11 @@
      keeps a fully opaque label, which goes on masking, and the border and the buttons are dimmed by
      hand. The two colours are the .32 blend over --surface computed, not eyeballed:
      #2f6f62 -> #213b42, #83d8c6 -> #3c5d62. */
-  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup,
+  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup, body.overview-open .wsgroup .expgroup,
   body.nav-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
-  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button,
+  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button, body.overview-open .wsgroup .expgroup button,
   body.nav-open .wsgroup .expgroup button{opacity:.32}
-  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel,
+  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel, body.overview-open .wsgroup .explabel,
   body.nav-open .wsgroup .explabel{color:#3c5d62}
   .genbar button:disabled{opacity:.5}
   .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
@@ -670,7 +685,7 @@
   <div class="wsbar wsbar2">
     <select id="ws" title="Workspaces found inside the working folder"></select>
     <button id="wsadd" title="Create a workspace for the org in the active Zoho tab">+ Workspace</button><button id="wssample" title="Open or write a sample workspace of invented data - nothing is fetched">Sample</button>
-    <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
+    <button id="overview" class="pbtn icon" disabled title="Workspace overview - local coverage and shortcuts" aria-label="Workspace overview"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx=".8"/><rect x="9.5" y="1.5" width="5" height="5" rx=".8"/><rect x="1.5" y="9.5" width="5" height="5" rx=".8"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/></svg></button><button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
   </div>
   <div id="ctx" class="unbound">
     <span class="dot"></span><span class="who" id="who">No Zoho CRM tab detected</span><span class="bound" id="bound"></span>
@@ -717,6 +732,7 @@
     </fieldset>
   </div>
   <div id="belowbar">
+  <div id="overviewview"><div class="ovhead"><span>Workspace overview</span><span class="ovx" id="overviewx" title="Close">✕</span></div><div id="overviewbody"></div></div>
   <!-- The history, as a view over everything: the same footprint as the AI and Health
        views beside it in the toolbar, tab row included. It covers the search box, so it
        carries its own - and its own Name, where the product has one. -->

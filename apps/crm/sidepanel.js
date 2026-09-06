@@ -40,7 +40,7 @@ const zohoReady = () => !!(lastCtx && guardOk());
 // reaches because it is not a tab - the health view pulls it on its own. Building the sentence
 // from the runners would have promised an area this button does not pull, which is the mistake
 // this line exists to stop, made in the other direction.
-const LOCAL_BTNS = ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
+const LOCAL_BTNS = ['overview', 'graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
 // **Three lists, and a control in none of them.** `ZOHO_BTNS` held the two Pulls and was applied by
 // setting `disabled`; a rule in the stylesheet greyed `#pvreveal` and `#pvfind` by id, because those
 // two are spans and a span has no `disabled`; and `#funcs` - «Functions page» - was in neither, so it
@@ -5357,6 +5357,7 @@ async function readJsonIn(h, name) { const fh = await h.getFileHandle(name); ret
 // enabled - reported. `pull` is also disabled by refreshContext on every state change, and
 // `pullone` was the one nothing else covered.
 function setEnabled(on) {
+  if (!on) closeOverview();
   LOCAL_BTNS.forEach((b) => ($(b).disabled = !on));
   blockZoho(!on || isSample());
   sayWhyDisabled();
@@ -5566,6 +5567,7 @@ async function writeSampleWorkspace() {
     await window.idbHandle.set('activeWs', 'org:' + gen.org);
     setStatus(`Sample workspace written - ${Object.keys(files).length} files in \u00ab${gen.folderName()}\u00bb. Nothing was fetched from Zoho.`, 'ok');
     await loadWorkspaces();
+    openOverview();
   } catch (e) { setStatus('Could not write the sample: ' + e.message, 'bad'); }
 }
 
@@ -5591,6 +5593,7 @@ async function createWorkspaceForContext(ctx) {
     await window.idbHandle.set('activeWs', 'org:' + ctx.org);
     setStatus(`Workspace ready: ${name} - Pull to fill it.`, 'ok');
     await loadWorkspaces();
+    openOverview();
   } catch (e) { setStatus('Add failed: ' + e.message, 'warn'); }
 }
 async function openWorkspaceForContext(have) {
@@ -5659,7 +5662,11 @@ function dropWorkspaceState() {
   // or press + Sample - which never contacts Zoho at all - and its tree line closed on «Zoho would
   // not list one of this org's function languages». The sixth question this repository asks of every
   // change is what survives a change of workspace, and these were two more answers to it.
-  listGap = null; listGapWho = ''; listProbe = null;
+  listGap = null; listGapWho = ''; listProbe = null; unreadableMetas = [];
+  // Access and freshness are workspace facts too. Clear them before any renderer can run; the
+  // replacement is read from the new workspace below. Otherwise an open Overview can briefly and,
+  // because its render is asynchronous, permanently publish the previous org's verdicts.
+  tabAccess = {}; wsLastPull = null;
   const had = clearConversationState();
   dropFileCaches();   // everything read out of a file - listed once, in the function below
   // Relative paths mean nothing outside the folder they came from: a removal that failed in one
@@ -5730,6 +5737,76 @@ function resetView() {
   // context line is re-measured, since the index it reports is the new org's.
   if ($('healthview').classList.contains('show')) openHealth();
   if ($('aiview').classList.contains('show')) aiContextLabel();
+  if ($('overviewview').classList.contains('show')) void renderOverview();
+}
+
+const OVERVIEW_STATE = {
+  ready: 'Ready', partial: 'Partial', behind: 'Behind', unavailable: 'Not available', 'not-read': 'Not read',
+};
+async function renderOverview() {
+  const op = beginWorkspaceOp();
+  const counts = {};
+  const dates = {};
+  const unreadIndexes = new Set();
+  for (const tab of TABS) {
+    try {
+      const rows = JSON.parse(await op.read(`${tab.id}/index.json`));
+      counts[tab.id] = Array.isArray(rows) ? rows.length : null;
+      dates[tab.id] = pulledAt(tab.id);
+    } catch (e) {
+      counts[tab.id] = null;
+      // A missing index is the normal representation of an area excluded before its first pull.
+      // It is damaged only when this workspace explicitly records that the area was once written;
+      // the workspace-wide legacy date cannot establish that for a file that does not exist.
+      dates[tab.id] = (tabAccess[tab.id] && tabAccess[tab.id].pulledAt) || null;
+      if ((e && e.name) !== 'NotFoundError' || dates[tab.id]) unreadIndexes.add(tab.id);
+    }
+  }
+  if (!op.current()) return;
+  const selected = $('ws').selectedOptions && $('ws').selectedOptions[0];
+  const model = workspaceOverviewModel({
+    workspace: dir,
+    name: selected ? selected.textContent : (bound && (bound.label || bound.instance)),
+    sample: isSample(),
+    lastPull: wsLastPull,
+    areas: TABS.map((tab) => ({
+      id: tab.id, label: tab.label, count: counts[tab.id], pulledAt: dates[tab.id],
+      unavailable: isForbidden(tab.id) || unreadIndexes.has(tab.id), behind: areaStale(tab.id),
+      partial: tab.id === 'functions' && unreadableMetas.length > 0,
+    })),
+    issues: [unreadableMetas.length ? `${unreadableMetas.length} local function file(s) could not be read.` : '',
+      unreadIndexes.size ? `${unreadIndexes.size} local index file(s) could not be read.` : '',
+      listGap ? 'The functions census has a coverage gap.' : ''],
+  });
+  const when = (value) => {
+    if (!value) return 'Never pulled';
+    const date = new Date(value);
+    return isNaN(date) ? String(value) : date.toLocaleString();
+  };
+  const body = $('overviewbody');
+  body.innerHTML = `<div class="ovtitle">${escHtml(model.name)}</div>`
+    + `<div class="ovmeta">${model.sample ? 'Sample workspace - invented data' : `Last pull: ${escHtml(when(model.lastPull))}`}</div>`
+    + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard"><div class="ovlabel">${escHtml(area.label)}</div>`
+      + `<div class="ovcount">${area.count === null ? '—' : area.count}</div><div class="ovstate ${area.status}">${OVERVIEW_STATE[area.status]}`
+      + `${area.pulledAt ? ` · ${escHtml(when(area.pulledAt))}` : ''}</div></div>`).join('')}</div>`
+    + (model.issues.length ? `<div class="ovissues">${model.issues.map(escHtml).join('<br>')}</div>` : '')
+    + `<div class="ovactions"><button id="ovbrowse">Browse</button><button id="ovpull" class="zbtn"${model.sample ? ' hidden' : ''}>Pull all</button>`
+    + `<button id="ovgraph" class="lbtn"${$('graph').disabled ? ' disabled' : ''}>Wiring</button><button id="ovhealth" class="pbtn"${$('health').disabled ? ' disabled' : ''}>Health</button></div>`;
+  body.querySelector('#ovbrowse').onclick = closeOverview;
+  body.querySelector('#ovpull').onclick = () => { closeOverview(); void pullAll(); };
+  body.querySelector('#ovgraph').onclick = () => { closeOverview(); void openGraph(); };
+  body.querySelector('#ovhealth').onclick = () => { closeOverview(); void openHealth(); };
+}
+function openOverview() {
+  if (!dir) return;
+  closeAI(); closeHealth(); navShow(false);
+  $('overviewview').classList.add('show'); $('overview').classList.add('on');
+  document.body.classList.add('overview-open');
+  void renderOverview();
+}
+function closeOverview() {
+  $('overviewview').classList.remove('show'); $('overview').classList.remove('on');
+  document.body.classList.remove('overview-open');
 }
 
 // Which workspace the panel should reopen on, remembered in IndexedDB. Two selections overlapping -
@@ -5784,7 +5861,6 @@ async function activate(w, viaGesture) {
   // away a conversation about the org you are still in.
   if (!sameWs) {
     const n = dropWorkspaceState();
-    resetView();
     if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn');
   }
   // A different workspace: the chain is dropped, because every step in it names a file in the org
@@ -5795,6 +5871,9 @@ async function activate(w, viaGesture) {
   // class of mistake the environment guard exists to prevent, one field further in.
   if (!(await loadAccess(op))) return;
   renderTabs();
+  // Overview, Health and assistant context consume the access verdicts and freshness dates, so
+  // rebuild them only after those workspace facts have arrived.
+  if (!sameWs) resetView();
   const ok = viaGesture ? await ensurePerm(op.root) : await hasPerm(op.root);
   if (!op.current()) return;
   if (ok) await rebuildActive(); else { setStatus('Workspace found - click Refresh to grant access.', 'warn'); await refreshContext(); }
@@ -7035,6 +7114,7 @@ async function onRefresh() {
   if (failedRemovals.size) await reconcileFunctions();
 }
 
+$('overview').onclick = () => ($('overviewview').classList.contains('show') ? closeOverview() : openOverview()); $('overviewx').onclick = closeOverview;
 $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = onRefresh;
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };

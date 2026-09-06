@@ -245,7 +245,7 @@ lifted out of the panels and run in isolation, which proves the logic and not th
 1. On a Zoho CRM tab, click **+ Workspace** in the panel. On the first run the same action asks for
    one dedicated **working folder**, creates `crm/instance[-sandbox]-orgid` inside it and selects the
    workspace. Each Zoost product keeps its own subfolder, so one working folder can serve them all.
-2. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules, actions and connections.
+2. The new workspace opens on **Overview**: check what is already local, then click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules, actions and connections.
 3. Optional: `git init` in the workspace folder to start versioning. Everything else works without it.
 4. Explore: open a function, follow its links, open the **Wiring** diagram, run **Health** (♥), or **Export**.
 5. (Optional) **Settings → AI assistant** to set up the assistant (see below).
@@ -312,7 +312,7 @@ offer zero-retention.
   **✎** gives it a name of your own, shown instead of the folder's (the platform's own name stays in
   the tooltip and in the bar underneath, and clearing the field goes back to it); the **🗑** (Remove)
   button deletes that subfolder (local mirror only, re-pullable).
-- Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
+- Workspace actions: **Overview · Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
 - Mode segments: **Functions · Modules · Workflows · Schedules · Actions · Connections** - which of these
   appear, and in what order, is yours to set in **Settings → Tabs**, where each also carries a
   **pull** switch - whether `Pull all` asks Zoho for that type at all. Turning a tab off clears it,

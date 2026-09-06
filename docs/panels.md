@@ -114,6 +114,14 @@ Only the HTTP form is classified. Analytics also answers `200` with `{"status":"
 whether a permission refusal ever arrives that way has **not** been measured — so that path stays an
 ordinary failure rather than being labelled a refusal on a guess.
 
+**Workspace overview is an entry view, not a second audit.** A workspace that has just been created
+opens it once; reopening an existing workspace leaves the reader where they were. Its model lives in
+`workspace.js` and receives facts already read from the local mirror. A missing index stays unknown,
+never zero, while partial, unavailable and behind remain distinct states. The renderer owns only the
+DOM and the shortcuts to Browse, Pull all, the diagram and Health. The sample never offers Pull all.
+Like Health, AI and History, the overview is one full-panel view and a workspace change redraws it;
+losing the workspace closes it so it cannot keep showing the previous folder.
+
 **Anything that is not Zoho opens in its own window, never a tab.** `chrome.tabs.create` *activates*
 the new tab, so the panel suddenly finds itself looking at a non-Zoho page: the environment guard
 fires, the interface empties and the mismatch overlay appears. That is right when it means something
