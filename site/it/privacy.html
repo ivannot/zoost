@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:28bfb19e548b5e85 -->
+<!-- translated-from: site/privacy.html sha256:7bfe4251417ada0e -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
-<meta name="description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni e sei eventi aggregati del sito senza identificatori.">
+<meta name="description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni e quattro eventi aggregati del sito senza identificatori.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
-<meta property="og:description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni e sei eventi aggregati del sito senza identificatori.">
+<meta property="og:description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni e quattro eventi aggregati del sito senza identificatori.">
 <meta property="og:image" content="https://zoost.it/img/og.png?v=e0bc337840">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/privacy">
@@ -65,9 +65,10 @@
       API <em>tua</em>. <b>Solo due cose possono uscire, e soltanto per tua scelta:</b> la richiesta
       all'assistente e <b>Report this problem</b>, che manda allo sviluppatore una segnalazione letta per intero
       e che diventa una issue pubblica - descritta in <a href="#travel">Dove viaggiano i dati</a>. Nient'altro
-      viene inviato altrove e nulla parte senza un tuo clic. Separatamente, questo sito registra sei
-      tipi di evento del funnel senza identificatori e li usa soltanto come conteggi aggregati, come
-      descritto nella sezione 8.</p>
+      viene inviato altrove e nulla parte senza un tuo clic. Separatamente, questo sito registra
+      quattro visite a famiglie di pagine senza identificatori e le usa soltanto come conteggi
+      aggregati. I link in uscita verso lo Store contengono parametri standard di campagna che il
+      Chrome Web Store tratta dopo che hai seguito un link, come descritto nella sezione 8.</p>
   </div>
 
   <h2>0. Quali estensioni copre</h2>
@@ -360,12 +361,17 @@
   <h2>8. Questo sito</h2>
   <p>zoost.it non imposta cookie, non carica font o analytics di terze parti e non profila i
     visitatori. Il suo script di prima parte registra un funnel deliberatamente piccolo: le visite
-    alle pagine home, Zoho CRM, Zoho Analytics e sample, e i clic da questo sito verso le due schede del Chrome
-    Web Store. Ogni punto contiene soltanto il nome dell'evento, una di quelle famiglie di pagine e la
+    alle pagine home, Zoho CRM, Zoho Analytics e sample. Ogni punto contiene soltanto il nome
+    dell'evento, una di quelle famiglie di pagine e la
     lingua della pagina. Non contiene identificatori del visitatore o della sessione, indirizzo IP,
     user agent, referrer o query string; non viene mai unito all'attività dell'estensione o a una
     segnalazione. Lo script rispetta Global Privacy Control e Do Not Track. Il servizio di
     misurazione di Cloudflare conserva questi punti aggregati per tre mesi.</p>
+  <p>I link da questo sito alle due schede del Chrome Web Store includono i parametri standard
+    <code>utm_source</code>, <code>utm_medium</code> e <code>utm_campaign</code>. Non fanno inviare a
+    zoost.it una seconda copia del clic. Dopo che segui un link, l'attribuzione e l'eventuale
+    misurazione della pagina Store o dell'installazione sono gestite dal Chrome Web Store e da Google
+    secondo le loro condizioni.</p>
   <p><b>La <a href="/report">pagina delle segnalazioni</a></b> carica inoltre
     Turnstile di Cloudflare da <code>challenges.cloudflare.com</code>. È il controllo anti-abuso che
     sta fra quel modulo e un tracker di issue pubblico, ed è l'unico script di terze parti su questo
@@ -442,6 +448,6 @@
   </div>
 </footer>
 
-<script src="/site.js?v=3de7cf5fae" defer></script>
+<script src="/site.js?v=d297b73baf" defer></script>
 </body>
 </html>

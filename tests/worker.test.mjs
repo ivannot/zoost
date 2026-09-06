@@ -672,8 +672,29 @@ test('a counter that cannot be written refuses the report rather than losing the
 
 test('the browser funnel payload contains no ambient browsing data', () => {
   const { funnelPayload } = load([sliceFn('site/site.js', 'funnelPayload')], { JSON });
-  assert.equal(funnelPayload('store_crm', '/crm', 'en'),
-    '{"event":"store_crm","page":"/crm","lang":"en"}');
+  assert.equal(funnelPayload('view_crm', '/crm', 'en'),
+    '{"event":"view_crm","page":"/crm","lang":"en"}');
+});
+
+test('every website exit to the Chrome Web Store uses its native campaign attribution', () => {
+  const files = [...listPages(), 'site/llms.txt'];
+  let seen = 0;
+  for (const rel of files) {
+    const urls = read(rel).match(/https:\/\/chromewebstore\.google\.com\/detail\/[^\s"')>]+/g) || [];
+    for (const raw of urls) {
+      seen++;
+      const url = raw.replaceAll('&amp;', '&');
+      assert.match(url, /\?utm_source=zoost\.it&/,
+        `${rel}: the Store visit has no source attribution`);
+      assert.match(url, /&utm_medium=referral&/,
+        `${rel}: the Store visit has no standard medium`);
+      assert.match(url, /&utm_campaign=product-site$/,
+        `${rel}: the Store visit has no stable campaign name`);
+    }
+  }
+  assert.ok(seen >= 20, 'the test found too few Store links to be covering the published site');
+  assert.doesNotMatch(read('site/site.js'), /store_(crm|analytics)|funnelClick/,
+    'the site still sends its own copy of a click the Store attributes natively');
 });
 
 test('the browser funnel honours both privacy preference signals', () => {
@@ -706,11 +727,11 @@ function funnelEndpoint(body, origin = 'https://zoost.it') {
 }
 
 test('a funnel event stores only the declared aggregate dimensions', async () => {
-  const e = funnelEndpoint({ event: 'store_crm', page: '/crm', lang: 'en' });
+  const e = funnelEndpoint({ event: 'view_crm', page: '/crm', lang: 'en' });
   const res = await e.run();
   assert.equal(res.status, 204);
   assert.equal(JSON.stringify(e.points), JSON.stringify([
-    { blobs: ['store_crm', '/crm', 'en'], doubles: [1], indexes: ['store_crm'] },
+    { blobs: ['view_crm', '/crm', 'en'], doubles: [1], indexes: ['view_crm'] },
   ]));
   const written = JSON.stringify(e.points);
   assert.ok(!written.includes('192.0.2.4') && !written.includes('Private Browser'),
@@ -720,7 +741,8 @@ test('a funnel event stores only the declared aggregate dimensions', async () =>
 test('an unknown funnel event or page is not stored', async () => {
   for (const body of [
     { event: 'source_opened', page: '/crm', lang: 'en' },
-    { event: 'store_crm', page: '/private/path?token=x', lang: 'en' },
+    { event: 'store_crm', page: '/crm', lang: 'en' },
+    { event: 'view_crm', page: '/private/path?token=x', lang: 'en' },
   ]) {
     const e = funnelEndpoint(body);
     const res = await e.run();
@@ -730,7 +752,7 @@ test('an unknown funnel event or page is not stored', async () => {
 });
 
 test('a cross-site request cannot inflate the funnel', async () => {
-  const e = funnelEndpoint({ event: 'store_crm', page: '/crm', lang: 'en' }, 'https://example.test');
+  const e = funnelEndpoint({ event: 'view_crm', page: '/crm', lang: 'en' }, 'https://example.test');
   const res = await e.run();
   assert.equal(res.status, 403);
   assert.deepEqual(e.points, []);

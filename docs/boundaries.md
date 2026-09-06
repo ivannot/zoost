@@ -126,13 +126,17 @@ The extensions still contain no telemetry. The public website has a separate, fi
 funnel because visits to a product page and use of an extension are two different systems and two
 different promises.
 
-The browser can send six event names to `zoost.it/api/funnel`: one view for each of the home, CRM,
-Analytics and sample page families, and one exit to each Chrome Web Store listing. The payload has
+The browser can send four event names to `zoost.it/api/funnel`: one view for each of the home, CRM,
+Analytics and sample page families. The payload has
 three bounded fields: event name, page family and page language. `site/site.js` does not read or send
 an IP address, user agent, referrer, query string, visitor id or session id, and sends nothing when
 Global Privacy Control or Do Not Track is enabled. The Worker validates every field before writing a
 point to Cloudflare Analytics Engine. The points are used only as aggregate counts and expire there
 after three months.
+
+Links from zoost.it to the two Chrome Web Store listings carry the standard `utm_source`,
+`utm_medium` and `utm_campaign` parameters. Attribution after following those links is handled by
+the Chrome Web Store and its Google Analytics integration; zoost.it sends no duplicate click event.
 
 This boundary must stay separate from extension activity and problem reports. Adding an event,
 dimension, identifier, destination or longer-lived export is a new data-collection decision, not an

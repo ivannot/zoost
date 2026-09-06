@@ -34,7 +34,7 @@
   "kv_namespaces": [
     { "binding": "STATUS", "id": "7bccd32413744db3a7cf9d90c9396bc7" }
   ],
-  // Four page families and the two Store exits, as aggregate events only. The dataset is created on
+  // Four page families, as aggregate events only. The dataset is created on
   // the first write; it carries no visitor, session, address, user agent, referrer or query string.
   "analytics_engine_datasets": [
     { "binding": "METRICS", "dataset": "zoost_funnel" }

@@ -51,7 +51,7 @@ const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not
 
 // A deliberately small funnel, not a general analytics vocabulary. New names are a data-collection
 // decision and therefore have to be added here, to the client and to the privacy page together.
-const FUNNEL_EVENTS = new Set(['view_home', 'view_crm', 'view_analytics', 'view_try', 'store_crm', 'store_analytics']);
+const FUNNEL_EVENTS = new Set(['view_home', 'view_crm', 'view_analytics', 'view_try']);
 const FUNNEL_PAGES = new Set(['/', '/it', '/crm', '/it/crm', '/analytics', '/it/analytics', '/try', '/it/try']);
 
 const timeout = (ms) => AbortSignal.timeout(ms);

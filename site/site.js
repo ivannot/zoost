@@ -208,7 +208,7 @@
   function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
 
   // The conversion funnel is first-party and deliberately smaller than an analytics product: four
-  // page families and the two exits to the Chrome Web Store. The payload contains only names chosen
+  // page families. The payload contains only names chosen
   // here, never the referrer, query string, user agent or an identifier. Do Not Track and Global
   // Privacy Control are respected even though the measurement sets no cookie and builds no profile.
   var FUNNEL_VIEWS = {
@@ -232,16 +232,8 @@
     var payload = funnelPayload(event, page, LANG);
     navigator.sendBeacon('/api/funnel', new Blob([payload], { type: 'application/json' }));
   }
-  function funnelClick(e) {
-    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-    if (!a) return;
-    var href = a.getAttribute('href') || '';
-    if (href.indexOf('flffecjpbmjfonhoojaiemgjanbjkmpj') !== -1) funnelSend('store_crm');
-    else if (href.indexOf('gmelnigbgklfjgceldicakkomhgplgge') !== -1) funnelSend('store_analytics');
-  }
   var funnelPage = location.pathname.replace(/\/+$/, '') || '/';
   funnelSend(FUNNEL_VIEWS[funnelPage]);
-  document.addEventListener('click', funnelClick);
 
   // "Covers Zoost X · updated Y" on the guide. Kept in step with the repo automatically: the rule is
   // that documentation ships with the code that changed it, so the version the docs describe is the
