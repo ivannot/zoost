@@ -804,8 +804,12 @@ async function selectWorkspace(w) {
 
 async function addWorkspace() {
   if (workspaceChangeRefuse()) return;
-  if (!root) return status('Pick a working folder first.', 'warn');
+  if (!root) { await pickRoot(); if (!root) return; }
+  if (!(await ensurePerm(root))) { status(MSG.folder, 'warn'); return; }
+  if (!rootGranted) { rootGranted = true; await refreshWorkspaces(); }
   if (!ctx || !ctx.workspace) return status('Open a Zoho Analytics workspace in the active tab first.', 'warn');
+  const have = (wsList || []).find((w) => String(w.id) === String(ctx.workspace));
+  if (have) { $('ws').value = have.id; return selectWorkspace(have); }
   setBusy(true, 'Creating the workspace folder…');
   try {
     const info = await toBridge({ cmd: 'workspaceInfo', aboutTab: true });
@@ -1251,7 +1255,9 @@ function updateButtons() {
   // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
   // decided in one place, because they were decided in two and disagreed.
   updateSampleButtons();
-  $('wsadd').disabled = pullBusy || busy || !root || !rootGranted || !ctx || !ctx.workspace;
+  // Folder selection and a lapsed permission are handled inside the action. It grants first,
+  // refreshes the list, then opens an existing workspace or creates the missing one.
+  $('wsadd').disabled = pullBusy || busy || !ctx || !ctx.workspace;
   $('wsdel').disabled = pullBusy || busy || !dir || !wsList.length;
   $('wsrename').disabled = pullBusy || busy || !dir || !wsList.length;
   // Why each is grey, in the order the states block each other - the same order `emptyReason()`
@@ -1268,8 +1274,11 @@ function updateButtons() {
       : !root ? 'no working folder yet - press the folder button'
         : !rootGranted ? 'folder access is not granted - press Grant access'
           : null;
-  $('wsadd').title = !$('wsadd').disabled ? 'Create a workspace for the one in the active tab'
-    : `Cannot create a workspace: ${wsWhy || 'the active tab is not on a Zoho Analytics workspace'}`;
+  $('wsadd').title = !$('wsadd').disabled
+    ? !root ? 'Choose a working folder and create the workspace in the active tab'
+      : !rootGranted ? `Grant access to ${root.name}, then open or create the workspace in the active tab`
+        : 'Create a workspace for the one in the active tab'
+    : `Cannot create a workspace: ${pullBusy || busy ? wsWhy : 'the active tab is not on a Zoho Analytics workspace'}`;
   // Written out rather than looped: the check that holds this rule reads `$('id').title`, and a loop
   // over the ids hides it from the one thing that keeps it true. Two buttons, two lines.
   $('wsdel').title = !$('wsdel').disabled ? 'Remove this workspace from the folder'
@@ -2159,8 +2168,9 @@ function visibleViews() {
  */
 function emptyReason() {
   if (!root) {
-    return '<b>No working folder yet.</b> Press <b>\u{1F4C1} Set working folder\u2026</b> above and pick a '
-      + 'dedicated, empty folder. Every workspace lives inside it.';
+    return '<b>No working folder yet.</b> Press <b>Sample</b> to try invented data, or use '
+      + '<b>+ Workspace</b> from a Zoho Analytics tab. Either action asks for a dedicated folder and '
+      + 'continues from there; every workspace lives inside it.';
   }
   if (!rootGranted) {
     // Deliberately no explanation of *why* the access is missing: on a first install nothing expired,
@@ -3979,9 +3989,19 @@ function knownSample() {
 const sampleKnowable = () => !!(root && rootGranted) || !!sampleWsKnown;
 function updateSampleButtons() {
   const have = knownSample();
+  const knowable = sampleKnowable();
+  const title = have
+    ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
+    : knowable
+      ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
+      : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
   const sb = $('wssample');
-  if (sb) sb.hidden = !!have || !root || !rootGranted;
-  if (sb) sb.disabled = pullBusy || sampleBusy;
+  if (sb) {
+    sb.hidden = false;
+    sb.disabled = pullBusy || sampleBusy;
+    sb.textContent = have ? 'Open sample' : knowable ? '+ Sample' : 'Sample';
+    sb.title = title;
+  }
   // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
@@ -3992,12 +4012,8 @@ function updateSampleButtons() {
     // honest label asserts nothing and the tooltip says the click will find out. This project does
     // not state what it has not measured, and a button label is a statement like any other.
     ob.textContent = have ? 'Open sample workspace'
-      : sampleKnowable() ? '+ Sample workspace' : 'Sample workspace';
-    ob.title = have
-      ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
-      : sampleKnowable()
-        ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
-        : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
+      : knowable ? '+ Sample workspace' : 'Sample workspace';
+    ob.title = title;
   }
 }
 

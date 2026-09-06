@@ -5309,8 +5309,9 @@ function renderBlocked() {
 
 function emptyReason(area) {
   if (!root) {
-    return '<b>No working folder yet.</b> Press <b>\u{1F4C1} Set working folder\u2026</b> above and pick a '
-      + 'dedicated, empty folder. Every workspace lives inside it.';
+    return '<b>No working folder yet.</b> Press <b>Sample</b> to try invented data, or use '
+      + '<b>+ Workspace</b> from a Zoho CRM tab. Either action asks for a dedicated folder and '
+      + 'continues from there; every workspace lives inside it.';
   }
   if (!rootGranted) {
     return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above - or simply '
@@ -5509,9 +5510,19 @@ function knownSample() {
 const sampleKnowable = () => !!(root && rootGranted) || !!sampleWsKnown;
 function updateSampleButtons() {
   const have = knownSample();
+  const knowable = sampleKnowable();
+  const title = have
+    ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
+    : knowable
+      ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
+      : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
   const sb = $('wssample');
-  if (sb) sb.hidden = !!have || !root || !rootGranted;
-  if (sb) sb.disabled = pullBusy || sampleBusy;
+  if (sb) {
+    sb.hidden = false;
+    sb.disabled = pullBusy || sampleBusy;
+    sb.textContent = have ? 'Open sample' : knowable ? '+ Sample' : 'Sample';
+    sb.title = title;
+  }
   // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
@@ -5522,12 +5533,8 @@ function updateSampleButtons() {
     // honest label asserts nothing and the tooltip says the click will find out. This project does
     // not state what it has not measured, and a button label is a statement like any other.
     ob.textContent = have ? 'Open sample workspace'
-      : sampleKnowable() ? '+ Sample workspace' : 'Sample workspace';
-    ob.title = have
-      ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
-      : sampleKnowable()
-        ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
-        : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
+      : knowable ? '+ Sample workspace' : 'Sample workspace';
+    ob.title = title;
   }
 }
 
@@ -5592,10 +5599,13 @@ async function writeSampleWorkspace() {
 
 async function addWorkspaceForTab() {
   if (workspaceChangeRefuse()) return;
-  if (!root) { await pickRoot(); return; }
+  if (!root) { await pickRoot(); if (!root) return; }
   if (!(await ensurePerm(root))) { setStatus(MSG.folder, 'warn'); return; }
+  if (!rootGranted) { rootGranted = true; await loadWorkspaces(); }
   const ctx = lastCtx && lastCtx.org ? lastCtx : await getContext();
   if (!ctx || !ctx.org) { setStatus('Open a Zoho CRM tab first - the workspace is created for the org you are signed in to.', 'warn'); return; }
+  const have = (wsList || []).find((w) => w.binding && w.binding.org === ctx.org);
+  if (have) { $('ws').value = have.id; return activate(have, true); }
   try {
     const name = wsFolderName(ctx);
     const base = await appRoot(true);
@@ -5844,23 +5854,17 @@ function updateWsButtons() {
   // A workspace already exists for this org and never will not: that is not a wait, it is a
   // permanent no, and a greyed button there reads as something broken. The other three reasons -
   // no working folder, no Zoho tab, no org on the tab - all clear on their own, so the button
-  // stays visible and says what is missing.
+  // stays visible. Choosing or re-granting the folder is part of this action, not a prerequisite.
   const known = (wsList || []).some((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
   add.hidden = known;
-  // **And it may not be pressed while the list is empty for a reason that is not «there is none».**
-  // `wsList` is empty whenever Chrome has dropped the folder permission - which is every browser
-  // restart - so «no workspace for this org» was being answered from a list that had not been read.
-  // The sample button beside it already carries `rootGranted` for exactly this, and the Analytics
-  // twin states the rule: grant first, then decide, because deciding before that is deciding on a
-  // list that is empty for an unrelated reason.
-  add.disabled = pullBusy || !root || !rootGranted || !lastCtx || !lastCtx.org;
+  // The handler grants first, refreshes the workspace list and only then decides whether it needs to
+  // create or merely open the org. That makes the first click useful without trusting an unread list.
+  add.disabled = pullBusy || !lastCtx || !lastCtx.org;
   add.textContent = (lastCtx && lastCtx.instance) ? `+ ${lastCtx.instance}` : '+ Workspace';
-  // Why it is grey, as every other blocked control in this panel says it - and the folder comes
-  // first, because it is the one the reader can act on with a single click anywhere in the panel.
-  add.title = !root ? 'Set the working folder first'
-    : !rootGranted ? `Grant access to ${root.name} first - the workspaces in it have not been read`
-    : !lastCtx ? 'Open a Zoho CRM tab first'
-    : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
+  add.title = !lastCtx ? 'Open a Zoho CRM tab first'
+    : !root ? `Choose a working folder and create the workspace for \u00ab${lastCtx.instance}\u00bb`
+      : !rootGranted ? `Grant access to ${root.name}, then open or create \u00ab${lastCtx.instance}\u00bb`
+        : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
   // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
   // decided in one place, because they were decided in two and disagreed.
   updateSampleButtons();

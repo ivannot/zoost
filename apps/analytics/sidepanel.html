@@ -471,7 +471,7 @@
 </div>
 <div class="wsbar wsbar2">
   <select id="ws" title="Workspaces found inside the working folder"></select>
-  <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button><button id="wssample" title="Write a sample workspace of invented data into the working folder - nothing is fetched, and it can be deleted like any other">+ Sample</button>
+  <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button><button id="wssample" title="Open or write a sample workspace of invented data - nothing is fetched">Sample</button>
   <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
 </div>
 
@@ -603,9 +603,9 @@
 <div id="offoverlay">
   <div class="t">Not on a Zoho Analytics tab</div>
   <div class="s">This workspace talks to Zoho only from a Zoho Analytics tab. To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.</div>
+  <button class="primary" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">Sample workspace</button>
   <select id="gozohodc" class="znav" aria-label="Which data centre to open" title="Which data centre to open. It starts on the one this workspace or this tab is on, or on the default in Settings - after signing out, which org you want next is yours to say"></select>
-  <button class="primary" id="gozoho">Go to Zoho Analytics ↗</button>
-  <button class="znav" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">+ Sample workspace</button>
+  <button class="znav" id="gozoho">Go to Zoho Analytics ↗</button>
 </div>
 <div id="rxmenu" class="rxmenu"></div>
 

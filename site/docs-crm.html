@@ -107,19 +107,22 @@
   <h2 id="first-run">2. First run</h2>
   <ol>
     <li>Open a Zoho CRM tab and open the Zoost side panel (the extension icon).</li>
-    <li>Click <b class="ui">📁 Set working folder…</b> and choose a <b>dedicated, empty folder</b>.
-      Something like <code>~/Documents/Zoost</code>.</li>
-    <li>Click <b class="ui">+ Workspace</b>. Zoost creates the subfolder for the org in your active tab, named
+    <li>Click <b class="ui">+ Workspace</b>. If this is the first run, the same action asks you for a
+      <b>dedicated, empty working folder</b>, such as <code>~/Documents/Zoost</code>, then continues.
+      <b class="ui">📁 Set working folder…</b> changes it later.</li>
+    <li>Zoost creates the subfolder for the org in your active tab, named
       <code>crm/instance[-sandbox]-orgid</code>, and selects it. Each Zoost product keeps its own
       subfolder inside the working folder, so one folder can serve them all.</li>
     <li>Click <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>.</li>
   </ol>
-  <p><b class="ui">+ Sample</b> is the other way in, and it needs no Zoho tab: it writes a workspace of
+  <p><b class="ui">Sample</b> is the other way in, and it needs no Zoho tab: it writes a workspace of
     invented data into the working folder so you can open the tree, the graph and the exports before
     pointing Zoost at anything of your own. It is generated, never fetched - the workspace bar says
     so, and everything that would talk to Zoho is disabled for it. It is an ordinary folder otherwise:
-    delete it with <b class="ui">🗑</b> like any other. The button disappears once one exists.</p>
-  <p>The same action is on the <b>Not on a Zoho tab</b> screen, as <b class="ui">+ Sample workspace</b>:
+    delete it with <b class="ui">🗑</b> like any other. Once one exists the button reads
+    <b class="ui">Open sample</b> and takes you back to it.</p>
+  <p>The same action is the primary choice on the <b>Not on a Zoho tab</b> screen, as
+    <b class="ui">Sample workspace</b>:
     a sample owes the platform nothing, so it opens and reads without a tab and without an account.
     That screen is where somebody who has just installed Zoost actually is. Once one exists that button
     reads <b class="ui">Open sample workspace</b> and opens it; before Chrome has given the panel access

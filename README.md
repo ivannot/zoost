@@ -242,17 +242,16 @@ lifted out of the panels and run in isolation, which proves the logic and not th
 
 ## Quick start
 
-1. **Settings → Choose folder…** - pick one dedicated **working folder**. Every workspace will be a
-   subfolder inside it at `crm/instance[-sandbox]-orgid`, created automatically. Each Zoost
-   product keeps its own subfolder, so one working folder can serve them all.
-2. On a Zoho CRM tab, click **+** in the panel. Zoost creates the workspace for that org.
-3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules, actions and connections.
-4. Optional: `git init` in the workspace folder to start versioning. Everything else works without it.
-5. Explore: open a function, follow its links, open the **Wiring** diagram, run **Health** (♥), or **Export**.
-6. (Optional) **Settings → AI assistant** to set up the assistant (see below).
+1. On a Zoho CRM tab, click **+ Workspace** in the panel. On the first run the same action asks for
+   one dedicated **working folder**, creates `crm/instance[-sandbox]-orgid` inside it and selects the
+   workspace. Each Zoost product keeps its own subfolder, so one working folder can serve them all.
+2. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules, actions and connections.
+3. Optional: `git init` in the workspace folder to start versioning. Everything else works without it.
+4. Explore: open a function, follow its links, open the **Wiring** diagram, run **Health** (♥), or **Export**.
+5. (Optional) **Settings → AI assistant** to set up the assistant (see below).
 
-**Or press `+ Sample` and skip all of it.** It writes a workspace of invented data into the working
-folder - a couple of hundred functions with real call chains, modules with lookups, workflows,
+**Or press `Sample` and skip all of it.** It asks for the working folder when needed, then writes a
+workspace of invented data into it - a couple of hundred functions with real call chains, modules with lookups, workflows,
 schedules and connections - so you can open the tree, the graph, the audit and the exports before
 pointing Zoost at anything of your own. It needs no Zoho tab and no account, it is generated rather
 than fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other

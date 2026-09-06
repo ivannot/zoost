@@ -60,7 +60,7 @@ dirFor	c67faa925fb1	c67faa925fb1	identical
 dirtyPeer	5f62d305d70c	5f62d305d70c	identical
 dropWorkspaceState	1bc30b8e48a6	167539fa76e8	divergent
 egoStat	07126f3c9de0	07126f3c9de0	identical
-emptyReason	2abe1ee8d567	c6461ab20713	divergent
+emptyReason	52a2cc9b794f	1c45640bf913	divergent
 engineIncomplete	54560440576d	54560440576d	identical
 ensureBridge	d7215ec858e4	ae54e773d1c0	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
@@ -266,7 +266,7 @@ tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
 updateDepthUI	77a910d07585	77a910d07585	identical
 updateNav	0e95a07d943c	e933fb891d70	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
-updateSampleButtons	6a97baab42ae	6a97baab42ae	identical
+updateSampleButtons	bbf8b0ca157e	bbf8b0ca157e	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical
 wasOwn	137c94652f18	137c94652f18	identical

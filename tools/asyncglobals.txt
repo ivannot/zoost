@@ -72,6 +72,7 @@ apps/analytics/options.js	saveKeys	ownWrite
 apps/analytics/sidepanel.js	addSampleWorkspace	rootGranted
 apps/analytics/sidepanel.js	addSampleWorkspace	sampleBusy
 apps/analytics/sidepanel.js	addWorkspace	dir
+apps/analytics/sidepanel.js	addWorkspace	rootGranted
 apps/analytics/sidepanel.js	aiExecTool	o
 apps/analytics/sidepanel.js	analyticsFrameId	_afCandidates
 apps/analytics/sidepanel.js	analyticsFrameId	_afFrame
@@ -127,6 +128,7 @@ apps/crm/options.js	saveKeys	dirty
 apps/crm/options.js	saveKeys	ownWrite
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
+apps/crm/sidepanel.js	addWorkspaceForTab	rootGranted
 apps/crm/sidepanel.js	applySettingsChange	ownPrefsWrite
 apps/crm/sidepanel.js	applySettingsChange	pendingRootReload
 apps/crm/sidepanel.js	applySettingsChange	prefsSavedDuringPull

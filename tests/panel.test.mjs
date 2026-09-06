@@ -808,8 +808,11 @@ test('analytics: a workspace it has just created is the one it selects', () => {
   // refreshWorkspaces() picks the remembered workspace, and the remembered one was still the one you
   // were in - so «Create workspace for X» created X and put you back, mismatch bar and all. The CRM
   // twin has always remembered it first.
-  const src = read('apps/analytics/sidepanel.js');
-  const body = src.slice(src.indexOf('async function addWorkspace()'));
+  const fn = sliceFn('apps/analytics/sidepanel.js', 'addWorkspace');
+  // The permission-restoration branch now refreshes before it decides whether a workspace exists.
+  // This assertion is about the newly-created workspace, so start at the write that creates it;
+  // a refresh belonging to the neighbouring subject must not satisfy or fail this one.
+  const body = fn.slice(fn.indexOf('await patchCfg'));
   const remember = body.indexOf("idbHandle.set('activeWsAnalytics'");
   const refresh = body.indexOf('await refreshWorkspaces()');
   assert.ok(remember > 0, 'nothing remembers the workspace that was just created');
@@ -3429,8 +3432,11 @@ test('the sample workspace is written by the shipped generator, and nothing abou
       assert.ok(/sample/.test(stmt),
         `${app}: «${stmt.trim().slice(0, 60)}…» rebuilds the binding without the sample flag`);
     }
-    // and it is absent once one exists - a control with nothing to do
-    assert.ok(/wssample'\)[\s\S]{0,300}hidden = /.test(js), `${app}: the button never goes away`);
+    // It stays reachable even when the panel is already on a Zoho tab. The same control opens an
+    // existing sample or writes one, so hiding it would remove the lowest-risk first-run path from
+    // exactly the screen where an installed extension normally opens.
+    assert.ok(/wssample'\)[\s\S]{0,500}textContent = /.test(js),
+      `${app}: the sample control does not say whether it will open or write the workspace`);
   }
 
   // the generator writes what the panel expects to read back
@@ -3691,6 +3697,8 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
     // and the way in has to be on the overlay itself, which is where a new install actually lands
     const ov = html.slice(html.indexOf('id="offoverlay"'), html.indexOf('id="offoverlay"') + 800);
     assert.ok(/id="offsample"/.test(ov), `${app}: the overlay offers no way to try Zoost without signing in`);
+    assert.ok(/class="primary" id="offsample"/.test(ov), `${app}: the sample is not the primary first-run action`);
+    assert.ok(/class="znav" id="gozoho"/.test(ov), `${app}: the control that opens Zoho lost its navigation colour`);
     assert.ok(/\$\('offsample'\)\.onclick = \(\) => addSampleWorkspace\(\)/.test(js),
       `${app}: the overlay's sample button is not wired`);
     // Both copies call the one function, and **the function decides** - not the label. A label is
@@ -3748,6 +3756,133 @@ test('choosing the folder from the sample button continues into the sample in th
   }
 });
 
+test('choosing the folder from + Workspace continues into the real workspace in the same click', async () => {
+  // The sample path already treats choosing a folder as the first half of the action the user
+  // pressed. The real-workspace path made the same picker a separate task: first click chose the
+  // folder, second click created the workspace. Drive both shipped handlers from root=null and
+  // require the workspace write before that first click resolves.
+  {
+    const writes = [];
+    const file = {
+      getFile: async () => ({ text: async () => '{}' }),
+      createWritable: async () => ({
+        write: async (text) => { writes.push(JSON.parse(text)); }, close: async () => {},
+      }),
+    };
+    const globals = {
+      root: null, rootGranted: false, wsList: [],
+      lastCtx: { org: '44', origin: 'https://crm.zoho.eu', instance: 'Acme' },
+      workspaceChangeRefuse: () => false,
+      ensurePerm: async () => true,
+      getContext: async () => null,
+      wsFolderName: () => 'acme-44',
+      appRoot: async () => ({ getDirectoryHandle: async () => ({ getFileHandle: async () => file }) }),
+      CFG: '.zoost.json', JSON, Object,
+      window: { idbHandle: { set: async () => {} } },
+      setStatus: () => {}, loadWorkspaces: async () => {},
+    };
+    globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
+    const { addWorkspaceForTab } = load(
+      [sliceFn('apps/crm/sidepanel.js', 'addWorkspaceForTab')], globals);
+    await addWorkspaceForTab();
+    assert.equal(writes.length, 1, 'crm: the first click only chose the folder');
+    assert.equal(writes[0].org, '44', 'crm: the first click wrote a different org');
+  }
+
+  {
+    const patched = [];
+    const globals = {
+      root: null, rootGranted: false, wsList: [], ctx: { workspace: '77' },
+      workspaceChangeRefuse: () => false,
+      ensurePerm: async () => true,
+      status: () => {}, setBusy: () => {},
+      toBridge: async () => ({ workspace: '77', name: 'Finance', origin: 'https://analytics.zoho.eu' }),
+      appRoot: async () => ({ getDirectoryHandle: async () => ({}) }),
+      stemOf: () => 'finance-77', dir: null, forgetDirs: () => {},
+      patchCfg: async (value) => { patched.push(value); }, PULL_SV: 5,
+      window: { idbHandle: { set: async () => {} } },
+      $: () => ({ className: '' }), refreshWorkspaces: async () => {},
+    };
+    globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
+    const { addWorkspace } = load([sliceFn('apps/analytics/sidepanel.js', 'addWorkspace')], globals);
+    await addWorkspace();
+    assert.equal(patched.length, 1, 'analytics: the first click only asked for a working folder');
+    assert.equal(patched[0].workspace, '77', 'analytics: the first click wrote a different workspace');
+  }
+});
+
+test('restoring folder access opens the workspace it finds instead of recreating it', async () => {
+  // At browser restart the remembered handle exists but its contents have not been read. The action
+  // is allowed to restore that permission, but it must refresh before deciding to create: Analytics
+  // creation deliberately resets lastPull, so recreating an existing folder would erase a fact the
+  // user cannot reconstruct without another pull.
+  {
+    const opened = [];
+    const existing = { id: 'org:44', binding: { org: '44' } };
+    const globals = {
+      root: { name: 'Zoost' }, rootGranted: false, wsList: [],
+      lastCtx: { org: '44', origin: 'https://crm.zoho.eu', instance: 'Acme' },
+      workspaceChangeRefuse: () => false, ensurePerm: async () => true,
+      loadWorkspaces: async () => { globals.wsList.push(existing); }, getContext: async () => null,
+      activate: async (w) => { opened.push(w); },
+      $: () => ({ value: '' }), setStatus: () => {},
+      appRoot: async () => { throw new Error('existing CRM workspace was recreated'); },
+    };
+    const { addWorkspaceForTab } = load(
+      [sliceFn('apps/crm/sidepanel.js', 'addWorkspaceForTab')], globals);
+    await addWorkspaceForTab();
+    assert.deepEqual(opened, [existing], 'crm: the existing workspace was not opened after re-grant');
+  }
+
+  {
+    const opened = [];
+    const existing = { id: '77', cfg: { workspace: '77', lastPull: '2026-09-05T10:00:00Z' } };
+    const globals = {
+      root: { name: 'Zoost' }, rootGranted: false, wsList: [], ctx: { workspace: '77' },
+      workspaceChangeRefuse: () => false, ensurePerm: async () => true,
+      refreshWorkspaces: async () => { globals.wsList.push(existing); },
+      selectWorkspace: async (w) => { opened.push(w); },
+      $: () => ({ value: '' }), status: () => {}, setBusy: () => {},
+      toBridge: async () => { throw new Error('existing Analytics workspace was queried as new'); },
+    };
+    const { addWorkspace } = load([sliceFn('apps/analytics/sidepanel.js', 'addWorkspace')], globals);
+    await addWorkspace();
+    assert.deepEqual(opened, [existing], 'analytics: the existing workspace was recreated after re-grant');
+    assert.equal(existing.cfg.lastPull, '2026-09-05T10:00:00Z', 'analytics: lastPull was erased');
+  }
+});
+
+test('the sample entry point stays available on a Zoho tab and states what it will do', () => {
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/sidepanel.js`;
+    const cfg = app === 'crm' ? 'binding' : 'cfg';
+    const drive = (root, rootGranted, wsList, sampleWsKnown) => {
+      const els = {
+        wssample: { hidden: true, disabled: false, textContent: '', title: '' },
+        offsample: { disabled: false, textContent: '', title: '' },
+      };
+      const globals = {
+        root, rootGranted, wsList, sampleWsKnown, pullBusy: false, sampleBusy: false,
+        $: (id) => els[id],
+      };
+      const { updateSampleButtons } = load([
+        sliceFn(rel, 'knownSample'), sliceConst(rel, 'sampleKnowable'),
+        sliceFn(rel, 'updateSampleButtons'),
+      ], globals);
+      updateSampleButtons();
+      return els;
+    };
+
+    const first = drive(null, false, [], null);
+    assert.equal(first.wssample.hidden, false, `${app}: Sample disappears on a first run opened from Zoho`);
+    assert.equal(first.wssample.textContent, 'Sample', `${app}: the unread folder is described as empty`);
+
+    const existing = drive({ name: 'Zoost' }, true, [{ id: 'sample', [cfg]: { sample: true } }], null);
+    assert.equal(existing.wssample.hidden, false, `${app}: an existing sample has no direct way back in`);
+    assert.equal(existing.wssample.textContent, 'Open sample', `${app}: an existing sample is labelled as a new one`);
+  }
+});
+
 test('the panel remembers whether a sample exists, for the moment it cannot look', () => {
   // Chrome drops the folder permission between sessions, so the state right after the panel opens is
   // the one where it cannot enumerate anything - and that is exactly when the overlay asks whether
@@ -3790,7 +3925,7 @@ test('the panel does not claim what it has not looked at, and a poll does not un
     assert.ok(/const sampleKnowable = \(\) => !!\(root && rootGranted\) \|\| !!sampleWsKnown;/.test(js),
       `${app}: nothing distinguishes «there is none» from «I have not looked»`);
     const lbl = js.slice(js.indexOf("const ob = $('offsample')"), js.indexOf("const ob = $('offsample')") + 700);
-    assert.ok(/sampleKnowable\(\) \? '\+ Sample workspace' : 'Sample workspace'/.test(lbl),
+    assert.ok(/knowable \? '\+ Sample workspace' : 'Sample workspace'/.test(lbl),
       `${app}: the button still says «+ Sample workspace» when it cannot tell`);
     assert.ok(/toggle\('show', !isSample\(\) && !sampleBusy\)/.test(js),
       `${app}: the overlay is derived without knowing a sample is being written, so the poll brings it back`);
