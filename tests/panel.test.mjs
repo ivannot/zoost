@@ -6385,8 +6385,13 @@ for (const app of ['crm', 'analytics']) {
 // obvious English words and that is exactly why they were measured before being sent.
 {
   const REL = 'apps/crm/sidepanel.js';
+  const fixedDate = (offsetMinutes) => class extends Date {
+    constructor(...args) { super(...(args.length ? args : ['2026-08-22T12:00:00Z'])); }
+    static now() { return Date.parse('2026-08-22T12:00:00Z'); }
+    getTimezoneOffset() { return offsetMinutes; }
+  };
   const bench = (from, to, offsetMinutes = -120) => {
-    const g = { String, Number, Math, Date: class extends Date { getTimezoneOffset() { return offsetMinutes; } },
+    const g = { String, Number, Math, Date: fixedDate(offsetMinutes),
                 console, runtimeFrom: from, runtimeTo: to, RUNTIME_KEPT_DAYS: 30 };
     return load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
   };
@@ -6473,7 +6478,12 @@ for (const app of ['crm', 'analytics']) {
   test('and a typed range is still put in order', () => {
     // The second half: the attributes bind the picker, not the keyboard, and these fields can be
     // typed into. Asserted on values rather than on the wiring.
-    const g = { String, Number, Math, Date: class extends Date { getTimezoneOffset() { return -120; } },
+    const DateAtCapture = class extends Date {
+      constructor(...args) { super(...(args.length ? args : ['2026-08-22T12:00:00Z'])); }
+      static now() { return Date.parse('2026-08-22T12:00:00Z'); }
+      getTimezoneOffset() { return -120; }
+    };
+    const g = { String, Number, Math, Date: DateAtCapture,
                 console, runtimeFrom: '2026-08-21', runtimeTo: '2026-08-05', RUNTIME_KEPT_DAYS: 30 };
     const s = load([sliceFn(REL, 'runtimeSpan')], g).runtimeSpan();
     assert.equal(s.from.slice(0, 10), '2026-08-05');
