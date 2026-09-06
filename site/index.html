@@ -52,15 +52,13 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>Everything you built inside Zoho is yours.<br><span>And with Zoost you can see all of it at once.</span></h1>
-    <p class="lead">Zoho shows you one object at a time, in a browser tab. Zoost copies the whole org to plain
-      files on your own disk, then maps the links between them: which functions call each other, what depends
-      on what, and which objects appear to be unused.</p>
+    <h1>Before you change something in Zoho,<br><span>find out what depends on it.</span></h1>
+    <p class="lead">Zoost copies code and configuration to your computer, maps the relationships and lets
+      you search, compare and document the organisation as a whole.</p>
     <div class="cta">
-      <a class="btn p" href="#the-workbenches">The workbenches</a>
-      <a class="btn" href="#what-both-workbenches-share">What both workbenches share</a>
-      <a class="btn" href="/try">Try it with invented data</a>
-      <span class="meta">Free · Apache-2.0 · no account · source you can read, all of it</span>
+      <a class="btn p" href="/try#crm">Try Zoost CRM with sample data</a>
+      <a class="btn" href="/try#analytics">Try Zoost Analytics with sample data</a>
+      <span class="meta">Read-only towards Zoho · no account · data on your computer · open source</span>
     </div>
   </div>
 </div>
@@ -172,7 +170,7 @@
       </div>
       <div>
         <h3>Nothing leaves on its own</h3>
-        <p>No account, no telemetry, and no server between you and your org. Two things leave only if you
+        <p>The extensions have no account or telemetry, and no server sits between you and your org. Two things leave only if you
           send them: what you ask the optional AI assistant, with your own key -
           <a href="/ai">what it adds, and when it is not worth one</a> - and a
           <a href="/report">problem report</a>, which you read in full first.</p>
@@ -224,7 +222,7 @@
         <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No account, no telemetry, and nothing sent anywhere unless they send it: a question to an AI provider, or a <a href="/report">problem report</a> they have read in full.</td></tr>
         <tr><td class="k">The one exception</td><td>An optional AI assistant, off until someone enters their own API key. Then, and only then, the parts it needs go to Anthropic or OpenAI. It can reach nowhere else.</td></tr>
         <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
-        <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>. Both ask for their own platform's domains in every data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code>, and <code>zoost.it</code>. Zoho CRM adds its sandbox data centres, and both add the two suite shells - <code>one.zoho.*</code> and <code>crmplus.zoho.*</code>, with their <code>one.zohocloud.ca</code> and <code>crmplus.zohocloud.ca</code> counterparts for Canada, which is a different family however alike it looks. The bridge that reads your org is injected only into frames on its own platform's domain: inside Zoho One or Zoho CRM Plus your org is an ordinary page in a frame of its own, and that frame is the only thing either extension reads. Finding it costs one line that runs in every frame of the tab and answers with that frame's address - nothing else is read there, and nothing leaves the browser. The two AI hosts are reached only if someone turns the assistant on. And nothing of ours runs on <code>zoost.it</code> until you press <b>Report this problem</b>: it opens <a href="/report">the report page</a> and writes the text into the box, so that you read it before anything is sent. The manifest is the authority.</td></tr>
+        <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>. Both ask for their own platform's domains in every data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code>, and <code>zoost.it</code>. Zoho CRM adds its sandbox data centres, and both add the two suite shells - <code>one.zoho.*</code> and <code>crmplus.zoho.*</code>, with their <code>one.zohocloud.ca</code> and <code>crmplus.zohocloud.ca</code> counterparts for Canada, which is a different family however alike it looks. The bridge that reads your org is injected only into frames on its own platform's domain: inside Zoho One or Zoho CRM Plus your org is an ordinary page in a frame of its own, and that frame is the only thing either extension reads. Finding it costs one line that runs in every frame of the tab and answers with that frame's address - nothing else is read there, and nothing leaves the browser. The two AI hosts are reached only if someone turns the assistant on. And no extension code runs on <code>zoost.it</code> until you press <b>Report this problem</b>: it opens <a href="/report">the report page</a> and writes the text into the box, so that you read it before anything is sent. The manifest is the authority.</td></tr>
 <tr><td class="k">How you can check</td><td>Twenty-one files of plain JavaScript for Zoho CRM, thirteen for Zoho Analytics. No bundler, no minifier: what you read is what runs. Each release is built by GitHub twice over and signed, and one command verifies the published file.</td></tr>
         <tr><td class="k">How to judge it without me</td><td>Every command is on the <a href="/nerd#check-it-yourself">nerd page</a>: what GitHub built, the same archive rebuilt on your own machine, and the record of what was submitted to the Store - including the entries it says it cannot prove, and why. The source is short enough to read in one sitting, which is the point of shipping it unminified.</td></tr>
       </tbody>
@@ -285,6 +283,6 @@
   </div>
 </footer>
 
-<script src="/site.js?v=00b65ef13e" defer></script>
+<script src="/site.js?v=3de7cf5fae" defer></script>
 </body>
 </html>

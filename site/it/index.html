@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:6687d7633d8a579f -->
+<!-- translated-from: site/index.html sha256:db2b9099af74499f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -53,15 +53,13 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E con Zoost puoi vederlo tutto insieme.</span></h1>
-    <p class="lead">In Zoho puoi guardare un oggetto alla volta, dentro una scheda del browser. Zoost porta
-      l'intera org sul tuo disco, in file che puoi aprire con qualsiasi editor, e ti mostra la mappa:
-      chi chiama chi, quali elementi dipendono da altri e quali non vengono più usati.</p>
+    <h1>Prima di modificare qualcosa in Zoho,<br><span>scopri che cosa dipende da quella modifica.</span></h1>
+    <p class="lead">Zoost copia codice e configurazione sul tuo computer, costruisce le relazioni e ti
+      permette di cercare, confrontare e documentare l'intera organizzazione.</p>
     <div class="cta">
-      <a class="btn p" href="#the-workbenches">I workbench</a>
-      <a class="btn" href="#cosa-condividono-i-due-workbench">Cosa condividono i due workbench</a>
-      <a class="btn" href="/it/try">Provalo su dati inventati</a>
-      <span class="meta">Gratuiti · Apache-2.0 · nessun account · sorgente leggibile, tutto quanto</span>
+      <a class="btn p" href="/it/try#crm">Prova Zoost CRM con dati di esempio</a>
+      <a class="btn" href="/it/try#analytics">Prova Zoost Analytics con dati di esempio</a>
+      <span class="meta">Sola lettura verso Zoho · nessun account · dati sul tuo computer · open source</span>
     </div>
     <p class="note" style="margin-top:22px" data-it-only>Il sito è tutto in italiano, guide e privacy policy comprese; la
       <a href="/llms.txt" hreflang="en">mappa per gli assistenti</a> resta in inglese, perché a
@@ -179,7 +177,7 @@
       </div>
       <div>
         <h3>Niente esce da solo</h3>
-        <p>Nessun account da creare, nessuna telemetria, nessun server fra te e la tua org. Due cose
+        <p>Le estensioni non hanno account o telemetria e nessun server si interpone fra te e la tua org. Due cose
           escono solo se le mandi tu: quello che chiedi all'assistente AI, che è facoltativo e resta spento
           finché non gli dai una chiave tua - <a href="/it/ai">cosa aggiunge e quando non serve</a> - e una
           <a href="/report" hreflang="en">segnalazione di problema</a>, che leggi per intero prima.</p>
@@ -231,7 +229,7 @@
         <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi usa Zoost, e basta. Nessun account, nessuna telemetria: esce solo ciò che la persona decide di inviare, cioè una domanda a un provider AI o una <a href="/report" hreflang="en">segnalazione</a> che può leggere per intero prima dell'invio.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente ciò che quella persona può già vedere dentro Zoho. Zoost usa la stessa sessione e gli stessi permessi, quindi non può accedere a niente di più.</td></tr>
-        <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Entrambe chiedono i domini della propria piattaforma in ogni data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code> e <code>zoost.it</code>. Zoost per Zoho CRM aggiunge i data centre sandbox, ed entrambe aggiungono le due shell di suite - <code>one.zoho.*</code> e <code>crmplus.zoho.*</code>, con le controparti <code>one.zohocloud.ca</code> e <code>crmplus.zohocloud.ca</code> per il Canada, che è una famiglia diversa per quanto si somiglino. Il ponte che legge la tua org viene iniettato solo nei frame che stanno sul dominio della sua piattaforma: dentro Zoho One o Zoho CRM Plus la tua org è una pagina come le altre, in un frame suo, e quel frame è l'unica cosa che le estensioni leggono. Trovarlo costa una riga che gira in ogni frame della scheda e risponde con l'indirizzo di quel frame - lì non viene letto altro, e non esce niente dal browser. I due host AI si raggiungono solo se qualcuno accende l'assistente. E su <code>zoost.it</code> non gira niente di nostro finché non premi <b>Segnala un problema</b>: apre <a href="/report">la pagina della segnalazione</a> (in inglese: è una sola, così la segnalazione che arriva è in una lingua sola) e ci scrive dentro il testo, così lo leggi prima che parta qualsiasi cosa. Il manifest fa fede.</td></tr>
+        <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Entrambe chiedono i domini della propria piattaforma in ogni data centre, <code>api.anthropic.com</code> / <code>api.openai.com</code> e <code>zoost.it</code>. Zoost per Zoho CRM aggiunge i data centre sandbox, ed entrambe aggiungono le due shell di suite - <code>one.zoho.*</code> e <code>crmplus.zoho.*</code>, con le controparti <code>one.zohocloud.ca</code> e <code>crmplus.zohocloud.ca</code> per il Canada, che è una famiglia diversa per quanto si somiglino. Il ponte che legge la tua org viene iniettato solo nei frame che stanno sul dominio della sua piattaforma: dentro Zoho One o Zoho CRM Plus la tua org è una pagina come le altre, in un frame suo, e quel frame è l'unica cosa che le estensioni leggono. Trovarlo costa una riga che gira in ogni frame della scheda e risponde con l'indirizzo di quel frame - lì non viene letto altro, e non esce niente dal browser. I due host AI si raggiungono solo se qualcuno accende l'assistente. E su <code>zoost.it</code> non gira nessun codice delle estensioni finché non premi <b>Segnala un problema</b>: apre <a href="/report">la pagina della segnalazione</a> (in inglese: è una sola, così la segnalazione che arriva è in una lingua sola) e ci scrive dentro il testo, così lo leggi prima che parta qualsiasi cosa. Il manifest fa fede.</td></tr>
 <tr><td class="k">Come verificarlo</td><td>Ventuno file di JavaScript in chiaro per Zoho CRM, tredici per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma; un comando verifica il file pubblicato.</td></tr>
         <tr><td class="k">Come giudicarlo senza di me</td><td>Ogni comando sta sulla <a href="/it/nerd#check-it-yourself">pagina nerd</a>: cosa ha costruito GitHub, lo stesso archivio ricostruito sulla tua macchina, e il registro di quello che è stato inviato allo Store - comprese le voci che dichiara di non poter dimostrare, e perché. Il sorgente è abbastanza corto da leggere in una volta sola, che è il motivo per cui viene distribuito non minificato.</td></tr>
       </tbody>
@@ -294,6 +292,6 @@
   </div>
 </footer>
 
-<script src="/site.js?v=00b65ef13e" defer></script>
+<script src="/site.js?v=3de7cf5fae" defer></script>
 </body>
 </html>

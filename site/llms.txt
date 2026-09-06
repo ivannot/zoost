@@ -66,7 +66,7 @@ Stated here rather than buried, because it is the part an assessment needs.
 - **Report definitions in Zoho Analytics are not covered.** Chart type, groupings and axes
   would require an endpoint that returns the computed data with them, so it is not called and the
   gap is stated wherever a report is shown.
-- **Nothing leaves the machine on its own.** There is no telemetry, and nothing is sent on an error
+- **Nothing leaves the machine on its own.** The extensions have no telemetry, and nothing is sent on an error
   or on a schedule. Two things leave when the user sends them: what they ask the optional AI
   assistant, which is off until they supply their own API key and then talks only to Anthropic or
   OpenAI; and a problem report - versions, the error, the last status lines, counters - which the
@@ -85,7 +85,10 @@ Stated here rather than buried, because it is the part an assessment needs.
   consumer, and neither platform reports that.
 - **The one exception is this website, and it is declared rather than waved away.** zoost.it is
   served by Cloudflare, whose edge keeps ordinary request logs - IP, time, URL, user agent - with no
-  cookie and no identifier. That is a processing of personal data, however small, and for it the
+  cookie and no identifier. Its first-party script also records six kinds of funnel event - four
+  page-family views and the two exits to the Chrome Web Store - with only event, page family and
+  language, no visitor or session identifier, and respect for GPC and Do Not Track. The events are
+  used only as aggregate counts and retained for three months. That is a processing of data, and for it the
   developer is the controller; §8 of the privacy policy states it, names the basis and gives an
   address to exercise a right against it. For everything the extensions touch the developer is
   neither controller nor processor, because no processing happens: nothing is received, nothing is

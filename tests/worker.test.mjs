@@ -668,6 +668,74 @@ test('a counter that cannot be written refuses the report rather than losing the
   assert.equal(e.calls.github, 0, 'it opened the issue anyway, having failed to count it');
 });
 
+// ---------- first-party funnel measurements ----------
+
+test('the browser funnel payload contains no ambient browsing data', () => {
+  const { funnelPayload } = load([sliceFn('site/site.js', 'funnelPayload')], { JSON });
+  assert.equal(funnelPayload('store_crm', '/crm', 'en'),
+    '{"event":"store_crm","page":"/crm","lang":"en"}');
+});
+
+test('the browser funnel honours both privacy preference signals', () => {
+  const source = sliceFn('site/site.js', 'funnelAllowed');
+  function allowed(navigator, window) {
+    return load([source], { navigator, window }).funnelAllowed();
+  }
+  const beacon = () => true;
+  assert.equal(allowed({ globalPrivacyControl: true, doNotTrack: '0', sendBeacon: beacon }, { doNotTrack: '0' }), false);
+  assert.equal(allowed({ globalPrivacyControl: false, doNotTrack: '1', sendBeacon: beacon }, { doNotTrack: '0' }), false);
+  assert.equal(allowed({ globalPrivacyControl: false, doNotTrack: '0', sendBeacon: beacon }, { doNotTrack: '1' }), false);
+  assert.equal(allowed({ globalPrivacyControl: false, doNotTrack: '0', sendBeacon: beacon }, { doNotTrack: '0' }), true);
+});
+
+function funnelEndpoint(body, origin = 'https://zoost.it') {
+  const points = [];
+  const ctx = load([
+    sliceConst('site/_worker.js', 'FUNNEL_EVENTS'),
+    sliceConst('site/_worker.js', 'FUNNEL_PAGES'),
+    sliceFn('site/_worker.js', 'funnel'),
+  ], { Set, Response, URL, JSON });
+  const request = {
+    method: 'POST', url: 'https://zoost.it/api/funnel',
+    headers: { get: (h) => ({ origin, 'content-length': '90',
+      'cf-connecting-ip': '192.0.2.4', 'user-agent': 'Private Browser' }[h] || '') },
+    json: async () => body,
+  };
+  const env = { METRICS: { writeDataPoint: (p) => points.push(p) } };
+  return { run: () => ctx.funnel(request, env), points };
+}
+
+test('a funnel event stores only the declared aggregate dimensions', async () => {
+  const e = funnelEndpoint({ event: 'store_crm', page: '/crm', lang: 'en' });
+  const res = await e.run();
+  assert.equal(res.status, 204);
+  assert.equal(JSON.stringify(e.points), JSON.stringify([
+    { blobs: ['store_crm', '/crm', 'en'], doubles: [1], indexes: ['store_crm'] },
+  ]));
+  const written = JSON.stringify(e.points);
+  assert.ok(!written.includes('192.0.2.4') && !written.includes('Private Browser'),
+    'the aggregate point contains request identity the funnel does not need');
+});
+
+test('an unknown funnel event or page is not stored', async () => {
+  for (const body of [
+    { event: 'source_opened', page: '/crm', lang: 'en' },
+    { event: 'store_crm', page: '/private/path?token=x', lang: 'en' },
+  ]) {
+    const e = funnelEndpoint(body);
+    const res = await e.run();
+    assert.equal(res.status, 400);
+    assert.deepEqual(e.points, []);
+  }
+});
+
+test('a cross-site request cannot inflate the funnel', async () => {
+  const e = funnelEndpoint({ event: 'store_crm', page: '/crm', lang: 'en' }, 'https://example.test');
+  const res = await e.run();
+  assert.equal(res.status, 403);
+  assert.deepEqual(e.points, []);
+});
+
 test('and when the counter can be written, the report goes', async () => {
   // The other half: a gate that always refuses is broken, and looks strict until somebody needs it.
   const e = reportEndpoint();

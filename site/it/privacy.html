@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:eb58a597c7f72241 -->
+<!-- translated-from: site/privacy.html sha256:28bfb19e548b5e85 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
-<meta name="description" content="Privacy policy delle estensioni Chrome Zoost. Nessun server, nessun account, nessuna telemetria: lo sviluppatore non riceve niente.">
+<meta name="description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni e sei eventi aggregati del sito senza identificatori.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
-<meta property="og:description" content="Privacy policy delle estensioni Chrome Zoost. Nessun server, nessun account, nessuna telemetria: lo sviluppatore non riceve niente.">
+<meta property="og:description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni e sei eventi aggregati del sito senza identificatori.">
 <meta property="og:image" content="https://zoost.it/img/og.png?v=e0bc337840">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/privacy">
@@ -49,7 +49,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">4 settembre 2026</span></p>
+  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">6 settembre 2026</span></p>
 
   <p class="note" data-it-only><b>La versione inglese è quella che fa fede.</b> Questa è una
     traduzione fedele, offerta perché il documento sia leggibile da chi deve approvarne l'uso in
@@ -58,14 +58,16 @@
 
   <div class="box">
     <h2 class="h3">In breve</h2>
-    <p>Lo sviluppatore non raccoglie nulla. Zoost non ha server, account, analytics né sistemi di
-      tracciamento. I dati si spostano solo tra il tuo browser, il prodotto Zoho in cui hai già eseguito
+    <p>Le estensioni non hanno server, account, analytics né sistemi di tracciamento. I dati Zoho si
+      spostano solo tra il tuo browser, il prodotto Zoho in cui hai già eseguito
       l'accesso e una cartella sul tuo disco. L'unica eccezione è l'assistente AI facoltativo: invia al
       provider configurato da <em>te</em> le informazioni necessarie per rispondere, usando una chiave
       API <em>tua</em>. <b>Solo due cose possono uscire, e soltanto per tua scelta:</b> la richiesta
       all'assistente e <b>Report this problem</b>, che manda allo sviluppatore una segnalazione letta per intero
       e che diventa una issue pubblica - descritta in <a href="#travel">Dove viaggiano i dati</a>. Nient'altro
-      viene inviato altrove e nulla parte senza un tuo clic.</p>
+      viene inviato altrove e nulla parte senza un tuo clic. Separatamente, questo sito registra sei
+      tipi di evento del funnel senza identificatori e li usa soltanto come conteggi aggregati, come
+      descritto nella sezione 8.</p>
   </div>
 
   <h2>0. Quali estensioni copre</h2>
@@ -86,7 +88,7 @@
   <h2>1. Chi c'è dietro Zoost</h2>
   <p>Zoost è sviluppato e pubblicato da <b>Ivan Notaristefano</b>, sviluppatore individuale, come
     strumento indipendente e non ufficiale. Contatto: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
-  <p><b>Sui dati che Zoost tocca lo sviluppatore non effettua nessun trattamento</b>: non ne riceve,
+  <p><b>Sui dati Zoho che le estensioni toccano lo sviluppatore non effettua nessun trattamento</b>: non ne riceve,
     non ne conserva, non ha accesso alla cartella in cui l'estensione scrive. L'unica cosa che può
     arrivargli è una segnalazione di problema, che scrivi, leggi per intero e mandi tu; è descritta
     al §2 e diventa una issue pubblica, mai un archivio tenuto qui.</p>
@@ -356,11 +358,15 @@
     e non è destinato all'uso da parte di chi ha meno di 16 anni.</p>
 
   <h2>8. Questo sito</h2>
-  <p>zoost.it non imposta cookie, non incorpora tracker, non carica font o analytics di terze parti,
-    non profila i visitatori. Le pagine sono file statici, e ognuna tranne una esegue un solo script
-    servito da questo stesso dominio, che compila l'anno del copyright e il badge delle versioni nel
-    footer.</p>
-  <p><b>L'unica eccezione è <a href="/report">la pagina delle segnalazioni</a></b>, che carica anche
+  <p>zoost.it non imposta cookie, non carica font o analytics di terze parti e non profila i
+    visitatori. Il suo script di prima parte registra un funnel deliberatamente piccolo: le visite
+    alle pagine home, Zoho CRM, Zoho Analytics e sample, e i clic da questo sito verso le due schede del Chrome
+    Web Store. Ogni punto contiene soltanto il nome dell'evento, una di quelle famiglie di pagine e la
+    lingua della pagina. Non contiene identificatori del visitatore o della sessione, indirizzo IP,
+    user agent, referrer o query string; non viene mai unito all'attività dell'estensione o a una
+    segnalazione. Lo script rispetta Global Privacy Control e Do Not Track. Il servizio di
+    misurazione di Cloudflare conserva questi punti aggregati per tre mesi.</p>
+  <p><b>La <a href="/report">pagina delle segnalazioni</a></b> carica inoltre
     Turnstile di Cloudflare da <code>challenges.cloudflare.com</code>. È il controllo anti-abuso che
     sta fra quel modulo e un tracker di issue pubblico, ed è l'unico script di terze parti su questo
     sito: gira su quella pagina e su nessun'altra. A Cloudflare viene passato il tuo indirizzo per fare
@@ -391,14 +397,16 @@
     impostare cookie né identificatori. Quello è un trattamento di dati personali, per quanto minimo; per quel trattamento il titolare è lo sviluppatore, sulla base del legittimo interesse a servire e
     proteggere il sito. Questi dati non vengono usati per costruire altro: nessun cookie, nessun tracker, nessuna
     profilazione, nessuna mailing list, niente di qui viene collegato a quello che fa l'estensione.
-    I tempi di conservazione sono quelli di Cloudflare; nessuna esportazione dei log è attiva e lo sviluppatore non ne
-    tiene copia. Per esercitare un diritto su questo, o anche solo per chiedere:
+    I tempi di conservazione sono quelli di Cloudflare; nessuna esportazione dei log è attiva e lo sviluppatore non
+    conserva una copia di quei log. Il funnel aggregato descritto sopra è conservato separatamente e
+    contiene soltanto le tre dimensioni dichiarate. Per esercitare un diritto su questo, o anche solo per chiedere:
     <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
 
   <h2>9. Modifiche</h2>
   <p>Se una versione futura di Zoost cambia quali dati vengono trattati o dove viaggiano, questa policy
     verrà aggiornata e la data in cima rivista prima che quella versione venga pubblicata. Le modifiche
-    sostanziali saranno segnalate nelle note di rilascio dell'estensione.</p>
+    sostanziali saranno segnalate nelle note di rilascio dell'estensione. Le modifiche alla
+    misurazione del sito sono indicate in questa sezione e nella cronologia pubblica del sorgente.</p>
 
 </div>
 </main>
@@ -434,6 +442,6 @@
   </div>
 </footer>
 
-<script src="/site.js?v=00b65ef13e" defer></script>
+<script src="/site.js?v=3de7cf5fae" defer></script>
 </body>
 </html>

@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
-<meta name="description" content="Privacy policy for the Zoost Chrome extensions. No server, no account, no telemetry: nothing ever reaches the developer.">
+<meta name="description" content="Privacy policy for the Zoost extensions and website: no extension telemetry, and six aggregate website funnel events with no identifiers.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://zoost.it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
-<meta property="og:description" content="Privacy policy for the Zoost Chrome extensions. No server, no account, no telemetry: nothing ever reaches the developer.">
+<meta property="og:description" content="Privacy policy for the Zoost extensions and website: no extension telemetry, and six aggregate website funnel events with no identifiers.">
 <meta property="og:image" content="https://zoost.it/img/og.png?v=e0bc337840">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/privacy">
@@ -48,18 +48,20 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">4 September 2026</span></p>
+  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">6 September 2026</span></p>
 
   <div class="box">
     <h2 class="h3">The short version</h2>
-    <p>The developer collects nothing. Zoost has no server, account, analytics or tracking. Your data
+    <p>The extensions have no account, analytics or tracking. Your Zoho data
       moves only between your browser, the Zoho product you are already signed in to, and a folder on
       your own disk. <b>Only two things can leave, and only when you choose to send them.</b> The optional
       AI assistant sends the information needed for your question to the provider <em>you</em> configure,
       using <em>your own</em> API key. <b>Report this problem</b> sends the developer a report that you
       have reviewed in full, where it becomes a public issue. This is explained under
       <a href="#travel">Where data travels</a>. Nothing else is transmitted, and neither action happens
-      without your click.</p>
+      without your click. Separately, this website records six kinds of funnel event - four page
+      families and two exits to the Chrome Web Store - with no visitor or session identifier, and
+      uses them only as aggregate counts.</p>
   </div>
 
   <h2>0. Which extensions this covers</h2>
@@ -81,7 +83,7 @@
   <h2>1. Who is behind Zoost</h2>
   <p>Zoost is developed and published by <b>Ivan Notaristefano</b>, an individual developer, as an
     independent, unofficial tool. Contact: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
-  <p><b>For the data Zoost touches, the developer carries out no processing at all</b>: receives none
+  <p><b>For the Zoho data the extensions touch, the developer carries out no processing at all</b>: receives none
     of it, stores none of it, and has no access to the folder the extension writes to. The one thing
     that can reach the developer is a problem report, which you write, read in full and send by hand;
     it is set out in §2 and it becomes a public issue, never a record kept here.</p>
@@ -325,10 +327,14 @@
     and is not intended for use by anyone under 16.</p>
 
   <h2>8. This website</h2>
-  <p>zoost.it sets no cookies, embeds no trackers, loads no third-party fonts or analytics, and does not
-    profile visitors. The pages are static files, and every page but one runs a single script served
-    from this same domain, which fills in the copyright year and the version badge in the footer.</p>
-  <p><b>The one exception is <a href="/report">the problem-report page</a></b>, which also loads
+  <p>zoost.it sets no cookies, loads no third-party fonts or analytics, and does not profile visitors.
+    Its first-party script records a deliberately small conversion funnel: visits to the homepage,
+    Zoho CRM, Zoho Analytics and sample pages, and clicks from this site to either Chrome Web Store listing. Each
+    point contains only the event name, one of those page families and the page language. It contains
+    no visitor or session identifier, IP address, user agent, referrer or query string; it is never
+    joined to extension activity or a problem report. The script respects Global Privacy Control and
+    Do Not Track. Cloudflare's measurement store retains these aggregate points for three months.</p>
+  <p><b>The <a href="/report">problem-report page</a></b> additionally loads
     Cloudflare's Turnstile from <code>challenges.cloudflare.com</code>. It is the anti-abuse check
     standing between that form and a public issue tracker, and it is the only third-party script on
     this site. It runs on that page and nowhere else. Cloudflare is given your address for the check,
@@ -359,13 +365,15 @@
     the developer, on the legitimate interest in serving and protecting the site. Nothing is built on
     top of it: no cookie, no tracker, no profile, no mailing list, and nothing here is joined to
     anything the extension does. Cloudflare's own retention applies; no log export is enabled and the
-    developer keeps no copy of any of it. To exercise a right over that, or to ask anything about it:
+    developer keeps no copy of those logs. The aggregate funnel described above is stored separately
+    and contains only its three declared dimensions. To exercise a right over that, or to ask anything about it:
     <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
 
   <h2>9. Changes</h2>
   <p>If a future version of Zoost changes what data is handled or where it travels, this policy will be
     updated and the date at the top revised before that version is published. Material changes will be
-    noted in the extension's release notes.</p>
+    noted in the extension's release notes. Changes to the website measurement are stated in this
+    section and in the public source history.</p>
 
 </div>
 </main>
@@ -400,6 +408,6 @@
   </div>
 </footer>
 
-<script src="/site.js?v=00b65ef13e" defer></script>
+<script src="/site.js?v=3de7cf5fae" defer></script>
 </body>
 </html>

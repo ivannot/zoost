@@ -120,6 +120,25 @@ who controls the browser profile can read a plaintext key, and encryption withou
 be decoration - the key to decrypt would sit next to the ciphertext. That is why the option exists and
 why it is the user's choice.
 
+## The website measurement boundary
+
+The extensions still contain no telemetry. The public website has a separate, first-party conversion
+funnel because visits to a product page and use of an extension are two different systems and two
+different promises.
+
+The browser can send six event names to `zoost.it/api/funnel`: one view for each of the home, CRM,
+Analytics and sample page families, and one exit to each Chrome Web Store listing. The payload has
+three bounded fields: event name, page family and page language. `site/site.js` does not read or send
+an IP address, user agent, referrer, query string, visitor id or session id, and sends nothing when
+Global Privacy Control or Do Not Track is enabled. The Worker validates every field before writing a
+point to Cloudflare Analytics Engine. The points are used only as aggregate counts and expire there
+after three months.
+
+This boundary must stay separate from extension activity and problem reports. Adding an event,
+dimension, identifier, destination or longer-lived export is a new data-collection decision, not an
+ordinary instrumentation change: update the client allow-list, Worker allow-list, executable payload
+test, both privacy pages and this document in the same commit.
+
 ## Adversaries this is built against
 
 - **a script on the Zoho page** - it can forge the save notice, and that is all it can reach;

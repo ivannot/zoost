@@ -1,9 +1,10 @@
 /*
- * zoost.it Worker. Everything is a static asset except two endpoints, which this script answers:
- * /api/versions, read by every page's footer badge, and /api/ahead, read only by /emergency.
+ * zoost.it Worker. Everything is a static asset except four endpoints answered here:
+ * /api/versions for the footer badge, /api/ahead for /emergency, /api/funnel for the site's small
+ * aggregate conversion funnel, and /api/report for an explicitly submitted problem report.
  *
  * Assets are served first by the platform; this script only runs when no file matches, so the site
- * behaves exactly as before and this endpoint is the single addition. `functions/` was the wrong
+ * behaves exactly as before for every matching asset. `functions/` was the wrong
  * shape entirely — that is a Cloudflare Pages convention and this project is a Worker.
  *
  * Reports the version Zoost is at in each place it lives, so the site can show whether they are in
@@ -47,6 +48,11 @@ const TTL = 600;                        // seconds, when every source answered
 const TTL_PARTIAL = 60;                 // …and when one did not, so an outage expires with the outage
 const UA = 'zoost.it version badge (+https://zoost.it)';
 const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not a version
+
+// A deliberately small funnel, not a general analytics vocabulary. New names are a data-collection
+// decision and therefore have to be added here, to the client and to the privacy page together.
+const FUNNEL_EVENTS = new Set(['view_home', 'view_crm', 'view_analytics', 'view_try', 'store_crm', 'store_analytics']);
+const FUNNEL_PAGES = new Set(['/', '/it', '/crm', '/it/crm', '/analytics', '/it/analytics', '/try', '/it/try']);
 
 const timeout = (ms) => AbortSignal.timeout(ms);
 const listing = (app) => `https://chromewebstore.google.com/detail/${EXT_ID[app]}`;
@@ -537,6 +543,37 @@ async function reportRateKey(env, ip) {
   return 'rl:report:' + [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Store one aggregate step in the public site's conversion funnel.
+ *
+ * The point contains three bounded labels chosen by this code: event, page family and language.
+ * It deliberately never reads the address, user agent, referrer, query string or a browser id. The
+ * request still crosses Cloudflare like every page request; what this function adds is only the
+ * aggregate point described on the privacy page. Analytics Engine expires it after three months.
+ */
+async function funnel(request, env) {
+  const reply = (status) => new Response(null, { status, headers: { 'cache-control': 'no-store' } });
+  if (request.method !== 'POST') return reply(405);
+  const origin = request.headers.get('origin') || '';
+  try {
+    if (!origin || new URL(origin).hostname !== new URL(request.url).hostname) return reply(403);
+  } catch (_) { return reply(403); }
+  let body;
+  try { body = await request.json(); } catch (_) { return reply(400); }
+  const event = String((body && body.event) || '');
+  const page = String((body && body.page) || '').replace(/\/+$/, '') || '/';
+  const lang = String((body && body.lang) || '').slice(0, 2);
+  if (!FUNNEL_EVENTS.has(event) || !FUNNEL_PAGES.has(page) || !/^(en|it)$/.test(lang)) return reply(400);
+  try {
+    if (env.METRICS) env.METRICS.writeDataPoint({
+      blobs: [event, page, lang], doubles: [1], indexes: [event],
+    });
+  } catch (_) {
+    // Measurement is subordinate to the page. A missing or unavailable binding may lose this count;
+    // it must never delay or break the navigation the visitor chose.
+  }
+  return reply(204);
+}
+
 async function report(request, env) {
   const bad = (status, error) => new Response(JSON.stringify({ error }), {
     status, headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -696,6 +733,7 @@ async function handle(request, env, ctx) {
   const url = new URL(request.url);
   if (url.pathname === '/api/versions') return versions(request, env, ctx);
   if (url.pathname === '/api/ahead') return ahead(request, env, ctx);
+  if (url.pathname === '/api/funnel') return funnel(request, env);
   if (url.pathname === '/api/report') return report(request, env);
   const to = MOVED[url.pathname];
   if (to) return Response.redirect(new URL(to, url).toString(), 301);

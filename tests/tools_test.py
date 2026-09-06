@@ -7499,6 +7499,18 @@ class TheSuiteCountsItself(unittest.TestCase):
                            'that stopped expanding')
 
 
+class TheWebsiteFunnelCanBeRead(unittest.TestCase):
+    """The counts are only useful if their query is reproducible and sampling-aware."""
+
+    def test_the_query_counts_sampled_events_and_bounds_the_period(self):
+        import funnel
+        sql = funnel.query(30)
+        self.assertIn('SUM(_sample_interval * double1)', sql)
+        self.assertIn("INTERVAL '30' DAY", sql)
+        self.assertIn('FROM zoost_funnel', sql)
+        self.assertNotIn('SELECT *', sql)
+
+
 class ImagesAreAGateOnlyWhenPublishing(unittest.TestCase):
     """Where «these pictures are older than the panel» refuses, and where it only says so.
 
