@@ -5535,7 +5535,9 @@ let sampleBusy = false;
 async function addSampleWorkspace() {
   if (workspaceChangeRefuse()) return;
   if (sampleBusy) return;
-  if (!root) { await pickRoot(); return; }
+  // The button says "Sample workspace", so a successful folder choice is the first half of this
+  // same action, not a separate action the user has to discover and repeat.
+  if (!root) { await pickRoot(); if (!root) return; }
   // **Grant first, then decide.** A click is the only context in which the permission can be
   // re-requested, and until it is granted the panel cannot see what is in the folder - so deciding
   // before this line means deciding on a list that is empty for a reason unrelated to the question.

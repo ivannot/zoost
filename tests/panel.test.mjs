@@ -3723,6 +3723,31 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
   }
 });
 
+test('choosing the folder from the sample button continues into the sample in the same click', async () => {
+  // The sample is the lowest-friction first run. Its button did open the folder picker, but the
+  // handler returned immediately after a successful choice: the user had to discover that the same
+  // button needed a second click. Drive the handler through an initially absent root and prove that
+  // the action it names is reached before the click ends.
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/sidepanel.js`;
+    const calls = [];
+    const globals = {
+      root: null, rootGranted: false, sampleBusy: false, wsList: [],
+      workspaceChangeRefuse: () => false,
+      ensurePerm: async () => true,
+      loadWorkspaces: async () => {}, refreshWorkspaces: async () => {},
+      activate: async () => {}, selectWorkspace: async () => {},
+      writeSampleWorkspace: async () => { calls.push('sample written'); },
+      updateSampleButtons: () => {},
+      $: () => ({ value: '', disabled: false, classList: { remove() {} } }),
+    };
+    globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
+    const m = load([sliceFn(rel, 'addSampleWorkspace')], globals);
+    await m.addSampleWorkspace();
+    assert.deepEqual(calls, ['sample written'], `${app}: the first click only chose the folder`);
+  }
+});
+
 test('the panel remembers whether a sample exists, for the moment it cannot look', () => {
   // Chrome drops the folder permission between sessions, so the state right after the panel opens is
   // the one where it cannot enumerate anything - and that is exactly when the overlay asks whether
