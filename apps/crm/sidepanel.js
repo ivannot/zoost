@@ -27,7 +27,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let dir = null, index = new Map(), bound = null, lastCtx = null;
 let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
-const FN_NAMES = ['api_name', 'display_name', 'name'];   // every name a function answers to
 // Which toolbar controls read from Zoho and which only read the disk. Declared here, above every
 // reader, because `refreshContext` runs on a five-second poll and used to name `pull` by hand while
 // this list already knew there were two: the per-type Pull stayed enabled through an environment
@@ -100,15 +99,9 @@ let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 // a reader wants to ask them together. `all` here means every language, the same word the other
 // filters use for the same idea.
 let langFilter = 'all';
-// What the Type chip lets through - written once, because three places asked it and one of them now
-// has to *say* what it excluded. Three copies of a predicate are three chances for the sentence
-// about a filter to describe a different filter from the one that ran.
-const passTypeRow = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter);
-// The same reasoning one line up, for the language: written once so the three places that ask
-// cannot disagree, and combined here so a call site cannot apply one filter and forget the other -
-// which is how a list and the sentence explaining it come to describe different filters.
-const passLangRow = (e) => langFilter === 'all' || langFamily(e.language) === langFilter;
-const passRow = (e) => passTypeRow(e) && passLangRow(e);
+// The panel is only the adapter for the pure list model. The same predicate is used by full-text
+// search, while renderTree asks the model for the whole selection and its exact empty-state count.
+const passRow = (e) => functionRowPasses(e, { typeFilter, langFilter, languageFamily: langFamily });
 // The data centre to fall back on when the panel knows neither a workspace nor a tab. It is a
 // display-only copy of a setting, so it is read into a URL and never written from here.
 let zohoDc = 'zoho.com';
@@ -2028,20 +2021,6 @@ async function fetchThenRedrawRow(e) {
   updateMissingButton();
 }
 
-// Sorting by a number answers a different question from browsing by namespace, so a numeric sort
-// drops the grouping and goes flat, highest first. Descending only: these are "which are the big
-// ones" questions, and an ascending list of the smallest functions answers nothing anyone asks.
-const TREE_SORTS = {
-  name: null,
-  lines: { label: 'lines', get: (e) => (e.stats ? e.stats.lines : -1) },
-  calls: { label: 'outbound calls', get: (e) => (e.stats ? e.stats.apiCalls : -1) },
-  modified: { label: 'last modified', get: (e) => (e.updatedTime ? (Date.parse(String(e.updatedTime).replace(' ', 'T')) || 0) : -1) },
-  // Sorted by the family and not by Zoho's spelling, so `java` and `java17` sit together instead of
-  // being separated by whatever sorts between them. The row shows the family while this is the
-  // sort, which is the rule the size sort was removed under: a list ordered by something it does
-  // not show reads as a list that is not ordered.
-  language: { label: 'language', get: (e) => langFamilyLabel(langFamily(e.language)), text: true },
-};
 function renderTree() {
   if (viewMode !== 'functions') return;
   const search = searchState.snapshot();
@@ -2054,17 +2033,20 @@ function renderTree() {
     clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220);
     return;
   }
-  const term = search.text.trim().toLowerCase();
-  const shown = treeData
-    .filter(passRow)
-    .filter((e) => !connFilterSet || connFilterSet.has(e.path))
-  // A function carries **three** names and Zoho means a different thing by each: `display_name`
-  // («LearningObjects - Upsert User DELETE»), `api_name` (a lowercased slug), and `name` - the
-  // CamelCase one you actually write in Deluge as `namespace.Name(...)`. The filter checked two of
-  // them, so searching for the name you had just copied out of a call found nothing. Reported.
-  // Which one is *shown* is the reader's choice (Name: display / api); which ones are *searched* is
-  // not a choice at all - all of them, or the box lies about what is in the workspace.
-    .filter((e) => !term || FN_NAMES.some((k) => String(e[k] || '').toLowerCase().includes(term)));
+  // A function carries three names. Which one is shown is the reader's choice; all three are always
+  // searched. The pure model also applies the two filters and connection set, then owns the order.
+  const selection = selectFunctionRows(treeData, {
+    typeFilter,
+    langFilter,
+    languageFamily: langFamily,
+    languageLabel: langFamilyLabel,
+    connectionPaths: connFilterSet,
+    term: search.text,
+    label: labelOf,
+    sortKey: treeSort,
+    sortDir: treeSortDir,
+  });
+  const shown = selection.rows;
   const tree = $('tree'); tree.innerHTML = '';
   if (connectionFilter) {
     const b = document.createElement('div'); b.className = 'connbanner';
@@ -2081,42 +2063,23 @@ function renderTree() {
     // one; unnamed, «No matches» is a true sentence about a list that was never looked at.
     m.innerHTML = treeData.length
       ? `<b>No matches.</b>${(typeFilter !== 'all' || langFilter !== 'all')
-        ? ` The ${narrowingName()} holding the list to ${treeData.filter(passRow).length} of ${treeData.length} function(s) - set them to <b>All</b> to search them all.` : ''}`
+        ? ` The ${narrowingName()} holding the list to ${selection.filterCount} of ${treeData.length} function(s) - set them to <b>All</b> to search them all.` : ''}`
       : (emptyReason('functions') || '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to mirror this org.');
     tree.appendChild(m); return;
   }
-  const sorter = TREE_SORTS[treeSort];
+  const sorter = selection.sorter;
   if (sorter) {
-    const dir = treeSortDir === 'asc' ? 1 : -1;
-    const list = shown.slice().sort((a, b) => {
-      const va = sorter.get(a), vb = sorter.get(b);
-      // A word is not a number, and `va - vb` over two of them is `NaN` - which compares false
-      // against everything and leaves the list in whatever order it arrived, looking sorted.
-      if (sorter.text) {
-        const c = String(va).localeCompare(String(vb));
-        return c ? dir * c : labelOf(a).localeCompare(labelOf(b));
-      }
-      // Rows with no data yet stay at the bottom whichever way we sort: ascending would otherwise
-      // open the list with the functions we know nothing about.
-      if ((va < 0) !== (vb < 0)) return va < 0 ? 1 : -1;
-      if (va !== vb) return dir * (va - vb);
-      return labelOf(a).localeCompare(labelOf(b));
-    });
-    // «Without data» is about a measurement nobody has taken yet. Every function has a language,
-    // so counting `< 0` over a word would report all of them or none, depending on the word.
-    const noData = sorter.text ? 0 : list.filter((e) => sorter.get(e) < 0).length;
+    const list = shown;
     const hdr = document.createElement('div'); hdr.className = 'srhdr';
     const order = sorter.text ? (treeSortDir === 'asc' ? 'A to Z' : 'Z to A')
       : `${treeSortDir === 'asc' ? 'lowest' : 'highest'} first`;
     hdr.textContent = `${list.length} function(s) by ${sorter.label}, ${order}`
-      + (noData ? ` · ${noData} without data (not downloaded yet)` : '');
+      + (selection.noData ? ` · ${selection.noData} without data (not downloaded yet)` : '');
     tree.appendChild(hdr);
     list.forEach((e) => tree.appendChild(fnRowEl(e)));
     return;
   }
-  const byNs = {}; shown.forEach((e) => { (byNs[e.namespace] ||= []).push(e); });
-  Object.keys(byNs).sort().forEach((ns) => {
-    const list = byNs[ns].sort((a, b) => (treeSortDir === 'asc' ? 1 : -1) * labelOf(a).localeCompare(labelOf(b)));
+  selection.groups.forEach(({ namespace: ns, rows: list }) => {
     const isCol = collapsed.has(ns);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
     g.innerHTML = `<span class="chev">▾</span><span>${escHtml(ns)}</span><span class="cnt">${list.length}</span>`;

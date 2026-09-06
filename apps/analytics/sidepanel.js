@@ -2129,46 +2129,18 @@ async function ensureSqlCache(op = beginWorkspaceOp()) {
 }
 
 function visibleViews() {
-  const search = searchState.snapshot();
-  const q = search.text.trim().toLowerCase();
-  let out = views;
-  if (typeFilter === ORPHANS) out = out.filter(isOrphanCandidate);
-  else if (typeFilter) out = out.filter((v) => v.type === typeFilter);
-  if (q && search.mode === 'sql') {
-    // Only what has SQL can match, and only what has been read: a query whose file would not open is
-    // counted by ensureSqlCache() and reported, not quietly turned into «no match».
-    const rx = search.regex ? rxCompile(search.text.trim()) : null;
-    // A broken pattern searched nothing, so it matches nothing: render() names the error, and this
-    // empties the list so the keyboard cannot step onto rows the reader was just told do not exist.
-    out = rx && rx.error ? [] : out.filter((v) => sqlCache && sqlHit(sqlCache.get(v.id), q, rx && rx.re));
-  } else if (q) {
-    out = out.filter((v) => {
-      if ((v.name || '').toLowerCase().includes(q) || (v.folderName || '').toLowerCase().includes(q)) return true;
-      const t = schema[v.id];                  // searching a column name finds the tables that have it
-      return !!(t && t.columns.some((c) => c.name.toLowerCase().includes(q)));
-    });
-  }
-  return out.slice().sort((a, b) => {
-    if (sortKey === 'readBy') {
-      // Absent lineage sorts last in both directions, like an absent timestamp: "not pulled" is not
-      // the same as "nothing reads it", and putting them at zero would say it was.
-      const cnt = (v) => { const d = deps && deps[v.id]; return d ? d.children.length + d.dashboards.length : null; };
-      const x = cnt(a), y = cnt(b);
-      if (x == null && y == null) return 0;
-      if (x == null) return 1;
-      if (y == null) return -1;
-      return (x - y) * sortDir;
-    }
-    if (sortKey === 'dataModifiedAt' || sortKey === 'designModifiedAt') {
-      // Views with no timestamp sort last in both directions - an absent value is not "oldest".
-      const x = a[sortKey], y = b[sortKey];
-      if (!x && !y) return 0;
-      if (!x) return 1;
-      if (!y) return -1;
-      return (x - y) * sortDir;
-    }
-    const x = a[sortKey] ?? '', y = b[sortKey] ?? '';
-    return String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' }) * sortDir;
+  return selectAnalyticsViews(views, {
+    typeFilter,
+    orphanToken: ORPHANS,
+    search: searchState.snapshot(),
+    schema,
+    sqlCache,
+    dependencies: deps,
+    isOrphan: isOrphanCandidate,
+    sortKey,
+    sortDir,
+    compileRegex: rxCompile,
+    sqlMatches: sqlHit,
   });
 }
 

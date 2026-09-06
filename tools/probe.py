@@ -105,6 +105,37 @@ CRM = """
       await until(() => $('navview').classList.contains('show'), 'the history view never opened');
     };
     const rows = () => [...document.querySelectorAll('#tree .f')];
+    // Drive the panel adapter around the pure list model. Counting only would miss an order that is
+    // right in memory and wrong on screen, so the flat sort compares every path in sequence.
+    {
+      const type = [...document.querySelectorAll('#typechips select')]
+        .find((select) => select.getAttribute('aria-label') === 'Type filter');
+      if (!type) say('the Functions type filter is not on screen');
+      const option = [...type.options].map((item) => item.value).find((value) => {
+        if (value === 'all') return false;
+        const picked = selectFunctionRows(treeData, { typeFilter: value, langFilter,
+          languageFamily: langFamily, languageLabel: langFamilyLabel, label: labelOf });
+        return picked.rows.length > 0 && picked.rows.length < treeData.length;
+      });
+      if (!option) say('the sample has no function type that narrows the list - the case cannot run');
+      type.value = option; type.onchange(); await settle('the function filter never finished drawing');
+      const expectedCount = selectFunctionRows(treeData, { typeFilter: option, langFilter,
+        languageFamily: langFamily, languageLabel: langFamilyLabel, label: labelOf }).rows.length;
+      if (rows().length !== expectedCount)
+        say(`the type filter drew ${rows().length} row(s), its model selected ${expectedCount}`);
+      type.value = 'all'; type.onchange(); await settle('clearing the function filter never finished drawing');
+
+      const sort = [...document.querySelectorAll('#typechips select')]
+        .find((select) => select.getAttribute('aria-label') === 'Sort functions');
+      if (!sort) say('the Functions sort is not on screen');
+      sort.value = 'lines'; sort.onchange(); await settle('the function sort never finished drawing');
+      const expected = selectFunctionRows(treeData, { typeFilter, langFilter,
+        languageFamily: langFamily, languageLabel: langFamilyLabel, label: labelOf,
+        sortKey: treeSort, sortDir: treeSortDir }).rows.map((row) => row.path).join('|');
+      const actual = rows().map((row) => row.dataset.path).join('|');
+      if (actual !== expected) say('the function order on screen is not the order its model returned');
+      sort.value = 'name'; sort.onchange(); await settle('restoring the function sort never finished drawing');
+    }
     const first = rows().find((e) => /Build invoice/.test(e.textContent));
     const second = rows().find((e) => /Sync contact/.test(e.textContent)) || rows().find((e) => e !== first);
     if (!first || !second) say('the fixture tree has fewer than two functions');
@@ -919,6 +950,38 @@ AN = """
     };
     await wait(1600);
     const rows = () => [...document.querySelectorAll('#list tbody tr')];
+    // The filter and both directions of a sort cross the new model/UI boundary here. Compare ids,
+    // not labels: two equal names are legal and would make the weaker assertion pass by accident.
+    {
+      const choice = [...$('typesel').options].map((option) => option.value).find((value) => {
+        if (!value || value === ORPHANS) return false;
+        const picked = selectAnalyticsViews(views, { typeFilter: value, orphanToken: ORPHANS,
+          search: searchState.snapshot(), schema, sqlCache, dependencies: deps,
+          isOrphan: isOrphanCandidate, sortKey, sortDir, compileRegex: rxCompile, sqlMatches: sqlHit });
+        return picked.length > 0 && picked.length < views.length;
+      });
+      if (!choice) say('the sample has no view type that narrows the list - the case cannot run');
+      $('typesel').value = choice; $('typesel').onchange(); await settle('the view filter never finished drawing');
+      const expectedFiltered = selectAnalyticsViews(views, { typeFilter, orphanToken: ORPHANS,
+        search: searchState.snapshot(), schema, sqlCache, dependencies: deps,
+        isOrphan: isOrphanCandidate, sortKey, sortDir, compileRegex: rxCompile, sqlMatches: sqlHit });
+      if (rows().map((row) => row.dataset.id).join('|') !== expectedFiltered.map((view) => String(view.id)).join('|'))
+        say('the view filter on screen is not the selection its model returned');
+      $('typesel').value = ''; $('typesel').onchange(); await settle('clearing the view filter never finished drawing');
+
+      $('sort').value = 'dataModifiedAt'; $('sort').onchange(); await settle('the view sort never finished drawing');
+      const expectedOrder = () => selectAnalyticsViews(views, { typeFilter, orphanToken: ORPHANS,
+        search: searchState.snapshot(), schema, sqlCache, dependencies: deps,
+        isOrphan: isOrphanCandidate, sortKey, sortDir, compileRegex: rxCompile, sqlMatches: sqlHit })
+        .map((view) => String(view.id)).join('|');
+      if (rows().map((row) => row.dataset.id).join('|') !== expectedOrder())
+        say('the ascending view order on screen is not the order its model returned');
+      $('sortdir').click(); await settle('reversing the view sort never finished drawing');
+      if (rows().map((row) => row.dataset.id).join('|') !== expectedOrder())
+        say('the descending view order on screen is not the order its model returned');
+      $('sort').value = 'name'; $('sort').onchange(); await settle('restoring the view sort never finished drawing');
+      if (sortDir !== 1) { $('sortdir').click(); await settle('restoring the view direction never finished drawing'); }
+    }
     if (rows().length < 2) say('the fixture list has fewer than two views');
     rows()[0].click(); await settle();
     const a = selectedId;

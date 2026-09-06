@@ -206,6 +206,15 @@ CHECKS = [
         'covers': ['apps/*/search-state.js', 'apps/*/sidepanel.js'],
     },
     {
+        'id': 'list-selection',
+        'by': "probe.py: both panels compare the filtered and sorted rows on screen with the list model",
+        'title': 'Filters and sorting change the rows they describe',
+        'do': ['Choose one type, then sort by a measured column in both directions.'],
+        'pass': ('Only that type remains; each direction draws every row in the exact order selected '
+                 'by the model, including rows whose measurement is unavailable.'),
+        'covers': ['apps/*/list-model.js', 'apps/*/sidepanel.js'],
+    },
+    {
         'id': 'passphrase',
         'title': 'The API key under a passphrase, across a browser restart',
         'do': ['In Settings, protect the key with a passphrase.',

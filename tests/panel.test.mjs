@@ -66,6 +66,87 @@ const gcon = (app, name) => {
 };
 const gsrc = (app) => read(`apps/${app}/graphview.js`) + '\n' + read(`apps/${app}/graphlogic.js`);
 
+function crmListModel() {
+  const rel = 'apps/crm/list-model.js';
+  return load([sliceConst(rel, 'FUNCTION_NAMES'), sliceConst(rel, 'TREE_SORTS'),
+    sliceFn(rel, 'functionRowPasses'), sliceFn(rel, 'functionSortValue'),
+    sliceFn(rel, 'selectFunctionRows')], { Map, Set, Date, String, Array, Object });
+}
+
+function analyticsListModel() {
+  const rel = 'apps/analytics/list-model.js';
+  return load([sliceFn(rel, 'selectAnalyticsViews')], { String, Array, Object });
+}
+
+test('crm: the list model applies every narrowing before it orders the rows', () => {
+  const model = crmListModel();
+  const rows = [
+    { api_name: 'alpha', display_name: 'Alpha', name: 'WrittenAlpha', namespace: 'automation', language: 'deluge', path: '/a', stats: { lines: 20, apiCalls: 1 } },
+    { api_name: 'beta', display_name: 'Beta', name: 'WrittenBeta', namespace: 'automation', language: 'java17', path: '/b', stats: { lines: 5, apiCalls: 4 } },
+    { api_name: 'gamma', display_name: 'Gamma', name: 'WrittenGamma', namespace: 'standalone', language: 'java', path: '/c' },
+  ];
+  const family = (value) => String(value || 'deluge').startsWith('java') ? 'java' : 'deluge';
+  const one = model.selectFunctionRows(rows, { typeFilter: 'automation', langFilter: 'java',
+    languageFamily: family, connectionPaths: new Set(['/b']), term: 'writtenbeta' });
+  assert.equal(one.rows.map((row) => row.api_name).join(','), 'beta');
+  assert.equal(one.filterCount, 1, 'the empty-state count applies a different filter from the rows');
+
+  const ascending = model.selectFunctionRows(rows, { sortKey: 'lines', sortDir: 'asc' });
+  assert.equal(ascending.rows.map((row) => row.api_name).join(','), 'beta,alpha,gamma',
+    'a function without measurements is presented as the smallest');
+  const descending = model.selectFunctionRows(rows, { sortKey: 'lines', sortDir: 'desc' });
+  assert.equal(descending.rows.map((row) => row.api_name).join(','), 'alpha,beta,gamma',
+    'a function without measurements is presented as the largest');
+  assert.equal(descending.noData, 1);
+
+  const grouped = model.selectFunctionRows(rows, { sortKey: 'name', sortDir: 'desc',
+    label: (row) => row.display_name });
+  assert.equal(grouped.groups.map((group) => group.namespace).join(','), 'automation,standalone');
+  assert.equal(grouped.groups[0].rows.map((row) => row.api_name).join(','), 'beta,alpha');
+});
+
+test('analytics: the list model distinguishes filters, searches and missing sort values', () => {
+  const model = analyticsListModel();
+  const rows = [
+    { id: 'a', name: 'Sales 10', folderName: 'Finance', type: 'Table', dataModifiedAt: 20 },
+    { id: 'b', name: 'Sales 2', folderName: 'Ops', type: 'QueryTable', dataModifiedAt: 10 },
+    { id: 'c', name: 'Overview', folderName: 'Board', type: 'Report', dataModifiedAt: null },
+    { id: 'd', name: 'Board', folderName: 'Board', type: 'Dashboard', dataModifiedAt: 30 },
+  ];
+  const dependencies = {
+    a: { children: ['b'], dashboards: [] },
+    b: { children: [], dashboards: [] },
+    c: { children: [], dashboards: [] },
+    d: { children: [], dashboards: [] },
+  };
+  const isOrphan = (view) => view.type !== 'Dashboard'
+    && dependencies[view.id].children.length === 0 && dependencies[view.id].dashboards.length === 0;
+  const base = { dependencies, isOrphan };
+  assert.equal(model.selectAnalyticsViews(rows, { ...base, typeFilter: 'Table' })
+    .map((view) => view.id).join(','), 'a');
+  assert.equal(model.selectAnalyticsViews(rows, { ...base, typeFilter: '__orphans__' })
+    .map((view) => view.id).sort().join(','), 'b,c', 'a dashboard was labelled as unused');
+  assert.equal(model.selectAnalyticsViews(rows, { ...base, search: { text: 'revenue', mode: 'name' },
+    schema: { b: { columns: [{ name: 'Revenue' }] } } }).map((view) => view.id).join(','), 'b');
+
+  const searchFns = load([sliceFn('apps/analytics/sidepanel.js', 'rxCompile'),
+    sliceFn('apps/analytics/sidepanel.js', 'sqlHit')], { RegExp, String });
+  const sqlOptions = { ...base, search: { text: '^select', mode: 'sql', regex: true },
+    sqlCache: new Map([['b', 'select * from T']]), compileRegex: searchFns.rxCompile,
+    sqlMatches: searchFns.sqlHit };
+  assert.equal(model.selectAnalyticsViews(rows, sqlOptions).map((view) => view.id).join(','), 'b');
+  assert.equal(model.selectAnalyticsViews(rows, { ...sqlOptions, search: { text: '(', mode: 'sql', regex: true } }).length, 0,
+    'a broken regular expression left unrelated rows reachable');
+
+  assert.equal(model.selectAnalyticsViews(rows, { ...base, sortKey: 'name', sortDir: 1 })
+    .map((view) => view.name).join(','), 'Board,Overview,Sales 2,Sales 10');
+  assert.equal(model.selectAnalyticsViews(rows, { ...base, sortKey: 'readBy', sortDir: -1,
+    dependencies: { a: dependencies.a, b: dependencies.b } }).map((view) => view.id).join(','), 'a,b,c,d',
+    'lineage not read was sorted as a zero');
+  assert.equal(model.selectAnalyticsViews(rows, { ...base, sortKey: 'dataModifiedAt', sortDir: -1 })
+    .map((view) => view.id).join(','), 'd,a,b,c', 'a missing timestamp did not stay last');
+});
+
 // ---------- Deluge: stripping comments and strings before counting anything ----------
 
 // The scanner comes with it: `stripNonCode` is now the façade over one pass that also hands back
@@ -4681,13 +4762,18 @@ test('both panels order the workspace list with the same comparator', () => {
 // window checked a different two. Reported. Which name is *shown* is the reader's choice; which are
 // *searched* is not one.
 test('the function search accepts every name a function answers to', () => {
-  const src = panelBody('crm');
-  const m = src.match(/const FN_NAMES = \[([^\]]*)\]/);
-  assert.ok(m, 'id=crm FN_NAMES is gone - the list the search derives from');
+  const src = read('apps/crm/list-model.js');
+  const m = src.match(/const FUNCTION_NAMES = \[([^\]]*)\]/);
+  assert.ok(m, 'id=crm FUNCTION_NAMES is gone - the list the search derives from');
   for (const k of ['api_name', 'display_name', 'name']) {
-    assert.ok(m[1].includes(`'${k}'`), `id=crm FN_NAMES no longer holds ${k}`);
+    assert.ok(m[1].includes(`'${k}'`), `id=crm FUNCTION_NAMES no longer holds ${k}`);
   }
-  assert.ok(/FN_NAMES\.some\(/.test(src), 'id=crm the tree filter stopped deriving from FN_NAMES');
+  const rows = [{ api_name: 'api-hit', display_name: 'Display hit', name: 'WrittenHit', namespace: 'standalone' }];
+  const model = crmListModel();
+  for (const term of ['api-hit', 'display hit', 'writtenhit']) {
+    const result = model.selectFunctionRows(rows, { term });
+    assert.equal(result.rows.length, 1, `id=crm searching ${term} missed the function`);
+  }
   // and the diagram window has to agree, or the same box behaves differently in two places
   const gv = gsrc('crm');
   const line = gv.split('\n').find((l) => /return !q \|\|/.test(l));
@@ -5690,7 +5776,7 @@ for (const app of ['crm', 'analytics']) {
     const an = read('apps/analytics/sidepanel.js');
     assert.ok(/clearTimeout\(_sqlSearchT\); _sqlSearchT = setTimeout\(render, 220\)/.test(an),
       'why=every keystroke runs the pattern over every cached query body');
-    assert.ok(/out = rx && rx\.error \? \[\]/.test(an),
+    assert.ok(/compiled && compiled\.error \? \[\]/.test(read('apps/analytics/list-model.js')),
       'why=a broken pattern leaves every view in visibleViews, and the keyboard steps onto them');
   });
 
@@ -5988,11 +6074,12 @@ for (const app of ['crm', 'analytics']) {
     { api_name: 'e', namespace: 'standalone', rest: false },   // a row from a mirror written before the field
   ];
   const bench = (typeFilter, langFilter) => {
-    const g = { Object, String, Array, console, typeFilter, langFilter };
-    const m = load([sliceConst(REL, 'LANG_FAMILY'), sliceConst(REL, 'langFamily'),
-                    sliceConst(REL, 'passTypeRow'), sliceConst(REL, 'passLangRow'),
-                    sliceConst(REL, 'passRow')], g);
-    return rows.filter(m.passRow).map((r) => r.api_name).join('');
+    const langs = load([sliceConst(REL, 'LANG_FAMILY'), sliceConst(REL, 'langFamily')],
+      { Object, String, Array, console });
+    const m = crmListModel();
+    return rows.filter((row) => m.functionRowPasses(row, {
+      typeFilter, langFilter, languageFamily: langs.langFamily,
+    })).map((r) => r.api_name).join('');
   };
 
   test('the language filter holds the list to one language', () => {
@@ -6019,11 +6106,14 @@ for (const app of ['crm', 'analytics']) {
     // The defect this prevents has happened here twice with the Type filter alone: a list held down
     // by a filter, and a sentence that names a different one - or a search that quietly ignores it.
     const src = read(REL);
-    assert.equal((src.match(/passTypeRow\(/g) || []).length, 1,
-      'why=something asks the type filter on its own again - the pair is `passRow`');
-    for (const site of ['.filter(passRow)', 'treeData.filter(passRow).length', '!passRow(e)']) {
-      assert.ok(src.includes(site), `why=${site} is gone - a list or a search that ignores a filter`);
-    }
+    const adapter = sliceConst(REL, 'passRow');
+    assert.ok(/functionRowPasses\(e, \{ typeFilter, langFilter/.test(adapter),
+      'why=the full-text search applies a different filter from the list');
+    const render = sliceFn(REL, 'renderTree');
+    assert.ok(/selectFunctionRows\(treeData, \{[\s\S]*typeFilter,[\s\S]*langFilter,/.test(render),
+      'why=the rendered list does not hand both filters to its model');
+    assert.ok(/!passRow\(e\)/.test(sliceFn(REL, 'contentSearch')),
+      'why=full-text search ignores one or both filters');
   });
 
   test('the sentence names the filter that is actually narrowing', () => {
@@ -6236,14 +6326,15 @@ for (const app of ['crm', 'analytics']) {
   test('sorting by language orders by the family and not by the spelling', () => {
     // `java` and `java17` must sit together. Sorting on Zoho's string would separate them by
     // whatever sorts between the two, which is a list that looks shuffled inside each language.
-    const g = { String, Array, console, Date,
-                langFamily: m.langFamily, langFamilyLabel: m.langFamilyLabel };
-    const { TREE_SORTS } = load([sliceConst(REL, 'TREE_SORTS')], g);
-    const key = TREE_SORTS.language;
-    assert.ok(key && key.text, 'why=language sorts as a number, and `a - b` over two words is NaN');
-    assert.equal(key.get({ language: 'java17' }), key.get({ language: 'java' }));
-    assert.equal(key.get({ language: 'nodejs_22' }), 'Node.js');
-    assert.equal(key.get({ language: null }), 'Deluge');
+    const model = crmListModel();
+    const rows = [{ api_name: 'node', language: 'nodejs_22' },
+      { api_name: 'java-z', language: 'java17' }, { api_name: 'java-a', language: 'java' },
+      { api_name: 'old', language: null }];
+    const result = model.selectFunctionRows(rows, { sortKey: 'language', sortDir: 'asc',
+      label: (row) => row.api_name, languageFamily: m.langFamily, languageLabel: m.langFamilyLabel });
+    assert.equal(result.sorter.text, true,
+      'why=language sorts as a number, and `a - b` over two words is NaN');
+    assert.equal(result.rows.map((row) => row.api_name).join(','), 'old,java-a,java-z,node');
   });
 }
 
@@ -20710,8 +20801,7 @@ test('the function row shows what the list is sorted by', () => {
   // Derived, and the rule the size sort was removed under: every criterion the list offers is either
   // a column the row already has, or one this slot shows. A sort by something invisible is what made a
   // correct order read as a broken one.
-  const { TREE_SORTS } = load([sliceConst(rel, 'TREE_SORTS')],
-                              { console, langFamily: () => 'java', langFamilyLabel: () => 'Java' });
+  const { TREE_SORTS } = crmListModel();
   const own = new Set(['name', 'lines', 'calls']);
   for (const key of Object.keys(TREE_SORTS)) {
     if (own.has(key)) continue;
