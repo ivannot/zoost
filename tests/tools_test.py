@@ -4343,6 +4343,15 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
         self.assertRegex(wf, r'push:\s*\n\s*branches: \[main\]', 'it does not fire on a push to main')
         self.assertIn('bash tests/run.sh', wf, 'it fires and runs something else')
 
+    def test_the_official_ci_refuses_to_skip_the_browser(self):
+        wf = self.WF.read_text(encoding='utf-8')
+        self.assertRegex(wf, r'ZOOST_REQUIRE_CHROME:\s*["\']?1["\']?',
+                         'the official battery lets tools/probe.py exit green without Chrome, so '
+                         'the only check that executes the extensions may silently execute nothing')
+        probe = (ROOT / 'tools/probe.py').read_text(encoding='utf-8')
+        self.assertIn('os.environ.get("ZOOST_REQUIRE_CHROME") == "1"', probe,
+                      'the workflow asks for Chrome but the probe does not turn its absence red')
+
     def test_it_pins_its_actions_like_every_other_workflow(self):
         # A tag is a ref its owner can repoint; the rest of this repository pins to a commit and says
         # which release it was. A new workflow is exactly where that slips.

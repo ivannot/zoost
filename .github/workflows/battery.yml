@@ -31,6 +31,11 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+    env:
+      # Locally an absent browser is reported and the rest of the battery can still run. This is the
+      # official product gate: if its browser disappears, a green run would mean that no extension
+      # was executed at all.
+      ZOOST_REQUIRE_CHROME: "1"
     steps:
       # Pinned to a commit, like every other action in this repository: a tag is a ref its owner can
       # repoint. The trailing comment records which release it was.

@@ -8,8 +8,9 @@ half that was missing. What is checked here is *wiring* - a click, a keypress, t
 
 No new machinery: the shot stub already runs a script after load and turns a throw into a
 `SHOT ERROR:` title that `shots.capture()` refuses, so a script that asserts is a test. Chrome is the
-only requirement, and where there is none this says so and exits 0 rather than reporting a pass it
-did not earn - the same rule `tools/totest.sh` follows for a folder that is not mounted.
+only requirement. A local machine without it says so and exits without claiming a pass; the official
+CI sets `ZOOST_REQUIRE_CHROME=1`, so the same absence is a failure there rather than a quietly empty
+product check.
 
 Every case here is a defect that happened. Following a link and being unable to come back (reported).
 Going back after a jump and landing nowhere. A step recorded while replaying, which makes `back`
@@ -17,6 +18,7 @@ walk on the spot. A jump into a tab hidden in Settings leaving the row with no s
 was real, and which the unit tests could not see because it lives in the gap between two functions.
 """
 import importlib.util
+import os
 import pathlib
 import sys
 
@@ -1739,7 +1741,7 @@ def click_guard_installed() -> tuple:
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
-        return 0
+        return 1 if os.environ.get("ZOOST_REQUIRE_CHROME") == "1" else 0
     shots._browser_for(1280, 800, 1.0)
     try:
         for key, app, ws, script in (("probe-crm", "crm", "crm/sampleorg-1234567890", CRM),
