@@ -10,8 +10,10 @@ scripts loaded before `sidepanel.js`: AI, export and Health keep their product-s
 `report.js` owns the identical privacy-critical redaction and bounded diagnostic buffer on each
 side. `overview-view.js` turns the Overview model into DOM and delegates every action back to the
 panel; it reads no workspace or Chrome state. CRM's `pull-plan.js` freezes which areas one Pull all
-will ask before its first await, including explicit permission rechecks. `sidepanel.js` retains the
-filesystem and Zoho adapters. There is still no build step and no runtime dependency: the browser loads the
+will ask before its first await, including explicit permission rechecks; `pull-controller.js` owns
+the nested pull lock, runs that plan and releases the lock on every exit. The identical
+`bridge-contract.js` modules preserve the bound workspace identity and error facts across Chrome's
+plain-object message channel. `sidepanel.js` retains the filesystem and Zoho adapters. There is still no build step and no runtime dependency: the browser loads the
 readable source files that ship. Tests derive the script set and order from the page rather than
 maintaining another file list.
 

@@ -640,16 +640,7 @@ function bridgeError(r, fallback) {
   // so the reader was shown «Error: Error: unknown», «list failed», «pull failed». Four states, no
   // meaning, and `MSG.staleBridge` - which says the true thing and names the remedy - was reached
   // from one place. The twin has answered this with one sentence since it existed.
-  const e = new Error(r ? ((r && r.error) || fallback) : MSG.staleBridge);
-  e.status = (r && r.status) || 0;
-  e.forbidden = !!(r && r.forbidden);
-  // A refusal Zoho worded in its own way carries the sentence to show for it; without one the
-  // generic role sentence is used, which is right for the 401/403 that state the reason themselves.
-  e.note = (r && r.note) || null;
-  // What the bridge could say about *why*, in fields. The sentence it also builds is for the status
-  // line and does not survive the problem report - see `buildReport`.
-  e.diag = (r && r.diag) || null;
-  return e;
+  return bridgeResponseError(r, fallback, MSG.staleBridge);
 }
 
 // Record what Zoho answered for one area, in the workspace's own config. Per workspace, because a
@@ -1518,9 +1509,9 @@ async function toBridge(msg) {
   // last word belongs to the only party that cannot be out of date about which org it is.
   const expected = (msg && msg.cmd !== 'context' && bound)
     ? { org: bound.org, origin: bound.base, instance: bound.instance } : null;
-  return chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg, at);
+  return chrome.tabs.sendMessage(id, bridgeCommand(msg, expected), at);
 }
-async function getContext() { try { const r = await toBridge({ cmd: 'context' }); return r?.ok ? r : null; } catch { return null; } }
+async function getContext() { try { return bridgeContext(await toBridge({ cmd: 'context' })); } catch { return null; } }
 async function waitTabComplete(id, timeout = 9000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) { try { const t = await chrome.tabs.get(id); if (t.status === 'complete') return true; } catch { return false; } await sleep(200); }
@@ -1565,7 +1556,7 @@ async function refreshContext() {
   try {
     const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, cfid === null ? {} : { frameId: cfid });
     if (!current()) return;
-    lastCtx = r?.ok ? r : null;
+    lastCtx = bridgeContext(r);
   } catch (e) { if (!current()) return; lastCtx = null; _ctxErr = (e && e.message) || String(e); }
   // No instance name: this line is written to be pasted into a chat, and the instance is the
   // customer's own portal. Whether it answered is the whole diagnostic value; who answered is not.
@@ -6137,6 +6128,11 @@ const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.jso
   && p !== 'modules/layouts/index.json';
 
 async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'actions' ? rebuildActions() : rebuildConnections(); }
+function consumePullPreferenceChange() {
+  const changed = prefsSavedDuringPull;
+  prefsSavedDuringPull = false;
+  return changed;
+}
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
 // when the current pull has finished - success or error.
@@ -6146,26 +6142,39 @@ async function rebuildActive() { return viewMode === 'functions' ? rebuildTree()
 // Pull buttons, and a second `pullEverything` could start on top of the first. The comment above
 // promises the opposite. A count means a nested pull can raise and lower it without knowing who else
 // is holding it, which is the only version of this that stays true as callers are added.
-let pullDepth = 0;
-function setPullBusy(b) {
-  pullDepth = Math.max(0, pullDepth + (b ? 1 : -1));
-  pullBusy = pullDepth > 0;
-  // Both read from Zoho, so both are also off on a sample workspace - and this function is what
-  // *re-enables* them when a pull ends, which is how #pullone came back on after setEnabled had
-  // already turned it off. A state that is restored somewhere else has to know every reason for it.
-  // `pullBusy`, not `b`: with the depth counter, the argument says what this caller wants and the
-  // flag says whether anything else still holds it. Reading the argument put the buttons back on
-  // while a pull was running - a click that looks available and then does nothing.
-  blockZoho(pullBusy || !zohoReady() || !dir || navOpenNow());
-  updateWsButtons();
-}
-function workspaceChangeRefuse() {
-  if (!pullBusy) return false;
-  $('ws').value = activeWsId || '';
-  setStatus('Pull in progress - workspace unchanged.', 'warn');
-  updateWsButtons();
-  return true;
-}
+const pullController = createCrmPullController({
+  busy: () => pullBusy,
+  publishBusy: (busy) => { pullBusy = busy; },
+  blockZoho,
+  zohoReady,
+  hasDirectory: () => !!dir,
+  navigationOpen: navOpenNow,
+  updateWorkspaceButtons: updateWsButtons,
+  restoreWorkspaceSelection: () => { $('ws').value = activeWsId || ''; },
+  setStatus,
+  currentView: () => viewMode || 'functions',
+  tabLabel,
+  runners: () => ({ functions: pullAll, modules: pullModules, workflows: pullWorkflows,
+    schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures }),
+  statusKind: () => $('status').className,
+  rebuildActive,
+  beginOperation: beginWorkspaceOp,
+  plan: () => buildPullPlan(TABS, {
+    recheck: wantsRecheck, forbidden: isForbidden, enabled: isPulled,
+    verdictAt: (id) => (tabAccess[id] || {}).at,
+  }),
+  answeredRechecks: (planned) => answeredPullRechecks(planned, (id) => (tabAccess[id] || {}).at),
+  takeRechecks: takeRecheck,
+  renderTabs,
+  forbiddenNote,
+  consumePreferencesChanged: consumePullPreferenceChange,
+  preferencesChangedNote: MSG.prefsLater,
+  takeListGap,
+  statusSnapshot: () => ({ text: $('stxt').textContent || '', kind: $('status').className }),
+  errorText: (error) => String((error && error.message) || error),
+});
+function setPullBusy(b) { pullController.setPullBusy(b); }
+function workspaceChangeRefuse() { return pullController.workspaceChangeRefuse(); }
 /** Every user entry that re-reads Zoho holds the pull flag for its whole span - which is what
  *  blocks the workspace selector and refuses a second pull on top. The promise «the workspace
  *  cannot change while a pull writes it» was true of the two main buttons only: the per-row
@@ -6174,24 +6183,10 @@ function workspaceChangeRefuse() {
  *  outside scan on refreshSchedules(). The depth counter absorbs nesting; `finally` is what makes
  *  an exception unable to leave the panel locked. */
 async function runPullAction(work) {
-  if (pullBusy) return false;
-  setPullBusy(true);
-  try { await work(); return true; } finally { setPullBusy(false); }
+  return pullController.runPullAction(work);
 }
 async function pullCurrent() {
-  if (pullBusy) return;
-  const label = tabLabel(viewMode || 'functions').toLowerCase();   // the registry is the only list of these
-  setPullBusy(true); setStatus('Pulling ' + label + '\u2026', 'busy');   // immediate feedback (underlying pull sets its own progress next)
-  try {
-    if (viewMode === 'modules') await pullModules();
-    else if (viewMode === 'workflows') await pullWorkflows();
-    else if (viewMode === 'schedules') await pullSchedules();
-    else if (viewMode === 'actions') await pullActions();
-    else if (viewMode === 'connections') await pullConnections();
-    else await pullAll();
-    if ($('status').className === 'busy') { try { await rebuildActive(); } catch (_) { setStatus('Pull complete.', 'ok'); } }
-  } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); }
-  finally { setPullBusy(false); }
+  return pullController.pullCurrent();
 }
 // "Pull all" means every area this user can actually reach. An area Zoho refused last time is
 // skipped rather than re-tried on every pull: re-asking a question already answered turns each pull
@@ -6202,97 +6197,8 @@ async function pullCurrent() {
 // mirror being incomplete: the export and the AI index read from disk, and quietly leaving a type
 // out of them because a tab was tidied away would be a mirror that lies by omission.
 async function pullEverything() {
-  if (pullBusy) return;
-  const op = beginWorkspaceOp();   // «Pull all» is one act, and it belongs to the workspace it began in
-  setPullBusy(true);
-  try {
-  const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures };
-  // The same seven the button's tooltip names - one list, so the promise and the act cannot part.
-  const skipped = [];
-  // What this pull will actually do, counted before it starts: the areas your Zoho role allows and
-  // your settings ask for. A «3 of 6» that silently meant «3 of whatever is left» would be worse
-  // than no number at all.
-  // The same condition as the loop below, or the count and the act part company - «3 of 6» over a
-  // run that does seven is the number this line's own comment calls worse than none. A ticked «ask
-  // again» outranks both reasons an area is otherwise left out: the verdict, and the pull switch
-  // Settings forces off beside it - it is an explicit instruction about this one area.
-  //
-  // **And the plan is what runs.** The loop used to walk every tab and ask these questions again on
-  // each turn, while the count above had asked them once - so a Settings page saved during the run
-  // (it is a separate tab, and nothing disables it) moved the answers underneath and the line read
-  // «7 of 6», or ended at «5 of 6». A pull is one act: what it will do is decided when it starts,
-  // and a preference saved while it runs belongs to the next one. Said to the reader rather than
-  // done silently - see `applySettingsChange`.
-  const planned = buildPullPlan(TABS, {
-    recheck: wantsRecheck, forbidden: isForbidden, enabled: isPulled,
-    verdictAt: (id) => (tabAccess[id] || {}).at,
-  });
-  const plan = planned.areas;
-  skipped.push(...planned.skipped);
-  const todo = plan;
-  // Which areas are in this run *because* of a tick, and what their verdict said before it started.
-  // Both are read here, before the first await: `tabAccess` moves as the run goes.
-  let done = 0;
-  for (const t of plan) {
-    // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
-    // so without this the remaining areas would carry on pulling the tab's org into the folder the
-    // user had just opened, which is only refused if that folder is already bound to another org.
-    if (!op.current()) return;
-    // Said here, before the runner is called, and not left to the runner to say. Every one of them
-    // asks for the folder permission, then the tab's context, then reads the config - three or four
-    // awaits, seconds on a cold bridge - before its own first message replaces this line. Until then
-    // the panel showed the *previous* area's closing line, «All 900 functions downloaded.», with
-    // nothing turning: the pull was working and looked finished, then stuck. Reported exactly that
-    // way. The position is in it because «what else is left» is the other half of the question.
-    op.say(`${tabLabel(t.id)}: ${done + 1} of ${todo.length}…`, 'busy');
-    try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
-    done++;
-  }
-  if (!op.current()) return;
-  // **Spent on what this run actually asked Zoho, which is narrower than what was ticked and
-  // narrower again than what ran.** Two ways it was wrong, both found by a reader: a Pull all in
-  // *another* workspace consumed the request, because the verdict is per workspace and the tick is
-  // per install, so an area granted there was in the run for the ordinary reason and the id matched;
-  // and a run whose runners bail before reaching Zoho - a closed tab, a folder permission dismissed -
-  // spent it having asked nothing. Derived from the event instead: an area was asked only if it
-  // recorded a verdict during this run, which is what `noteAccess` writes and the one thing that
-  // cannot be true without a request.
-  await takeRecheck(answeredPullRechecks(planned, (id) => (tabAccess[id] || {}).at));
-  if (!op.current()) return;
-  // The last area closes with its own line and then this runs - rebuilding a tree of thousands of
-  // rows, which is the second place the panel looked stuck at the end of a pull.
-  //
-  // And then its own message became the third, which is what a real org found: «Rebuilding the
-  // list…» is a *busy* line, and when there was nothing to append to it - no refusal, nothing
-  // skipped - nothing ever replaced it. A pull that had finished sat on a spinner indefinitely,
-  // and from outside a finished pull and a hung one look the same, which is the one thing this
-  // panel is not allowed to do. The twin gets it right: Zoho Analytics ends on its own summary.
-  //
-  // So the summary the last area wrote is held across the rebuild and put back. The note is
-  // appended to *that* rather than to whatever the status happens to say by then - the same
-  // defect one line down, which read «Rebuilding the list… · Workflows skipped by your settings».
-  const summary = $('stxt').textContent;
-  const summaryKind = $('status').className;
-  op.say('Rebuilding the list\u2026', 'busy');
-  try { await rebuildActive(); } catch (_) {}
-  renderTabs();                                   // a refusal discovered just now changes the set
-  // Both notes, because they are different facts and neither may be swallowed: one is what Zoho
-  // refused, the other is what you told it not to ask for. A pull that quietly covered less than the
-  // whole org without saying so is a mirror you cannot trust.
-  const note = forbiddenNote()
-    + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '')
-    // A preference saved while this was running belongs to the next run - the plan was fixed when
-    // this one started - and the reader hears it here rather than in place of the progress line.
-    + (prefsSavedDuringPull ? ` · ${MSG.prefsLater}` : '')
-    // The run's own last word, because five areas speak after the functions one does.
-    + takeListGap();
-  prefsSavedDuringPull = false;
-  if (op.current()) setStatus(summary + note, note ? 'warn' : summaryKind);
-  // In a finally, because the body above calls renderers and helpers that are not individually
-  // guarded - one exception used to leave `pullBusy` true and the whole panel locked until reopen.
-  } finally { setPullBusy(false); }
+  return pullController.pullEverything();
 }
-
 // ---------- modules ----------
 // In modules.js - the fifth slice: pull, tree, detail, resync, schema-graph bridge.
 

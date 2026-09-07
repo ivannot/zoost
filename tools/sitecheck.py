@@ -356,7 +356,8 @@ NUM = {8: ('eight', 'otto'), 9: ('nine', 'nove'), 10: ('ten', 'dieci'), 11: ('el
        21: ('twenty-one', 'ventuno'), 22: ('twenty-two', 'ventidue'),
        23: ('twenty-three', 'ventitré'), 24: ('twenty-four', 'ventiquattro'),
        25: ('twenty-five', 'venticinque'), 26: ('twenty-six', 'ventisei'),
-       27: ('twenty-seven', 'ventisette'), 28: ('twenty-eight', 'ventotto')}
+       27: ('twenty-seven', 'ventisette'), 28: ('twenty-eight', 'ventotto'),
+       29: ('twenty-nine', 'ventinove'), 30: ('thirty', 'trenta')}
 
 
 def translations_have_the_same_shape(findings: list) -> None:

@@ -4385,7 +4385,7 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
         self.assertRegex(tool, r'TYPESCRIPT_VERSION=[0-9]+\.[0-9]+\.[0-9]+',
                          'the compiler gate can change when the latest TypeScript release moves')
         self.assertIn('--noEmit', tool, 'the contract check has become a build step')
-        self.assertIn("git grep -l '^// @ts-check'", tool,
+        self.assertIn("grep -l '^// @ts-check'", tool,
                       'new opted-in modules are not derived and can miss the gate')
 
 

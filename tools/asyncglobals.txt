@@ -147,7 +147,6 @@ apps/crm/sidepanel.js	openWorkflow	currentPath
 apps/crm/sidepanel.js	pickRoot	root
 apps/crm/sidepanel.js	pickRoot	rootGranted
 apps/crm/sidepanel.js	pullAll	currentPath
-apps/crm/sidepanel.js	pullEverything	prefsSavedDuringPull
 apps/crm/sidepanel.js	pullFailures	failIndex
 apps/crm/sidepanel.js	readRememberedSample	sampleWsKnown
 apps/crm/sidepanel.js	rebuildTree	aiConnCache

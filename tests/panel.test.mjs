@@ -1131,13 +1131,12 @@ test('analytics: a workspace it has just created is the one it selects', () => {
 // *before* the work, not after it.
 
 test('the CRM names each area before it pulls it, and the position in the run', () => {
-  const src = read('apps/crm/sidepanel.js');
-  const body = src.slice(src.indexOf('async function pullEverything'));
-  const say = body.indexOf('op.say(`${tabLabel(t.id)}');
-  const call = body.indexOf('await runners[t.id]()');
+  const body = sliceFn('apps/crm/pull-controller.js', 'pullEverything');
+  const say = body.indexOf('operation.say(`${options.tabLabel(area.id)}');
+  const call = body.indexOf('await runners[area.id]()');
   assert.ok(say > 0, 'no line names the area about to be pulled');
   assert.ok(say < call, 'the area is named after it has been pulled, which is when it is too late');
-  assert.match(body, /of \$\{todo\.length\}/, 'the position must count the areas this run will do');
+  assert.match(body, /of \$\{planned\.areas\.length\}/, 'the position must count the areas this run will do');
   // The denominator is what the run will actually do - not TABS, which includes what the role
   // refused and what settings excluded. «3 of 7» over a run of four is a wrong number, not a rough one.
   // **One plan, built once, and then walked.** The denominator and the loop used to ask the same
@@ -1146,12 +1145,12 @@ test('the CRM names each area before it pulls it, and the position in the run', 
   // What must hold now is that nothing re-decides inside the loop.
   // Both facts, asked separately: a character window between them is a distance, not a property,
   // and it reported a comment as a defect twice in this file already.
-  assert.ok(body.includes('const planned = buildPullPlan'), 'the run builds no plan of what it will do');
-  assert.ok(body.indexOf('const planned = buildPullPlan') < body.indexOf('for (const t of plan)'),
+  assert.ok(body.includes('const planned = options.plan()'), 'the run builds no plan of what it will do');
+  assert.ok(body.indexOf('const planned = options.plan()') < body.indexOf('for (const area of planned.areas)'),
             'the run walks a plan it has not built yet');
-  const loop = body.slice(body.indexOf('for (const t of plan)'));
+  const loop = body.slice(body.indexOf('for (const area of planned.areas)'));
   for (const term of ['wantsRecheck(', 'isForbidden(', 'isPulled(']) {
-    assert.ok(!loop.slice(0, loop.indexOf('await takeRecheck')).includes(term),
+    assert.ok(!loop.slice(0, loop.indexOf('await options.takeRechecks')).includes(term),
               `the loop asks ${term} again while it runs, which is what let a settings save move the `
               + 'answers underneath a run in progress');
   }
@@ -9327,12 +9326,12 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // whatever the outer one meant, which is the third time that shape has been found here.
 {
   const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-  const fn = src.slice(src.indexOf('function setPullBusy'), src.indexOf('\n}', src.indexOf('function setPullBusy')));
+  const factory = sliceFn('apps/crm/pull-controller.js', 'createCrmPullController');
 
   test('the busy state counts its holders instead of switching', () => {
-    assert.ok(/pullDepth/.test(fn), 'it is a switch again, so a nested pull releases the outer one');
-    assert.ok(/pullBusy = pullDepth > 0/.test(fn), 'the flag no longer follows the count');
-    assert.ok(/Math\.max\(0,/.test(fn), 'an extra release drives the count negative and wedges it busy');
+    assert.ok(/let depth = 0/.test(factory), 'it is a switch again, so a nested pull releases the outer one');
+    assert.ok(/publishBusy\(depth > 0\)/.test(factory), 'the published flag no longer follows the count');
+    assert.ok(/Math\.max\(0,/.test(factory), 'an extra release drives the count negative and wedges it busy');
   });
 
   test('nothing assigns the flag behind the counter', () => {
@@ -9341,7 +9340,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // The declaration is not an assignment for this purpose; anything else is the counter bypassed.
     const assigns = src.split('\n').filter((l) => /\bpullBusy\s*=[^=]/.test(l) && !/^\s*let /.test(l));
     assert.equal(assigns.length, 1, `pullBusy is set in ${assigns.length} places: ${assigns.map((l) => l.trim()).join(' | ')}`);
-    assert.ok(/pullDepth/.test(assigns[0]), 'the one assignment does not follow the count');
+    assert.ok(/publishBusy/.test(src.slice(Math.max(0, src.indexOf(assigns[0]) - 80), src.indexOf(assigns[0]) + 80)),
+              'the one assignment bypasses the controller publication boundary');
   });
 }
 
@@ -9710,7 +9710,7 @@ test('a nested release leaves the buttons off while anything still holds the pul
   // or off, and stubbing it would leave this case asserting about a mechanism the panel no longer
   // uses. It marks with a class as well as with `disabled`, because two of the five controls are
   // spans - which is how «Find» went dead while «Functions page» stayed live.
-  const ctx = { pullDepth: 0, pullBusy: false, dir: {}, disabled: {}, ZOHO_BTNS: ['pullall', 'pullone'],
+  const ctx = { disabled: {}, ZOHO_BTNS: ['pullall', 'pullone'],
                 updateWsButtons() {},
                 document: { body: { classList: { toggle() {} } } },
                 $: (id) => (ctx.disabled[id] = ctx.disabled[id] || {
@@ -9720,16 +9720,21 @@ test('a nested release leaves the buttons off while anything still holds the pul
                 // `blockZoho` also restates what «Pull all» pulls, from the tabs it walks - so the
                 // list travels with it here, or the lift throws where the panel would not.
                 TABS: [{ id: 'functions', label: 'Functions' }, { id: 'modules', label: 'Modules' }],
-                zohoReady: () => true, navOpenNow: () => false, Math };
-  vm.createContext(ctx);
-  vm.runInContext([sliceFn('apps/crm/sidepanel.js', 'blockZoho'),
-                   sliceFn('apps/crm/sidepanel.js', 'setPullBusy')].join('\n'), ctx);
-  vm.runInContext('setPullBusy(true); setPullBusy(true); setPullBusy(false);', ctx);
-  assert.equal(ctx.pullBusy, true, 'the flag itself stopped counting its holders');
+                Math };
+  const made = load([sliceFn('apps/crm/sidepanel.js', 'blockZoho'),
+                     sliceFn('apps/crm/pull-controller.js', 'createCrmPullController')], ctx);
+  let busy = false;
+  const controller = made.createCrmPullController({
+    busy: () => busy, publishBusy: (value) => { busy = value; }, blockZoho: made.blockZoho,
+    zohoReady: () => true, hasDirectory: () => true, navigationOpen: () => false,
+    updateWorkspaceButtons() {},
+  });
+  controller.setPullBusy(true); controller.setPullBusy(true); controller.setPullBusy(false);
+  assert.equal(busy, true, 'the flag itself stopped counting its holders');
   for (const b of ctx.ZOHO_BTNS)
     assert.equal(ctx.disabled[b + ':v'], true, `${b} was re-enabled while a pull still held the flag`);
-  vm.runInContext('setPullBusy(false);', ctx);
-  assert.equal(ctx.pullBusy, false, 'the last release did not end it');
+  controller.setPullBusy(false);
+  assert.equal(busy, false, 'the last release did not end it');
   for (const b of ctx.ZOHO_BTNS)
     assert.equal(ctx.disabled[b + ':v'], false, `${b} stayed off after the last release`);
 });
@@ -9918,11 +9923,11 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
     for (const fn of ['downloadMissing', 'downloadMissingWf', 'pullModules', 'pullEverything']) {
       const body = sliceApp('crm', fn);
       const loop = body.search(/\n\s*for \(/);
-      const guard = body.indexOf('!op.current()');
+      const guard = body.search(/!(?:op|operation)\.current\(\)/);
       assert.ok(loop > 0, `${fn} no longer has the loop this is about`);
       assert.ok(guard > 0, `${fn} runs its loop to the end whatever workspace it is in`);
       const after = body.slice(loop);
-      assert.ok(/!op\.current\(\)/.test(after.slice(0, after.indexOf('await '))),
+      assert.ok(/!(?:op|operation)\.current\(\)/.test(after.slice(0, after.indexOf('await '))),
                 `${fn} checks once before the loop rather than on each turn`);
     }
     // And giving up must not leave the buttons off: the hold is released in a finally, not on the
@@ -10267,9 +10272,11 @@ test('the release workflows take a ref through env and validate its whole shape'
       assert.equal(f(c.theirs, c.now), true, 'the tab refuses a command that does belong to it');
       assert.equal(f(null, c.now), true, 'the context probe stopped travelling, so no mismatch can be found');
 
-      const panel = read(`apps/${app}/sidepanel.js`);
-      assert.ok(/__zoostExpected: expected/.test(panel) || /\{ \.\.\.msg, __zoostExpected: expected \}/.test(panel),
-                'the panel no longer sends what it expects');
+      const contract = load([sliceFn(`apps/${app}/bridge-contract.js`, 'bridgeCommand')]);
+      assert.deepEqual(contract.bridgeCommand({ cmd: 'pull' }, c.mine).__zoostExpected, c.mine,
+                       'the panel no longer sends what it expects');
+      assert.equal(contract.bridgeCommand({ cmd: 'context' }, c.mine).__zoostExpected, undefined,
+                   'the context probe carries a stale binding and cannot discover a mismatch');
       const bridge = read(`apps/${app}/content-bridge.js`);
       assert.ok(/cmd !== 'context' && !expectedMatches\(msg && msg\.__zoostExpected, context\(\)\)/.test(bridge),
                 'the bridge accepts a command without checking which org it is');
@@ -10468,8 +10475,9 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/\$\('ws'\)\.disabled = pullBusy/.test(repaint), 'a repaint can re-enable the workspace selector during a pull');
     assert.ok(/(?:\$\('wsroot'\)|rt)\.disabled = pullBusy/.test(repaint), 'the working-folder picker can replace the workspace during a pull');
     assert.ok(/if \(pullBusy/.test(activateBody), 'a direct/programmatic activation bypasses the disabled selector');
-    const refuse = sliceFn(`apps/${app}/sidepanel.js`, 'workspaceChangeRefuse');
-    assert.ok(/if \(!pullBusy\) return false/.test(refuse), 'workspace-changing actions have no shared programmatic guard');
+    const refuse = sliceApp(app, 'workspaceChangeRefuse');
+    assert.ok(/if \(!(?:pullBusy|options\.busy\(\))\) return false/.test(refuse),
+              'workspace-changing actions have no shared programmatic guard');
     for (const fn of ['pickRoot', 'renameWorkspace']) {
       assert.ok(/workspaceChangeRefuse\(\)/.test(sliceFn(`apps/${app}/sidepanel.js`, fn)), `${fn} bypasses the pull lock`);
     }
@@ -10569,9 +10577,9 @@ test('crm: every user entry that re-reads Zoho holds the pull flag for its whole
   // from inside downloadMissing, which already holds the flag.
   assert.ok(/runPullAction\(\(\) => downloadOne\(e\)\)/.test(src), 'a tree-row download runs unwrapped');
   assert.ok(/runPullAction\(\(\) => downloadOneWf\(e\)\)/.test(src), 'a workflow-row download runs unwrapped');
-  const w = sliceFn('apps/crm/sidepanel.js', 'runPullAction');
+  const w = sliceFn('apps/crm/pull-controller.js', 'runPullAction');
   assert.ok(/finally \{ setPullBusy\(false\); \}/.test(w), 'an exception in the work leaves the panel locked');
-  const pe = sliceFn('apps/crm/sidepanel.js', 'pullEverything');
+  const pe = sliceFn('apps/crm/pull-controller.js', 'pullEverything');
   assert.ok(/\} finally \{ setPullBusy\(false\); \}/.test(pe),
             'pullEverything still releases by hand, so one throwing renderer locks the panel until reopen');
 });
@@ -14070,7 +14078,9 @@ test('a refused token reaches the problem report as facts, not as prose', () => 
   const bridgeReply = { ok: false, error: '400 - INVALID_CSRF_TOKEN', status: 400,
                         diag: { what: 'csrf', from: 'CT_CSRF_TOKEN (fallback)', shape: "128 chars, no '='",
                                 cookies: ['CT_CSRF_TOKEN', 'crmcsr', 'iamcsr'] } };
-  const made = load([sliceFn(REL, 'bridgeError')], { Error, MSG: { staleBridge: 'stale' } });
+  const made = load([sliceFn('apps/crm/bridge-contract.js', 'bridgeResponseError'),
+                     sliceFn(REL, 'bridgeError')],
+                    { Error, String, Number, MSG: { staleBridge: 'stale' } });
   const err = made.bridgeError(bridgeReply, 'connections pull failed');
   assert.ok(err.diag, 'bridgeError drops what the bridge said about why, so no report can carry it');
 
@@ -15054,8 +15064,9 @@ test('crm: a control that is off says why, in the words the panel uses', () => {
 
 test('crm: no answer from the Zoho page is a sentence, not an internal word', () => {
   const stale = 'The Zoho tab is still running an older copy of this extension - reload that tab.';
-  const { bridgeError } = load([sliceFn('apps/crm/sidepanel.js', 'bridgeError')],
-                               { Error, MSG: { staleBridge: stale } });
+  const { bridgeError } = load([sliceFn('apps/crm/bridge-contract.js', 'bridgeResponseError'),
+                                sliceFn('apps/crm/sidepanel.js', 'bridgeError')],
+                               { Error, String, Number, MSG: { staleBridge: stale } });
   assert.equal(bridgeError(undefined, 'list failed').message, stale,
                'a page that answered nothing is reported with the caller\'s internal fallback');
   // What Zoho itself said still comes through - the fallback is for the case with no answer at all.
@@ -19169,7 +19180,9 @@ test('a refused area is described in the words the refusal came with', () => {
   assert.match(noTab, /^Failures:/, `the bare id is shown instead of the area name: ${noTab}`);
 
   // And it has to survive the message boundary, which is where `forbidden` was lost twice before.
-  const made = load([sliceFn(rel, 'bridgeError')], { Error, MSG: { staleBridge: 'stale' } });
+  const made = load([sliceFn('apps/crm/bridge-contract.js', 'bridgeResponseError'),
+                     sliceFn(rel, 'bridgeError')],
+                    { Error, String, Number, MSG: { staleBridge: 'stale' } });
   const err = made.bridgeError({ ok: false, error: '400 - INVALID_CSRF_TOKEN', status: 400,
                                  forbidden: true, note: 'Zoho refused this read' }, 'fallback');
   assert.equal(err.note, 'Zoho refused this read',
@@ -19277,13 +19290,13 @@ test('a refused area is asked again by the next pull, once, and only when asked 
 
   // The run counts and the run acts on one condition. Two spellings is how «3 of 6» comes to stand
   // over a run of seven, which is the thing this file already refuses one function along.
-  const body = read(rel).slice(read(rel).indexOf('async function pullEverything'));
-  assert.ok(body.includes('const todo = plan;'),
+  const body = sliceFn('apps/crm/pull-controller.js', 'pullEverything');
+  assert.ok(body.includes('planned.areas.length') && body.includes('for (const area of planned.areas)'),
             'the denominator is no longer the plan the run walks, so the two can part company');
 
   // And it is spent by the pull that acts on it: «once» is the whole difference between this and
   // re-asking every refused area on every pull, which is the shape the author refused.
-  assert.match(body, /await takeRecheck\(/,
+  assert.match(body, /await options\.takeRechecks\(/,
                'nothing spends the request, so one tick re-asks Zoho on every pull for ever');
   const take = sliceFn(rel, 'takeRecheck');
   assert.match(take, /ids\.filter\(\(id\) => tabPrefs\.recheck\.includes\(id\)\)/,
@@ -19297,10 +19310,10 @@ test('a refused area is asked again by the next pull, once, and only when asked 
   assert.doesNotMatch(body, /takeRecheck\(todo\.map/,
                       'the whole run is spent, so a pull of a workspace that never refused the area '
                       + 'consumes a request meant for the one that did');
-  assert.match(body, /answeredPullRechecks\(planned/,
+  assert.match(body, /options\.answeredRechecks\(planned\)/,
                'a run that reached no runner still spends the tick, so the reader ticks it again '
                + 'with nothing saying why');
-  const before = body.indexOf('const planned = buildPullPlan');
+  const before = body.indexOf('const planned = options.plan()');
   assert.ok(before > 0 && before < body.indexOf('await runners['),
             'the «before» reading is taken after the run has started moving the verdicts it compares');
 
@@ -19674,10 +19687,10 @@ test('a settings save during a pull is applied to the panel and announced, not t
                'the panel reports its own write as a settings save the reader made during the pull');
   assert.match(sliceFn(rel, 'takeRecheck'), /ownPrefsWrite = true;[\s\S]{0,200}?storage\.local\.set/,
                'nothing marks that write as ours, so the guard above can never fire');
-  const closing = sliceFn(rel, 'pullEverything');
-  assert.match(closing, /prefsSavedDuringPull \? ` \u00b7 \$\{MSG\.prefsLater\}`/,
+  const closing = sliceFn('apps/crm/pull-controller.js', 'pullEverything');
+  assert.match(closing, /changed \? ` · \$\{options\.preferencesChangedNote\}`/,
                'the run does not say it when it ends, so nothing ever says it');
-  assert.match(closing, /prefsSavedDuringPull = false;/,
+  assert.match(read(rel), /prefsSavedDuringPull = false;/,
                'the flag is never spent, so every later pull repeats a sentence about a save that '
                + 'happened during an earlier one');
   const msg = /prefsLater: '([^']+)'/.exec(src);
@@ -20532,7 +20545,7 @@ test('a link to a function with no source here says which absence it is', () => 
 test('a list that came back short is on the line that closes the pull', () => {
   const rel = 'apps/crm/sidepanel.js';
   const bare = (fn) => sliceFn(rel, fn).replace(/^\s*\/\/.*$/gm, '');
-  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+  const src = crmPanel().replace(/^\s*\/\/.*$/gm, '');
 
   // Only a closing line may consume it; everything else reads.
   // Its own declaration is not a call site.
@@ -20548,7 +20561,8 @@ test('a list that came back short is on the line that closes the pull', () => {
                + 'that is the outcome of every pull after the first');
   assert.match(dm, /\(fail \|\| cleanup \|\| short\) \? 'warn' : 'ok'/, 'and it announces it as fine');
 
-  assert.match(bare('pullEverything'), /\+ takeListGap\(\);/,
+  const all = sliceFn('apps/crm/pull-controller.js', 'pullEverything').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(all, /\+ options\.takeListGap\(\);/,
                'Pull all closes on the last area it ran, so the functions warning is painted over by '
                + 'five summaries and the run ends green');
 

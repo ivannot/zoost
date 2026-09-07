@@ -88,6 +88,7 @@ const PULL_SV = 1;
 // worded one way in Zoost CRM and another in Zoost Analytics. ↻ Refresh is the control that re-asks.
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
+  staleBridge: 'No answer from the Zoho Analytics page.',
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   narrow: 'Use a longer substring to narrow.',
@@ -933,16 +934,14 @@ async function toBridge(msg) {
   // The Analytics frame, like the context probe. A command addressed to the whole tab reaches the
   // shell as well, and the bridge is not the only listener a page may have.
   const afid = await analyticsFrameId(id);
-  const r = await chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg,
+  const r = await chrome.tabs.sendMessage(id, bridgeCommand(msg, expected),
                                           afid === null ? {} : { frameId: afid });
-  if (!r) throw new Error('No answer from the Zoho Analytics page.');
+  if (!r) throw new Error(MSG.staleBridge);
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
   // bridge is thrown away one line after crossing the boundary - which is how "your role does not
   // allow this" would end up displayed as a bare status code again.
   if (r.ok === false) {
-    const e = new Error(r.error || 'unknown error');
-    e.status = r.status || 0; e.forbidden = !!r.forbidden;
-    throw e;
+    throw bridgeResponseError(r, 'unknown error', MSG.staleBridge);
   }
   return r;
 }
@@ -1014,7 +1013,7 @@ async function refreshContext() {
     // about the wrong document.
     const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }, afid === null ? {} : { frameId: afid });
     if (!current()) return;
-    ctx = r && r.ok ? r : null;
+    ctx = bridgeContext(r);
   } catch (e) { if (!current()) return; ctx = null; _ctxErr = (e && e.message) || String(e); }
 
   // The sequence, one line per tick, in the order things happened - the same record the CRM panel

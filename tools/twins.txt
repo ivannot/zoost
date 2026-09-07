@@ -36,6 +36,9 @@ askScope	d27f77a79c58	5a0012715e71	divergent
 beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 beginWorkspaceOp	bda7cf29077d	bd3315e93edb	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
+bridgeCommand	43c239bf9acf	43c239bf9acf	identical
+bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
+bridgeResponseError	0f1c63b7aeae	0f1c63b7aeae	identical
 buildChips	9091c2364889	9091c2364889	identical
 buildExportHtml	39d5f7544abd	e1a5052dd09d	divergent
 buildExportMarkdown	89b53926d677	f5d0fbdf2c0e	divergent
@@ -215,7 +218,7 @@ rebase	6611b6610c49	6611b6610c49	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	08e31fb8e42d	b1ed8fe54d22	divergent
+refreshContext	95345ae8d5da	8e247506fb1c	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
@@ -255,7 +258,7 @@ select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	f1130b960701	f1130b960701	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
 setFocus	f2a33f350182	9be5357f9740	divergent
-setPullBusy	807dee3c22f7	ce2ae8471a4f	divergent
+setPullBusy	6f5dd48d8c5e	ce2ae8471a4f	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
@@ -273,7 +276,7 @@ syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 takeTheirs	e157a3cfc9a3	e157a3cfc9a3	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
-toBridge	692c8692eeff	ae1ca2903cfa	divergent
+toBridge	6bc4a4519bb0	ceed8ccbc845	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	49d5973236dd	5726eb4df5a7	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical
@@ -288,7 +291,7 @@ wasOwn	137c94652f18	137c94652f18	identical
 wireAsideFold	f549a11bd896	f549a11bd896	identical
 wireForget	b03a0a24ed6f	b03a0a24ed6f	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
-workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
+workspaceChangeRefuse	6209500de223	d28870c5e809	divergent
 workspaceOnboardingModel	44136fa355b3	44136fa355b3	identical
 workspaceOverviewAction	44136fa355b3	44136fa355b3	identical
 workspaceOverviewModel	44136fa355b3	44136fa355b3	identical

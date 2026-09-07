@@ -10,10 +10,9 @@ cd "$(dirname "$0")/.."
 TYPESCRIPT_VERSION=5.9.2
 
 for app in crm analytics; do
-  # `git grep` is present anywhere this repository can be checked out. `rg` is convenient locally
-  # but is not part of GitHub's runner contract, and made the first official execution of this gate
-  # fail before TypeScript could read a file.
-  files=$(git grep -l '^// @ts-check' -- "apps/$app/*.js" | sort)
+  # Plain `grep` is present on the GitHub runner and, unlike `git grep`, sees a new opted-in module
+  # before it has been staged. That makes the local gate test the same files the next commit ships.
+  files=$(grep -l '^// @ts-check' apps/"$app"/*.js | sort || true)
   if [ -z "$files" ]; then
     echo "$app: no @ts-check modules found" >&2
     exit 1
