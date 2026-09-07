@@ -13,7 +13,11 @@ panel; it reads no workspace or Chrome state. CRM's `pull-plan.js` freezes which
 will ask before its first await, including explicit permission rechecks; `pull-controller.js` owns
 the nested pull lock, runs that plan and releases the lock on every exit. The identical
 `bridge-contract.js` modules preserve the bound workspace identity and error facts across Chrome's
-plain-object message channel. `sidepanel.js` retains the filesystem and Zoho adapters. There is still no build step and no runtime dependency: the browser loads the
+plain-object message channel. `filesystem-adapter.js` owns permission, path resolution, handle
+caching and workspace-scoped I/O in both products. In CRM, `zoho-bridge.js` owns tab/frame discovery
+and message transport, while `zoho-navigation.js` owns destination construction, host admission and
+frame-aware navigation. `sidepanel.js` supplies current state and orchestrates those adapters; it no
+longer implements their mechanics. There is still no build step and no runtime dependency: the browser loads the
 readable source files that ship. Tests derive the script set and order from the page rather than
 maintaining another file list.
 

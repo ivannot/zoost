@@ -399,16 +399,6 @@ const META_SV = 5;   // v5 adds what Zoho is running: the deploy time and whethe
 // a value identical to the one beside it is not evidence of a change either.
 const movedInZoho = (listMs, fetchedMs) => !!(listMs && fetchedMs && String(listMs) !== String(fetchedMs)
   && Number(listMs) !== Number(fetchedMs));
-// A deletion is a write: what was read from that path is no longer what is there. It goes through
-// the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
-// diagram without the pull having to remember.
-async function removeFileAt(root, path) {
-  if (root !== dir) throw new Error(WS_MOVED);
-  const parts = path.split('/'); const name = parts.pop();
-  let d = root; for (const p of parts) d = await d.getDirectoryHandle(p);
-  await d.removeEntry(name); noteWrite(path);
-}
-const removeFile = (path) => removeFileAt(dir, path);
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
@@ -1017,103 +1007,26 @@ const noteWrite = (rel) => {
     _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; aiConnCache = null;
   }
 };
-// The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
-// root again - two calls to the browser's file system before the one that does the work - so half of
-// what a pull and a load spend is asking for the same directory over and over. Measured: writing a
-// function cost 8 calls, of which 4 were this.
-//
-// Handles are per working folder, so the cache is dropped whenever that changes; a stale handle is
-// worse than a slow one, and this is the kind of cache that has to be given up eagerly rather than
-// checked. `removeEntry` drops it too, since a folder that has just been deleted must not be handed
-// back by us.
-// Keyed on the root, not one map for whichever folder is current. It walked from `dir`, awaited each
-// step, and then wrote what it found into the *global* cache - so a resolution that started in one
-// workspace and finished after a switch filled the new workspace's cache with the old one's handles,
-// and the next lookup there answered without ever asking that folder. Reproduced in both panels: a
-// path resolved in B came back holding A's handle with zero calls to B.
-//
-// A cache per root cannot say the wrong thing about the other one: the entry goes where it was read
-// from. Handles still have to be given up eagerly rather than checked - a stale one is worse than a
-// slow one - so a switch drops everything and `removeEntry` drops everything, since a folder that
-// has just been deleted must not be handed back by us.
-let _dirCaches = new WeakMap();
-const forgetDirs = (root) => { if (root) _dirCaches.delete(root); else _dirCaches = new WeakMap(); };
-async function dirFor(parts, create, root = dir) {
-  if (!root) throw new Error('No workspace folder is open.');
-  let cache = _dirCaches.get(root);
-  if (!cache) _dirCaches.set(root, (cache = new Map()));
-  const key = parts.join('/');
-  // The cache answers for writes too: a folder that has been created once exists, and asking the
-  // browser to create it again is the call this exists to avoid. Skipping the cache when `create`
-  // was set left a pull paying full price for every file it wrote - half of the eight calls each.
-  if (cache.has(key)) return cache.get(key);
-  let d = root;
-  for (const p of parts) d = await d.getDirectoryHandle(p, create ? { create: true } : undefined);
-  cache.set(key, d);
-  return d;
-}
-async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
-async function hasPerm(h) {
-  return (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
-}
-// The guard every pull, graph and export opens with. It throws rather than returning false, so the
-// caller's own `catch` writes the message: the nine sites that used it were already a `try` block
-// each, and a helper that returned a boolean would have left the `throw` copied at all nine.
-// Callers that instead want to report and carry on keep their own `ensurePerm`, and say MSG.folder:
-// the wording no longer varies by call site, so a wrapper like «Export error: …» is the only thing
-// that differs between one report of a lapsed permission and another.
-async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
-// The workspace an operation belongs to, taken once and carried - not read out of a global after
-// every await. A pull lists from Zoho, waits, and then writes: `dir` at that moment is whatever the
-// panel is showing *now*, so a switch part-way through put one org's functions, modules and layouts
-// into another org's folder, and the guards that existed checked once and let the writes after them
-// through. Measured, in both panels.
-//
-// So the root is a parameter of the I/O and the check lives in the one place every write passes
-// through, rather than being remembered at each call site - the same move as `noteWrite`. `current()`
-// is what a caller asks before spending effort; the writer refuses regardless, which is what makes
-// the class impossible instead of merely unlikely.
 const WS_MOVED = 'The workspace changed while this was running - nothing further was written to it.';
-function beginWorkspaceOp() {
-  const gen = wsGen, root = dir;
-  const current = () => gen === wsGen && root === dir;
-  // The refusal is the op's, not the file writer's. `writeFileAt` compares handles, and a handle is
-  // not an identity through time: leave a workspace and come back to it and the same object is
-  // current again, so an operation from before the round trip passed the check while `current()`
-  // said false. Both halves, both sides of the await - the workspace can move while the browser is
-  // inside `createWritable()` as easily as between two calls.
-  const guard = () => { if (!current()) throw new Error(WS_MOVED); };
-  async function through(fn) { guard(); const v = await fn(); guard(); return v; }
-  return {
-    root, gen, current,
-    read: (p) => through(() => readFileAt(root, p)),
-    write: (p, body) => through(() => writeFileAt(root, p, body)),
-    mkdir: (p) => through(() => ensureDirectoryAt(root, p)),
-    remove: (p) => through(() => removeFileAt(root, p)),
-    // Progress belongs to a workspace as much as a write does. Reported: a pull started in one org
-    // kept counting «Downloading 214/900» into the panel after the user had opened another workspace,
-    // so the work looked like it was happening *there*. It says nothing once it is not there.
-    say: (msg, kind) => { if (current()) setStatus(msg, kind); },
-  };
-}
-async function ensureDirectoryAt(root, rel) {
-  if (root !== dir) throw new Error(WS_MOVED);
-  await dirFor(rel.split('/').filter(Boolean), true, root);
-}
-async function writeFileAt(root, rel, content) {
-  if (root !== dir) throw new Error(WS_MOVED);
-  const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), true, root);
-  const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
-  const w = await fh.createWritable(); await w.write(content); await w.close();
-  noteWrite(rel);
-}
-async function readFileAt(root, rel) {
-  const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), false, root);
-  const fh = await d.getFileHandle(parts[parts.length - 1]);
-  return (await fh.getFile()).text();
-}
+const workspaceFilesystem = createWorkspaceFilesystem({
+  root: () => dir,
+  generation: () => wsGen,
+  onWrite: noteWrite,
+  say: setStatus,
+  folderMessage: MSG.folder,
+  movedMessage: WS_MOVED,
+});
+const ensurePerm = workspaceFilesystem.ensurePermission;
+const hasPerm = workspaceFilesystem.hasPermission;
+const requirePerm = workspaceFilesystem.requirePermission;
+const forgetDirs = workspaceFilesystem.forgetDirectories;
+const dirFor = workspaceFilesystem.directoryFor;
+const beginWorkspaceOp = workspaceFilesystem.beginOperation;
+const ensureDirectoryAt = workspaceFilesystem.ensureDirectoryAt;
+const writeFileAt = workspaceFilesystem.writeFileAt;
+const readFileAt = workspaceFilesystem.readFileAt;
+const removeFileAt = workspaceFilesystem.removeFileAt;
+const removeFile = (path) => removeFileAt(dir, path);
 
 /** Write one function in the shape Zoho serves it: one `.dg` for Deluge, every returned file below
  * `<name>.files/` for compiled runtimes. Metadata is written last, so a sidecar always describes
@@ -1316,208 +1229,29 @@ function tabOrder() {
 const visibleTabs = () => tabOrder().filter((id) => !isHiddenByUser(id) && !isForbidden(id));
 
 // ---------- Zoho tab / bridge ----------
-async function tabHasCrmFrame(id) { try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); return !!(r && r.ok && r.origin); } catch (_) { return false; } }
-async function zohoTabId() {
-  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (active && ZOHO_HOST_RE.test(active.url || '')) return active.id;
-  if (active && (await tabHasCrmFrame(active.id))) return active.id;   // wrapper (e.g. Zoho One) with a CRM iframe
-  const tabs = await chrome.tabs.query({ url: ZOHO_MATCHES });
-  return tabs[0]?.id ?? null;
-}
-async function activeZohoTabId() {
-  const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!a) return null;
-  if (ZOHO_HOST_RE.test(a.url || '')) return a.id;
-  return (await tabHasCrmFrame(a.id)) ? a.id : null;                   // wrapper-agnostic detection
-}
-/** The frame that is Zoho CRM, or `null` when this tab has none.
- *
- * **`null` and not `0`, which is the whole finding.** `ZOHO_HOST_RE` accepts `one.zoho.*` so the
- * panel can tell which Zoho One org a tab belongs to - and on a Zoho One page with no CRM iframe
- * (the launcher, Mail, the home) the search below found nothing and fell back to frame 0, the Zoho
- * One document itself. `ensureBridge` then injected `hook.js`, which replaces `fetch` and
- * `XMLHttpRequest` in that page's MAIN world, and the content bridge beside it.
- *
- * Three things wrong with that, and the third is the one that matters. `one.zoho.*` is in
- * `host_permissions` but declares no content script, so the injection is permitted and undeclared.
- * The bridge refuses every command from a non-CRM origin, so it never answers, so `ensureBridge`
- * caught the failure and **re-injected every five seconds** for as long as that tab stayed active.
- * And `site/privacy.html` says of those hosts, in as many words, «which it does not read».
- *
- * A tab with no CRM frame has nothing for the bridge to talk to. It is refused rather than guessed
- * at. The one case that still answers 0 is the honest one: the enumeration itself failed, and the
- * tab's own top frame is CRM.
- */
-// **A cache repeats an answer; this one was repeating a failure.** The lookup is memoised for six
-// seconds so the five-second poll does not enumerate a tab's frames every time - and the first
-// version stored `null` on the same terms. A Zoho One page is a single-page application: while the
-// shell is creating or replacing the CRM iframe, an enumeration that lands in that instant finds no
-// CRM frame, and «there is no CRM frame here» was then true for six seconds over a tab that had one.
-// The panel showed «Zoho tab (not ready)» for a cycle, at intervals nobody could predict - reported
-// from a real Zoho One org as the button being disabled «randomly», which is the word this
-// repository treats as an instruction to go and look rather than to guess.
-//
-// So only a *found* frame is remembered. A miss costs one `executeScript` on the next poll, which is
-// what it cost before anything was cached at all, and it cannot outlive the moment that produced it.
-/** Which of several same-origin candidates is the CRM application, decided by asking them.
- *
- * A suite shell puts more than one document on `crm.zoho.<dc>` in the same tab - measured: two of
- * thirteen - and only one of them is the application the bridge lives in. Nothing about the order the
- * frame list comes back in says which. So each candidate is asked the one question whose answer is
- * self-validating: `context` is refused by the bridge unless the origin is CRM *and* an instance
- * resolved, so a frame that answers is the frame.
- *
- * All at once rather than in turn: they are cheap, they are bounded by the message channel itself,
- * and asking six frames one after another would put the panel's own poll behind them. A frame with
- * no listener rejects immediately - measured at 1ms - so the wait is the real one's round trip.
- *
- * `null` when none answers, which is the honest answer and the one `crmFrameId` records as a miss.
- */
-async function answeringFrame(tabId, frameIds) {
-  const asked = await Promise.all(frameIds.map((frameId) => askFrame(tabId, frameId)));
-  console.info(`[zoost] frames asked [${asked.map((x) => x.frameId + ':' + x.why).join(' ')}]`);
-  const ok = asked.find((x) => x && x.ok);
-  return ok ? ok.frameId : null;
-}
-async function askFrame(tabId, frameId) {
-  try {
-    const r = await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, { frameId });
-    // Four answers, not two, and the difference is the whole diagnosis. `no-listener` means the
-    // bridge is not in that frame and injecting is the repair; `declined` means it is there and the
-    // frame is not the application; `half` means it named itself without an org, which is the shape
-    // that produced a *wrong* identity rather than none. Reported as one word - «not ready» - for all
-    // of them, which is why three attempts at this bug went to three different causes.
-    return { frameId, ok: !!(r && r.ok && r.instance && r.org),
-             why: !r ? 'declined' : r.ok ? (r.instance && r.org ? 'ok' : 'half') : 'refused' };
-  } catch (_) {
-    return { frameId, ok: false, why: 'no-listener' };
-  }
-}
-// The CRM-origin frames this tab has, whether or not any of them answered. **`null` from
-// `crmFrameId` means two different things** and `ensureBridge` has to tell them apart: «this tab has
-// no CRM document, so nothing here is ours to inject into» - the Zoho One page itself, which
-// `privacy.html` says we do not read - and «it has CRM documents and none of them has our bridge
-// yet», which is exactly when injecting is the right act. Conflating the two is a defect I wrote
-// this afternoon and the instrument found within the hour: with several CRM frames and none
-// answering, the panel stopped injecting and could never come alive, on a tab whose CRM was there.
-let _crmCandidates = { tabId: null, ids: [] };
-let _crmFrame = { tabId: null, frameId: 0, ts: 0 };
-let _crmFrameSeen = '(not enumerated)';
-async function crmFrameId(tabId) {
-  const now = Date.now();
-  if (_crmFrame.tabId === tabId && _crmFrame.frameId !== null && now - _crmFrame.ts < 6000) return _crmFrame.frameId;
-  let fid = null;
-  try {
-    const res = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, func: () => ({ href: location.href, top: window === window.top }) });
-    const seen = (res || []).map((r) => ({ frameId: r.frameId, ...(r.result || {}) }));
-    const crm = seen.filter((x) => /^https:\/\/crm(sandbox)?\.zoho/.test(x.href || ''));
-    // **More than one frame can be on the CRM's origin, and choosing by position chose wrong.**
-    // Measured on a real Zoho One tab: thirteen frames, two of them `crm.zoho.<dc>`, and this took
-    // `crm[0]` - the first the enumeration happened to return. It was the wrong one; the panel asked
-    // it and was refused in a millisecond, every tick, which is «Zoho tab (not ready)» on a tab whose
-    // CRM was right there. The shell builds several frames and the order they come back in is not a
-    // fact about which of them is the application.
-    //
-    // So the frame is not *chosen*, it is the one that **answers**. The bridge already refuses every
-    // origin that is not CRM and every document with no instance resolved, so it selects itself -
-    // there is no rule here about which position is the right one, which is the only kind of answer
-    // this project accepts. The top frame is still preferred when there is one, because a plain CRM
-    // tab has exactly that and asking it is a round trip nobody needs.
-    const top = crm.find((x) => x.top);
-    _crmCandidates = { tabId, ids: crm.map((x) => x.frameId) };
-    if (top) fid = top.frameId;
-    else if (crm.length === 1) fid = crm[0].frameId;
-    else if (crm.length) fid = await answeringFrame(tabId, _crmCandidates.ids);
-    // What was actually there, in the order it was seen. An intermittent report is a *sequence*, and
-    // this repository has paid for the lesson that sampling at chosen instants is not measuring: five
-    // changes were made to a scroll bug before anybody wrote down what happened in what order, and
-    // every one of them was wrong. One line per enumeration, hosts only - no path, because a path
-    // carries a portal name and a record id and this line ends up pasted into a chat.
-    _crmFrameSeen = seen.map((x) => `${x.frameId}:${(x.href || '').split('/').slice(0, 3).join('/')}`).join(' ');
-  } catch (_) {
-    // The enumeration is the thing that failed, not the tab. A CRM tab's own document is frame 0,
-    // and that is the only case where guessing it is not a guess.
-    try {
-      const t = await chrome.tabs.get(tabId);
-      if (/^https:\/\/crm(sandbox)?\.zoho/.test((t && t.url) || '')) fid = 0;
-    } catch (_) {}
-  }
-  // Only a hit is remembered. Recording the miss is what made a transient absence last six seconds.
-  if (fid !== null) _crmFrame = { tabId, frameId: fid, ts: now };
-  return fid;
-}
-/** Speak to the bridge, and put it there if it is not.
- *
- * **Asking and injecting are different acts and only one of them is dangerous.** The first version of
- * this fix refused both when no CRM frame was found, and that broke the case it was not about: with
- * the frame list unavailable, the panel stopped *asking* too, so the context bar went from naming the
- * org to «Zoho tab (not ready)» - visible in thirteen of the site's screenshots, which is how it was
- * caught. Asking costs nothing and is refused by the bridge itself when the origin is not CRM;
- * injecting is what puts our code into somebody else's page.
- *
- * So: ask wherever there is a frame to ask, and inject only where a CRM document actually is.
- */
-async function ensureBridge(tabId) {
-  const fid = await crmFrameId(tabId);
-  const to = fid === null ? {} : { frameId: fid };
-  try { await chrome.tabs.sendMessage(tabId, { cmd: 'context' }, to); return true; }
-  catch {
-    // Every CRM-origin frame this tab has, not one of them. A shell builds several and only one is
-    // the application; injecting into the one that happened to come first left the others without a
-    // bridge, so the frame that *would* have answered never could. They are all on a host this
-    // extension declares a content script for, so this is the declaration being applied rather than
-    // a reach into anything new - and a frame that is not the application is refused by the bridge
-    // itself, which is what makes «ask them all» safe.
-    const ids = _crmCandidates.tabId === tabId ? _crmCandidates.ids : (fid === null ? [] : [fid]);
-    // No CRM frame in this tab: nothing here is ours to inject into. See `crmFrameId`.
-    if (!ids.length) return false;
-    try {
-      await chrome.scripting.executeScript({ target: { tabId, frameIds: ids }, world: 'MAIN', files: ['hook.js'] });
-      await chrome.scripting.executeScript({ target: { tabId, frameIds: ids }, files: ['content-bridge.js'] });
-      console.info(`[zoost] bridge injected into [${ids.join(' ')}]`);
-      await sleep(60);
-      // The lookup was made before any of this existed, so its answer - very likely `null` - is about
-      // a tab that has since changed. Forget it and let the next caller ask the frames that are now
-      // listening; remembering it is the «cache repeats a failure» defect one level up.
-      _crmFrame = { tabId: null, frameId: 0, ts: 0 };
-      return true;
-    } catch (e) {
-      // A refused injection said nothing at all, and «nothing happened» and «Chrome refused» look the
-      // same from the panel: both end as «not ready». The message is what tells them apart.
-      console.info(`[zoost] bridge injection REFUSED for [${ids.join(' ')}]: ${(e && e.message) || e}`);
-      return false;
-    }
-  }
-}
-async function toBridge(msg) {
-  // The last line, below every disabled control and every guard above it. The panel speaks to the
-  // tab that is open, so a command that is not the context probe must not travel while that tab is a
-  // different org from the workspace this panel is bound to - whatever removed the `disabled`, and
-  // whoever called the function directly. `context` is how the mismatch is detected in the first
-  // place, so it is the one thing that always goes; and a panel with nothing bound yet is creating
-  // its first workspace, which is not a mismatch.
-  if (msg && msg.cmd !== 'context' && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
-  const id = await zohoTabId(); if (!id) throw new Error(MSG.noTab);
-  await ensureBridge(id); const fid = await crmFrameId(id);
-  // `null` is «this tab has no Zoho CRM frame», and it is now a possible answer: ask the tab rather
-  // than name a frame that is not there. The bridge refuses a non-CRM origin by itself, so the worst
-  // this can do is go unanswered - which is the same as any other tab that is not ready.
-  const at = fid === null ? {} : { frameId: fid };
-  // The identity travels with the command and is checked *in the page that will run it*. Everything
-  // above this line is a check against `lastCtx`, which is a five-second poll's memory of which org
-  // the tab was showing - and between reading it and reaching the tab there are three awaits. So the
-  // last word belongs to the only party that cannot be out of date about which org it is.
-  const expected = (msg && msg.cmd !== 'context' && bound)
-    ? { org: bound.org, origin: bound.base, instance: bound.instance } : null;
-  return chrome.tabs.sendMessage(id, bridgeCommand(msg, expected), at);
-}
-async function getContext() { try { return bridgeContext(await toBridge({ cmd: 'context' })); } catch { return null; } }
-async function waitTabComplete(id, timeout = 9000) {
-  const t0 = Date.now();
-  while (Date.now() - t0 < timeout) { try { const t = await chrome.tabs.get(id); if (t.status === 'complete') return true; } catch { return false; } await sleep(200); }
-  return false;
-}
-
+const crmZohoBridge = createCrmZohoBridge({
+  chromeApi: chrome,
+  zohoMatches: ZOHO_MATCHES,
+  zohoHost: ZOHO_HOST_RE,
+  bound: () => bound,
+  guardOk,
+  mismatchMessage: MSG.mismatchRefused,
+  noTabMessage: MSG.noTab,
+  sleep,
+  command: bridgeCommand,
+  context: bridgeContext,
+  log: (message) => console.info(message),
+});
+const tabHasCrmFrame = crmZohoBridge.tabHasCrmFrame;
+const zohoTabId = crmZohoBridge.tabId;
+const activeZohoTabId = crmZohoBridge.activeTabId;
+const answeringFrame = crmZohoBridge.answeringFrame;
+const askFrame = crmZohoBridge.askFrame;
+const crmFrameId = crmZohoBridge.frameId;
+const ensureBridge = crmZohoBridge.ensure;
+const toBridge = crmZohoBridge.send;
+const getContext = crmZohoBridge.getContext;
+const waitTabComplete = crmZohoBridge.waitTabComplete;
 // ---------- context bar + off-zoho overlay ----------
 let contextLoad = 0;
 let _ctxErr = null;
@@ -1567,7 +1301,7 @@ async function refreshContext() {
   // arrives at*, and until now the only record of arriving at it was the words on screen - which say
   // that it happened and nothing about why. Whoever reads this next has the tab, the frames that
   // were there, the frame we asked, and what the answer was.
-  console.info(`[zoost] ctx tab=${activeId} frames=[${_crmFrameSeen}] asked=${cfid === null ? 'any' : cfid}`
+  console.info(`[zoost] ctx tab=${activeId} frames=[${crmZohoBridge.seenFrames()}] asked=${cfid === null ? 'any' : cfid}`
     + ` -> ${lastCtx ? 'ok' : 'NOT READY' + (_ctxErr ? ' (' + _ctxErr + ')' : '')}`
     + ` ${Date.now() - _t0}ms`);
   _ctxErr = null;
@@ -3255,51 +2989,14 @@ async function carryUiIds(entries, map, op) {
   return entries;
 }
 // ---------- reveal (auto-navigate to Functions page, then filter) ----------
-function functionsUrl() {
-  const base = bound?.base || lastCtx?.origin; const inst = bound?.instance || lastCtx?.instance;
-  return base && inst ? `${base}/crm/${inst}/settings/functions/myFunctions` : null;
-}
-/** The one function, in Zoho's newer interface. Measured: `?functionId=<record id>&tab=overview`
- *  opens it, the `viewId` their own links carry is not needed, and an org that does not have that
- *  interface is redirected by Zoho to the functions list - which is where this used to stop. So the
- *  worst case of a stale id is the old behaviour, not an error page. */
-function functionUrl(uiId) {
-  const base = bound?.base || lastCtx?.origin; const inst = bound?.instance || lastCtx?.instance;
-  return base && inst && uiId
-    ? `${base}/crm/${inst}/settings/functions?functionId=${encodeURIComponent(uiId)}&tab=overview` : null;
-}
-/** «Go to Zoho CRM» is about the platform, not about this workspace's org - and it was
- *  `${base}/crm/${instance}/`, which is a claim about which org you will land in. Reported: log out
- *  of one org to sign into another and the button takes you back to the one you just left.
- *  `ShowHomePage.do` is the account's own CRM home and resolves to whatever org the session has.
- *
- *  The host is still derived from what is known - the open workspace first, then the tab - because a
- *  data centre is a property of the account and logging out does not move it. The setting is only
- *  consulted when neither exists, which is a fresh install with nothing pulled: there the old code
- *  guessed `crm.zoho.com`, and a guess about somebody else's data centre is wrong five times out of
- *  six. */
-/** The data centres, and the choice offered where the link is.
- *
- *  The destination used to be derived from whichever workspace happened to be open, on the reasoning
- *  that a data centre is a property of an account and signing out does not move it. True of one
- *  account, and false for the reader this product is most for: a consultant with clients on .eu,
- *  .com and .jp cannot have it deduced, because after signing out the next org is a choice nobody
- *  but them has made yet. Reported, and the earlier reasoning was mine and wrong.
- *
- *  So the picklist is beside the button and is always there, offering every data centre rather than
- *  the ones already mirrored - wanting to open .jp while the default is .eu is exactly the case, and
- *  a control that only offers what you have been to before cannot serve it. What it opens on is what
- *  is known: the workspace, then the tab, then the default in Settings. */
-/** The data centres, derived from the manifest instead of typed.
- *
- *  It was a literal list in two places - here and the Settings form - held together by a test,
- *  which is a checker standing in for a source of truth. The manifest already *is* that source:
- *  a host this extension cannot reach is not a destination it may offer, and one it can reach is.
- *  Adding a data centre is then one edit, in the file that has to change anyway.
- *
- *  Measured while asking whether the list was complete, and it is not: Zoho answers on
- *  zoho.sa, zoho.uk, zoho.ae and zoho.com.cn with the same shape as the six here, and neither
- *  manifest grants them. That is a permissions change and is not made in passing. */
+const crmNavigationContext = () => ({
+  base: bound?.base || lastCtx?.origin,
+  instance: bound?.instance || lastCtx?.instance,
+});
+function functionsUrl() { return crmFunctionsUrl(crmNavigationContext()); }
+function functionUrl(uiId) { return crmFunctionUrl(crmNavigationContext(), uiId); }
+// Offered data centres come from the manifest; the selected one remains a user choice because a
+// consultant may move between accounts hosted in different data centres.
 const DCS = [...new Set((chrome.runtime.getManifest().host_permissions || [])
   .filter((h) => h.startsWith('https://crm.'))
   .map((h) => h.slice('https://crm.'.length).replace(/\/.*$/, '')))].sort();
@@ -3317,101 +3014,27 @@ function homeUrl() {
   const dc = ($('gozohodc') && $('gozohodc').value) || dcOf(bound?.base) || dcOf(lastCtx?.origin) || zohoDc;
   // Production, never the sandbox: this is the way *in*, and a sandbox host is a place you arrive at
   // from a workspace that already knows it is one.
-  return `https://crm.${dc}/crm/ShowHomePage.do`;
+  return crmHomeUrl(dc);
 }
-/** Take the reader to a page of their Zoho CRM, without taking their shell away.
- *
- * **A tab is a tree of documents, and we were navigating the wrong one.** On a plain CRM tab there is
- * one document and it is the CRM. Inside a suite shell - Zoho One, and CRM Plus the same way - the
- * CRM is an iframe on `crm.zoho.<dc>` and the *tab* is the shell. Thirteen call sites said «take this
- * TAB to this address», which is right in the first case and, in the second, throws away the shell
- * the reader was working in and lands them on a bare CRM.
- *
- * The address itself was never the problem, and that is worth stating because it is what made this
- * safe to fix: hovering a module link inside the shell shows
- * `https://crm.zoho.<dc>/crm/<portal>/tab/<Module>` in the status bar - absolute, on the CRM's own
- * origin, character for character what `openModulePage` builds. **Zoho publishes that entry point
- * itself**, so nothing here is guessed about somebody else's router, which is the thing this project
- * refuses to do. We move the frame the bridge already talks to, which is what clicking that link does.
- *
- * On a plain CRM tab the CRM frame *is* the tab's document - frame 0 - so this navigates the tab and
- * one code path serves both. A tab with no CRM frame at all falls back to navigating the tab, which
- * is where it started; in that state the Zoho-bound controls are blocked anyway.
- *
- * Returns the tab id, or null when there was nothing to move.
- */
-// **Nothing navigates anywhere this extension is not allowed to be.** Every «Open in Zoho» builds its
-// URL from `bound.base`, and `bound` is `.zoost.json` - a file on disk, in a folder the user may have
-// been given rather than made. `guardOk()` compares that origin against the tab before a *pull*; no
-// navigation asked anything, so a workspace received from somebody else could point a control
-// labelled with Zoho's name at any origin, in the user's own Zoho frame.
-//
-// The check is here and not at the six builders, because a seventh added tomorrow inherits it - the
-// same argument `safePath` makes in the bridge. The families come from `host_permissions`, so this
-// cannot drift from what the manifest actually grants.
-// The hosts, exactly, out of `host_permissions` - not a prefix. Written as a prefix first, and
-// `https://crm.zoho.eu.evil.com/` walked straight through it: `^https://crm\.zoho` is happy with any
-// domain that *starts* that way. A host is a whole string or it is somebody else's.
-const ZOHO_HOSTS = new Set(ZOHO_MATCHES.map((h) => {
-  try { return new URL(h.replace(/\*$/, '')).host; } catch (_) { return null; }
-}).filter(Boolean));
-function zohoUrlOk(url) {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' && ZOHO_HOSTS.has(u.host);
-  } catch (_) { return false; }
-}
-async function goToZoho(url, opts = {}) {
-  if (!zohoUrlOk(url)) {
-    // Said, not swallowed: a control that does nothing is the failure this repository refuses, and
-    // the reason is worth the reader's attention - it is about the workspace, not about the click.
-    setStatus('This workspace points at ' + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
-      + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad');
-    return null;
-  }
-  if (opts.newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
-  let id = await zohoTabId();
-  if (!id) { const t = await chrome.tabs.create({ url, active: opts.active !== false }); return t.id; }
-  const fid = await crmFrameId(id);
-  // Frame 0 is the tab's own document: moving it and moving the tab are the same act, and
-  // `chrome.tabs.update` is the one that also raises the tab.
-  if (fid) {
-    try {
-      await chrome.scripting.executeScript({ target: { tabId: id, frameIds: [fid] },
-                                             func: (u) => { location.href = u; }, args: [url] });
-      if (opts.active !== false) await chrome.tabs.update(id, { active: true });
-      return id;
-    } catch (_) {
-      // A refused injection is not a reason to do nothing: fall through to the tab, which is the
-      // behaviour every one of these call sites had before.
-    }
-  }
-  await chrome.tabs.update(id, { url, active: opts.active !== false });
-  return id;
-}
+// The adapter checks the complete host against manifest permissions and navigates the CRM frame
+// inside suite shells, preserving the shell instead of replacing the whole tab.
+const crmZohoNavigator = createCrmZohoNavigator({
+  chromeApi: chrome,
+  hostPatterns: ZOHO_MATCHES,
+  findTab: zohoTabId,
+  findFrame: crmFrameId,
+  refused: (url) => setStatus('This workspace points at '
+    + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
+    + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad'),
+});
+const zohoUrlOk = crmZohoNavigator.allows;
+const goToZoho = crmZohoNavigator.open;
 async function openZohoHome() {
   if (sampleRefuse()) return;
   await goToZoho(homeUrl());
 }
-// Zoho's own page for one automation action. The paths were read off the address bar rather than
-// guessed - `settings/alerts/<id>`, `settings/field-updates/<id>`, `settings/tasks/<id>`,
-// `settings/webhooks/<id>` - which is the only way this project is allowed to build a URL: a
-// certain path or nothing. The webhook one arrived last and was absent until it did, rather than
-// being guessed from the pattern of the other three.
-const ACTION_PATH = { email_notifications: 'alerts', field_updates: 'field-updates', tasks: 'tasks', webhooks: 'webhooks' };
-function actionUrl(a) {
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  const seg = a && ACTION_PATH[a.kind];
-  return (base && inst && seg && a.id) ? `${base}/crm/${inst}/settings/${seg}/${a.id}` : null;
-}
-// The template a notification sends is a page of its own, and the notification only names it -
-// so the name is the link. A query string rather than a path, which is Zoho's shape here and not a
-// pattern to extrapolate from the other three.
-function templateUrl(a) {
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  const id = a && a.template && a.template.id;
-  return (base && inst && id) ? `${base}/crm/${inst}/settings/templates?type=email&templateId=${encodeURIComponent(id)}` : null;
-}
+function actionUrl(a) { return crmActionUrl(crmNavigationContext(), a); }
+function templateUrl(a) { return crmTemplateUrl(crmNavigationContext(), a); }
 async function openZohoAt(url, what) {
   if (sampleRefuse()) return;
   if (!url) { setStatus(MSG.noActionTarget, 'warn'); return; }
@@ -3427,23 +3050,23 @@ async function openActionInZoho(a) { await openZohoAt(actionUrl(a), a.name || a.
 async function openModulePage(genName, navigable, label) {
   if (sampleRefuse()) return;
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !genName) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  if (!await goToZoho(`${base}/crm/${inst}/tab/${genName}`)) return;
+  const url = crmModuleUrl(crmNavigationContext(), genName);
+  if (!url) { setStatus(MSG.noModuleTarget, 'warn'); return; }
+  if (!await goToZoho(url)) return;
   setStatus(`Opened \u00ab${genName}\u00bb in Zoho.`, 'ok');
 }
 async function openModuleLayouts(gen) {
   if (sampleRefuse()) return;
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  if (!await goToZoho(`${base}/crm/${inst}/settings/modules/${gen}/layouts`)) return;
+  const url = crmLayoutUrl(crmNavigationContext(), gen);
+  if (!url) { setStatus(MSG.noModuleTarget, 'warn'); return; }
+  if (!await goToZoho(url)) return;
   setStatus(`Opened ${gen} layouts in Zoho.`, 'ok');
 }
 async function openModuleLayout(gen, layoutId) {
   if (sampleRefuse()) return;
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
-  if (!await goToZoho(layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`)) return;
+  const url = crmLayoutUrl(crmNavigationContext(), gen, layoutId);
+  if (!url) { setStatus(MSG.noModuleTarget, 'warn'); return; }
+  if (!await goToZoho(url)) return;
   setStatus(layoutId ? 'Opened the layout in Zoho.' : `Opened ${gen} layouts in Zoho.`, 'ok');
 }
 function moduleNavigable(m) {

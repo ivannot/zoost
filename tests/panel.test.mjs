@@ -24,6 +24,60 @@ const crmPanel = () => appPanel('crm');
 // either read the composed subject, while APP_FILES below still derives script order from the HTML.
 const panelPage = (app) => read(`apps/${app}/sidepanel.html`) + '\n' + read(`apps/${app}/sidepanel.css`);
 const aiFile = (app) => `apps/${app}/ai.js`;
+const filesystemFile = (app) => `apps/${app}/filesystem-adapter.js`;
+
+function workspaceFilesystemFor(app, overrides = {}) {
+  const { createWorkspaceFilesystem } = load([
+    sliceFn(filesystemFile(app), 'createWorkspaceFilesystem'),
+  ], { WeakMap, Map, Error, Promise });
+  let root = overrides.root || null;
+  let generation = overrides.generation || 0;
+  const api = createWorkspaceFilesystem({
+    root: () => root,
+    generation: () => generation,
+    onWrite: overrides.onWrite || (() => {}),
+    say: overrides.say || (() => {}),
+    folderMessage: overrides.folderMessage || 'folder denied',
+    movedMessage: overrides.movedMessage || 'workspace moved',
+  });
+  return {
+    api,
+    setRoot: (value) => { root = value; },
+    setGeneration: (value) => { generation = value; },
+  };
+}
+
+function crmBridgeFor(chromeApi, overrides = {}) {
+  const { createCrmZohoBridge } = load([
+    sliceFn('apps/crm/zoho-bridge.js', 'createCrmZohoBridge'),
+  ], { Date, Promise, Error, RegExp });
+  return createCrmZohoBridge({
+    chromeApi,
+    zohoMatches: overrides.zohoMatches || ['https://crm.zoho.eu/*', 'https://one.zoho.eu/*'],
+    zohoHost: overrides.zohoHost || /^(?:https:\/\/)?(?:crm(?:sandbox)?|one)\.zoho\./,
+    bound: overrides.bound || (() => null),
+    guardOk: overrides.guardOk || (() => true),
+    mismatchMessage: overrides.mismatchMessage || 'mismatch',
+    noTabMessage: overrides.noTabMessage || 'no tab',
+    sleep: overrides.sleep || (async () => {}),
+    command: overrides.command || ((message) => message),
+    context: overrides.context || ((reply) => reply),
+    log: overrides.log || (() => {}),
+  });
+}
+
+function crmNavigatorFor(chromeApi, overrides = {}) {
+  const { createCrmZohoNavigator } = load([
+    sliceFn('apps/crm/zoho-navigation.js', 'createCrmZohoNavigator'),
+  ], { Set, URL, String, Boolean, Promise });
+  return createCrmZohoNavigator({
+    chromeApi,
+    hostPatterns: overrides.hostPatterns || ['https://crm.zoho.eu/*', 'https://one.zoho.eu/*'],
+    findTab: overrides.findTab || (async () => 42),
+    findFrame: overrides.findFrame || (async () => 0),
+    refused: overrides.refused || (() => {}),
+  });
+}
 // A slice by name, wherever the split put it: tries the app's files in page order and keeps
 // sliceFn's own guarantee - a name found nowhere still throws, so cover cannot vanish silently.
 // Derived from the page, in its load order: four manual copies of this list existed (here, the two
@@ -4355,14 +4409,14 @@ test('the folder-access guard throws from one place per panel', () => {
   // carry on instead of throwing keep their own ensurePerm, so this counts the *throw*. The message
   // itself is no longer written here: it is MSG.folder, one sentence for the ten sites that used to
   // say it three ways, and the case below holds the two panels to the same wording.
-  const thrown = /throw new Error\(MSG\.folder\)/g;
   for (const app of ['crm', 'analytics']) {
-    const src = panelBody(app);
-    const n = (src.match(thrown) || []).length;
+    const adapter = read(filesystemFile(app));
+    const n = (adapter.match(/throw new Error\(options\.folderMessage\)/g) || []).length;
     assert.equal(n, 1, `${app}: the guard throws from ${n} places - use requirePerm(dir)`);
+    assert.ok(/const requirePerm = workspaceFilesystem\.requirePermission;/.test(panelBody(app)),
+      `${app}: the panel is not wired to the shared permission guard`);
   }
   const crm = panelBody('crm');
-  assert.ok(/async function requirePerm\(h\)/.test(crm), 'the CRM lost requirePerm()');
   // `op.root`, not `dir`: an operation guards the folder it belongs to, since the one on screen may
   // already be a different workspace by the time it asks.
   assert.ok((crm.match(/await requirePerm\((?:dir|op\.root)\);/g) || []).length >= 9,
@@ -4520,17 +4574,15 @@ test('sampleRefuse() refuses a sample and lets a real workspace through', () => 
 });
 
 test('requirePerm() throws the shipped message, and only when the folder is denied', async () => {
-  const { requirePerm } = load([
-    sliceConst('apps/crm/sidepanel.js', 'MSG'),
-    sliceFn('apps/crm/sidepanel.js', 'requirePerm'),
-    sliceFn('apps/crm/sidepanel.js', 'ensurePerm'),
-  ], {});
+  const { api } = workspaceFilesystemFor('crm', {
+    folderMessage: 'Folder access needs re-granting - click ↻ Refresh.',
+  });
   const handle = (state) => ({ queryPermission: async () => state, requestPermission: async () => state });
-  await requirePerm(handle('granted'));   // must not throw, or every pull stops on a granted folder
+  await api.requirePermission(handle('granted'));   // must not throw, or every pull stops on a granted folder
   // The wording is read from the shipped MSG rather than repeated here - a copy in the test is one
   // more place the sentence can drift, which is the whole defect this fold was about. What is
   // asserted is that the thrown message *is* that constant and names a button the user can press.
-  await assert.rejects(() => requirePerm(handle('denied')),
+  await assert.rejects(() => api.requirePermission(handle('denied')),
     (e) => e.message === 'Folder access needs re-granting - click ↻ Refresh.',
     'the message a user reads when the folder is gone has changed');
 });
@@ -4908,8 +4960,8 @@ test('both panels report a lapsed folder permission in the same words', () => {
   // in - the drift the twin rule exists to stop, in the helper a previous pass folded for it.
   const wording = ['apps/crm/sidepanel.js', 'apps/analytics/sidepanel.js'].map((rel) => {
     const src = read(rel);
-    assert.ok(/async function requirePerm\(h\) \{ if \(!\(await ensurePerm\(h\)\)\) throw new Error\(MSG\.folder\); \}/.test(src),
-      `id=${rel} no longer throws MSG.folder from requirePerm`);
+    assert.ok(/const requirePerm = workspaceFilesystem\.requirePermission;/.test(src),
+      `id=${rel} no longer delegates to the filesystem permission guard`);
     return (src.match(/^\s*folder: '([^']*)',/m) || [])[1];
   });
   assert.ok(wording[0], 'id=crm has no MSG.folder to compare');
@@ -5252,11 +5304,16 @@ for (const [app, fns] of [
 // door cannot.
 for (const app of ['crm', 'analytics']) {
   test(`${app}: nothing reaches the platform through a mismatch, whatever the buttons say`, () => {
-    const send = sliceFn(`apps/${app}/sidepanel.js`, 'toBridge');
-    assert.ok(/throw new Error\(MSG\.mismatchRefused\)/.test(send),
+    const send = app === 'crm'
+      ? sliceFn('apps/crm/zoho-bridge.js', 'createCrmZohoBridge')
+      : sliceFn('apps/analytics/sidepanel.js', 'toBridge');
+    assert.ok(app === 'crm' ? /throw new Error\(options\.mismatchMessage\)/.test(send)
+                            : /throw new Error\(MSG\.mismatchRefused\)/.test(send),
       'the refusal is silent or unnamed at the door');
-    const line = send.split('\n').find((l) => /throw new Error\(MSG\.mismatchRefused\)/.test(l));
-    assert.ok(/&& bound && !guardOk\(\)/.test(line),
+    const line = send.split('\n').find((l) => app === 'crm'
+      ? /if \(message && message\.cmd/.test(l) : /throw new Error\(MSG\.mismatchRefused\)/.test(l));
+    assert.ok(app === 'crm' ? /&& bound && !options\.guardOk\(\)/.test(line)
+                            : /&& bound && !guardOk\(\)/.test(line),
       'the transport lets anything through, so removing a disabled attribute is enough');
     // The exemptions are **derived from the line and checked against a declared set**, not pinned as
     // an expression: this used to assert the condition character for character, so adding a third
@@ -5269,9 +5326,11 @@ for (const app of ['crm', 'analytics']) {
     //             Safe because the bridge's workspaceInfo takes its id from the page's own URL.
     const declared = { crm: ["cmd !== 'context'", 'bound', '!guardOk()'],
                        analytics: ["cmd !== 'context'", '!aboutTab', 'bound', '!guardOk()'] }[app];
-    const clauses = line.slice(line.indexOf('if (') + 4, line.lastIndexOf(') throw')).split('&&')
+    const clauses = line.slice(line.indexOf('if (') + 4, line.lastIndexOf(') {') > 0
+      ? line.lastIndexOf(') {') : line.lastIndexOf(') throw')).split('&&')
       .map((c) => c.trim().replace(/^msg\.?/, ''))
-      .filter((c) => c && c !== 'msg');
+      .map((c) => c.replace(/^message\.?/, '').replace('options.guardOk()', 'guardOk()'))
+      .filter((c) => c && c !== 'msg' && c !== 'message');
     for (const c of clauses) {
       assert.ok(declared.some((d) => c.includes(d)),
         `${app}: «${c}» is a way past the mismatch guard that nothing here declares`);
@@ -6396,7 +6455,9 @@ for (const app of ['crm', 'analytics']) {
   test('the address is built from the record id, and from nothing else', () => {
     const g = { encodeURIComponent, String, console,
                 bound: { base: 'https://crm.zoho.eu', instance: 'yourinstance' }, lastCtx: null };
-    const { functionUrl } = load([sliceFn(REL, 'functionUrl')], g);
+    const pieces = [sliceFn('apps/crm/zoho-navigation.js', 'crmFunctionUrl'),
+      sliceConst(REL, 'crmNavigationContext'), sliceFn(REL, 'functionUrl')];
+    const { functionUrl } = load(pieces, g);
     assert.equal(functionUrl(THEIRS),
       `https://crm.zoho.eu/crm/yourinstance/settings/functions?functionId=${THEIRS}&tab=overview`);
     // The `viewId` their own links carry is not sent: it was measured to be unnecessary, and a
@@ -6405,7 +6466,7 @@ for (const app of ['crm', 'analytics']) {
     // No id, no address - the caller then opens the list, which is what it did for everyone before.
     assert.equal(functionUrl(null), null);
     assert.equal(functionUrl(''), null);
-    assert.equal(load([sliceFn(REL, 'functionUrl')], { encodeURIComponent, String, console, bound: null, lastCtx: null })
+    assert.equal(load(pieces, { encodeURIComponent, String, console, bound: null, lastCtx: null })
       .functionUrl(THEIRS), null, 'an address was built with no workspace and no tab to build it from');
   });
 
@@ -6438,7 +6499,8 @@ for (const app of ['crm', 'analytics']) {
     // The defect this whole mapping exists to avoid, and it was measured before it could be shipped:
     // the two spaces look alike and neither is checkable by eye.
     const g = { encodeURIComponent, String, console, bound: { base: 'https://crm.zoho.eu', instance: 'yourinstance' }, lastCtx: null };
-    const { functionUrl } = load([sliceFn(REL, 'functionUrl')], g);
+    const { functionUrl } = load([sliceFn('apps/crm/zoho-navigation.js', 'crmFunctionUrl'),
+      sliceConst(REL, 'crmNavigationContext'), sliceFn(REL, 'functionUrl')], g);
     const src = read(REL);
     assert.ok(!functionUrl(THEIRS).includes(OURS));
     // `reveal` must ask the row for `uiId`, not for `id`: they are both there, and one of them
@@ -6457,7 +6519,9 @@ for (const app of ['crm', 'analytics']) {
       sampleRefuse: () => false, setStatus: () => {}, MSG: { noTarget: 'none', openingFns: 'opening' },
       goToZoho: async (url) => { opened = url; return 7; },
     };
-    const { reveal } = load([sliceFn(REL, 'functionsUrl'), sliceFn(REL, 'functionUrl'), sliceFn(REL, 'reveal')], g);
+    const { reveal } = load([sliceFn('apps/crm/zoho-navigation.js', 'crmFunctionsUrl'),
+      sliceFn('apps/crm/zoho-navigation.js', 'crmFunctionUrl'), sliceConst(REL, 'crmNavigationContext'),
+      sliceFn(REL, 'functionsUrl'), sliceFn(REL, 'functionUrl'), sliceFn(REL, 'reveal')], g);
     await reveal({ uiId: THEIRS, displayName: 'Run it' });
     assert.equal(opened,
       `https://crm.zoho.eu/crm/yourinstance/settings/functions?functionId=${THEIRS}&tab=overview`,
@@ -8111,10 +8175,9 @@ test('the sources are read in tranches, and the reader is told', () => {
 // file-system calls to 4, opening a 5,000-function workspace from 20,015 to 10,732.
 test('the directory handles are cached, and dropped when the folder changes', () => {
   const js = crmPanel();
-  const at = js.indexOf('async function dirFor');
-  const body = js.slice(at, at + 700).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const body = sliceFn(filesystemFile('crm'), 'createWorkspaceFilesystem');
   assert.ok(/cache\.has\(key\)/.test(body), 'nothing is cached');
-  assert.ok(/_dirCaches\.get\(root\)/.test(body), 'one map again, for whichever folder is current');
+  assert.ok(/directoryCaches\.get\(root\)/.test(body), 'one map again, for whichever folder is current');
   // A stale handle is worse than a slow one: it must be given up eagerly, never validated.
   const drops = (js.match(/forgetDirs\(\)/g) || []).length;
   assert.ok(drops >= 5, `the cache is dropped in ${drops} places; every path that changes dir must`);
@@ -8133,8 +8196,8 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
   test('every write marks the function it rewrote', () => {
-    const at = code.indexOf('async function writeFile');
-    assert.ok(/noteWrite\(rel\)/.test(code.slice(at, at + 400)), 'a write leaves no mark');
+    const adapter = sliceFn(filesystemFile('crm'), 'createWorkspaceFilesystem');
+    assert.ok(/options\.onWrite\(relativePath\)/.test(adapter), 'a write leaves no mark');
     assert.ok(/_dirtySource\.add/.test(code), 'nothing records which files were rewritten');
   });
 
@@ -8291,7 +8354,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     for (const c of ['codeCache', 'graphCache', 'moduleFilesCache', 'aiConnCache', 'aiActCache', 'actionUsers']) {
       assert.ok(new RegExp(c + '\\s*=\\s*null').test(note), `noteWrite does not forget ${c}`);
     }
-    assert.ok(/noteWrite\(path\)/.test(region('async function removeFileAt', '\n}')),
+    assert.ok(/options\.onWrite\(relativePath\)/.test(sliceFn(filesystemFile('crm'), 'createWorkspaceFilesystem')),
               'a deletion leaves what was read from that path in memory');
   });
 
@@ -8349,9 +8412,9 @@ test('the directory handles are cached, and dropped when the folder changes', ()
 
   test('the Analytics twin does the same at its own write', () => {
     const an = appPanel('analytics').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    const at = an.indexOf('async function writeFile');
-    assert.ok(/noteWrite\(rel\)/.test(an.slice(at, at + 400)), 'a write leaves no mark in Analytics');
-    assert.ok(/sqlCache\s*=\s*null/.test(an.slice(an.indexOf('function noteWrite'), at)),
+    const adapter = sliceFn(filesystemFile('analytics'), 'createWorkspaceFilesystem');
+    assert.ok(/options\.onWrite\(relativePath\)/.test(adapter), 'a write leaves no mark in Analytics');
+    assert.ok(/sqlCache\s*=\s*null/.test(an.slice(an.indexOf('function noteWrite'), an.indexOf('const workspaceFilesystem'))),
               'the query cache is not forgotten by the write that replaced the query');
   });
 }
@@ -9750,14 +9813,12 @@ for (const app of ['crm', 'analytics']) {
     const mk = (nm, slow) => ({ nm, calls: 0,
       async getDirectoryHandle(p) { this.calls++; await new Promise((r) => setTimeout(r, slow ? 40 : 0)); return mk(nm + '/' + p, slow); } });
     const A = mk('A', true), B = mk('B', false);
-    const ctx = { dir: A, _dirCaches: new WeakMap(), setTimeout, Map, WeakMap, Error };
-    vm.createContext(ctx);
-    vm.runInContext(sliceFn(`apps/${app}/sidepanel.js`, 'dirFor'), ctx);
-    const inflight = vm.runInContext('dirFor', ctx)(['functions'], true);
-    ctx.dir = B;                                  // the switch, while A is still walking
+    const filesystem = workspaceFilesystemFor(app, { root: A });
+    const inflight = filesystem.api.directoryFor(['functions'], true);
+    filesystem.setRoot(B);                       // the switch, while A is still walking
     await inflight;
     B.calls = 0;
-    const got = await vm.runInContext('dirFor', ctx)(['functions'], true);
+    const got = await filesystem.api.directoryFor(['functions'], true);
     assert.ok(got.nm.startsWith('B'), `resolving in B returned ${got.nm}`);
     assert.equal(B.calls, 1, 'B was never asked - it was answered out of the other workspace\'s cache');
   });
@@ -9773,28 +9834,29 @@ for (const app of ['crm', 'analytics']) {
   const src = read(`apps/${app}/sidepanel.js`);
 
   test(`${app}: the writer refuses a folder that is no longer the one it started in`, () => {
-    const w = sliceFn(`apps/${app}/sidepanel.js`, 'writeFileAt');
-    assert.ok(/^\s*if \(root !== dir\) throw new Error\(WS_MOVED\);/m.test(w),
+    const w = sliceFn(filesystemFile(app), 'createWorkspaceFilesystem');
+    assert.ok(/function assertCurrentRoot\(root\)[\s\S]*root !== options\.root\(\)/.test(w),
               'the write does not check the workspace it was given against the one on screen');
-    assert.ok(/dirFor\(parts\.slice\(0, -1\), true, root\)/.test(w),
+    assert.ok(/directoryFor\(parts\.slice\(0, -1\), true, root\)/.test(w),
               'it resolves the path against whatever folder is current, not against its own root');
   });
 
   test(`${app}: an operation takes its workspace before its first await`, () => {
-    const b = sliceFn(`apps/${app}/sidepanel.js`, 'beginWorkspaceOp');
-    assert.ok(/const gen = wsGen, root = dir;/.test(b), 'the op does not capture both halves');
-    assert.ok(/const current = \(\) => gen === wsGen && root === dir;/.test(b),
+    const b = sliceFn(filesystemFile(app), 'createWorkspaceFilesystem');
+    assert.ok(/const generation = options\.generation\(\);\s*const root = options\.root\(\);/.test(b),
+              'the op does not capture both halves');
+    assert.ok(/const current = \(\) => generation === options\.generation\(\) && root === options\.root\(\);/.test(b),
               'being current is decided on one of the two, so one of the two ways of moving is invisible');
     // The refusal is the op's, on both sides of the await. `writeFileAt` compares handles, and a
     // handle is not an identity through time: A -> B -> A makes the old one valid again, so an
     // operation from before the round trip wrote while `current()` said false.
-    assert.ok(/const guard = \(\) => \{ if \(!current\(\)\) throw new Error\(WS_MOVED\); \};/.test(b),
+    assert.ok(/const guard = \(\) => \{ if \(!current\(\)\) throw new Error\(options\.movedMessage\); \};/.test(b),
               'the op hands its I/O straight to the file writer, which only compares handles');
     // The shape, not the spelling: it guards, awaits, guards. It was an arrow with a `const`
     // binding and is a declaration now - which is the convention every shipped async scope follows,
     // because `tools/asynccheck.py` reads declarations - and an assertion on the old text would have
     // forbidden the fix rather than checked the behaviour.
-    assert.match(b, /function through\(fn\) \{ guard\(\); const v = await fn\(\); guard\(\); return v; \}/,
+    assert.match(b, /async function through\(work\) \{[\s\S]*guard\(\);[\s\S]*const value = await work\(\);[\s\S]*guard\(\);[\s\S]*return value;/,
                  'the workspace is checked on one side of the await only');
   });
 
@@ -9914,8 +9976,8 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
   const panel = crmPanel();
 
   test('an op speaks only into the workspace it belongs to', () => {
-    const b = sliceFn('apps/crm/sidepanel.js', 'beginWorkspaceOp');
-    assert.ok(/say: \(msg, kind\) => \{ if \(current\(\)\) setStatus\(msg, kind\); \}/.test(b),
+    const b = sliceFn(filesystemFile('crm'), 'createWorkspaceFilesystem');
+    assert.ok(/say: \(text, kind\) => \{ if \(current\(\)\) options\.say\(text, kind\); \}/.test(b),
               'progress is not bound to the workspace the way the writes are');
   });
 
@@ -9952,8 +10014,8 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
     const src = appPanel('analytics');
     assert.equal((src.match(/if \(m\?\.type === 'pullProgress'\) op\.say\(/g) || []).length, 2,
                  'the bridge keeps reporting progress into a workspace it is not pulling');
-    const b = sliceApp('analytics', 'beginWorkspaceOp');
-    assert.ok(/say: \(msg, kind\) => \{ if \(current\(\)\) status\(msg, kind\); \}/.test(b),
+    const b = sliceFn(filesystemFile('analytics'), 'createWorkspaceFilesystem');
+    assert.ok(/say: \(text, kind\) => \{ if \(current\(\)\) options\.say\(text, kind\); \}/.test(b),
               'the twin of the CRM op cannot speak, so its callers check by hand and drift');
     assert.ok(/function endBusyElsewhere\(\) \{ busy = false; updateButtons\(\); \}/.test(src),
               'an overtaken pull leaves the panel it is no longer in looking busy');
@@ -13658,51 +13720,29 @@ test('crm: every Zoho-bound control is blocked in one place, and nowhere else', 
 //
 // Run rather than read, on both shapes, because the whole point is that one code path serves them.
 test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the tab is the CRM', async () => {
-  const mk = (frames) => {
+  const mk = (frameId) => {
     const acted = [];
-    const ctx = {
-      Date, Promise, Error, console, RegExp, URL,
-      // The hosts the check reads, as `host_permissions` gives them - the panel derives the set from
-      // the manifest, so the fixture supplies the manifest's shape and not the set.
-      ZOHO_MATCHES: ['https://crm.zoho.eu/*', 'https://crm.zoho.com/*', 'https://one.zoho.eu/*'],
-      setStatus: () => {},
-      zohoTabId: async () => 42,
-      chrome: {
+    const chromeApi = {
         tabs: {
-          get: async () => ({ url: frames[0] }),
           update: async (id, o) => { acted.push({ what: 'tab', id, ...o }); },
           create: async (o) => { acted.push({ what: 'create', ...o }); return { id: 99 }; },
         },
         scripting: {
-          // `frameIds` is a property of `target`, not of the call. The first version of this stub
-          // read `o.frameIds`, which is undefined either way, so both calls looked like the
-          // enumeration and the navigation was never recorded - a stub that answers the wrong
-          // question makes the code under test look broken.
           executeScript: async (o) => {
-            if (!o.target.frameIds) return frames.map((href, i) => ({ frameId: i, result: { href, top: i === 0 } }));
             acted.push({ what: 'frame', frameId: o.target.frameIds[0], url: o.args[0] });
             return [];
           },
         },
-      },
     };
-    vm.createContext(ctx);
-    // `goToZoho` refuses a URL that is not on a host the manifest names, so the check and the host
-    // set it reads travel with it - without them every case below would be refused before it acted.
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
-                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
-                     sliceConst('apps/crm/sidepanel.js', 'ZOHO_HOSTS'),
-                     sliceFn('apps/crm/sidepanel.js', 'zohoUrlOk'),
-                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
-                     sliceFn('apps/crm/sidepanel.js', 'goToZoho')].join('\n'), ctx);
-    return { ctx, acted };
+    const navigator = crmNavigatorFor(chromeApi, { findFrame: async () => frameId });
+    return { navigator, acted };
   };
 
   const URL_ = 'https://crm.zoho.eu/crm/x/tab/Contacts';
 
   // Inside a shell: the CRM is frame 1, and the shell must still be there afterwards.
-  const shell = mk(['https://one.zoho.eu/zohoone/x/home', 'https://crm.zoho.eu/crm/x/tab/Deals']);
-  await vm.runInContext(`goToZoho(${JSON.stringify(URL_)})`, shell.ctx);
+  const shell = mk(1);
+  await shell.navigator.open(URL_);
   const moved = shell.acted.filter((a) => a.what === 'frame');
   assert.deepEqual(moved.map((a) => [a.frameId, a.url]), [[1, URL_]],
                    'the CRM frame was not the thing that moved - inside a shell that means the '
@@ -13712,8 +13752,8 @@ test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the 
 
   // A plain CRM tab: frame 0 is the tab's own document, so this is a tab navigation and there is
   // only one code path. A guard that never takes this branch would pass the case above and be useless.
-  const plain = mk(['https://crm.zoho.eu/crm/x/tab/Deals']);
-  await vm.runInContext(`goToZoho(${JSON.stringify(URL_)})`, plain.ctx);
+  const plain = mk(0);
+  await plain.navigator.open(URL_);
   assert.deepEqual(plain.acted.map((a) => a.what), ['tab'],
                    'on a tab whose own document is the CRM it did something other than navigate it');
   assert.equal(plain.acted[0].url, URL_, 'it navigated the tab somewhere else');
@@ -15543,28 +15583,29 @@ test('a workspace can only send you to a host the manifest names', () => {
   const man = { host_permissions: ['https://crm.zoho.eu/*', 'https://crmsandbox.zoho.com/*',
                                    'https://one.zoho.eu/*', 'https://analytics.zoho.eu/*'] };
   const cases = {
-    crm: { pieces: [sliceConst('apps/crm/sidepanel.js', 'ZOHO_HOSTS'),
-                    sliceFn('apps/crm/sidepanel.js', 'zohoUrlOk')],
-           globals: { ZOHO_MATCHES: man.host_permissions.filter((h) => !/analytics/.test(h)), URL },
-           good: ['https://crm.zoho.eu/crm/inst/tab/Contacts', 'https://one.zoho.eu/x'] },
     analytics: { pieces: [sliceAppConst('analytics', 'APP_HOSTS'),
                           sliceApp('analytics', 'zohoUrlOk')],
                  globals: { chrome: { runtime: { getManifest: () => man } }, URL },
                  good: ['https://analytics.zoho.eu/workspace/1/view/2'] },
   };
+  const crmHosts = man.host_permissions.filter((host) => !/analytics/.test(host));
+  const crm = crmNavigatorFor({}, { hostPatterns: crmHosts });
+  const crmGood = ['https://crm.zoho.eu/crm/inst/tab/Contacts', 'https://one.zoho.eu/x'];
+  for (const url of crmGood) assert.ok(crm.allows(url), `crm: refuses ${url}, which the manifest grants`);
+  const refused = ['https://crm.zoho.eu.evil.example/crm/x', 'https://analytics.zoho.eu.evil.example/w/1',
+    'https://attacker.example/crm/inst/tab/Contacts', 'http://crm.zoho.eu/crm/x',
+    'javascript:alert(1)', 'data:text/html,x', '', null, undefined];
+  for (const url of refused) assert.equal(crm.allows(url), false, `crm: would navigate to ${url}`);
+  assert.equal(crmNavigatorFor({}, { hostPatterns: [] }).allows(crmGood[0]), false,
+    'crm: says yes with no hosts granted - the list is not coming from the manifest');
   for (const [app, c] of Object.entries(cases)) {
     const { zohoUrlOk } = load(c.pieces, c.globals);
     for (const u of c.good) assert.ok(zohoUrlOk(u), `${app}: refuses ${u}, which the manifest grants`);
-    for (const u of ['https://crm.zoho.eu.evil.example/crm/x',      // starts like one; is not one
-                     'https://analytics.zoho.eu.evil.example/w/1',
-                     'https://attacker.example/crm/inst/tab/Contacts',
-                     'http://crm.zoho.eu/crm/x',                    // not https
-                     'javascript:alert(1)', 'data:text/html,x', '', null, undefined])
+    for (const u of refused)
       assert.equal(zohoUrlOk(u), false, `${app}: would navigate to ${u}`);
     // If a manifest with no hosts still says yes to something, the derivation is not deriving.
-    const empty = load(c.pieces, app === 'crm'
-      ? { ZOHO_MATCHES: [], URL }
-      : { chrome: { runtime: { getManifest: () => ({ host_permissions: [] }) } }, URL });
+    const empty = load(c.pieces,
+      { chrome: { runtime: { getManifest: () => ({ host_permissions: [] }) } }, URL });
     assert.equal(empty.zohoUrlOk(c.good[0]), false,
                  `${app}: says yes with no hosts granted - the list is not coming from the manifest`);
   }
@@ -15709,11 +15750,14 @@ test('the two reports are the same shape', () => {
 // alternative to a derivation that would have to encode it.
 test('both panels reach a Zoho page through one function, and the detail button uses it', () => {
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`);
-    const fn = sliceFn(`apps/${app}/sidepanel.js`, 'goToZoho');
-    assert.match(fn, /frameIds: \[fid\]/,
+    const js = app === 'crm' ? read('apps/crm/zoho-navigation.js') : read('apps/analytics/sidepanel.js');
+    const fn = app === 'crm'
+      ? sliceFn('apps/crm/zoho-navigation.js', 'createCrmZohoNavigator')
+      : sliceFn('apps/analytics/sidepanel.js', 'goToZoho');
+    assert.match(fn, app === 'crm' ? /frameIds: \[frameId\]/ : /frameIds: \[fid\]/,
                  `${app}: goToZoho does not address a frame, so inside a shell it takes the shell away`);
-    assert.match(fn, /location\.href = u/, `${app}: goToZoho navigates something other than the frame`);
+    assert.match(fn, app === 'crm' ? /location\.href = destination/ : /location\.href = u/,
+      `${app}: goToZoho navigates something other than the frame`);
 
     // The only place a frame is navigated. A second one is a second policy, and the first thing that
     // diverges between two panels is a policy that exists twice.
@@ -15755,8 +15799,8 @@ test('crm: the bridge answers for the tab only with an instance and an org', () 
                'a frame may still speak for the tab with a name and no org, which is how «html» did');
 
   // And the panel does not settle for half an answer either, wherever it asks.
-  const ask = sliceFn('apps/crm/sidepanel.js', 'askFrame');
-  assert.match(ask, /r\.instance && r\.org/,
+  const ask = sliceFn('apps/crm/zoho-bridge.js', 'createCrmZohoBridge');
+  assert.match(ask, /reply\.instance && reply\.org/,
                'the panel accepts a frame that named itself without an org');
 });
 
@@ -15810,9 +15854,7 @@ test('crm: a preview frame whose path segment looks like an instance names nobod
 test('crm: with two frames on the CRM origin, the one that answers is the one used', async () => {
   const mk = (live) => {
     const asked = [];
-    const ctx = {
-      Date, Promise, Error, console, RegExp,
-      chrome: {
+    const chromeApi = {
         tabs: {
           get: async () => ({ url: 'https://one.zoho.eu/home' }),
           sendMessage: async (_id, _msg, to) => {
@@ -15828,34 +15870,26 @@ test('crm: with two frames on the CRM origin, the one that answers is the one us
             { frameId: 1124, result: { href: 'https://crm.zoho.eu/crm/x/tab/B', top: false } },
           ]),
         },
-      },
     };
-    vm.createContext(ctx);
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
-                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
-                     sliceConst('apps/crm/sidepanel.js', '_crmFrameSeen'),
-                     sliceFn('apps/crm/sidepanel.js', 'askFrame'),
-                     sliceFn('apps/crm/sidepanel.js', 'answeringFrame'),
-                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
-    return { ctx, asked };
+    return { bridge: crmBridgeFor(chromeApi), asked };
   };
 
   // The live frame is the *second* candidate - the case that was failing, because the first is the
   // one a positional rule picks.
   const late = mk(1124);
-  assert.equal(await vm.runInContext('crmFrameId(7)', late.ctx), 1124,
+  assert.equal(await late.bridge.frameId(7), 1124,
                'it took the first candidate the enumeration returned rather than the one that answers');
   assert.deepEqual(late.asked.sort(), [1124, 1203], 'it did not ask both candidates');
 
   // And the first, so this is not a rule that always prefers the last: a guard that gets one case
   // right by accident is not a guard.
   const early = mk(1203);
-  assert.equal(await vm.runInContext('crmFrameId(7)', early.ctx), 1203,
+  assert.equal(await early.bridge.frameId(7), 1203,
                'it cannot find a live frame that happens to come first');
 
   // Nobody answers: `null`, which `crmFrameId` records as a miss and does not remember.
   const dead = mk(-1);
-  assert.equal(await vm.runInContext('crmFrameId(7)', dead.ctx), null,
+  assert.equal(await dead.bridge.frameId(7), null,
                'with no frame answering it named one anyway, which is the guess this replaced');
 });
 
@@ -15863,24 +15897,15 @@ test('crm: with two frames on the CRM origin, the one that answers is the one us
 // a plain CRM tab has exactly that and asking it would be a message nobody needs.
 test('crm: a plain CRM tab is answered from the frame list, without asking anybody', async () => {
   const asked = [];
-  const ctx = {
-    Date, Promise, Error, console, RegExp,
-    chrome: {
+  const chromeApi = {
       tabs: { get: async () => ({ url: 'https://crm.zoho.eu/crm/x/tab/A' }),
               sendMessage: async (_i, _m, to) => { asked.push(to.frameId); return { ok: true, instance: 'x' }; } },
       scripting: {
         executeScript: async () => ([{ frameId: 0, result: { href: 'https://crm.zoho.eu/crm/x/tab/A', top: true } }]),
       },
-    },
   };
-  vm.createContext(ctx);
-  vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
-                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
-                   sliceConst('apps/crm/sidepanel.js', '_crmFrameSeen'),
-                   sliceFn('apps/crm/sidepanel.js', 'askFrame'),
-                   sliceFn('apps/crm/sidepanel.js', 'answeringFrame'),
-                   sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
-  assert.equal(await vm.runInContext('crmFrameId(7)', ctx), 0, 'the tab\'s own document was not used');
+  const bridge = crmBridgeFor(chromeApi);
+  assert.equal(await bridge.frameId(7), 0, 'the tab\'s own document was not used');
   assert.deepEqual(asked, [], 'it asked a frame it did not need to ask');
 });
 
@@ -15904,9 +15929,7 @@ test('crm: the frame lookup remembers where the CRM is, never that it could not 
   const mk = () => {
     let hrefs = ['https://one.zoho.com/home'];
     const enumerations = [];
-    const ctx = {
-      Date, Promise, Error, console, RegExp,
-      chrome: {
+    const chromeApi = {
         tabs: { get: async () => ({ url: 'https://one.zoho.com/home' }) },
         scripting: {
           executeScript: async () => {
@@ -15914,22 +15937,17 @@ test('crm: the frame lookup remembers where the CRM is, never that it could not 
             return hrefs.map((href, i) => ({ frameId: i, result: { href, top: i === 0 } }));
           },
         },
-      },
     };
-    vm.createContext(ctx);
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
-                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
-                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId')].join('\n'), ctx);
-    return { ctx, enumerations, put: (h) => { hrefs = h; } };
+    return { bridge: crmBridgeFor(chromeApi), enumerations, put: (h) => { hrefs = h; } };
   };
 
-  const { ctx, enumerations, put } = mk();
-  const first = await vm.runInContext('crmFrameId(7)', ctx);
+  const { bridge, enumerations, put } = mk();
+  const first = await bridge.frameId(7);
   assert.equal(first, null, 'a tab with no CRM frame answered with one');
 
   // The shell finishes building its iframe, well inside the six-second memo.
   put(['https://one.zoho.com/home', 'https://crm.zoho.eu/crm/x/tab/Contacts']);
-  const second = await vm.runInContext('crmFrameId(7)', ctx);
+  const second = await bridge.frameId(7);
   assert.equal(enumerations.length, 2,
                'the miss was cached: the second call answered from memory and never looked again, '
                + 'which is «Zoho tab (not ready)» for as long as the memo lasts');
@@ -15937,7 +15955,7 @@ test('crm: the frame lookup remembers where the CRM is, never that it could not 
 
   // And the other half, which is what makes the first mean something: a *hit* is still remembered,
   // or this is not a cache at all and the poll enumerates every five seconds for ever.
-  const third = await vm.runInContext('crmFrameId(7)', ctx);
+  const third = await bridge.frameId(7);
   assert.equal(enumerations.length, 2, 'a frame it had already found was looked up again');
   assert.equal(third, 1, 'the remembered frame came back wrong');
 });
@@ -15961,10 +15979,7 @@ test('crm: a tab with no Zoho CRM frame is not injected into', async () => {
   const frames = (hrefs) => hrefs.map((href, i) => ({ frameId: i, result: { href, top: i === 0 } }));
   const run = async (hrefs, tabUrl, { enumerate = true } = {}) => {
     const calls = [], asked = [];
-    const ctx = {
-      Date, Promise, Error, console, RegExp,
-      MSG: { noTab: 'no tab' }, sleep: async () => {},
-      chrome: {
+    const chromeApi = {
         tabs: {
           get: async () => ({ url: tabUrl }),
           sendMessage: async (_id, _msg, to) => { asked.push(to); throw new Error('nobody answered'); },
@@ -15979,16 +15994,11 @@ test('crm: a tab with no Zoho CRM frame is not injected into', async () => {
             return [];
           },
         },
-      },
     };
-    vm.createContext(ctx);
-    vm.runInContext([sliceConst('apps/crm/sidepanel.js', '_crmCandidates'),
-                     sliceConst('apps/crm/sidepanel.js', '_crmFrame'),
-                     sliceFn('apps/crm/sidepanel.js', 'crmFrameId'),
-                     sliceFn('apps/crm/sidepanel.js', 'ensureBridge')].join('\n'), ctx);
+    const bridge = crmBridgeFor(chromeApi);
     // A fresh tab id per case: the six-second memo would otherwise answer for the previous one.
     const id = calls.length + Math.floor(Math.random() * 1e6) + hrefs.join('').length;
-    const ok = await vm.runInContext(`ensureBridge(${id})`, ctx);
+    const ok = await bridge.ensure(id);
     return { ok, injected: calls, asked };
   };
 
@@ -17647,21 +17657,25 @@ test('a write the browser refuses forgets nothing, in either product', async () 
 
     const build = (writable) => {
       const ctx = {
-        Set, Object, Array, String, Error, Promise, Map, console,
-        WS_MOVED: 'moved',
+        Set, Object, Array, String, Error, Promise, Map, WeakMap, console,
         isModuleFile: (r) => r.startsWith('modules/'),
         _dirtyMeta: new Set(), _dirtySource: new Set(),
         sqlDiskUnread: new Set(), sqlUnread: 0,
-        dirFor: async () => ({ getFileHandle: async () => ({ createWritable: writable }) }),
       };
       // The root is a real enough handle: `removeFileAt` walks it directory by directory, so a bare
       // object throws «not a function» and the case would pass on the wrong error.
       ctx.dir = { name: 'root',
                   getDirectoryHandle: async () => ({
+                    getFileHandle: async () => ({ createWritable: writable }),
                     removeEntry: async () => { throw new Error('the browser refused the removal'); } }) };
       for (const c of CACHES) ctx[c] = 'kept';
       vm.createContext(ctx);
-      vm.runInContext([noteSrc, sliceFn(rel, 'writeFileAt'), sliceFn(rel, 'removeFileAt')].join('\n'), ctx);
+      vm.runInContext([noteSrc, sliceFn(filesystemFile(app), 'createWorkspaceFilesystem')].join('\n'), ctx);
+      ctx.fs = vm.runInContext('createWorkspaceFilesystem', ctx)({
+        root: () => ctx.dir, generation: () => 0,
+        onWrite: vm.runInContext('noteWrite', ctx), say: () => {},
+        folderMessage: 'folder', movedMessage: 'moved',
+      });
       return ctx;
     };
     const held = (ctx) => CACHES.filter((c) => ctx[c] === 'kept');
@@ -17675,14 +17689,14 @@ test('a write the browser refuses forgets nothing, in either product', async () 
     assert.ok(startsWith, `id=${app}: noteWrite branches on no path prefix - the derivation broke`);
     const path = startsWith[1] + 'x' + (endsWith ? endsWith[1] : '');
     const drops = build(async () => ({ write: async () => {}, close: async () => {} }));
-    await vm.runInContext(`writeFileAt(dir, '${path}', 'x')`, drops);
+    await drops.fs.writeFileAt(drops.dir, path, 'x');
     assert.notDeepEqual(held(drops), CACHES,
       `id=${app}: a written «${path}» dropped nothing, so this case is driving a path the table `
       + 'does not react to and would pass whatever the order');
 
     // The browser refuses the write. Nothing was written, so nothing may be forgotten.
     const bad = build(async () => { throw new Error('the browser refused the write'); });
-    await assert.rejects(() => vm.runInContext(`writeFileAt(dir, '${path}', 'x')`, bad),
+    await assert.rejects(() => bad.fs.writeFileAt(bad.dir, path, 'x'),
       /refused/, `id=${app}: a refused write no longer reaches the caller`);
     assert.deepEqual(held(bad), CACHES,
       `id=${app}: a write that never happened cleared ${CACHES.filter((c) => bad[c] !== 'kept')} - the `
@@ -17692,7 +17706,7 @@ test('a write the browser refuses forgets nothing, in either product', async () 
 
     // A removal the browser refuses: same rule, the other writer.
     const rm = build(async () => ({ write: async () => {}, close: async () => {} }));
-    await assert.rejects(() => vm.runInContext(`removeFileAt(dir, '${path}')`, rm),
+    await assert.rejects(() => rm.fs.removeFileAt(rm.dir, path),
       /refused/, `id=${app}: a refused removal no longer reaches the caller`);
     assert.deepEqual(held(rm), CACHES,
       `id=${app}: a removal that never happened cleared a cache, so the panel forgets a file that is still there`);
@@ -17702,19 +17716,27 @@ test('a write the browser refuses forgets nothing, in either product', async () 
   // drops the source, the graph and the connection map, and leaves a dirty mark behind it. Asserted
   // where the branch exists rather than in the loop, because the two tables are not the same table.
   let closed = false;
+  const directory = {
+    getDirectoryHandle: async () => directory,
+    getFileHandle: async () => ({ createWritable:
+      async () => ({ write: async () => {}, close: async () => { closed = true; } }) }),
+  };
   const ctx = {
-    Set, Object, Array, String, Error, Promise, console, WS_MOVED: 'moved',
+    Set, Object, Array, String, Error, Promise, Map, WeakMap, console,
     isModuleFile: (r) => r.startsWith('modules/'),
     _dirtyMeta: new Set(), _dirtySource: new Set(),
-    dir: { name: 'root' },
-    dirFor: async () => ({ getFileHandle: async () => ({ createWritable:
-      async () => ({ write: async () => {}, close: async () => { closed = true; } }) }) }),
+    dir: { name: 'root', getDirectoryHandle: async () => directory },
   };
   const note = noteOf('apps/crm/sidepanel.js');
   for (const c of [...new Set([...note.matchAll(/(\w+) = null/g)].map((m) => m[1]))]) ctx[c] = 'kept';
   vm.createContext(ctx);
-  vm.runInContext([note, sliceFn('apps/crm/sidepanel.js', 'writeFileAt')].join('\n'), ctx);
-  await vm.runInContext("writeFileAt(dir, 'functions/a/b.dg', 'x')", ctx);
+  vm.runInContext([note, sliceFn(filesystemFile('crm'), 'createWorkspaceFilesystem')].join('\n'), ctx);
+  const fs = vm.runInContext('createWorkspaceFilesystem', ctx)({
+    root: () => ctx.dir, generation: () => 0,
+    onWrite: vm.runInContext('noteWrite', ctx), say: () => {},
+    folderMessage: 'folder', movedMessage: 'moved',
+  });
+  await fs.writeFileAt(ctx.dir, 'functions/a/b.dg', 'x');
   assert.equal(closed, true, 'the writable was never closed, so the bytes are not on disk');
   for (const c of ['codeCache', 'graphCache', 'aiConnCache']) {
     assert.equal(ctx[c], null, `a written .dg no longer drops ${c}`);

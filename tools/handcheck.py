@@ -79,7 +79,9 @@ CHECKS = [
                'Press Pull all and leave it alone until it stops.'],
         'pass': ('It ends on a line that names what it read - not on «interrupted», not on «could not». '
                  'The tree fills, and the counts match what the platform shows you.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/*/bridge-contract.js', 'apps/crm/pull-plan.js', 'apps/crm/pull-controller.js', 'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
+        'covers': ['apps/*/sidepanel.js', 'apps/*/bridge-contract.js', 'apps/*/filesystem-adapter.js',
+                   'apps/crm/zoho-bridge.js', 'apps/crm/pull-plan.js', 'apps/crm/pull-controller.js',
+                   'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
                    'apps/*/automation.js', 'apps/*/connections.js'],
     },
     {
@@ -193,7 +195,7 @@ CHECKS = [
                'Open the history menu and clear it.'],
         'pass': ('Back and forward open the expected item; a new turn drops the old forward tail; '
                  'the menu lists the same walk; Clear keeps only what is currently open.'),
-        'covers': ['apps/*/navigation.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/navigation.js', 'apps/crm/zoho-navigation.js', 'apps/*/sidepanel.js'],
     },
     {
         'id': 'search-state',

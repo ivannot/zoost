@@ -163,7 +163,9 @@ but this is the direction, and a change that reverses one of these arrows is wor
 ```
 hook.js        → nothing (it posts one message and holds no state)
 content-bridge → Zoho HTTP and the page. Never the filesystem, never the model
-side panel     → the bridge, the mirror, the model, the exports
+Zoho adapter   → tabs, frames and the content bridge. Never the filesystem or model
+FS adapter     → the granted workspace handle. Never Zoho, Chrome storage or the model
+side panel     → the adapters, the model and the exports; it supplies state and policy
 graphlogic.js  → nothing: no DOM, no chrome.*, no network. That is the criterion it was extracted by
 ```
 

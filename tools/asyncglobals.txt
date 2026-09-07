@@ -58,6 +58,7 @@
 # where both panels rewrite the folder handle after an await.
 apps/analytics/ai.js	aiExecTool	o
 apps/analytics/export.js	loadScope	expScope
+apps/analytics/filesystem-adapter.js	createWorkspaceFilesystem	root
 apps/analytics/graphview.js	init	DATA
 apps/analytics/graphview.js	init	N
 apps/analytics/graphview.js	init	curFocus
@@ -106,6 +107,7 @@ apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
 apps/crm/content-bridge.js	pageCsrfToken	_pageCsrf
 apps/crm/content-bridge.js	warmDeluge	_warming
+apps/crm/filesystem-adapter.js	createWorkspaceFilesystem	root
 apps/crm/graphview.js	init	DATA
 apps/crm/graphview.js	init	N
 apps/crm/graphview.js	init	curFocus
@@ -128,10 +130,6 @@ apps/crm/sidepanel.js	applySettingsChange	prefsSavedDuringPull
 apps/crm/sidepanel.js	applySettingsChange	root
 apps/crm/sidepanel.js	applySettingsChange	zohoDc
 apps/crm/sidepanel.js	createSampleWorkspace	sampleBusy
-apps/crm/sidepanel.js	crmFrameId	_crmCandidates
-apps/crm/sidepanel.js	crmFrameId	_crmFrame
-apps/crm/sidepanel.js	crmFrameId	_crmFrameSeen
-apps/crm/sidepanel.js	ensureBridge	_crmFrame
 apps/crm/sidepanel.js	filterByConnection	connFilterSet
 apps/crm/sidepanel.js	filterByConnection	connectionFilter
 apps/crm/sidepanel.js	grantRoot	rootGranted
@@ -164,3 +162,4 @@ apps/crm/sidepanel.js	showCallers	runtimeFrom
 apps/crm/sidepanel.js	showCallers	runtimeTo
 apps/crm/sidepanel.js	showCallers	runtimeWindow
 apps/crm/sidepanel.js	takeRecheck	tabPrefs
+apps/crm/zoho-bridge.js	createCrmZohoBridge	bound

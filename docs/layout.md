@@ -43,7 +43,8 @@ boundaries.
 
 Pure modules opt into checked JSDoc one at a time. `tools/typecheck.sh` derives that set and checks
 each extension as its own classic-script world in CI, with no emitted file and no runtime package.
-The checked set includes the bridge message boundary in both products and the CRM pull controller;
+The checked set includes the bridge message boundary and filesystem adapter in both products, plus
+the CRM pull controller, Zoho bridge and Zoho navigation adapter;
 new opted-in files are discovered before staging as well as after checkout.
 
 **No code is shared between apps yet, and that is deliberate.** The two will look similar (a tree, a

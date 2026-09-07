@@ -236,53 +236,6 @@ function status(text, kind) { noteStep(text); $('statustext').textContent = text
 function showEmergency(on) { for (const id of ['emerg', 'repopen', 'repdismiss']) { const e = $(id); if (e) e.classList.toggle('on', !!on); } }
 
 // ---------- filesystem ----------
-async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
-async function hasPerm(h) {
-  return (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
-}
-// Chrome drops the folder permission between sessions, so anything that is about to write has to
-// ask first - under a real click, which every caller of this is. Without it the first write throws
-// `NotAllowedError: The request is not allowed by the user agent…`, which names neither the folder
-// nor the remedy and reads as the extension being broken. The CRM panel guards all fifteen of its
-// mirror-writing entry points; this one guarded two of five, and pullAll, pullOne and retryFailed
-// wrote straight to disk. Same wording as the twin, so one message covers both products.
-async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
-// The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
-// root again - two calls to the browser's file system before the one that does the work - so half of
-// what a pull and a load spend is asking for the same directory over and over. Measured: writing a
-// function cost 8 calls, of which 4 were this.
-//
-// Handles are per working folder, so the cache is dropped whenever that changes; a stale handle is
-// worse than a slow one, and this is the kind of cache that has to be given up eagerly rather than
-// checked. `removeEntry` drops it too, since a folder that has just been deleted must not be handed
-// back by us.
-// Keyed on the root, not one map for whichever folder is current. It walked from `dir`, awaited each
-// step, and then wrote what it found into the *global* cache - so a resolution that started in one
-// workspace and finished after a switch filled the new workspace's cache with the old one's handles,
-// and the next lookup there answered without ever asking that folder. Reproduced in both panels: a
-// path resolved in B came back holding A's handle with zero calls to B.
-//
-// A cache per root cannot say the wrong thing about the other one: the entry goes where it was read
-// from. Handles still have to be given up eagerly rather than checked - a stale one is worse than a
-// slow one - so a switch drops everything and `removeEntry` drops everything, since a folder that
-// has just been deleted must not be handed back by us.
-let _dirCaches = new WeakMap();
-const forgetDirs = (root) => { if (root) _dirCaches.delete(root); else _dirCaches = new WeakMap(); };
-async function dirFor(parts, create, root = dir) {
-  if (!root) throw new Error('No workspace folder is open.');
-  let cache = _dirCaches.get(root);
-  if (!cache) _dirCaches.set(root, (cache = new Map()));
-  const key = parts.join('/');
-  // The cache answers for writes too: a folder that has been created once exists, and asking the
-  // browser to create it again is the call this exists to avoid. Skipping the cache when `create`
-  // was set left a pull paying full price for every file it wrote - half of the eight calls each.
-  if (cache.has(key)) return cache.get(key);
-  let d = root;
-  for (const p of parts) d = await d.getDirectoryHandle(p, create ? { create: true } : undefined);
-  cache.set(key, d);
-  return d;
-}
-
 /** What a write means for what is still held in memory from that file. The CRM panel's `noteWrite`,
  *  with one entry, because this product has one cache of file contents.
  *
@@ -301,57 +254,26 @@ function noteWrite(rel) {
     sqlDiskUnread.clear();
   }
 }
-// The workspace an operation belongs to, taken once and carried - not read out of a global after
-// every await. A pull reads from Zoho, waits, and then writes: `dir` at that moment is whatever the
-// panel is showing *now*, so a switch part-way through wrote one workspace's views, schema and SQL
-// into another workspace's folder - and put its ids into the other one's memory. Measured.
-//
-// The root is a parameter of the I/O and the refusal lives in the one place every write passes
-// through. `current()` is what a caller asks before spending effort or touching what is in memory;
-// the writer refuses regardless, which is what makes the class impossible rather than unlikely.
 const WS_MOVED = 'The workspace changed while this was running - nothing further was written to it.';
-function beginWorkspaceOp() {
-  const gen = wsGen, root = dir;
-  const current = () => gen === wsGen && root === dir;
-  // See the CRM twin: a handle is not an identity through time. Leave a workspace and come back and
-  // the same object is current again, so an operation from before the round trip passed a check that
-  // compares handles while `current()` said false. Asked on both sides of the await.
-  const guard = () => { if (!current()) throw new Error(WS_MOVED); };
-  async function through(fn) { guard(); const v = await fn(); guard(); return v; }
-  return {
-    root, gen, current,
-    read: (p) => through(() => readFileAt(root, p)),
-    write: (p, body) => through(() => writeFileAt(root, p, body)),
-    remove: (p) => through(() => removeFileAt(root, p)),
-    // Progress belongs to a workspace as much as a write does. Reported on the CRM side: a pull kept
-    // counting into the panel after the user had opened another workspace, so the work looked like it
-    // was happening there. Here the counting arrives as a message from the bridge, which is the same
-    // thing one layer out. It says nothing once it is not there.
-    say: (msg, kind) => { if (current()) status(msg, kind); },
-  };
-}
-async function writeFileAt(root, rel, content) {
-  if (root !== dir) throw new Error(WS_MOVED);
-  const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), true, root);
-  const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
-  const w = await fh.createWritable(); await w.write(content); await w.close();
-  noteWrite(rel);
-}
-async function readFileAt(root, rel) {
-  const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), false, root);
-  const fh = await d.getFileHandle(parts[parts.length - 1]);
-  return (await fh.getFile()).text();
-}
+const workspaceFilesystem = createWorkspaceFilesystem({
+  root: () => dir,
+  generation: () => wsGen,
+  onWrite: noteWrite,
+  say: status,
+  folderMessage: MSG.folder,
+  movedMessage: WS_MOVED,
+});
+const ensurePerm = workspaceFilesystem.ensurePermission;
+const hasPerm = workspaceFilesystem.hasPermission;
+const requirePerm = workspaceFilesystem.requirePermission;
+const forgetDirs = workspaceFilesystem.forgetDirectories;
+const dirFor = workspaceFilesystem.directoryFor;
+const beginWorkspaceOp = workspaceFilesystem.beginOperation;
+const writeFileAt = workspaceFilesystem.writeFileAt;
+const readFileAt = workspaceFilesystem.readFileAt;
+const removeFileAt = workspaceFilesystem.removeFileAt;
 // The shorthands every render path uses: they read and write the workspace on screen, which is the
 // one they mean. A path that survives an await must take an op instead.
-async function removeFileAt(root, path) {
-  if (root !== dir) throw new Error(WS_MOVED);
-  const parts = path.split('/'); const name = parts.pop();
-  let d = root; for (const q of parts) d = await d.getDirectoryHandle(q);
-  await d.removeEntry(name); noteWrite(path);
-}
 const writeFile = (rel, content) => writeFileAt(dir, rel, content);
 const readFile = (rel) => readFileAt(dir, rel);
 // Every file in a workspace, path first. The twin of the CRM panel's, and it was *called* here
