@@ -20,6 +20,8 @@ import subprocess
 import sys
 import pathlib
 from pathlib import Path
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from jstext import strip_js  # noqa: E402 - one scanner, every checker that reads JavaScript
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / 'site'
@@ -1059,8 +1061,9 @@ def main() -> int:
     # within the hour, invisible to a check that stopped at .html.
     for js in sorted(SITE.glob('*.js')):
         src = js.read_text(encoding='utf-8')
-        src = re.sub(r'^\s*//.*$', ' ', src, flags=re.M)      # comments discuss the rule, they do not state it
-        src = re.sub(r'/\*.*?\*/', ' ', src, flags=re.S)
+        # Comments discuss the rule, they do not state it - and they are removed by a scanner and
+        # not a regex, because `'*/*'` in a string opens a phantom comment that eats live code.
+        src = re.sub(r'^\s*//.*$', ' ', strip_js(src), flags=re.M)
         for form in undeclared_form(src):
             findings.append(f'{js.name}: {form!r} is neither the manifest name nor its short_name')
 

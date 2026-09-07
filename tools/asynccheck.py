@@ -47,6 +47,7 @@ import sys
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ledger import delta as ledger_delta, count as ledger_count, keep_comments as ledger_keep  # noqa: E402
+from jstext import strip_js  # noqa: E402 - a regex cannot tell `'*/*'` from a comment; see its docstring
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
@@ -156,7 +157,9 @@ def _iife(src):
     reporting nothing wrong. A detector has to be measured on every file it will meet, which is what
     the sweep in `tests/tools_test.py` now does.
     """
-    code = re.sub(r'/\*[\s\S]*?\*/', '', src)
+    # Not a regex: `'*/*'` in an Accept header opened a phantom comment that swallowed 259 lines
+    # of a shipped file elsewhere in this repository, silently. One scanner, every checker.
+    code = strip_js(src)
     for line in code.split('\n'):
         t = line.strip()
         if not t or t.startswith('//'):

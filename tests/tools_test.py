@@ -7545,6 +7545,48 @@ class TheSuiteCountsItself(unittest.TestCase):
                            'that stopped expanding')
 
 
+class JavaScriptCommentsAreScannedNotMatched(unittest.TestCase):
+    """No checker may strip JavaScript comments with a regular expression.
+
+    `apps/analytics/content-bridge.js` sends `Accept: '*/*'`. A naive `/\\*.*?\\*/` reads that `/*` as a
+    comment opening and swallows everything to the next `*/` - measured there as **14,888 characters,
+    259 lines of live code**, gone from the checker's subject without a word. `tools/jstext.py` exists
+    for exactly this and its docstring records it happening to `namecheck` and `twincheck`, where 48
+    of one panel's 217 declarations were invisible.
+
+    It happened again anyway, in three tools that were never converted, and it surfaced the dangerous
+    way: `deadcode.py` reported a live `const PACE` as referred to nowhere, because both its uses were
+    inside the swallowed region - a false positive in a list whose purpose is to say what to delete.
+
+    So the rule is checked rather than remembered. CSS is a different language and keeps its regex;
+    the line has to say so.
+    """
+
+    def test_no_tool_strips_js_comments_with_a_regex(self):
+        naive = re.compile(r"re\.sub\(\s*r?['\"]/\\\*")
+        findings = []
+        for f in sorted((ROOT / 'tools').glob('*.py')):
+            for n, line in enumerate(f.read_text(encoding='utf-8').split('\n'), 1):
+                if naive.search(line) and 'css' not in line.lower():
+                    findings.append(f'{f.name}:{n}: {line.strip()[:70]}')
+        self.assertEqual(findings, [],
+                         'these strip JavaScript comments with a regex, which cannot tell a string '
+                         "containing '*/*' from a comment - use tools/jstext.py's strip_js:\n  "
+                         + '\n  '.join(findings))
+
+    def test_the_scanner_keeps_what_the_regex_ate(self):
+        """The proof, on the file that produced the false positive, both ways round."""
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from jstext import strip_js
+        src = (ROOT / 'apps' / 'analytics' / 'content-bridge.js').read_text(encoding='utf-8')
+        self.assertEqual(src.count('PACE'), 3, 'the file this is measured on has changed shape')
+        naive = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
+        self.assertLess(naive.count('PACE'), 3,
+                        'the regex no longer eats this file, so this case is measuring nothing')
+        self.assertEqual(strip_js(src).count('PACE'), 3,
+                         'the scanner lost code the regex was supposed to be replaced for keeping')
+
+
 class ImagesAreAGateOnlyWhenPublishing(unittest.TestCase):
     """Where «these pictures are older than the panel» refuses, and where it only says so.
 

@@ -25,11 +25,24 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from jstext import strip_js  # noqa: E402 - one scanner, every checker that reads JavaScript
 
 
 def strip_comments(s: str) -> str:
-    s = re.sub(r'/\*.*?\*/', '', s, flags=re.S)
-    return re.sub(r'^\s*//.*$', '', s, flags=re.M)
+    """Comments out, strings left alone - which a regex cannot do, and this used a regex.
+    
+    `apps/analytics/content-bridge.js:165` sends `Accept: '*/*'`. A naive `/\\*.*?\\*/` read that
+    `/*` as a comment opening and swallowed everything to the next `*/`: **14,888 characters, 259
+    lines of live code**, invisible to this sweep for as long as that header has been there. It
+    surfaced by producing a false positive - `const PACE`, reported as referred to nowhere while two
+    `setTimeout(r, PACE)` calls sat inside the swallowed region - which is the dangerous direction
+    for a tool whose output is a list of things to delete.
+    
+    `tools/jstext.py` was written for this exact defect in two other checkers and its docstring says
+    so. Three more were still carrying the regex, this one included.
+    """
+    return re.sub(r'^\s*//.*$', '', strip_js(s), flags=re.M)
 
 
 def read(p: pathlib.Path) -> str:
