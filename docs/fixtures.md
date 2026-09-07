@@ -125,7 +125,11 @@ without one. It is suppressed for a sample, and the overlay itself now carries
 `+ Sample workspace`, because that screen is where somebody who has just installed Zoost actually is.
 
 **`+ Sample` writes it, and `sample: true` in `.zoost.json` is the whole mechanism.** The button is
-in the workspace bar, absent once one exists and while there is nowhere to write it. It writes the
+in the workspace bar and stays there, with three labels rather than two: `+ Sample` where a folder is
+readable and no sample exists, `Open sample` once one does, and `Sample` while the folder has not been
+granted yet - which is the one-click first run, not an absence. It was described here as «absent once
+one exists and while there is nowhere to write it», and neither half was ever true of the code:
+`updateSampleButtons` sets `hidden = false` unconditionally. It writes the
 generator's file tree into `<working folder>/<app>/<name>/` and stops: from that point the workspace
 is read by the ordinary list, the ordinary walks and the ordinary exports.
 

@@ -1,5 +1,8 @@
 {
-  // zoost.it — a Worker that serves this directory as static assets, plus one endpoint.
+  // zoost.it - a Worker that serves this directory as static assets, plus four endpoints:
+  // /api/versions, /api/ahead, /api/funnel and /api/report. Its neighbour `_worker.js` was
+  // corrected to «four» in the commit that added the fourth; this line, edited in the same commit
+  // to add the METRICS binding, was not.
   //
   // Cloudflare's git integration deploys with "Root directory: site", so this config lives here and
   // every path below is relative to site/. Until now no config was committed and Cloudflare used a

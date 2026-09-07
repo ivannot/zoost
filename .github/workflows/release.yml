@@ -108,6 +108,15 @@ jobs:
           fi
 
       - name: The suite and the claims, before anything public exists
+        # **The same browser gate as the battery workflow, for the same reason and more of it.**
+        # `battery.yml` sets this and this file did not, so the one run that builds, signs and
+        # publishes was the one where `tools/probe.py` could report «no Chrome here», exit 0 and let
+        # a green suite mean that no extension had been executed at all. The two workflows are
+        # independent jobs, so the push-to-main run carrying the flag proves nothing about the tag
+        # run. Found by a reader with no memory of writing the flag; the case that holds the rule now
+        # derives the workflows from which ones run the battery instead of naming one.
+        env:
+          ZOOST_REQUIRE_CHROME: "1"
         run: |
           # These run in tools/release.sh too, and that was the whole of it: the gates lived on the
           # machine that types the tag. `git tag && git push --follow-tags` from muscle memory, or

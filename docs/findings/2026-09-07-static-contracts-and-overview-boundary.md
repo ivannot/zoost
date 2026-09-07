@@ -7,7 +7,9 @@ never reads can decay while the official battery stays green. `tools/typecheck.s
 still no package manifest, installed runtime dependency or generated extension file.
 
 The first clean-run execution also removed an environmental assumption from the gate itself: the
-GitHub runner did not contain `rg`, so discovery now uses `git grep`, which is supplied by the same
+GitHub runner did not contain `rg`, so discovery uses plain `grep` - the note said `git grep`, which
+three commits later it no longer was; a record that describes a mechanism the tool has stopped using
+is worse than none. It is supplied by the same
 checkout the command is inspecting. The failed run occurred after the product battery had passed and
 before TypeScript ran; the replacement was exercised locally and then by a new remote run.
 

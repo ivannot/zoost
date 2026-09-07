@@ -11,7 +11,19 @@ async function sendGraphWhenBuilt(kind, token, sendResponse) {
   sendResponse(await buildGraphFor(kind, token));
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+/** What the panel does with a message from the content bridge or the diagram window.
+ *
+ *  **Declared here, registered by the composition root.** This file is loaded four scripts
+ *  before `sidepanel.js`, and it used to call `addListener` at load time - so a `saved`,
+ *  `created`, `deleted` or `pullProgress` arriving in that window ran a handler whose
+ *  `pullActive` and `beginWorkspaceOp` are lexical globals still in the temporal dead zone,
+ *  and threw inside the listener where nobody sees it. No sender exists in those few
+ *  milliseconds today, so nothing was observed; it is the load-order rule this project
+ *  states - a script before the root declares state and functions only - and a rule with
+ *  one exception is the one that gets broken next.
+ */
+function onPanelMessage(msg, _sender, sendResponse) {
+
   if (msg?.type === 'saved') syncOne(msg.id);
   // A deletion and a creation both mean «the list has changed»; neither is trusted with what
   // changed. Duplicates are harmless because reconciling is idempotent, which is why the hook no
@@ -23,7 +35,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // Through a declaration: `.then(sendResponse)` is a scope nothing can read, and what it carries
   // is a whole graph built after an await.
   if (msg?.type === 'graphSwitch') { void sendGraphWhenBuilt(msg.kind, msg.token, sendResponse); return true; }
-});
+}
 async function buildGraphFor(kind, token) {
   const op = beginWorkspaceOp(), ws = graphIdentity();
   try {

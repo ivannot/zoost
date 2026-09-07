@@ -380,7 +380,14 @@ async function healthOpenWorkflow(id, name) {
   const byName = name ? workflowData.filter((w) => (w.name || '') === name) : [];
   if (e || byName.length === 1) { openWorkflow(e || byName[0]); return; }
   if (byName.length > 1) {
-    $('find').value = name; runSearch();
+    // **Through the state, not into the box.** `searchState` is the authority since the search
+    // moved out of the composition root, and the only thing that copies the box into it is the
+    // keystroke handler - so writing the input directly filtered the list and recorded nothing.
+    // Leave the tab and come back and `searchState.enter()` painted the box from a text it had
+    // never been told about: empty, filter gone, over a jump the reader had just made. It was the
+    // one asymmetric writer left, and it happens to land on a tab that filters from the DOM, so
+    // nothing worse was reachable - which is the kind of luck a second one would spend.
+    paintSearchControls(searchState.setText(name)); runSearch();
     setStatus(`${byName.length} workflows are called «${name}» - listed, so you can pick the one you meant.`, 'warn');
     return;
   }

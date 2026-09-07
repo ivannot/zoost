@@ -138,7 +138,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   somebody can open the tree, the diagrams and the exports before pointing Zoost at anything of their
   own. It is generated, never fetched - nothing is requested from the platform - and the workspace bar
   says so. Everything that would talk to the platform is disabled for it. It is an ordinary folder
-  otherwise, deleted like any other, and the button is absent once one exists.
+  otherwise, deleted like any other, and the button stays in the workspace bar, reading «Open sample» once one exists.
   The same action is on the "Not on a Zoho CRM tab" screen, as "+ Sample workspace": a sample owes the
   platform nothing, so it opens and reads without a tab and without an account.
   Once one exists that button reads "Open sample workspace" and opens it: that overlay covers the

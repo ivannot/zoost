@@ -4349,11 +4349,27 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
         self.assertRegex(wf, r'push:\s*\n\s*branches: \[main\]', 'it does not fire on a push to main')
         self.assertIn('bash tests/run.sh', wf, 'it fires and runs something else')
 
-    def test_the_official_ci_refuses_to_skip_the_browser(self):
-        wf = self.WF.read_text(encoding='utf-8')
-        self.assertRegex(wf, r'ZOOST_REQUIRE_CHROME:\s*["\']?1["\']?',
-                         'the official battery lets tools/probe.py exit green without Chrome, so '
-                         'the only check that executes the extensions may silently execute nothing')
+    def test_every_workflow_that_runs_the_battery_refuses_to_skip_the_browser(self):
+        """**Derived from which workflows run the suite, not from the one that was named.**
+
+        This asked `battery.yml` and nothing else, and `release.yml` - the run that builds, signs
+        and publishes - ran the same `bash tests/run.sh` without the flag. So the only check that
+        executes the extensions could report «no Chrome here», exit 0, and let a green suite mean
+        that nothing had been executed, on exactly the run where that matters most. The two are
+        independent jobs: the push-to-main run carrying the flag proves nothing about the tag run.
+
+        Naming one file is what let the second one exist. The list is derived instead, so a third
+        workflow that runs the battery tomorrow inherits the rule without anybody remembering."""
+        runs = [f for f in sorted((ROOT / '.github/workflows').glob('*.yml'))
+                if 'tests/run.sh' in f.read_text(encoding='utf-8')]
+        self.assertGreaterEqual(len(runs), 2,
+                                'fewer workflows run the battery than this case was written for - '
+                                'check the derivation still finds them')
+        for f in runs:
+            self.assertRegex(f.read_text(encoding='utf-8'), r'ZOOST_REQUIRE_CHROME:\s*["\']?1["\']?',
+                             f'{f.name} runs the battery and lets tools/probe.py exit green without '
+                             'Chrome, so the only check that executes the extensions may silently '
+                             'execute nothing')
         probe = (ROOT / 'tools/probe.py').read_text(encoding='utf-8')
         self.assertIn('os.environ.get("ZOOST_REQUIRE_CHROME") == "1"', probe,
                       'the workflow asks for Chrome but the probe does not turn its absence red')
@@ -7586,6 +7602,40 @@ class ImagesAreAGateOnlyWhenPublishing(unittest.TestCase):
                          'prepare.sh runs imgcheck without --publishing, so nothing refuses a stale '
                          'picture at the one moment it matters')
 
+
+
+class EverySurfaceNamesTheFilesItIsMadeOf(unittest.TestCase):
+    """`tools/matrix.py` derives what each surface can do by reading the files it names, so a shipped
+    script no surface names is a capability nobody measures.
+
+    Twenty-three of them had accumulated - eleven per product plus two CRM adapters - twelve created
+    in a single refactor that extended the list for the files it happened to think of and did not
+    walk it to completion. Nothing was mis-derived on the day: the capabilities are matched by
+    expressions that still lived in the files that *were* listed. That is what makes it worth a
+    check rather than a correction - `search` is found by `\brxShortcuts\b`, and the day that name
+    follows the rest of the search into `search-state.js`, the panel silently stops having the
+    capability and the closed-cell count moves underneath itself.
+
+    Derived from the directory, not from a second list: the failure mode was somebody maintaining a
+    list by hand, so a check that maintains another one would inherit it."""
+
+    def test_no_shipped_script_is_outside_every_surface(self):
+        listed = set(re.findall(r'"(apps/[a-z]+/[\w-]+\.(?:js|html))"',
+                                (ROOT / 'tools/matrix.py').read_text(encoding='utf-8')))
+        shipped = {str(p.relative_to(ROOT)) for app in ('crm', 'analytics')
+                   for p in (ROOT / 'apps' / app).glob('*.js')}
+        missing = sorted(shipped - listed)
+        self.assertEqual(missing, [],
+                         'these ship inside an extension and no surface in tools/matrix.py names '
+                         'them, so whatever they can do is measured by nothing: ' + ', '.join(missing))
+
+    def test_every_named_file_exists(self):
+        # The other direction, and the one a rename breaks: a surface naming a file that is gone
+        # reads capabilities from nothing and says so to nobody.
+        listed = re.findall(r'"(apps/[a-z]+/[\w-]+\.(?:js|html))"',
+                            (ROOT / 'tools/matrix.py').read_text(encoding='utf-8'))
+        gone = sorted(f for f in set(listed) if not (ROOT / f).exists())
+        self.assertEqual(gone, [], 'a surface names a file that does not exist: ' + ', '.join(gone))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

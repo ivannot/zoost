@@ -31,8 +31,8 @@ trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1103
-PY_EXPECTED=413
+NODE_EXPECTED=1105
+PY_EXPECTED=415
 cd "$(dirname "$0")/.."
 
 # The machine that runs this is not the machine the extensions are loaded on: Chrome there reads

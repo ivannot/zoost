@@ -3743,6 +3743,12 @@ $('wsdel').onclick = onWsdel;
 document.addEventListener('click', regrantOnAnyClick, true);
 $('opts').onclick = () => openSettings();
 $('help').href = DOCS_URL;
+// Registered here and not where it is written: `live-sync.js` is loaded four scripts earlier and
+// its handler reads `pullActive` and `beginWorkspaceOp`, which are lexical globals of this file and
+// in the temporal dead zone until it runs. Binding it there put a message arriving in that window
+// into a handler that would throw where nobody sees it. A script before the composition root
+// declares; the root binds.
+try { chrome.runtime.onMessage.addListener(onPanelMessage); } catch (_) {}
 // The options page is a separate document: pick up its changes without a manual refresh.
 try {
   chrome.storage.onChanged.addListener((ch, area) => { void applySettingsChange(ch, area); });

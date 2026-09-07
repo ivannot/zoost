@@ -463,7 +463,9 @@ async function refreshWorkspaces() {
     // The remembered sample id is refreshed from the list below - «including to null, which is how
     // deleting the sample stops the button offering to open one that is gone». This return is the one
     // path that never reaches it: delete the sample when it is the *only* workspace and the id stays
-    // in storage, so `updateSampleButtons()` hides «+ Sample» for good - while the empty state two
+    // in storage, so `updateSampleButtons()` relabels the button - it sets `hidden = false`
+    // unconditionally and never hides it, which this line claimed for as long as it existed -
+    // while the empty state two
     // lines down is telling the reader to press it. It survives a reload, because the stale id is
     // restored from storage on start.
     // Only when the folder was actually read. `listWorkspaces()` returns an empty array *both* when

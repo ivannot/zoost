@@ -8,19 +8,14 @@
 # the reading nobody was doing. It should shrink; when it grows, the run says so.
 # means somebody read it and decided it cannot carry markup. It should shrink;
 # when it grows, the run says so and the commit says which of the two reasons.
-apps/crm/export.js	(e && e.message) || e
 apps/crm/export.js	(g.field && g.field.api_name) || '?'
 apps/crm/export.js	EMPTY
 apps/crm/export.js	EXPORT_CSS
 apps/crm/export.js	L.visible === false ? ' (hidden)' : ''
 apps/crm/export.js	L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''
-apps/crm/export.js	LEGAL_DISCLAIMER
-apps/crm/export.js	PRODUCT_AUTHOR
 apps/crm/export.js	PRODUCT_NAME
 apps/crm/export.js	PRODUCT_URL
-apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
 apps/crm/export.js	REPORT_FILTER_JS
-apps/crm/export.js	SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''
 apps/crm/export.js	String(a.id)
 apps/crm/export.js	String(a.name || '').toLowerCase()
 apps/crm/export.js	String(fails.month.from || '').slice(0, 10) || 'the last 30 days'
@@ -91,7 +86,6 @@ apps/crm/export.js	actHtml
 apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
 apps/crm/export.js	actWithheld
 apps/crm/export.js	areaAsOf(t.id)
-apps/crm/export.js	areaLabel(area)
 apps/crm/export.js	behind
 apps/crm/export.js	bound.label
 apps/crm/export.js	c.sequence_number || i + 1
@@ -103,24 +97,15 @@ apps/crm/export.js	desc ? `<p class="hxd">${desc}</p>` : ''
 apps/crm/export.js	det.repeat ? 'yes' : 'no'
 apps/crm/export.js	dt.fields.map((fl) => (fl.field && fl.field.api_name) || fl.api_name |
 apps/crm/export.js	dt.repeat ? 'yes' : 'no'
-apps/crm/export.js	e.note
-apps/crm/export.js	e.note || 'your Zoho role does not grant access'
-apps/crm/export.js	e.status
-apps/crm/export.js	e.status ? ` (Zoho answered ${e.status})` : ''
 apps/crm/export.js	ea.period || ''
 apps/crm/export.js	ea.unit
 apps/crm/export.js	empty
 apps/crm/export.js	env
 apps/crm/export.js	f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href
 apps/crm/export.js	f.count
-apps/crm/export.js	f.downloaded ? '' : '<span class="badge no">not downloaded</span>'
-apps/crm/export.js	f.downloaded ? '' : '\u2014'
 apps/crm/export.js	f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''
 apps/crm/export.js	f.modulesUnknown
 apps/crm/export.js	f.rest ? '<span class="badge rest">REST</span>' : ''
-apps/crm/export.js	f.rest ? '\u25cf' : ''
-apps/crm/export.js	f.stats ? f.stats.apiCalls : ''
-apps/crm/export.js	f.stats ? f.stats.lines : ''
 apps/crm/export.js	f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} z
 apps/crm/export.js	f.stats.apiCalls || 'none'
 apps/crm/export.js	f.stats.codeLines
@@ -143,7 +128,6 @@ apps/crm/export.js	fl.required ? '\u25cf' : ''
 apps/crm/export.js	fl.required ? '●' : ''
 apps/crm/export.js	fnHtml || absent(scope.functions, 'functions')
 apps/crm/export.js	freshnessLine()
-apps/crm/export.js	friendlyError(e)
 apps/crm/export.js	frows
 apps/crm/export.js	g.comparator || ''
 apps/crm/export.js	g.counts.inOrg
@@ -153,9 +137,7 @@ apps/crm/export.js	g.counts.notMirrorable
 apps/crm/export.js	g2
 apps/crm/export.js	hLink(n)
 apps/crm/export.js	healthHtml
-apps/crm/export.js	healthTotal
 apps/crm/export.js	inst
-apps/crm/export.js	k
 apps/crm/export.js	label(n)
 apps/crm/export.js	lang
 apps/crm/export.js	langLabelOf(n.language)
@@ -173,8 +155,6 @@ apps/crm/export.js	mref.text
 apps/crm/export.js	n.api_name || ''
 apps/crm/export.js	n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}
 apps/crm/export.js	n.description ? ' - ' + first(n.description) : ''
-apps/crm/export.js	n.downloaded ? '' : ' \u00b7 not downloaded'
-apps/crm/export.js	n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source not
 apps/crm/export.js	n.mirrored === false ? ` \u00b7 ${langLabelOf(n.language)}, source una
 apps/crm/export.js	n.modified_by ? 'by ' + n.modified_by : ''
 apps/crm/export.js	n.modulesUnknown
@@ -204,8 +184,6 @@ apps/crm/export.js	n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) :
 apps/crm/export.js	name
 apps/crm/export.js	notDown
 apps/crm/export.js	notDown ? ` (${notDown} not downloaded - listed, without source)` : ''
-apps/crm/export.js	notRead
-apps/crm/export.js	notRead ? ` (${notRead} in a language Zoost does not read - listed, wi
 apps/crm/export.js	now
 apps/crm/export.js	op
 apps/crm/export.js	org
@@ -222,7 +200,6 @@ apps/crm/export.js	r.linking_module ? ' via ' + _mdCell(r.linking_module) : ''
 apps/crm/export.js	r.visible === false ? ' (hidden)' : ''
 apps/crm/export.js	r.visible === false ? ' \u00b7 hidden' : ''
 apps/crm/export.js	r.visible ? '' : ' \u00b7 hidden'
-apps/crm/export.js	rb
 apps/crm/export.js	refBy
 apps/crm/export.js	refs
 apps/crm/export.js	relHtml
@@ -235,14 +212,12 @@ apps/crm/export.js	s.invokeurl
 apps/crm/export.js	s.lines
 apps/crm/export.js	s.sendmail
 apps/crm/export.js	s.zoho
-apps/crm/export.js	sanitize((bound && bound.instance) || 'workspace')
 apps/crm/export.js	sanitize(m.api_name || 'unknown')
 apps/crm/export.js	sanitize(whose)
 apps/crm/export.js	sc.frequency ? ' (' + sc.frequency + ')' : ''
 apps/crm/export.js	sc.function_name || '?'
 apps/crm/export.js	sc.name
 apps/crm/export.js	schHtml
-apps/crm/export.js	scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${
 apps/crm/export.js	scheduledBy[fnKey(f)].map((sc) => `<a href="#${schAnchor(sc.id)}">${es
 apps/crm/export.js	scope.code ? ' (full source)' : ' (signatures only - source code exclu
 apps/crm/export.js	scope.code ? '' : ' · source code excluded'
@@ -252,7 +227,6 @@ apps/crm/export.js	secCount
 apps/crm/export.js	secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail no
 apps/crm/export.js	stamp
 apps/crm/export.js	status
-apps/crm/export.js	tabLabel(area)
 apps/crm/export.js	tabLabel(t.id)
 apps/crm/export.js	tim
 apps/crm/export.js	tim ? ` (${_mdCell(tim)})` : ''
@@ -263,7 +237,6 @@ apps/crm/export.js	usesLinks
 apps/crm/export.js	w
 apps/crm/export.js	w.active ? '' : ' (inactive)'
 apps/crm/export.js	w.active ? '' : '<span class="badge no">inactive</span>'
-apps/crm/export.js	w.active ? '\u25cf' : ''
 apps/crm/export.js	w.id
 apps/crm/export.js	w.module ? ' (' + w.module + ')' : ''
 apps/crm/export.js	w.name
@@ -273,4 +246,3 @@ apps/crm/export.js	what
 apps/crm/export.js	when
 apps/crm/export.js	withheld
 apps/crm/export.js	wsc.count
-apps/crm/export.js	wsc.count || ''

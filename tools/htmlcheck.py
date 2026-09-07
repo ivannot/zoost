@@ -474,6 +474,12 @@ def main() -> int:
     except OSError:
         known = set()
     content, c_total, c_inert = content_findings(set() if accept else known)
+    # A row that no longer matches anything is a finding of its own: without this the ledger can only
+    # grow, and «it should shrink» is a sentence nothing enforces. Reported in both modes so
+    # `--accept` cannot quietly carry one forward either.
+    live = {f'apps/crm/export.js\t{expr}' for _line, expr in content_slots(
+        re.sub(r'^\s*//.*$', '', EXPORT_FILE.read_text(encoding='utf-8'), flags=re.M))}
+    stale = sorted(r for r in known if r.startswith('apps/crm/export.js\t') and r not in live)
     if accept:
         rows = ['# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.',
                 '# Content interpolations in the exported report - the one document this project',
@@ -488,14 +494,26 @@ def main() -> int:
         # a row twice whenever an expression is *rewritten*: the old spelling stays in `known`, the
         # new one arrives in the findings, and both go in. `sanitize(whose)` was in here three times
         # for a line that exists twice. Sorted so a diff of this file is a diff of what changed.
+        # **Derived from the file as it stands, never unioned with what was there before.** The
+        # union was added so a *rewritten* expression would not be recorded twice - true, and it
+        # also meant a row outlived the code it described, for ever. `export.js` was not touched for
+        # a whole refactor while nine rows naming it were added from a file that had just been split
+        # out of it, and twenty-one of 266 rows matched nothing at all. That is not untidiness: a row
+        # here pre-blesses an interpolation in the one document with an inline script and no CSP, so
+        # a phantom row is a standing permission for markup nobody has read. `csscheck` refuses a
+        # stale line and this is the same discipline, in the sibling that had it and lost it.
         entries = {f'apps/crm/export.js\t{f.partition("content ${")[2].rpartition("}")[0]}' for f in content}
-        entries |= known
         kept = ledger_keep(CONTENT_LEDGER, rows)
         CONTENT_LEDGER.write_text('\n'.join(rows + kept + sorted(entries)) + '\n', encoding='utf-8')
         print(ledger_delta(f'htmlcheck: {CONTENT_LEDGER.relative_to(ROOT)}', before,
                            ledger_count(CONTENT_LEDGER)))
     else:
         findings += content
+        # Only here. `findings` is the *attribute* ledger's own source three lines down, so adding to
+        # it in accept mode would write these sentences into `attrraw.txt` - one ledger corrupted
+        # while fixing the other. In accept mode a stale row simply goes, which is what accepting is.
+        findings += [f'{r.split(chr(9))[0]}: a ledger row matches nothing in the file - '
+                     f'remove it with --accept: {r.split(chr(9))[1]}' for r in stale]
 
     if accept:
         rows = ['# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.',

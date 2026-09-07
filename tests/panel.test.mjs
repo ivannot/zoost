@@ -21115,3 +21115,60 @@ test('the function row shows what the list is sorted by', () => {
     assert.ok(key in TREE_SORTS, `the menu offers «${key}» and nothing sorts by it`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// **The search text has one authority, and every writer goes through it.** The box used to *be* the
+// state; since the search moved out of the composition root, `searchState` is, and the only thing
+// that copies the input into it is the keystroke handler. So a jump that set `$('find').value`
+// directly filtered the list and recorded nothing: leave the tab, come back, and the box is painted
+// from a text nobody had been told about - empty, with the filter gone over a jump just made.
+//
+// Found by a reader with no memory of the move. One asymmetric writer was left, on a tab that
+// happens to filter from the DOM, so nothing worse was reachable - which is the kind of luck a
+// second one would spend.
+test('nothing writes the search box without telling the state', () => {
+  const writers = [];
+  for (const f of ['sidepanel.js', 'health.js', 'modules.js', 'automation.js', 'connections.js',
+                   'preview-controller.js', 'workspace-controller.js', 'history-controller.js']) {
+    const rel = `apps/crm/${f}`;
+    const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+    for (const _m of src.matchAll(/\$\('find'\)\.value\s*=/g)) writers.push(rel);
+  }
+  // One writer, and it is the painter - which writes the box *from* the state and is the whole
+  // point of having one. Counted by file rather than by line: a line number pins the check to a
+  // layout, and this file has already reported a comment as a defect twice for exactly that.
+  assert.deepEqual(writers, ['apps/crm/sidepanel.js'],
+                   'the search box is written from somewhere other than the painter, so a filter '
+                   + `can be on screen and unknown to the state that restores it: ${writers.join(', ')}`);
+  const painter = sliceFn('apps/crm/sidepanel.js', 'paintSearchControls');
+  assert.match(painter, /\$\('find'\)\.value = state\.text/, 'the painter no longer paints the box');
+  // And the jump that used to write it directly now goes through the state.
+  assert.match(read('apps/crm/health.js'), /paintSearchControls\(searchState\.setText\(name\)\)/,
+               'the ambiguous-name jump filters the list without recording what it filtered by');
+});
+
+// ---------------------------------------------------------------------------------------------
+// **A script loaded before the composition root declares; the root binds.** `live-sync.js` is four
+// scripts earlier and its handler reads `pullActive` and `beginWorkspaceOp` - lexical globals of
+// `sidepanel.js`, in the temporal dead zone until it runs. Registering the listener at load time
+// meant a message arriving in that window ran a handler that throws where nobody sees it. No sender
+// exists in those milliseconds today, which is why it was never observed; the rule is the check.
+test('no script before the composition root binds a runtime listener at load time', () => {
+  const html = read('apps/crm/sidepanel.html');
+  const order = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  const root = order.indexOf('sidepanel.js');
+  assert.ok(root > 0, 'the composition root is not in the page - this case has lost its subject');
+  for (const file of order.slice(0, root)) {
+    const src = read(`apps/crm/${file}`).replace(/^\s*\/\/.*$/gm, '');
+    for (const m of src.matchAll(/^(chrome\.[\w.]*addEventListener|chrome\.[\w.]+\.addListener|window\.addEventListener|document\.addEventListener)/gm)) {
+      assert.fail(`${file} binds ${m[1]} at load time, ${root - order.indexOf(file)} script(s) before `
+                  + 'sidepanel.js declares what its handler reads - so an event in that window runs '
+                  + 'against globals in the temporal dead zone and throws inside the listener');
+    }
+  }
+  // And the one that moved is bound by the root, or it is bound nowhere at all.
+  assert.match(read('apps/crm/sidepanel.js'), /chrome\.runtime\.onMessage\.addListener\(onPanelMessage\)/,
+               'the panel no longer listens for a saved function, a deletion or a pull progress');
+  assert.match(read('apps/crm/live-sync.js'), /^function onPanelMessage\(/m,
+               'the handler is gone, so the root binds a name that does not exist');
+});

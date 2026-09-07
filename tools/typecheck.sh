@@ -21,5 +21,17 @@ for app in crm analytics; do
   # duplicate globals that no browser page ever loads together.
   npx --yes --package "typescript@$TYPESCRIPT_VERSION" tsc \
     --allowJs --checkJs --noEmit --skipLibCheck --target ES2022 --lib ES2022,DOM $files
-  echo "$app: $(printf '%s\n' "$files" | wc -l | tr -d ' ') contract module(s)"
+  # **The count, its denominator, and what it does not read.** «13 contract module(s)» said nothing
+  # about the 26 it skips, which is the shape this project already names: a headline that counts what
+  # was opened and is silent about what was examined. The denominator is derived by a cruder method
+  # than the check itself - a plain file count - so it cannot drift with the checker's own idea of
+  # what a module is.
+  #
+  # The stated limit, because a limit that is not written down is a blind spot: this checks each
+  # opted-in module's internals and the calls *between* opted-in modules. It does not read the call
+  # sites in the files that are not opted in, which is where the wiring lives - a wrong argument
+  # passed from `sidepanel.js` is invisible here and caught only by the same call inside a checked
+  # module. Measured, not assumed.
+  echo "$app: $(printf '%s\n' "$files" | wc -l | tr -d ' ') of $(ls apps/"$app"/*.js | wc -l | tr -d ' ') script(s) opted in;" \
+       "their internals and the calls between them are checked, call sites in the rest are NOT"
 done

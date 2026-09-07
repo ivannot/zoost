@@ -88,7 +88,9 @@ def main() -> int:
     if not isinstance(rows, list):
         print('Cloudflare returned no data array; the dataset may not exist until the first event.', file=sys.stderr)
         return 1
-    print(f'zoost.it funnel — last {args.days} day(s)')
+    # ASCII punctuation, like everything else a reader might copy: this printed a long dash, and
+    # neither exception applies to a tool's own output.
+    print(f'zoost.it funnel - last {args.days} day(s)')
     print('event\tpage\tlanguage\tcount')
     for row in rows:
         print(f"{row.get('event', '')}\t{row.get('page', '')}\t{row.get('language', '')}\t{row.get('events', 0)}")
