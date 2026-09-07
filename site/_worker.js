@@ -553,10 +553,21 @@ async function reportRateKey(env, ip) {
 async function funnel(request, env) {
   const reply = (status) => new Response(null, { status, headers: { 'cache-control': 'no-store' } });
   if (request.method !== 'POST') return reply(405);
+  // Origin, exactly - scheme included. The comparison was on hostname alone, so `http://zoost.it`
+  // passed a check written to mean «this page». It costs nothing to be exact.
   const origin = request.headers.get('origin') || '';
   try {
-    if (!origin || new URL(origin).hostname !== new URL(request.url).hostname) return reply(403);
+    if (!origin || new URL(origin).origin !== new URL(request.url).origin) return reply(403);
   } catch (_) { return reply(403); }
+  // **The stated limit, because a limit nobody wrote down is a blind spot.** An `Origin` header is
+  // set by the browser and forged by anything else, so this is not authentication and nothing here
+  // pretends otherwise: it is the only unauthenticated write on the site, and a stranger can add
+  // points to a billed dataset and skew what `tools/funnel.py` prints. `/api/report` two functions
+  // below can afford Turnstile and a counter because it runs once when somebody presses a button;
+  // this runs on every page view, and a per-request store would cost more than the measurement is
+  // worth. The proportionate answer is a rate limit at the edge, which is a zone setting and not a
+  // line of this file - so it is written here rather than solved badly in code. Nothing published
+  // claims these counts are trustworthy, and nothing should until that rule exists.
   let body;
   try { body = await request.json(); } catch (_) { return reply(400); }
   const event = String((body && body.event) || '');
