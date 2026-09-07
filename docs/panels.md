@@ -18,6 +18,9 @@ caching and workspace-scoped I/O in both products. In CRM, `zoho-bridge.js` owns
 and message transport, while `zoho-navigation.js` owns destination construction, host admission and
 frame-aware navigation. CRM's `workspace-controller.js` owns the working-folder and workspace
 lifecycle, while `live-sync.js` owns page notices, single-flight reconciliation and mirror updates.
+CRM's `preview-model.js` owns the pure projection from a function row to its local files and folders;
+`preview-controller.js` owns the detail pane, project tree and selection, while
+`history-controller.js` adapts the pure navigation state to CRM items and the history overlay.
 The export-scope dialog and its persisted policy live in `export-scope.js`, separate from the
 workspace snapshot and report builders in `export.js`.
 `sidepanel.js` supplies shared panel state and composes these boundaries; it no longer implements

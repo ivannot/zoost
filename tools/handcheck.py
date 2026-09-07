@@ -186,7 +186,8 @@ CHECKS = [
         'do': ['Open a Deluge function (Zoho CRM) or a query table (Zoho Analytics) from the tree.'],
         'pass': ('The source is coloured, and a name inside it that Zoost can open is a link that goes '
                  'where it says. For a query, the SQL is the SQL the platform shows.'),
-        'covers': ['apps/*/highlight.js', 'apps/analytics/analytics-sql.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/highlight.js', 'apps/analytics/analytics-sql.js', 'apps/*/sidepanel.js',
+                   'apps/crm/preview-model.js', 'apps/crm/preview-controller.js'],
     },
     {
         'id': 'history',
@@ -196,7 +197,8 @@ CHECKS = [
                'Open the history menu and clear it.'],
         'pass': ('Back and forward open the expected item; a new turn drops the old forward tail; '
                  'the menu lists the same walk; Clear keeps only what is currently open.'),
-        'covers': ['apps/*/navigation.js', 'apps/crm/zoho-navigation.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/navigation.js', 'apps/crm/zoho-navigation.js', 'apps/*/sidepanel.js',
+                   'apps/crm/history-controller.js'],
     },
     {
         'id': 'search-state',

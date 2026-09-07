@@ -4960,7 +4960,7 @@ test('every message named is defined, and every message defined is named', () =>
     const GROUPS = [
       ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
       ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
-      ['apps/crm/sidepanel.js', 'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js', 'apps/crm/ai.js', 'apps/crm/export-scope.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
+      ['apps/crm/sidepanel.js', 'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js', 'apps/crm/preview-controller.js', 'apps/crm/history-controller.js', 'apps/crm/ai.js', 'apps/crm/export-scope.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
       ['apps/analytics/sidepanel.js', 'apps/analytics/ai.js', 'apps/analytics/export.js', 'apps/analytics/health.js'],
     ];
     const group = GROUPS.find((g) => g.includes(rel));
@@ -5978,7 +5978,7 @@ for (const app of ['crm', 'analytics']) {
   });
 
   test('the detail pane shows the search: painted on render, repainted on every change', () => {
-    const crm = read('apps/crm/sidepanel.js');
+    const crm = crmPanel();
     assert.equal((crm.match(/paintFindMarks\(\$\('pvcode'\), findMarkRe\(\)\)/g) || []).length, 2,
       'why=the CRM preview is painted on open or on search change, but not both');
     assert.ok(/openFile\(r\.path, r\.lineNo, true\)/.test(crm),
@@ -6289,7 +6289,7 @@ for (const app of ['crm', 'analytics']) {
       assert.ok(sourceLanguage(probe), `why=a ${lang} file would be shown uncoloured`);
     }
     // And the two places a source is drawn both reach for it, or the report is the lesser copy.
-    assert.ok(/window\.highlightSource\(code, otherLang\)/.test(read('apps/crm/sidepanel.js')),
+    assert.ok(/window\.highlightSource\(code, otherLang\)/.test(crmPanel()),
       'why=the panel draws a project file as plain text');
     assert.ok(/window\.highlightSource\(c, window\.sourceLanguage\(name\)\)/.test(read('apps/crm/export.js')),
       'why=the HTML export draws a project file as plain text');
@@ -6424,7 +6424,7 @@ for (const app of ['crm', 'analytics']) {
   test('every place that draws or searches the list applies both filters', () => {
     // The defect this prevents has happened here twice with the Type filter alone: a list held down
     // by a filter, and a sentence that names a different one - or a search that quietly ignores it.
-    const src = read(REL);
+    const src = crmPanel();
     const adapter = sliceConst(REL, 'passRow');
     assert.ok(/functionRowPasses\(e, \{ typeFilter, langFilter/.test(adapter),
       'why=the full-text search applies a different filter from the list');
@@ -6690,7 +6690,8 @@ for (const app of ['crm', 'analytics']) {
                 rebuildConnections: async () => {}, rebuildActions: async () => {},
                 rebuildModules: async () => {}, openModule: () => {},
                 openFile: async (p) => { opened.push(p); } };
-    const m = load([sliceConst(REL, 'isDeluge'), sliceConst(REL, 'functionRowForPath'),
+    const m = load([sliceFn('apps/crm/preview-model.js', 'findPreviewFunction'),
+                    sliceConst(REL, 'functionRowForPath'),
                     sliceFn(REL, 'navOpen')], g);
     return { m, opened, said: () => g.MSG };
   };
@@ -7018,7 +7019,7 @@ for (const app of ['crm', 'analytics']) {
   test('the choice survives the next function', () => {
     // A reader working in months asks the same question of the next function; re-choosing it every
     // time is the control apologising for itself.
-    const src = read(REL);
+    const src = crmPanel();
     assert.match(src, /^let runtimeWindow = 'past_24_hours', runtimeFrom = '', runtimeTo = '';$/m,
       'why=the chosen window is per open, so it resets under the reader');
     assert.match(src, /win\.onchange = \(\) => \{ runtimeWindow = win\.value;/);
@@ -7099,7 +7100,7 @@ for (const app of ['crm', 'analytics']) {
 // before «from».
 {
   const REL = 'apps/crm/sidepanel.js';
-  const src = read(REL);
+  const src = crmPanel();
 
   test('the calendar opens on the field, not only on its icon', () => {
     // A date input *is* a calendar; what it is not is obviously one, because it draws like a text
@@ -7456,7 +7457,8 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
         querySelectorAll: () => rows,
       }),
     };
-    const { syncTreeTo } = load([sliceConst('apps/crm/sidepanel.js', 'functionRowForPath'),
+    const { syncTreeTo } = load([sliceFn('apps/crm/preview-model.js', 'findPreviewFunction'),
+                                 sliceConst('apps/crm/sidepanel.js', 'functionRowForPath'),
                                  sliceFn('apps/crm/sidepanel.js', 'revealRow'),
                                  sliceFn('apps/crm/sidepanel.js', 'syncTreeTo')], ctx);
     syncTreeTo(path);
@@ -19020,7 +19022,8 @@ test('compiled projects are recovered and cached by sidecar, and never highlight
 test('a secondary project file still resolves to its one function row', () => {
   const row = { id: 'p1', path: 'functions/standalone/run.files/src/main.py',
     mirrorFiles: ['functions/standalone/run.files/src/main.py', 'functions/standalone/run.files/config.json'] };
-  const { functionRowForPath } = load([sliceConst('apps/crm/sidepanel.js', 'functionRowForPath')],
+  const { functionRowForPath } = load([sliceFn('apps/crm/preview-model.js', 'findPreviewFunction'),
+                                       sliceConst('apps/crm/sidepanel.js', 'functionRowForPath')],
     { treeData: [row], Array, console });
   assert.equal(functionRowForPath('functions/standalone/run.files/config.json').id, 'p1',
     'search can open config.json, but selection and Open in Zoho then forget which function owns it');
@@ -19036,6 +19039,8 @@ test('the preview offers every file in a compiled function project', () => {
     'functions/standalone/run.meta.json',
   ], mirrorDirectories: ['functions/standalone/run.files/lib', 'functions/standalone/run.files/empty'] };
   const { projectFilesOf, projectDirectoriesOf } = load([
+    sliceFn('apps/crm/preview-model.js', 'previewProjectFiles'),
+    sliceFn('apps/crm/preview-model.js', 'previewProjectDirectories'),
     sliceConst(rel, 'isDeluge'), sliceConst(rel, 'projectFilesOf'), sliceConst(rel, 'projectDirectoriesOf')],
     { String, RegExp, Array, console });
   assert.equal(JSON.stringify(projectFilesOf(row)), JSON.stringify(row.mirrorFiles.slice(0, 3)),
@@ -19044,7 +19049,7 @@ test('the preview offers every file in a compiled function project', () => {
     'a one-file Deluge function was dressed up as a project');
   assert.equal(projectDirectoriesOf(row).length, 2, 'empty project directories are invisible in the preview');
 
-  const src = read(rel), html = panelPage('crm');
+  const src = crmPanel(), html = panelPage('crm');
   assert.match(src, /showProjectFiles\(trow, path\)/, 'opening a function never fills the project tree');
   const fn = sliceFn(rel, 'showProjectFiles');
   assert.match(fn, /openFile\(f\.path, null, true\)/,

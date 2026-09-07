@@ -131,6 +131,10 @@ apps/crm/options.js	onAiengine	prevEngine
 apps/crm/options.js	onSaveAi	aiPassChanging
 apps/crm/options.js	saveKeys	dirty
 apps/crm/options.js	saveKeys	ownWrite
+apps/crm/preview-controller.js	openFile	currentPath
+apps/crm/preview-controller.js	showCallers	runtimeFrom
+apps/crm/preview-controller.js	showCallers	runtimeTo
+apps/crm/preview-controller.js	showCallers	runtimeWindow
 apps/crm/sidepanel.js	applySettingsChange	ownPrefsWrite
 apps/crm/sidepanel.js	applySettingsChange	pendingRootReload
 apps/crm/sidepanel.js	applySettingsChange	prefsSavedDuringPull
@@ -138,7 +142,6 @@ apps/crm/sidepanel.js	applySettingsChange	root
 apps/crm/sidepanel.js	applySettingsChange	zohoDc
 apps/crm/sidepanel.js	filterByConnection	connFilterSet
 apps/crm/sidepanel.js	filterByConnection	connectionFilter
-apps/crm/sidepanel.js	openFile	currentPath
 apps/crm/sidepanel.js	openWorkflow	currentPath
 apps/crm/sidepanel.js	pullAll	currentPath
 apps/crm/sidepanel.js	pullFailures	failIndex
@@ -148,9 +151,6 @@ apps/crm/sidepanel.js	rebuildTree	moduleFilesCache
 apps/crm/sidepanel.js	rebuildTree	treeLoad
 apps/crm/sidepanel.js	rebuildTree	unreadableMetas
 apps/crm/sidepanel.js	refineRowFromMeta	unreadableMetas
-apps/crm/sidepanel.js	showCallers	runtimeFrom
-apps/crm/sidepanel.js	showCallers	runtimeTo
-apps/crm/sidepanel.js	showCallers	runtimeWindow
 apps/crm/sidepanel.js	takeRecheck	tabPrefs
 apps/crm/workspace-controller.js	createSampleWorkspace	sampleBusy
 apps/crm/workspace-controller.js	grantRoot	rootGranted

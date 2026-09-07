@@ -96,7 +96,7 @@ CAPABILITIES = [
 # The files each surface is made of. Written as paths rather than prose because the capabilities are
 # derived by reading them - a surface whose files nobody can list is a surface nobody can measure.
 SURFACE_FILES = {
-    "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/workspace-controller.js", "apps/crm/live-sync.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/tabs.js", "apps/crm/modules.js",
+    "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/workspace-controller.js", "apps/crm/live-sync.js", "apps/crm/preview-model.js", "apps/crm/preview-controller.js", "apps/crm/history-controller.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/tabs.js", "apps/crm/modules.js",
                    "apps/crm/automation.js", "apps/crm/connections.js", "apps/crm/health.js",
                    "apps/crm/sidepanel.html"],
     "crm-ai":     ["apps/crm/ai.js", "apps/crm/keyvault.js"],
@@ -119,7 +119,7 @@ SURFACE_FILES = {
 
 # The product, in the units somebody works on. Not files: a defect lives in an area.
 SURFACES = [
-    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,report,overview-view,bridge-contract,pull-plan,pull-controller,tabs,modules,automation,connections,health}.js"),
+    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,preview-model,preview-controller,history-controller,report,overview-view,bridge-contract,pull-plan,pull-controller,tabs,modules,automation,connections,health}.js"),
     ("crm-ai",       "apps/crm/{ai,keyvault}.js"),
     ("crm-export",   "apps/crm/{export-scope,export}.js"),
     ("an-panel",     "apps/analytics/{sidepanel,report,overview-view,bridge-contract,ai,export,health}.js"),
