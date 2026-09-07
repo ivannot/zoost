@@ -549,14 +549,20 @@ async function renderOverview() {
       partial: tab.id === 'functions' && unreadableMetas.length > 0,
     })),
     issues: [unreadableMetas.length ? { text: `${unreadableMetas.length} local function file(s) could not be read.`, action: 'pull' } : '',
-      unreadIndexes.size ? { text: `${unreadIndexes.size} local index file(s) could not be read.`, action: 'pull' } : '',
+      // **Say which of the two it is.** Every area refusing at once is almost never six damaged
+      // files; it is the folder grant having lapsed, which the adapter has just asked about. Blaming
+      // the files there sent the reader to a pull that would refuse for the same reason, and hid the
+      // one-click remedy - reported: open the overview, open the diagram window, come back.
+      unreadIndexes.size ? (rootGranted
+        ? { text: `${unreadIndexes.size} local index file(s) could not be read.`, action: 'pull' }
+        : { text: 'Folder access has lapsed - nothing local can be read until it is granted again.', action: 'refresh' }) : '',
       listGap ? { text: 'The functions census has a coverage gap.', action: 'health' } : ''],
   });
   const onboarding = workspaceOnboardingModel({ sample: model.sample, mirrorReady: model.sample || !!model.lastPull });
   renderOverviewView(model, onboarding, {
     body: $('overviewbody'), escapeText: escHtml, escapeAttribute: escA,
     graphDisabled: $('graph').disabled, healthDisabled: $('health').disabled, graphLabel: 'Wiring',
-    issueLabel: (action) => action === 'health' ? 'Review' : 'Repair',
+    issueLabel: (action) => action === 'health' ? 'Review' : action === 'refresh' ? 'Grant access' : 'Repair',
     browse: closeOverview,
     pull: () => { closeOverview(); void pullEverything(); },
     graph: () => { closeOverview(); void openGraph(); },
@@ -816,6 +822,22 @@ async function loadWorkspaces() {
 // a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
 // Named, like every async scope this project ships: `tools/asynccheck.py` reads function
 // declarations, so an inline callback is a scope nothing looks inside.
+/** The grant lapsed while the panel was open, and the panel had believed otherwise.
+ *
+ * `rootGranted` was written when the workspace was opened and re-read nowhere: a memory of a check,
+ * which is the shape this repository has already paid for elsewhere. Every remedy the panel offers
+ * for a lapsed folder is gated on it - `↻ Refresh` re-grants only when it is false, and so does the
+ * click-anywhere listener below - so the moment the grant went, both switched themselves off and
+ * the panel started reporting damaged files instead. The filesystem adapter asks the API on any
+ * failed operation and calls this; from here the two remedies are true again, and the status line
+ * says which one to use.
+ */
+function noteFolderAccessLost() {
+  if (!root || !rootGranted) return;
+  rootGranted = false;
+  updateWsButtons();
+  setStatus(MSG.folder, 'warn');
+}
 async function regrantOnAnyClick(e) {
   if (!root || rootGranted) return;
   const t = e.target;

@@ -13,6 +13,7 @@
  * say: (text: string, kind?: string) => void,
  * folderMessage: string,
  * movedMessage: string,
+ * permissionLost?: () => void,
  * }} WorkspaceFilesystemOptions */
 
 /** @param {WorkspaceFilesystemOptions} options */
@@ -89,6 +90,29 @@ function createWorkspaceFilesystem(options) {
     options.onWrite(relativePath);
   }
 
+  /** A refused read is a question, not a diagnosis.
+   *
+   * A folder grant can lapse while the panel is open, and nothing tells the page it has: every read
+   * simply starts refusing. The panel remembered the answer it got when the workspace was opened,
+   * so it went on believing it had access - which switched off both remedies it advertises, since
+   * «click anywhere to re-grant» and «↻ Refresh» are gated on that same remembered flag. The reader
+   * was then told six local files were damaged, and offered a pull that could not have worked
+   * either.
+   *
+   * So the grant is **re-derived from the event**: any failed operation asks the API whether the
+   * permission is still there, and a «no» is reported once to whoever owns that state. The question
+   * is asked rather than the exception read - which error a lapsed grant throws is Chrome's business
+   * and not something this file should encode.
+   *
+   * What it does not cover, stated: only work driven through an operation. A direct `readFileAt` is
+   * not watched, and neither is an enumeration.
+   */
+  async function askWhetherGrantIsGone() {
+    const handle = options.root();
+    if (!handle || !options.permissionLost) return;
+    try { if (!(await hasPermission(handle))) options.permissionLost(); } catch (_) {}
+  }
+
   function beginOperation() {
     const generation = options.generation();
     const root = options.root();
@@ -96,7 +120,9 @@ function createWorkspaceFilesystem(options) {
     const guard = () => { if (!current()) throw new Error(options.movedMessage); };
     async function through(work) {
       guard();
-      const value = await work();
+      let value;
+      try { value = await work(); }
+      catch (error) { await askWhetherGrantIsGone(); throw error; }
       guard();
       return value;
     }

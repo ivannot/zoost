@@ -40,6 +40,7 @@ function workspaceFilesystemFor(app, overrides = {}) {
     say: overrides.say || (() => {}),
     folderMessage: overrides.folderMessage || 'folder denied',
     movedMessage: overrides.movedMessage || 'workspace moved',
+    permissionLost: overrides.permissionLost,
   });
   return {
     api,
@@ -4598,6 +4599,35 @@ test('sampleRefuse() refuses a sample and lets a real workspace through', () => 
     assert.equal(said, null, `${app}: a real workspace got a status line it should not have`);
   }
 });
+
+// A grant can lapse while the panel is open - reported: open the workspace overview, open the
+// diagram window, come back, and all six areas read «Not available» over «6 local index file(s)
+// could not be read». Nothing was damaged and no pull could have helped: the folder had stopped
+// answering, and the panel went on believing it had access because `rootGranted` was written once
+// and re-read nowhere. Both remedies it advertises are gated on that flag, so both were off.
+//
+// The adapter asks rather than reading the exception - which error a lapsed grant throws is Chrome's
+// business - so this drives the question and its two answers. Both directions, because a check that
+// always fires is not strict, it is broken.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a refused operation asks the folder whether the grant is gone`, async () => {
+    const refuse = () => { const e = new Error('refused'); e.name = 'NotAllowedError'; throw e; };
+    let lost = 0;
+    let permission = 'prompt';
+    const root = { queryPermission: async () => permission, getDirectoryHandle: refuse, getFileHandle: refuse };
+    const { api } = workspaceFilesystemFor(app, { root, permissionLost: () => { lost += 1; } });
+
+    await assert.rejects(() => api.beginOperation().read('functions/index.json'), /refused/,
+      `${app}: the caller stopped seeing the failure`);
+    assert.equal(lost, 1, `${app}: a refused read did not ask the folder, so nothing re-derives the grant`);
+
+    // And the answer is used: a folder that still answers «granted» must not be reported as lost,
+    // or every ordinary NotFoundError would switch the panel into its re-grant state.
+    permission = 'granted'; lost = 0;
+    await assert.rejects(() => api.beginOperation().read('functions/index.json'), /refused/);
+    assert.equal(lost, 0, `${app}: a granted folder was reported as lapsed`);
+  });
+}
 
 test('requirePerm() throws the shipped message, and only when the folder is denied', async () => {
   const { api } = workspaceFilesystemFor('crm', {
@@ -9880,12 +9910,30 @@ for (const app of ['crm', 'analytics']) {
     // operation from before the round trip wrote while `current()` said false.
     assert.ok(/const guard = \(\) => \{ if \(!current\(\)\) throw new Error\(options\.movedMessage\); \};/.test(b),
               'the op hands its I/O straight to the file writer, which only compares handles');
-    // The shape, not the spelling: it guards, awaits, guards. It was an arrow with a `const`
-    // binding and is a declaration now - which is the convention every shipped async scope follows,
-    // because `tools/asynccheck.py` reads declarations - and an assertion on the old text would have
-    // forbidden the fix rather than checked the behaviour.
-    assert.match(b, /async function through\(work\) \{[\s\S]*guard\(\);[\s\S]*const value = await work\(\);[\s\S]*guard\(\);[\s\S]*return value;/,
-                 'the workspace is checked on one side of the await only');
+  });
+
+  // The shape, not the spelling: it guards, awaits, guards. This was a regex over `through`, and it
+  // said so in its own comment - «an assertion on the old text would have forbidden the fix rather
+  // than checked the behaviour» - while asserting the old text. It then went red for a change that
+  // kept the behaviour exactly, which is the whole argument: a photograph of an expression can only
+  // confirm the expression is still spelled the same way. So the workspace is moved *during* the
+  // awaited work, and what is asserted is that the operation still refuses.
+  test(`${app}: an operation refuses a workspace that moved while it was reading`, async () => {
+    const hold = {};
+    const file = { getFile: async () => { hold.move(); return { text: async () => '[]' }; } };
+    const folder = { getDirectoryHandle: async () => folder, getFileHandle: async () => file };
+    const filesystem = workspaceFilesystemFor(app, { root: folder, movedMessage: 'workspace moved' });
+    hold.move = () => filesystem.setGeneration(1);
+
+    await assert.rejects(() => filesystem.api.beginOperation().read('functions/index.json'),
+      /workspace moved/,
+      `${app}: a read that finished after the workspace changed handed its bytes over anyway`);
+
+    // And it must not refuse a workspace that stayed: a guard that always throws is not strict.
+    hold.move = () => {};
+    filesystem.setGeneration(1);
+    assert.equal(await filesystem.api.beginOperation().read('functions/index.json'), '[]',
+      `${app}: an ordinary read was refused`);
   });
 
   test(`${app}: every function that writes carries an op`, () => {

@@ -626,6 +626,7 @@ const workspaceFilesystem = createWorkspaceFilesystem({
   say: setStatus,
   folderMessage: MSG.folder,
   movedMessage: WS_MOVED,
+  permissionLost: noteFolderAccessLost,
 });
 const ensurePerm = workspaceFilesystem.ensurePermission;
 const hasPerm = workspaceFilesystem.hasPermission;
