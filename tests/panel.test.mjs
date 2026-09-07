@@ -8922,11 +8922,11 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       { Map, String });
     const search = createSearchState({ scope: 'functions', fullTextScope: 'functions', fullTextMode: 'content' });
     search.setText('needle'); search.toggleMode(); search.toggleRegex();
-    assert.equal(JSON.stringify(search.enter('modules')), JSON.stringify({ scope: 'modules', text: '', mode: 'name', regex: false, fullText: false }),
+    assert.equal(JSON.stringify(search.enter('modules')), JSON.stringify({ scope: 'modules', text: '', mode: 'name', regex: false }),
       'the Functions search leaks into Modules');
     search.setText('Accounts');
     assert.equal(JSON.stringify(search.enter('functions')),
-      JSON.stringify({ scope: 'functions', text: 'needle', mode: 'content', regex: true, fullText: true }),
+      JSON.stringify({ scope: 'functions', text: 'needle', mode: 'content', regex: true }),
       'leaving a tab throws away what was typed in it, or how it was being searched');
     assert.equal(search.enter('modules').text, 'Accounts', 'arriving on a tab does not restore its own');
   });
@@ -21263,3 +21263,47 @@ for (const app of ['crm', 'analytics']) {
     assert.match(body, /if \(!root \|\| !rootGranted\) return;/, `${app}: it repeats itself on every refused read`);
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// **A control is switched off before it is asked why it is grey.**
+//
+// `#wsdel`'s tooltip was computed from `$('wsdel').disabled` three lines before that property was
+// assigned, so it always described the *previous* call's state. The markup gives the button no
+// `disabled` attribute, so the first pass was true by accident and every pass after it was one state
+// behind: with a workspace open the enabled 🗑 read «Cannot remove a workspace: none is selected»,
+// and during a pull the greyed one read as though it worked. `#wsrename` two lines away had the
+// order right, and so did the Analytics twin - which is how it survived a reading.
+//
+// Driven rather than read, because the defect is an order of statements and a regex over them would
+// be a photograph of one spelling.
+test('the Remove tooltip describes the state the button is actually in', () => {
+  const el = () => ({ disabled: false, title: '', textContent: '', value: '', innerHTML: '',
+                      style: {}, classList: { toggle() {}, add() {}, remove() {} } });
+  const nodes = {};
+  const g = {
+    Boolean, String, Object,
+    $: (id) => (nodes[id] || (nodes[id] = el())),
+    pullBusy: false, busy: false, dir: null, wsList: [], root: { name: 'folder' }, rootGranted: true,
+    lastCtx: null, sampleWsKnown: null, ctx: null,
+    renderGoDc: () => {}, updateSampleButtons: () => {}, addWorkspaceView: () => ({}),
+  };
+  const { updateWsButtons } = load([sliceApp('crm', 'updateWsButtons')], g);
+
+  const seen = () => ({ off: nodes.wsdel.disabled, says: nodes.wsdel.title });
+  updateWsButtons();
+  assert.equal(seen().off, true, 'no workspace open and Remove is offered');
+  assert.match(seen().says, /Cannot remove/, `a greyed Remove says: ${seen().says}`);
+
+  // The transition that showed it: a workspace arrives, so the button comes back on.
+  g.dir = {}; g.wsList = [{ id: 'org:1234567890' }];
+  updateWsButtons();
+  assert.equal(seen().off, false, 'a workspace is open and Remove is still greyed');
+  assert.doesNotMatch(seen().says, /Cannot remove/,
+    `Remove is offered and its tooltip says it cannot: ${seen().says}`);
+
+  // And during a pull, where the reason it gives has to be the pull and not the selection.
+  g.pullBusy = true;
+  updateWsButtons();
+  assert.equal(seen().off, true, 'Remove stayed live during a pull');
+  assert.match(seen().says, /a pull is running/, `the greyed Remove blames the wrong thing: ${seen().says}`);
+});

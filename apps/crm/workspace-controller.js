@@ -420,7 +420,6 @@ async function addWorkspaceForTab() {
 // anything about folders. Reported after three functions had been fixed one by one and the fourth,
 // fifth and sixth were still writing one org's data into another's folder.
 let wsGen = 0;
-const sameWs = (gen) => gen === wsGen;
 
 // Clearing a conversation and leaving a workspace are two different things, and one function did
 // both: Clear threw away every cache *and the queue of removals that had failed and must be retried*,
@@ -694,14 +693,22 @@ function updateWsButtons() {
   // has disabled its Remove this way from the start; this side never did, and the two buttons sat
   // beside each other behaving differently.
   renderGoDc();                      // the list it offers is the workspaces, so it moves with them
-  $('wsrename').disabled = pullBusy || !dir || !wsList.length;
   // Why it is grey, as the Analytics twin says it: a control that goes off with nothing on it is a
   // dead end the reader cannot act on.
+  //
+  // **Both are switched off before either is explained.** `#wsdel` had its title computed from
+  // `$('wsdel').disabled` three lines *before* that property was assigned, so every tooltip
+  // described the previous call's state: with a workspace open the enabled 🗑 read «Cannot remove a
+  // workspace: none is selected», and during a pull the greyed one read as though it worked. Nothing
+  // saw it because the markup gives `#wsdel` no `disabled` attribute, so the first pass was true by
+  // accident and every pass after it was one state behind. `#wsrename`, two lines away, and the
+  // Analytics twin both had the order right.
+  $('wsrename').disabled = pullBusy || !dir || !wsList.length;
+  $('wsdel').disabled = pullBusy || !dir || !wsList.length;
   $('wsdel').title = !$('wsdel').disabled ? 'Remove this workspace from the folder'
     : `Cannot remove a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
   $('wsrename').title = !$('wsrename').disabled ? 'Give this workspace a name of your own'
     : `Cannot name a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
-  $('wsdel').disabled = pullBusy || !dir || !wsList.length;
   const needsGrant = !!root && !rootGranted;
   rt.classList.toggle('needgrant', needsGrant);
   rt.textContent = !root ? '\u{1F4C1} Set working folder\u2026'

@@ -2980,7 +2980,7 @@ function renderNav() {
     return;
   }
   if (!rows.length) { body.innerHTML = `<div class="nvnone">${esc(MSG.narrowNav)}</div>`; return; }
-  body.innerHTML = rows.map(({ e, i }) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(String(e.id))}">`
+  body.innerHTML = rows.map(({ e, i }) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-i="${escA(String(i))}" title="${escA(String(e.id))}">`
     + `<span class="nvk">${esc(e.kind || 'view')}</span><span class="nvl">${esc(e.label)}</span>`
     + `<span class="nvw">${esc(navWhen(e.at))}</span></div>`).reverse().join('');
   body.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });

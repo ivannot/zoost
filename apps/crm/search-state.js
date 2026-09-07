@@ -18,8 +18,10 @@ function createSearchState(options = {}) {
 
   const blank = () => ({ text: '', mode: 'name', regex: false });
   /** @param {SearchValue} state */
-  const copy = (state) => ({ scope, text: state.text, mode: state.mode, regex: state.regex,
-    fullText: state.mode === fullTextMode });
+  // `fullText: state.mode === fullTextMode` was on every snapshot and read by nobody: both panels
+  // derive it where they paint, from `mode`, which is the same one comparison. A field on a value
+  // object is a promise that somebody consumes it.
+  const copy = (state) => ({ scope, text: state.text, mode: state.mode, regex: state.regex });
 
   /** @param {SearchValue | null | undefined} value @param {string} [forScope] */
   function normalize(value, forScope = scope) {

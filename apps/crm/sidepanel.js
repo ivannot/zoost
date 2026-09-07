@@ -632,7 +632,6 @@ const ensurePerm = workspaceFilesystem.ensurePermission;
 const hasPerm = workspaceFilesystem.hasPermission;
 const requirePerm = workspaceFilesystem.requirePermission;
 const forgetDirs = workspaceFilesystem.forgetDirectories;
-const dirFor = workspaceFilesystem.directoryFor;
 const beginWorkspaceOp = workspaceFilesystem.beginOperation;
 const ensureDirectoryAt = workspaceFilesystem.ensureDirectoryAt;
 const writeFileAt = workspaceFilesystem.writeFileAt;
@@ -2007,7 +2006,6 @@ const crmZohoNavigator = createCrmZohoNavigator({
     + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
     + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad'),
 });
-const zohoUrlOk = crmZohoNavigator.allows;
 const goToZoho = crmZohoNavigator.open;
 async function openZohoHome() {
   if (sampleRefuse()) return;
@@ -2081,13 +2079,13 @@ async function switchTab() {
   if (id) await chrome.tabs.update(id, { url, active: true });
   else await chrome.tabs.create({ url, active: true });
 }
-async function openTargetZoho(newTab) {
+async function openTargetZoho() {
   if (sampleRefuse()) return null;   // null, not undefined: the caller reads it as "no tab id"
   const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
   if (!url) { setStatus(MSG.noTarget, 'warn'); return null; }
-  return goToZoho(url, { newTab });
+  return goToZoho(url);
 }
-$('funcs').onclick = () => openTargetZoho(false);
+$('funcs').onclick = () => openTargetZoho();
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };

@@ -42,12 +42,8 @@
   // was already checked. Neither half is worth much alone.
   // Installing over an older hook leaves *its* wrappers underneath - they were never removed, and
   // cannot be: a wrapper does not know how to unwrap itself. So one request walks two observers and
-  // the panel is told twice. Harmless in effect (a notice only ever asks for a re-read of the state
-  // as it is now) and wrong as a fact, so identical notices arriving together are collapsed here,
-  // where the duplication is made, rather than by everyone downstream learning to expect it.
+  // the panel is told twice.
   //
-  // A window rather than a flag, because a second genuine save of the same function is a thing
-  // people do - and re-reading once instead of twice for it costs nothing.
   // No collapsing here, and deliberately none. An older hook's wrappers stay underneath this one and
   // notify from a closure of their own, so a memory kept here would be two memories and would
   // collapse nothing - measured. And a window that drops a repeat can drop a **second real save**,

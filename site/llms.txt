@@ -85,10 +85,9 @@ Stated here rather than buried, because it is the part an assessment needs.
   consumer, and neither platform reports that.
 - **The one exception is this website, and it is declared rather than waved away.** zoost.it is
   served by Cloudflare, whose edge keeps ordinary request logs - IP, time, URL, user agent - with no
-  cookie and no identifier. Its first-party script also records four page-family views with only
-  event, page family and
-  language, no visitor or session identifier, and respect for GPC and Do Not Track. The events are
-  used only as aggregate counts and retained for three months. That is a processing of data, and for it the
+  cookie and no identifier. The site itself measures nothing: no script of its own counts
+  anything, and the visit counter that used to run here was removed on 7 September 2026 because no
+  decision depended on it. Cloudflare's own request logs are that processing of data, and for it the
   developer is the controller. Outbound Store links use standard UTM campaign parameters; after a
   visitor follows one, the Chrome Web Store and Google handle attribution without a duplicate click
   event from zoost.it. §8 of the privacy policy states it, names the basis and gives an

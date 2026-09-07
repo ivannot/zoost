@@ -468,7 +468,7 @@ async function openModule(path, layoutId) {
         : m.related_read === false ? 'Neither endpoint would answer for this module, so whether it has any is unknown - not that it has none.'
         : 'None recorded - re-run <b>Pull Modules</b> to fetch them.'}</div>`;
   const refBanner = refusal
-    ? `<div class="box warn" style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
+    ? `<div style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
     : '';
   // Three tabs: Fields, Related lists, Details. The pane once held the names, the banner, the
   // relations bar, the layout picker, the fields table *and* the related lists, stacked in 400px;

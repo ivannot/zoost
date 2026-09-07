@@ -709,6 +709,16 @@ test('the website sends no measurement of its own', () => {
   const worker = read('site/_worker.js');
   assert.doesNotMatch(worker, /writeDataPoint|url\.pathname === '\/api\/funnel'/,
     'the worker writes measurements again, and the policy has not been rewritten to say so');
+  // **Both halves, because the first one alone let a page contradict itself.** This asserted only
+  // that the pages carry the sentence saying the site measures nothing - and the removal had rewritten
+  // §8 of each while leaving the summary box at the top still promising «four page-family views»,
+  // which is the half most readers actually read. Found from outside, twelve hours later. A claim
+  // that is gone has to be checked for its absence, not for its replacement's presence.
+  for (const page of ['site/privacy.html', 'site/it/privacy.html', 'site/llms.txt']) {
+    const text = read(page);
+    assert.doesNotMatch(text, /page-family view|famiglie di pagine|conversion funnel|funnel aggregato/,
+      `${page} still tells the reader this site records visits`);
+  }
   for (const page of ['site/privacy.html', 'site/it/privacy.html']) {
     assert.match(read(page), /no measurement script|non c'è uno script di misurazione/,
       `${page} no longer states that the site measures nothing`);
@@ -1621,14 +1631,23 @@ test('the Worker config names exactly the endpoints the Worker serves', () => {
   const served = new Set([...worker.matchAll(/url\.pathname === '(\/api\/[a-z]+)'/g)].map((m) => m[1]));
   assert.ok(served.size >= 2, `only ${served.size} route(s) found - the derivation stopped seeing them`);
 
-  const config = read('site/wrangler.jsonc');
-  const opening = config.slice(0, config.indexOf('"name":'));
-  const named = new Set([...opening.matchAll(/(\/api\/[a-z]+)/g)].map((m) => m[1]));
-  assert.deepEqual([...named].sort(), [...served].sort(),
-    'site/wrangler.jsonc describes a different set of endpoints from the ones _worker.js routes');
-
-  // And the number in front of them, because that is the half that was wrong both times.
+  // **Both files that describe the route table, not only the one the defect was found in.** The
+  // first version of this read `wrangler.jsonc` alone, and `_worker.js`'s own opening paragraph -
+  // three lines away from the routes it describes - kept saying «four endpoints» over a list of
+  // three for the rest of the day. Reported from outside. The subject is «a file that states the
+  // endpoints», and there are two of them.
   const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
-  assert.match(opening, new RegExp(`plus ${words[served.size]} endpoints?:`),
-    `the config says a different number of endpoints from the ${served.size} it lists`);
+  const openings = {
+    'site/wrangler.jsonc': (t) => t.slice(0, t.indexOf('"name":')),
+    'site/_worker.js': (t) => t.slice(0, t.indexOf('*/')),
+  };
+  for (const [file, head] of Object.entries(openings)) {
+    const opening = head(read(file));
+    const named = new Set([...opening.matchAll(/(\/api\/[a-z]+)/g)].map((m) => m[1]));
+    assert.deepEqual([...named].sort(), [...served].sort(),
+      `${file} describes a different set of endpoints from the ones _worker.js routes`);
+    // And the number in front of them, because that is the half that was wrong every time.
+    assert.match(opening, new RegExp(`${words[served.size]} endpoints?`),
+      `${file} says a different number of endpoints from the ${served.size} it lists`);
+  }
 });

@@ -1,5 +1,5 @@
 /*
- * zoost.it Worker. Everything is a static asset except four endpoints answered here:
+ * zoost.it Worker. Everything is a static asset except three endpoints answered here:
  * /api/versions for the footer badge, /api/ahead for /emergency, and /api/report for an explicitly
  * submitted problem report.
  *

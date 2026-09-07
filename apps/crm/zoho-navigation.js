@@ -8,7 +8,6 @@
 
 /** @typedef {{base?: string|null, instance?: string|null}} CrmNavigationContext */
 /** @typedef {{kind?: string, id?: string|number, template?: {id?: string|number}}} CrmActionTarget */
-/** @typedef {{newTab?: boolean, active?: boolean}} CrmNavigationOpenOptions */
 /** @typedef {{
  * chromeApi: any,
  * hostPatterns: string[],
@@ -84,19 +83,24 @@ function createCrmZohoNavigator(options) {
     } catch (_) { return false; }
   }
 
-  /** @param {string} url @param {CrmNavigationOpenOptions} openOptions */
-  async function open(url, openOptions = {}) {
+  /** Take the reader to a URL inside Zoho: reuse the tab they have open, or make one.
+   *
+   * It used to take an options object with `newTab` and `active`. **Neither was ever passed.** Nine
+   * call sites: eight give no options at all, and the ninth - `openTargetZoho` - was itself only ever
+   * called as `openTargetZoho(false)`, so `newTab` was constantly false and its branch could not
+   * run, while `active` was constantly `undefined` and the three `!== false` tests it fed were
+   * constantly true. Two dead fields, a dead branch and a parameter every caller agreed on: this
+   * always opens in the tab the reader already has, and brings it to the front.
+   *
+   * @param {string} url */
+  async function open(url) {
     if (!allows(url)) {
       options.refused(url);
       return null;
     }
-    if (openOptions.newTab) {
-      const tab = await options.chromeApi.tabs.create({ url, active: true });
-      return tab.id;
-    }
     let tabId = await options.findTab();
     if (!tabId) {
-      const tab = await options.chromeApi.tabs.create({ url, active: openOptions.active !== false });
+      const tab = await options.chromeApi.tabs.create({ url, active: true });
       return tab.id;
     }
     const frameId = await options.findFrame(tabId);
@@ -107,13 +111,11 @@ function createCrmZohoNavigator(options) {
           func: (destination) => { location.href = destination; },
           args: [url],
         });
-        if (openOptions.active !== false) {
-          await options.chromeApi.tabs.update(tabId, { active: true });
-        }
+        await options.chromeApi.tabs.update(tabId, { active: true });
         return tabId;
       } catch (_) { /* frame navigation refused: preserve the established tab fallback */ }
     }
-    await options.chromeApi.tabs.update(tabId, { url, active: openOptions.active !== false });
+    await options.chromeApi.tabs.update(tabId, { url, active: true });
     return tabId;
   }
 

@@ -137,7 +137,8 @@ either did not run or failed, and only the **Builds** page says which — the de
 And the lesson that keeps being re-learnt: a push is not a publication until `curl` says so.
 Documentation has to be correct at commit time, but it becomes visible only when a build succeeds.
 
-The site is static plus one endpoint - `/api/versions`, answered by `site/_worker.js` - and the
+The site is static plus three endpoints - `/api/versions`, `/api/ahead` and `/api/report`, all
+answered by `site/_worker.js` - and the
 footer shows whether four facts are in step, each from the source that actually holds it: what the
 Chrome Web Store serves and what it has in the queue, from the Store API; the newest **tag** and the
 `manifest.json` on `main`, from GitHub; and when the site went live, from the runtime. It reads tags
@@ -174,8 +175,8 @@ one: `version_metadata` is ours, added deliberately, and the generated file has 
 `zoost-it`, deploy `npx wrangler deploy`, root directory `site` — so `site/wrangler.jsonc` is the
 config and every path in it is relative to `site/`. **`functions/` is a Pages-only convention** and
 is never looked at here: a file placed there is published as a static asset (if inside `site/`) or
-ignored entirely. Server-side code goes in `site/_worker.js`, which answers `/api/versions` and
-hands everything else to `env.ASSETS`. Assets are served first and the script runs only when no file
+ignored entirely. Server-side code goes in `site/_worker.js`, which answers those three
+and hands everything else to `env.ASSETS`. Assets are served first and the script runs only when no file
 matches, so adding to it cannot change how an existing page is served.
 
 Two traps that this layout hides:

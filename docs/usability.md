@@ -18,9 +18,10 @@ The measurable path is:
 5. open the sample;
 6. create and pull a real workspace.
 
-zoost.it records aggregate visits to its four page families without an identifier. Store links use
-the Chrome Web Store's standard campaign parameters. Installation is measured by the Store. The site
-cannot observe steps 5 and 6, and the extensions send no telemetry; do not present either as measured.
+zoost.it measures nothing. Store links use the Chrome Web Store's standard campaign parameters, and
+installation is the one figure the Store reports. Nothing observes steps 1 to 6 - not the site, which
+counts no visits, and not the extensions, which send no telemetry. Do not present any of them as
+measured.
 
 ## Five-session protocol
 

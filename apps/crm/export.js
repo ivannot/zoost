@@ -497,7 +497,11 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
           ? a.mappings.map((m) => esc(String(m.field || '').replace(/_/g, ' ')) + ': ' + esc(mapVal(m))).join(' \u00b7 ')
         : a.notify === true ? 'notifies' : '';
       return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(actProv(a)) + '</td>'
-        + '<td class="num">' + users.length + '</td><td>' + users.map((w) => esc(w.name || w.id)).join(', ') + '</td><td>' + detail + '</td></tr>';
+        // No `class="num"`: it was borrowed from the Analytics *panel*, where `.vtbl td.num`
+        // right-aligns a count. This report carries EXPORT_CSS and nothing else, and EXPORT_CSS has
+        // no `.num` - so the class has never done anything here. Removed rather than given a rule,
+        // because the rule would be new styling nobody asked for, invented to justify a leftover.
+        + '<td>' + users.length + '</td><td>' + users.map((w) => esc(w.name || w.id)).join(', ') + '</td><td>' + detail + '</td></tr>';
     });
   const actHtml = acts.length
     ? '<p class="hxd">What a workflow rule fires, and which rules fire it. \u00abFired by\u00bb is read from the rules in this workspace, so a rule that was never pulled cannot appear in it.</p>'

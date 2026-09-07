@@ -480,7 +480,11 @@
   #pvcallers .fnchips{margin-top:3px}
   #pvcallers .apwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);line-height:1.7}
   #pvcallers .orphan{color:#f59e0b}
-  #pvcallers .connwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
+  /* `.modwrap` is here rather than in a rule of its own: it is the third block in this pane and it
+     had no rule at all, so the Reads/Writes list ran into whatever was above it while `.apwrap`
+     above and `.connwrap` beside it were both separated. One rule, because the declarations are the
+     same fact - a block in this pane is set off from the one before it. */
+  #pvcallers .connwrap, #pvcallers .modwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
   #pvcallers .conn{display:inline-block;background:#1a2333;border:1px solid #3f6ea8;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;color:#9fc4f5;cursor:pointer}
   /* Module chips: the same shape as a connection chip, because they are the same kind of thing -
      something outside the function that it reaches - with the colour carrying read against write.

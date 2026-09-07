@@ -672,14 +672,13 @@ function applySelection(byClick) {
   const rowPath = (owner && owner.path) || currentPath;
   const row = [...box.querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === rowPath);
   if (!row) return;
-  // **Arriving** is not **stepping**, and they want different things. `revealRow()` scrolls the least
-  // it can - the right answer for the arrows, where a list that jumps under you is worse than one
-  // that barely moves - but it means a jump lands at the top edge when you came from below and at
-  // the bottom edge when you came from above, which reads as two behaviours. Reported that way.
-  // A jump puts the row a couple of rows down from the top of the list instead: one place, always,
-  // with what precedes it visible.
-  const st = box.querySelector('.grp');
-  const cover = st ? st.getBoundingClientRect().height : 0;
+  // **A comment that outlived what it described, and the measurement it needed.** It used to say
+  // that a jump puts the row «a couple of rows down from the top of the list: one place, always»,
+  // and it did - by measuring the sticky group header and offsetting past it. That was replaced by
+  // `revealRow()`, the minimal-scroll reveal, and the paragraph promising the other behaviour stayed
+  // where it was along with the two lines that measured the header into a variable nothing read.
+  // What actually happens is below, and it is one line.
+  //
   // The origin travels with the call rather than in a variable shared between two navigations: a
   // click whose open then failed - no permission, an unreadable file - used to leave the flag set,
   // and the *next* arrival from somewhere else was mistaken for that click and never revealed.

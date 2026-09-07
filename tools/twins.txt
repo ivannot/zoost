@@ -38,7 +38,7 @@ bridgeCommand	43c239bf9acf	43c239bf9acf	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
 bridgeResponseError	0f1c63b7aeae	0f1c63b7aeae	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	39d5f7544abd	e1a5052dd09d	divergent
+buildExportHtml	7154ef8959a7	e1a5052dd09d	divergent
 buildExportMarkdown	89b53926d677	f5d0fbdf2c0e	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
@@ -222,7 +222,7 @@ rememberActive	74f9a0e0cbc6	74f9a0e0cbc6	identical
 renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b44d36ae2b45	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
-renderNav	5ca323768259	d849a1f86647	divergent
+renderNav	f755c2e0dbba	1f84c165466c	divergent
 renderOverview	24be84782697	da41fefb945e	divergent
 renderOverviewView	fedb982ea79f	fedb982ea79f	identical
 renderRx	9515db04e268	9515db04e268	identical
