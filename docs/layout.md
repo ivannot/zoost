@@ -41,6 +41,9 @@ Each side panel is deliberately assembled from small classic scripts and a linke
 Health, problem-report redaction, pure state and panel orchestration at separate maintenance
 boundaries.
 
+Pure modules opt into checked JSDoc one at a time. `tools/typecheck.sh` derives that set and checks
+each extension as its own classic-script world in CI, with no emitted file and no runtime package.
+
 **No code is shared between apps yet, and that is deliberate.** The two will look similar (a tree, a
 preview, a health view, exports) but they read different platforms with different shapes. Factor
 something out only once both sides actually use it and it has stopped changing — sharing too early

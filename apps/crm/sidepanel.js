@@ -5600,9 +5600,6 @@ function resetView() {
   if ($('overviewview').classList.contains('show')) void renderOverview();
 }
 
-const OVERVIEW_STATE = {
-  ready: 'Ready', partial: 'Partial', behind: 'Behind', unavailable: 'Not available', 'not-read': 'Not read',
-};
 async function renderOverview() {
   const op = beginWorkspaceOp();
   const counts = {};
@@ -5639,35 +5636,23 @@ async function renderOverview() {
       listGap ? { text: 'The functions census has a coverage gap.', action: 'health' } : ''],
   });
   const onboarding = workspaceOnboardingModel({ sample: model.sample, mirrorReady: model.sample || !!model.lastPull });
-  const when = (value) => {
-    if (!value) return 'Never pulled';
-    const date = new Date(value);
-    return isNaN(date) ? String(value) : date.toLocaleString();
-  };
-  const body = $('overviewbody');
-  body.innerHTML = `<div class="ovtitle">${escHtml(model.name)}</div>`
-    + `<div class="ovmeta">${model.sample ? 'Sample workspace - invented data' : `Last pull: ${escHtml(when(model.lastPull))}`}</div>`
-    + (onboarding.visible ? `<section class="ovstart"><h3>Getting started</h3><div class="ovsteps">${onboarding.steps.map((step) => `<div class="ovstep ${escA(step.state)}" data-step="${escA(step.id)}"><i>${step.state === 'done' ? '✓' : step.state === 'current' ? '→' : ''}</i><b>${escHtml(step.label)}</b><small>${escHtml(step.detail)}</small></div>`).join('')}</div></section>` : '')
-    + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard"><div class="ovlabel">${escHtml(area.label)}</div>`
-      + `<div class="ovcount">${area.count === null ? '—' : area.count}</div><div class="ovstate ${area.status}">${OVERVIEW_STATE[area.status]}`
-      + `${area.pulledAt ? ` · ${escHtml(when(area.pulledAt))}` : ''}</div></div>`).join('')}</div>`
-    + (model.issues.length ? `<div class="ovissues">${model.issues.map((issue) => `<button class="ovissue" data-action="${escA(issue.action || '')}"${issue.action ? '' : ' disabled'}>${escHtml(issue.text)}${issue.action ? `<span>${issue.action === 'health' ? 'Review' : 'Repair'} →</span>` : ''}</button>`).join('')}</div>` : '')
-    + `<div class="ovactions"><button id="ovbrowse"${onboarding.nextAction === 'browse' ? ' class="next"' : ''}>Browse</button><button id="ovpull" class="zbtn${onboarding.nextAction === 'pull' ? ' next' : ''}"${model.sample ? ' hidden' : ''}>Pull all</button>`
-    + `<button id="ovgraph" class="lbtn"${$('graph').disabled ? ' disabled' : ''}>Wiring</button><button id="ovhealth" class="pbtn"${$('health').disabled ? ' disabled' : ''}>Health</button></div>`;
-  body.querySelector('#ovbrowse').onclick = closeOverview;
-  body.querySelector('#ovpull').onclick = () => { closeOverview(); void pullEverything(); };
-  body.querySelector('#ovgraph').onclick = () => { closeOverview(); void openGraph(); };
-  body.querySelector('#ovhealth').onclick = () => { closeOverview(); void openHealth(); };
-  body.querySelectorAll('.ovissue[data-action]').forEach((button) => {
-    button.onclick = () => {
-      const run = workspaceOverviewAction(button.dataset.action, {
+  renderOverviewView(model, onboarding, {
+    body: $('overviewbody'), escapeText: escHtml, escapeAttribute: escA,
+    graphDisabled: $('graph').disabled, healthDisabled: $('health').disabled, graphLabel: 'Wiring',
+    issueLabel: (action) => action === 'health' ? 'Review' : 'Repair',
+    browse: closeOverview,
+    pull: () => { closeOverview(); void pullEverything(); },
+    graph: () => { closeOverview(); void openGraph(); },
+    health: () => { closeOverview(); void openHealth(); },
+    issue: (action) => {
+      const run = workspaceOverviewAction(action, {
         pull: () => { void pullEverything(); }, refresh: () => { void onRefresh(); },
         health: () => { void openHealth(); },
       });
       if (!run) return;
       closeOverview();
       run();
-    };
+    },
   });
 }
 function openOverview() {
@@ -6238,22 +6223,15 @@ async function pullEverything() {
   // «7 of 6», or ended at «5 of 6». A pull is one act: what it will do is decided when it starts,
   // and a preference saved while it runs belongs to the next one. Said to the reader rather than
   // done silently - see `applySettingsChange`.
-  const plan = [];
-  for (const t of TABS) {
-    if (wantsRecheck(t.id)) { plan.push(t); continue; }
-    // A refused area is skipped, because re-asking an answered question on every pull is a thousand
-    // pointless requests for one role change - unless the reader has ticked «ask again» in Settings
-    // for it, which is the one thing that says a role may have moved. It is spent below: one pull
-    // asks, and what Zoho answers this time becomes the record.
-    if (isForbidden(t.id)) continue;
-    if (!isPulled(t.id)) { skipped.push(t.id); continue; }
-    plan.push(t);
-  }
+  const planned = buildPullPlan(TABS, {
+    recheck: wantsRecheck, forbidden: isForbidden, enabled: isPulled,
+    verdictAt: (id) => (tabAccess[id] || {}).at,
+  });
+  const plan = planned.areas;
+  skipped.push(...planned.skipped);
   const todo = plan;
   // Which areas are in this run *because* of a tick, and what their verdict said before it started.
   // Both are read here, before the first await: `tabAccess` moves as the run goes.
-  const asked = todo.filter((t) => wantsRecheck(t.id)).map((t) => t.id);
-  const askedBefore = {}; asked.forEach((id) => { askedBefore[id] = (tabAccess[id] || {}).at; });
   let done = 0;
   for (const t of plan) {
     // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
@@ -6279,7 +6257,7 @@ async function pullEverything() {
   // spent it having asked nothing. Derived from the event instead: an area was asked only if it
   // recorded a verdict during this run, which is what `noteAccess` writes and the one thing that
   // cannot be true without a request.
-  await takeRecheck(asked.filter((id) => (tabAccess[id] || {}).at !== askedBefore[id]));
+  await takeRecheck(answeredPullRechecks(planned, (id) => (tabAccess[id] || {}).at));
   if (!op.current()) return;
   // The last area closes with its own line and then this runs - rebuilding a tree of thousands of
   // rows, which is the second place the panel looked stuck at the end of a pull.

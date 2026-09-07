@@ -48,3 +48,8 @@ jobs:
 
       - name: bash tests/run.sh
         run: bash tests/run.sh
+
+      # Development-only and no-emit: the extensions still ship the readable JavaScript in apps/.
+      # The exact compiler version lives in the script, so this gate cannot move underneath a commit.
+      - name: static JavaScript contracts
+        run: bash tools/typecheck.sh

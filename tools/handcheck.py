@@ -79,7 +79,7 @@ CHECKS = [
                'Press Pull all and leave it alone until it stops.'],
         'pass': ('It ends on a line that names what it read - not on «interrupted», not on «could not». '
                  'The tree fills, and the counts match what the platform shows you.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
+        'covers': ['apps/*/sidepanel.js', 'apps/crm/pull-plan.js', 'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
                    'apps/*/automation.js', 'apps/*/connections.js'],
     },
     {
@@ -155,7 +155,7 @@ CHECKS = [
         'pass': ('It writes, the tree fills, and the panel says nothing was fetched from Zoho. This is '
                  'the workspace every picture on the site is rendered from, so it is also the one a '
                  'first-time reader sees.'),
-        'covers': ['apps/*/sample-org.js', 'apps/*/workspace.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/sample-org.js', 'apps/*/workspace.js', 'apps/*/overview-view.js', 'apps/*/sidepanel.js'],
     },
     {
         'id': 'fresh-profile',

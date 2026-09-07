@@ -4377,6 +4377,17 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
                          'the push workflow runs auditcheck, which will be red for ordinary reasons')
         self.assertIn('auditcheck', wf.split('jobs:')[0], 'the omission is not explained')
 
+    def test_opted_in_static_contracts_are_a_pinned_no_emit_ci_gate(self):
+        wf = self.WF.read_text(encoding='utf-8')
+        tool = (ROOT / 'tools/typecheck.sh').read_text(encoding='utf-8')
+        self.assertIn('bash tools/typecheck.sh', wf,
+                      '@ts-check is documentation only: the official CI never verifies it')
+        self.assertRegex(tool, r'TYPESCRIPT_VERSION=[0-9]+\.[0-9]+\.[0-9]+',
+                         'the compiler gate can change when the latest TypeScript release moves')
+        self.assertIn('--noEmit', tool, 'the contract check has become a build step')
+        self.assertIn("rg -l '^// @ts-check'", tool,
+                      'new opted-in modules are not derived and can miss the gate')
+
 
 class CssScannerReadsEveryRule(unittest.TestCase):
     """The checker read 1318 of the 1487 rules in this tree and printed «0 findings».

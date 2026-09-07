@@ -8,9 +8,12 @@
 in `sidepanel.html` and their visual rules in `sidepanel.css`. Independent surfaces are classic
 scripts loaded before `sidepanel.js`: AI, export and Health keep their product-specific files, while
 `report.js` owns the identical privacy-critical redaction and bounded diagnostic buffer on each
-side. `sidepanel.js` retains workspace orchestration, navigation and DOM wiring. There is still no
-build step and no runtime dependency: the browser loads the readable source files that ship. Tests
-derive the script set and order from the page rather than maintaining another file list.
+side. `overview-view.js` turns the Overview model into DOM and delegates every action back to the
+panel; it reads no workspace or Chrome state. CRM's `pull-plan.js` freezes which areas one Pull all
+will ask before its first await, including explicit permission rechecks. `sidepanel.js` retains the
+filesystem and Zoho adapters. There is still no build step and no runtime dependency: the browser loads the
+readable source files that ship. Tests derive the script set and order from the page rather than
+maintaining another file list.
 
 **Analytics takes the workspace from the URL, not from a list.** `/workspace/{id}` carries it, so
 there is nothing to scrape and nothing to be fragile about — and the workspace-list endpoint is not

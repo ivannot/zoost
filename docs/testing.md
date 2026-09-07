@@ -12,6 +12,11 @@ lifters, its reporter, and the traps met while writing it.
 already present on any machine that can build this project. A suite needing `npm install` would be
 the first dependency in a repository whose pitch is that it has none.
 
+The opted-in JSDoc contracts are a separate development gate: `bash tools/typecheck.sh` asks `npx`
+for one exact TypeScript version and runs `checkJs` with `noEmit`, once per extension. It is not in
+the offline battery and it never changes the shipped files; the official CI runs it after the
+battery. The file set is derived from `// @ts-check`, so opting in and entering the gate are one act.
+
 **Every case is a bug that actually happened.** A test written from imagination tests the
 imagination; these were lifted from the throwaway checks run while fixing real defects — the Deluge
 comment/string scanner, which CSRF cookie belongs to which family, staleness derived per area,

@@ -162,7 +162,8 @@ test('analytics: an interrupted mirror is not presented as four ready empty area
     sliceFn('apps/analytics/workspace.js', 'workspaceOverviewModel'),
     sliceFn('apps/analytics/workspace.js', 'workspaceOnboardingModel'),
     sliceFn('apps/analytics/workspace.js', 'workspaceOverviewAction'),
-    sliceConst(rel, 'OVERVIEW_STATE'), sliceFn(rel, 'renderOverview'),
+    sliceConst('apps/analytics/overview-view.js', 'OVERVIEW_STATE'),
+    sliceFn('apps/analytics/overview-view.js', 'renderOverviewView'), sliceFn(rel, 'renderOverview'),
   ], {
     String, Number, Array, Object, Set, Date, isNaN,
     $: (id) => elements[id], esc: String, escA: String,
@@ -198,7 +199,8 @@ test('analytics: a newly created workspace has unknown counts, not four measured
     sliceFn('apps/analytics/workspace.js', 'workspaceOverviewModel'),
     sliceFn('apps/analytics/workspace.js', 'workspaceOnboardingModel'),
     sliceFn('apps/analytics/workspace.js', 'workspaceOverviewAction'),
-    sliceConst(rel, 'OVERVIEW_STATE'), sliceFn(rel, 'renderOverview'),
+    sliceConst('apps/analytics/overview-view.js', 'OVERVIEW_STATE'),
+    sliceFn('apps/analytics/overview-view.js', 'renderOverviewView'), sliceFn(rel, 'renderOverview'),
   ], {
     String, Number, Array, Object, Set, Date, isNaN,
     $: (id) => elements[id], esc: String, escA: String,
@@ -229,7 +231,8 @@ test('crm: an area excluded before its first pull is not reported as an unreadab
   const missing = new Error('missing'); missing.name = 'NotFoundError';
   const rel = 'apps/crm/sidepanel.js';
   const m = load([
-    sliceConst(rel, 'pulledAt'), sliceConst(rel, 'OVERVIEW_STATE'),
+    sliceConst(rel, 'pulledAt'), sliceConst('apps/crm/overview-view.js', 'OVERVIEW_STATE'),
+    sliceFn('apps/crm/overview-view.js', 'renderOverviewView'),
     sliceFn('apps/crm/workspace.js', 'workspaceOverviewModel'),
     sliceFn('apps/crm/workspace.js', 'workspaceOnboardingModel'),
     sliceFn('apps/crm/workspace.js', 'workspaceOverviewAction'), sliceFn(rel, 'renderOverview'),
@@ -272,7 +275,8 @@ test('crm: Pull all in Overview pulls every area, not only functions', async () 
   let functions = 0, everything = 0;
   const rel = 'apps/crm/sidepanel.js';
   const m = load([
-    sliceConst(rel, 'pulledAt'), sliceConst(rel, 'OVERVIEW_STATE'),
+    sliceConst(rel, 'pulledAt'), sliceConst('apps/crm/overview-view.js', 'OVERVIEW_STATE'),
+    sliceFn('apps/crm/overview-view.js', 'renderOverviewView'),
     sliceFn('apps/crm/workspace.js', 'workspaceOverviewModel'),
     sliceFn('apps/crm/workspace.js', 'workspaceOnboardingModel'),
     sliceFn('apps/crm/workspace.js', 'workspaceOverviewAction'), sliceFn(rel, 'renderOverview'),
@@ -1142,8 +1146,8 @@ test('the CRM names each area before it pulls it, and the position in the run', 
   // What must hold now is that nothing re-decides inside the loop.
   // Both facts, asked separately: a character window between them is a distance, not a property,
   // and it reported a comment as a defect twice in this file already.
-  assert.ok(body.includes('const plan = [];'), 'the run builds no plan of what it will do');
-  assert.ok(body.indexOf('const plan = [];') < body.indexOf('for (const t of plan)'),
+  assert.ok(body.includes('const planned = buildPullPlan'), 'the run builds no plan of what it will do');
+  assert.ok(body.indexOf('const planned = buildPullPlan') < body.indexOf('for (const t of plan)'),
             'the run walks a plan it has not built yet');
   const loop = body.slice(body.indexOf('for (const t of plan)'));
   for (const term of ['wantsRecheck(', 'isForbidden(', 'isPulled(']) {
@@ -1151,9 +1155,24 @@ test('the CRM names each area before it pulls it, and the position in the run', 
               `the loop asks ${term} again while it runs, which is what let a settings save move the `
               + 'answers underneath a run in progress');
   }
-  const plan = body.slice(body.indexOf('const plan = []'), body.indexOf('const todo = plan'));
-  for (const term of ['wantsRecheck(t.id)', 'isForbidden(t.id)', 'isPulled(t.id)'])
-    assert.ok(plan.includes(term), `the plan ignores ${term}, so it is not the set the run should do`);
+  const { buildPullPlan, answeredPullRechecks } = load([
+    sliceFn('apps/crm/pull-plan.js', 'buildPullPlan'),
+    sliceFn('apps/crm/pull-plan.js', 'answeredPullRechecks'),
+  ]);
+  const facts = { recheck: (id) => id === 'modules', forbidden: (id) => id === 'modules' || id === 'actions',
+    enabled: (id) => id !== 'workflows', verdictAt: (id) => id + '-before' };
+  const planned = buildPullPlan([
+    { id: 'functions' }, { id: 'modules' }, { id: 'workflows' }, { id: 'actions' },
+  ], facts);
+  assert.equal(planned.areas.map((area) => area.id).join(','), 'functions,modules',
+    'the immutable plan does not combine enabled areas with explicit permission rechecks');
+  assert.equal(planned.skipped.join(','), 'workflows', 'a disabled area is not reported as role-refused');
+  assert.equal(planned.asked.join(','), 'modules', 'the plan forgets which area exists only by request');
+  assert.equal(planned.askedBefore.modules, 'modules-before');
+  assert.equal(answeredPullRechecks(planned, (id) => id === 'modules' ? 'modules-after' : '').join(','),
+    'modules', 'an explicit recheck whose verdict moved is not spent');
+  assert.equal(answeredPullRechecks(planned, () => 'modules-before').length, 0,
+    'an area that never reached Zoho spends the reader\'s explicit recheck');
 });
 
 test('the CRM says it is rebuilding the list after the last area', () => {
@@ -19278,12 +19297,10 @@ test('a refused area is asked again by the next pull, once, and only when asked 
   assert.doesNotMatch(body, /takeRecheck\(todo\.map/,
                       'the whole run is spent, so a pull of a workspace that never refused the area '
                       + 'consumes a request meant for the one that did');
-  assert.match(body, /const asked = todo\.filter\(\(t\) => wantsRecheck\(t\.id\)\)/,
-               'nothing separates the areas that are in the run because of a tick');
-  assert.match(body, /takeRecheck\(asked\.filter\(\(id\) => \(tabAccess\[id\] \|\| \{\}\)\.at !== askedBefore\[id\]\)\)/,
+  assert.match(body, /answeredPullRechecks\(planned/,
                'a run that reached no runner still spends the tick, so the reader ticks it again '
                + 'with nothing saying why');
-  const before = body.indexOf('const askedBefore');
+  const before = body.indexOf('const planned = buildPullPlan');
   assert.ok(before > 0 && before < body.indexOf('await runners['),
             'the «before» reading is taken after the run has started moving the verdicts it compares');
 

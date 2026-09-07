@@ -601,9 +601,6 @@ function resetView() {
   if ($('overviewview').classList.contains('show')) renderOverview();
 }
 
-const OVERVIEW_STATE = {
-  ready: 'Ready', partial: 'Partial', behind: 'Behind', unavailable: 'Not available', 'not-read': 'Not read',
-};
 function renderOverview() {
   // An interrupted pull deliberately clears the in-memory snapshot: zero would mean Zoho really
   // contains no objects, while these arrays mean only «we refused to load a hybrid mirror».
@@ -639,35 +636,23 @@ function renderOverview() {
   });
   const onboarding = workspaceOnboardingModel({ sample: model.sample,
     mirrorReady: model.sample || (!!model.lastPull && !pullInterrupted) });
-  const when = (value) => {
-    if (!value) return 'Never pulled';
-    const date = new Date(value);
-    return isNaN(date) ? String(value) : date.toLocaleString();
-  };
-  const body = $('overviewbody');
-  body.innerHTML = `<div class="ovtitle">${esc(model.name)}</div>`
-    + `<div class="ovmeta">${model.sample ? 'Sample workspace - invented data' : `Last pull: ${esc(when(model.lastPull))}`}</div>`
-    + (onboarding.visible ? `<section class="ovstart"><h3>Getting started</h3><div class="ovsteps">${onboarding.steps.map((step) => `<div class="ovstep ${escA(step.state)}" data-step="${escA(step.id)}"><i>${step.state === 'done' ? '✓' : step.state === 'current' ? '→' : ''}</i><b>${esc(step.label)}</b><small>${esc(step.detail)}</small></div>`).join('')}</div></section>` : '')
-    + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard"><div class="ovlabel">${esc(area.label)}</div>`
-      + `<div class="ovcount">${area.count === null ? '—' : area.count}</div><div class="ovstate ${area.status}">${OVERVIEW_STATE[area.status]}`
-      + `${area.pulledAt ? ` · ${esc(when(area.pulledAt))}` : ''}</div></div>`).join('')}</div>`
-    + (model.issues.length ? `<div class="ovissues">${model.issues.map((issue) => `<button class="ovissue" data-action="${escA(issue.action || '')}"${issue.action ? '' : ' disabled'}>${esc(issue.text)}${issue.action ? `<span>${issue.action === 'retry' ? 'Retry' : 'Repair'} →</span>` : ''}</button>`).join('')}</div>` : '')
-    + `<div class="ovactions"><button id="ovbrowse"${onboarding.nextAction === 'browse' ? ' class="next"' : ''}>Browse</button><button id="ovpull" class="zbtn${onboarding.nextAction === 'pull' ? ' next' : ''}"${model.sample ? ' hidden' : ''}>Pull all</button>`
-    + `<button id="ovgraph" class="lbtn"${$('graph').disabled ? ' disabled' : ''}>ER diagram</button><button id="ovhealth" class="pbtn"${$('health').disabled ? ' disabled' : ''}>Health</button></div>`;
-  body.querySelector('#ovbrowse').onclick = closeOverview;
-  body.querySelector('#ovpull').onclick = () => { closeOverview(); void pullAll(); };
-  body.querySelector('#ovgraph').onclick = () => { closeOverview(); void openSchemaGraph(); };
-  body.querySelector('#ovhealth').onclick = () => { closeOverview(); openHealth(); };
-  body.querySelectorAll('.ovissue[data-action]').forEach((button) => {
-    button.onclick = () => {
-      const run = workspaceOverviewAction(button.dataset.action, {
+  renderOverviewView(model, onboarding, {
+    body: $('overviewbody'), escapeText: esc, escapeAttribute: escA,
+    graphDisabled: $('graph').disabled, healthDisabled: $('health').disabled, graphLabel: 'ER diagram',
+    issueLabel: (action) => action === 'retry' ? 'Retry' : 'Repair',
+    browse: closeOverview,
+    pull: () => { closeOverview(); void pullAll(); },
+    graph: () => { closeOverview(); void openSchemaGraph(); },
+    health: () => { closeOverview(); openHealth(); },
+    issue: (action) => {
+      const run = workspaceOverviewAction(action, {
         pull: () => { void pullAll(); }, refresh: () => { void refreshLocal(); },
         retry: () => { void retryFailed(); }, health: () => { openHealth(); },
       });
       if (!run) return;
       closeOverview();
       run();
-    };
+    },
   });
 }
 function openOverview() {
