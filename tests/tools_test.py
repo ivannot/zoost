@@ -18,6 +18,7 @@ import io
 import json
 import os
 import pathlib
+import collections
 import re
 import shutil
 import html
@@ -7543,6 +7544,34 @@ class TheSuiteCountsItself(unittest.TestCase):
                            f"NODE_EXPECTED is {want['NODE_EXPECTED']} and {declared} cases are declared "
                            'in source - a number at or below the declaration count cannot notice a loop '
                            'that stopped expanding')
+
+
+class EveryIdInAShippedPageIsUnique(unittest.TestCase):
+    """One element, one name - and nothing was asking.
+
+    A mechanical edit moved the workspace-overview button into the toolbar and failed to remove the
+    original: the Analytics panel shipped two elements with `id="overview"`, and `$()` answered with
+    whichever came first. It reached the user's screen, who reported it as «the icon is in a
+    different place», and every checker was green over it - `twincheck` compares ids *between* the two
+    products, `htmlcheck` reads how attributes are escaped, and neither asks the one question a
+    duplicate id fails.
+
+    A page with two of the same id is not a style problem: half the panel's code is `$('name')`, so
+    one of the two elements is unreachable and which one depends on document order.
+    """
+
+    def test_no_shipped_page_names_an_element_twice(self):
+        pages = sorted((ROOT / 'apps').rglob('*.html'))
+        self.assertGreaterEqual(len(pages), 6, 'the pages are no longer being found')
+        findings = []
+        for page in pages:
+            ids = re.findall(r'\sid="([^"]+)"', page.read_text(encoding='utf-8'))
+            for name, n in collections.Counter(ids).items():
+                if n > 1:
+                    findings.append(f'{page.relative_to(ROOT)}: id="{name}" appears {n} times')
+        self.assertEqual(findings, [],
+                         'a duplicate id makes one of the two elements unreachable through $():\n  '
+                         + '\n  '.join(findings))
 
 
 class JavaScriptCommentsAreScannedNotMatched(unittest.TestCase):
