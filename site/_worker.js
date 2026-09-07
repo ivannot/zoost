@@ -565,9 +565,14 @@ async function funnel(request, env) {
   // points to a billed dataset and skew what `tools/funnel.py` prints. `/api/report` two functions
   // below can afford Turnstile and a counter because it runs once when somebody presses a button;
   // this runs on every page view, and a per-request store would cost more than the measurement is
-  // worth. The proportionate answer is a rate limit at the edge, which is a zone setting and not a
-  // line of this file - so it is written here rather than solved badly in code. Nothing published
-  // claims these counts are trustworthy, and nothing should until that rule exists.
+  // worth. So the bound is at the edge and not in this file: a zone rate limiting rule, «Limit
+  // funnel beacon», 20 requests per 10 seconds per IP on this path, Block. Measured on the deployed
+  // zone with 25 requests - 405 up to the 21st, then 429, then 405 again as the window slid.
+  //
+  // What that rule does *not* do, said here because a defence is read as more than it is: it does
+  // not authenticate anything, and somebody patient enough to stay under the rate can still add
+  // points. It makes flooding bounded and costly instead of free and instant. Nothing published
+  // claims these counts are trustworthy, and nothing should.
   let body;
   try { body = await request.json(); } catch (_) { return reply(400); }
   const event = String((body && body.event) || '');

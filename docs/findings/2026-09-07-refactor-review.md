@@ -46,14 +46,24 @@ the wiring lives. Both are printed now.
 **A list of files maintained by hand is a list that goes stale.** `matrix.py` had 23 shipped scripts
 in no surface, 12 created in one refactor. Derived from the directory now, in both directions.
 
-## Stated, not solved
+## Stated, then bounded where it belongs
 
 `/api/funnel` is the only unauthenticated write on the site. An `Origin` header is set by the browser
 and forged by anything else, so a stranger can add points to a billed dataset and skew what
 `tools/funnel.py` prints. `/api/report` can afford Turnstile and a counter because it runs when
 somebody presses a button; this runs on every page view, and a per-request store would cost more than
-the measurement is worth. The proportionate answer is a rate limit at the edge - a zone setting, not
-a line of code - so it is written in the function rather than solved badly in it.
+the measurement is worth. The proportionate answer was a rate limit at the edge - a zone setting, not
+a line of code - so it was written in the function rather than solved badly in it, and it now exists:
+«Limit funnel beacon», 20 requests per 10 seconds per IP, Block. One page view sends exactly one
+beacon, so the threshold is four times the fastest real reader and nothing to a script.
+
+Two things about it are worth keeping. **A defence is verified against the deployed thing, not
+against the form that created it**: 25 requests to the live zone answered 405 up to the 21st, then
+429, then 405 again as the window slid - the refusal and the recovery both read, in one run. And the
+rule was expressed on the path alone rather than on `POST /api/funnel`, so that proof could be made
+with requests the Worker rejects before writing: **a gate nobody can exercise without causing the
+harm it prevents is a gate that will be believed rather than checked.** What it does not do is in the
+function beside it - it bounds flooding, it does not authenticate, and a patient drip stays under it.
 
 ## Measured, then not done
 
