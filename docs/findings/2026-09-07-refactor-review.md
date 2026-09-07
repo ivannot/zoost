@@ -59,8 +59,10 @@ the harm it prevents is a gate that will be believed rather than checked.**
 
 Then the author asked what the counter was for, and there was no answer. It measured whether visitors
 reached `/try`; no decision depended on that, the credential to read the counts had never been
-configured on any machine, and in the day it ran nobody had looked. It is gone - the beacon, the
-endpoint, the reader, the policy paragraph, and the reason the rule existed.
+configured on the machine the work happens on, and in the day it ran nobody had looked. It is gone -
+the beacon, the endpoint, the reader, the policy paragraph, and, deleted from the zone by the author
+the same afternoon, the rule itself. **The site now measures nothing**, and no configuration of it
+lives outside this repository.
 
 The rule this leaves is not about rate limits. **A defence is worth exactly what it defends, so the
 first question about one is what the thing behind it is for** - asked here after the limit, the
