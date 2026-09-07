@@ -637,7 +637,8 @@ test('the trace appears when the panel writes, and not before', () => {
 function reportEndpoint({ get = async () => '0', put = async () => {}, turnstile = true } = {}) {
   const calls = { github: 0 };
   const ctx = {
-    console, crypto, URL, URLSearchParams, Response, TextEncoder, JSON,
+    console, crypto, URL, URLSearchParams, Response, TextEncoder, TextDecoder, Uint8Array,
+    Number, String, JSON,
     REPORT_REPO: 'x/y', REPORT_MAX: 8000, REPORT_SAYS_MAX: 2000, REPORT_PER_IP_PER_DAY: 5,
     reportRedact: (t) => String(t), reportFence: (t) => t,
     reportRateKey: async () => 'rl:test',
@@ -650,14 +651,16 @@ function reportEndpoint({ get = async () => '0', put = async () => {}, turnstile
   vm.createContext(ctx);
   // `report` awaits through `settled` now - the two `.then((r) => r.json())` chains it used to
   // carry were continuations written at the call site, which the race check cannot enter.
-  vm.runInContext([sliceFn('site/_worker.js', 'settled'),
+  vm.runInContext([sliceConst('site/_worker.js', 'REPORT_BODY_MAX'),
+                   sliceFn('site/_worker.js', 'readBodyToLimit'),
+                   sliceFn('site/_worker.js', 'settled'),
                    sliceFn('site/_worker.js', 'report')].join('\n'), ctx);
-  const request = {
-    method: 'POST',
-    url: 'https://zoost.it/api/report',
-    headers: { get: (h) => (h === 'origin' ? 'https://zoost.it' : '') },
-    json: async () => ({ report: 'Zoost 1.0 · x\nwhat happened\n  boom', says: '', token: 't' }),
-  };
+  // A real `Request`, for the reason the funnel harness states: the ceiling is on the body, and a
+  // stub with a `json()` never has one.
+  const request = new Request('https://zoost.it/api/report', {
+    method: 'POST', headers: { origin: 'https://zoost.it' },
+    body: JSON.stringify({ report: 'Zoost 1.0 · x\nwhat happened\n  boom', says: '', token: 't' }),
+  });
   return { run: () => vm.runInContext('report', ctx)(request, { STATUS: { get, put }, TURNSTILE_SECRET: 's', GH_TOKEN: 'g' }), calls };
 }
 
@@ -714,14 +717,17 @@ function funnelEndpoint(body, origin = 'https://zoost.it') {
   const ctx = load([
     sliceConst('site/_worker.js', 'FUNNEL_EVENTS'),
     sliceConst('site/_worker.js', 'FUNNEL_PAGES'),
+    sliceConst('site/_worker.js', 'FUNNEL_BODY_MAX'),
+    sliceFn('site/_worker.js', 'readBodyToLimit'),
     sliceFn('site/_worker.js', 'funnel'),
-  ], { Set, Response, URL, JSON });
-  const request = {
-    method: 'POST', url: 'https://zoost.it/api/funnel',
-    headers: { get: (h) => ({ origin, 'content-length': '90',
-      'cf-connecting-ip': '192.0.2.4', 'user-agent': 'Private Browser' }[h] || '') },
-    json: async () => body,
-  };
+  ], { Set, Response, URL, JSON, TextDecoder, Uint8Array, Number, String });
+  // A real `Request`, because the ceiling lives on the body: a stub answering `json()` with an
+  // object steps straight over the thing being tested, and that is how these cases went on passing
+  // while the endpoint decoded whatever arrived.
+  const request = new Request('https://zoost.it/api/funnel', {
+    method: 'POST', body: JSON.stringify(body),
+    headers: { origin, 'cf-connecting-ip': '192.0.2.4', 'user-agent': 'Private Browser' },
+  });
   const env = { METRICS: { writeDataPoint: (p) => points.push(p) } };
   return { run: () => ctx.funnel(request, env), points };
 }
@@ -1566,3 +1572,113 @@ test('a report the server refused says why, and offers Send again', async () => 
   assert.match(p.msg(), /the check did not pass/, `the reason was not shown: ${p.msg()}`);
   assert.equal(p.sendEnabled(), true, 'Send stayed disabled, so the reader cannot try again');
 });
+
+// ---------------------------------------------------------------------------------------------
+// **The size of what a stranger sends was decided by the stranger.** Both public endpoints called
+// `request.json()` and applied their limits to the result: `/api/funnel` decoded a 5 MB body before
+// looking at a field, and `/api/report` decoded one before reaching its 8 KB rule and its captcha -
+// so the outbound Turnstile call was made for it too. About 10 MB of heap per request, each, for
+// free. Reported from outside, measured on the shipped functions with real `Request` objects, and
+// held here the same way: nothing is asserted about the source, everything about what the function
+// does when a body arrives.
+//
+// The rate limiting rule at the edge cannot cover this - it bounds how many requests arrive, not how
+// big one is - and neither can a captcha that runs after the parse.
+{
+  const publicApi = (names) => load([
+    sliceFn('site/_worker.js', 'readBodyToLimit'),
+    sliceConst('site/_worker.js', 'FUNNEL_BODY_MAX'),
+    sliceConst('site/_worker.js', 'REPORT_BODY_MAX'),
+    sliceConst('site/_worker.js', 'FUNNEL_EVENTS'),
+    sliceConst('site/_worker.js', 'FUNNEL_PAGES'),
+    ...names.map((n) => sliceFn('site/_worker.js', n)),
+  ], { URL, Response, TextDecoder, Uint8Array, Set, JSON, Number, String, RegExp, Promise, Error });
+
+  // A body that is produced only as it is pulled, so the test can say how much of it was ever read.
+  // A string body would prove the answer and not the cost, which is the whole of this defect.
+  const streamed = (bytes, pulled) => {
+    const chunk = new Uint8Array(64 * 1024).fill(0x20);
+    let sent = 0;
+    // `highWaterMark: 0`, or the stream fills its own queue on construction and a byte counted here
+    // would say «read» about a chunk nobody asked for - which would make «it never touched the body»
+    // impossible to assert at all.
+    return new ReadableStream({
+      pull(controller) {
+        if (sent >= bytes) { controller.close(); return; }
+        sent += chunk.byteLength; pulled.n += chunk.byteLength;
+        controller.enqueue(chunk);
+      },
+    }, new CountQueuingStrategy({ highWaterMark: 0 }));
+  };
+  const posted = (path, body, extra = {}) => new Request('https://zoost.it' + path, {
+    method: 'POST', headers: { origin: 'https://zoost.it', 'content-type': 'application/json' },
+    body, ...(body instanceof ReadableStream ? { duplex: 'half' } : {}), ...extra,
+  });
+
+  test('/api/funnel refuses a body past its ceiling without reading or parsing it', async () => {
+    const { funnel } = publicApi(['funnel']);
+    const pulled = { n: 0 };
+    const written = [];
+    const env = { METRICS: { writeDataPoint: (p) => written.push(p) } };
+    const response = await funnel(posted('/api/funnel', streamed(5 * 1024 * 1024, pulled)), env);
+    assert.equal(response.status, 413, 'an oversized beacon was accepted');
+    assert.deepEqual(written, [], 'a refused beacon still wrote a point to the billed dataset');
+    // The point of the whole change: it stopped pulling. A ceiling applied after the read would
+    // leave this at five megabytes and the status code would look identical.
+    assert.ok(pulled.n <= 256 * 1024, `it read ${pulled.n} bytes of a body it was going to refuse`);
+  });
+
+  test('/api/funnel still records an ordinary beacon', async () => {
+    const { funnel } = publicApi(['funnel']);
+    const written = [];
+    const env = { METRICS: { writeDataPoint: (p) => written.push(p) } };
+    const body = JSON.stringify({ event: 'view_crm', page: '/crm', lang: 'en' });
+    const response = await funnel(posted('/api/funnel', body), env);
+    assert.equal(response.status, 204, 'a real page view was refused');
+    assert.equal(written.length, 1, 'the beacon was accepted and counted nowhere');
+  });
+
+  test('/api/report refuses a body past its ceiling before it can reach Turnstile', async () => {
+    const { report } = publicApi(['report']);
+    const pulled = { n: 0 };
+    let fetched = 0;
+    const env = { TURNSTILE_SECRET: 's', GH_TOKEN: 't', fetch: () => { fetched += 1; } };
+    const response = await report(posted('/api/report', streamed(5 * 1024 * 1024, pulled)), env);
+    assert.equal(response.status, 413, 'an oversized report was accepted');
+    assert.equal(fetched, 0, 'the captcha was asked about a request that should never have been read');
+    assert.ok(pulled.n <= 256 * 1024, `it read ${pulled.n} bytes of a body it was going to refuse`);
+  });
+
+  // The header is the free half of the answer and is checked first. It cannot be driven through a
+  // real `Request`: a body given as a stream has no `content-length` and the runtime will not let one
+  // be attached, which is itself the reason the stream is counted rather than trusted. So the two
+  // parts the function actually reads - a `Headers` and a `ReadableStream` - are handed to it
+  // directly, and what is asserted is that the body was never pulled.
+  test('a declared content-length over the ceiling is refused without touching the body', async () => {
+    const { readBodyToLimit, FUNNEL_BODY_MAX } = publicApi([]);
+    const pulled = { n: 0 };
+    const request = {
+      headers: new Headers({ 'content-length': String(5 * 1024 * 1024) }),
+      body: streamed(5 * 1024 * 1024, pulled),
+    };
+    assert.equal(await readBodyToLimit(request, FUNNEL_BODY_MAX), null, 'a declared oversize body was read');
+    assert.equal(pulled.n, 0, 'the free answer in the header was not used');
+  });
+
+  // And the other half, which is why the header is not trusted: nothing declared, five megabytes
+  // arriving. A ceiling that believed the header would let this through.
+  test('a body with no declared length is still stopped at the ceiling', async () => {
+    const { readBodyToLimit, FUNNEL_BODY_MAX } = publicApi([]);
+    const pulled = { n: 0 };
+    const request = { headers: new Headers(), body: streamed(5 * 1024 * 1024, pulled) };
+    assert.equal(await readBodyToLimit(request, FUNNEL_BODY_MAX), null, 'an undeclared oversize body was read whole');
+    assert.ok(pulled.n <= 256 * 1024, `it read ${pulled.n} bytes before stopping`);
+  });
+
+  test('a body inside the ceiling comes back whole', async () => {
+    const { readBodyToLimit, REPORT_BODY_MAX } = publicApi([]);
+    const body = JSON.stringify({ report: 'Zoost report\nversion 1.49.0' });
+    assert.equal(await readBodyToLimit(posted('/api/report', body), REPORT_BODY_MAX), body,
+      'an ordinary body was truncated or refused');
+  });
+}

@@ -13,7 +13,7 @@
   <div class="wsbar wsbar2">
     <select id="ws" title="Workspaces found inside the working folder"></select>
     <button id="wsadd" title="Create a workspace for the org in the active Zoho tab">+ Workspace</button><button id="wssample" title="Open or write a sample workspace of invented data - nothing is fetched">Sample</button>
-    <button id="overview" class="pbtn icon" disabled title="Workspace overview - local coverage and shortcuts" aria-label="Workspace overview"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx=".8"/><rect x="9.5" y="1.5" width="5" height="5" rx=".8"/><rect x="1.5" y="9.5" width="5" height="5" rx=".8"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/></svg></button><button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
+    <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
   </div>
   <div id="ctx" class="unbound">
     <span class="dot"></span><span class="who" id="who">No Zoho CRM tab detected</span><span class="bound" id="bound"></span>
@@ -48,6 +48,7 @@
   <div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button><button id="mmgo"></button></div></div>
   <div class="genbar">
     <fieldset class="wsgroup">
+      <button id="overview" class="pbtn icon" disabled title="Workspace overview - local coverage and shortcuts" aria-label="Workspace overview"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx=".8"/><rect x="9.5" y="1.5" width="5" height="5" rx=".8"/><rect x="1.5" y="9.5" width="5" height="5" rx=".8"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/></svg></button>
       <button id="pull" class="zbtn icon" disabled title="Pull all - functions, modules, workflows and schedules" aria-label="Pull all"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg></button>
       <span class="expgroup"><span class="explabel">export</span>
         <button id="export" class="lbtn" disabled aria-label="Export HTML" title="Self-contained HTML report of this workspace">HTML</button>

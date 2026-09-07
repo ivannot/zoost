@@ -14,6 +14,15 @@
 <div class="wsbar wsbar2">
   <select id="ws" title="Workspaces found inside the working folder"></select>
   <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button><button id="wssample" title="Open or write a sample workspace of invented data - nothing is fetched">Sample</button>
+  <!-- **Not in `.wsgroup`, unlike the CRM's, and not by preference.** It belongs there - it opens a
+       view that owns the panel, which is what Health, AI and History do, and the stylesheet's
+       `body.overview-open .wsgroup > button:not(#overview)` has always assumed it. This row carries
+       two controls the CRM keeps elsewhere - Refresh, and Retry when a pull failed - so with the
+       History control on screen the group has no room left at the panel's minimum width. The probe
+       cannot settle it either way: it narrows the body inside a 1280px window, so the `vw` in the
+       row's gap resolves against the window and its number is ~24px pessimistic, and Chrome refuses
+       a viewport under 500px, so the real width cannot be measured from here at all. Moving it means
+       this row loses something first, which is a decision about this panel. -->
   <button id="overview" class="pbtn icon" disabled title="Workspace overview - local coverage and shortcuts" aria-label="Workspace overview"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx=".8"/><rect x="9.5" y="1.5" width="5" height="5" rx=".8"/><rect x="1.5" y="9.5" width="5" height="5" rx=".8"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/></svg></button><button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
 </div>
 

@@ -180,6 +180,14 @@ CRM = """
     // the row sideways - a control that is one drag off-screen is a control most people never find.
     // Measured: 335px of content in a 322px row before the separators and the export group were
     // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
+    //
+    // **What this number is not.** The body is narrowed inside a window that stays 1280px wide, so
+    // every `vw` in the stylesheet is still resolved against 1280 - and the row's own gap is
+    // `clamp(3px, 1.4vw, 8px)`, which lands on 8px here and on about 4.5px in a real 322px panel.
+    // Across seven gaps that is ~24px this check counts and the product does not: **it overstates,
+    // so a pass is trustworthy and a narrow failure is not.** The window cannot simply be made
+    // narrower to fix it - Chrome refuses a viewport below 500px, measured. Anything failing by less
+    // than ~25px has to be decided some other way.
     const wide = document.body.style.width;
     document.body.style.width = '340px'; await settle('the panel never finished reflowing');
     const grp = document.querySelector('.wsgroup');
@@ -1035,6 +1043,14 @@ AN = """
     // the row sideways - a control that is one drag off-screen is a control most people never find.
     // Measured: 335px of content in a 322px row before the separators and the export group were
     // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
+    //
+    // **What this number is not.** The body is narrowed inside a window that stays 1280px wide, so
+    // every `vw` in the stylesheet is still resolved against 1280 - and the row's own gap is
+    // `clamp(3px, 1.4vw, 8px)`, which lands on 8px here and on about 4.5px in a real 322px panel.
+    // Across seven gaps that is ~24px this check counts and the product does not: **it overstates,
+    // so a pass is trustworthy and a narrow failure is not.** The window cannot simply be made
+    // narrower to fix it - Chrome refuses a viewport below 500px, measured. Anything failing by less
+    // than ~25px has to be decided some other way.
     const wide = document.body.style.width;
     document.body.style.width = '340px'; await settle('the panel never finished reflowing');
     const grp = document.querySelector('.wsgroup');

@@ -495,6 +495,49 @@ async function ahead(request, env, ctx) {
 // two redirects to reach one page — and it is the same confusion between a file's path and its URL
 // that made every canonical on this site point at a redirect.
 // ---------------------------------------------------------------------------------------------
+// **A body is read to a ceiling, never parsed and then measured.**
+//
+// Both public endpoints called `request.json()` first and applied their limits to what came back, so
+// the size of what a stranger sent was decided by the stranger: a 5 MB JSON was decoded in full
+// before `/api/funnel` looked at a single field, and before `/api/report` reached its 8 KB rule and
+// its captcha - which means the outbound Turnstile call was made for it too. Measured that way by an
+// outside reader, on the shipped functions, with real `Request` objects: about 10 MB of heap per
+// request, on both. Nothing leaked and nothing was written that should not have been; what it costs
+// is memory and CPU, per request, for free.
+//
+// The rate limiting rule at the edge does not help here. It bounds how many requests arrive, not how
+// large one is, and neither does Turnstile, which runs after the parse it was supposed to protect.
+//
+// `content-length` is checked first because it is free, and then **ignored**: the header can be
+// absent on a chunked body and it can lie, so the stream is read with a running total and abandoned
+// the moment it passes the ceiling. `null` means «over the limit» and the caller answers 413 without
+// parsing anything.
+async function readBodyToLimit(request, limit) {
+  const declared = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > limit) return null;
+  if (!request.body) return '';
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) { try { await reader.cancel(); } catch (_) {} return null; }
+    chunks.push(value);
+  }
+  const whole = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) { whole.set(chunk, at); at += chunk.byteLength; }
+  return new TextDecoder().decode(whole);
+}
+// What each endpoint can legitimately receive, with the room its own fields already state.
+// A beacon is `{"event":…,"page":…,"lang":"it"}` - about sixty bytes, and 1 KiB is already generous.
+// A report is at most REPORT_MAX of text plus REPORT_SAYS_MAX of the reader's own words plus a
+// Turnstile token, so 16 KiB leaves headroom without inventing a second, larger limit.
+const FUNNEL_BODY_MAX = 1024;
+const REPORT_BODY_MAX = 16384;
+
 // /api/report - the one endpoint on this site that *writes* anywhere.
 //
 // It turns a report the reader has already seen twice into a public issue on the Zoost repository.
@@ -573,8 +616,10 @@ async function funnel(request, env) {
   // not authenticate anything, and somebody patient enough to stay under the rate can still add
   // points. It makes flooding bounded and costly instead of free and instant. Nothing published
   // claims these counts are trustworthy, and nothing should.
+  const raw = await readBodyToLimit(request, FUNNEL_BODY_MAX);
+  if (raw === null) return reply(413);
   let body;
-  try { body = await request.json(); } catch (_) { return reply(400); }
+  try { body = JSON.parse(raw); } catch (_) { return reply(400); }
   const event = String((body && body.event) || '');
   const page = String((body && body.page) || '').replace(/\/+$/, '') || '/';
   const lang = String((body && body.lang) || '').slice(0, 2);
@@ -614,8 +659,10 @@ async function report(request, env) {
     return bad(503, 'Reporting is not configured on this server. Please open an issue by hand, or email ivan@zoost.it.');
   }
 
+  const raw = await readBodyToLimit(request, REPORT_BODY_MAX);
+  if (raw === null) return bad(413, 'That is larger than a panel report - please open an issue by hand.');
   let body;
-  try { body = await request.json(); } catch (_) { return bad(400, 'Malformed request.'); }
+  try { body = JSON.parse(raw); } catch (_) { return bad(400, 'Malformed request.'); }
   const text = String((body && body.report) || '');
   const says = String((body && body.says) || '').slice(0, REPORT_SAYS_MAX);
   const token = String((body && body.token) || '');
