@@ -56,6 +56,8 @@
 #
 # What it cannot see is in the docstring: an arrow-function body, including the onChanged handler
 # where both panels rewrite the folder handle after an await.
+apps/analytics/ai.js	aiExecTool	o
+apps/analytics/export.js	loadScope	expScope
 apps/analytics/graphview.js	init	DATA
 apps/analytics/graphview.js	init	N
 apps/analytics/graphview.js	init	curFocus
@@ -69,7 +71,6 @@ apps/analytics/options.js	onAiengine	prevEngine
 apps/analytics/options.js	saveAi	aiPassChanging
 apps/analytics/options.js	saveKeys	dirty
 apps/analytics/options.js	saveKeys	ownWrite
-apps/analytics/sidepanel.js	aiExecTool	o
 apps/analytics/sidepanel.js	analyticsFrameId	_afCandidates
 apps/analytics/sidepanel.js	analyticsFrameId	_afFrame
 apps/analytics/sidepanel.js	createSampleWorkspace	sampleBusy
@@ -88,7 +89,6 @@ apps/analytics/sidepanel.js	ensureBridge	_afFrame
 apps/analytics/sidepanel.js	grantRoot	rootGranted
 apps/analytics/sidepanel.js	listWorkspaces	rootGranted
 apps/analytics/sidepanel.js	loadFromDisk	viewsPulledAt
-apps/analytics/sidepanel.js	loadScope	expScope
 apps/analytics/sidepanel.js	pickRoot	root
 apps/analytics/sidepanel.js	pickRoot	rootGranted
 apps/analytics/sidepanel.js	readRememberedSample	sampleWsKnown

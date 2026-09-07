@@ -12,29 +12,39 @@ import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read, blankNonCode, ROOT, handlerOf } from './slice.mjs';
 import { readdirSync, existsSync } from 'node:fs';
 
-// The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
-// so a test about «the panel» reads them as the page composes them. Analytics is still one file.
-// The page's files, in load order, read once - not per call: 50 call sites each concatenating
+// Both panels are composed from classic scripts in one shared scope. A test about "the panel" reads
+// them as the page composes them. The page's files, in load order, are read once - not per call:
+// 50 call sites each concatenating
 // 700KB is real memory, and a blanket replace once made this function call itself (OOM, not probe,
 // caught it - the mechanical-replace trap, fourth time in this repository's records).
-let _crmPanelText = null;
-const crmPanel = () => (_crmPanelText ??= CRM_FILES.map(read).join('\n'));
-// Where an assistant function lives, per app: the CRM's moved to ai.js with the split.
-const aiFile = (app) => (app === 'crm' ? `apps/${app}/ai.js` : `apps/${app}/sidepanel.js`);
+const _panelText = {};
+const appPanel = (app) => (_panelText[app] ??= APP_FILES[app].map(read).join('\n'));
+const crmPanel = () => appPanel('crm');
+// Markup and stylesheet are one rendered page even though they live in separate files. Tests about
+// either read the composed subject, while APP_FILES below still derives script order from the HTML.
+const panelPage = (app) => read(`apps/${app}/sidepanel.html`) + '\n' + read(`apps/${app}/sidepanel.css`);
+const aiFile = (app) => `apps/${app}/ai.js`;
 // A slice by name, wherever the split put it: tries the app's files in page order and keeps
 // sliceFn's own guarantee - a name found nowhere still throws, so cover cannot vanish silently.
 // Derived from the page, in its load order: four manual copies of this list existed (here, the two
 // composition maps in the Python checkers, keyvault.test) and a slice added to the HTML could have
 // shipped without entering any of them. The HTML is what Chrome loads, so it is the one authority.
-const CRM_FILES = [...read('apps/crm/sidepanel.html').matchAll(/<script\s+src="([^"]+\.js)"><\/script>/g)]
-  .map((m) => `apps/crm/${m[1]}`)
-  // The page also loads the shared libraries (keyvault, sample-org, the graph engine…), each with
-  // its own tests and its own message tables - «the panel» for these checks is its slices.
-  .filter((f) => !/(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$/.test(f));
+const APP_FILES = Object.fromEntries(['crm', 'analytics'].map((app) => [app,
+  [...read(`apps/${app}/sidepanel.html`).matchAll(/<script\s+src="([^"]+\.js)"><\/script>/g)]
+    .map((m) => `apps/${app}/${m[1]}`)
+    // Shared libraries have their own tests and message tables; "the panel" means its app slices.
+    .filter((f) => !/(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs|reportshell)\.js$/.test(f)),
+]));
+const CRM_FILES = APP_FILES.crm;
 function sliceApp(app, name) {
-  const files = app === 'crm' ? CRM_FILES : [`apps/${app}/sidepanel.js`];
+  const files = APP_FILES[app];
   let lastErr;
   for (const f of files) { try { return sliceFn(f, name); } catch (e) { lastErr = e; } }
+  throw lastErr;
+}
+function sliceAppConst(app, name) {
+  let lastErr;
+  for (const f of APP_FILES[app]) { try { return sliceConst(f, name); } catch (e) { lastErr = e; } }
   throw lastErr;
 }
 
@@ -334,8 +344,8 @@ test('analytics: the list model distinguishes filters, searches and missing sort
   assert.equal(model.selectAnalyticsViews(rows, { ...base, search: { text: 'revenue', mode: 'name' },
     schema: { b: { columns: [{ name: 'Revenue' }] } } }).map((view) => view.id).join(','), 'b');
 
-  const searchFns = load([sliceFn('apps/analytics/sidepanel.js', 'rxCompile'),
-    sliceFn('apps/analytics/sidepanel.js', 'sqlHit')], { RegExp, String });
+  const searchFns = load([sliceApp('analytics', 'rxCompile'),
+    sliceApp('analytics', 'sqlHit')], { RegExp, String });
   const sqlOptions = { ...base, search: { text: '^select', mode: 'sql', regex: true },
     sqlCache: new Map([['b', 'select * from T']]), compileRegex: searchFns.rxCompile,
     sqlMatches: searchFns.sqlHit };
@@ -759,7 +769,7 @@ test('crm: a module has three detail tabs, and a function has two or three', () 
   // gets two tabs, a compiled project gets three. The condition is asserted in the case below.
   assert.deepEqual(Object.keys(kinds.function.panes), ['code', 'files', 'info']);
   // Each pane names elements that exist in the markup, or a tab leads nowhere.
-  const html = read('apps/crm/sidepanel.html');
+  const html = panelPage('crm');
   const rendered = read('apps/crm/modules.js');
   for (const panes of Object.values(kinds.module.panes)) {
     for (const [id] of panes) {
@@ -863,7 +873,7 @@ test('crm: no container may style away the inertness by id', () => {
   // panel's own stylesheet for id-scoped anchor rules that set a pointer or a hover, and requires the
   // swap to exist rather than requiring each container to be polite - there were two such rules and a
   // third would have re-broken it silently.
-  const css = read('apps/crm/sidepanel.html');
+  const css = panelPage('crm');
   const bossy = (css.match(/#\w+ a(?:\.[\w-]+)*(?::hover)?\s*\{[^}]*\}/g) || [])
     .filter((r) => /cursor:\s*pointer|:hover/.test(r));
   assert.ok(bossy.length > 0, 'the premise moved: no id-scoped anchor rules left, re-read this case');
@@ -1048,7 +1058,7 @@ test('crm: a customer record id is not captured at the boundary', () => {
 });
 
 test('both panels: the unlock passphrase does not stay in the DOM', () => {
-  for (const rel of ['apps/crm/ai.js', 'apps/analytics/sidepanel.js']) {
+  for (const rel of ['apps/crm/ai.js', 'apps/analytics/ai.js']) {
     const src = read(rel);
     const at = src.indexOf('KEYVAULT.remember(prov, key)');
     assert.ok(at > 0, `${rel}: the unlock path moved`);
@@ -1071,7 +1081,7 @@ test('both panels: the unlock passphrase does not stay in the DOM', () => {
 // workspace, whatever is in the message.
 
 test('analytics: only the tab-scoped workspaceInfo is exempt from the mismatch guard', () => {
-  const src = read('apps/analytics/sidepanel.js');
+  const src = appPanel('analytics');
   const marked = [...src.matchAll(/toBridge\(\{([^}]*aboutTab[^}]*)\}/g)].map((m) => m[1]);
   assert.equal(marked.length, 1, `aboutTab is used ${marked.length} times - it is meant to be one`);
   assert.match(marked[0], /cmd:\s*'workspaceInfo'/, 'aboutTab marks something other than workspaceInfo');
@@ -1094,7 +1104,7 @@ test('analytics: a workspace it has just created is the one it selects', () => {
   // refreshWorkspaces() picks the remembered workspace, and the remembered one was still the one you
   // were in - so «Create workspace for X» created X and put you back, mismatch bar and all. The CRM
   // twin has always remembered it first.
-  const fn = sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForContext');
+  const fn = sliceApp('analytics', 'createWorkspaceForContext');
   // The permission-restoration branch now refreshes before it decides whether a workspace exists.
   // This assertion is about the newly-created workspace, so start at the write that creates it;
   // a refresh belonging to the neighbouring subject must not satisfy or fail this one.
@@ -1155,7 +1165,7 @@ test('the CRM says it is rebuilding the list after the last area', () => {
 });
 
 test('Analytics counts the SQL files it writes, and says so before the first one', () => {
-  const src = read('apps/analytics/sidepanel.js');
+  const src = appPanel('analytics');
   const body = src.slice(src.indexOf('async function writeToDisk'));
   assert.ok(body.indexOf('Writing the mirror') < body.indexOf("op.write(PULL_STATE"),
     'the disk stage must be announced before it starts, not once it is over');
@@ -1714,8 +1724,8 @@ test('nothing rebuilds the label of a button whose label is a mark', () => {
   const marked = ['pull', 'pullone', 'healthpull', 'graph', 'dpull', 'dgraph'];
   const findings = [];
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
-    const html = read(`apps/${app}/sidepanel.html`);
+    const src = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
+    const html = panelPage(app);
     for (const id of marked) {
       if (!html.includes(`id="${id}"`)) continue;
       const isMark = new RegExp(`id="${id}"[^>]*>\\s*<svg`).test(html);
@@ -1733,7 +1743,7 @@ test('nothing rebuilds the label of a button whose label is a mark', () => {
 
 test('every marked button carries a name and a tooltip', () => {
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/sidepanel.html`);
+    const html = panelPage(app);
     for (const m of html.matchAll(/<button([^>]*)>\s*<svg class="mk"/g)) {
       const attrs = m[1];
       const id = (attrs.match(/id="([^"]+)"/) || [])[1] || '?';
@@ -1905,7 +1915,7 @@ test('the export box is never faded with opacity, and the bar is never outlined'
   // decoration and he said so - the faded controls and the lit-up button already say which mode you
   // are in, and an outline around everything says it a third time.
   for (const app of ['crm', 'analytics']) {
-    const css = read(`apps/${app}/sidepanel.html`);
+    const css = panelPage(app);
     for (const m of css.matchAll(/^ *([^\n{]*\.expgroup[^\n{]*)\{([^}]*)\}/gm)) {
       // the *subject* of the selector, not any mention: `.expgroup button{opacity:.32}` is how the
       // box is meant to dim, and the first version of this test flagged it.
@@ -1922,7 +1932,7 @@ test('the export buttons say they export, not just which file they write', () =>
   // HTML and MD name a format. The legend says what pressing them does, for anyone looking; the
   // aria-label has to say it for anyone not.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/sidepanel.html`);
+    const html = panelPage(app);
     for (const [id, name] of [['export', 'Export HTML'], ['exportmd', 'Export Markdown']]) {
       // No `#` in an assertion message: it opens a comment in TAP, so `#exportmd` truncated the
       // failure to "analytics: " and said nothing. Second unreadable failure in two days, different
@@ -2028,7 +2038,7 @@ test('the workspace bar carries the name the user gave it, next to the platform\
             'the graph stopped carrying its workspace');
   const pubs = (js.match(/await publishGraph\(/g) || []).length;
   assert.ok(pubs >= 4, `only ${pubs} publishes go through the stamped path`);
-  const an = read('apps/analytics/sidepanel.js');
+  const an = appPanel('analytics');
   const aw = [...an.matchAll(/workspace: \{[^}]*\}/g)].map((m) => m[0]).filter((x) => /instance:/.test(x));
   assert.ok(aw.length >= 1, 'id=analytics the graph stopped carrying its workspace');
   for (const one of aw) assert.ok(/label:/.test(one), `id=analytics a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
@@ -2647,7 +2657,7 @@ test('the refused mark is neutral, and not one the panel uses for "try again"', 
   assert.ok(/ref \? '\\u2298'/.test(row), 'the refused row no longer carries its own glyph');
   assert.ok(!/ref \? '\\u27f3'|ref \? '\\u25cb'|ref \? '\\u25d0'/.test(row), 'it borrowed a mark that means something else');
   assert.ok(/ref \? 'st-none'/.test(row), 'the refused row is not neutral');
-  const css = read('apps/crm/sidepanel.html');
+  const css = panelPage('crm');
   assert.ok(/\.st-none\{color:var\(--muted\)\}/.test(css), 'st-none must be legible, not the dim "not here yet" grey');
   assert.ok(!/\.f \.rest\.rx\{[^}]*var\(--warn\)/.test(css), 'the chip still calls for attention');
 });
@@ -2686,7 +2696,7 @@ test('the empty state is written in one place, not two', () => {
   // same sentence. Fixing the one in the code changed nothing on screen, because the markup copy is
   // what is there at startup — refreshWorkspaces returns early when the folder is not granted and
   // never redraws. The CRM's tree has always been empty in the markup for exactly this reason.
-  const html = read('apps/analytics/sidepanel.html');
+  const html = panelPage('analytics');
   const list = html.slice(html.indexOf('<div id="list"'), html.indexOf('</div>', html.indexOf('<div id="list"')) + 6);
   assert.doesNotMatch(list, /Nothing pulled|Pull all|working folder/,
     'the list carries an empty state in the markup, which the code cannot keep true');
@@ -2694,7 +2704,7 @@ test('the empty state is written in one place, not two', () => {
 
 test('every early return still redraws the list', () => {
   // Otherwise the reason on screen is whichever one was true last.
-  const src = read('apps/analytics/sidepanel.js');
+  const src = appPanel('analytics');
   const fn = src.slice(src.indexOf('async function refreshWorkspaces'), src.indexOf('\n}', src.indexOf('async function refreshWorkspaces')));
   const earlies = [...fn.matchAll(/return updateButtons\(\);/g)];
   assert.ok(earlies.length >= 3, 'fewer early returns than expected — check this test still matches');
@@ -2733,7 +2743,7 @@ test('only the first b in an empty state is a heading', () => {
   // and one sentence arrived as four fragments. Reported as the message being misleading, which it
   // was — not by its words but by its shape.
   for (const app of ['crm', 'analytics']) {
-    const css = read(`apps/${app}/sidepanel.html`);
+    const css = panelPage(app);
     assert.match(css, /\.empty > b:first-child\{[^}]*display:block/, `${app}: the heading rule is gone`);
     assert.ok(!/\.empty b\{[^}]*display:block/.test(css), `${app}: every b in an empty state is a block again`);
   }
@@ -2839,8 +2849,8 @@ test("every per-kind index is <kind>/index.json, and both apps agree on the name
     assert.ok(crm.includes(`'${kind}/index.json'`), `${kind} has no ${kind}/index.json`);
   }
   // The twin: one index file, named the same way, so the two products read alike on disk.
-  assert.ok(read('apps/analytics/sidepanel.js').includes('sql/index.json'));
-  assert.ok(!read('apps/analytics/sidepanel.js').includes('sql/_index.json'));
+  assert.ok(appPanel('analytics').includes('sql/index.json'));
+  assert.ok(!appPanel('analytics').includes('sql/_index.json'));
 });
 
 test('functions are written under functions/<namespace>/, not in the workspace root', () => {
@@ -2954,11 +2964,11 @@ test('Clear and switching workspace empty the chat through the same function', (
   // workspace also drops every cache and the queue of removals still owed on disk, none of which has
   // anything to do with a conversation. The shared part is the conversation; the rest is not shared.
   for (const app of ['crm', 'analytics']) {
-    const src = app === 'crm' ? crmPanel() : read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     const clear = /function aiClear\(\)[^\n]*clearConversationState\(\);/.test(src)
                || /function aiClear\(\)[^\n]*dropWorkspaceState\(\);/.test(src);
     assert.ok(clear, `${app}: aiClear does not use the shared helper`);
-    const drop = sliceFn(`apps/${app}/sidepanel.js`, 'dropWorkspaceState');
+    const drop = sliceApp(app, 'dropWorkspaceState');
     if (/failedRemovals|Cache = null/.test(drop))
       assert.ok(/function aiClear\(\)[^\n]*clearConversationState\(\);/.test(src),
         `${app}: Clear goes through the function that also drops the caches and the removal queue`);
@@ -3256,7 +3266,7 @@ test('every element the side panel reaches for is in its own markup', () => {
   // search box of the exported HTML report.
   const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
+    const js = read(`apps/${app}/sidepanel.js`), html = panelPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
     // Comments stripped. A comment of mine quoting `$('id').title` while explaining why two titles
     // are written out rather than looped was read as a reach for an element called «id» - the third
@@ -3374,7 +3384,7 @@ test('a control that comes and goes may not move the numbers beside it', () => {
   // The layouts chevron appears only on a module with more than one, and it used to be absent
   // otherwise - so a row with several layouts was 12px wider on the right than its neighbours and
   // pushed its own field and layout counts left. Measured at 18px of drift. Reported.
-  const js = crmPanel(), css = read('apps/crm/sidepanel.html');
+  const js = crmPanel(), css = panelPage('crm');
   // Searched *after* the start, not from the top: moduleRefusal() is defined earlier in the file,
   // so a bare indexOf returned a slice that ran backwards and silently contained nothing.
   const from = js.indexOf('const multi = (m.layoutCount || 0) > 1');
@@ -3698,7 +3708,7 @@ test('the sample workspace is written by the shipped generator, and nothing abou
   // real one. No `if (demo)` branch in rendering code - that is how invented data eventually gets
   // shown as somebody's own - only `sample: true` in .zoost.json and the guard that already exists.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
+    const js = read(`apps/${app}/sidepanel.js`), html = panelPage(app);
     assert.ok(html.includes('src="sample-org.js"'), `${app}: the panel does not load the generator`);
     assert.ok(html.includes('id="wssample"'), `${app}: there is no way to ask for one`);
     assert.ok(/async function addSampleWorkspace\(\)/.test(js), `${app}: nothing writes it`);
@@ -3966,7 +3976,7 @@ test('a sample workspace states the discrepancy, and only the blocking differs',
   // switch to a Zoho org that a sample does not have.
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
-    const html = read(`apps/${app}/sidepanel.html`);
+    const html = panelPage(app);
     assert.ok(/const sampleMm = !!\(bound && (?:lastCtx|ctx)/.test(js),
       `${app}: nothing detects a sample sitting beside a real tab`);
     assert.ok(/classList\.toggle\('show', mm \|\| sampleMm\)/.test(js),
@@ -3986,7 +3996,7 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
   // account the one you could not open without one, which is the opposite of what it is for.
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
-    const html = read(`apps/${app}/sidepanel.html`);
+    const html = panelPage(app);
     assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !isSample\(\)/.test(js),
       `${app}: the off-Zoho overlay still covers a sample workspace, which owes Zoho nothing`);
     assert.ok(!/\$\('offoverlay'\)\.classList\.add\('show'\)/.test(js),
@@ -4133,11 +4143,11 @@ test('choosing the folder from + Workspace continues into the real workspace in 
     globals.pickRoot = async () => { globals.root = { name: 'Zoost' }; globals.rootGranted = true; };
     const { addWorkspace } = load([
       sliceFn('apps/analytics/workspace.js', 'runWorkspaceEntry'),
-      sliceFn('apps/analytics/sidepanel.js', 'refreshWorkspaceEntryAfterGrant'),
-      sliceFn('apps/analytics/sidepanel.js', 'openWorkspaceForContext'),
-      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForContext'),
-      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForEntry'),
-      sliceFn('apps/analytics/sidepanel.js', 'addWorkspace'),
+      sliceApp('analytics', 'refreshWorkspaceEntryAfterGrant'),
+      sliceApp('analytics', 'openWorkspaceForContext'),
+      sliceApp('analytics', 'createWorkspaceForContext'),
+      sliceApp('analytics', 'createWorkspaceForEntry'),
+      sliceApp('analytics', 'addWorkspace'),
     ], globals);
     await addWorkspace();
     assert.equal(patched.length, 1, 'analytics: the first click only asked for a working folder');
@@ -4189,11 +4199,11 @@ test('restoring folder access opens the workspace it finds instead of recreating
     };
     const { addWorkspace } = load([
       sliceFn('apps/analytics/workspace.js', 'runWorkspaceEntry'),
-      sliceFn('apps/analytics/sidepanel.js', 'refreshWorkspaceEntryAfterGrant'),
-      sliceFn('apps/analytics/sidepanel.js', 'openWorkspaceForContext'),
-      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForContext'),
-      sliceFn('apps/analytics/sidepanel.js', 'createWorkspaceForEntry'),
-      sliceFn('apps/analytics/sidepanel.js', 'addWorkspace'),
+      sliceApp('analytics', 'refreshWorkspaceEntryAfterGrant'),
+      sliceApp('analytics', 'openWorkspaceForContext'),
+      sliceApp('analytics', 'createWorkspaceForContext'),
+      sliceApp('analytics', 'createWorkspaceForEntry'),
+      sliceApp('analytics', 'addWorkspace'),
     ], globals);
     await addWorkspace();
     assert.deepEqual(opened, [existing], 'analytics: the existing workspace was recreated after re-grant');
@@ -4294,7 +4304,7 @@ test('the panel does not claim what it has not looked at, and a poll does not un
 
 // The panel as the page composes it: the CRM is ai.js + sidepanel.js since the split, and a test
 // about «the panel» must not care which file a function landed in.
-const panelBody = (app) => (app === 'crm' ? crmPanel() : read(`apps/${app}/sidepanel.js`)).replace(/^\s*\/\/.*$/gm, '');
+const panelBody = (app) => appPanel(app).replace(/^\s*\/\/.*$/gm, '');
 const countOf = (s, lit) => s.split(lit).length - 1;
 
 test('the sample refusal is written once per panel', () => {
@@ -4628,7 +4638,7 @@ test('every entry point that writes the mirror asks for the folder first', () =>
   // its five writing entry points: pullAll, pullOne and retryFailed went straight to disk. Found by
   // the twin comparison, not by a report - the CRM guarded nine places and Analytics one, and the
   // asymmetry was the signal.
-  const src = read('apps/analytics/sidepanel.js');
+  const src = appPanel('analytics');
   for (const fn of ['pullAll', 'pullOne', 'retryFailed']) {
     const at = src.indexOf(`async function ${fn}(`);
     assert.ok(at > 0, `id=${fn} is gone from the Analytics panel`);
@@ -4855,6 +4865,7 @@ test('every message named is defined, and every message defined is named', () =>
       ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
       ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
       ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
+      ['apps/analytics/sidepanel.js', 'apps/analytics/ai.js', 'apps/analytics/export.js', 'apps/analytics/health.js'],
     ];
     const group = GROUPS.find((g) => g.includes(rel));
     let src = read(rel);
@@ -5084,8 +5095,8 @@ test('every kind of health finding has a way to open it', () => {
 // as the same fact, and the panel then named the wrong missing thing: the reader is sent to pull a
 // workspace that has already been pulled, and pulling changes nothing.
 test('analytics: a workspace that cannot be read is not reported as never pulled', () => {
-  const js = read('apps/analytics/sidepanel.js');
-  const rj = sliceFn('apps/analytics/sidepanel.js', 'readJson');
+  const js = appPanel('analytics');
+  const rj = sliceApp('analytics', 'readJson');
   assert.ok(/e\.name !== 'NotFoundError'/.test(rj),
     'every failure still becomes the fallback, so unreadable and absent are one fact');
   assert.ok(/onFailure\(\{ rel/.test(rj), 'a failed read leaves nothing behind to report');
@@ -5098,7 +5109,7 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
   const click = js.slice(js.indexOf("document.addEventListener('click'"));
   assert.ok(/if \(!root \|\| rootGranted\) return;/.test(click),
     'the re-grant on click no longer depends on the verdict this now corrects');
-  const load = sliceFn('apps/analytics/sidepanel.js', 'loadFromDisk');
+  const load = sliceApp('analytics', 'loadFromDisk');
   // The four reads are one snapshot, so its failure stays in this invocation and is published with
   // the rest. A global accumulator let a config read elsewhere describe the next workspace.
   assert.ok(/let failed = null;/.test(load) && /noteFailure/.test(load),
@@ -5113,7 +5124,7 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
     'only the first unreadable file is kept, so the sentence cannot name what is actually missing');
   // Comments stripped: this asserts the order of two *branches*, and a comment above one of them
   // naming the other's sentence made it fail on a correct change. A test about code reads code.
-  const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason')
+  const why = sliceApp('analytics', 'emptyReason')
     .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.ok(why.indexOf('diskUnreadable') < why.indexOf('Nothing pulled yet'),
     'the panel blames the pull before it says the files could not be read');
@@ -5124,7 +5135,7 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
 test('analytics: only the load that observed a read failure may keep it', async () => {
   const ctx = { rootGranted: true, readFile: async () => null, JSON };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'readJson'), ctx);
+  vm.runInContext(sliceApp('analytics', 'readJson'), ctx);
   const readJson = vm.runInContext('readJson', ctx);
   const seen = [];
   const denied = new Error('denied'); denied.name = 'NotAllowedError';
@@ -5209,7 +5220,7 @@ for (const [app, fns] of [
   });
 
   test(`${app}: the mismatch is stated, not curtained off`, () => {
-    const html = read(`apps/${app}/sidepanel.html`), js = read(`apps/${app}/sidepanel.js`);
+    const html = panelPage(app), js = read(`apps/${app}/sidepanel.js`);
     assert.ok(!/mmoverlay/.test(html) && !/mmoverlay/.test(js),
       'the list is still covered, so what protects the reader is where things sit on screen');
     assert.ok(/id="mmbar"/.test(html), 'nothing says the two are different');
@@ -5318,7 +5329,7 @@ for (const app of ['crm', 'analytics']) {
   ];
 
   const { escHtml } = load([sliceConst('apps/crm/sidepanel.js', 'escHtml')]);
-  const { esc } = load([sliceConst('apps/analytics/sidepanel.js', 'esc')]);
+  const { esc } = load([sliceAppConst('analytics', 'esc')]);
 
   test('no hostile string keeps a tag open, in either product', () => {
     for (const s of HOSTILE) {
@@ -5359,7 +5370,7 @@ for (const app of ['crm', 'analytics']) {
 // whole of the matching: what a term does inside one query - how many times, and the first line it
 // is on - so the list can show where the match is instead of only that there was one.
 {
-  const { sqlHit } = load([sliceFn('apps/analytics/sidepanel.js', 'sqlHit')]);
+  const { sqlHit } = load([sliceApp('analytics', 'sqlHit')]);
   const SQL = 'SELECT a.x\nFROM "Orders" o\nJOIN "Accounts" a ON a.id = o.acc\nWHERE o.total > 0';
 
   test('a term that is not there is not a match', () => {
@@ -5406,15 +5417,15 @@ for (const app of ['crm', 'analytics']) {
 // is two search boxes that answer the same pattern differently.
 {
   const { rxCompile, markLine, sqlHit } = load([
-    sliceFn('apps/analytics/sidepanel.js', 'rxCompile'),
-    sliceFn('apps/analytics/sidepanel.js', 'markLine'),
-    sliceFn('apps/analytics/sidepanel.js', 'sqlHit'),
+    sliceApp('analytics', 'rxCompile'),
+    sliceApp('analytics', 'markLine'),
+    sliceApp('analytics', 'sqlHit'),
   ]);
   const SQL = 'SELECT a.x\nFROM "Orders" o\nJOIN "Accounts" a ON a.id = o.acc\nWHERE o.total > 0';
 
   test('the two panels carry the same helpers, byte for byte', () => {
     for (const fn of ['rxCompile', 'markLine']) {
-      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceFn('apps/analytics/sidepanel.js', fn),
+      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceApp('analytics', fn),
         'why=' + fn + ' has drifted between the twins');
     }
   });
@@ -5487,7 +5498,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('the report core is one text in both panels', () => {
     for (const fn of ['redact', 'buildReport', 'noteStep']) {
-      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceFn('apps/analytics/sidepanel.js', fn),
+      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceApp('analytics', fn),
         'why=' + fn + ' has drifted between the twins');
     }
   });
@@ -5722,7 +5733,7 @@ for (const app of ['crm', 'analytics']) {
     // gets wrong: adding a fourth and forgetting it leaves a stray control on an empty row.
     for (const app of ['crm', 'analytics']) {
       const js = read(`apps/${app}/sidepanel.js`);
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       assert.ok(html.includes('id="repdismiss"'), `why=${app} has no way to clear the row`);
       assert.ok(/\$\('repdismiss'\)\.onclick = \(\) => showEmergency\(false\);/.test(js),
         `why=${app} draws the control without wiring it`);
@@ -5746,7 +5757,7 @@ for (const app of ['crm', 'analytics']) {
     // «Send» that does not send, which is the shape of the thing that was removed.
     for (const app of ['crm', 'analytics']) {
       const js = read(`apps/${app}/sidepanel.js`);
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       for (const id of ['repdlg', 'repbody', 'repgo', 'repcancel', 'repcopy']) {
         assert.ok(!html.includes(`id="${id}"`), `why=${app} still has the dialog element ${id}`);
         assert.ok(!js.includes(`'${id}'`), `why=${app} still wires ${id}`);
@@ -5762,7 +5773,7 @@ for (const app of ['crm', 'analytics']) {
     // remembering - and a second funnel added later is the thing this would catch.
     assert.ok(/const setStatus = \(t, cls = ''\) => \{ noteStep\(t\);/.test(read('apps/crm/sidepanel.js')),
       'why=the CRM status line does not reach the report');
-    assert.ok(/function status\(text, kind\) \{ noteStep\(text\);/.test(read('apps/analytics/sidepanel.js')),
+    assert.ok(/function status\(text, kind\) \{ noteStep\(text\);/.test(appPanel('analytics')),
       'why=the Analytics status line does not reach the report');
   });
 }
@@ -5843,7 +5854,7 @@ for (const app of ['crm', 'analytics']) {
   });
 
   test('matchSpans finds every span once and steps over the empty ones', () => {
-    const { matchSpans } = load([sliceFn('apps/analytics/sidepanel.js', 'matchSpans')]);
+    const { matchSpans } = load([sliceApp('analytics', 'matchSpans')]);
     const re = /a+/gim;
     // Compared as JSON: the slice runs in its own vm realm, whose Array prototype fails strict
     // deep-equality against this one.
@@ -5854,11 +5865,11 @@ for (const app of ['crm', 'analytics']) {
 
   test('the detail painter is the same in both panels, and both pages give it its colour', () => {
     for (const fn of ['matchSpans', 'paintFindMarks']) {
-      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceFn('apps/analytics/sidepanel.js', fn),
+      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceApp('analytics', fn),
         'why=' + fn + ' has drifted between the twins');
     }
     for (const app of ['crm', 'analytics']) {
-      assert.ok(/::highlight\(zoost-find\)/.test(read(`apps/${app}/sidepanel.html`)),
+      assert.ok(/::highlight\(zoost-find\)/.test(panelPage(app)),
         'why=' + app + ' registers ranges under a name its page never styles');
     }
   });
@@ -5869,7 +5880,7 @@ for (const app of ['crm', 'analytics']) {
       'why=the CRM preview is painted on open or on search change, but not both');
     assert.ok(/openFile\(r\.path, r\.lineNo, true\)/.test(crm),
       'why=a search hit opens the file at the top instead of at its line');
-    const an = read('apps/analytics/sidepanel.js');
+    const an = appPanel('analytics');
     assert.equal((an.match(/paintFindMarks\(.*pre\.sql.*findMarkRe\(\)\)/g) || []).length, 2,
       'why=the Analytics SQL tab is painted on render or on search change, but not both');
     assert.ok(/detailTab = 'sql';\n      openDetail/.test(an),
@@ -5940,7 +5951,7 @@ for (const app of ['crm', 'analytics']) {
     // #rxmenu first landed after the <script> tags, and the top-level init crashed on
     // null.classList in setMode - found only by the render harness actually loading the page.
     for (const app of ['crm', 'analytics']) {
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       const div = html.indexOf('id="rxmenu"');
       const script = html.search(/<script src=/);
       assert.ok(div >= 0 && script >= 0 && div < script,
@@ -5978,7 +5989,7 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/searchSeq\+\+/.test(crm), 'why=nothing moves the sequence');
     assert.ok(/mine !== searchSeq \|\| !cache/.test(crm),
       'why=a stale contentSearch overwrites the newer result after its await');
-    const an = read('apps/analytics/sidepanel.js');
+    const an = appPanel('analytics');
     assert.ok(/clearTimeout\(_sqlSearchT\); _sqlSearchT = setTimeout\(render, 220\)/.test(an),
       'why=every keystroke runs the pattern over every cached query body');
     assert.ok(/compiled && compiled\.error \? \[\]/.test(read('apps/analytics/list-model.js')),
@@ -6088,7 +6099,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('both products carry the same stamp and clear their own sensitive key', () => {
     for (const [app, key] of [['crm', 'code'], ['analytics', 'sql']]) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       assert.match(src, /const SCOPE_SV = 2;/, `${app}: no version on the stored scope`);
       assert.ok(src.includes('sv !== SCOPE_SV'), `${app}: nothing checks the stamp`);
       assert.ok(src.includes(`${key} = false`), `${app}: the migration clears the wrong key`);
@@ -7161,8 +7172,8 @@ for (const app of ['crm', 'analytics']) {
       $: () => ({ querySelectorAll: () => [] }),
     };
     // `stepSelection` reveals the row it lands on, so the helper it calls comes with it.
-    const { stepSelection } = load([sliceFn('apps/analytics/sidepanel.js', 'revealRow'),
-                                    sliceFn('apps/analytics/sidepanel.js', 'stepSelection')], ctx);
+    const { stepSelection } = load([sliceApp('analytics', 'revealRow'),
+                                    sliceApp('analytics', 'stepSelection')], ctx);
     return { step: stepSelection, opened, ctx };
   }
 
@@ -7216,7 +7227,7 @@ for (const app of ['crm', 'analytics']) {
       }
       assert.ok(/INPUT/.test(h), `${app}: a key typed in a field would be stolen from it`);
       assert.ok(/preventDefault/.test(h), `${app}: the list scrolls as well as selecting`);
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       assert.ok(new RegExp(`id="${list}"[^>]*tabindex`).test(html),
                 `${app}: the list cannot hold the focus, so the keys never reach it`);
     }
@@ -7246,7 +7257,7 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
     const body = js.slice(i, i + 900);
     assert.ok(/aiclear'\)\.style\.display = aiMessages\.length/.test(body),
               `${app}: Clear is shown whatever the conversation holds`);
-    const html = read(`apps/${app}/sidepanel.html`);
+    const html = panelPage(app);
     assert.ok(/id="aiclear"[^>]*display:none/.test(html),
               `${app}: it is visible in the markup, so it flashes before the first render hides it`);
   }
@@ -7267,7 +7278,7 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
       getBoundingClientRect: () => rect(box[0], box[1]),
       querySelector: () => (header ? { getBoundingClientRect: () => rect(box[0], box[0] + header) } : null),
     };
-    const { revealRow } = load([sliceFn('apps/analytics/sidepanel.js', 'revealRow')]);
+    const { revealRow } = load([sliceApp('analytics', 'revealRow')]);
     revealRow(el, container, 'thead');
     return container.scrollTop;
   }
@@ -7291,7 +7302,7 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
   });
 
   test('nothing to reveal is not a special case that throws', () => {
-    const { revealRow } = load([sliceFn('apps/analytics/sidepanel.js', 'revealRow')]);
+    const { revealRow } = load([sliceApp('analytics', 'revealRow')]);
     revealRow(null, null, 'thead');
     revealRow({ getBoundingClientRect: () => rect(0, 10) }, null, 'thead');
   });
@@ -7363,7 +7374,7 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
   });
 
   test('analytics reveals the row it opens, from a foreign key or the lineage', () => {
-    const src = read('apps/analytics/sidepanel.js');
+    const src = appPanel('analytics');
     const i = src.indexOf('async function openDetail(id)');
     const body = src.slice(i, src.indexOf('async function renderDetail', i));
     assert.ok(/revealRow\(/.test(body), 'opening a view from a link marks a row nobody can see');
@@ -7464,7 +7475,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   test('both halves are wired, or the links do nothing', () => {
     const crm = crmPanel();
     assert.ok(/a\.aplink\[data-ap\]/.test(crm), 'crm: the «Used in» links are drawn and never wired');
-    const an = read('apps/analytics/sidepanel.js');
+    const an = appPanel('analytics');
     const i = an.indexOf('<h5>Reads from</h5>');
     assert.ok(/a\.fk\[data-go\]/.test(an.slice(i, i + 900)), 'analytics: the lineage links are not wired');
   });
@@ -7484,7 +7495,7 @@ test('crm: the arrows open a row the way that row opens', () => {
 // clicks, nothing that depends on Zoho's markup or on the interface language.
 {
   const url = (bound, id) => {
-    const { viewUrl } = load([sliceFn('apps/analytics/sidepanel.js', 'viewUrl')], { bound });
+    const { viewUrl } = load([sliceApp('analytics', 'viewUrl')], { bound });
     return viewUrl(id);
   };
   const WS = { origin: 'https://analytics.zoho.eu', workspace: '177856000000004002' };
@@ -7512,7 +7523,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   });
 
   test('the sample offers nothing to open, because there is nothing behind it', () => {
-    const src = read('apps/analytics/sidepanel.js');
+    const src = appPanel('analytics');
     const i = src.indexOf("$('dzoho')");
     const body = src.slice(i - 400, i + 300);
     assert.ok(/isSample\(\) \? null : viewUrl/.test(body),
@@ -7718,7 +7729,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // health, hiding every tab as they do». Held against those two rather than against
     // numbers: whatever they cover, this covers.
     for (const app of ['crm', 'analytics']) {
-      const css = read(`apps/${app}/sidepanel.html`);
+      const css = panelPage(app);
       const rule = (id) => css.slice(css.indexOf(`#${id}{`), css.indexOf(`#${id}.show`));
       const mine = rule('navview'), health = rule('healthview');
       for (const decl of ['position:absolute', 'inset:0']) {
@@ -7758,7 +7769,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // have been is none of them. The arrows take the same fill: they were lighting up in the blue
     // that means «opens Zoho», which is a promise about somewhere else.
     for (const app of ['crm', 'analytics']) {
-      const css = read(`apps/${app}/sidepanel.html`);
+      const css = panelPage(app);
       assert.ok(/--hist:/.test(css), `${app}: the history has no colour of its own`);
       const seg = css.slice(css.indexOf('.navseg{'), css.indexOf('.navseg:hover'));
       assert.ok(/var\(--hist-fill\)/.test(seg), `${app}: the control does not use it`);
@@ -7772,7 +7783,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // Measured before it was believed: 40 steps in a side-panel-sized window give 1168px of rows in a
     // 378px box, so it scrolled all along - what was missing was a bar you can see and grab.
     for (const app of ['crm', 'analytics']) {
-      const css = read(`apps/${app}/sidepanel.html`);
+      const css = panelPage(app);
       const rule = css.slice(css.indexOf('#navbody{'), css.indexOf('#navbody{') + 200);
       assert.ok(/overflow:\s*auto/.test(rule), `${app}: the history box cannot scroll`);
       // And its bar is the browser's, like every other list here. It was styled in `--border` for a
@@ -7828,7 +7839,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // exactly where it would go unnoticed, because one of them usually does nothing anyway.
     for (const [app, ids] of [['crm', ['pvback', 'pvfwd', 'navtab']], ['analytics', ['dback', 'dfwd', 'navtab']]]) {
       const js = read(`apps/${app}/sidepanel.js`);
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       for (const id of ids) {
         assert.ok(html.includes(`id="${id}"`), `${app}: id=${id} is not in the markup`);
         assert.ok(new RegExp(`\\$\\('${id}'\\)\\.onclick`).test(js), `${app}: id=${id} is drawn and never wired`);
@@ -7874,8 +7885,8 @@ test('crm: the arrows open a row the way that row opens', () => {
 // could not tell a wrap from a line somebody wrote. Reported as an inconsistency between the apps,
 // which is what it was - and the kind that survives because each panel looks right on its own.
 test('code is shown the same way in both products: lines as written, box scrolls', () => {
-  const crm = read('apps/crm/sidepanel.html');
-  const an = read('apps/analytics/sidepanel.html');
+  const crm = panelPage('crm');
+  const an = panelPage('analytics');
   const crmRule = crm.slice(crm.indexOf('#pvgutter,#pvcode{'), crm.indexOf('#pvgutter,#pvcode{') + 200);
   const anRule = an.slice(an.indexOf('pre.sql{'), an.indexOf('pre.sql{') + 200);
   assert.ok(/white-space:pre[;}]/.test(crmRule), 'the CRM code pane no longer keeps its lines');
@@ -7891,7 +7902,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
 {
   test('both panels offer one copy control, wired to what is on screen', () => {
     for (const app of ['crm', 'analytics']) {
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       const js = read(`apps/${app}/sidepanel.js`);
       assert.ok(html.includes('id="codecopy"'), `${app}: nothing to copy the code with`);
       assert.ok(js.includes("$('codecopy').onclick"), `${app}: the copy button is drawn and never wired`);
@@ -7905,7 +7916,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
 
   test('it is not positioned over anything: it sits in the row above the code', () => {
     for (const app of ['crm', 'analytics']) {
-      const css = read(`apps/${app}/sidepanel.html`);
+      const css = panelPage(app);
       const rule = css.slice(css.indexOf('#codecopy{'), css.indexOf('#codecopy{') + 120);
       assert.ok(!/position:\s*absolute/.test(rule), `${app}: the copy button floats again`);
     }
@@ -7915,7 +7926,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
     // Reported: the lists showed the browser's light bar and the boxes below showed something dark
     // that could not be seen against them. Stated once, for everything that scrolls.
     for (const app of ['crm', 'analytics']) {
-      const css = read(`apps/${app}/sidepanel.html`);
+      const css = panelPage(app);
       assert.ok(css.includes('*::-webkit-scrollbar-thumb{background:#5a6b85'),
                 `${app}: the scrollbars are back to whatever each box inherits`);
       assert.ok(!/\.wsgroup::-webkit-scrollbar-thumb/.test(css),
@@ -8136,7 +8147,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // An editor, a `git checkout`, a synced folder: nothing marks those, and detecting them would
     // cost a `getFile()` per file - the very reading the summary exists to avoid.
     assert.ok(/distrustEverything\(\)/.test(code), 'Refresh no longer forces a full re-read');
-    const html = read('apps/crm/sidepanel.html');
+    const html = panelPage('crm');
     assert.ok(/read every file again/.test(html), 'the button does not say that is what it does');
   });
 }
@@ -8319,7 +8330,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   });
 
   test('the Analytics twin does the same at its own write', () => {
-    const an = read('apps/analytics/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const an = appPanel('analytics').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const at = an.indexOf('async function writeFile');
     assert.ok(/noteWrite\(rel\)/.test(an.slice(at, at + 400)), 'a write leaves no mark in Analytics');
     assert.ok(/sqlCache\s*=\s*null/.test(an.slice(an.indexOf('function noteWrite'), at)),
@@ -9782,9 +9793,9 @@ test('analytics: the model is guarded, not only the disk', () => {
   // The half a disk-only guard misses: `sqls`, `deps` and `pullFailed` are read by every view in the
   // panel, so a retry that merges one workspace's ids into another one's memory is wrong on screen
   // before it is wrong on disk - and it never reaches the disk to be caught there.
-  const src = read('apps/analytics/sidepanel.js');
+  const src = appPanel('analytics');
   for (const fn of ['pullOne', 'retryFailed']) {
-    const body = sliceFn('apps/analytics/sidepanel.js', fn);
+    const body = sliceApp('analytics', fn);
     const first = body.indexOf('({ sqls, deps, pullFailed } =');
     const guard = body.indexOf('op.current()');
     assert.ok(first > 0 && guard > 0 && guard < first,
@@ -9792,7 +9803,7 @@ test('analytics: the model is guarded, not only the disk', () => {
   }
   // pullAll is held to the stronger rule: nothing lands in memory until the whole snapshot is on
   // disk - one destructuring after the writeToDisk gate, and no per-stage global assignment left.
-  const pa = sliceFn('apps/analytics/sidepanel.js', 'pullAll');
+  const pa = sliceApp('analytics', 'pullAll');
   const gate = pa.indexOf('await writeToDisk(info, op, next)');
   const publish = pa.indexOf('({ views, folders, schema, relations, sqls, deps, pullFailed } = next)');
   assert.ok(gate > 0 && publish > gate, 'pullAll publishes memory before the snapshot is on disk');
@@ -9811,7 +9822,7 @@ test('analytics: a write failure after the marker blocks the live snapshot too',
   // does not exist, and the failure lands on the assertion three lines down rather than on the gap.
   ctx.op = { current: () => true, write: async (p) => writes.push(p), say: () => {} };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
+  vm.runInContext(sliceApp('analytics', 'writeToDisk'), ctx);
   let error;
   try {
     await vm.runInContext('writeToDisk', ctx)(
@@ -9820,13 +9831,13 @@ test('analytics: a write failure after the marker blocks the live snapshot too',
   } catch (e) { error = e; }
   assert.ok(error && error.mirrorIncomplete, 'the live panel cannot distinguish a pre-write failure from a hybrid disk');
   assert.equal(writes[0], '.pull-state.json', 'the incomplete verdict was raised before its marker existed');
-  assert.match(sliceFn('apps/analytics/sidepanel.js', 'pullAll'), /refuseIncompleteSnapshot\(\)/,
+  assert.match(sliceApp('analytics', 'pullAll'), /refuseIncompleteSnapshot\(\)/,
                'the same open panel can still export or send the old globals over a hybrid disk');
 });
 
 test('analytics: partial refreshes publish only after a marked disk snapshot', async () => {
   for (const fn of ['pullOne', 'retryFailed']) {
-    const body = sliceFn('apps/analytics/sidepanel.js', fn);
+    const body = sliceApp('analytics', fn);
     const write = body.indexOf('await writePartialSnapshot(op,');
     const publish = body.indexOf('({ sqls, deps, pullFailed } =');
     assert.ok(write > 0 && publish > write,
@@ -9843,7 +9854,7 @@ test('analytics: partial refreshes publish only after a marked disk snapshot', a
   };
   ctx.op = { write: async (p) => writes.push(p) };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writePartialSnapshot'), ctx);
+  vm.runInContext(sliceApp('analytics', 'writePartialSnapshot'), ctx);
   let error;
   try {
     await vm.runInContext('writePartialSnapshot', ctx)(ctx.op, { deps: {}, pullFailed: [], sqls: {} });
@@ -9863,7 +9874,7 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
     };
     ctx.op = { current: () => true };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeSql'), ctx);
+    vm.runInContext(sliceApp('analytics', 'writeSql'), ctx);
     await assert.rejects(() => vm.runInContext('writeSql', ctx)(ctx.op, {}),
                          /Could not read sql\/index\.json/, `${name} was treated as an empty index`);
   }
@@ -9914,10 +9925,10 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
   });
 
   test('analytics: progress and busy belong to the workspace too', () => {
-    const src = read('apps/analytics/sidepanel.js');
+    const src = appPanel('analytics');
     assert.equal((src.match(/if \(m\?\.type === 'pullProgress'\) op\.say\(/g) || []).length, 2,
                  'the bridge keeps reporting progress into a workspace it is not pulling');
-    const b = sliceFn('apps/analytics/sidepanel.js', 'beginWorkspaceOp');
+    const b = sliceApp('analytics', 'beginWorkspaceOp');
     assert.ok(/say: \(msg, kind\) => \{ if \(current\(\)\) status\(msg, kind\); \}/.test(b),
               'the twin of the CRM op cannot speak, so its callers check by hand and drift');
     assert.ok(/function endBusyElsewhere\(\) \{ busy = false; updateButtons\(\); \}/.test(src),
@@ -10033,7 +10044,7 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
     };
     ctx.op = { current: () => live, write: async () => {}, say: () => {} };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
+    vm.runInContext(sliceApp('analytics', 'writeToDisk'), ctx);
     ctx.readJson = async () => { live = false; return { label: 'B', sample: true }; };
     const ok = await vm.runInContext('writeToDisk', ctx)({ workspace: 'A', name: 'A', origin: 'oA' }, ctx.op,
       { views: [], folders: [], schema: {}, relations: [], sqls: {}, deps: {}, pullFailed: [] });
@@ -10115,7 +10126,7 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
         : { id: 'q1', parents: [], children: [], dashboards: [] }),
     };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', fn), ctx);
+    vm.runInContext(sliceApp('analytics', fn), ctx);
     await vm.runInContext(`${fn}(${fn === 'pullOne' ? "'q1'" : ''})`, ctx);
     return ctx;
   };
@@ -10297,7 +10308,7 @@ test('analytics: a SQL search overtaken by a workspace switch publishes nothing'
     readFile: async () => delayed, status() {}, Map, Set, Object, String,
   };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'), ctx);
+  vm.runInContext(sliceApp('analytics', 'ensureSqlCache'), ctx);
   const pending = vm.runInContext('ensureSqlCache()', ctx);
   live = false; release('select * from A');
   await pending;
@@ -10423,8 +10434,8 @@ for (const fn of ['openFile', 'openModule', 'openWorkflow']) {
 }
 
 test('analytics: a SQL detail is invalidated by the next detail navigation', () => {
-  const open = sliceFn('apps/analytics/sidepanel.js', 'openDetail');
-  const render = sliceFn('apps/analytics/sidepanel.js', 'renderDetail');
+  const open = sliceApp('analytics', 'openDetail');
+  const render = sliceApp('analytics', 'renderDetail');
   assert.ok(/const mine = \+\+detailLoad/.test(open), 'the opener has no navigation token');
   assert.ok(/await renderDetail\(v, mine, op\)/.test(open), 'the token does not reach the SQL read');
   assert.ok(/detailCurrent\(mine, op\)/.test(render), 'the SQL read can still repaint an item opened later');
@@ -10451,7 +10462,7 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/refuse: workspaceChangeRefuse/.test(sliceFn(`apps/${app}/sidepanel.js`, add)), `${add} bypasses the pull lock`);
     const remove = app === 'crm'
       ? handlerOf('apps/crm/sidepanel.js', 'wsdel')
-      : sliceFn('apps/analytics/sidepanel.js', 'delWorkspace');
+      : sliceApp('analytics', 'delWorkspace');
     assert.ok(/workspaceChangeRefuse\(\)/.test(remove), 'Remove workspace bypasses the pull lock');
     const handler = handlerOf(`apps/${app}/sidepanel.js`, 'ws');
     assert.ok(/workspaceChangeRefuse\(\)/.test(handler), 'a forged change event bypasses the lock');
@@ -10675,7 +10686,7 @@ test('crm: a module resync publishes only what it managed to write', () => {
 // exercised with the minimum its own schema declares, and schema and dispatcher cannot diverge
 // silently again.
 test('analytics: every declared tool runs on the minimum input its schema declares', async () => {
-  const src = read('apps/analytics/sidepanel.js');
+  const src = appPanel('analytics');
   const ctx = {
     // The load's own record of what would not open: the tools ask it before stating an absence.
     diskUnreadableAll: [], aiMirrorShort: () => '',
@@ -10689,11 +10700,11 @@ test('analytics: every declared tool runs on the minimum input its schema declar
   vm.createContext(ctx);
   // Consts and functions both: sliceFn only lifts declarations, so the arrow-consts come through
   // sliceConst - and anything genuinely absent must throw here, not answer '' and hide a hole.
-  const piece = (n) => { try { return sliceFn('apps/analytics/sidepanel.js', n); } catch { return sliceConst('apps/analytics/sidepanel.js', n); } };
+  const piece = (n) => { try { return sliceApp('analytics', n); } catch { return sliceAppConst('analytics', n); } };
   vm.runInContext([
-    sliceConst('apps/analytics/sidepanel.js', 'MSG'),
-    sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'),
-    sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
+    sliceAppConst('analytics', 'MSG'),
+    sliceAppConst('analytics', 'SQL_UNREADABLE'),
+    sliceAppConst('analytics', 'SQL_EMPTY'),
     'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { throw new Error("x"); } });',
     ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlReadState', 'sqlState', 'aiStructureText',
         'structureChain', 'nameOf', 'relationsOf', 'shortDate', 'isOrphanCandidate', 'aiExecTool'].map(piece),
@@ -10701,7 +10712,7 @@ test('analytics: every declared tool runs on the minimum input its schema declar
   // The registry is JavaScript, so it is evaluated as JavaScript - parsing it as JSON died on the
   // first apostrophe in a description.
   const tctx = {}; vm.createContext(tctx);
-  vm.runInContext(sliceConst('apps/analytics/sidepanel.js', 'AI_TOOLS') + '; this.__t = AI_TOOLS;', tctx);
+  vm.runInContext(sliceAppConst('analytics', 'AI_TOOLS') + '; this.__t = AI_TOOLS;', tctx);
   const tools = tctx.__t;
   assert.ok(tools.length >= 5, `only ${tools.length} tools parsed from the registry`);
   for (const t of tools) {
@@ -10745,11 +10756,11 @@ test('analytics: a missing indexed SQL file makes search coverage incomplete', a
     String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
   };
   vm.createContext(ctx);
-  const piece = (n) => { try { return sliceFn('apps/analytics/sidepanel.js', n); } catch { return sliceConst('apps/analytics/sidepanel.js', n); } };
+  const piece = (n) => { try { return sliceApp('analytics', n); } catch { return sliceAppConst('analytics', n); } };
   vm.runInContext([
-    sliceConst('apps/analytics/sidepanel.js', 'MSG'),
-    sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'),
-    sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
+    sliceAppConst('analytics', 'MSG'),
+    sliceAppConst('analytics', 'SQL_UNREADABLE'),
+    sliceAppConst('analytics', 'SQL_EMPTY'),
     'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { const e = new Error("missing"); e.name = "NotFoundError"; throw e; } });',
     ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlReadState', 'sqlState',
         'aiStructureText', 'structureChain', 'nameOf', 'relationsOf', 'shortDate',
@@ -10777,10 +10788,10 @@ test('analytics: an indexed SQL read failure is counted once and retried', async
   };
   vm.createContext(ctx);
   vm.runInContext([
-    sliceFn('apps/analytics/sidepanel.js', 'sqlState'),
-    sliceFn('apps/analytics/sidepanel.js', 'sqlBodyOf'),
-    sliceFn('apps/analytics/sidepanel.js', 'sqlReadState'),
-    sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'),
+    sliceApp('analytics', 'sqlState'),
+    sliceApp('analytics', 'sqlBodyOf'),
+    sliceApp('analytics', 'sqlReadState'),
+    sliceApp('analytics', 'ensureSqlCache'),
   ].join('\n'), ctx);
 
   await vm.runInContext('ensureSqlCache()', ctx);
@@ -10804,7 +10815,7 @@ test('analytics: health includes SQL files found unreadable after loading the in
     structureChain: () => [], isOrphanCandidate: () => false, Object, Array, Set, String,
   };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'healthFindings'), ctx);
+  vm.runInContext(sliceApp('analytics', 'healthFindings'), ctx);
   const h = vm.runInContext('healthFindings()', ctx);
   assert.equal(h.unread.length, 1, 'the health report hides a SQL file that failed after index load');
   assert.equal(h.unread[0].id, 'q1');
@@ -10817,10 +10828,10 @@ test('analytics: health includes SQL files found unreadable after loading the in
 // cannot tell a dropped query from one that never existed. One state function now, four values,
 // consulted by every surface.
 {
-  const an = read('apps/analytics/sidepanel.js');
+  const an = appPanel('analytics');
 
   test('analytics: sqlState is the one answer, and every surface asks it', () => {
-    const fn = sliceFn('apps/analytics/sidepanel.js', 'sqlState');
+    const fn = sliceApp('analytics', 'sqlState');
     assert.ok(/kind: 'not-query'/.test(fn) && /kind: 'unread'/.test(fn) && /kind: 'read'/.test(fn),
               'the four-value state lost a value');
     assert.ok(/f\.stage === 'sql'/.test(fn), 'a lineage failure would read as an unread query');
@@ -10840,7 +10851,7 @@ test('analytics: health includes SQL files found unreadable after loading the in
     // Every failure records its stage, or sqlState cannot tell sql from lineage.
     assert.ok(!/still\.push\(\.\.\.\(r2?\.failed \|\| \[\]\)\);/.test(an),
               'a partial pull records failures with no stage');
-    assert.ok(/\(sq\.failed \|\| \[\]\)\.map\(\(f\) => \(\{ \.\.\.f, stage: 'sql' \}\)\)/.test(sliceFn('apps/analytics/sidepanel.js', 'pullAll')),
+    assert.ok(/\(sq\.failed \|\| \[\]\)\.map\(\(f\) => \(\{ \.\.\.f, stage: 'sql' \}\)\)/.test(sliceApp('analytics', 'pullAll')),
               'the full pull records sql failures with no stage');
   });
 
@@ -10852,8 +10863,8 @@ test('analytics: health includes SQL files found unreadable after loading the in
       String, Object, Map, Array,
     };
     vm.createContext(ctx);
-    vm.runInContext(sliceConst('apps/analytics/sidepanel.js', 'viewById'), ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'sqlState'), ctx);
+    vm.runInContext(sliceAppConst('analytics', 'viewById'), ctx);
+    vm.runInContext(sliceApp('analytics', 'sqlState'), ctx);
     const st = vm.runInContext("sqlState('q1')", ctx);
     assert.equal(st.kind, 'unread');
     assert.equal(st.error, 'HTTP 429', 'the reason Zoho gave is lost before it reaches the tab');
@@ -10863,7 +10874,7 @@ test('analytics: health includes SQL files found unreadable after loading the in
   });
 
   test('analytics: the unread counter includes queries whose pull failed', () => {
-    const fn = sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache');
+    const fn = sliceApp('analytics', 'ensureSqlCache');
     assert.ok(/sqlState\(v\.id\)\.kind === 'unread'/.test(fn),
               'the counter only sees files that refused to open, not pulls that failed');
   });
@@ -10875,9 +10886,9 @@ test('analytics: health includes SQL files found unreadable after loading the in
       String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
     };
     vm.createContext(ctx);
-    const piece = (n) => { try { return sliceFn('apps/analytics/sidepanel.js', n); } catch { return sliceConst('apps/analytics/sidepanel.js', n); } };
-    vm.runInContext([sliceConst('apps/analytics/sidepanel.js', 'MSG'),
-      sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'), sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
+    const piece = (n) => { try { return sliceApp('analytics', n); } catch { return sliceAppConst('analytics', n); } };
+    vm.runInContext([sliceAppConst('analytics', 'MSG'),
+      sliceAppConst('analytics', 'SQL_UNREADABLE'), sliceAppConst('analytics', 'SQL_EMPTY'),
       'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { throw new Error("x"); } });',
       ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlReadState', 'sqlState', 'aiStructureText',
           'structureChain', 'nameOf', 'relationsOf', 'shortDate', 'isOrphanCandidate', 'aiExecTool'].map(piece)].join('\n'), ctx);
@@ -10889,7 +10900,7 @@ test('analytics: health includes SQL files found unreadable after loading the in
     const ctx = { views: [{ id: 'q', type: 'QueryTable' }], sqls: { q: { sql: '' } }, pullFailed: [], sqlDiskUnread: new Set(),
                   viewById: () => new Map([['q', { id: 'q', type: 'QueryTable' }]]), String, Map };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'sqlState'), ctx);
+    vm.runInContext(sliceApp('analytics', 'sqlState'), ctx);
     assert.equal(vm.runInContext("sqlState('q').kind", ctx), 'read',
                  'Zoho answering with an empty query is reported as a failed read');
     ctx.pullFailed = [{ id: 'q', stage: 'sql', error: '429' }];
@@ -10925,7 +10936,7 @@ test('crm: a function that holds an op never reads through the global resolver',
 test('an operation-bound call chain never starts a fresh workspace halfway through', () => {
   const products = {
     crm: CRM_FILES,
-    analytics: ['apps/analytics/sidepanel.js'],
+    analytics: APP_FILES.analytics,
   };
   const bad = [];
   for (const [app, files] of Object.entries(products)) {
@@ -10985,7 +10996,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
       walk: async function* () { yield 'sql/kept.sql'; yield 'sql/renamed-old.sql'; yield 'sql/deleted.sql'; yield 'views.json'; },
       Set, Object, RegExp };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
+    vm.runInContext(sliceApp('analytics', 'pruneSql'), ctx);
     // The census is required now: these two cases called it with two arguments, which is the shape
     // the data loss had. An empty census here is the honest fixture - this case is about what the
     // *index* keeps - and it is passed explicitly rather than defaulted.
@@ -11002,12 +11013,12 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
             remove: async () => { throw new Error('busy'); } },
       walk: async function* () { yield 'sql/old.sql'; }, Set, Object, RegExp };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
+    vm.runInContext(sliceApp('analytics', 'pruneSql'), ctx);
     const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, []);
     assert.equal(failed, 1, 'the caller cannot know cleanup was incomplete');
     assert.equal(said.length, 1);
     assert.equal(said[0][1], 'warn');
-    const pa = sliceFn('apps/analytics/sidepanel.js', 'pullAll');
+    const pa = sliceApp('analytics', 'pullAll');
     assert.match(pa, /cleanupFailed/, 'pullAll overwrites the cleanup warning with its final success line');
   });
 
@@ -11230,7 +11241,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
 // rename, ↻ Refresh after a lapsed permission, the capture-phase re-grant click. The state that
 // cleared the flag ran only when the workspace actually differed. Same shape as `pullActive`, which
 // this repository has already had to fix once: set by many, released by one.
-for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/ai.js']]) {
   test(`${app}: the assistant releases Send however the send ends`, () => {
     const fn = sliceFn(file, 'aiSend');
     const i = fn.indexOf('aiBusy = true');
@@ -11517,7 +11528,7 @@ for (const app of ['crm', 'analytics']) {
   test('every call to a prune hands it everything the keep-set needs', () => {
     // The other half, and the one that would have caught the plant directly: a call site that passes
     // fewer arguments than the declaration names.
-    const src = read('apps/analytics/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const src = appPanel('analytics').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const decl = src.match(/^async function pruneSql\s*\(([^)]*)\)/m);
     assert.ok(decl, 'pruneSql() is gone - renamed, or no longer a declaration');
     const params = decl[1].split(',').length;
@@ -11775,7 +11786,7 @@ for (const app of ['crm', 'analytics']) {
 // Derived: `sqlBodyOf` is reachable from `sqlReadState` and from nowhere else.
 {
   test('analytics: nothing reads the SQL body without asking whether it is still true', () => {
-    const src = read('apps/analytics/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const src = appPanel('analytics').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const callers = [];
     for (const m of src.matchAll(/\bsqlBodyOf\(/g)) {
       const at = Math.max(src.lastIndexOf('\nasync function ', m.index), src.lastIndexOf('\nfunction ', m.index)) + 1;
@@ -12050,9 +12061,9 @@ for (const app of ['crm', 'analytics']) {
 // Derived from the markup: whichever input the lock row holds is the one that must be emptied, so
 // renaming it does not quietly drop the cover.
 {
-  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/ai.js']]) {
     test(`${app}: the passphrase field is emptied whether the row opens or closes`, () => {
-      const html = read(`apps/${app}/sidepanel.html`);
+      const html = panelPage(app);
       const row = html.slice(html.indexOf('id="ailockrow"'), html.indexOf('</div>', html.indexOf('id="ailockrow"')));
       const input = (row.match(/<input[^>]*id="(\w+)"/) || [])[1];
       assert.ok(input, `id=${app} the lock row holds no input - the derivation broke`);
@@ -12743,7 +12754,7 @@ test('every setting the options page writes is read by something', () => {
 // the registry now, so the sentence cannot fall behind it again.
 test('the assistant is told about every tool it is given', () => {
   for (const [rel, marker] of [['apps/crm/ai.js', 'READ-ONLY tools to explore'],
-                               ['apps/analytics/sidepanel.js', 'READ-ONLY tools over the local mirror']]) {
+                               ['apps/analytics/ai.js', 'READ-ONLY tools over the local mirror']]) {
     const src = read(rel);
     const at = src.indexOf(marker);
     assert.ok(at > 0, `id=${rel}: the sentence that lists the tools has gone`);
@@ -13576,7 +13587,7 @@ test('the diagram sliders mean the same thing in Settings and in the window', ()
 // and says here, in as many words, that the list is read by a person.
 test('crm: every Zoho-bound control is blocked in one place, and nowhere else', () => {
   const js = read('apps/crm/sidepanel.js');
-  const html = read('apps/crm/sidepanel.html');
+  const html = panelPage('crm');
 
   const list = sliceConst('apps/crm/sidepanel.js', 'ZOHO_BTNS');
   const ids = [...list.matchAll(/'(\w+)'/g)].map((m) => m[1]);
@@ -13692,7 +13703,7 @@ test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the 
 // Derived rather than named: whatever the panel uses to render code, the report uses too. A future
 // third surface that renders SQL is covered by the same sentence.
 test('analytics: the report colours SQL the way the panel does', () => {
-  const js = read('apps/analytics/sidepanel.js');
+  const js = appPanel('analytics');
   const uses = [...js.matchAll(/window\.highlightSql/g)].length;
   assert.ok(uses >= 2,
             `only ${uses} place renders SQL through the highlighter - the panel had it and the `
@@ -13717,7 +13728,7 @@ test('analytics: the report colours SQL the way the panel does', () => {
   assert.match(css, /pre\.code\{[^}]*background:#0f1622/,
                'the code block has no dark ground, so light paper carries dark-theme token colours '
                + 'and the reader gets an unreadable page');
-  assert.match(read('apps/analytics/sidepanel.js'), /<pre class="\$\{has \? 'code'/,
+  assert.match(appPanel('analytics'), /<pre class="\$\{has \? 'code'/,
                'the SQL is drawn in a block of its own again instead of the shared one');
 });
 
@@ -13734,7 +13745,7 @@ test('analytics: the report colours SQL the way the panel does', () => {
 // the function cannot enforce on its own: neither builder names the product in the heading. The
 // product is named once, in the foot.
 test('neither report titles itself with the product name', () => {
-  for (const [app, rel] of [['crm', 'apps/crm/export.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+  for (const [app, rel] of [['crm', 'apps/crm/export.js'], ['analytics', 'apps/analytics/export.js']]) {
     const js = read(rel);
     // The heading is composed by the shell now, so what each builder decides is the *subject* it
     // hands over - which is the thing that differed.
@@ -13791,7 +13802,7 @@ const anything = () => new Proxy(function () {}, {
 
 test('every script the panels load evaluates on its own', () => {
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/sidepanel.html`);
+    const html = panelPage(app);
     const files = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
     // If the page stops naming its scripts, this case is measuring nothing and is the broken thing.
     assert.ok(files.length > 3, `${app}: no <script src> found in sidepanel.html - this case cannot `
@@ -14963,7 +14974,7 @@ test('analytics: a folder that cannot be read leaves nothing of it on screen', a
     wsOptionTitle: () => '', wsOptionText: () => '', selectWorkspace: async () => {},
     hasPerm: async () => true, appRoot: async () => ({}),
   };
-  const { refreshWorkspaces } = load([sliceFn('apps/analytics/sidepanel.js', 'refreshWorkspaces')], g);
+  const { refreshWorkspaces } = load([sliceApp('analytics', 'refreshWorkspaces')], g);
   await refreshWorkspaces();
   // Every projection of the workspace, not just the two that were being cleared: what is left on
   // screen is what the enabled controls read.
@@ -15087,7 +15098,7 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
 test('every writer of the export scope stamps it, and the two products agree', () => {
   const sv = {};
   for (const [rel, name] of [['apps/crm/sidepanel.js', 'crm panel'], ['apps/crm/options.js', 'crm settings'],
-                             ['apps/analytics/sidepanel.js', 'analytics panel']]) {
+                             ['apps/analytics/export.js', 'analytics panel']]) {
     const src = read(rel);
     const m = /const SCOPE_SV = (\d+);/.exec(src);
     assert.ok(m, `${name}: SCOPE_SV is gone from ${rel} - the stamp cannot be written`);
@@ -15104,11 +15115,11 @@ test('every writer of the export scope stamps it, and the two products agree', (
   // And the property, run: a scope that goes out of the panel carries the stamp, so the migration
   // cannot fire over a choice the reader just made.
   for (const [app, sensitive] of [['crm', 'code'], ['analytics', 'sql']]) {
-    const keys = JSON.parse(sliceConst(`apps/${app}/sidepanel.js`, 'SCOPE_KEYS')
+    const keys = JSON.parse(sliceAppConst(app, 'SCOPE_KEYS')
       .replace(/^[^[]*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
     const full = Object.fromEntries(keys.map((k) => [k, true]));
-    const { SCOPE_DEFAULT } = load([sliceConst(`apps/${app}/sidepanel.js`, 'SCOPE_SV'),
-                                    sliceConst(`apps/${app}/sidepanel.js`, 'SCOPE_DEFAULT')],
+    const { SCOPE_DEFAULT } = load([sliceAppConst(app, 'SCOPE_SV'),
+                                    sliceAppConst(app, 'SCOPE_DEFAULT')],
                                    { SCOPE_FULL: full, Object });
     assert.equal(SCOPE_DEFAULT.sv, distinct[0], `${app}: the default scope carries no stamp`);
     assert.equal(SCOPE_DEFAULT[sensitive], false,
@@ -15344,7 +15355,7 @@ test('a bridge re-injected over an older build replaces it, and over its own doe
 //
 // Run, not read: the request body is captured, and the stream is driven to the stop it is about.
 test('the answer budget reaches the request, in both products', async () => {
-  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/ai.js']]) {
     let sent = null;
     const g = { AI_MAX_TOKENS: 16384, OPENAI_BASE: 'https://api.openai.com/v1', JSON, console,
                 fetch: async (u, o) => { sent = JSON.parse(o.body);
@@ -15369,7 +15380,7 @@ test('an answer cut off by the budget says so, in both products', async () => {
   //
   // So the loop is executed against a stream that delivers two chunks and then stops at the budget,
   // and what is asserted is the message the reader ends up with.
-  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/ai.js']]) {
     const said = [];
     const g = {
       console, Promise, JSON, AI_MAX_TOKENS: 16384,
@@ -15404,7 +15415,7 @@ test('an answer cut off by the budget says so, in both products', async () => {
 });
 
 test('the other engine says so too, in both products', () => {
-  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/ai.js']]) {
     const call = sliceFn(file, 'aiCall');
     assert.ok(/txt && c && c\.finish_reason === 'length'/.test(call),
               `${app}: a truncated OpenAI answer is returned as if it were whole`);
@@ -15424,7 +15435,7 @@ test('the other engine says so too, in both products', () => {
 test('cancelling the export dialog leaves the stored scope alone, in both products', () => {
   const cases = {
     crm: { file: 'apps/crm/sidepanel.js', sensitive: 'code', on: 'functions' },
-    analytics: { file: 'apps/analytics/sidepanel.js', sensitive: 'sql', on: 'structure' },
+    analytics: { file: 'apps/analytics/export.js', sensitive: 'sql', on: 'structure' },
   };
   for (const [app, c] of Object.entries(cases)) {
     const keys = JSON.parse(sliceConst(c.file, 'SCOPE_KEYS').replace(/^[^[]*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
@@ -15506,8 +15517,8 @@ test('a workspace can only send you to a host the manifest names', () => {
                     sliceFn('apps/crm/sidepanel.js', 'zohoUrlOk')],
            globals: { ZOHO_MATCHES: man.host_permissions.filter((h) => !/analytics/.test(h)), URL },
            good: ['https://crm.zoho.eu/crm/inst/tab/Contacts', 'https://one.zoho.eu/x'] },
-    analytics: { pieces: [sliceConst('apps/analytics/sidepanel.js', 'APP_HOSTS'),
-                          sliceFn('apps/analytics/sidepanel.js', 'zohoUrlOk')],
+    analytics: { pieces: [sliceAppConst('analytics', 'APP_HOSTS'),
+                          sliceApp('analytics', 'zohoUrlOk')],
                  globals: { chrome: { runtime: { getManifest: () => man } }, URL },
                  good: ['https://analytics.zoho.eu/workspace/1/view/2'] },
   };
@@ -15643,7 +15654,7 @@ test('the two reports are the same shape', () => {
   // Each product still wears its own accent, or a reader with both reports open cannot tell them
   // apart. It is the one thing the shell deliberately does not decide.
   const accent = (rel) => (read(rel).match(/--accent:\s*(#[0-9a-f]{3,8})/i) || [])[1];
-  const a1 = accent('apps/crm/export.js'), a2 = accent('apps/analytics/sidepanel.js');
+  const a1 = accent('apps/crm/export.js'), a2 = accent('apps/analytics/export.js');
   assert.ok(a1 && a2, 'a product no longer sets its own accent over the shared sheet');
   assert.notEqual(a1, a2, 'both reports wear the same accent');
 });
@@ -15684,7 +15695,7 @@ test('both panels reach a Zoho page through one function, and the detail button 
 
   // The detail pane's own button, in the panel where it diverged. It is wired at the call site, so
   // read the wiring rather than a handler name.
-  const a = read('apps/analytics/sidepanel.js');
+  const a = appPanel('analytics');
   assert.match(a, /\$\('dzoho'\)\.onclick = \(\) => \{ if \(zurl\) goToZoho\(zurl\); \}/,
                '«Open in Zoho» opens a tab of its own again, which is what leaving the shell looks '
                + 'like to a reader inside Zoho One');
@@ -16211,7 +16222,7 @@ test('analytics: the SQL search reads what a pull just published', async () => {
     setStatus: () => {}, sqlUnread: 0,
   };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'), ctx);
+  vm.runInContext(sliceApp('analytics', 'ensureSqlCache'), ctx);
   const cache = await vm.runInContext('ensureSqlCache()', ctx);
 
   assert.ok(cache && cache.size >= 2,
@@ -16700,7 +16711,7 @@ test('crm: the export contents name the chapters the export has, in the order it
   assert.deepEqual(withToc.sort(), ['apps/analytics/reportshell.js', 'apps/crm/reportshell.js'],
     `a builder writes its own contents markup instead of calling reportToc: ${withToc}`);
   for (const app of ['crm', 'analytics']) {
-    const rel = app === 'crm' ? 'apps/crm/export.js' : 'apps/analytics/sidepanel.js';
+    const rel = app === 'crm' ? 'apps/crm/export.js' : 'apps/analytics/export.js';
     assert.match(read(rel), /reportToc\(/, `${app}: its report builds no contents at all`);
   }
 
@@ -16765,8 +16776,8 @@ test('analytics: the export contents name the chapters in the order the document
                              undescribed: [], noStructure: [] }),
   };
   const { buildExportMarkdown } = load([
-    sliceFn('apps/analytics/sidepanel.js', 'exportSections'),
-    sliceFn('apps/analytics/sidepanel.js', 'buildExportMarkdown'),
+    sliceApp('analytics', 'exportSections'),
+    sliceApp('analytics', 'buildExportMarkdown'),
   ], globals);
 
   const md = await buildExportMarkdown({ views: true, structure: true, relations: true,
@@ -18586,7 +18597,7 @@ test('an export preset keeps what the page needs to read it back', () => {
     const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
     // Derived: whatever `loadScope` compares to decide a stored scope is old. Naming `sv` here would
     // survive the day that field is renamed and stop meaning anything.
-    const stamp = /(\w+)\.(\w+) !== \w+/.exec(sliceFn(`apps/${app}/sidepanel.js`, 'loadScope').replace(/^\s*\/\/.*$/gm, ''));
+    const stamp = /(\w+)\.(\w+) !== \w+/.exec(sliceApp(app, 'loadScope').replace(/^\s*\/\/.*$/gm, ''));
     assert.ok(stamp, `${app}: loadScope no longer tests a stamp on the stored scope - this case has lost its subject`);
     for (const preset of ['SCOPE_FULL', 'SCOPE_SAFE']) {
       const m = new RegExp(`dlgScope = Object\\.assign\\(([^)]*)${preset}\\)`).exec(src);
@@ -18611,7 +18622,7 @@ test('the report filter reaches every kind of row the report draws', () => {
   assert.ok(sel, 'the report filter no longer selects anything - this case has lost its subject');
   // Derived from the markup: every class the two export builders put a per-item row in.
   const drawn = new Set();
-  for (const rel of ['apps/crm/export.js', 'apps/analytics/sidepanel.js']) {
+  for (const rel of ['apps/crm/export.js', 'apps/analytics/export.js']) {
     for (const m of read(rel).matchAll(/<(?:div|li|tr)\s+class="(hxrow|item|relrow)\b/g)) drawn.add(m[1]);
   }
   assert.ok(drawn.size, 'no per-item rows found in either builder - the derivation broke');
@@ -18956,7 +18967,7 @@ test('the preview offers every file in a compiled function project', () => {
     'a one-file Deluge function was dressed up as a project');
   assert.equal(projectDirectoriesOf(row).length, 2, 'empty project directories are invisible in the preview');
 
-  const src = read(rel), html = read('apps/crm/sidepanel.html');
+  const src = read(rel), html = panelPage('crm');
   assert.match(src, /showProjectFiles\(trow, path\)/, 'opening a function never fills the project tree');
   const fn = sliceFn(rel, 'showProjectFiles');
   assert.match(fn, /openFile\(f\.path, null, true\)/,
@@ -20608,10 +20619,9 @@ test('a fold reports what left the drawing, not what left the graph', () => {
 // Derived: whichever key the preset excludes, not the name of this one.
 test('a box the Everything preset leaves off is labelled as deliberate', () => {
   for (const app of ['crm', 'analytics']) {
-    const rel = `apps/${app}/sidepanel.js`;
     const g = { console, Object, SCOPE_SV: 2 };
-    const m = load([sliceConst(rel, 'SCOPE_FULL')], g);
-    const html = read(`apps/${app}/sidepanel.html`);
+    const m = load([sliceAppConst(app, 'SCOPE_FULL')], g);
+    const html = panelPage(app);
     const off = Object.keys(m.SCOPE_FULL).filter((k) => !m.SCOPE_FULL[k]);
     for (const k of off) {
       const at = html.indexOf(`id="sc_${k}"`);
@@ -20634,7 +20644,7 @@ test('a box the Everything preset leaves off is labelled as deliberate', () => {
 // Zoho and was pulled. That is the sentence somebody deletes a view over, and it is the same miss
 // made in the CRM one absence earlier and fixed there.
 test('analytics: the assistant says when the mirror is short instead of asserting an absence', async () => {
-  const rel = 'apps/analytics/sidepanel.js';
+  const rel = 'apps/analytics/ai.js';
   const views = [{ id: 'v1', name: 'Orders', type: 'Table' }];
   const run = async (broken) => {
     const g = { console, Object, Map, Set, Array, JSON, String, Number, Promise, RegExp,

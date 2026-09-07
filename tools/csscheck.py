@@ -59,6 +59,11 @@ def sheets():
                                                       p.read_text(encoding="utf-8"), re.S))
         if css.strip():
             out.append((p.parent.name, p.relative_to(ROOT).as_posix(), css))
+    # Linked extension stylesheets are shipped CSS just as much as an inline <style>. Keeping this
+    # derived from the filesystem means extracting a page stylesheet cannot make it disappear from
+    # the duplicate and parser audits.
+    for p in sorted((ROOT / "apps").rglob("*.css")):
+        out.append((p.parent.name, p.relative_to(ROOT).as_posix(), p.read_text(encoding="utf-8")))
     return out
 
 

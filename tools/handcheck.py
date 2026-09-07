@@ -122,7 +122,7 @@ CHECKS = [
         'title': 'The assistant answers about the org, with a real key',
         'do': ['With an API key configured, ask it something that needs a tool - «who calls X».'],
         'pass': 'It answers, the tools it opened are listed in the chat, and nothing it says is invented.',
-        'covers': ['apps/crm/ai.js', 'apps/*/sidepanel.js', 'apps/*/options.js'],
+        'covers': ['apps/*/ai.js', 'apps/*/sidepanel.js', 'apps/*/options.js'],
     },
     {
         'id': 'export',
@@ -132,7 +132,7 @@ CHECKS = [
         'pass': ('Every section the panel shows is in them, nothing in them is empty or invented, and '
                  'the two HTML reports are the same document: same header, same index, same cards, '
                  'same foot.'),
-        'covers': ['apps/crm/export.js', 'apps/*/sidepanel.js', 'apps/crm/health.js',
+        'covers': ['apps/*/export.js', 'apps/*/sidepanel.js', 'apps/*/health.js',
                    'apps/*/reportshell.js'],
     },
     {
@@ -174,7 +174,7 @@ CHECKS = [
                'Open the ? help from the panel.'],
         'pass': ('Every control in the toolbar is still reachable without scrolling the row sideways, '
                  'and the help describes what you are actually looking at.'),
-        'covers': ['apps/*/sidepanel.html', 'apps/*/product-help.js'],
+        'covers': ['apps/*/sidepanel.html', 'apps/*/sidepanel.css', 'apps/*/product-help.js'],
     },
     {
         'id': 'detail',

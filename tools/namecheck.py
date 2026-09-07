@@ -55,6 +55,9 @@ ALLOWED = {
     'apps/analytics/sidepanel.js': [
         ('the CRM', 'comments comparing the two panels are how the twin rule is documented in code'),
     ],
+    'apps/analytics/ai.js': [
+        ('the CRM', 'comments comparing the two assistants are how the twin rule is documented in code'),
+    ],
     'apps/crm/sidepanel.js': [
         ('Analytics', 'comments comparing the two panels'),
     ],

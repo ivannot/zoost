@@ -6,39 +6,39 @@
 # rules win by order inside their own page and lose that when they move.
 # selector	where
 analytics:#ertools button.on	apps/analytics/graphview.html
-analytics:*	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:.ck	apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:.ck input	apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:.empty	apps/analytics/graphview.html,apps/analytics/sidepanel.html
+analytics:*	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.css
+analytics:.ck	apps/analytics/options.html,apps/analytics/sidepanel.css
+analytics:.ck input	apps/analytics/options.html,apps/analytics/sidepanel.css
+analytics:.empty	apps/analytics/graphview.html,apps/analytics/sidepanel.css
 analytics:.erbox	apps/analytics/graphview.html
 analytics:.wrap	apps/analytics/graphview.html,apps/analytics/options.html
-analytics:[hidden]	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:body	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:button	apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:button.primary	apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:[hidden]	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.css
+analytics:body	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.css
+analytics:button	apps/analytics/options.html,apps/analytics/sidepanel.css
+analytics:button.primary	apps/analytics/options.html,apps/analytics/sidepanel.css
 analytics:header	apps/analytics/graphview.html,apps/analytics/options.html
 analytics:header h1	apps/analytics/graphview.html,apps/analytics/options.html
 crm:#ertools button.on	apps/crm/graphview.html
-crm:*	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
-crm:.chips	apps/crm/graphview.html,apps/crm/sidepanel.html
-crm:.ck	apps/crm/options.html,apps/crm/sidepanel.html
-crm:.ck em	apps/crm/options.html,apps/crm/sidepanel.html
-crm:.ck input	apps/crm/options.html,apps/crm/sidepanel.html
-crm:.ck.ind	apps/crm/options.html,apps/crm/sidepanel.html
-crm:.empty	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:*	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.css
+crm:.chips	apps/crm/graphview.html,apps/crm/sidepanel.css
+crm:.ck	apps/crm/options.html,apps/crm/sidepanel.css
+crm:.ck em	apps/crm/options.html,apps/crm/sidepanel.css
+crm:.ck input	apps/crm/options.html,apps/crm/sidepanel.css
+crm:.ck.ind	apps/crm/options.html,apps/crm/sidepanel.css
+crm:.empty	apps/crm/graphview.html,apps/crm/sidepanel.css
 crm:.erbox	apps/crm/graphview.html
-crm:.ftbl	apps/crm/graphview.html,apps/crm/sidepanel.html
-crm:.ftbl td	apps/crm/graphview.html,apps/crm/sidepanel.html
-crm:.ftbl td.mono	apps/crm/graphview.html,apps/crm/sidepanel.html
-crm:.ftbl th	apps/crm/graphview.html,apps/crm/sidepanel.html
-crm:.ftbl tr:hover	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.ftbl	apps/crm/graphview.html,apps/crm/sidepanel.css
+crm:.ftbl td	apps/crm/graphview.html,apps/crm/sidepanel.css
+crm:.ftbl td.mono	apps/crm/graphview.html,apps/crm/sidepanel.css
+crm:.ftbl th	apps/crm/graphview.html,apps/crm/sidepanel.css
+crm:.ftbl tr:hover	apps/crm/graphview.html,apps/crm/sidepanel.css
 crm:.tabrow	apps/crm/graphview.html,apps/crm/options.html
 crm:.tabs	apps/crm/graphview.html,apps/crm/options.html
 crm:.wrap	apps/crm/graphview.html,apps/crm/options.html
-crm:[hidden]	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
-crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
-crm:button	apps/crm/options.html,apps/crm/sidepanel.html
-crm:button.primary	apps/crm/options.html,apps/crm/sidepanel.html
+crm:[hidden]	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.css
+crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.css
+crm:button	apps/crm/options.html,apps/crm/sidepanel.css
+crm:button.primary	apps/crm/options.html,apps/crm/sidepanel.css
 crm:header	apps/crm/graphview.html,apps/crm/options.html
 crm:header h1	apps/crm/graphview.html,apps/crm/options.html
 site:header .brand	site/site.css

@@ -3415,33 +3415,39 @@ class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
         preference two files write, is a check with a hole the size of the other file.
         """
         for app, key in self.SENSITIVE.items():
-            for name in ('sidepanel.js', 'options.js'):
-                self._one(ROOT / 'apps' / app / name, app, key, name)
+            app_dir = ROOT / 'apps' / app
+            html = (app_dir / 'sidepanel.html').read_text(encoding='utf-8')
+            scripts = re.findall(r'<script[^>]+src="([^"]+\.js)"', html)
+            panel = '\n'.join((app_dir / name).read_text(encoding='utf-8') for name in scripts)
+            self._source(panel, app, key, 'panel scripts')
+            self._one(app_dir / 'options.js', app, key, 'options.js')
 
     def _one(self, path, app, key, name):
-            if not path.exists():
-                return
-            src = path.read_text(encoding='utf-8')
-            # Only a file that holds the preference is asked about it: the Analytics settings page has
-            # no export section at all, and requiring a default there would be a check about a screen
-            # that does not exist. The subject is «every file that builds a scope», derived by whether
-            # it names SCOPE_FULL, not a list of file names.
-            if 'SCOPE_FULL' not in src:
-                return
-            m = re.search(r'const SCOPE_DEFAULT = Object\.assign\(\{\}, SCOPE_FULL, \{([^}]*)\}\)', src)
-            self.assertIsNotNone(m, f'{app}/{name}: there is no SCOPE_DEFAULT, so the scope starts from SCOPE_FULL')
-            self.assertRegex(m.group(1), rf'{key}:\s*false',
-                             f'{app}/{name}: {key} is not turned off in the default export scope')
-            # and nothing initialises a scope from SCOPE_FULL any more - the whole point is that an
-            # omitted key must not mean «include the sensitive section».
-            for line in src.splitlines():
-                code = line.split('//')[0]
-                if 'Object.assign({}, SCOPE_FULL' in code and 'SCOPE_DEFAULT =' not in code:
-                    # `pspFull` in the panel, `scFull` on the settings page: the «Everything» button,
-                    # which is the one place a reader asks for the sensitive half by pressing it.
-                    self.assertTrue('pspFull' in code or 'scFull' in code,
-                                    f'{app}/{name}: a scope is built from SCOPE_FULL outside the '
-                                    f'«Everything» button: {line.strip()[:90]}')
+        if not path.exists():
+            return
+        self._source(path.read_text(encoding='utf-8'), app, key, name)
+
+    def _source(self, src, app, key, name):
+        # Only a file that holds the preference is asked about it: the Analytics settings page has
+        # no export section at all, and requiring a default there would be a check about a screen
+        # that does not exist. The subject is «every file that builds a scope», derived by whether
+        # it names SCOPE_FULL, not a list of file names.
+        if 'SCOPE_FULL' not in src:
+            return
+        m = re.search(r'const SCOPE_DEFAULT = Object\.assign\(\{\}, SCOPE_FULL, \{([^}]*)\}\)', src)
+        self.assertIsNotNone(m, f'{app}/{name}: there is no SCOPE_DEFAULT, so the scope starts from SCOPE_FULL')
+        self.assertRegex(m.group(1), rf'{key}:\s*false',
+                         f'{app}/{name}: {key} is not turned off in the default export scope')
+        # and nothing initialises a scope from SCOPE_FULL any more - the whole point is that an
+        # omitted key must not mean «include the sensitive section».
+        for line in src.splitlines():
+            code = line.split('//')[0]
+            if 'Object.assign({}, SCOPE_FULL' in code and 'SCOPE_DEFAULT =' not in code:
+                # `pspFull` in the panel, `scFull` on the settings page: the «Everything» button,
+                # which is the one place a reader asks for the sensitive half by pressing it.
+                self.assertTrue('pspFull' in code or 'scFull' in code,
+                                f'{app}/{name}: a scope is built from SCOPE_FULL outside the '
+                                f'«Everything» button: {line.strip()[:90]}')
 
 
 class AnItalianPageDoesNotSendYouToTheEnglishOne(unittest.TestCase):
@@ -3499,7 +3505,7 @@ class TheScrollingRowDoesNotShaveItsOwnLabel(unittest.TestCase):
 
     def test_the_label_fits_inside_the_row_that_clips_it(self):
         for app in ('crm', 'analytics'):
-            css = (ROOT / 'apps' / app / 'sidepanel.html').read_text(encoding='utf-8')
+            css = (ROOT / 'apps' / app / 'sidepanel.css').read_text(encoding='utf-8')
             row = self.rule(css, '.wsgroup')
             self.assertIn('overflow-x:auto', row.replace(' ', ''),
                           f'{app}: the row no longer scrolls, so this check is about nothing')
@@ -4029,7 +4035,7 @@ class TheAssistantsToolsAreNamedWhereTheyAreClaimed(unittest.TestCase):
     def test_the_count_in_the_prose_is_the_count_in_the_code(self):
         # The word, not the digit: this is prose. Nine became eleven and the sentence did not move.
         words = {9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve', 13: 'thirteen'}
-        for rel, page in (('apps/crm/ai.js', 'README.md'), ('apps/analytics/sidepanel.js', 'site/ai.html')):
+        for rel, page in (('apps/crm/ai.js', 'README.md'), ('apps/analytics/ai.js', 'site/ai.html')):
             n = len(self._tools(rel))
             with self.subTest(rel):
                 self.assertIn(words[n], (ROOT / page).read_text(encoding='utf-8'),
@@ -4439,6 +4445,12 @@ class CssScannerReadsEveryRule(unittest.TestCase):
     def test_the_tree_has_no_unread_rule(self):
         for _, where, css in self.c.sheets():
             self.assertEqual(self.c.unread(css), [], f'{where}: a rule this check never reads')
+
+    def test_linked_extension_stylesheets_are_in_the_subject(self):
+        where = {path for _, path, _ in self.c.sheets()}
+        for app in ('crm', 'analytics'):
+            self.assertIn(f'apps/{app}/sidepanel.css', where,
+                          f'{app}: extracting the panel CSS made it invisible to csscheck')
 
 
 class StoreCopySeesEverySection(unittest.TestCase):
@@ -6509,6 +6521,13 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
         self.assertGreaterEqual(len(read), 2, f'only {len(read)} page(s) report a work unit:\n{out}')
         self.assertGreater(sum(read), 50, 'the pages are opened and almost nothing in them is read')
 
+    def test_the_linked_panel_stylesheets_are_part_of_the_comparison(self):
+        for app in ('crm', 'analytics'):
+            html = (ROOT / 'apps' / app / 'sidepanel.html').read_text(encoding='utf-8')
+            css = twincheck.styles(html, app)
+            self.assertIn(':root', twincheck.rules(css),
+                          f'{app}: the panel stylesheet is linked but twincheck reads no rules')
+
     def test_a_drift_on_one_of_those_pages_is_a_finding(self):
         # Run it, on the real file: the plant that went through every checker before this.
         page = ROOT / 'apps' / 'analytics' / 'graphview.html'
@@ -6540,7 +6559,7 @@ class TheSiteNamesEveryAssistantTool(unittest.TestCase):
     """
 
     def registry(self, app):
-        src = (ROOT / 'apps' / app / ('ai.js' if app == 'crm' else 'sidepanel.js')).read_text(encoding='utf-8')
+        src = (ROOT / 'apps' / app / 'ai.js').read_text(encoding='utf-8')
         at = src.index('AI_TOOLS')
         end = src.index('\n];', at)
         return sorted(set(re.findall(r"name: '(\w+)'", src[at:end])))

@@ -261,8 +261,15 @@ def product_only(app, eid):
     return None
 
 
-def styles(html):
-    return '\n'.join(re.findall(r'<style[^>]*>(.*?)</style>', html, re.S))
+def styles(html, app=None):
+    """CSS that the page actually loads: inline blocks plus local linked stylesheets."""
+    out = list(re.findall(r'<style[^>]*>(.*?)</style>', html, re.S))
+    if app:
+        for href in re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"', html):
+            path = ROOT / 'apps' / app / href
+            if path.is_file():
+                out.append(path.read_text(encoding='utf-8'))
+    return '\n'.join(out)
 
 
 def rules(css):
@@ -473,7 +480,7 @@ def main():
     every = '--all' in sys.argv
     accept = '--accept' in sys.argv
     html = {k: p.read_text(encoding='utf-8') for k, p in PANELS.items()}
-    css = {k: rules(styles(v)) for k, v in html.items()}
+    css = {k: rules(styles(v, k)) for k, v in html.items()}
     raw = {k: id_attrs(v) for k, v in html.items()}
     ids = {k: {canon(e): v for e, v in d.items()} for k, d in raw.items()}
     findings = 0

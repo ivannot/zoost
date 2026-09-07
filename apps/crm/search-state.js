@@ -1,3 +1,4 @@
+// @ts-check
 /* Search-box state, without DOM or product data.
  *
  * The panel decides how a query is executed and drawn. This object keeps the inseparable parts of
@@ -5,6 +6,10 @@
  * a regular expression, and the tab the intent belongs to.
  */
 
+/** @typedef {{text: string, mode: string, regex: boolean}} SearchValue */
+/** @typedef {{fullTextScope?: string, fullTextMode?: string, scope?: string}} SearchOptions */
+
+/** @param {SearchOptions} [options] */
 function createSearchState(options = {}) {
   const fullTextScope = String(options.fullTextScope || '');
   const fullTextMode = String(options.fullTextMode || 'content');
@@ -12,9 +17,11 @@ function createSearchState(options = {}) {
   const states = new Map();
 
   const blank = () => ({ text: '', mode: 'name', regex: false });
+  /** @param {SearchValue} state */
   const copy = (state) => ({ scope, text: state.text, mode: state.mode, regex: state.regex,
     fullText: state.mode === fullTextMode });
 
+  /** @param {SearchValue | null | undefined} value @param {string} [forScope] */
   function normalize(value, forScope = scope) {
     const state = value || blank();
     const mode = forScope === fullTextScope && state.mode === fullTextMode ? fullTextMode : 'name';
@@ -28,12 +35,14 @@ function createSearchState(options = {}) {
 
   function snapshot() { return copy(current()); }
 
+  /** @param {unknown} nextScope */
   function enter(nextScope) {
     scope = String(nextScope || 'main');
     states.set(scope, normalize(states.get(scope), scope));
     return snapshot();
   }
 
+  /** @param {unknown} text */
   function setText(text) {
     current().text = String(text == null ? '' : text);
     return snapshot();
@@ -59,6 +68,7 @@ function createSearchState(options = {}) {
     return snapshot();
   }
 
+  /** @param {unknown} text */
   function usePattern(text) {
     const state = current();
     if (scope !== fullTextScope) return snapshot();

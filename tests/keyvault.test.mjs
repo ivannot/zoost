@@ -454,7 +454,7 @@ test('the CRM status bar is under the AI overlay, which is why the above matters
   // Not a bug being fixed here — the overlay owning everything below the toolbar is a documented
   // decision — but the reason a status-bar-only message is not a message. Asserted so that if the
   // layout is ever changed, whoever changes it finds this note rather than rediscovering it.
-  const html = fs.readFileSync(path.join(ROOT, 'apps/crm/sidepanel.html'), 'utf8');
+  const html = panelPage('crm');
   const body = html.slice(html.indexOf('<body'));
   const seg = body.slice(body.indexOf('id="belowbar"'), body.indexOf('id="status"'));
   const depth = (seg.match(/<div\b/g) || []).length - (seg.match(/<\/div>/g) || []).length;
@@ -469,7 +469,7 @@ test('the footer is outside the container the AI view covers', () => {
   // always had the footer as a sibling; this is the CRM catching up, and the assertion is here so a
   // future tidy-up does not put it back inside.
   for (const app of ['crm', 'analytics']) {
-    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+    const html = panelPage(app);
     const body = html.slice(html.indexOf('<body'));
     const view = app === 'crm' ? 'id="belowbar"' : 'id="main"';
     const seg = body.slice(body.indexOf(view), body.indexOf('id="pfoot"'));
@@ -488,8 +488,7 @@ test('the footer is outside the container the AI view covers', () => {
  * shipped, `node --check` passed (the syntax is fine) and only *running* the function found it. The
  * constant is read from the panel rather than restated here, so the test cannot pass on a wording
  * the product no longer uses. */
-// The CRM panel is two files since the split - ai.js and sidepanel.js share one scope on the page,
-// so a test about «the panel» reads them composed. Analytics is still one file.
+// The panel scripts share one classic scope, so a test about «the panel» reads them composed.
 function panelSrc(app) {
   // Derived from the page: the HTML is the authority on what composes a panel.
   const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
@@ -497,6 +496,11 @@ function panelSrc(app) {
     .map((m) => m[1]).filter((f) => !/(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$/.test(f))
     .map((f) => { try { return fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8'); } catch { return ''; } });
   return parts.join('\n');
+}
+function panelPage(app) {
+  const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+  const css = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.css'), 'utf8');
+  return html + '\n' + css;
 }
 function errText(app) {
   // The CRM's assistant lives in ai.js since the panel was split; MSG stays in sidepanel.js. The
@@ -899,7 +903,7 @@ test('the gear and the cross are drawn, not typed', () => {
   // The panel's glyph vocabulary (↻ ↗ → ♥ ⚙ ⏱ ◐) is untouched everywhere else - this is the one
   // place where two glyphs had to agree with each other rather than only be read.
   for (const app of ['crm', 'analytics']) {
-    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+    const html = panelPage(app);
     for (const id of ['aigear', 'aix']) {
       const m = new RegExp(`id="${id}"[^>]*>(.*?)</span>`, 's').exec(html);
       assert.ok(m, `${app}: ${id} is gone`);

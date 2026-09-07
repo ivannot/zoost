@@ -36,6 +36,10 @@ has to be named here or the suite says so.
 Each app carries its **own `manifest.json` and its own version number** — they do not move in step.
 `./build.sh crm` and `./build.sh analytics` package them separately.
 
+Each side panel is deliberately assembled from small classic scripts and a linked
+`sidepanel.css`. This preserves the no-build, inspectable distribution while keeping AI, exports,
+Health, pure state and panel orchestration at separate maintenance boundaries.
+
 **No code is shared between apps yet, and that is deliberate.** The two will look similar (a tree, a
 preview, a health view, exports) but they read different platforms with different shapes. Factor
 something out only once both sides actually use it and it has stopped changing — sharing too early

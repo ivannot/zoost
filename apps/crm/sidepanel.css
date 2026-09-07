@@ -1,0 +1,676 @@
+  /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
+     visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
+     in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
+     than remembering it at every element that grows a display later. */
+  [hidden]{display:none!important}
+  :root{
+    --bg:#0d121c; --tree:#0f1622; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
+    --border:#26303f; --line:#1e2735; --sel:#3b82f6;--accent:#3b82f6; --sel-soft:#16263f;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --rest:#a78bfa;
+    --hist:#67e8f9; --hist-line:#2b7c8c; --hist-fill:rgba(34,211,238,.14);   /* the history: a colour used for nothing else */
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);display:flex;flex-direction:column;font-size:13px;overflow-x:hidden}
+  .wsbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .wsbar2{padding-top:0;border-bottom:1px solid var(--line)}
+  .wsroot{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:1px dashed var(--border);color:var(--muted)}
+  .wsroot:hover{border-color:var(--sel);color:var(--ink);border-style:solid}
+  .wsroot.needgrant{border-style:solid;border-color:#b06a1c;color:#f0a44a;background:rgba(217,119,6,.10);font-weight:600}
+  .wsroot.needgrant:hover{background:rgba(217,119,6,.20);border-color:#d97706;color:#fbbf24}
+  .wsbar select{flex:1;min-width:0;background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:12px var(--sans)}   /* min-width:0 lets the select shrink (and ellipsize) instead of shoving Remove off-screen */
+  .wsbar button{flex:none}
+  .modebar{display:flex;flex-wrap:wrap;gap:3px;padding:6px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+  /* Applied by fitTabs() when the segments would otherwise wrap - see the note there for why it is
+     measured and not a media query. Measured on the six shipped tabs: they need 380px as authored
+     and 330px like this, so the panel has to be dragged genuinely narrow before it breaks. */
+  .modebar.tight{gap:2px;padding:6px 3px}
+  .modebar.tight .seg{padding:6px 2px}
+  .modebar.tighter .seg{font-size:10px;padding:6px 1px}
+  .seg{flex:1 1 auto;min-width:0;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 3px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .segnone{flex:1;color:var(--muted);font-size:11px;padding:6px 3px;text-align:center}
+  .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}
+  #pvtable{display:none;flex:1;overflow:auto}
+  .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
+  .ftbl th{position:sticky;top:0;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
+  .ftbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top;white-space:nowrap}
+  .ftbl td.mono{color:#82d2ff} .ftbl tr:hover{background:#16263f}
+  /* A picklist of forty options laid out on one line made the fields table scroll sideways
+     for ever, and a horizontal scrollbar in a 400px panel hides the columns that matter. The
+     cell carries the count and opens downwards; ▸/▾ is the pair this panel already uses for
+     a group that folds. */
+  .ftbl td.pl{white-space:normal}
+  .plbtn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font:11px var(--mono);padding:1px 6px;cursor:pointer}
+  .plbtn:hover{color:var(--ink);border-color:var(--sel)}
+  .ftbl tr.plrow td{white-space:normal;background:#101827;padding:7px 8px}
+  .plvals{display:flex;flex-wrap:wrap;gap:4px;max-height:180px;overflow:auto}
+  .plv{border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#cbd5e1;background:#16203099;
+       max-width:100%;overflow-wrap:anywhere}
+  .bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+  button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer}
+  button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
+  button.primary{background:var(--sel);border-color:var(--sel);color:#fff}
+  button.primary:hover:not(:disabled){background:#2f6fe0}
+  .controls{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);background:#131a27;flex-wrap:wrap}
+  .findgrp{display:flex;align-items:stretch;flex:1;min-width:190px;background:#0f1826;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .findgrp:focus-within{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  .findwrap{position:relative;flex:1;min-width:90px;display:flex}
+  .findwrap input{width:100%;padding:6px 26px 6px 10px;background:transparent;border:0;color:var(--ink);font:12px var(--sans);outline:none}
+  .findwrap .fx{position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer}
+  .findwrap .fx:hover{color:var(--ink)}
+  /* Nothing to clear, nothing to click: the mark appears with the text. Written as a rule about
+     the input's own state rather than as something switched from script - there is no second place
+     to keep in step, and it cannot fall out of date with what the box contains. */
+  .findwrap input:placeholder-shown + .fx{display:none}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .fsellbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .filtersel{background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font:12px var(--sans);cursor:pointer}
+  .sortdir{background:#0f1826;border:1px solid var(--border);border-radius:7px;padding:0;width:26px;height:26px;line-height:1;font-size:13px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .sortdir:hover{border-color:var(--sel)}
+  .ntog button{padding:4px 9px;font-size:11px}
+  #ctx{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
+  #ctx .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+  #ctx.match .dot{background:var(--ok)} #ctx.mismatch .dot{background:var(--bad)} #ctx.unbound .dot{background:var(--muted)} #ctx.offzoho .dot{background:var(--warn)}
+  #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap} #ctx .who b{color:var(--ink)} #ctx .who span{color:var(--muted)}
+  #ctx .bound{margin-left:auto;color:var(--muted);font:11px var(--mono);white-space:nowrap} #ctx.mismatch .bound{color:var(--bad)}
+  #status{font-size:11px;color:var(--muted);padding:4px 10px;min-height:18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px}
+  #mmbar{display:none;flex-direction:column;align-items:stretch;gap:8px;padding:9px 11px;background:#2a1c14;border-bottom:1px solid #6b3a1f}
+  #mmbar.show{display:flex}
+  #mmbar #mmtext{font:11.5px var(--mono);color:#f0b483;line-height:1.5}
+  /* The sample's discrepancy is stated, not blocked - so the bar wears a colder colour than the one
+     that means «everything is disabled until you fix this». Same shape, different weight, because
+     they are different situations and a reader has to be able to tell without reading. */
+  #mmbar.soft{background:#141d2b;border-bottom-color:#2f4463}
+  #mmbar.soft #mmtext{color:#93a7c4}
+  #mmbar .mmbtns{display:flex;gap:8px;flex-wrap:wrap}
+  #mmbar .mmbtns button{white-space:nowrap;flex:1 1 auto}
+  #mmbar #mmgo{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
+  #status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad)} #status.busy{color:var(--ink)}
+  /* The pointer to zoost.it/emergency, shown only when a read from Zoho failed in a way that is
+     not a role refusal. A class and not the `hidden` attribute: `display:inline` on an id would
+     quietly beat `[hidden]`, which is a trap this project has already paid for once. */
+  #emerg{display:none;margin-left:auto;color:var(--accent);text-decoration:none;white-space:nowrap}
+  #emerg.on{display:inline} #emerg:hover{text-decoration:underline}
+  #repopen{display:none;margin-left:8px;flex:none;background:none;border:0;padding:0;color:var(--accent);font-size:11px;text-decoration:underline;cursor:pointer;white-space:nowrap}
+  #repopen.on{display:inline}
+  /* The row does not clear itself: every other status line is replaced by the next one, and
+     after a report is sent nothing else happens, so it sat there for good. */
+  #repdismiss{display:none;margin-left:8px;flex:none;background:none;border:0;padding:0 2px;
+    color:var(--muted);font-size:11px;cursor:pointer;line-height:1}
+  #repdismiss.on{display:inline} #repdismiss:hover{color:var(--ink)}
+  .spin{width:11px;height:11px;border:2px solid #33415a;border-top-color:var(--sel);border-radius:50%;animation:sp .7s linear infinite;display:none;flex:none}
+  #status.busy .spin{display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  /* main split */
+  #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+  #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
+  #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
+  #overview.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
+  #belowbar{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
+  /* What the history covers: everything the tab row controls. Written with the id repeated so
+     it outranks `#preview.show`, which is an id selector of its own. */
+  /* What the history replaces: the list and the detail pane. The pull bar stays - disabled, from
+     `navBlockChrome()` - and so do the search box and Name, which the chain uses. The chip row goes:
+     those filter the tab's own types and mean nothing here. */
+  #aiview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
+  #aiview.show{display:flex}
+  #aiview .aihead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  #aiview .aihead .aisp{flex:1}
+  #aiview .aiicon{cursor:pointer;color:var(--muted);font-size:14px}
+  /* Two glyphs, two different amounts of ink inside the same line box - ⚙ paints much smaller than
+     ✕ at the same declared size, and each sits differently against its own baseline. Nudging one by
+     a pixel is fitting the font rather than the layout, so instead they get a box of their own and
+     are centred inside it: whatever a font does with them, the two boxes are the same and the row
+     agrees with itself. `Clear` keeps the plain rule, because it is a word and a fixed width would
+     clip it. Reported as «the gear is too small and they are not all centred». */
+  #aiview #aigear, #aiview #aix{display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;line-height:1}
+  #aiview .aiicon:hover{color:var(--ink)}
+  /* Chrome, not content: the context line sits on the panel background so the message bubbles -
+     which are --surface - read as raised above it. It used to share both the background and the
+     border tone with the assistant's bubble, so the two ran together and the first line of an
+     answer looked like a continuation of the status bar. */
+  .aictx{padding:6px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg)}
+  .aimsgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+  .aimsg{display:flex;flex-direction:column;gap:2px;max-width:85%}
+  .aimsg.user{align-self:flex-end;align-items:flex-end}
+  .aimsg.assistant{align-self:flex-start;align-items:flex-start}
+  .aimsg .airole{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:0 4px}
+  .aimsg .aitext{padding:8px 11px;font-size:12.5px;line-height:1.5;word-break:break-word}
+  .aitool{align-self:flex-start;font:10.5px var(--mono);color:var(--muted);background:var(--tree);border:1px solid var(--line);border-radius:6px;padding:2px 8px;max-width:90%}
+  .aimsg.assistant .aitext pre.aicode{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;overflow:auto;font:11px var(--mono);white-space:pre;margin:6px 0}
+  .aimsg.assistant .aitext code{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0 4px;font:11px var(--mono)}
+  .aimsg.assistant .aitext strong{color:var(--ink)} .aimsg.assistant .aitext a{color:var(--accent)}
+  .aimsg.user .aitext{background:var(--accent);color:#eaf2ff;border-radius:13px 13px 3px 13px}
+  .aimsg.assistant .aitext{background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:13px 13px 13px 3px}
+  #aiclear{font-size:11px}
+  #aiengbadge{font:10px var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 8px;white-space:nowrap}
+  #aiengbadge.agent{color:#83d8c6;border-color:#2f6f62}
+  #aiengbadge.single{color:#f0a44a;border-color:#6b4a1c}
+  .aiwait{align-self:flex-start;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 11px;background:var(--surface);border:1px solid var(--line);border-radius:13px 13px 13px 3px}
+  .aiwait i{width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;animation:aib 1.1s infinite ease-in-out}
+  .aiwait i:nth-child(2){animation-delay:.15s} .aiwait i:nth-child(3){animation-delay:.3s}
+  @keyframes aib{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+  .ainote{margin:0 12px 8px;padding:7px 10px;border-left:2px solid #6b4a1c;background:#1e1a12;color:#e2c98a;font-size:11px;line-height:1.5;border-radius:0 6px 6px 0;display:none}
+  .ainote.show{display:block;position:relative;padding-right:26px}
+  .ainote .ainotex{position:absolute;top:5px;right:8px;cursor:pointer;color:#b08b52;font-size:12px;line-height:1}
+  .ainote .ainotex:hover{color:#f0a44a}
+  .ailockrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:center;flex-wrap:wrap}
+  .ailockrow .ailocktxt{flex:1 1 100%;color:var(--muted);font-size:11.5px;line-height:1.45}
+  .ailockrow input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:7px 9px;font:12.5px var(--sans)}
+  .ailockrow input:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  /* The verdict belongs beside the field, not in the status bar: in the CRM panel #aiview covers
+     #status entirely, so a message sent there while the chat is open is written to nothing. */
+  .ailockrow .ailockmsg{flex:1 1 100%;font-size:11.5px;line-height:1.45;color:var(--warn)}
+  .aiinrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:flex-end}
+  .aiinrow textarea{flex:1;resize:vertical;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:7px 9px;font:12.5px var(--sans);min-height:38px}
+  .aiinrow textarea:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  .aiinrow #aisend{background:#d97706;border-color:#d97706;color:#fff;font-weight:600;align-self:stretch;padding:0 14px}
+  .aiinrow #aisend:hover:not(:disabled){background:#ea8c11;border-color:#ea8c11}
+  .aiinrow #aisend:disabled{opacity:.5}
+  #healthview{display:none;position:absolute;inset:0;z-index:7;background:var(--bg);flex-direction:column}
+  #healthview.show{display:flex}
+  #healthview .hh{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  /* Everything in this view is computed from the mirror except one group, which is read from Zoho.
+     That group had no way to be refreshed on its own once it stopped being a tab - the only route
+     left was «Pull all», which re-downloads the whole org to update one reading. It says «Pull» and
+     wears `.zbtn` because it reaches Zoho: `↻` is reserved for reading the disk again. */
+  #healthview .hhr{display:flex;align-items:center;gap:9px}
+  #healthpull{font-size:10.5px;padding:2px 8px}
+  #healthview .hx{cursor:pointer;color:var(--muted)}
+  /* No padding above the sticky tab row, or it parks below the gap and the coverage line
+     scrolls up into the strip over it - the trap this project has already hit once with a
+     table header. The 10px lives on the sticky row itself, which paints over what passes. */
+  #healthbody{overflow:auto;padding:0 12px 10px}
+  .hcov{font-size:11px;color:var(--muted);line-height:1.5;background:#141b29;border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:12px}
+  .hsec{margin-bottom:14px}
+  .hsec .ht{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;margin-bottom:6px}
+  .hsec .ht .n{font:11px var(--mono);padding:1px 7px;border-radius:9px}
+  .hsec .n.warn{background:#3a2a12;color:#f0b483} .hsec .n.bad{background:#3a1a1a;color:#f87171} .hsec .n.ok{background:#173a2a;color:#54d199}
+  .hsec .hd{font-size:11px;color:var(--muted);margin-bottom:6px}
+  .hrow{padding:4px 8px;border:1px solid var(--border);border-radius:6px;margin:3px 0;font:11.5px var(--mono);color:var(--ink);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+  /* A finding that opens the thing it names. Keyed on the view rather than on the row, because the
+     two panels lay their findings out differently - rows here, a list there - and the *idea* is the
+     same one: what is styled is «a link inside the health view», which both have. It was `.hrow a`,
+     which is the CRM's markup wearing the rule. */
+  #healthbody a{color:var(--accent);text-decoration:none;cursor:pointer} #healthbody a:hover{text-decoration:underline}
+  #overviewview{display:none;position:absolute;inset:0;z-index:6;background:var(--bg);flex-direction:column}
+  #overviewview.show{display:flex}
+  #overviewview .ovhead{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  #overviewview .ovx{cursor:pointer;color:var(--muted)}
+  #overviewbody{flex:1;overflow:auto;padding:14px 12px;color:var(--ink)}
+  .ovtitle{font-size:16px;font-weight:650;margin-bottom:3px}.ovmeta{font-size:11px;color:var(--muted);margin-bottom:14px}
+  .ovgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .ovcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;min-width:0}
+  .ovlabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.35px}.ovcount{font:17px var(--mono);margin:3px 0}.ovstate{font-size:10.5px;color:var(--muted)}
+  .ovstate.partial,.ovstate.unavailable,.ovstate.behind{color:var(--warn)}.ovissues{margin:12px 0;padding:8px 10px;border-left:2px solid var(--warn);background:var(--surface);font-size:11px;line-height:1.5}
+  .ovissue{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;padding:4px 0;width:100%;border:0;background:none;color:var(--ink);text-align:left}.ovissue + .ovissue{border-top:1px solid var(--border)}.ovissue span{color:var(--warn);white-space:nowrap}.ovissue:hover:not(:disabled){background:none;color:#fff}
+  .ovstart{margin:0 0 14px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+  .ovstart h3{margin:0 0 8px;font-size:12px}.ovsteps{display:grid;gap:6px}.ovstep{display:grid;grid-template-columns:18px 1fr;column-gap:6px;font-size:11px;color:var(--muted)}
+  .ovstep i{grid-row:1/3;width:16px;height:16px;border:1px solid var(--border);border-radius:50%;font-style:normal;text-align:center;line-height:14px}.ovstep b{color:var(--ink);font-weight:600}.ovstep small{font-size:10px}.ovstep.done i{border-color:var(--ok);color:var(--ok)}.ovstep.current i{border-color:var(--warn);color:var(--warn)}.ovstep.pending{opacity:.65}
+  .ovactions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.ovactions button{font-size:11px}
+  .ovactions button.next{box-shadow:0 0 0 2px rgba(245,158,11,.22);border-color:var(--warn)}
+  .hrow .meta{color:var(--muted);font-size:10.5px}
+  .hnone{font-size:11px;color:#54d199}
+  /* The status line lives inside #belowbar and this view covers it, so anything setStatus()
+     says while the health view is open is written where nobody can see it. A verdict about
+     an action goes beside the control that started it. */
+  #healthmsg{font:11px var(--sans);color:var(--muted)}
+  #healthmsg:empty{display:none}
+  #healthmsg.ok{color:var(--ok)} #healthmsg.warn{color:var(--warn)} #healthmsg.bad{color:var(--bad)}
+  .htabs{display:flex;gap:4px;margin-bottom:10px;position:sticky;top:0;background:var(--bg);padding:10px 0 2px;z-index:2}
+  .htab{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .htab.on{color:var(--ink);border-color:var(--accent);background:#16233a}
+  .htab .htn{font:10px var(--mono);background:var(--bg);border-radius:9px;padding:0 6px;color:var(--muted)}
+  .htab.on .htn{color:var(--accent)}
+  .hrow .hcontent{flex:1;min-width:0}
+  #tree{flex:1 1 auto;overflow:auto;padding:0 0 4px;min-height:60px;background:var(--tree)}
+  .grp{font:10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:7px 10px 5px;cursor:pointer;display:flex;align-items:center;gap:6px;background:#0b1220;position:sticky;top:0;z-index:3;box-shadow:0 1px 0 var(--line)}
+  .grp .chev{transition:transform .12s;color:#5b6b82} .grp.collapsed .chev{transform:rotate(-90deg)}
+  .grp .cnt{margin-left:auto;color:#4a5877}
+  .f{padding:4px 10px 4px 24px;font:12px var(--mono);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:6px;align-items:center}
+  .f:hover{background:var(--sel-soft)} .f[aria-selected=true]{background:var(--sel-soft);color:#fff;box-shadow:inset 3px 0 0 var(--sel)}
+  .f .rest{color:var(--rest);font-size:9px;margin-left:auto}
+  .f .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .f .rest.rf{margin-left:0;min-width:44px;text-align:right}
+  .f .rest.rl{margin-left:8px;min-width:26px;text-align:right;color:#a78bfa}
+  /* Functions rows: fixed-width trailing columns of their own (rf/rl above belong to Modules), so
+     the numbers line up down the list even when a row has nothing to put in one of them. The first
+     .rest still carries margin-left:auto and pushes the whole group to the right edge. */
+  .f .rest.rlg{min-width:30px;text-align:right;color:#7dd3fc}
+  .f .rest.rr{min-width:26px;text-align:right}
+  /* Whether Zoho is running this function. Amber for a draft, because «written and never published»
+     is the state somebody is looking for when they wonder why an edit changed nothing. */
+  .f .rest.rpb{min-width:34px;text-align:right;color:var(--ok)}
+  #pvcallers .publine{margin:0 0 6px;font-weight:600;color:var(--ok)}
+  /* The runtime box: a live reading, so it is visually quieter than the mirror around it. */
+  #pvcallers .rtwrap{margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
+  #pvcallers .rtnote{color:var(--muted);font-size:11px;margin:4px 0}
+  #pvcallers table.rt{width:100%;border-collapse:collapse;font:11px var(--mono);margin:4px 0 10px}
+  #pvcallers table.rt th{text-align:left;color:var(--muted);font-weight:500;padding:2px 6px 2px 0}
+  #pvcallers table.rt td{padding:2px 6px 2px 0;vertical-align:top}
+  #pvcallers table.rt .rtok{color:var(--ok)} #pvcallers table.rt .rtbad{color:var(--warn)}
+  #pvcallers .rtdate{background:var(--tree);color:var(--ink);border:1px solid var(--line);
+    border-radius:6px;padding:2px 6px;font:11px var(--mono);margin-left:6px}
+  #pvcallers .publine.pubdraft{color:#f59e0b}
+  .f .rest.rpb.rpbd{color:#f59e0b}
+  .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
+  .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
+  /* A date needs more room than a count; only the «last modified» sort asks for it. */
+  .f .rest.rfl.rfw{min-width:62px}
+  .f .rest.rc{margin-left:6px;min-width:30px;text-align:right;color:#e0a86b}
+  /* Actions rows: same discipline, their own classes rather than widening the four above, which
+     Modules and Connections also draw. The module is a name and not a number, so it is bounded and
+     clipped instead of being allowed to push the counts around. */
+  .f .rest.rm{min-width:78px;max-width:78px;text-align:right;color:#a78bfa;overflow:hidden;text-overflow:ellipsis}
+  .f .rest.rs{margin-left:6px;min-width:10px;text-align:right;color:#f59e0b}
+  .f .rest.rk{margin-left:6px;min-width:46px;text-align:right;color:#6b7688}
+  .f .rest.ru{margin-left:6px;min-width:26px;text-align:right}
+  .f .rest.ru.none{color:#e0a86b}
+  /* A module Zoho would not describe. Its own class rather than widening .rf/.rl, which the
+     Connections rows also use - see the note in CLAUDE.md about the badge classes. */
+  .f .rest.rx{margin-left:0;color:var(--muted);font-weight:600}
+  .f .st{cursor:pointer;font-size:11px;width:13px;text-align:center;flex:none}
+  .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)} .st-stale{color:#f59e0b}
+  /* Listed, and its source is not something this mirror holds - neither present nor pending. */
+  .st-lang{color:#7dd3fc}
+  /* Refused by Zoho. Neutral on purpose and readable: amber in this panel means "do something",
+     and there is nothing to do. Lighter than .st-no, which means "not here yet" and is dim
+     because it is waiting; this one is settled and has to be legible. */
+  .st-none{color:var(--muted)}
+  #missing{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
+  .genbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);min-width:0}
+  /* nowrap keeps the row on one line; min-width:0 lets it scroll INSIDE its own box instead of
+     pushing the whole panel wide (which made Remove / Ask AI spill past the edge). */
+  /* The top padding is not spacing, it is headroom: `overflow-x:auto` makes this a scroll container,
+     and a box with one axis `auto` and the other `visible` computes the visible one to `auto` too -
+     so this clips vertically as well. `.explabel` sits 7px above its group's border to straddle it,
+     which put it 1px above this element's padding box and had the top of EXPORT shaved off, in both
+     products, wherever the panel is drawn. Measured in the shipped panel rather than reasoned:
+     label 183.3..191.3, padding box 184.3, clipped by 1.0px. Reported by the author from a
+     screenshot. Keep this at least 6px or the letters lose their top row again. */
+  .wsgroup{border:1px solid var(--border);border-radius:9px;padding:8px 4px 7px;margin:0;display:flex;gap:clamp(3px,1.4vw,8px);align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
+  /* Left-aligned, with the spare width left spare - spreading the icons across the whole row was
+     tried and is worse: it reads as a bar of unrelated things rather than a group. What grows is
+     only the distance between them, and it grows with the panel: 3px at the narrowest, where every
+     icon still has to be reachable without scrolling the row, up to 8px where there is room. Two
+     reports answered by one line - «they must be aligned to the left» and «all the icons must be
+     visible». */
+  /* Every icon in this row has to be reachable at the panel's minimum width - measured, not
+     guessed: with the history control added the row wanted 348px of the 322px it has, and a
+     button one drag off-screen is one most people never find. 9px of padding became 6, and the
+     two decorative separators went: the export group has a border of its own to say where it
+     starts. */
+  .wsgroup button{height:28px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center}   /* uniform height + centering, so every button on the row sits at the same level */
+  /* One scrollbar for the whole panel, light enough to be seen on the darkest box in it. Reported:
+     the lists showed the browser's own light bar and the panes below showed something dark that was
+     invisible against them - partly a rule of ours that painted the workspace strip's thumb in
+     `--border`, partly Chrome taking its default from each box's own background. Stated once here,
+     so every scrollable thing agrees. */
+  *::-webkit-scrollbar{width:10px;height:8px}
+  *::-webkit-scrollbar-thumb{background:#5a6b85;border-radius:5px}
+  *::-webkit-scrollbar-thumb:hover{background:#7b8dab}
+  *::-webkit-scrollbar-track{background:transparent}
+  *{scrollbar-width:thin;scrollbar-color:#5a6b85 transparent}
+  .wsgroup > button{flex:none;white-space:nowrap}   /* one line, never wrap; the row scrolls (contained) if it truly cannot fit */
+  /* Export box: a plain inline-flex box (not a fieldset), so its buttons align with the neighbours.
+     The label is absolutely positioned over the top border - same look as a legend, but it adds no
+     vertical offset, which is what threw "Pull all" out of line. It earns its keep: HTML and MD say
+     what the file is and nothing about what the buttons do, and the legend is what says it. */
+  .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:3px 4px;display:inline-flex;gap:4px;align-items:center;flex:none}
+  .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
+  .expgroup button{flex:none;white-space:nowrap}
+  /* The stacking order of the panel's four overlapping layers, written down because it was
+     wrong: a dialog at 61 opened *under* the off-platform overlay at 70, so pressing About
+     with no Zoho tab did nothing anybody could see. It reads, from the bottom:
+     the views inside the workbench (6-8) · the off-platform overlay (70) · the footer, which
+     stays reachable under that overlay (80) · a dialog's scrim (85) and the dialog (90),
+     which is the only thing that may cover the footer, because it is modal. */
+  .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:85;display:none}
+  .scrim.on{display:block}
+  .dlg{position:fixed;z-index:90;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .dlg.on{display:flex}
+  .dlg.full{left:0;top:0;transform:none;width:100vw;height:100vh;max-height:100vh;border:0;border-radius:0}
+  .dlg.full .db{padding:16px 18px}
+  .dlg .dh{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);font-weight:600;color:#e7edf6}
+  .dlg .dx{cursor:pointer;color:var(--muted)}
+  .dlg .db{padding:12px 14px;overflow:auto;flex:1;min-height:0}
+  .dlg .df{display:flex;gap:8px;align-items:center;padding:11px 14px;border-top:1px solid var(--border)}
+  .dlg .df button:last-child{margin-left:0} .dlg .df #expcancel{margin-left:auto}
+  .dnote{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .preset{display:flex;gap:6px;margin-bottom:10px}
+  .preset button{flex:1;font-size:11.5px}
+  .ck{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:12px;color:#cdd7e6;cursor:pointer;line-height:1.45}
+  .ck.ind{padding-left:20px}
+  .ck input{margin-top:2px;accent-color:var(--sel)}
+  .ck em{color:#f0a44a;font-style:normal}
+  .scstale{margin:8px 0;padding:8px 10px;border:1px solid #6b3a1f;background:#2a1c14;border-radius:8px;font-size:11.5px;color:#f0b483;line-height:1.5}
+  .scstale b{color:#fbbf24}
+  .scstale div+div{margin-top:5px}
+  .scwarn{font-size:11px;color:#f0a44a;flex:1}
+  #aboutbody{font-size:12px;color:#cdd7e6;line-height:1.6}
+  #aboutbody h4{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  #aboutbody a{color:#83d8c6}
+  #aboutbody .legal{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:6px}
+  /* Toolbar marks. Same weight as the ↻ glyph beside them - 1.6px stroke at 13px - and
+     currentColor, so each inherits its button's role colour instead of introducing a new one.
+     A mark replaces the *visible* word only: the name lives in aria-label and title, which is
+     where a name has to be anyway for anyone not looking at pixels. */
+  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
+  /* Only the horizontal padding is tightened. Zeroing it top and bottom made the marked buttons
+     visibly shorter than the words beside them, which is the sort of thing you notice without
+     being able to name it. */
+  button.icon{padding:6px 8px}
+  #overview.icon{padding-left:3px;padding-right:3px}
+  button.glyph{font-size:15px;line-height:14px;padding:6px 8px}
+  /* 14px, not 13: the line box a word makes here is 14px, so a 13px block left the marked
+     buttons one pixel shorter than their neighbours. The drawing is unchanged - only its box. */
+  button.icon .mk{display:block;width:14px;height:14px}
+  .zbtn{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
+  .zbtn:hover:not(:disabled){background:#2f6fe0;border-color:#2f6fe0}
+  .lbtn{background:transparent;border:1px solid #2f6f62;color:#83d8c6}
+  .lbtn:hover:not(:disabled){background:rgba(47,111,98,.16)}
+  /* button semantics:
+     .zbtn  solid blue    - writes to / reads from Zoho (pull)
+     .znav  light blue    - opens a page in Zoho
+     .lbtn  teal outline  - produces a local artefact (file or window)
+     .pbtn  violet outline- in-panel view, no output, no Zoho call
+     .abtn  amber outline - AI                                                */
+  .znav{background:rgba(47,111,237,.14);border:1px solid #3f6ea8;color:#9fc4f5}
+  .znav:hover:not(:disabled){background:rgba(47,111,237,.26);border-color:var(--sel);color:#cfe1fb}
+  .pbtn{background:transparent;border:1px solid #5a4a9c;color:#b9a9f0}
+  .pbtn:hover:not(:disabled){background:rgba(124,92,255,.16)}
+  .abtn{background:transparent;border:1px solid #b06a1c;color:#f0a44a}
+  .abtn:hover:not(:disabled){background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
+  body.ai-open .wsgroup > button:not(#askai){opacity:.32;pointer-events:none}
+  body.health-open .wsgroup > button:not(#health){opacity:.32;pointer-events:none}
+  body.overview-open .wsgroup > button:not(#overview){opacity:.32;pointer-events:none}
+  body.ai-open #overview, body.health-open #overview, body.nav-open #overview{opacity:.32;pointer-events:none}
+  /* The history is the third view of this kind, so it behaves like the other two: while it is
+     open every other control in the toolbar is dimmed and inert. Asked for three times, and it
+     was the half that was missing - the view covered the panel and left the buttons above it live. */
+  body.nav-open .wsgroup > button:not(#navtab){opacity:.32;pointer-events:none}
+  /* The export box dims from the inside, and every other faded control dims with `opacity`.
+     `opacity` on this one made its own top border show through the label whose whole job is to hide
+     it - a line straight across EXPORT the moment Health or the assistant opened. Measured: the
+     label is 8px tall and the border crosses it 6.5px down, so it runs through the letters, and
+     shrinking the label does not help because the cause is the compositing, not the size. So the box
+     keeps a fully opaque label, which goes on masking, and the border and the buttons are dimmed by
+     hand. The two colours are the .32 blend over --surface computed, not eyeballed:
+     #2f6f62 -> #213b42, #83d8c6 -> #3c5d62. */
+  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup, body.overview-open .wsgroup .expgroup,
+  body.nav-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
+  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button, body.overview-open .wsgroup .expgroup button,
+  body.nav-open .wsgroup .expgroup button{opacity:.32}
+  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel, body.overview-open .wsgroup .explabel,
+  body.nav-open .wsgroup .explabel{color:#3c5d62}
+  .genbar button:disabled{opacity:.5}
+  .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
+  .smode:hover{background:#1e2a3d;color:var(--ink)}
+  .smode.on{background:var(--sel);color:#fff;border-left-color:var(--sel)}
+  .rxmenu{position:fixed;z-index:60;background:#182131;border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.45);min-width:200px;max-width:min(340px,calc(100vw - 16px));display:none;padding:4px 0}
+  .rxmenu.show{display:block}
+  .rxmenu button{display:block;width:100%;text-align:left;background:none;border:0;padding:6px 10px;color:var(--ink);font-size:12px;border-radius:0}
+  .rxmenu button:hover{background:#1e2a3d}
+  .rxmenu .rxpat{display:block;color:var(--muted);font-family:ui-monospace,monospace;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rxmenu .rxman{border-top:1px solid var(--border);color:var(--muted);margin-top:4px;padding-top:8px}
+  .rxmenu .rxsave{display:flex;gap:6px;align-items:center;border-top:1px solid var(--border);margin-top:4px;padding:8px 10px 4px;flex-wrap:wrap}
+  .rxmenu .rxsave input{flex:1;min-width:120px;background:#0f1522;border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px;padding:4px 6px}
+  .rxmenu .rxsave button{width:auto;flex:none;background:#1e2a3d;border-radius:4px;padding:4px 10px}
+  .rxmenu .rxerr{flex-basis:100%;color:#e08f8f;font-size:10px;min-height:0}
+  .rxmenu .rxnote{color:var(--muted);font-size:11px}
+  .srhdr{color:var(--muted);font-size:11px;padding:6px 10px}
+  .sr{padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer}
+  .sr:hover{background:#182338}
+  .srname{font:12px var(--sans);color:var(--ink);display:flex;gap:6px;align-items:center}
+  .srcount{background:#22304a;color:var(--muted);border-radius:999px;padding:0 6px;font-size:10px}
+  .srline{font:11px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .srln{color:#5b6b82;margin-right:6px}
+  .sr mark{background:rgba(59,111,224,.35);color:#fff;border-radius:2px}
+  ::highlight(zoost-find){background:rgba(59,111,224,.45);color:#fff}
+  .wftype{color:var(--muted);font-size:9px;margin-left:auto;text-transform:uppercase}
+  .wfoff{color:#f59e0b;font-size:9px;margin-left:6px;text-transform:uppercase}
+  /* Actions that do not run immediately. Its own hue, not the amber `off` uses: "delayed" is a
+     property of the rule, "inactive" is a state, and one colour for two meanings is one fewer
+     meaning. `margin-left:auto` lives on .wftype, so this sits after it without fighting for it. */
+  .wfsched{color:#7dd3c0;font-size:9px;margin-left:6px;white-space:nowrap}
+  /* A figure that states its own gap, in the list where the figure is. */
+  .wfnote{color:var(--muted);font-size:10.5px;line-height:1.5;padding:7px 10px;border-bottom:1px solid var(--line)}
+  .wfnote b{color:var(--ink)}
+  .wfd{padding:8px 10px;font:12px var(--mono);line-height:1.6}
+  .wfrow{margin:2px 0}.wfrow .wk{color:var(--muted);display:inline-block;min-width:66px}
+  /* What Zoho reports about a function at runtime, under what the mirror says about it statically. */
+  /* The detail pane's two tabs. Same class and same look as the Analytics panel's, because it is
+     the same gesture in the same place. */
+  .dtabs{display:flex;gap:3px;padding:5px 7px;border-bottom:1px solid var(--line);background:#131a27;align-items:center}
+  .dtab{flex:1 1 auto;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:4px 3px;border-radius:6px;cursor:pointer;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dtab.active{background:#28405c;border-color:#3d5a7e;color:#fff}
+  .failwrap{margin-top:5px;color:#f0b483}
+  .failrow{color:var(--muted);margin-left:2px}
+  .wfcond{margin:8px 0;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#141b29}
+  .wfch{color:#82d2ff;font-size:11px;margin-bottom:4px}
+  .wfcrit{color:var(--ink);font-size:11px;margin-bottom:5px}.wfcrit i{color:var(--muted);font-style:normal}
+  .wfacts{margin-top:4px}.wfacts .wk{color:var(--muted);margin-right:6px}
+  .wfact{display:inline-block;background:#22304a;color:var(--muted);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px}
+  .wf-fn{display:inline-block;background:rgba(59,111,224,.18);color:#82d2ff;border:1px solid var(--sel);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px;cursor:pointer}
+  .wf-fn:hover{background:var(--sel);color:#fff}
+  /* A chip whose tab is not there. Not a link: no pointer, no hover, and the muted colour every other
+     unavailable thing in this panel uses. The text stays - what a module is used by is a fact about
+     the module, and hiding the Functions tab does not make it untrue - it simply stops being a way in. */
+  .wf-fn.gone{background:none;border-color:#33415a;color:var(--muted);cursor:default}
+  .wf-fn.gone:hover{background:none;color:var(--muted)}
+  /* `cursor:default` is not enough on its own where the container styles the element by id, so the
+     inert chip is not an `<a>` at all - see wireFnChips(). This says what it should look like; the
+     element swap is what makes sure nothing else can say otherwise. */
+  span.wf-fn.gone{text-decoration:none}
+  .connfns{padding:6px 10px 2px}
+  .rlbl{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:4px;margin-right:5px;vertical-align:middle}
+  .rlbl.remote{background:#1e3a5f;color:#8ec5ff}
+  .rlbl.local{background:#2a2140;color:#c9b3ff}
+  body.zoho-blocked .st{opacity:.3;pointer-events:none}
+  /* By the mark `blockZoho()` puts on them, not by their ids: this rule named two controls and
+     a third - «Functions page» - was in no list at all, so it stayed live while the rest went
+     dead. One list in the script decides; this only says what blocked looks like. */
+  .zblocked{opacity:.4;pointer-events:none}
+
+  /* The callers, as chips on their own line: a comma-separated list of names reads as prose
+     while the reader is scanning for one of them. Same chip as everywhere else a function is
+     linked, so «a link to a function» has one look across the panel. */
+  #pvcallers .fnchips{margin-top:3px}
+  #pvcallers .apwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);line-height:1.7}
+  #pvcallers .orphan{color:#f59e0b}
+  #pvcallers .connwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
+  #pvcallers .conn{display:inline-block;background:#1a2333;border:1px solid #3f6ea8;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;color:#9fc4f5;cursor:pointer}
+  /* Module chips: the same shape as a connection chip, because they are the same kind of thing -
+     something outside the function that it reaches - with the colour carrying read against write.
+     Read borrows the module colour the ER diagram already uses; write is warmer, because that is
+     the one somebody scans for before changing a field. */
+  #pvcallers .mod{display:inline-block;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;cursor:pointer;border:1px solid}
+  #pvcallers .mod.r{background:#16261d;border-color:#3f8a63;color:#9fe0bd}
+  #pvcallers .mod.w{background:#2a2016;border-color:#a8783f;color:#f0c48a}
+  #pvcallers .mod.t{background:#1e1e26;border-color:#6b6b8a;color:#b9b9d4}
+  #pvcallers .conn:hover{background:rgba(47,111,237,.22);color:#cfe1fb}
+  #pvcallers .modline{margin-top:4px;color:#6b7688}
+  #pvcallers .statline{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);color:#8ea0bb}
+  .connbanner{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;background:rgba(47,111,237,.12);border-bottom:1px solid var(--border);font:11px var(--mono);color:#9fc4f5}
+  .connbanner .connclear{cursor:pointer;color:var(--muted)}
+  .connbanner .connclear:hover{color:var(--ink)}
+  #pvcode a.c-link{text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
+  #pvcode a.c-link:hover{background:rgba(96,165,250,.18);border-radius:3px}
+  .wfacts .wk i{color:#f59e0b;font-style:normal;font-size:10px}
+  .wfraw{margin:10px 0 4px}.wfraw summary{cursor:pointer;color:var(--muted);font-size:11px}
+  .wfraw pre{margin:6px 0 0;padding:8px;background:#0f1826;border:1px solid var(--border);border-radius:6px;color:#8ea0bb;font:10.5px var(--mono);white-space:pre;overflow:auto;max-height:320px}
+  .wfusage-wrap{margin:10px 0 4px}
+  .wfusage{padding:4px 10px;font-size:11px}
+  .wfu{margin-top:6px;padding:8px 9px;border:1px solid var(--border);border-radius:7px;background:#141b29;font:11px var(--mono)}
+  .wfustat{margin:3px 0}.wfustat .an{color:var(--ink)}.wfustat .ok{color:var(--ok)}.wfustat .fail{color:#f87171}
+  #pvhead .reveal2{cursor:pointer;color:#9fc4f5;flex:none;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
+  #pvhead .reveal2:hover{background:#2f6fe0;border-color:#2f6fe0}
+  .treemsg{color:var(--muted);padding:16px;font-size:12px;text-align:center}
+  .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
+  /* Only the *first* b is the heading. The rule used to hit every one, so a control named inline -
+     «Press <b>Grant access</b> above» - became its own line and the sentence arrived in four
+     fragments that read as four separate statements. */
+  .empty > b:first-child{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
+  .empty b{color:var(--ink)}
+  .empty code{font:11px var(--mono);color:#f0a8c8}
+  #resizer{height:8px;flex:none;background:#0a0f18;border-top:1px solid var(--border);border-bottom:1px solid var(--border);cursor:row-resize;display:none;position:relative}
+  #resizer.show{display:block}
+  #resizer::after{content:'';position:absolute;left:50%;top:2.5px;width:34px;height:3px;border-radius:2px;background:#3a4a63;transform:translateX(-50%)}
+  /* preview (high contrast vs tree) */
+  #preview{position:relative;display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+  #preview.show{display:flex}
+  /* The row must not change height as the buttons come and go: with «Records»/«Layouts» or
+     «Open in Zoho» it measured 36px and with none of them 29, so selecting a connection after a
+     module moved everything below it by 7px. The height of the taller state, held. */
+  #pvhead{display:flex;gap:8px;align-items:center;min-height:36px;padding:7px 10px;border-bottom:1px solid var(--border);font:12px var(--mono);background:#141b29}
+  /* «name in Module»: the joining word is quiet so the two names stay the readable part. */
+  .apwrap .apin{color:var(--muted);font-style:italic}
+  /* The chain, as a panel in the flow. It was a positioned layer and a resize left it beside
+     nothing; here there is no position to become wrong. It pushes the pane's content down while it
+     is open, which is also what tells the reader it belongs to this pane. */
+  /* The same footprint as the AI and Health views, because it is the same kind of thing: a view of
+     the whole workspace from one angle, not a strip inside another list. It covers the tab row too,
+     which is what made the borrowed search box and Name toggle impossible - so it carries its own,
+     the way the health view carries its own Pull. */
+  #navview{display:none;position:absolute;inset:0;z-index:7;background:var(--bg);flex-direction:column}
+  #navview.show{display:flex}
+  #navview .nvh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  #navview .nvh .nvr{display:flex;align-items:center;gap:10px;font-weight:400}
+  #navview .nvtools{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line)}
+  #navview .nvtools input{flex:1;min-width:0;background:var(--tree);color:var(--ink);border:1px solid var(--border);
+    border-radius:7px;padding:6px 8px;font:12px var(--sans)}
+  #navview .nvclear{cursor:pointer;color:var(--hist);font:11px var(--sans)}
+  #navview .nvclear:hover{text-decoration:underline}
+  #navview .nvx{cursor:pointer;color:var(--muted);font-size:15px}
+  #navview .nvx:hover{color:var(--ink)}
+  #navbody{flex:1;min-height:0;overflow:auto;padding:4px 0}
+  /* No scrollbar styling here, and that is the point: `#tree` and `#list` - the lists this view
+     stands in place of - use the browser's own, so anything of ours would make the history the
+     odd one out. It was dressed in `--border`, which is darker than Chrome's default and read
+     as a different kind of list. Uniform by having nothing to be uniform with. */
+  #navbody .nvrow{display:flex;gap:10px;align-items:baseline;padding:7px 12px;cursor:pointer;
+    border-bottom:1px solid var(--line);font:12px var(--sans)}
+  #navbody .nvrow:hover{background:var(--tree)}
+  #navbody .nvrow.at{background:var(--sel-soft)}
+  #navbody .nvk{color:var(--muted);flex:none;font-size:10px;text-transform:uppercase;letter-spacing:.04em;min-width:78px}
+  #navbody .nvl{color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #navbody .nvw{color:var(--muted);flex:none;font-size:11px;font-variant-numeric:tabular-nums}
+  #navbody .nvnone{padding:16px 12px;color:var(--muted)}
+  .navseg{display:inline-flex;align-items:center;justify-content:center;flex:none;
+    background:var(--hist-fill);border:1px solid var(--hist-line);color:var(--hist)}
+  .navseg:hover:not(:disabled){background:rgba(34,211,238,.24);border-color:var(--hist)}
+  .navseg.on{background:var(--hist-line);border-color:var(--hist);color:#e6feff}
+  /* The three ways of moving through the chain. Drawn rather than typed - reported as too small,
+     and a size asked for in pixels is only a size when we draw the shape; a glyph's ink belongs to
+     whatever font the machine happens to have. Bigger than the toolbar's marks on purpose: these are
+     what the reader aims at to move. Present only when they can do something, which is this panel's
+     rule for Clear, for Forget and for the retry button.
+     They also carry their own display rule: the earlier chain-panel edit took the old one with it,
+     and with no rule at all every arrow was permanently visible. */
+  .nvmk{width:16px;height:16px;stroke-width:1.8}
+  /* A mark on its own does not read as a control beside buttons that have a border and a
+     background - reported: «non sembra cliccabile ma lo e'». The cursor was already a
+     pointer over the whole icon (measured), so what was missing is the affordance, not the
+     handler: a hit area of its own, 22px square, that lights up under the mouse. */
+  /* The same fill as the history control they belong to: they were lighting up in the blue that
+     means «opens Zoho», which is a promise about somewhere else. */
+  #pvhead .back{cursor:pointer;color:var(--hist);flex:none;display:none;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:6px;background:var(--hist-fill);border:1px solid transparent}
+  #pvhead .back.show{display:inline-flex}
+  #pvhead .back:hover{color:var(--hist);background:var(--hist-fill);border-color:var(--hist-line)}
+  #pvhead .back .mk{pointer-events:none}   /* the span takes the click, so the cursor cannot differ over the drawing */
+  #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+  /* The file, in the same place on every tab. It used to be the whole path, only on Functions,
+     in the element that also holds the name - so the one part worth reading, the file name,
+     was the part the ellipsis ate, and the other four tabs did not say which file at all. */
+  #pvhead #pvfile{flex:none;color:var(--muted);font-size:11px;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #pvhead #pvfile:empty{display:none}
+  #pvhead .reveal{cursor:pointer;color:#9fc4f5;flex:none;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
+  #pvhead .reveal:hover,#pvhead .reveal2:hover{background:rgba(47,111,237,.26);border-color:var(--sel);color:#cfe1fb}
+  #pvhead .x{cursor:pointer;color:var(--muted);flex:none}
+  /* It scrolls itself. On a function it holds a handful of callers; on a module it holds every
+     function that reads or writes it - 19 and 12 on a real org - and without a limit of its own
+     it grew the whole panel: the footer left the bottom of the window and the scrollbar that
+     appeared moved the extension instead of this box. Reported with a picture. */
+  #pvcallers{padding:5px 10px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--muted);display:none;line-height:1.5;background:#161d2b;overflow:auto;min-height:0;max-height:45vh}
+  #pvcallers.show{display:block} #pvcallers b{color:var(--ink)} #pvcallers a{color:var(--sel);cursor:pointer}
+  /* Inside a module's Details pane it is not a box of its own: one region scrolls, not two stacked
+     ones with a scrollbar each - «the scrollbar should appear on the whole box, not only on the
+     module names». Scoped by the parent rather than by a class, because `showModuleUsage()` assigns
+     `className` wholesale and a class would be dropped on the next render. */
+  #pvdetails #pvcallers{max-height:none;overflow:visible;border-bottom:0;background:none;padding:0 10px 8px}
+  /* `#pvcallers a` is an id selector and `.wf-fn:hover` is not, so the chip's hover colour lost to
+     it and the label stayed blue on a blue fill - unreadable, reported with a picture. The chip is
+     shared with three other views, so it is *this* container that is made to agree with it rather
+     than the chip being changed under them. */
+  #pvcallers a.wf-fn{color:#82d2ff}
+  #pvcallers a.wf-fn:hover{color:#fff}
+  /* Copy, in the row above the code rather than floating over it - it landed on the control at the
+     end of that row, which is what a button positioned into somebody else's box does sooner or
+     later. A local artefact, so it wears the .lbtn colour the export buttons wear. */
+  /* The height of the buttons it stands with, measured against them: 28px beside their 22 read
+     as a control that had wandered in from another row. */
+  #codecopy{margin-left:auto;height:22px;padding:0 8px;display:inline-flex;align-items:center}
+  /* One function row, several source files. The project stays one function in the census and gets a
+     tab of its own here - a tree that opens and closes, because a project carries folders and a flat
+     list of nested paths is not something anybody reads. It is a pane like Code and Details, so it
+     scrolls inside the preview instead of taking height from the list above it. */
+  #pvfiles{display:none;flex:1;min-height:0;overflow:auto;padding:6px 4px;font:11.5px/1.7 var(--mono)}
+  #pvfiles .pfrow{display:flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;
+    color:var(--ink);cursor:pointer;white-space:nowrap}
+  #pvfiles .pfrow:hover{background:var(--tree)}
+  #pvfiles .pfrow.on{background:var(--sel-soft)}
+  #pvfiles .pfdir{color:var(--muted)}
+  /* The marker column is always there, empty on a file: without it every file sits one character
+     left of its own folder's children and the indentation stops meaning depth. */
+  #pvfiles .pfmk{flex:none;width:9px;color:var(--muted)}
+  #pvfiles .pfempty{color:var(--muted);padding:6px 10px}
+  #pvbody{flex:1;display:flex;overflow:auto;min-height:0}
+  /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
+     Settings, Help and About were unreachable - and Settings is where somebody who has just
+     installed this has business being. The overlay explains why the workbench is idle; it has
+     no reason to take the footer with it. */
+  #pfoot{position:relative;z-index:80;flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
+  #pfoot .pfsp{flex:1}
+  #pfoot #opts,#pfoot #about,#pfoot #help{cursor:pointer}
+  #pfoot #opts:hover,#pfoot #about:hover,#pfoot #help:hover{color:var(--ink)}
+  #pfoot a{color:var(--muted);text-decoration:none} #pfoot a:hover{color:#f472b6} #pfoot .sep{color:var(--border)}
+  #pvgutter,#pvcode{margin:0;padding:10px;font:11.5px/1.55 var(--mono);white-space:pre;tab-size:2}
+  #pvgutter{color:#4a5877;text-align:right;user-select:none;border-right:1px solid var(--line);background:#141b29}
+  #pvcode{flex:1;color:#cbd5e1}
+  .c-com{color:#5b6b82;font-style:italic} .c-str{color:#7ee0a6} .c-num{color:#e0a86b}
+  .c-kw{color:#7aa2f7;font-weight:600} .c-type{color:#c792ea} .c-fn{color:#82d2ff}
+  /* A module named inside a call keeps the colour of the string it is, and underlines like the
+     function links beside it - one rule for «this name goes somewhere», not two. */
+  .c-mod{text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
+  /* off-zoho overlay */
+  #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:70;text-align:center;padding:20px}
+  #offoverlay.show{display:flex}
+  #offoverlay .t{color:var(--ink);font-size:14px;font-weight:600} #offoverlay .s{color:var(--muted);font-size:12px;max-width:240px}
+  /* The strip's right-hand slot. A control that acts on the item belongs beside the tabs, not
+     inside one of them - see the comment on #pvtabs. */
+  /* One component, not three things next to the tabs. Loose on the strip, the word «depth», the
+     picklist and the diagram button read as belonging to the buttons beside them - so they are
+     drawn as a single bordered group, centred on the row, with the label inside it. */
+  #pvtabsr{flex:none;display:flex;align-items:center;align-self:center;gap:5px;padding:0 6px;
+           height:24px;border:1px solid var(--border);border-radius:6px;background:#0f1826;
+           font-size:10.5px;color:var(--muted)}
+  #pvtabsr:empty{display:none}
+  #pvtabsr select{padding:0 4px;font-size:10.5px}   /* no height: a native select clips its value */
+  #pvtabsr .laylocal{margin-left:0;padding:1px 6px;line-height:1}
+  .laybar{padding:7px 10px;border-bottom:1px solid var(--border);background:#0f1522;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .laybar select,#pvtabsr select{background:var(--tree);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+  .laymod{margin-left:auto;cursor:pointer;color:#9fc4f5;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
+  .laymod:hover{background:rgba(47,111,237,.26);border-color:var(--sel);color:#cfe1fb}
+  .laylocal{margin-left:auto;cursor:pointer;color:#83d8c6;background:transparent;border:1px solid #2f6f62;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
+  .laylocal:hover{background:rgba(47,111,98,.16)}
+  .secttl{padding:6px 10px;font-weight:600;color:#cdd7e6;background:#141b29;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .rlcopy{cursor:pointer} .rlcopy:hover{text-decoration:underline}
+  .laychev{flex:0 0 12px;display:inline-block;text-align:center;color:#8ea0bb;cursor:pointer;font-size:9px} .laychev:hover{color:#fff}
+  /* The empty slot on a module with one layout. It holds the column, so the counts to its left do
+     not move when a neighbouring row grows an arrow. */
+  .laychev.none{cursor:default;pointer-events:none}
+  .fsub{padding-left:26px;opacity:.9} .fsub .laysub{color:#a78bfa;margin-right:4px}

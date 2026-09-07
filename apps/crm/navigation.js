@@ -1,3 +1,4 @@
+// @ts-check
 /* Navigation history state, without DOM or product data.
  *
  * A panel decides what an entry opens and how it is drawn. This object owns only the browser-like
@@ -5,8 +6,12 @@
  * tail, replay does not record itself, and the oldest entry falls off at the limit.
  */
 
+/** @typedef {{key: string, n?: number, at?: number, [field: string]: unknown}} NavigationEntry */
+
+/** @param {number} [limit] @param {() => number} [clock] */
 function createNavigationState(limit = 50, clock = Date.now) {
   const cap = Math.max(1, Number(limit) || 1);
+  /** @type {NavigationEntry[]} */
   let entries = [];
   let position = -1;
   let sequence = 0;
@@ -22,6 +27,7 @@ function createNavigationState(limit = 50, clock = Date.now) {
     };
   }
 
+  /** @param {unknown} key @param {Record<string, unknown>} [fields] */
   function record(key, fields = {}) {
     if (replaying || key === null || key === undefined || key === '') return null;
     const identity = String(key);
@@ -37,6 +43,7 @@ function createNavigationState(limit = 50, clock = Date.now) {
     return snapshot();
   }
 
+  /** @param {Record<string, unknown> | null | undefined} fields */
   function updateCurrent(fields) {
     if (position < 0 || !entries[position] || !fields) return null;
     Object.assign(entries[position], fields);
@@ -58,6 +65,7 @@ function createNavigationState(limit = 50, clock = Date.now) {
     return snapshot();
   }
 
+  /** @param {number} nextPosition */
   function startReplay(nextPosition) {
     if (nextPosition < 0 || nextPosition >= entries.length || nextPosition === position) return null;
     position = nextPosition;

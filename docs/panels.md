@@ -4,6 +4,13 @@
 
 # The panels: what Analytics exposes, and how the chrome is arranged
 
+**A panel page is now composition, not an implementation file.** Both side panels keep their markup
+in `sidepanel.html` and their visual rules in `sidepanel.css`. Analytics now follows the CRM boundary
+for the three largest independent surfaces: `ai.js`, `export.js` and `health.js` are classic scripts
+loaded before `sidepanel.js`, which retains workspace orchestration, navigation and DOM wiring. There
+is still no build step and no runtime dependency: the browser loads the readable source files that
+ship. Tests derive the script set and order from the page rather than maintaining another file list.
+
 **Analytics takes the workspace from the URL, not from a list.** `/workspace/{id}` carries it, so
 there is nothing to scrape and nothing to be fragile about — and the workspace-list endpoint is not
 needed at all. This is the same shape as the CRM panel taking the org from the tab it is looking at:

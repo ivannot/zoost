@@ -45,7 +45,7 @@ LEDGER = ROOT / "tools" / "aisends.txt"
 # to a product and not added here is at least visible as a number that did not move.
 SOURCES = {
     "crm": ("apps/crm/ai.js", ["aiExecTool", "aiModuleText", "aiBuildSeed", "aiFocus"]),
-    "analytics": ("apps/analytics/sidepanel.js", ["aiExecTool", "aiStructureText", "aiBuildSeed"]),
+    "analytics": ("apps/analytics/ai.js", ["aiExecTool", "aiStructureText", "aiBuildSeed"]),
 }
 
 # A field starts a line; a word followed by a colon in the middle of a sentence is prose. The first
