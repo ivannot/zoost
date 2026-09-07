@@ -1606,3 +1606,29 @@ test('a report the server refused says why, and offers Send again', async () => 
       'an ordinary body was truncated or refused');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// **The configuration's own description of the Worker, derived instead of remembered.**
+//
+// `site/wrangler.jsonc` opens by naming the endpoints the script serves, and that sentence has been
+// wrong twice in opposite directions: it said «three» when a fourth arrived, and «four» after the
+// fourth was removed - each time because the routes and the bindings were edited and the paragraph
+// above them was not. One failure earns a check; two is the repository's own record of what a rule
+// living only as prose is worth. The reader of a config is somebody working out what the Worker is,
+// so a stale list there is worse than none.
+test('the Worker config names exactly the endpoints the Worker serves', () => {
+  const worker = read('site/_worker.js');
+  const served = new Set([...worker.matchAll(/url\.pathname === '(\/api\/[a-z]+)'/g)].map((m) => m[1]));
+  assert.ok(served.size >= 2, `only ${served.size} route(s) found - the derivation stopped seeing them`);
+
+  const config = read('site/wrangler.jsonc');
+  const opening = config.slice(0, config.indexOf('"name":'));
+  const named = new Set([...opening.matchAll(/(\/api\/[a-z]+)/g)].map((m) => m[1]));
+  assert.deepEqual([...named].sort(), [...served].sort(),
+    'site/wrangler.jsonc describes a different set of endpoints from the ones _worker.js routes');
+
+  // And the number in front of them, because that is the half that was wrong both times.
+  const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
+  assert.match(opening, new RegExp(`plus ${words[served.size]} endpoints?:`),
+    `the config says a different number of endpoints from the ${served.size} it lists`);
+});

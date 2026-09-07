@@ -1,8 +1,9 @@
 {
-  // zoost.it - a Worker that serves this directory as static assets, plus four endpoints:
-  // /api/versions, /api/ahead, /api/funnel and /api/report. Its neighbour `_worker.js` was
-  // corrected to «four» in the commit that added the fourth; this line, edited in the same commit
-  // to add the METRICS binding, was not.
+  // zoost.it - a Worker that serves this directory as static assets, plus three endpoints:
+  // /api/versions, /api/ahead and /api/report. This line has been wrong twice, in both directions,
+  // and both times because the endpoint count and the bindings below were edited without it: it
+  // said «three» when a fourth arrived, and «four» after that fourth was removed. It is derived from
+  // nothing, so it has to be read whenever a route is added or dropped.
   //
   // Cloudflare's git integration deploys with "Root directory: site", so this config lives here and
   // every path below is relative to site/. Until now no config was committed and Cloudflare used a
@@ -36,11 +37,6 @@
   // nothing web-facing can write this.
   "kv_namespaces": [
     { "binding": "STATUS", "id": "7bccd32413744db3a7cf9d90c9396bc7" }
-  ],
-  // Four page families, as aggregate events only. The dataset is created on
-  // the first write; it carries no visitor, session, address, user agent, referrer or query string.
-  "analytics_engine_datasets": [
-    { "binding": "METRICS", "dataset": "zoost_funnel" }
   ],
   "assets": {
     "directory": ".",
