@@ -509,9 +509,22 @@ function resetView() {
   connectionFilter = null; connFilterSet = null;
   currentPath = null; navClear();
   $('preview').classList.remove('show'); $('resizer').classList.remove('show');
-  // An overlay is a view of the workspace too. Health is rebuilt rather than closed, because
-  // closing it would answer «what is wrong here» by taking the question away; the assistant's
-  // context line is re-measured, since the index it reports is the new org's.
+  redrawOpenViews();
+}
+/** The views standing over the workspace, rebuilt from what it says now.
+ *
+ * Split out of `resetView()`, which is only reached when the workspace *changed* - so a
+ * re-activation of the same one redrew nothing. Reported: the folder grant lapses, the overview says
+ * so, a click anywhere restores it, the status line clears, and the overview goes on showing six
+ * areas as «Not available» over a message about access that is no longer true. It is the same fact
+ * as the one this file already records about switching workspaces with Health open: **an overlay is
+ * a view of the workspace too**, and rebuilding «the active view» rebuilds the list underneath it.
+ *
+ * Health is rebuilt rather than closed, because closing it would answer «what is wrong here» by
+ * taking the question away; the assistant's context line is re-measured, since the index it reports
+ * has moved.
+ */
+function redrawOpenViews() {
   if ($('healthview').classList.contains('show')) openHealth();
   if ($('aiview').classList.contains('show')) aiContextLabel();
   if ($('overviewview').classList.contains('show')) void renderOverview();
@@ -654,7 +667,9 @@ async function activate(w, viaGesture) {
   renderTabs();
   // Overview, Health and assistant context consume the access verdicts and freshness dates, so
   // rebuild them only after those workspace facts have arrived.
-  if (!sameWs) resetView();
+  // The same workspace is not the same *state*: this path is how a re-granted folder comes back, and
+  // the views over it were describing the refusal.
+  if (!sameWs) resetView(); else redrawOpenViews();
   const ok = viaGesture ? await ensurePerm(op.root) : await hasPerm(op.root);
   if (!op.current()) return;
   if (ok) await rebuildActive(); else { setStatus('Workspace found - click Refresh to grant access.', 'warn'); await refreshContext(); }

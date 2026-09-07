@@ -117,6 +117,33 @@ CRM = """
     if (!document.querySelector('.ovstep[data-step="mirror"].done')) say('the CRM sample did not say its invented mirror is ready');
     if (!$('ovbrowse').classList.contains('next')) say('the CRM sample did not identify Browse as the next action');
     if (getComputedStyle($('ovpull')).display !== 'none') say('the CRM sample overview offered a pull from Zoho');
+    // **A grant that comes back has to take the views with it.** Reported, in this order: the folder
+    // grant lapses, the overview says so, a click anywhere in the panel restores access, the status
+    // line clears - and the overview goes on showing every area as «Not available» over a sentence
+    // about access that is no longer true. The defect is in the call site, which nothing can lift:
+    // `resetView()` rebuilds the open views and is reached only when the workspace *changed*, so
+    // re-activating the same one redrew nothing.
+    {
+      const heldDir = dir.getDirectoryHandle, heldAsk = dir.queryPermission;
+      // What a lapsed grant does, on the handle the panel holds. The question the adapter asks on a
+      // failed read is answered the way the API answers it.
+      dir.getDirectoryHandle = async () => { const e = new Error('permission'); e.name = 'NotAllowedError'; throw e; };
+      dir.queryPermission = async () => 'prompt';
+      forgetDirs();
+      $('overview').click(); await settle();          // closed
+      $('overview').click();                          // and open again, on a folder that refuses
+      await until(() => [...document.querySelectorAll('.ovcard .ovstate')].every((s) => /Not available/.test(s.textContent)),
+                  'a refusing folder did not reach the overview at all');
+      if (![...document.querySelectorAll('.ovissue')].some((b) => /Folder access has lapsed/.test(b.textContent)))
+        say('the overview blamed the local files for a folder that had stopped answering');
+      // The remedy the panel advertises, exercised as a user does it: one click, anywhere.
+      dir.getDirectoryHandle = heldDir; dir.queryPermission = heldAsk;
+      document.body.click();
+      await until(() => [...document.querySelectorAll('.ovcard .ovcount')].every((c) => /^[0-9]+$/.test(c.textContent.trim())),
+                  'access came back and the overview stayed on the refusal', 6000);
+      if ([...document.querySelectorAll('.ovissue')].some((b) => /Folder access has lapsed/.test(b.textContent)))
+        say('the overview still says access has lapsed after it was granted');
+    }
     $('ovbrowse').click();
     await until(() => !$('overviewview').classList.contains('show'), 'Browse did not close the CRM overview');
     const rows = () => [...document.querySelectorAll('#tree .f')];

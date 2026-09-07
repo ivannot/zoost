@@ -210,6 +210,7 @@ readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
 rebase	6611b6610c49	6611b6610c49	identical
 redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
+redrawOpenViews	cf2e0a34bf88	5a6c69136e78	divergent
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	f327985da31a	8e247506fb1c	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
@@ -229,7 +230,7 @@ reportFoot	5369198eb387	5369198eb387	identical
 reportHead	38270d601c35	38270d601c35	identical
 reportMark	267dd72f6fe1	267dd72f6fe1	identical
 reportToc	bffb45a529c6	bffb45a529c6	identical
-resetView	fde8898f76ba	fc53dff71bd3	divergent
+resetView	6dc964329195	e122c2b6b701	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 runWorkspaceEntry	21263fa94191	21263fa94191	identical

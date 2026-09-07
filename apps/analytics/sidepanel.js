@@ -521,6 +521,17 @@ function dropWorkspaceState() {
  *  the detail pane are not here because `loadFromDisk()` already drops them on every load. */
 function resetView() {
   paintSearchControls(searchState.reset());
+  redrawOpenViews();
+}
+/** The views standing over the workspace, rebuilt from what it says now.
+ *
+ * Split out of `resetView()`, which is only reached when the workspace *changed* - so a
+ * re-activation of the same one redrew nothing, or redrew the overview alone. Reported in the CRM:
+ * the folder grant lapses, a click anywhere restores it, the status line clears, and the overview
+ * goes on showing every area as «Not available» over a message about access that is no longer true.
+ * Health had the same hole here and nobody had looked.
+ */
+function redrawOpenViews() {
   if ($('healthview').classList.contains('show')) renderHealth();
   if ($('aiview').classList.contains('show')) aiContextLabel();
   if ($('overviewview').classList.contains('show')) renderOverview();
@@ -653,11 +664,12 @@ async function selectWorkspace(w) {
   if (!loaded) {
     // The interrupted-mirror path is a valid state of the newly selected workspace, not a reason
     // to leave the old workspace's overlay and filters on screen.
-    if (!sameWs) resetView();
-    else if ($('overviewview').classList.contains('show')) renderOverview();
+    if (!sameWs) resetView(); else redrawOpenViews();
     return;
   }
-  if (!sameWs) resetView();   // after the load: Health is rendered from what is now in memory
+  // The same workspace is not the same *state*: this path is how a re-granted folder comes back, and
+  // the views over it were describing the refusal.
+  if (!sameWs) resetView(); else redrawOpenViews();   // after the load: Health is rendered from what is now in memory
   if (!op.current()) return;
   await refreshContext();
 }
