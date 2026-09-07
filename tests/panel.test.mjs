@@ -21307,3 +21307,21 @@ test('the Remove tooltip describes the state the button is actually in', () => {
   assert.equal(seen().off, true, 'Remove stayed live during a pull');
   assert.match(seen().says, /a pull is running/, `the greyed Remove blames the wrong thing: ${seen().says}`);
 });
+
+// ---------------------------------------------------------------------------------------------
+// **The one number `tools/probe.py` copies out of a stylesheet.**
+//
+// Its toolbar check narrows the body inside a window that stays 1280px wide, so a `vw` in the
+// stylesheet resolves against the window and not the panel: the row's `clamp(3px, 1.4vw, 8px)` was
+// measured at 8px where the product spends about 4.8px, and across eight gaps the check reported a
+// row as 26px too wide when it fits. It computes that gap for the width it is testing now - which
+// means it holds a copy of the expression, and a copy nobody checks is the thing this repository
+// spends its length on. If the stylesheet stops saying it, this fails and names both places.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the toolbar gap is the one the probe computes for it`, () => {
+    const css = read(`apps/${app}/sidepanel.css`);
+    assert.match(css, /\.wsgroup\{[^}]*gap:clamp\(3px,1\.4vw,8px\)/,
+      `the toolbar's gap has changed; tools/probe.py computes clamp(3px, 1.4vw, 8px) for the width `
+      + 'it tests and would now be measuring a row the product does not draw');
+  });
+}

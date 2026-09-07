@@ -208,18 +208,31 @@ CRM = """
     // Measured: 335px of content in a 322px row before the separators and the export group were
     // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
     //
-    // **What this number is not.** The body is narrowed inside a window that stays 1280px wide, so
-    // every `vw` in the stylesheet is still resolved against 1280 - and the row's own gap is
-    // `clamp(3px, 1.4vw, 8px)`, which lands on 8px here and on about 4.5px in a real 322px panel.
-    // Across seven gaps that is ~24px this check counts and the product does not: **it overstates,
-    // so a pass is trustworthy and a narrow failure is not.** The window cannot simply be made
-    // narrower to fix it - Chrome refuses a viewport below 500px, measured. Anything failing by less
-    // than ~25px has to be decided some other way.
+    // **The one number this harness cannot read off the page: the gap.** The body is narrowed inside
+    // a window that stays 1280px wide, so every `vw` in the stylesheet still resolves against 1280 -
+    // and this row's gap is `clamp(3px, 1.4vw, 8px)`, which lands on 8px here and on about 4.8px in
+    // a real 340px panel. Across eight gaps that is ~26px the check counted and the product never
+    // spends: it reported «344px needed in 322» for a row that fits, and the answer to that was very
+    // nearly to make the product's spacing smaller to satisfy the instrument. The window cannot be
+    // narrowed instead - Chrome refuses a viewport below 500px, measured.
+    //
+    // So the gap is computed for the width being tested rather than read from a page laid out for
+    // another one, and everything else - the controls' own widths - is measured as it is. The one
+    // number copied out of the stylesheet is the clamp, and `tests/panel.test.mjs` fails if the
+    // stylesheet stops saying it, so the copy cannot drift in silence.
     const wide = document.body.style.width;
     document.body.style.width = '340px'; await settle('the panel never finished reflowing');
     const grp = document.querySelector('.wsgroup');
-    if (grp.scrollWidth > grp.clientWidth + 1)
-      say(`the toolbar needs ${grp.scrollWidth}px in ${grp.clientWidth}px - an icon is off-screen at the minimum width`);
+    const items = [...grp.children].filter((c) => getComputedStyle(c).display !== 'none');
+    const gap = Math.min(8, Math.max(3, 0.014 * 340));      // clamp(3px, 1.4vw, 8px) at 340px
+    const needs = Math.round(items.reduce((w, c) => w + c.getBoundingClientRect().width, 0)
+                             + Math.max(0, items.length - 1) * gap);
+    if (needs > grp.clientWidth + 1) {
+      // What it is made of, because «10px too wide» is a number nobody can act on.
+      const parts = items.map((c) => (c.id || c.className) + '=' + Math.round(c.getBoundingClientRect().width)).join(' ');
+      say(`the toolbar needs ${needs}px in ${grp.clientWidth}px - an icon is off-screen at the `
+          + `minimum width. It holds: ${parts}`);
+    }
     document.body.style.width = wide; await settle('the panel never finished reflowing');
     const mk = $('pvback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
@@ -1071,18 +1084,24 @@ AN = """
     // Measured: 335px of content in a 322px row before the separators and the export group were
     // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
     //
-    // **What this number is not.** The body is narrowed inside a window that stays 1280px wide, so
-    // every `vw` in the stylesheet is still resolved against 1280 - and the row's own gap is
-    // `clamp(3px, 1.4vw, 8px)`, which lands on 8px here and on about 4.5px in a real 322px panel.
-    // Across seven gaps that is ~24px this check counts and the product does not: **it overstates,
-    // so a pass is trustworthy and a narrow failure is not.** The window cannot simply be made
-    // narrower to fix it - Chrome refuses a viewport below 500px, measured. Anything failing by less
-    // than ~25px has to be decided some other way.
+    // **The one number this harness cannot read off the page: the gap.** Written up in full beside
+    // the CRM's copy of this check - the body is narrowed inside a window that stays 1280px wide, so
+    // `clamp(3px, 1.4vw, 8px)` measures 8px here and is about 4.8px in a real 340px panel, and the
+    // difference across the row was ~26px of overstatement. Computed for the width being tested now;
+    // `tests/panel.test.mjs` holds the copy of the clamp to the stylesheet.
     const wide = document.body.style.width;
     document.body.style.width = '340px'; await settle('the panel never finished reflowing');
     const grp = document.querySelector('.wsgroup');
-    if (grp.scrollWidth > grp.clientWidth + 1)
-      say(`the toolbar needs ${grp.scrollWidth}px in ${grp.clientWidth}px - an icon is off-screen at the minimum width`);
+    const items = [...grp.children].filter((c) => getComputedStyle(c).display !== 'none');
+    const gap = Math.min(8, Math.max(3, 0.014 * 340));      // clamp(3px, 1.4vw, 8px) at 340px
+    const needs = Math.round(items.reduce((w, c) => w + c.getBoundingClientRect().width, 0)
+                             + Math.max(0, items.length - 1) * gap);
+    if (needs > grp.clientWidth + 1) {
+      // What it is made of, because «10px too wide» is a number nobody can act on.
+      const parts = items.map((c) => (c.id || c.className) + '=' + Math.round(c.getBoundingClientRect().width)).join(' ');
+      say(`the toolbar needs ${needs}px in ${grp.clientWidth}px - an icon is off-screen at the `
+          + `minimum width. It holds: ${parts}`);
+    }
     document.body.style.width = wide; await settle('the panel never finished reflowing');
     const mk = $('dback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
