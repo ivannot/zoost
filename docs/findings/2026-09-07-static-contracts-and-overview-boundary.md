@@ -6,6 +6,11 @@ never reads can decay while the official battery stays green. `tools/typecheck.s
 5.9.2, and emits nothing. The push workflow runs it after the dependency-free battery. There is
 still no package manifest, installed runtime dependency or generated extension file.
 
+The first clean-run execution also removed an environmental assumption from the gate itself: the
+GitHub runner did not contain `rg`, so discovery now uses `git grep`, which is supplied by the same
+checkout the command is inspecting. The failed run occurred after the product battery had passed and
+before TypeScript ran; the replacement was exercised locally and then by a new remote run.
+
 The Workspace Overview had a model boundary but left its markup and event wiring duplicated inside
 both orchestration files. Each app now owns an app-local, byte-identical `overview-view.js`. It
 receives a model, escaping functions, current control state and callbacks; it reads no Chrome,
