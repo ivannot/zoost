@@ -15119,7 +15119,10 @@ test('analytics: a folder that cannot be read leaves nothing of it on screen', a
     wsOptionTitle: () => '', wsOptionText: () => '', selectWorkspace: async () => {},
     hasPerm: async () => true, appRoot: async () => ({}),
   };
-  const { refreshWorkspaces } = load([sliceApp('analytics', 'refreshWorkspaces')], g);
+  // The folder-button painter comes along rather than being stubbed: it moved out of this
+  // function, and a stub here would be a second place the harness has to be told about it.
+  const { refreshWorkspaces } = load([sliceApp('analytics', 'paintFolderButton'),
+                                      sliceApp('analytics', 'refreshWorkspaces')], g);
   await refreshWorkspaces();
   // Every projection of the workspace, not just the two that were being cleared: what is left on
   // screen is what the enabled controls read.
@@ -21220,3 +21223,43 @@ test('no script before the composition root binds a runtime listener at load tim
   assert.match(read('apps/crm/live-sync.js'), /^function onPanelMessage\(/m,
                'the handler is gone, so the root binds a name that does not exist');
 });
+
+// ---------------------------------------------------------------------------------------------
+// **The wire, not the wiring diagram.** The adapter can tell a panel that the folder grant has gone;
+// the CRM was handed that callback and Analytics was not. Reported from outside with the sequence
+// measured on the shipped code: a read refused, the adapter asked and got the true answer, and
+// `rootGranted` stayed true anyway - so the next click asked for nothing and Refresh had to fail a
+// read of its own before the panel would try again. Two remedies, both switched off, and a recovery
+// path the reader cannot understand.
+//
+// Derived from the construction sites and not from a list of products, so a third panel cannot
+// arrive without one - which is exactly how this one was missed.
+test('every panel tells the filesystem adapter where to report a lapsed grant', () => {
+  const apps = readdirSync(new URL('../apps', import.meta.url))
+    .filter((app) => existsSync(new URL(`../apps/${app}/sidepanel.js`, import.meta.url)));
+  assert.ok(apps.length >= 2, `only ${apps.length} panel(s) found - the derivation has stopped seeing them`);
+  const missing = [];
+  for (const app of apps) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const at = src.indexOf('createWorkspaceFilesystem({');
+    if (at < 0) { missing.push(`${app} (builds no adapter)`); continue; }
+    const options = src.slice(at, src.indexOf('});', at));
+    if (!/permissionLost:\s*\w/.test(options)) missing.push(app);
+  }
+  assert.deepEqual(missing, [], `these panels cannot be told the folder stopped answering: ${missing.join(', ')}`);
+});
+
+// And the handler each of them names must do the one thing the remedies are gated on. A callback
+// that repaints and forgets to clear the flag would satisfy the check above and change nothing.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the lapsed-grant handler clears the flag both remedies are gated on`, () => {
+    const src = appPanel(app);
+    const at = src.indexOf('function noteFolderAccessLost(');
+    assert.ok(at > 0, `${app}: no handler for a lapsed grant`);
+    const body = src.slice(at, src.indexOf('\n}', at));
+    assert.match(body, /rootGranted = false/, `${app}: the handler leaves the panel believing it has access`);
+    // It must also refuse to say it twice: the adapter asks on every failed operation, and a pull
+    // that meets a gone folder meets it many times over.
+    assert.match(body, /if \(!root \|\| !rootGranted\) return;/, `${app}: it repeats itself on every refused read`);
+  });
+}

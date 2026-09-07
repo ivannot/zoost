@@ -169,6 +169,7 @@ navShow	2421299e7e5a	e6f5d13b2ae9	divergent
 navTo	b1e4310846de	9d7f6cc6f34d	divergent
 navWhen	6d2200ac5636	6d2200ac5636	identical
 noFocusHere	3e2039406c53	721f572314ba	divergent
+noteFolderAccessLost	2a0281fc0119	789a449da631	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 noteThrown	6c35bc6fa368	6c35bc6fa368	identical

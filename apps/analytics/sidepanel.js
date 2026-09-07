@@ -262,6 +262,7 @@ const workspaceFilesystem = createWorkspaceFilesystem({
   say: status,
   folderMessage: MSG.folder,
   movedMessage: WS_MOVED,
+  permissionLost: noteFolderAccessLost,
 });
 const ensurePerm = workspaceFilesystem.ensurePermission;
 const hasPerm = workspaceFilesystem.hasPermission;
@@ -420,11 +421,17 @@ async function listWorkspaces() {
   return out.sort((a, b) => String(a.name || a.folder || '').localeCompare(String(b.name || b.folder || '')));
 }
 
-async function refreshWorkspaces() {
-  const sel = $('ws');
-  // Word for word the CRM's, including the glyphs and the titles: it is the same control, and it read
-  // as a different product for showing «Zoost/analytics» where the other side shows «📁 Zoost». The
-  // subfolder is an implementation detail of where workspaces live, not the folder the user picked.
+/** The working-folder control, painted from the two facts it states.
+ *
+ * Word for word the CRM's, including the glyphs and the titles: it is the same control, and it read
+ * as a different product for showing «Zoost/analytics» where the other side shows «📁 Zoost».
+ * The subfolder is an implementation detail of where workspaces live, not the folder the user picked.
+ *
+ * A function of its own because it lived inside `refreshWorkspaces()`, which enumerates the folder -
+ * so the one moment this button most needs repainting, a read having just been refused, is the one
+ * moment that function cannot be called.
+ */
+function paintFolderButton() {
   const rt = $('wsroot');
   const needsGrant = !!root && !rootGranted;
   rt.classList.toggle('needgrant', needsGrant);
@@ -434,6 +441,26 @@ async function refreshWorkspaces() {
   rt.title = !root ? 'Pick the folder that will contain all Zoost workspaces'
     : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it - no folder picker.'
     : `Working folder: ${root.name} - click to choose a different one`;
+}
+/** The grant lapsed while the panel was open, and the panel had believed otherwise.
+ *
+ * The CRM's `noteFolderAccessLost`, and it is here for the same reason: every remedy for a lapsed
+ * folder is gated on `rootGranted`, so a memory of a check switches both of them off. This side
+ * re-derived the flag in `readJson` alone, by reading the exception's name - which covers the reads
+ * that go through it and not the ones that go through an operation. Reported from outside with the
+ * sequence measured: the flag stayed true, the next click asked for nothing, and Refresh had to fail
+ * a read of its own before the panel would try again.
+ */
+function noteFolderAccessLost() {
+  if (!root || !rootGranted) return;
+  rootGranted = false;
+  paintFolderButton();
+  updateButtons();
+  status(MSG.folder, 'warn');
+}
+async function refreshWorkspaces() {
+  const sel = $('ws');
+  paintFolderButton();
   if (root && !rootGranted) {
     sel.innerHTML = '<option value="">access not granted</option>';
     dir = null; bound = null; forgetDirs();
