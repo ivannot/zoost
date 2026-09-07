@@ -322,7 +322,15 @@ async function doExport(kind) {
   if (!dir) return;
   const sc = await askScope();
   if (!sc) return;
-  await window.idbHandle.set('exportScopeAnalytics', sc);
+  // What is stored here is where the dialog **starts next time**, not the scope of the export about
+  // to run - which travels in `sc`. So a refused write must not stop the export the reader just
+  // asked for, and it must not be silent either. Unguarded, a rejection from IndexedDB threw out of
+  // this function before `setBusy`, and the call site discards the promise: the dialog closed, no
+  // busy state, no file, no message. The CRM twin says the same thing in the same words, and had
+  // the guard; this side did not.
+  try { await window.idbHandle.set('exportScopeAnalytics', sc); }
+  catch (e) { status(`This export runs with what you ticked; the browser refused to remember it as `
+    + `the default (${(e && e.message) || 'no reason given'}).`, 'warn'); }
   setBusy(true, kind === 'md' ? 'Building AI (Markdown) export…' : 'Building HTML export…');
   try {
     await requirePerm(op.root);

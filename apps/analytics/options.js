@@ -14,7 +14,6 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-const PRODUCT_AUTHOR = 'Ivan Notaristefano';
 // What this page says in more than one place. `saveFailed` prefixes the platform's own sentence
 // rather than replacing it, at all three writers. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.

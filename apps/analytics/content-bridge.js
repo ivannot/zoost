@@ -370,15 +370,16 @@
       return /^\d{4,}$/.test(v2) ? v2 : null;      // Zoho ids are long integers; anything else is not one
     };
     const ids = (a) => (a || []).map((x) => ({ id: one(x), level: Number(x && x.level) || 0 })).filter((e) => e.id);
-    const dropped = (a) => (a || []).filter((x) => !one(x)).length;
     return {
       id: String(id),
       parents: ids(d.parentTableIds),
       children: ids(d.childTableIds),
       dashboards: (d.dashboardViewIds || []).map(one).filter(Boolean),
-      // Not hidden: if Analytics sent something we could not read, the count says so rather than the
-      // diagram quietly showing one fewer dependency than exists.
-      dropped: dropped(d.parentTableIds) + dropped(d.childTableIds) + dropped(d.dashboardViewIds),
+      // A `dropped` count used to be written here, with a comment promising that «the count says so
+      // rather than the diagram quietly showing one fewer dependency than exists». Nothing ever read
+      // it - and `pullOne` rebuilt the same entry without it, so `lineage.json` had two shapes
+      // depending on whether you re-read one view or pulled everything, in a file the reader diffs.
+      // One shape, and no field that only claims to be a safeguard.
     };
   }
   // Failures are collected rather than aborting: one unreadable view must not cost the other three
@@ -412,13 +413,18 @@
     send({ ok: true, ...r });
   }
 
+  /** Does the page the command arrived at match the one the panel meant?
+   *
+   * One shape, because this product has one: the panel sends `{ workspace, origin }` and nothing
+   * else, ever. It used to carry the CRM's `org`/`instance` arm as well - unreachable, since
+   * `x.workspace` is always set here, and **fail-open if it had been reached**: the Analytics context
+   * has no `org`, so the comparison would have been `String(undefined) === String(undefined)` and the
+   * gate would have said yes. A branch that cannot run is worth removing anywhere; inside an identity
+   * check it is worth removing today.
+   */
   function expectedMatches(x, c) {
     if (!x) return true;
-    if (x.workspace != null) return String(x.workspace) === String(c.workspace)
-      && (!x.origin || x.origin === c.origin);
-    return String(x.org) === String(c.org)
-      && (!x.origin || x.origin === c.origin)
-      && (!x.instance || !c.instance || x.instance === c.instance);
+    return String(x.workspace) === String(c.workspace) && (!x.origin || x.origin === c.origin);
   }
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!IS_ANALYTICS) return false;

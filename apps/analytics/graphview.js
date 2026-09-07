@@ -1580,7 +1580,13 @@ function erRender() {
     hit.setAttribute('fill', 'none'); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '14');
     hit.addEventListener('click', (ev) => { if (erDragged) return; ev.stopPropagation(); erPick(a, b); });
     const ht = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    ht.textContent = `${label(N[b]) || b} \u2192 ${label(N[a]) || a}`; hit.appendChild(ht);
+    // **A → B, the way the arrowhead points and the way the card reads.** This was `b → a`, copied
+    // from the CRM where it is deliberate: an arc there is a *related list*, reachable on B and
+    // returning A, and its docstring says so. Zoho Analytics has no related lists - `buildSchemaGraph`
+    // writes `related_lists: []` for every node - so here an arc is a foreign key out of A, which is
+    // what the join block below reads and what `erPick` puts on the card. Hover and click, ten pixels
+    // apart, stated opposite directions.
+    ht.textContent = `${label(N[a]) || a} \u2192 ${label(N[b]) || b}`; hit.appendChild(ht);
     svg.appendChild(hit);
 
     // The join, from A's side: which of A's columns points at which of B's. Both ends are labelled

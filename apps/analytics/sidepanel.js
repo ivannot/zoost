@@ -692,6 +692,12 @@ async function selectWorkspace(w) {
     // The interrupted-mirror path is a valid state of the newly selected workspace, not a reason
     // to leave the old workspace's overlay and filters on screen.
     if (!sameWs) resetView(); else redrawOpenViews();
+    // **And not a reason to leave its context bar either.** This return is before the one call that
+    // paints `#ctx`, `#mmbar` and `#bound`, so switching to a workspace whose mirror is refused left
+    // the mismatch bar still naming the workspace you had just left - offering to switch you to the
+    // one you were already on - with Pull enabled underneath a bar saying pulling is off. Nothing
+    // corrected it afterwards: this panel has no poll. Reported from outside, driven.
+    await refreshContext();
     return;
   }
   // The same workspace is not the same *state*: this path is how a re-granted folder comes back, and
@@ -956,10 +962,15 @@ async function refreshContext() {
     ctx = null;
     // Not over a sample - see the note in the CRM panel: a Zoho Analytics tab is not a
     // precondition for reading invented data.
-    // `sampleBusy` belongs here and not only at the click. This panel re-derives its whole state on
-    // a five-second poll, so anything set imperatively on top of that is undone by the next tick -
-    // reported as the overlay coming back in the middle of writing the sample and then leaving
+    // `sampleBusy` belongs here and not only at the click: `refreshContext` runs again on every tab
+    // change and every navigation, so anything set imperatively on top of it is undone by the next
+    // run - reported as the overlay coming back in the middle of writing the sample and then leaving
     // again. A state that has to hold across time is a term in the condition, never an assignment.
+    //
+    // This used to say «re-derives its whole state on a five-second poll», copied from the CRM,
+    // which really does have `setInterval(refreshContext, 5000)`. This panel has no interval at all
+    // and never has had one - so a reader reasoning from that sentence would conclude that anything
+    // stale here fixes itself within five seconds, and it does not.
     $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
     $('mmbar').classList.remove('show');
     el.className = 'offzoho'; who.innerHTML = 'Not on a Zoho Analytics tab'; bnd.innerHTML = localLbl;
@@ -2456,8 +2467,14 @@ async function refreshLocal() {
   // and the empty list underneath then blamed «Nothing pulled yet. Press Pull all», because the
   // writing branch returns before `diskUnreadable` is assigned. A blocked mirror, reported as an
   // empty one, under the word Ready.
+  //
+  // **And the fix covered one of the two ways it happens.** `loadFromDisk` also returns *true* for a
+  // mirror it could read but not whole - «N file(s) here would not open … what they hold is missing
+  // from every count below» - and «Ready.» went over that one too, above a list showing 39 views, no
+  // tables and no relations. The condition is not «did it succeed» but «did it leave a sentence on
+  // screen», and it leaves one whenever it loaded any view at all. Reported from outside, driven.
   const ok = await loadFromDisk();
-  setBusy(false, ok ? undefined : null);
+  setBusy(false, ok && !views.length ? undefined : null);
 }
 
 // ---------- schema graph ----------
