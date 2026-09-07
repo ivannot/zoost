@@ -19,8 +19,13 @@ for app in crm analytics; do
   fi
   # The two extensions are separate classic-script worlds. Checking them together would invent
   # duplicate globals that no browser page ever loads together.
+  #
+  # `DOM.Iterable` because without it `for (const el of qsa(...))` - which every panel writes - is an
+  # error on correct code, and a gate that refuses what the product legitimately does is one somebody
+  # works around: the next module to iterate a NodeList would have been opted *out* to get green.
+  # Measured by planting that loop in an opted-in module and reading the exit code: 2 before, 0 after.
   npx --yes --package "typescript@$TYPESCRIPT_VERSION" tsc \
-    --allowJs --checkJs --noEmit --skipLibCheck --target ES2022 --lib ES2022,DOM $files
+    --allowJs --checkJs --noEmit --skipLibCheck --target ES2022 --lib ES2022,DOM,DOM.Iterable $files
   # **The count, its denominator, and what it does not read.** «13 contract module(s)» said nothing
   # about the 26 it skips, which is the shape this project already names: a headline that counts what
   # was opened and is silent about what was examined. The denominator is derived by a cruder method

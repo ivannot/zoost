@@ -55,6 +55,24 @@ somebody presses a button; this runs on every page view, and a per-request store
 the measurement is worth. The proportionate answer is a rate limit at the edge - a zone setting, not
 a line of code - so it is written in the function rather than solved badly in it.
 
+## Measured, then not done
+
+The obvious answer to «call sites in the rest are NOT checked» is to opt the other 26 scripts in. It
+was measured before being attempted: checking every CRM script reports **570 errors, and none of them
+is a malfunction**. 469 are `window.x = ...` and `chrome` - the two things a classic extension script
+is made of - and the rest resolve to idioms that are correct at run time (`isNaN(new Date(s))`), to a
+contract narrower than its caller needs, or to a union tsc cannot see through. The four that looked
+real were read: each is documented behaviour, one of them by a paragraph explaining why the argument
+is omitted. The 13 that are opted in check cleanly because they were *written* to - pure factories,
+no globals, no `chrome` - so the price of the other 26 is hundreds of annotations and a declarations
+file, for nothing found. **A check earns its place by having caught something.** Recorded here so the
+next session does not re-derive it.
+
+One thing did fall out and was fixed: `--lib` had no `DOM.Iterable`, so `for (const el of qsa(...))`
+- which every panel writes - was an error on correct code. Nothing was red today because no opted-in
+module iterates a NodeList; the first one to do so would have been opted *out* to get green, which is
+how a gate that refuses legitimate work gets worked around instead of fixed.
+
 ## The rule this sweep is really about
 
 Every one of these passed a green battery. The refactor did not break them: it moved the ground under
