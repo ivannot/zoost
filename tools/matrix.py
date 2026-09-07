@@ -96,11 +96,11 @@ CAPABILITIES = [
 # The files each surface is made of. Written as paths rather than prose because the capabilities are
 # derived by reading them - a surface whose files nobody can list is a surface nobody can measure.
 SURFACE_FILES = {
-    "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/tabs.js", "apps/crm/modules.js",
+    "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/workspace-controller.js", "apps/crm/live-sync.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/tabs.js", "apps/crm/modules.js",
                    "apps/crm/automation.js", "apps/crm/connections.js", "apps/crm/health.js",
                    "apps/crm/sidepanel.html"],
     "crm-ai":     ["apps/crm/ai.js", "apps/crm/keyvault.js"],
-    "crm-export": ["apps/crm/export.js"],
+    "crm-export": ["apps/crm/export-scope.js", "apps/crm/export.js"],
     "an-panel":   ["apps/analytics/sidepanel.js", "apps/analytics/report.js", "apps/analytics/overview-view.js", "apps/analytics/bridge-contract.js", "apps/analytics/ai.js",
                    "apps/analytics/export.js", "apps/analytics/health.js",
                    "apps/analytics/sidepanel.html", "apps/analytics/analytics-sql.js"],
@@ -119,9 +119,9 @@ SURFACE_FILES = {
 
 # The product, in the units somebody works on. Not files: a defect lives in an area.
 SURFACES = [
-    ("crm-panel",    "apps/crm/{sidepanel,report,overview-view,bridge-contract,pull-plan,pull-controller,tabs,modules,automation,connections,health}.js"),
+    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,report,overview-view,bridge-contract,pull-plan,pull-controller,tabs,modules,automation,connections,health}.js"),
     ("crm-ai",       "apps/crm/{ai,keyvault}.js"),
-    ("crm-export",   "apps/crm/export.js"),
+    ("crm-export",   "apps/crm/{export-scope,export}.js"),
     ("an-panel",     "apps/analytics/{sidepanel,report,overview-view,bridge-contract,ai,export,health}.js"),
     ("options",      "apps/*/options.js + options.html"),
     ("bridges",      "apps/*/{hook,content-bridge,background}.js"),

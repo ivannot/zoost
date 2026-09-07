@@ -149,7 +149,7 @@ loadDc	e9df03bb1506	b21659f28f25	divergent
 loadLay	c472a9e54baf	c472a9e54baf	identical
 loadRx	db6b4a2453f7	db6b4a2453f7	identical
 loadRxShortcuts	0c1fc69cd664	0c1fc69cd664	identical
-loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
+loadScope	724393563fb1	8e8b4ff1ea82	divergent
 loadState	c9c882f79b7e	c9c882f79b7e	identical
 loadZohoDc	83d8c8288511	83d8c8288511	identical
 loseLock	a4a8e5acfcb8	a4a8e5acfcb8	identical
@@ -241,8 +241,8 @@ sampleWorkspaceView	43e9d9eef7a9	43e9d9eef7a9	identical
 saveKeys	5d998c0b7cde	5d998c0b7cde	identical
 saveSearchPattern	593f956d7d95	593f956d7d95	identical
 sayWhereTheReportWent	2075390ad7f5	604b8164ad60	divergent
-scopeFromUI	3a730daf94e4	dba5d46721f4	divergent
-scopeToUI	0ccde670708d	c63391d26a9d	divergent
+scopeFromUI	dafd3ba13708	dba5d46721f4	divergent
+scopeToUI	5c7aa71f70a6	c63391d26a9d	divergent
 seedRing	efc0113e2b3a	efc0113e2b3a	identical
 seedShortcuts	a2eedf0c5050	a2eedf0c5050	identical
 select	a415fad61600	e1eca3d924a3	divergent

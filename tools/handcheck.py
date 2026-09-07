@@ -81,6 +81,7 @@ CHECKS = [
                  'The tree fills, and the counts match what the platform shows you.'),
         'covers': ['apps/*/sidepanel.js', 'apps/*/bridge-contract.js', 'apps/*/filesystem-adapter.js',
                    'apps/crm/zoho-bridge.js', 'apps/crm/pull-plan.js', 'apps/crm/pull-controller.js',
+                   'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js',
                    'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
                    'apps/*/automation.js', 'apps/*/connections.js'],
     },
@@ -91,7 +92,7 @@ CHECKS = [
         'do': ['Press Pull all again on the same workspace, without changing anything.'],
         'pass': ('It finishes the same way, nothing is reported as failed to remove, and the counts '
                  'do not move. A second pull is where a half-written mirror shows.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/*/content-bridge.js'],
+        'covers': ['apps/*/sidepanel.js', 'apps/crm/live-sync.js', 'apps/*/content-bridge.js'],
     },
     {
         'id': 'progress',
@@ -100,7 +101,7 @@ CHECKS = [
         'do': ['Watch the status line during the pull above.'],
         'pass': ('No stretch where the line stands still on a finished stage while the spinner turns. '
                  'Every stage names itself, and the ones that count, count.'),
-        'covers': ['apps/*/sidepanel.js'],
+        'covers': ['apps/*/sidepanel.js', 'apps/crm/workspace-controller.js'],
     },
     {
         'id': 'wrong-tab',
@@ -134,7 +135,7 @@ CHECKS = [
         'pass': ('Every section the panel shows is in them, nothing in them is empty or invented, and '
                  'the two HTML reports are the same document: same header, same index, same cards, '
                  'same foot.'),
-        'covers': ['apps/*/export.js', 'apps/*/sidepanel.js', 'apps/*/health.js',
+        'covers': ['apps/*/export.js', 'apps/crm/export-scope.js', 'apps/*/sidepanel.js', 'apps/*/health.js',
                    'apps/*/reportshell.js'],
     },
     {

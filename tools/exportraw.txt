@@ -8,6 +8,7 @@
 # the reading nobody was doing. It should shrink; when it grows, the run says so.
 # means somebody read it and decided it cannot carry markup. It should shrink;
 # when it grows, the run says so and the commit says which of the two reasons.
+apps/crm/export.js	(e && e.message) || e
 apps/crm/export.js	(g.field && g.field.api_name) || '?'
 apps/crm/export.js	EMPTY
 apps/crm/export.js	EXPORT_CSS
@@ -19,6 +20,7 @@ apps/crm/export.js	PRODUCT_NAME
 apps/crm/export.js	PRODUCT_URL
 apps/crm/export.js	PRODUCT_URL ? ` (${PRODUCT_URL})` : ''
 apps/crm/export.js	REPORT_FILTER_JS
+apps/crm/export.js	SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''
 apps/crm/export.js	String(a.id)
 apps/crm/export.js	String(a.name || '').toLowerCase()
 apps/crm/export.js	String(fails.month.from || '').slice(0, 10) || 'the last 30 days'
@@ -89,6 +91,7 @@ apps/crm/export.js	actHtml
 apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
 apps/crm/export.js	actWithheld
 apps/crm/export.js	areaAsOf(t.id)
+apps/crm/export.js	areaLabel(area)
 apps/crm/export.js	behind
 apps/crm/export.js	bound.label
 apps/crm/export.js	c.sequence_number || i + 1
@@ -100,6 +103,10 @@ apps/crm/export.js	desc ? `<p class="hxd">${desc}</p>` : ''
 apps/crm/export.js	det.repeat ? 'yes' : 'no'
 apps/crm/export.js	dt.fields.map((fl) => (fl.field && fl.field.api_name) || fl.api_name |
 apps/crm/export.js	dt.repeat ? 'yes' : 'no'
+apps/crm/export.js	e.note
+apps/crm/export.js	e.note || 'your Zoho role does not grant access'
+apps/crm/export.js	e.status
+apps/crm/export.js	e.status ? ` (Zoho answered ${e.status})` : ''
 apps/crm/export.js	ea.period || ''
 apps/crm/export.js	ea.unit
 apps/crm/export.js	empty
@@ -136,6 +143,7 @@ apps/crm/export.js	fl.required ? '\u25cf' : ''
 apps/crm/export.js	fl.required ? '●' : ''
 apps/crm/export.js	fnHtml || absent(scope.functions, 'functions')
 apps/crm/export.js	freshnessLine()
+apps/crm/export.js	friendlyError(e)
 apps/crm/export.js	frows
 apps/crm/export.js	g.comparator || ''
 apps/crm/export.js	g.counts.inOrg
@@ -244,6 +252,7 @@ apps/crm/export.js	secCount
 apps/crm/export.js	secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail no
 apps/crm/export.js	stamp
 apps/crm/export.js	status
+apps/crm/export.js	tabLabel(area)
 apps/crm/export.js	tabLabel(t.id)
 apps/crm/export.js	tim
 apps/crm/export.js	tim ? ` (${_mdCell(tim)})` : ''

@@ -9,7 +9,8 @@
 import { test } from 'node:test';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load, read, blankNonCode, ROOT, handlerOf } from './slice.mjs';
+import { sliceFn as sliceFileFn, sliceConst as sliceFileConst,
+         load, read, blankNonCode, ROOT, handlerOf } from './slice.mjs';
 import { readdirSync, existsSync } from 'node:fs';
 
 // Both panels are composed from classic scripts in one shared scope. A test about "the panel" reads
@@ -93,12 +94,37 @@ const CRM_FILES = APP_FILES.crm;
 function sliceApp(app, name) {
   const files = APP_FILES[app];
   let lastErr;
-  for (const f of files) { try { return sliceFn(f, name); } catch (e) { lastErr = e; } }
+  for (const f of files) { try { return sliceFileFn(f, name); } catch (e) { lastErr = e; } }
   throw lastErr;
 }
 function sliceAppConst(app, name) {
   let lastErr;
-  for (const f of APP_FILES[app]) { try { return sliceConst(f, name); } catch (e) { lastErr = e; } }
+  for (const f of APP_FILES[app]) { try { return sliceFileConst(f, name); } catch (e) { lastErr = e; } }
+  throw lastErr;
+}
+
+// A historical call site may still name sidepanel.js while its subject has moved into a shipped
+// panel slice. Keep those tests about the composed application, not about yesterday's file layout;
+// a subject missing from every loaded script still throws through sliceApp/sliceAppConst.
+function sliceFn(rel, name) {
+  const panel = /^apps\/(crm|analytics)\/sidepanel\.js$/.exec(rel);
+  return panel ? sliceApp(panel[1], name) : sliceFileFn(rel, name);
+}
+function sliceConst(rel, name) {
+  const panel = /^apps\/(crm|analytics)\/sidepanel\.js$/.exec(rel);
+  return panel ? sliceAppConst(panel[1], name) : sliceFileConst(rel, name);
+}
+function handlerApp(app, id) {
+  let lastErr;
+  for (const f of APP_FILES[app]) {
+    try { return handlerOf(f, id); } catch (e) { lastErr = e; }
+    // A classic-script page has one shared global scope: after a responsibility is extracted, the
+    // composition root may attach a handler declared by an earlier slice. `handlerOf` deliberately
+    // stays file-local; resolve that shipped cross-file binding here, then lift the real declaration.
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const binding = read(f).match(new RegExp(`\\$\\('${escaped}'\\)\\.on(?:click|change|input)\\s*=\\s*(\\w+);`));
+    if (binding) return sliceApp(app, binding[1]);
+  }
   throw lastErr;
 }
 
@@ -1001,7 +1027,7 @@ for (const [app, sample] of [['crm', { label: 'Acme production', instance: 'acme
     // The first version of this read the bar *up to* `$('mmsw')` and stopped - so it passed while the
     // «Switch workspace ->» button on the next line went on naming the platform. A test whose window
     // ends where the bug starts agrees with the bug. Reported, one fix later.
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     const from = src.indexOf("$('mmtext')");
     // The bar ends on the line that offers to create a workspace for the tab - the last thing in it,
     // and the only end marker both panels share. Asserted, because the first end anchor existed in one
@@ -1765,7 +1791,7 @@ test('every writer of .zoost.json merges', () => {
   // whole-object write is correct only until someone else puts a field in the same file — which has
   // now happened three times.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);   // `read` from slice.mjs; this file imports no fs
+    const src = appPanel(app);   // `read` from slice.mjs; this file imports no fs
     const body = src.replace(/^\s*\/\/.*$/gm, '');
     const whole = [...body.matchAll(/\bwrite(Cfg|Json)\(\s*(CFG\s*,)?/g)]
       .filter((m) => m[1] === 'Cfg' || (m[2] || '').includes('CFG'))
@@ -1951,7 +1977,7 @@ test('every empty list asks what is blocking before blaming the pull', () => {
   // would do, and three of them already done. The CRM looked right only because its status line
   // happened to say the true thing; its tree messages had the same defect.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const src = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     const fn = 'emptyReason';   // one name on both sides now, and the same wording behind it
     // The CRM's takes the area it is being asked about - a refusal is recorded per area there, and
     // Analytics records one per workspace - so the name is what is shared, not the arity.
@@ -2757,7 +2783,7 @@ test('a lapsed permission is reported in words, on both sides', () => {
   // The same sentence, word for word: the remedy is one click and both panels say so rather than
   // leaving the reader to work out that «access not granted» in a dropdown is actionable.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     assert.ok(src.includes('Grant access\\u00bb above, or anywhere in this panel - one click, no folder picker'),
       `${app}: the status line no longer offers the remedy, or the two sides have drifted`);
   }
@@ -2791,7 +2817,7 @@ test('both panels say the same thing when the folder is not granted', () => {
   // two different products. Both now put the same sentence in the same place, and the wording is
   // compared here rather than trusted to stay in step.
   const bodies = ['crm', 'analytics'].map((app) => {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     const i = src.search(/function emptyReason\(\w*\)/);
     assert.ok(i > 0, `${app}: emptyReason() is gone`);
     return src.slice(i, src.indexOf('\n}', i));
@@ -2830,7 +2856,7 @@ test('the click-anywhere shortcut exists on both, and stays out of the same plac
   // day the callback became a named declaration, and would have stopped matching again at the next
   // reshuffle. `sliceFn` cuts the body and nothing else.
   const guards = ['crm', 'analytics'].map((app) => {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     assert.match(src, /document\.addEventListener\('click', regrantOnAnyClick, true\)/,
                  `${app}: nothing re-grants on a stray click`);
     return sliceFn(`apps/${app}/sidepanel.js`, 'regrantOnAnyClick');
@@ -2951,7 +2977,7 @@ test('both panels drop the conversation when the workspace changes', () => {
   // and the whole thread is re-sent with every message — so the model was being asked to reason
   // about two orgs at once, with nothing marking the boundary. Reported by the user.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     assert.match(src, /function dropWorkspaceState\(\)/, `${app} has no dropWorkspaceState`);
     assert.match(src, /aiMessages = \[\]; aiSeedWarned = false;/, `${app} does not reset both`);
     assert.ok(/if \(!sameWs\) \{\s*const n = dropWorkspaceState\(\)/.test(src),
@@ -2973,7 +2999,7 @@ test('re-activating the same workspace keeps the conversation', () => {
   // Regranting a lapsed folder permission re-runs activate/selectWorkspace for the workspace you are
   // already in. Clearing there would throw away a conversation about the org you never left.
   for (const app of ['crm', 'analytics']) {
-    assert.match(read(`apps/${app}/sidepanel.js`), /const sameWs = /, `${app} does not compare first`);
+    assert.match(appPanel(app), /const sameWs = /, `${app} does not compare first`);
   }
 });
 
@@ -3336,9 +3362,9 @@ test('every element the side panel reaches for is in its own markup', () => {
   // `body` is not this document's at all: it is the textarea on zoost.it/report, named inside the
   // function the panel injects into that page. It belongs to the same family as `q`, which is the
   // search box of the exported HTML report.
-  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`), html = panelPage(app);
+    const js = appPanel(app), html = panelPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
     // Comments stripped. A comment of mine quoting `$('id').title` while explaining why two titles
     // are written out rather than looped was read as a reach for an element called «id» - the third
@@ -3780,7 +3806,7 @@ test('the sample workspace is written by the shipped generator, and nothing abou
   // real one. No `if (demo)` branch in rendering code - that is how invented data eventually gets
   // shown as somebody's own - only `sample: true` in .zoost.json and the guard that already exists.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`), html = panelPage(app);
+    const js = appPanel(app), html = panelPage(app);
     assert.ok(html.includes('src="sample-org.js"'), `${app}: the panel does not load the generator`);
     assert.ok(html.includes('id="wssample"'), `${app}: there is no way to ask for one`);
     assert.ok(/async function addSampleWorkspace\(\)/.test(js), `${app}: nothing writes it`);
@@ -3872,7 +3898,7 @@ test('nothing reaches Zoho for a sample workspace, navigations included', () => 
   // pull and the per-item reads go through guardOk, but the *navigations* build a URL from the
   // workspace's own instance and would have opened one that does not exist.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`);
+    const js = appPanel(app);
     // every function that hands a URL to chrome.tabs has to refuse first
     const names = [...js.matchAll(/async function (\w+)\([^)]*\)\s*\{/g)].map((m) => m[1]);
     for (const fn of names) {
@@ -4047,7 +4073,7 @@ test('a sample workspace states the discrepancy, and only the blocking differs',
   // neither is stopped. What still differs is the bar: softer for a sample, and without the offer to
   // switch to a Zoho org that a sample does not have.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const js = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     const html = panelPage(app);
     assert.ok(/const sampleMm = !!\(bound && (?:lastCtx|ctx)/.test(js),
       `${app}: nothing detects a sample sitting beside a real tab`);
@@ -4067,7 +4093,7 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
   // unreachable - including «+ Sample». That made the one workspace anybody can open without an
   // account the one you could not open without one, which is the opposite of what it is for.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const js = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     const html = panelPage(app);
     assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !isSample\(\)/.test(js),
       `${app}: the off-Zoho overlay still covers a sample workspace, which owes Zoho nothing`);
@@ -4324,7 +4350,7 @@ test('the panel remembers whether a sample exists, for the moment it cannot look
   // surface that cannot reach the folder. The folder stays the authority - this is only read into a
   // label, and the action re-checks after granting.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const js = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     assert.ok(/chrome\.storage\.local\.get\('sampleWs'\)/.test(js),
       `${app}: nothing remembers whether a sample exists`);
     assert.ok(/chrome\.storage\.local\.set\(\{ sampleWs/.test(js), `${app}: the fact is never recorded`);
@@ -4353,7 +4379,7 @@ test('the panel does not claim what it has not looked at, and a poll does not un
   //    the middle of writing the sample. A state that has to hold across time is a **term in the
   //    condition**, never an assignment on top of the derivation.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const js = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     assert.ok(/const sampleKnowable = \(\) => !!\(root && rootGranted\) \|\| !!sampleWsKnown;/.test(js),
       `${app}: nothing distinguishes «there is none» from «I have not looked»`);
     const { sampleWorkspaceView } = load([
@@ -4934,7 +4960,7 @@ test('every message named is defined, and every message defined is named', () =>
     const GROUPS = [
       ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
       ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
-      ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
+      ['apps/crm/sidepanel.js', 'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js', 'apps/crm/ai.js', 'apps/crm/export-scope.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
       ['apps/analytics/sidepanel.js', 'apps/analytics/ai.js', 'apps/analytics/export.js', 'apps/analytics/health.js'],
     ];
     const group = GROUPS.find((g) => g.includes(rel));
@@ -5226,7 +5252,7 @@ test('analytics: only the load that observed a read failure may keep it', async 
 // otherwise, and it is what a reader forms their idea of the state from.
 for (const app of ['crm', 'analytics']) {
   test(`${app}: the mismatch bar does not claim more is off than is off`, () => {
-    const js = read(`apps/${app}/sidepanel.js`);
+    const js = appPanel(app);
     assert.ok(!/Everything is disabled/.test(js), 'the bar claims the local views are off too');
     assert.ok(/what is already mirrored stays readable/.test(js),
       'the bar does not say that the mirror is still readable');
@@ -5290,7 +5316,7 @@ for (const [app, fns] of [
   });
 
   test(`${app}: the mismatch is stated, not curtained off`, () => {
-    const html = panelPage(app), js = read(`apps/${app}/sidepanel.js`);
+    const html = panelPage(app), js = appPanel(app);
     assert.ok(!/mmoverlay/.test(html) && !/mmoverlay/.test(js),
       'the list is still covered, so what protects the reader is where things sit on screen');
     assert.ok(/id="mmbar"/.test(html), 'nothing says the two are different');
@@ -5693,7 +5719,7 @@ for (const app of ['crm', 'analytics']) {
     // The net cannot recognise a bare name - «AcmeCorp Ltd» is words. The panels quote names with
     // « » everywhere else, so the fix and the house style are the same thing; this holds it.
     for (const app of ['crm', 'analytics']) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       const re = /(?:setStatus|status)\(`([^`]*)`/g;
       let m;
       while ((m = re.exec(src))) {
@@ -5706,7 +5732,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('the report carries a stack when something actually threw', () => {
     for (const app of ['crm', 'analytics']) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       assert.ok(/addEventListener\('error'/.test(src) && /unhandledrejection/.test(src),
         'why=' + app + ' never captures a thrown error, so the report is only the status buffer');
       assert.ok(/reportFacts\(lastThrown/.test(src),
@@ -5718,7 +5744,7 @@ for (const app of ['crm', 'analytics']) {
     // It travelled in the URL fragment until an audit pointed out that the navigation itself is
     // recorded in history and syncs with it - the report leaving the machine with no click.
     for (const app of ['crm', 'analytics']) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       assert.ok(!/zoost\.it\/report#/.test(src), 'why=' + app + ' still puts the report in a URL');
       assert.ok(/chrome\.scripting\.executeScript/.test(handlerOf(`apps/${app}/sidepanel.js`, 'repopen')),
         'why=' + app + ' does not put the text into the page it opened');
@@ -5734,7 +5760,7 @@ for (const app of ['crm', 'analytics']) {
     // A window has no panel in it. The listener must then watch the tab *inside* that window, which
     // is the part a careless change breaks silently: the injection simply never fires.
     for (const app of ['crm', 'analytics']) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       const block = handlerOf(`apps/${app}/sidepanel.js`, 'repopen');
       assert.ok(/chrome\.windows\.create/.test(block), 'why=' + app + ' opens the report in a tab');
       assert.ok(!/chrome\.tabs\.create/.test(block), 'why=' + app + ' still opens a tab');
@@ -5809,7 +5835,7 @@ for (const app of ['crm', 'analytics']) {
     // already been reported. The three parts appear and go together, which is the part a later edit
     // gets wrong: adding a fourth and forgetting it leaves a stray control on an empty row.
     for (const app of ['crm', 'analytics']) {
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       const html = panelPage(app);
       assert.ok(html.includes('id="repdismiss"'), `why=${app} has no way to clear the row`);
       assert.ok(/\$\('repdismiss'\)\.onclick = \(\) => showEmergency\(false\);/.test(js),
@@ -5833,7 +5859,7 @@ for (const app of ['crm', 'analytics']) {
     // page opens, so the step defended nothing. A regression here is not cosmetic: it is a second
     // «Send» that does not send, which is the shape of the thing that was removed.
     for (const app of ['crm', 'analytics']) {
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       const html = panelPage(app);
       for (const id of ['repdlg', 'repbody', 'repgo', 'repcancel', 'repcopy']) {
         assert.ok(!html.includes(`id="${id}"`), `why=${app} still has the dialog element ${id}`);
@@ -5890,7 +5916,7 @@ for (const app of ['crm', 'analytics']) {
       rxProblems([{ name: 'A', pattern: 'x+' }, { name: 'B', pattern: 'x+' }])),
       'why=the Settings page saves two entries that search identically');
     for (const app of ['crm', 'analytics']) {
-      const panel = read(`apps/${app}/sidepanel.js`);
+      const panel = appPanel(app);
       // The save is `saveSearchPattern` now, a declaration of its own, so the slice takes both:
       // reading only the menu would silently stop covering the three rules below it.
       const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"))
@@ -5971,7 +5997,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('a read that failed is not an empty list, anywhere it could be mistaken for one', () => {
     for (const app of ['crm', 'analytics']) {
-      const panel = read(`apps/${app}/sidepanel.js`);
+      const panel = appPanel(app);
       assert.ok(/catch \(_\) \{ return null; \}/.test(panel),
         'why=' + app + ' panel turns a failed storage read into \u00abno saved patterns\u00bb');
       const opts = read(`apps/${app}/options.js`);
@@ -6008,7 +6034,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('the menu saves only what it could: a parsing pattern, onto a list that was read', () => {
     for (const app of ['crm', 'analytics']) {
-      const panel = read(`apps/${app}/sidepanel.js`);
+      const panel = appPanel(app);
       // The save is `saveSearchPattern` now, a declaration of its own - see the note above the twin
       // of this slice further up. Reading only the menu would silently stop covering it.
       const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"))
@@ -6038,7 +6064,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('hiding the picker closes its menu, and a menu opened late refuses to act', () => {
     for (const app of ['crm', 'analytics']) {
-      const panel = read(`apps/${app}/sidepanel.js`);
+      const panel = appPanel(app);
       const hides = (panel.match(/\$\('rxpick'\)\.style\.display = ('none'|\$\('rxpick'\))/g) || []).length;
       const closes = (panel.match(/\$\('rxmenu'\)\.classList\.remove\('show'\)/g) || []).length;
       assert.ok(closes >= 3, 'why=' + app + ' can hide the \u25be button and leave its menu floating (' + closes + ' close sites)');
@@ -6344,7 +6370,7 @@ for (const app of ['crm', 'analytics']) {
     // The other write path fetches a function that was *just saved* in Zoho, so it deliberately
     // records no list reading - the list this panel holds predates the save. The row has to say the
     // same, or the summary keeps a value the sidecar does not have and the pair means nothing.
-    const src = read(REL);
+    const src = crmPanel();
     const at = src.indexOf('const written = await writeFunctionMirror(f, op, null);');
     assert.ok(at > 0, 'why=the sync path is gone or writes something else');
     assert.ok(/ent\.fetchedAgainst = written\.listUpdated/.test(src.slice(at, at + 900)),
@@ -7300,7 +7326,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('both panels wire the same four keys, and leave fields alone', () => {
     for (const [app, list] of [['analytics', 'list'], ['crm', 'tree']]) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       const i = src.indexOf(`$('${list}').addEventListener('keydown'`);
       assert.ok(i > 0, `${app}: the list does not listen for keys`);
       const h = src.slice(i, i + 700);
@@ -7391,7 +7417,7 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
 
   test('both panels reveal rather than scrollIntoView', () => {
     for (const [app, sticky] of [['analytics', 'thead'], ['crm', '.grp']]) {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       const i = src.indexOf('function stepSelection');
       const body = src.slice(i, src.indexOf('\nfunction ', i + 10))
         .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
@@ -7837,7 +7863,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // Reported as missing. Keeping the current step is the part worth holding: dropping it too would
     // leave the pane showing something the history says was never visited.
     for (const app of ['crm', 'analytics']) {
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       assert.ok(new RegExp("\\$\\('navclear'\\)\\.onclick").test(js), `${app}: Clear is drawn and never wired`);
       const at = js.indexOf("$('navclear').onclick");
       assert.ok(/navHistory\.keepCurrent\(\)/.test(js.slice(at, at + 300)),
@@ -7889,7 +7915,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // Asked for: the view sits where a list sits, so it answers the same box. Both panels, because a
     // search that works in one product and not in the other is the drift the twins rule exists for.
     for (const app of ['crm', 'analytics']) {
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       assert.ok(/\$\('navfind'\)\.oninput = renderNav/.test(js), `${app}: typing does not redraw the chain`);
       const at = js.indexOf('function renderNav');
       assert.ok(/\$\('navfind'\)\.value/.test(js.slice(at, at + 900)), `${app}: the chain ignores its own search box`);
@@ -7920,7 +7946,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // A control drawn and never wired is the failure this panel has met before; a pair of arrows is
     // exactly where it would go unnoticed, because one of them usually does nothing anyway.
     for (const [app, ids] of [['crm', ['pvback', 'pvfwd', 'navtab']], ['analytics', ['dback', 'dfwd', 'navtab']]]) {
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       const html = panelPage(app);
       for (const id of ids) {
         assert.ok(html.includes(`id="${id}"`), `${app}: id=${id} is not in the markup`);
@@ -7944,7 +7970,7 @@ test('crm: the arrows open a row the way that row opens', () => {
       const navigation = createNavigationState(50, () => 123456);
       navigation.record('one', { label: 'One' });
       assert.equal(navigation.snapshot().entries[0].at, 123456, `${app}: a step carries no time`);
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       assert.ok(/navWhen\(e\.at\)/.test(js), `${app}: the time is recorded and never shown`);
     }
   });
@@ -7985,7 +8011,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
   test('both panels offer one copy control, wired to what is on screen', () => {
     for (const app of ['crm', 'analytics']) {
       const html = panelPage(app);
-      const js = read(`apps/${app}/sidepanel.js`);
+      const js = appPanel(app);
       assert.ok(html.includes('id="codecopy"'), `${app}: nothing to copy the code with`);
       assert.ok(js.includes("$('codecopy').onclick"), `${app}: the copy button is drawn and never wired`);
       // textContent of the pane, never a stored source: what the reader is looking at is what lands
@@ -9213,7 +9239,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // list of functions somebody remembered.
 {
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     test(`${app}: the generation moves at the switch, before the handle and before any await`, () => {
       assert.ok(/let wsGen = 0;/.test(src), 'there is nothing to compare against');
       // Where it moves is the whole of it. It was in `dropWorkspaceState()`, which Clear also calls
@@ -9831,7 +9857,7 @@ for (const app of ['crm', 'analytics']) {
 // `sameWs` call: the root is a parameter of the I/O, so the refusal lives at the single point every
 // write passes through, and a call site that forgets inherits it anyway.
 for (const app of ['crm', 'analytics']) {
-  const src = read(`apps/${app}/sidepanel.js`);
+  const src = appPanel(app);
 
   test(`${app}: the writer refuses a folder that is no longer the one it started in`, () => {
     const w = sliceFn(filesystemFile(app), 'createWorkspaceFilesystem');
@@ -10060,7 +10086,7 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
 
   for (const app of ['crm', 'analytics']) {
     test(`${app}: what is remembered as open is what is on screen`, async () => {
-      const src = read(`apps/${app}/sidepanel.js`);
+      const src = appPanel(app);
       // Run rather than read. This used to assert the *expression* - `gen === wsGen ? set(...)` -
       // which is a photograph of a belief and went stale the day the chain became a declaration,
       // while the behaviour it was written for never changed. What matters is two facts: a write
@@ -10366,7 +10392,7 @@ for (const app of ['crm', 'analytics']) {
     // Comments and strings blanked: it went red on a *comment* that mentioned `op.say` while
     // explaining an unrelated fix, and the failure named a function that touches no operation at
     // all. A scan over prose about code is the third of these met today, so it uses the scanner.
-    const src = blankNonCode(read(`apps/${app}/sidepanel.js`));
+    const src = blankNonCode(appPanel(app));
     const bad = [];
     for (const m of src.matchAll(/^(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/gm)) {
       const body = src.slice(m.index, src.indexOf('\n}', src.indexOf('{', m.index)));
@@ -10531,7 +10557,7 @@ test('analytics: a SQL detail is invalidated by the next detail navigation', () 
 
 for (const app of ['crm', 'analytics']) {
   test(`${app}: a pull locks workspace selection in the UI and in the activation path`, () => {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     const repaint = sliceFn(`apps/${app}/sidepanel.js`, app === 'crm' ? 'updateWsButtons' : 'updateButtons');
     const activateBody = sliceFn(`apps/${app}/sidepanel.js`, app === 'crm' ? 'activate' : 'selectWorkspace');
     assert.ok(/\$\('ws'\)\.disabled = pullBusy/.test(repaint), 'a repaint can re-enable the workspace selector during a pull');
@@ -10550,10 +10576,10 @@ for (const app of ['crm', 'analytics']) {
     const add = app === 'crm' ? 'addWorkspaceForTab' : 'addWorkspace';
     assert.ok(/refuse: workspaceChangeRefuse/.test(sliceFn(`apps/${app}/sidepanel.js`, add)), `${add} bypasses the pull lock`);
     const remove = app === 'crm'
-      ? handlerOf('apps/crm/sidepanel.js', 'wsdel')
+      ? handlerApp('crm', 'wsdel')
       : sliceApp('analytics', 'delWorkspace');
     assert.ok(/workspaceChangeRefuse\(\)/.test(remove), 'Remove workspace bypasses the pull lock');
-    const handler = handlerOf(`apps/${app}/sidepanel.js`, 'ws');
+    const handler = handlerApp(app, 'ws');
     assert.ok(/workspaceChangeRefuse\(\)/.test(handler), 'a forged change event bypasses the lock');
   });
 }
@@ -11844,7 +11870,7 @@ for (const app of ['crm', 'analytics']) {
 {
   for (const [app, fn] of [['analytics', 'selectWorkspace'], ['crm', 'activate']]) {
     test(`${app}: leaving a workspace forgets the selection and the chain it belongs to`, () => {
-      const src = read(`apps/${app}/sidepanel.js`).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const src = appPanel(app).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
       const at = src.indexOf(`async function ${fn}(`);
       assert.ok(at > 0, `id=${fn} is gone - renamed, or no longer a declaration`);
       const body = src.slice(at, src.indexOf('\n}', at));
@@ -12108,7 +12134,7 @@ for (const app of ['crm', 'analytics']) {
 // replace, so a tenth section added to the panel tomorrow survives a save here.
 {
   const opts = read('apps/crm/options.js');
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
   const keysOf = (src) => {
     const m = src.match(/const SCOPE_KEYS = \[([^\]]+)\]/);
     assert.ok(m, 'SCOPE_KEYS is gone - renamed, or no longer a literal');
@@ -13167,7 +13193,7 @@ test('the options page refuses to save over settings it could not read', () => {
 // Deferred rather than refused, like the live-sync notice beside it: the folder has already changed
 // in storage and this panel cannot un-change it, so it moves when the pull ends and says so.
 test('a working folder changed in Settings waits for the pull to finish', () => {
-  const src = read('apps/crm/sidepanel.js')
+  const src = crmPanel()
     .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
     .replace(/^([ \t]*)\/\/.*$/gm, (c) => ' '.repeat(c.length));
 
@@ -14162,7 +14188,7 @@ test('a refused token reaches the problem report as facts, not as prose', () => 
 // looked at what it answered.
 test('nothing says a Zoho page opened when the navigation was refused', () => {
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     const names = [...src.matchAll(/^async function (\w+)\s*\(/gm)].map((m) => m[1]);
     let seen = 0;
     for (const n of names) {
@@ -15167,7 +15193,7 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
 // on the settings page did the same. Measured in that order, both paths.
 test('every writer of the export scope stamps it, and the two products agree', () => {
   const sv = {};
-  for (const [rel, name] of [['apps/crm/sidepanel.js', 'crm panel'], ['apps/crm/options.js', 'crm settings'],
+  for (const [rel, name] of [['apps/crm/export-scope.js', 'crm panel'], ['apps/crm/options.js', 'crm settings'],
                              ['apps/analytics/export.js', 'analytics panel']]) {
     const src = read(rel);
     const m = /const SCOPE_SV = (\d+);/.exec(src);
@@ -15353,7 +15379,7 @@ test('a folder called something hostile appears as its name, not as markup', () 
   // copy cannot reintroduce it. If neither panel mentions the name at all, this is measuring nothing.
   let mentions = 0;
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     for (const m of src.matchAll(/innerHTML\s*=\s*(`[^`]*`)/g)) {
       if (!/root\.name/.test(m[1])) continue;
       mentions += 1;
@@ -15553,7 +15579,7 @@ test('the About dialog names every destination the panel can reach', () => {
     // If the manifest grants nothing outward, this case is measuring nothing and says so.
     assert.ok(outward.length >= 2, `${app}: no outward host in the manifest - either the assistant went `
                                    + 'away, or this case is the thing that is broken');
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     const about = src.slice(src.indexOf('<h4>Your data</h4>'), src.indexOf('<h4>Your data</h4>') + 1600);
     assert.ok(about, `${app}: the About dialog no longer has a «Your data» section`);
     assert.ok(/assistant/i.test(about),
@@ -16289,7 +16315,7 @@ test('crm: Settings can set every export scope the panel offers', () => {
     assert.ok(m, `${rel}: SCOPE_KEYS was not found - the derivation broke`);
     return m[1].split(',').map((x) => x.trim().replace(/^'|'$/g, ''));
   };
-  const panel = keysOf('apps/crm/sidepanel.js');
+  const panel = keysOf('apps/crm/export-scope.js');
   const page = keysOf('apps/crm/options.js');
   assert.ok(panel.length >= 10, `the panel offers ${panel.length} scope(s) - the derivation broke`);
   assert.deepEqual(page, panel,
@@ -18424,7 +18450,7 @@ test('the link count applies folds where the node counts do', () => {
 // message, no stack and no error class. Derived from the catch blocks that raise the button.
 test('a panel that offers a report has recorded the error it is about', () => {
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = appPanel(app);
     assert.match(src, /function noteThrown\(/, `${app}: nothing records a handled failure for the report`);
     // The places that *raise* it: its own declaration and the calls that lower it are not among
     // them, and deriving that from the argument keeps a fourth call site inside the net.
@@ -18645,7 +18671,7 @@ test('an unticked export chapter says so instead of claiming the org is empty', 
 // Settings has assigned onto the stored object since it was written.
 test('an export preset keeps what the page needs to read it back', () => {
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const src = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     // Derived: whatever `loadScope` compares to decide a stored scope is old. Naming `sv` here would
     // survive the day that field is renamed and stop meaning anything.
     const stamp = /(\w+)\.(\w+) !== \w+/.exec(sliceApp(app, 'loadScope').replace(/^\s*\/\/.*$/gm, ''));

@@ -16,8 +16,12 @@ the nested pull lock, runs that plan and releases the lock on every exit. The id
 plain-object message channel. `filesystem-adapter.js` owns permission, path resolution, handle
 caching and workspace-scoped I/O in both products. In CRM, `zoho-bridge.js` owns tab/frame discovery
 and message transport, while `zoho-navigation.js` owns destination construction, host admission and
-frame-aware navigation. `sidepanel.js` supplies current state and orchestrates those adapters; it no
-longer implements their mechanics. There is still no build step and no runtime dependency: the browser loads the
+frame-aware navigation. CRM's `workspace-controller.js` owns the working-folder and workspace
+lifecycle, while `live-sync.js` owns page notices, single-flight reconciliation and mirror updates.
+The export-scope dialog and its persisted policy live in `export-scope.js`, separate from the
+workspace snapshot and report builders in `export.js`.
+`sidepanel.js` supplies shared panel state and composes these boundaries; it no longer implements
+their mechanics. There is still no build step and no runtime dependency: the browser loads the
 readable source files that ship. Tests derive the script set and order from the page rather than
 maintaining another file list.
 

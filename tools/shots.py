@@ -588,13 +588,13 @@ def render_panel(shot):
             encoding="utf-8")
         page = stage / "sidepanel.html"
         html = page.read_text(encoding="utf-8")
-        # After idb.js and before sidepanel.js. Loading it earlier put the shim in place and then
-        # let the real idb.js overwrite window.idbHandle, so the panel looked for the folder handle
-        # in IndexedDB, found nothing, and drew «No workspace» over a fixture that was right there.
-        first = '<script src="sidepanel.js"></script>'
-        assert first in html, key + ": the panel does not load sidepanel.js where this expects"
+        # Immediately after idb.js: loading it earlier lets the real idb.js overwrite the shim;
+        # loading it only before sidepanel.js misses any extracted panel slice that executes a
+        # Chrome listener at load time. The HTML script order is the product's composition root.
+        first = '<script src="idb.js"></script>'
+        assert first in html, key + ": the panel does not load idb.js where this expects"
         page.write_text(html.replace(
-            first, '<script src="fsshim.js"></script>\n  <script src="shot.js"></script>\n  ' + first, 1),
+            first, first + '\n  <script src="fsshim.js"></script>\n  <script src="shot.js"></script>', 1),
             encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
