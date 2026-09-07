@@ -1,7 +1,7 @@
 # User validation
 
-Open this before changing first-run guidance, the sample path, or the conversion funnel. It separates
-what the product can measure from what only watching a person can establish.
+Open this before changing first-run guidance or the sample path. It separates what the product can
+measure from what only watching a person can establish.
 
 ## Primary outcome
 
@@ -64,5 +64,7 @@ observation; “the navigation is confusing” is a conclusion to make only afte
 - Requests made after participants succeeded are separated from first-run failures.
 
 Repeat the same protocol after a change. Do not compare participants by speed and do not claim a
-conversion improvement from five people; the sessions locate friction, while the aggregate site and
-Store measurements show whether the funnel changes at population scale.
+conversion improvement from five people: the sessions locate friction, and nothing here measures a
+population. The site counts nothing - its funnel was removed on 7 September 2026, unread, because no
+decision depended on it - so the only population figure that exists is what the Chrome Web Store
+reports about installs.

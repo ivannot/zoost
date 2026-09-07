@@ -671,14 +671,6 @@ test('a counter that cannot be written refuses the report rather than losing the
   assert.equal(e.calls.github, 0, 'it opened the issue anyway, having failed to count it');
 });
 
-// ---------- first-party funnel measurements ----------
-
-test('the browser funnel payload contains no ambient browsing data', () => {
-  const { funnelPayload } = load([sliceFn('site/site.js', 'funnelPayload')], { JSON });
-  assert.equal(funnelPayload('view_crm', '/crm', 'en'),
-    '{"event":"view_crm","page":"/crm","lang":"en"}');
-});
-
 test('every website exit to the Chrome Web Store uses its native campaign attribution', () => {
   const files = [...listPages(), 'site/llms.txt'];
   let seen = 0;
@@ -700,69 +692,29 @@ test('every website exit to the Chrome Web Store uses its native campaign attrib
     'the site still sends its own copy of a click the Store attributes natively');
 });
 
-test('the browser funnel honours both privacy preference signals', () => {
-  const source = sliceFn('site/site.js', 'funnelAllowed');
-  function allowed(navigator, window) {
-    return load([source], { navigator, window }).funnelAllowed();
-  }
-  const beacon = () => true;
-  assert.equal(allowed({ globalPrivacyControl: true, doNotTrack: '0', sendBeacon: beacon }, { doNotTrack: '0' }), false);
-  assert.equal(allowed({ globalPrivacyControl: false, doNotTrack: '1', sendBeacon: beacon }, { doNotTrack: '0' }), false);
-  assert.equal(allowed({ globalPrivacyControl: false, doNotTrack: '0', sendBeacon: beacon }, { doNotTrack: '1' }), false);
-  assert.equal(allowed({ globalPrivacyControl: false, doNotTrack: '0', sendBeacon: beacon }, { doNotTrack: '0' }), true);
-});
-
-function funnelEndpoint(body, origin = 'https://zoost.it') {
-  const points = [];
-  const ctx = load([
-    sliceConst('site/_worker.js', 'FUNNEL_EVENTS'),
-    sliceConst('site/_worker.js', 'FUNNEL_PAGES'),
-    sliceConst('site/_worker.js', 'FUNNEL_BODY_MAX'),
-    sliceFn('site/_worker.js', 'readBodyToLimit'),
-    sliceFn('site/_worker.js', 'funnel'),
-  ], { Set, Response, URL, JSON, TextDecoder, Uint8Array, Number, String });
-  // A real `Request`, because the ceiling lives on the body: a stub answering `json()` with an
-  // object steps straight over the thing being tested, and that is how these cases went on passing
-  // while the endpoint decoded whatever arrived.
-  const request = new Request('https://zoost.it/api/funnel', {
-    method: 'POST', body: JSON.stringify(body),
-    headers: { origin, 'cf-connecting-ip': '192.0.2.4', 'user-agent': 'Private Browser' },
-  });
-  const env = { METRICS: { writeDataPoint: (p) => points.push(p) } };
-  return { run: () => ctx.funnel(request, env), points };
-}
-
-test('a funnel event stores only the declared aggregate dimensions', async () => {
-  const e = funnelEndpoint({ event: 'view_crm', page: '/crm', lang: 'en' });
-  const res = await e.run();
-  assert.equal(res.status, 204);
-  assert.equal(JSON.stringify(e.points), JSON.stringify([
-    { blobs: ['view_crm', '/crm', 'en'], doubles: [1], indexes: ['view_crm'] },
-  ]));
-  const written = JSON.stringify(e.points);
-  assert.ok(!written.includes('192.0.2.4') && !written.includes('Private Browser'),
-    'the aggregate point contains request identity the funnel does not need');
-});
-
-test('an unknown funnel event or page is not stored', async () => {
-  for (const body of [
-    { event: 'source_opened', page: '/crm', lang: 'en' },
-    { event: 'store_crm', page: '/crm', lang: 'en' },
-    { event: 'view_crm', page: '/private/path?token=x', lang: 'en' },
-  ]) {
-    const e = funnelEndpoint(body);
-    const res = await e.run();
-    assert.equal(res.status, 400);
-    assert.deepEqual(e.points, []);
+// **The site counts nothing of its own, and the privacy page says so in as many words.**
+//
+// It used to: four page-view events to `/api/funnel`, an endpoint, a rate limiting rule at the edge
+// and a paragraph of policy. Nobody had ever read the counts - the credential to read them was never
+// configured - and the question they answered («do people reach /try») was one no decision depended
+// on. Removed rather than kept «in case», because an endpoint a stranger can write to has to earn
+// its place, and this one could not.
+//
+// Held here because the claim is on a published page and the code is the only thing that can make it
+// false again.
+test('the website sends no measurement of its own', () => {
+  const script = read('site/site.js');
+  assert.doesNotMatch(script, /sendBeacon|\/api\/funnel|navigator\.doNotTrack/,
+    'the site is measuring visits again - privacy.html says it counts nothing of its own');
+  const worker = read('site/_worker.js');
+  assert.doesNotMatch(worker, /writeDataPoint|url\.pathname === '\/api\/funnel'/,
+    'the worker writes measurements again, and the policy has not been rewritten to say so');
+  for (const page of ['site/privacy.html', 'site/it/privacy.html']) {
+    assert.match(read(page), /no measurement script|non c'è uno script di misurazione/,
+      `${page} no longer states that the site measures nothing`);
   }
 });
 
-test('a cross-site request cannot inflate the funnel', async () => {
-  const e = funnelEndpoint({ event: 'view_crm', page: '/crm', lang: 'en' }, 'https://example.test');
-  const res = await e.run();
-  assert.equal(res.status, 403);
-  assert.deepEqual(e.points, []);
-});
 
 test('and when the counter can be written, the report goes', async () => {
   // The other half: a gate that always refuses is broken, and looks strict until somebody needs it.
@@ -1574,23 +1526,16 @@ test('a report the server refused says why, and offers Send again', async () => 
 });
 
 // ---------------------------------------------------------------------------------------------
-// **The size of what a stranger sends was decided by the stranger.** Both public endpoints called
-// `request.json()` and applied their limits to the result: `/api/funnel` decoded a 5 MB body before
-// looking at a field, and `/api/report` decoded one before reaching its 8 KB rule and its captcha -
-// so the outbound Turnstile call was made for it too. About 10 MB of heap per request, each, for
-// free. Reported from outside, measured on the shipped functions with real `Request` objects, and
-// held here the same way: nothing is asserted about the source, everything about what the function
-// does when a body arrives.
-//
-// The rate limiting rule at the edge cannot cover this - it bounds how many requests arrive, not how
-// big one is - and neither can a captcha that runs after the parse.
+// **The size of what a stranger sends was decided by the stranger.** `/api/report` called
+// `request.json()` and applied its limits to the result, so a 5 MB body was decoded in full before
+// the 8 KB rule and the captcha were reached - which means the outbound Turnstile call was made for
+// it too. About 10 MB of heap per request, reported from outside and measured on the shipped
+// function with a real `Request`. A rate limit at the edge cannot cover this: it bounds how many
+// requests arrive, not how large one is.
 {
   const publicApi = (names) => load([
     sliceFn('site/_worker.js', 'readBodyToLimit'),
-    sliceConst('site/_worker.js', 'FUNNEL_BODY_MAX'),
     sliceConst('site/_worker.js', 'REPORT_BODY_MAX'),
-    sliceConst('site/_worker.js', 'FUNNEL_EVENTS'),
-    sliceConst('site/_worker.js', 'FUNNEL_PAGES'),
     ...names.map((n) => sliceFn('site/_worker.js', n)),
   ], { URL, Response, TextDecoder, Uint8Array, Set, JSON, Number, String, RegExp, Promise, Error });
 
@@ -1615,29 +1560,6 @@ test('a report the server refused says why, and offers Send again', async () => 
     body, ...(body instanceof ReadableStream ? { duplex: 'half' } : {}), ...extra,
   });
 
-  test('/api/funnel refuses a body past its ceiling without reading or parsing it', async () => {
-    const { funnel } = publicApi(['funnel']);
-    const pulled = { n: 0 };
-    const written = [];
-    const env = { METRICS: { writeDataPoint: (p) => written.push(p) } };
-    const response = await funnel(posted('/api/funnel', streamed(5 * 1024 * 1024, pulled)), env);
-    assert.equal(response.status, 413, 'an oversized beacon was accepted');
-    assert.deepEqual(written, [], 'a refused beacon still wrote a point to the billed dataset');
-    // The point of the whole change: it stopped pulling. A ceiling applied after the read would
-    // leave this at five megabytes and the status code would look identical.
-    assert.ok(pulled.n <= 256 * 1024, `it read ${pulled.n} bytes of a body it was going to refuse`);
-  });
-
-  test('/api/funnel still records an ordinary beacon', async () => {
-    const { funnel } = publicApi(['funnel']);
-    const written = [];
-    const env = { METRICS: { writeDataPoint: (p) => written.push(p) } };
-    const body = JSON.stringify({ event: 'view_crm', page: '/crm', lang: 'en' });
-    const response = await funnel(posted('/api/funnel', body), env);
-    assert.equal(response.status, 204, 'a real page view was refused');
-    assert.equal(written.length, 1, 'the beacon was accepted and counted nowhere');
-  });
-
   test('/api/report refuses a body past its ceiling before it can reach Turnstile', async () => {
     const { report } = publicApi(['report']);
     const pulled = { n: 0 };
@@ -1646,6 +1568,8 @@ test('a report the server refused says why, and offers Send again', async () => 
     const response = await report(posted('/api/report', streamed(5 * 1024 * 1024, pulled)), env);
     assert.equal(response.status, 413, 'an oversized report was accepted');
     assert.equal(fetched, 0, 'the captcha was asked about a request that should never have been read');
+    // The point of the whole change: it stopped pulling. A ceiling applied after the read would
+    // leave this at five megabytes and the status code would look identical.
     assert.ok(pulled.n <= 256 * 1024, `it read ${pulled.n} bytes of a body it was going to refuse`);
   });
 
@@ -1655,23 +1579,23 @@ test('a report the server refused says why, and offers Send again', async () => 
   // parts the function actually reads - a `Headers` and a `ReadableStream` - are handed to it
   // directly, and what is asserted is that the body was never pulled.
   test('a declared content-length over the ceiling is refused without touching the body', async () => {
-    const { readBodyToLimit, FUNNEL_BODY_MAX } = publicApi([]);
+    const { readBodyToLimit, REPORT_BODY_MAX } = publicApi([]);
     const pulled = { n: 0 };
     const request = {
       headers: new Headers({ 'content-length': String(5 * 1024 * 1024) }),
       body: streamed(5 * 1024 * 1024, pulled),
     };
-    assert.equal(await readBodyToLimit(request, FUNNEL_BODY_MAX), null, 'a declared oversize body was read');
+    assert.equal(await readBodyToLimit(request, REPORT_BODY_MAX), null, 'a declared oversize body was read');
     assert.equal(pulled.n, 0, 'the free answer in the header was not used');
   });
 
   // And the other half, which is why the header is not trusted: nothing declared, five megabytes
   // arriving. A ceiling that believed the header would let this through.
   test('a body with no declared length is still stopped at the ceiling', async () => {
-    const { readBodyToLimit, FUNNEL_BODY_MAX } = publicApi([]);
+    const { readBodyToLimit, REPORT_BODY_MAX } = publicApi([]);
     const pulled = { n: 0 };
     const request = { headers: new Headers(), body: streamed(5 * 1024 * 1024, pulled) };
-    assert.equal(await readBodyToLimit(request, FUNNEL_BODY_MAX), null, 'an undeclared oversize body was read whole');
+    assert.equal(await readBodyToLimit(request, REPORT_BODY_MAX), null, 'an undeclared oversize body was read whole');
     assert.ok(pulled.n <= 256 * 1024, `it read ${pulled.n} bytes before stopping`);
   });
 

@@ -46,24 +46,26 @@ the wiring lives. Both are printed now.
 **A list of files maintained by hand is a list that goes stale.** `matrix.py` had 23 shipped scripts
 in no surface, 12 created in one refactor. Derived from the directory now, in both directions.
 
-## Stated, then bounded where it belongs
+## Stated, bounded, then removed
 
-`/api/funnel` is the only unauthenticated write on the site. An `Origin` header is set by the browser
-and forged by anything else, so a stranger can add points to a billed dataset and skew what
-`tools/funnel.py` prints. `/api/report` can afford Turnstile and a counter because it runs when
-somebody presses a button; this runs on every page view, and a per-request store would cost more than
-the measurement is worth. The proportionate answer was a rate limit at the edge - a zone setting, not
-a line of code - so it was written in the function rather than solved badly in it, and it now exists:
-«Limit funnel beacon», 20 requests per 10 seconds per IP, Block. One page view sends exactly one
-beacon, so the threshold is four times the fastest real reader and nothing to a script.
+`/api/funnel` was the only unauthenticated write on the site. An `Origin` header is set by the browser
+and forged by anything else, so a stranger could add points to a billed dataset and skew the counts.
+The proportionate answer looked like a rate limit at the edge - a zone setting, not a line of code -
+and it was made: «Limit funnel beacon», 20 requests per 10 seconds per IP, Block, verified against the
+live zone with 25 requests that answered 405 up to the 21st, then 429, then 405 again as the window
+slid. The rule was expressed on the path alone rather than on `POST /api/funnel` so that proof could
+be made with requests the Worker rejects before writing: **a gate nobody can exercise without causing
+the harm it prevents is a gate that will be believed rather than checked.**
 
-Two things about it are worth keeping. **A defence is verified against the deployed thing, not
-against the form that created it**: 25 requests to the live zone answered 405 up to the 21st, then
-429, then 405 again as the window slid - the refusal and the recovery both read, in one run. And the
-rule was expressed on the path alone rather than on `POST /api/funnel`, so that proof could be made
-with requests the Worker rejects before writing: **a gate nobody can exercise without causing the
-harm it prevents is a gate that will be believed rather than checked.** What it does not do is in the
-function beside it - it bounds flooding, it does not authenticate, and a patient drip stays under it.
+Then the author asked what the counter was for, and there was no answer. It measured whether visitors
+reached `/try`; no decision depended on that, the credential to read the counts had never been
+configured on any machine, and in the day it ran nobody had looked. It is gone - the beacon, the
+endpoint, the reader, the policy paragraph, and the reason the rule existed.
+
+The rule this leaves is not about rate limits. **A defence is worth exactly what it defends, so the
+first question about one is what the thing behind it is for** - asked here after the limit, the
+verification and the note about it had all been written. Two of those three were work that a single
+question would have made unnecessary, and the question was the user's.
 
 ## Measured, then not done
 

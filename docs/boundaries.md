@@ -122,17 +122,25 @@ why it is the user's choice.
 
 ## The website measurement boundary
 
-The extensions still contain no telemetry. The public website has a separate, first-party conversion
-funnel because visits to a product page and use of an extension are two different systems and two
-different promises.
+The extensions contain no telemetry, and **the website measures nothing either**.
 
-The browser can send four event names to `zoost.it/api/funnel`: one view for each of the home, CRM,
-Analytics and sample page families. The payload has
-three bounded fields: event name, page family and page language. `site/site.js` does not read or send
-an IP address, user agent, referrer, query string, visitor id or session id, and sends nothing when
-Global Privacy Control or Do Not Track is enabled. The Worker validates every field before writing a
-point to Cloudflare Analytics Engine. The points are used only as aggregate counts and expire there
-after three months.
+It used to. Four page-view events went to `zoost.it/api/funnel` - home, CRM, Analytics and sample -
+with three bounded fields and no identifier of any kind, and the Worker wrote them to Cloudflare
+Analytics Engine. Every promise made about it was kept; what it never had was a reader. The
+credential to query the counts was never configured on the machine the work happens on, and the
+question they answered -
+«do visitors reach /try» - was one no decision depended on. It was removed on 7 September 2026, and
+with it went the site's only write nobody had to pass a challenge for, the rate limiting rule that
+had been created to bound it, and a paragraph of privacy policy. `/api/report` is still there and is
+still a stranger's to call - it just costs them a captcha.
+
+The rule this leaves is the one worth keeping: **a measurement is a promise about data, so it has to
+be paid for by a decision that depends on it.** Collecting first and finding a use later inverts
+that, and the cost - an open write path, a policy paragraph, an edge rule and the attention of
+everyone who reads the code - is paid in the meantime.
+
+If page counts are ever wanted again, the platform the site already runs on offers them without any
+code here.
 
 Links from zoost.it to the two Chrome Web Store listings carry the standard `utm_source`,
 `utm_medium` and `utm_campaign` parameters. Attribution after following those links is handled by

@@ -207,33 +207,6 @@
   };
   function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
 
-  // The conversion funnel is first-party and deliberately smaller than an analytics product: four
-  // page families. The payload contains only names chosen
-  // here, never the referrer, query string, user agent or an identifier. Do Not Track and Global
-  // Privacy Control are respected even though the measurement sets no cookie and builds no profile.
-  var FUNNEL_VIEWS = {
-    '/': 'view_home', '/it': 'view_home',
-    '/crm': 'view_crm', '/it/crm': 'view_crm',
-    '/analytics': 'view_analytics', '/it/analytics': 'view_analytics',
-    '/try': 'view_try', '/it/try': 'view_try',
-  };
-  function funnelAllowed() {
-    return navigator.globalPrivacyControl !== true && navigator.doNotTrack !== '1'
-      && window.doNotTrack !== '1' && typeof navigator.sendBeacon === 'function';
-  }
-  // Kept as a pure, named boundary so the privacy promise can be tested against the exact payload
-  // that leaves the browser. Adding an ambient browser value here is therefore a visible change.
-  function funnelPayload(event, page, lang) {
-    return JSON.stringify({ event: event, page: page, lang: lang });
-  }
-  function funnelSend(event) {
-    if (!event || !funnelAllowed()) return;
-    var page = location.pathname.replace(/\/+$/, '') || '/';
-    var payload = funnelPayload(event, page, LANG);
-    navigator.sendBeacon('/api/funnel', new Blob([payload], { type: 'application/json' }));
-  }
-  var funnelPage = location.pathname.replace(/\/+$/, '') || '/';
-  funnelSend(FUNNEL_VIEWS[funnelPage]);
 
   // "Covers Zoost X · updated Y" on the guide. Kept in step with the repo automatically: the rule is
   // that documentation ships with the code that changed it, so the version the docs describe is the

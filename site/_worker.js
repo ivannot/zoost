@@ -1,7 +1,7 @@
 /*
  * zoost.it Worker. Everything is a static asset except four endpoints answered here:
- * /api/versions for the footer badge, /api/ahead for /emergency, /api/funnel for the site's small
- * aggregate conversion funnel, and /api/report for an explicitly submitted problem report.
+ * /api/versions for the footer badge, /api/ahead for /emergency, and /api/report for an explicitly
+ * submitted problem report.
  *
  * Assets are served first by the platform; this script only runs when no file matches, so the site
  * behaves exactly as before for every matching asset. `functions/` was the wrong
@@ -49,10 +49,6 @@ const TTL_PARTIAL = 60;                 // …and when one did not, so an outage
 const UA = 'zoost.it version badge (+https://zoost.it)';
 const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not a version
 
-// A deliberately small funnel, not a general analytics vocabulary. New names are a data-collection
-// decision and therefore have to be added here, to the client and to the privacy page together.
-const FUNNEL_EVENTS = new Set(['view_home', 'view_crm', 'view_analytics', 'view_try']);
-const FUNNEL_PAGES = new Set(['/', '/it', '/crm', '/it/crm', '/analytics', '/it/analytics', '/try', '/it/try']);
 
 const timeout = (ms) => AbortSignal.timeout(ms);
 const listing = (app) => `https://chromewebstore.google.com/detail/${EXT_ID[app]}`;
@@ -497,16 +493,15 @@ async function ahead(request, env, ctx) {
 // ---------------------------------------------------------------------------------------------
 // **A body is read to a ceiling, never parsed and then measured.**
 //
-// Both public endpoints called `request.json()` first and applied their limits to what came back, so
-// the size of what a stranger sent was decided by the stranger: a 5 MB JSON was decoded in full
-// before `/api/funnel` looked at a single field, and before `/api/report` reached its 8 KB rule and
-// its captcha - which means the outbound Turnstile call was made for it too. Measured that way by an
-// outside reader, on the shipped functions, with real `Request` objects: about 10 MB of heap per
-// request, on both. Nothing leaked and nothing was written that should not have been; what it costs
+// `/api/report` called `request.json()` first and applied its limits to what came back, so the size
+// of what a stranger sent was decided by the stranger: a 5 MB JSON was decoded in full before the
+// 8 KB rule and the captcha were reached - which means the outbound Turnstile call was made for it
+// too. Measured by an outside reader, on the shipped function, with a real `Request`: about 10 MB of
+// heap per request. Nothing leaked and nothing was written that should not have been; what it costs
 // is memory and CPU, per request, for free.
 //
-// The rate limiting rule at the edge does not help here. It bounds how many requests arrive, not how
-// large one is, and neither does Turnstile, which runs after the parse it was supposed to protect.
+// A rate limit at the edge does not help here: it bounds how many requests arrive, not how large one
+// is - and neither does Turnstile, which runs after the parse it was supposed to protect.
 //
 // `content-length` is checked first because it is free, and then **ignored**: the header can be
 // absent on a chunked body and it can lie, so the stream is read with a running total and abandoned
@@ -532,10 +527,8 @@ async function readBodyToLimit(request, limit) {
   return new TextDecoder().decode(whole);
 }
 // What each endpoint can legitimately receive, with the room its own fields already state.
-// A beacon is `{"event":…,"page":…,"lang":"it"}` - about sixty bytes, and 1 KiB is already generous.
 // A report is at most REPORT_MAX of text plus REPORT_SAYS_MAX of the reader's own words plus a
-// Turnstile token, so 16 KiB leaves headroom without inventing a second, larger limit.
-const FUNNEL_BODY_MAX = 1024;
+// Turnstile token, so 16 KiB leaves headroom.
 const REPORT_BODY_MAX = 16384;
 
 // /api/report - the one endpoint on this site that *writes* anywhere.
@@ -584,55 +577,6 @@ async function reportRateKey(env, ip) {
   const data = new TextEncoder().encode(String(ip) + '|' + (env.REPORT_SALT || env.TURNSTILE_SECRET || ''));
   const digest = await crypto.subtle.digest('SHA-256', data);
   return 'rl:report:' + [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** Store one aggregate step in the public site's conversion funnel.
- *
- * The point contains three bounded labels chosen by this code: event, page family and language.
- * It deliberately never reads the address, user agent, referrer, query string or a browser id. The
- * request still crosses Cloudflare like every page request; what this function adds is only the
- * aggregate point described on the privacy page. Analytics Engine expires it after three months.
- */
-async function funnel(request, env) {
-  const reply = (status) => new Response(null, { status, headers: { 'cache-control': 'no-store' } });
-  if (request.method !== 'POST') return reply(405);
-  // Origin, exactly - scheme included. The comparison was on hostname alone, so `http://zoost.it`
-  // passed a check written to mean «this page». It costs nothing to be exact.
-  const origin = request.headers.get('origin') || '';
-  try {
-    if (!origin || new URL(origin).origin !== new URL(request.url).origin) return reply(403);
-  } catch (_) { return reply(403); }
-  // **The stated limit, because a limit nobody wrote down is a blind spot.** An `Origin` header is
-  // set by the browser and forged by anything else, so this is not authentication and nothing here
-  // pretends otherwise: it is the only unauthenticated write on the site, and a stranger can add
-  // points to a billed dataset and skew what `tools/funnel.py` prints. `/api/report` two functions
-  // below can afford Turnstile and a counter because it runs once when somebody presses a button;
-  // this runs on every page view, and a per-request store would cost more than the measurement is
-  // worth. So the bound is at the edge and not in this file: a zone rate limiting rule, «Limit
-  // funnel beacon», 20 requests per 10 seconds per IP on this path, Block. Measured on the deployed
-  // zone with 25 requests - 405 up to the 21st, then 429, then 405 again as the window slid.
-  //
-  // What that rule does *not* do, said here because a defence is read as more than it is: it does
-  // not authenticate anything, and somebody patient enough to stay under the rate can still add
-  // points. It makes flooding bounded and costly instead of free and instant. Nothing published
-  // claims these counts are trustworthy, and nothing should.
-  const raw = await readBodyToLimit(request, FUNNEL_BODY_MAX);
-  if (raw === null) return reply(413);
-  let body;
-  try { body = JSON.parse(raw); } catch (_) { return reply(400); }
-  const event = String((body && body.event) || '');
-  const page = String((body && body.page) || '').replace(/\/+$/, '') || '/';
-  const lang = String((body && body.lang) || '').slice(0, 2);
-  if (!FUNNEL_EVENTS.has(event) || !FUNNEL_PAGES.has(page) || !/^(en|it)$/.test(lang)) return reply(400);
-  try {
-    if (env.METRICS) env.METRICS.writeDataPoint({
-      blobs: [event, page, lang], doubles: [1], indexes: [event],
-    });
-  } catch (_) {
-    // Measurement is subordinate to the page. A missing or unavailable binding may lose this count;
-    // it must never delay or break the navigation the visitor chose.
-  }
-  return reply(204);
 }
 
 async function report(request, env) {
@@ -796,7 +740,6 @@ async function handle(request, env, ctx) {
   const url = new URL(request.url);
   if (url.pathname === '/api/versions') return versions(request, env, ctx);
   if (url.pathname === '/api/ahead') return ahead(request, env, ctx);
-  if (url.pathname === '/api/funnel') return funnel(request, env);
   if (url.pathname === '/api/report') return report(request, env);
   const to = MOVED[url.pathname];
   if (to) return Response.redirect(new URL(to, url).toString(), 301);
