@@ -60,6 +60,8 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | crm | 1.48.0 | `crm-v1.48.0` | `69f46313e163c271c25e064957ff4be9461c2b76` | `89f47a8436e05bc90a185c743eaf1bfa6d6c8369a23c4a67b3d6807a77b85d6b` |
 | crm | 1.49.0 | `crm-v1.49.0` | `aae4c5e4bdb68faf59ccac24b4f2d7d73165ee20` | `23201498788bc85357c5ddfaecfc689463b5896dfa9f200d2d03f2b0911c6f81` |
 | analytics | 1.31.0 | `analytics-v1.31.0` | `aae4c5e4bdb68faf59ccac24b4f2d7d73165ee20` | `ac7fbf9b8c8004dd6cd4c951c72c2e169809386c86a89a9d555acb976c1ac975` |
+| crm | 1.50.0 | `crm-v1.50.0` | `d97af5bafb43f2bc8202487e0e77c8d0537595e4` | `c2efc7819c88ab1219bc7834700356b9f1595b315871d2a1884dd3334f72ac86` |
+| analytics | 1.32.0 | `analytics-v1.32.0` | `d97af5bafb43f2bc8202487e0e77c8d0537595e4` | `b166e623b7a194a592c0367e6a877286463349aba8f087e2ea2722d35bad4f92` |
 
 ## What this table cannot tell you, and why
 
