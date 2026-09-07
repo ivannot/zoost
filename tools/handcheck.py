@@ -79,7 +79,7 @@ CHECKS = [
                'Press Pull all and leave it alone until it stops.'],
         'pass': ('It ends on a line that names what it read - not on «interrupted», not on «could not». '
                  'The tree fills, and the counts match what the platform shows you.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
+        'covers': ['apps/*/sidepanel.js', 'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
                    'apps/*/automation.js', 'apps/*/connections.js'],
     },
     {

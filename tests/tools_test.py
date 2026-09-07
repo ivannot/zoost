@@ -1379,7 +1379,7 @@ class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
             ['node', '-e', """
              const fs = require('fs');
              const w = fs.readFileSync('site/_worker.js', 'utf8');
-             const p = fs.readFileSync('apps/crm/sidepanel.js', 'utf8');
+             const p = fs.readFileSync('apps/crm/report.js', 'utf8');
              const wf = w.slice(w.indexOf('function reportRedact'));
              eval(wf.slice(0, wf.indexOf('\\n}') + 2));
              const pf = p.slice(p.indexOf('function redact('));

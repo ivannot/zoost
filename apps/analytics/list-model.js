@@ -1,3 +1,4 @@
+// @ts-check
 /* The Analytics view list, without DOM or panel state.
  *
  * The caller supplies the current search controls and the data already read from disk. This module
@@ -5,6 +6,34 @@
  * and lineage that was never read.
  */
 
+/** @typedef {{name?: string}} AnalyticsColumn */
+/** @typedef {{columns: AnalyticsColumn[]}} AnalyticsTable */
+/** @typedef {{children: unknown[], dashboards: unknown[]}} AnalyticsDependencies */
+/** @typedef {{
+ * id: string,
+ * name?: string,
+ * folderName?: string,
+ * type?: string,
+ * dataModifiedAt?: number | null,
+ * designModifiedAt?: number | null,
+ * [field: string]: unknown,
+ * }} AnalyticsListView */
+/** @typedef {{text?: unknown, mode?: string, regex?: boolean}} AnalyticsSearch */
+/** @typedef {{
+ * typeFilter?: string | null,
+ * orphanToken?: string,
+ * search?: AnalyticsSearch,
+ * schema?: Record<string, AnalyticsTable>,
+ * sqlCache?: Map<string, unknown> | null,
+ * dependencies?: Record<string, AnalyticsDependencies> | null,
+ * sortKey?: string,
+ * sortDir?: number,
+ * isOrphan?: (view: AnalyticsListView) => boolean,
+ * compileRegex?: (text: string) => {error?: unknown, re?: RegExp},
+ * sqlMatches?: (sql: unknown, query: string, re?: RegExp) => boolean,
+ * }} AnalyticsListOptions */
+
+/** @param {AnalyticsListView[]} rows @param {AnalyticsListOptions} [options] */
 function selectAnalyticsViews(rows, options = {}) {
   const typeFilter = options.typeFilter || null;
   const orphanToken = options.orphanToken || '__orphans__';
@@ -25,9 +54,11 @@ function selectAnalyticsViews(rows, options = {}) {
   }
 
   if (query && search.mode === 'sql') {
-    const compiled = search.regex ? options.compileRegex(String(search.text || '').trim()) : null;
+    const compileRegex = /** @type {(text: string) => {error?: unknown, re?: RegExp}} */ (options.compileRegex);
+    const sqlMatches = /** @type {(sql: unknown, query: string, re?: RegExp) => boolean} */ (options.sqlMatches);
+    const compiled = search.regex ? compileRegex(String(search.text || '').trim()) : null;
     selected = compiled && compiled.error ? [] : selected.filter((view) => sqlCache
-      && options.sqlMatches(sqlCache.get(view.id), query, compiled && compiled.re));
+      && sqlMatches(sqlCache.get(view.id), query, (compiled && compiled.re) || undefined));
   } else if (query) {
     selected = selected.filter((view) => {
       if ((view.name || '').toLowerCase().includes(query)
@@ -47,7 +78,7 @@ function selectAnalyticsViews(rows, options = {}) {
       if (left == null && right == null) return 0;
       if (left == null) return 1;
       if (right == null) return -1;
-      return (left - right) * sortDir;
+      return (Number(left) - Number(right)) * sortDir;
     }
     if (sortKey === 'dataModifiedAt' || sortKey === 'designModifiedAt') {
       const left = a[sortKey], right = b[sortKey];

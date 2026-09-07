@@ -355,7 +355,7 @@ NUM = {8: ('eight', 'otto'), 9: ('nine', 'nove'), 10: ('ten', 'dieci'), 11: ('el
        # reports the correction as the defect.
        21: ('twenty-one', 'ventuno'), 22: ('twenty-two', 'ventidue'),
        23: ('twenty-three', 'ventitré'), 24: ('twenty-four', 'ventiquattro'),
-       25: ('twenty-five', 'venticinque')}
+       25: ('twenty-five', 'venticinque'), 26: ('twenty-six', 'ventisei')}
 
 
 def translations_have_the_same_shape(findings: list) -> None:

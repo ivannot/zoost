@@ -38,7 +38,8 @@ Each app carries its **own `manifest.json` and its own version number** — they
 
 Each side panel is deliberately assembled from small classic scripts and a linked
 `sidepanel.css`. This preserves the no-build, inspectable distribution while keeping AI, exports,
-Health, pure state and panel orchestration at separate maintenance boundaries.
+Health, problem-report redaction, pure state and panel orchestration at separate maintenance
+boundaries.
 
 **No code is shared between apps yet, and that is deliberate.** The two will look similar (a tree, a
 preview, a health view, exports) but they read different platforms with different shapes. Factor

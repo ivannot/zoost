@@ -1,3 +1,4 @@
+// @ts-check
 /* The functions list, without DOM or workspace state.
  *
  * The panel supplies the current controls and the two product-specific language functions. This
@@ -5,6 +6,34 @@
  * elements. Keeping the complete selection in one call also means the empty-state count and the
  * rows on screen cannot apply different filters.
  */
+
+/** @typedef {{lines?: number, apiCalls?: number}} FunctionStats */
+/** @typedef {{
+ * api_name?: string,
+ * display_name?: string,
+ * name?: string,
+ * namespace?: string,
+ * rest?: boolean,
+ * language?: unknown,
+ * stats?: FunctionStats,
+ * updatedTime?: unknown,
+ * path?: string,
+ * [field: string]: unknown,
+ * }} FunctionListRow */
+/** @typedef {'name'|'lines'|'calls'|'modified'|'language'} FunctionSortKey */
+/** @typedef {'lines'|'calls'|'modified'|'language'} FunctionMetricSort */
+/** @typedef {{
+ * typeFilter?: string,
+ * langFilter?: string,
+ * languageFamily?: (value: unknown) => string,
+ * languageLabel?: (value: string) => string,
+ * label?: (row: FunctionListRow) => string,
+ * nameKeys?: string[],
+ * term?: unknown,
+ * connectionPaths?: Set<string> | null,
+ * sortKey?: FunctionSortKey,
+ * sortDir?: 'asc'|'desc',
+ * }} FunctionListOptions */
 
 const FUNCTION_NAMES = ['api_name', 'display_name', 'name'];
 const TREE_SORTS = {
@@ -19,6 +48,7 @@ const TREE_SORTS = {
   language: { label: 'language', text: true },
 };
 
+/** @param {FunctionListRow} row @param {FunctionListOptions} [options] */
 function functionRowPasses(row, options = {}) {
   const type = options.typeFilter || 'all';
   const language = options.langFilter || 'all';
@@ -27,11 +57,14 @@ function functionRowPasses(row, options = {}) {
   return typePasses && (language === 'all' || familyOf(row.language) === language);
 }
 
+/** @param {FunctionListRow} row @param {FunctionMetricSort} key
+ * @param {{languageFamily: (value: unknown) => string, languageLabel: (value: string) => string}} options */
 function functionSortValue(row, key, options) {
   if (key === 'language') return options.languageLabel(options.languageFamily(row.language));
   return TREE_SORTS[key].get(row);
 }
 
+/** @param {FunctionListRow[]} rows @param {FunctionListOptions} [options] */
 function selectFunctionRows(rows, options = {}) {
   const label = options.label || ((row) => row.display_name || row.api_name || row.name || '');
   const nameKeys = options.nameKeys || FUNCTION_NAMES;
@@ -52,11 +85,12 @@ function selectFunctionRows(rows, options = {}) {
     .filter((row) => !term || nameKeys.some((key) => String(row[key] || '').toLowerCase().includes(term)));
   const sorter = TREE_SORTS[sortKey];
   if (sorter) {
+    const metricKey = /** @type {FunctionMetricSort} */ (sortKey);
     const direction = sortDir === 'asc' ? 1 : -1;
     const valueOptions = { languageFamily, languageLabel };
     const sorted = visible.slice().sort((a, b) => {
-      const left = functionSortValue(a, sortKey, valueOptions);
-      const right = functionSortValue(b, sortKey, valueOptions);
+      const left = functionSortValue(a, metricKey, valueOptions);
+      const right = functionSortValue(b, metricKey, valueOptions);
       if (sorter.text) {
         const compared = String(left).localeCompare(String(right));
         return compared ? direction * compared : label(a).localeCompare(label(b));
@@ -73,7 +107,7 @@ function selectFunctionRows(rows, options = {}) {
       filterCount,
       sorter,
       noData: sorter.text
-        ? 0 : sorted.filter((row) => functionSortValue(row, sortKey, valueOptions) < 0).length,
+        ? 0 : sorted.filter((row) => functionSortValue(row, metricKey, valueOptions) < 0).length,
     };
   }
 
@@ -85,7 +119,8 @@ function selectFunctionRows(rows, options = {}) {
   const direction = sortDir === 'asc' ? 1 : -1;
   const groups = [...byNamespace.keys()].sort().map((namespace) => ({
     namespace,
-    rows: byNamespace.get(namespace).sort((a, b) => direction * label(a).localeCompare(label(b))),
+    rows: /** @type {FunctionListRow[]} */ (byNamespace.get(namespace))
+      .sort((a, b) => direction * label(a).localeCompare(label(b))),
   }));
   return { rows: visible, groups, filterCount, sorter: null, noData: 0 };
 }

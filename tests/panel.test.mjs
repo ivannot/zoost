@@ -5491,14 +5491,14 @@ for (const app of ['crm', 'analytics']) {
 // reader sees the result, and only a click opens the page that can send it.
 {
   const { redact, buildReport } = load([
-    sliceFn('apps/crm/sidepanel.js', 'redact'),
-    sliceFn('apps/crm/sidepanel.js', 'redactHard'),
-    sliceFn('apps/crm/sidepanel.js', 'buildReport'),
+    sliceApp('crm', 'redact'),
+    sliceApp('crm', 'redactHard'),
+    sliceApp('crm', 'buildReport'),
   ]);
 
   test('the report core is one text in both panels', () => {
     for (const fn of ['redact', 'buildReport', 'noteStep']) {
-      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceApp('analytics', fn),
+      assert.equal(sliceApp('crm', fn), sliceApp('analytics', fn),
         'why=' + fn + ' has drifted between the twins');
     }
   });
@@ -5554,9 +5554,9 @@ for (const app of ['crm', 'analytics']) {
   // A fresh buffer per case: the array is module state, so two cases sharing one load would make
   // the second depend on what the first pushed.
   const freshBuffer = () => load([
-    sliceConst('apps/crm/sidepanel.js', 'REPORT_STEPS_MAX'),
-    sliceConst('apps/crm/sidepanel.js', 'reportSteps'),
-    sliceFn('apps/crm/sidepanel.js', 'noteStep'),
+    sliceAppConst('crm', 'REPORT_STEPS_MAX'),
+    sliceAppConst('crm', 'reportSteps'),
+    sliceApp('crm', 'noteStep'),
   ]);
 
   test('the steps buffer is bounded and drops the oldest, so a long session cannot fill a report', () => {
@@ -5578,13 +5578,13 @@ for (const app of ['crm', 'analytics']) {
     // audit said so. Both functions are checked: the first version read only buildReport, and
     // everything sensitive would have arrived through reportFacts.
     for (const app of ['crm', 'analytics']) {
-      const never = JSON.parse(sliceConst(`apps/${app}/sidepanel.js`, 'REPORT_NEVER')
+      const never = JSON.parse(sliceAppConst(app, 'REPORT_NEVER')
         .replace(/^[^=]*=\s*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
       assert.ok(never.length >= 10, 'why=the list of what is never collected has been emptied');
       // The manifest is *ours* - `getManifest().name` is "Zoost - workbench for…", not anything of
       // the user's - so its reads are taken out before the check, and named here rather than left
       // as a mysterious exception.
-      const src = (sliceFn(`apps/${app}/sidepanel.js`, 'buildReport') + sliceFn(`apps/${app}/sidepanel.js`, 'reportFacts'))
+      const src = (sliceApp(app, 'buildReport') + sliceApp(app, 'reportFacts'))
         .replace(/chrome\.runtime\.getManifest\(\)/g, 'MF').replace(/\bm\.(name|version)\b/g, 'MF');
       for (const field of never) {
         assert.ok(!new RegExp('\\.' + field + '\\b').test(src),
@@ -5594,7 +5594,7 @@ for (const app of ['crm', 'analytics']) {
   });
 
   test('the hard redaction takes out what an audit found the status lines actually carry', () => {
-    const { redactHard } = load([sliceFn('apps/crm/sidepanel.js', 'redactHard')]);
+    const { redactHard } = load([sliceApp('crm', 'redactHard')]);
     // Every one of these is a real status string from these panels, with a real value in it.
     const cases = [
       ['Synced: functions/Commissions/Recalc_ACME_Fees.dg', /ACME|Recalc|Commissions/],
@@ -14034,7 +14034,7 @@ test('the call graph header counts the links on the drawing', () => {
 // anywhere on that path.
 test('a refused token reaches the problem report as facts, not as prose', () => {
   const REL = 'apps/crm/sidepanel.js';
-  const m = load([sliceFn(REL, 'redact'), sliceFn(REL, 'redactHard'), sliceFn(REL, 'buildReport')],
+  const m = load([sliceApp('crm', 'redact'), sliceApp('crm', 'redactHard'), sliceApp('crm', 'buildReport')],
                  { String, Object, Number });
 
   // And the one call that can produce a diagnostic goes through the helper that records it - the
@@ -18298,9 +18298,8 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
 // reader that names and ids are stripped where they are recognised.
 test('the report keeps the stack frames and not the message line', () => {
   for (const app of ['crm', 'analytics']) {
-    const rel = `apps/${app}/sidepanel.js`;
     const g = { console, Object, String, Number, Array, JSON, RegExp, Math, Date, Boolean };
-    const m = load([sliceFn(rel, 'redact'), sliceFn(rel, 'redactHard'), sliceFn(rel, 'buildReport')], g);
+    const m = load([sliceApp(app, 'redact'), sliceApp(app, 'redactHard'), sliceApp(app, 'buildReport')], g);
     const e = new Error('Could not write functions/Contacts/Update_Account_Owner.dg for org 123456');
     const out = m.buildReport({ product: 'Zoost', version: '1.0.0', browser: 'Chrome', message: e.message,
                                 stack: e.stack, tab: 'functions', search: '', pullActive: false, counts: {}, log: [] });
