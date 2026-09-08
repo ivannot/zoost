@@ -232,9 +232,14 @@ that is the minimum available, not the minimum imaginable, and it is said here r
 sound narrower than it is.
 
 Three consequences worth knowing before changing any of it. *One*, the badge was at most ten minutes
-behind and is now as far behind as the schedule, which runs every half hour **and** after a package
-is staged - the moment the answer actually changes. 48 writes a day against a free plan that allows
-1,000, checked before the interval was chosen. *Two*, `asOf` refreshes on **every** run, so a workflow
+behind and is now as far behind as the schedule, which *asks* for every half hour **and** runs after a
+package is staged - the moment the answer actually changes. **Asks is not gets**: GitHub delays
+scheduled runs on a quiet repository, and over twenty consecutive ones the median gap measured
+**202 minutes**, from 120 to 367 - so the badge is routinely hours behind and that is the normal
+state, not a fault. Measured on 8 September 2026, after a publication was live for hours while the
+site still said «in review». The write budget was sized for 48 a day against a free plan that allows
+1,000, so the throttling costs nothing there; what it costs is the reader's expectation, which is why
+the sentence on the page now hands over both numbers. *Two*, `asOf` refreshes on **every** run, so a workflow
 that quietly stopped shows up as a date that stopped advancing; `/emergency` prints it and judges
 nothing, because a staleness threshold here would turn a cron that ran late into «unknown». *Three*,
 `tests/tools_test.py` holds `SECRETS` **empty**: a name reappearing there means a credential has come

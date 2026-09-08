@@ -142,10 +142,16 @@
                                 { day: 'numeric', month: longMonth ? 'long' : 'short', year: 'numeric' });
   }
 
-  // How long a reading may sit before the page says so. The workflow runs every half hour, so a day
-  // is forty-eight missed runs: an order of magnitude above the jitter GitHub's scheduled runs show
-  // under load, which is what rules out a threshold in hours, and well below the point where somebody
-  // would act on a number nobody has checked since yesterday.
+  // How long a reading may sit before the page says so.
+  //
+  // **The cron and the cadence are two different numbers, and this reasoned from the wrong one.** The
+  // schedule asks for every half hour; GitHub delays scheduled runs on a quiet repository, and over
+  // twenty consecutive runs the median gap measured **202 minutes**, from 120 to 367. So a day is
+  // about seven missed runs rather than forty-eight - still an order of magnitude above the spread,
+  // which is what a threshold has to clear, and still well below the point where somebody would act
+  // on a number nobody has checked since yesterday. The bound stands; the arithmetic under it did
+  // not, and the sentence the reader is handed said «every half hour» about a reading that is
+  // routinely hours old, which reads as a fault when it is the normal cadence.
   const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
   // Deliberately not a judgement on the reading, which is true whatever its age - only on whether
@@ -183,7 +189,7 @@
       queued: 'submitted, awaiting review', refused: 'this submission was rejected',
       askFailed: 'This check could not be run just now.',
       storeAsOf: 'The Store was last asked',
-      storeStale: 'This reading is older than usual - the check that asks Google runs every half hour.',
+      storeStale: 'This reading is older than usual - the check that asks Google is scheduled every half hour, and usually lands every few hours.',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
@@ -202,7 +208,7 @@
       queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
       askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
       storeAsOf: 'Lo Store è stato interrogato l\'ultima volta il',
-      storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google gira ogni mezz\'ora.',
+      storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google è programmato ogni mezz\'ora e di solito arriva ogni poche ore.',
     },
   };
   function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
@@ -351,7 +357,8 @@
     // committed file it moved only when the Store did, and a threshold then would have called a quiet
     // fortnight a failure.
     //
-    // The sentence hands over the yardstick («runs every half hour») instead of a verdict, and it
+    // The sentence hands over the yardstick - what the schedule asks and what it actually manages,
+    // measured - instead of a verdict, and it
     // deliberately does not draw the conclusion that the versions below may have moved: a reader who
     // has just been given the interval and a date two days old draws it unaided, and this page's whole
     // posture is that the decision to install by hand is theirs.
