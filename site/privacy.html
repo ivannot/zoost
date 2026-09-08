@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
-<meta name="description" content="Privacy policy for the Zoost extensions and website: no extension telemetry, no cookies, no analytics and no visitor profiling.">
+<meta name="description" content="Privacy policy for the Zoost extensions and website: no extension telemetry; cookie-free Cloudflare Web Analytics and no visitor profiling.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://zoost.it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
-<meta property="og:description" content="Privacy policy for the Zoost extensions and website: no extension telemetry, no cookies, no analytics and no visitor profiling.">
+<meta property="og:description" content="Privacy policy for the Zoost extensions and website: no extension telemetry; cookie-free Cloudflare Web Analytics and no visitor profiling.">
 <meta property="og:image" content="https://zoost.it/img/og.png?v=8c7d5f0712">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/privacy">
@@ -48,20 +48,22 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">7 September 2026</span></p>
+  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">8 September 2026</span></p>
 
   <div class="box">
     <h2 class="h3">The short version</h2>
     <p>The extensions have no account, analytics or tracking. Your Zoho data
       moves only between your browser, the Zoho product you are already signed in to, and a folder on
-      your own disk. <b>Only two things can leave, and only when you choose to send them.</b> The optional
+      your own disk. <b>From either extension, only two things can leave, and only when you choose to
+      send them.</b> The optional
       AI assistant sends the information needed for your question to the provider <em>you</em> configure,
       using <em>your own</em> API key. <b>Report this problem</b> sends the developer a report that you
       have reviewed in full, where it becomes a public issue. This is explained under
-      <a href="#travel">Where data travels</a>. Nothing else is transmitted, and neither action happens
-      without your click. This website measures nothing of its own: no cookie, no script that
-      counts visits, no profile. Its outbound Store links carry standard campaign parameters which
-      the Chrome Web Store processes after you follow a link.</p>
+      <a href="#travel">Where data travels</a>. Nothing else is transmitted by either extension, and
+      neither action happens without your click. Separately, this website uses Cloudflare Web Analytics
+      to count page views and measure page performance. It sets no analytics cookie, uses no local
+      storage or fingerprint, and builds no visitor profile. Its outbound Store links carry standard
+      campaign parameters which the Chrome Web Store processes after you follow a link.</p>
   </div>
 
   <h2>0. Which extensions this covers</h2>
@@ -96,7 +98,7 @@
     Data held inside your Zoho products remains governed by your own agreement with Zoho and by your
     organisation's policies; this document covers only what the Zoost extensions do with it.</p>
 
-  <h2>2. What the developer collects</h2>
+  <h2>2. What the extensions send to the developer</h2>
   <p><b>Nothing, unless you send it - and then only what you have read first.</b> The extension
     contains no analytics, no telemetry, no advertising identifiers, no cookies and no remotely hosted
     code. Nothing is ever transmitted in the background, on a schedule, or on an error.</p>
@@ -123,9 +125,9 @@
     exhaustive: recognising a name is a judgement, and that is exactly why the text is put in front of
     you before anything happens, and why you can unlock it and cut anything you like - the report then
     travels marked as altered, so nobody mistakes an edited trace for evidence.</p>
-  <p>Apart from that, the developer does not sell, share, transfer or otherwise process your personal
-    data. A report you send is published as it stands and joined to nothing, because there is nothing
-    here to join it to.</p>
+  <p>Apart from a report you choose to publish and the website processing described in section 8, the
+    developer does not sell, share, transfer or otherwise process your personal data. A report you send
+    is published as it stands and is not joined to the website's aggregate measurements.</p>
 
   <h2>3. What is stored, and where</h2>
   <p>Everything Zoost stores lives on the computer you are using.</p>
@@ -316,30 +318,41 @@
     tightened this way: Chrome refuses a manifest that tries to relax the first two.</p>
 
   <h2>6. Legal basis and your rights</h2>
-  <p>The developer receives nothing except a problem report you chose to send, and that is published
-    rather than held, so there is no store to consent to, object to, or request access to. A report is
-    a public issue: ask and it is deleted. Data protection rights in respect of the Zoho data itself are exercised against
-    the controller of that data - your organisation - and, where relevant, against the AI provider you
-    chose, under their respective policies.</p>
+  <p>From the extensions, the developer receives nothing except a problem report you chose to send,
+    and that is published rather than held. A report is a public issue: ask and it is deleted. The
+    website's request logs and aggregate Cloudflare Web Analytics measurements are described in section
+    8. Data protection rights in respect of the Zoho data itself are exercised against the controller
+    of that data - your organisation - and, where relevant, against the AI provider you chose, under
+    their respective policies.</p>
 
   <h2>7. Children</h2>
   <p>Zoost is a developer and administration tool for business software. It is not directed at children
     and is not intended for use by anyone under 16.</p>
 
   <h2>8. This website</h2>
-  <p>zoost.it sets no cookies, loads no third-party fonts or analytics, and does not profile visitors.
-    It counts nothing of its own: there is no measurement script, no visit counter and no funnel.
-    What the site knows about a visit is what serving the page requires, set out at the end of this section.</p>
+  <p>zoost.it sets no analytics cookies, uses no local storage for analytics, and does not profile
+    visitors. Cloudflare is configured to inject the Cloudflare Web Analytics module,
+    <code>static.cloudflareinsights.com/beacon.min.js</code>, into every HTML page. The browser reports a
+    page view and page-performance measurements to <code>zoost.it/cdn-cgi/rum</code>. The dashboard shows
+    aggregate paths, referring hosts, countries, device types, browsers, operating systems and Core Web
+    Vitals. It records no query strings or custom events, and it sees nothing done inside either
+    extension.</p>
+  <p>The beacon uses no cookie or <code>localStorage</code>, creates no persistent identifier and does
+    not fingerprint a visitor through an IP address, user agent or anything else. Cloudflare receives
+    the request and processes the measurement; the developer sees aggregate results, not a visitor's
+    history. Cloudflare retains unsampled beacon data for seven days, aggregates older data, and makes
+    the resulting Cloudflare Web Analytics data available for six months. These measurements are not
+    exported or joined to problem reports, Store attribution or anything either extension does.</p>
   <p>Links from this site to the two Chrome Web Store listings include the standard
     <code>utm_source</code>, <code>utm_medium</code> and <code>utm_campaign</code> parameters. They do
     not cause zoost.it to send a second click event. After you follow a link, attribution and any
     measurement of the Store page or installation are handled by the Chrome Web Store and Google
     under their own terms.</p>
-  <p><b>The <a href="/report">problem-report page</a></b> additionally loads
-    Cloudflare's Turnstile from <code>challenges.cloudflare.com</code>. It is the anti-abuse check
-    standing between that form and a public issue tracker, and it is the only third-party script on
-    this site. It runs on that page and nowhere else. Cloudflare is given your address for the check,
-    which is described below - it is already the host of this site, so it has it either way.</p>
+  <p><b>The <a href="/report">problem-report page</a></b> additionally loads Cloudflare's Turnstile from
+    <code>challenges.cloudflare.com</code>. It is the anti-abuse check standing between that form and a
+    public issue tracker. Unlike the analytics beacon, it runs on that page and nowhere else.
+    Cloudflare is given your address for the check, which is described below - it is already the host
+    of this site, so it has it either way.</p>
   <p>The badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's
     edge and answers from two things: a reading of the Chrome Web Store, taken by a scheduled job in
     the public repository and stored at the edge rather than fetched while you wait, and GitHub for
@@ -363,17 +376,20 @@
     Cloudflare, which is both its network and its host. Like any web server, its edge keeps ordinary
     request logs - IP address, time, URL, user agent - and counts requests without setting a cookie or
     an identifier. That is a processing of personal data, however slight, and for it the controller is
-    the developer, on the legitimate interest in serving and protecting the site. Nothing is built on
-    top of it: no cookie, no tracker, no profile, no mailing list, and nothing here is joined to
-    anything the extension does. Cloudflare's own retention applies; no log export is enabled and the
-    developer keeps no copy of those logs. To exercise a right over that, or to ask anything about it:
-    <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
+    the developer, on the legitimate interest in serving, protecting and understanding aggregate use
+    of the public site. No profile or mailing list is built, and nothing here is joined to anything an
+    extension does. Cloudflare's own retention applies to the edge logs; no log export is enabled and
+    the developer keeps no copy of those raw logs. Cloudflare Web Analytics retention is stated
+    above. To exercise a right over this processing, or to ask anything about it:
+    <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. The
+    <a href="https://developers.cloudflare.com/web-analytics/about/">Cloudflare Web Analytics product
+    documentation</a> describes its privacy properties.</p>
 
   <h2>9. Changes</h2>
   <p>If a future version of Zoost changes what data is handled or where it travels, this policy will be
     updated and the date at the top revised before that version is published. Material changes will be
-    noted in the extension's release notes. If the website ever starts measuring anything, that is a change
-    of this kind and will be stated here before it happens.</p>
+    noted in the extension's release notes. Changes to website measurement are stated in this section
+    and in the public source history.</p>
 
 </div>
 </main>

@@ -59,6 +59,12 @@ class BareNames(unittest.TestCase):
     def test_our_full_name_is_fine(self):
         self.assertFalse(sitecheck.bare_platform('<p>Zoost - workbench for Zoho CRM does this.</p>'))
 
+    def test_another_products_full_name_is_fine(self):
+        self.assertFalse(sitecheck.bare_platform('<p>Cloudflare Web Analytics measures traffic.</p>'))
+
+    def test_generic_web_analytics_is_still_reported(self):
+        self.assertTrue(sitecheck.bare_platform('<p>Web Analytics measures traffic.</p>'))
+
     def test_code_and_paths_are_exempt(self):
         # `analytics/` is a folder, not a sentence.
         self.assertFalse(sitecheck.bare_platform('<code>analytics/CRM</code>'))

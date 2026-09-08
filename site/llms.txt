@@ -85,13 +85,15 @@ Stated here rather than buried, because it is the part an assessment needs.
   consumer, and neither platform reports that.
 - **The one exception is this website, and it is declared rather than waved away.** zoost.it is
   served by Cloudflare, whose edge keeps ordinary request logs - IP, time, URL, user agent - with no
-  cookie and no identifier. The site itself measures nothing: no script of its own counts
-  anything, and the visit counter that used to run here was removed on 7 September 2026 because no
-  decision depended on it. Cloudflare's own request logs are that processing of data, and for it the
-  developer is the controller. Outbound Store links use standard UTM campaign parameters; after a
-  visitor follows one, the Chrome Web Store and Google handle attribution without a duplicate click
-  event from zoost.it. §8 of the privacy policy states it, names the basis and gives an
-  address to exercise a right against it. For everything the extensions touch the developer is
+  analytics cookie or persistent identifier. Cloudflare Web Analytics is enabled on every HTML page:
+  its managed beacon counts page views and page performance without cookies, local storage,
+  fingerprints, query strings or custom events. The developer sees aggregate paths, referrers,
+  countries, device and browser families, operating systems and Core Web Vitals; unsampled beacon
+  data lasts seven days and aggregate results are available for six months. Nothing is joined to an
+  extension, a report or Store attribution. Outbound Store links use standard UTM campaign
+  parameters; after a visitor follows one, the Chrome Web Store and Google handle attribution without
+  a duplicate click event from zoost.it. §8 of the privacy policy states it, names the basis and gives
+  an address to exercise a right against it. For everything the extensions touch the developer is
   neither controller nor processor, because no processing happens: nothing is received, nothing is
   stored, and there is no service anything could reach. §1 of the policy states that in the
   regulation's own terms, says it is not legal advice, and names the facts it rests on - each of them

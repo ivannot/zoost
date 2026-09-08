@@ -65,7 +65,8 @@ observation; “the navigation is confusing” is a conclusion to make only afte
 - Requests made after participants succeeded are separated from first-run failures.
 
 Repeat the same protocol after a change. Do not compare participants by speed and do not claim a
-conversion improvement from five people: the sessions locate friction, and nothing here measures a
-population. The site counts nothing - its funnel was removed on 7 September 2026, unread, because no
-decision depended on it - so the only population figure that exists is what the Chrome Web Store
-reports about installs.
+conversion improvement from five people: the sessions locate friction rather than measure a
+population. Cloudflare Web Analytics measures aggregate site traffic and page performance, while the
+Chrome Web Store reports listing visits and installs. Neither observes whether somebody opens the
+sample, completes a pull or succeeds with a workflow inside an extension, so those outcomes still
+require the protocol above.

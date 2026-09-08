@@ -85,13 +85,16 @@ def bare_platform(html: str):
     """
     s = re.sub(r'<code>.*?</code>|<pre>.*?</pre>', ' ', html, flags=re.S)
     s = re.sub(r'<[^>]+>', ' ', s)
-    # Three legitimate forms, and they are removed before the search so that what remains is only
-    # the illegitimate one. "Zoho CRM" is Zoho's product. "Zoost for Zoho CRM" is ours in full.
+    # Legitimate forms are removed before the search so that what remains is only the illegitimate
+    # one. "Zoho CRM" is Zoho's product. "Zoost for Zoho CRM" is ours in full.
     # "Zoost CRM" is ours in short — always carrying Zoost, never standing alone. A bare "CRM" or
     # "Analytics" is none of the three and is what this reports.
     # `\s+`, not a literal space: prose wraps, and "Zoho\n    Analytics" is still the legitimate form.
     # A literal space reported it as a bare platform name and would have had prose reflowed to satisfy
     # a checker — the wrong direction, and the sort of thing that teaches people to ignore it.
+    # "Cloudflare Web Analytics" is also a complete third-party product name. Keep the exemption
+    # deliberately narrow: a generic "Web Analytics" or bare "Analytics" must still be reported.
+    s = re.sub(r'Cloudflare\s+Web\s+Analytics', ' ', s)
     s = re.sub(r'Zoost\s+for\s+Zoho\s+(CRM|Analytics)|Zoho\s+(CRM|Analytics)|Zoost\s+(CRM|Analytics)', ' ', s)
     return [' '.join(s[max(0, m.start() - 45):m.end() + 25].split())
             for m in re.finditer(r'\b(Analytics|CRM)\b', s)]

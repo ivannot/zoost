@@ -692,36 +692,36 @@ test('every website exit to the Chrome Web Store uses its native campaign attrib
     'the site still sends its own copy of a click the Store attributes natively');
 });
 
-// **The site counts nothing of its own, and the privacy page says so in as many words.**
+// **The site's measurement boundary is Cloudflare-managed RUM, not Zoost instrumentation.**
 //
-// It used to: four page-view events to `/api/funnel`, an endpoint, a rate limiting rule at the edge
-// and a paragraph of policy. Nobody had ever read the counts - the credential to read them was never
-// configured - and the question they answered («do people reach /try») was one no decision depended
-// on. Removed rather than kept «in case», because an endpoint a stranger can write to has to earn
-// its place, and this one could not.
-//
-// Held here because the claim is on a published page and the code is the only thing that can make it
-// false again.
-test('the website sends no measurement of its own', () => {
+// The earlier custom funnel sent four page-view events to `/api/funnel`. It was removed on 7
+// September 2026. Cloudflare Web Analytics was enabled for EU visitors the next day: Cloudflare now
+// injects its managed beacon at the edge, while this repository still owns no measurement endpoint,
+// event vocabulary or client tracking code. The public policy must state both halves.
+test('the website measurement is only the declared Cloudflare-managed RUM', () => {
   const script = read('site/site.js');
   assert.doesNotMatch(script, /sendBeacon|\/api\/funnel|navigator\.doNotTrack/,
-    'the site is measuring visits again - privacy.html says it counts nothing of its own');
+    'site.js has reintroduced Zoost-owned visit measurement');
   const worker = read('site/_worker.js');
   assert.doesNotMatch(worker, /writeDataPoint|url\.pathname === '\/api\/funnel'/,
-    'the worker writes measurements again, and the policy has not been rewritten to say so');
-  // **Both halves, because the first one alone let a page contradict itself.** This asserted only
-  // that the pages carry the sentence saying the site measures nothing - and the removal had rewritten
-  // §8 of each while leaving the summary box at the top still promising «four page-family views»,
-  // which is the half most readers actually read. Found from outside, twelve hours later. A claim
-  // that is gone has to be checked for its absence, not for its replacement's presence.
+    'the Worker has reintroduced the removed Zoost-owned measurement endpoint');
+  for (const page of listPages()) {
+    assert.doesNotMatch(read(page), /<script\b[^>]*cloudflareinsights/i,
+      `${page} embeds a beacon that Cloudflare is already configured to inject`);
+  }
   for (const page of ['site/privacy.html', 'site/it/privacy.html', 'site/llms.txt']) {
     const text = read(page);
     assert.doesNotMatch(text, /page-family view|famiglie di pagine|conversion funnel|funnel aggregato/,
-      `${page} still tells the reader this site records visits`);
+      `${page} still describes the removed custom funnel`);
+    assert.match(text, /Cloudflare Web Analytics/,
+      `${page} does not name the managed measurement now in use`);
   }
   for (const page of ['site/privacy.html', 'site/it/privacy.html']) {
-    assert.match(read(page), /no measurement script|non c'è uno script di misurazione/,
-      `${page} no longer states that the site measures nothing`);
+    const text = read(page);
+    assert.match(text, /static\.cloudflareinsights\.com\/beacon\.min\.js/,
+      `${page} does not name the browser module`);
+    assert.match(text, /\/cdn-cgi\/rum/,
+      `${page} does not name the reporting endpoint`);
   }
 });
 
