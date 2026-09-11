@@ -82,7 +82,7 @@ CHECKS = [
         'covers': ['apps/*/sidepanel.js', 'apps/*/bridge-contract.js', 'apps/*/filesystem-adapter.js',
                    'apps/crm/zoho-bridge.js', 'apps/crm/pull-plan.js', 'apps/crm/pull-controller.js',
                    'apps/*/pull-lifecycle.js', 'apps/*/mirror-plan.js', 'apps/*/error-model.js',
-                   'apps/*/pull-usecase.js', 'apps/*/pull-adapter.js', 'apps/crm/function-stats.js', 'apps/crm/graph-session.js',
+                   'apps/*/pull-usecase.js', 'apps/*/pull-adapter.js', 'apps/crm/function-stats.js', 'apps/crm/graph-session.js', 'apps/crm/crm-utils.js',
                    'apps/*/bootstrap.js',
                    'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js',
                    'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
