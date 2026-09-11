@@ -218,7 +218,7 @@ CLOSED = {
     ("fake", "an-panel", "persist"):    ("tests/panel.test.mjs: a write the browser refuses forgets nothing, in either product", "planted 2026-08-24"),
     ("fake", "diagrams", "diagram"):    ("tests/panel.test.mjs: the diagram walks a graph that loops, and comes back", "planted 2026-08-24"),
     ("fake", "crm-ai", "ai"):           ("tests/panel.test.mjs: crm: the model stream is assembled by index, across whatever chunks arrive", "planted 2026-08-24"),
-    ("fake", "bridges", "pull"):        ("tests/panel.test.mjs: crm: the bridge answers Zoho four ways, and none of them was ever tried", "planted 2026-08-24"),
+    ("fake", "bridges", "pull"):        ("tools/probe.py: the raw Analytics endpoint pull fails when PAROBJID loses its string-to-array decode", "planted 2026-09-11"),
     ("copy", "bridges", "pull"):        ("tests/tools_test.py: the two halves of live sync reach the same pages", "planted 2026-08-24"),
     ("copy", "an-panel", "export"):     ("tests/panel.test.mjs: every export scope has a box to untick it, and every box is a scope", "planted 2026-08-24"),
     ("copy", "crm-ai", "ai"):           ("tests/panel.test.mjs: a number the settings page offers is the number the panel uses", "planted 2026-08-24"),

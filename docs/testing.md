@@ -137,6 +137,23 @@ never typing the command.
 filter that dropped annotated tags — and confirm red, then restore. A suite that has never failed is
 a claim.
 
+**The Analytics pull has two browser subjects, because one fake cannot honestly stand for both.**
+The fast panel probe gives `pullAll()` normalized bridge replies and therefore owns the writer,
+replacement, pruning and recovery paths. `tools/endpointprobe.mjs` starts one level earlier: the
+shipped panel sends Chrome-shaped messages to the shipped `content-bridge.js`, whose real `fetch`
+calls are intercepted and answered with `fixtures/analytics/raw-pull.json`. The fixture is raw wire
+data, not the objects the panel expects. Every route, method, query, relevant header and POST body is
+checked; an unknown route, a duplicate, or an expected route never used is red. Chrome gets a fresh
+profile, has its cache cleared and disabled, and no request is allowed off the invented Zoho origin.
+
+That split found a real boundary defect on its first run. In the HAR, all **83 of 83** `editsql`
+responses carried `PAROBJID` as a JSON array inside a string; the bridge accepted arrays only, so it
+wrote every QueryTable to `sql/index.json` with `parents: []`. Before the parser changed, the new
+browser path failed on the exact durable field (`got [], expected ["99001001"]`); after decoding at
+the boundary, the same seven raw routes produce the seven-file mirror. What this still does not
+claim is equally explicit: the Chrome message bus and File System Access implementation are adapters
+in this run, and the session is not a real Zoho account.
+
 **And prove it can pass, which is the half that was missing everywhere this was written.** A gate
 that always refuses is not strict, it is broken, and it looks identical to a strict one until
 somebody needs it. `release.sh` ran `auditcheck --offline`, which reports the skipped live comparison

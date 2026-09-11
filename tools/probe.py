@@ -20,6 +20,7 @@ was real, and which the unit tests could not see because it lives in the gap bet
 import importlib.util
 import os
 import pathlib
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -1935,6 +1936,17 @@ def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
         return 1 if os.environ.get("ZOOST_REQUIRE_CHROME") == "1" else 0
+    # The panel pull below deliberately supplies normalized bridge answers: it isolates the writer
+    # and its recovery paths. This second path owns the boundary it leaves out. The same shipped
+    # panel talks through Chrome-shaped messaging to the shipped content bridge; Chrome intercepts
+    # every request before the network and answers with the raw, invented wire fixture derived from
+    # a real Analytics Pull all capture. That is what caught PAROBJID arriving as a JSON-array string
+    # while the bridge treated it as an array and durably wrote every query with no parents.
+    print(f"  {'endpoint-analytics':18s} driving…", flush=True)
+    env = os.environ.copy()
+    env["CHROME"] = shots.chrome()
+    subprocess.run(["node", str(ROOT / "tools" / "endpointprobe.mjs")], check=True, env=env)
+    print(f"  {'endpoint-analytics':18s} ok", flush=True)
     shots._browser_for(1280, 800, 1.0)
     try:
         for key, app, ws, script in (("probe-crm", "crm", "crm/sampleorg-1234567890", CRM),

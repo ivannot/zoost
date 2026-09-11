@@ -225,13 +225,16 @@ records every twin with a hash of each side and reports the one-sided change.
 bash tests/run.sh
 ```
 
-Unit tests, three structural checkers and both builds. No framework and nothing to install: node's
-own test runner and Python's `unittest`. Every case is a defect that actually occurred, and the
-checkers are tested too - two of them shipped broken, and a checker that reports success over the
-thing it was built to catch is worse than no checker.
+Unit tests, structural checkers, browser probes and both builds. No framework and nothing to install:
+node's own test runner, Python's `unittest` and Chrome. Every case is a defect that actually occurred,
+and the checkers are tested too - two of them shipped broken, and a checker that reports success over
+the thing it was built to catch is worse than no checker.
 
-What it does **not** cover: anything needing a DOM, a browser, a file handle or Zoho. Helpers are
-lifted out of the panels and run in isolation, which proves the logic and not the wiring.
+The browser probe drives both shipped panels over an in-memory File System Access adapter. Zoost Analytics
+also runs one complete Pull all from raw synthetic Zoho responses, through the shipped content
+bridge and parsers, into the local mirror. Every request is intercepted before the network, the cache
+is disabled, and an unknown or unused endpoint fails the run. A real Zoho session, Chrome's real
+extension message bus and the real folder-permission lifetime remain outside automation.
 
 ## Install (developer / unpacked)
 

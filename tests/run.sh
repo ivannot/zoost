@@ -13,11 +13,14 @@
 #     cookie belongs to which family, how staleness is derived per area, how a tag is read out of an
 #     Atom feed, how a version is scraped from a page we do not control, and the three checkers.
 #
-#   not covered — anything that needs a DOM, a browser, a file handle or Zoho. The panels are
-#     browser scripts and are not restructured to be importable: doing that refactor *in order to*
-#     add tests would spend the risk before earning the cover. Helpers are lifted out and run alone
-#     (see slice.mjs), which proves the logic and not the wiring. A correct function called from the
-#     wrong place still passes here.
+#   covered in Chrome — the main panel paths against an in-memory File System Access adapter, plus
+#     one Analytics Pull all from raw endpoint responses through the shipped content bridge, parser,
+#     panel writer and resulting mirror. The raw server is synthetic and strictly intercepted: it
+#     never contacts Zoho.
+#
+#   not covered — a real Zoho session, Chrome's real extension message bus, and Chrome's real folder
+#     picker/permission lifetime. The panels are not restructured to be importable: helpers are
+#     lifted out and run alone (see slice.mjs), while tools/probe.py owns the browser wiring it can.
 set -euo pipefail
 PYOUT=$(mktemp)
 NODEOUT=$(mktemp)

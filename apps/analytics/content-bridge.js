@@ -261,6 +261,22 @@
       columns: (entry.colValues || []).map((c) => ({ name: text(c[0]), type: text(c[1]) })),
     };
   }
+  // The source ids in `editsql` are a JSON array carried inside a string.
+  //
+  // Measured in the capture that produced `fixtures/analytics/raw-pull.json`: 83 of 83 QueryTable
+  // answers used that form, including both one and several parents. Treating it as an array made
+  // every query's `parents` empty while the richer `PAROBJIDINVCOLS` beside it happened to parse -
+  // a plausible half-result that then became the durable `sql/index.json`. Decode the measured
+  // boundary here; if its shape changes, fail this query instead of recording «reads from nothing».
+  function queryParents(value) {
+    let parsed = value;
+    if (typeof value === 'string') {
+      try { parsed = JSON.parse(value); }
+      catch (_) { throw new Error('PAROBJID is not a JSON array'); }
+    }
+    if (!Array.isArray(parsed)) throw new Error('PAROBJID is not an array');
+    return parsed.map((id) => String(id).trim()).filter(Boolean);
+  }
   // The ER endpoint is what Analytics itself calls to draw the workspace diagram, and it is a strict
   // superset of GETALLTABLECOLDETAILS: the same 135 objects with the same columns and types
   // (verified against a capture - identical sets, only ordered differently), plus four things that
@@ -338,7 +354,7 @@
     return {
       id: String(id),
       sql: d.SQLQUERY,
-      parents: (Array.isArray(d.PAROBJID) ? d.PAROBJID : []).map(String),
+      parents: queryParents(d.PAROBJID),
       sources,        // { sourceTableId: { name, kind, columns[] } } - column-level lineage
     };
   }

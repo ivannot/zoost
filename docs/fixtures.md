@@ -4,6 +4,13 @@
 
 # The sample workspace, and the pictures rendered from it
 
+`fixtures/analytics/raw-pull.json` is a different kind of fixture from the sample workspace. Its
+values are invented, while its outer response shapes were derived from one real Analytics Pull all
+HAR: VIEWLIST's columnar rows, the ER nodes and links, `editsql`'s nested source columns and string-
+encoded `PAROBJID`, and dependency responses in both their object and bare-id forms. The HAR itself
+is never copied into this repository. `tools/endpointprobe.mjs` serves this small file as a strict
+fake Zoho server and verifies the mirror the real parser and panel writer produce from it.
+
 **Derive a file shape from the writer, never from what looks reasonable.** The first sample
 workspace invented every one of them - `{items: […]}` where the pull writes a **bare array**,
 `namespace` where the meta says **`nameSpace`**, a boolean `rest` where it is **`rest_api`**, `sv: 3`

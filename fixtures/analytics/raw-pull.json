@@ -1,0 +1,161 @@
+{
+  "workspace": "99000999",
+  "name": "Endpoint Probe Workspace",
+  "origin": "https://analytics.zoho.eu",
+  "folder": "endpoint-probe",
+  "viewList": {
+    "status": "success",
+    "data": {
+      "viewListKey": [
+        "VIEW_ID",
+        "VIEW_NAME",
+        "VIEW_TYPE",
+        "PARENT_ID",
+        "VIEW_DESC",
+        "FOLD_ID",
+        "VIEW_CREATE_TIME",
+        "VIEWOWNER",
+        "CREATED_BY",
+        "SHARED_BY",
+        "PUBLICPERMLEVEL",
+        "LAST_DATA_MODIFY",
+        "LAST_DATA_MODIFY_BY",
+        "LAST_DESIGN_MODIFY",
+        "LAST_DESIGN_MODIFY_BY",
+        "OWNER_ZUID",
+        "VIEW_LAST_MODIFIED",
+        "ACT_VIEW_MODTIME",
+        "SNAPSHOT_URL",
+        "IS_FAVOURITE",
+        "COMMENTS_COUNT",
+        "UNREAD_COMMENTS",
+        "HAVESNAPSHOT",
+        "OWNER_NAME",
+        "IS_LIVE",
+        "TAGS",
+        "IS_SYSTEM_TABLE",
+        "SYSTEM_TAG_INFO"
+      ],
+      "viewListValues": [
+        ["99001001", "Orders", "Table", null, "Raw orders", "10", " 01 Sep 2026", false, "Probe User", "", 1, "just now", "Probe User", " 11 Sep 2026", "Probe User", 1, "", "1790000001000", "", false, null, false, false, "Probe User", false, [], false, []],
+        ["99001002", "Revenue Query", "QueryTable", "99001001", "Revenue by order", "20", " 02 Sep 2026", false, "Probe User", "", 1, "one minute ago", "Probe User", " 11 Sep 2026", "Probe User", 1, "", "1790000002000", "", true, null, false, false, "Probe User", false, ["finance"], false, []],
+        ["99001003", "Revenue Chart", "Chart", "99001002", "Revenue chart", "30", " 03 Sep 2026", false, "Probe User", "", 1, "two minutes ago", "Probe User", " 11 Sep 2026", "Probe User", 1, "", "1790000003000", "", false, null, false, false, "Probe User", false, [], false, []]
+      ],
+      "folderListKey": [
+        "FOLDER_ID",
+        "FOLD_NAME",
+        "FOLD_DESC",
+        "FOLD_INDEX",
+        "FOL_PARID",
+        "FOLDER_OWNER",
+        "FOLDER_MODIFIED_INFO",
+        "ACT_FOLD_MODTIME",
+        "ISDEFAULT"
+      ],
+      "folderListValues": [
+        ["10", "Data", "Source data", 0, "", "Probe User", "today", "1790000001000", true],
+        ["20", "Queries", "Query tables", 1, "", "Probe User", "today", "1790000002000", false],
+        ["30", "Reports", "Presentation views", 2, "", "Probe User", "today", "1790000003000", false]
+      ]
+    }
+  },
+  "erd": {
+    "nodes": [
+      {
+        "id": 0,
+        "name": "Orders",
+        "lastModTime": 1790000001000,
+        "isSystemTable": false,
+        "isDataPrepTable": false,
+        "viewType": "0",
+        "viewDesc": "Raw orders",
+        "viewId": "99001001",
+        "involved": true,
+        "columns": [
+          {"name": "Order_Id", "dt": "BIGINT", "colid": "col-order-id", "coldesc": "Stable order id"},
+          {"name": "Amount", "dt": "DECIMAL", "colid": "col-amount", "coldesc": "Net amount"}
+        ],
+        "displaycolumns": [0, 1],
+        "width": 180,
+        "height": 100
+      },
+      {
+        "id": 1,
+        "name": "Revenue Query",
+        "lastModTime": 1790000002000,
+        "isSystemTable": false,
+        "isDataPrepTable": false,
+        "viewType": "6",
+        "viewDesc": "Revenue by order",
+        "viewId": "99001002",
+        "involved": true,
+        "columns": [
+          {"name": "Order_Id", "dt": "BIGINT", "colid": "col-query-order-id", "coldesc": "Order id"},
+          {"name": "Revenue", "dt": "DECIMAL", "colid": "col-revenue", "coldesc": "Revenue"}
+        ],
+        "displaycolumns": [0, 1],
+        "width": 180,
+        "height": 100
+      }
+    ],
+    "links": [
+      {
+        "id": 0,
+        "source": 0,
+        "target": 1,
+        "relationstring": "(Orders.Order_Id)=(Revenue Query.Order_Id)",
+        "sourceColumns": [0],
+        "targetColumns": [0],
+        "relatedlinks": []
+      }
+    ]
+  },
+  "sql": {
+    "99001002": {
+      "status": "success",
+      "summary": "ok",
+      "data": {
+        "SQLQUERY": "SELECT o.\"Order_Id\", o.\"Amount\" AS \"Revenue\"\nFROM \"Orders\" o",
+        "DBID": "99000999",
+        "OBJID": "99001002",
+        "PAROBJID": "[\"99001001\"]",
+        "PAROBJIDINVCOLS": {
+          "values": {
+            "99001001": {
+              "tableValues": ["Orders", "0"],
+              "colValues": [["Order_Id", "BIGINT"], ["Amount", "DECIMAL"]]
+            }
+          }
+        },
+        "PERMLEVEL": 1
+      }
+    }
+  },
+  "dependencies": {
+    "99001001": {
+      "status": "success",
+      "summary": "ok",
+      "data": {
+        "childTableIds": [{"objId": "99001002", "level": 1}],
+        "dashboardViewIds": []
+      }
+    },
+    "99001002": {
+      "status": "success",
+      "summary": "ok",
+      "data": {
+        "parentTableIds": [{"objId": "99001001", "level": 1}],
+        "childTableIds": ["99001003"],
+        "dashboardViewIds": ["99001003"]
+      }
+    },
+    "99001003": {
+      "status": "success",
+      "summary": "ok",
+      "data": {
+        "parentTableIds": ["99001002"],
+        "dashboardViewIds": []
+      }
+    }
+  }
+}
