@@ -2798,9 +2798,10 @@ async function pullAll() {
       const old = previousById.get(String(e.id));
       return mirrorPaths(old && old.mirrorFiles ? old : e);
     }).map((p) => [p, { path: p }]));
-    // This runner owns the real transition: the census and enrichment above are reading, while the
-    // manifest comparison below is planning.  The controller will leave these phases alone once the
-    // runner has advanced them, so Pull all records the work where it actually happened.
+    // This runner owns the real transition through planning and writing: the census and enrichment
+    // above are reading, while the manifest comparison and mirror writes below are their actual
+    // phases. Refreshing remains at the composite Pull all boundary so later areas are not labelled
+    // as a refresh while they are still being read.
     pullController.phase('planning');
     const mirrorPlan = buildMirrorPlan(previousFiles, nextFiles,
       { complete: !r.capped && !(r.unanswered || []).length });
@@ -2845,7 +2846,6 @@ async function pullAll() {
     await cacheBinding(bound);
     await rebuildTree();
     await downloadMissing(true);   // fetch each function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
-    pullController.phase('refreshing');
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // **The truncation is said where it is discovered, and this line is gone.** It sat here because
