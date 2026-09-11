@@ -230,9 +230,9 @@ node's own test runner, Python's `unittest` and Chrome. Every case is a defect t
 and the checkers are tested too - two of them shipped broken, and a checker that reports success over
 the thing it was built to catch is worse than no checker.
 
-The browser probe drives both shipped panels over an in-memory File System Access adapter. Zoost Analytics
-also runs one complete Pull all from raw synthetic Zoho responses, through the shipped content
-bridge and parsers, into the local mirror. Every request is intercepted before the network, the cache
+The browser probe drives both shipped panels over an in-memory File System Access adapter. Each of
+the two extensions also runs one complete Pull all from raw synthetic Zoho responses, through the
+shipped content bridge and parsers, into the local mirror. Every request is intercepted before the network, the cache
 is disabled, and an unknown or unused endpoint fails the run. A real Zoho session, Chrome's real
 extension message bus and the real folder-permission lifetime remain outside automation.
 
