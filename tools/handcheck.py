@@ -220,7 +220,7 @@ CHECKS = [
         'do': ['Choose one type, then sort by a measured column in both directions.'],
         'pass': ('Only that type remains; each direction draws every row in the exact order selected '
                  'by the model, including rows whose measurement is unavailable.'),
-        'covers': ['apps/*/list-model.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/list-model.js', 'apps/*/sidepanel.js', 'apps/crm/type-chips.js'],
     },
     {
         'id': 'passphrase',

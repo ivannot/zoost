@@ -6490,14 +6490,14 @@ for (const app of ['crm', 'analytics']) {
     // The bar is built on a mode switch and the languages come from the workspace, so a workspace
     // with one language shows no control - and must not still be filtering by a value chosen in the
     // one before it. Both halves are in the same block, and both were written for the same defect.
-    const src = read(REL);
-    const at = src.indexOf("ll.textContent = 'Language'");
+    const src = read(REL), chips = read('apps/crm/type-chips.js');
+    const at = chips.indexOf("ll.textContent = 'Language'");
     assert.ok(at > 0, 'why=the Language control is gone');
-    const block = src.slice(at - 1200, at + 1600);
+    const block = chips.slice(at - 1200, at + 1600);
     assert.ok(/langs\.length > 1/.test(block), 'why=an org with one language gets a dropdown of one');
-    assert.ok(/!langs\.includes\(langFilter\)\) langFilter = 'all'/.test(block),
+    assert.ok(/!langs\.includes\(deps\.getLangFilter\(\)\)\) deps\.setLangFilter\('all'\)/.test(block),
       'why=a language the new workspace does not have would filter every row out, with no way back');
-    assert.ok(/langFilter = 'all';\s+\/\/ the control is gone/.test(block),
+    assert.ok(/deps\.setLangFilter\('all'\);\s+\/\/ the control is gone/.test(block),
       'why=the control disappears and its filter keeps running');
     // And it is rebuilt when the workspace has finished loading, or it appears only after the
     // reader happens to touch a tab - which is the dead-control shape this panel knows well.
@@ -9610,7 +9610,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // no longer offers, which is derived from the options rather than from which caller it was.
 {
   const src = crmPanel();
-  const chips = sliceFn('apps/crm/sidepanel.js', 'buildTypeChips');
+  const chips = sliceFn('apps/crm/type-chips.js', 'buildTypeChips');
 
   test('buildTypeChips keeps the current filter when the list still offers it', () => {
     assert.ok(/defs\.some\(\(\[k\]\) => k === curFilter\(\)\) \? curFilter\(\) : 'all'/.test(chips),
@@ -21322,8 +21322,8 @@ test('the function row shows what the list is sorted by', () => {
                     + 'either give it this slot, or take the criterion away');
   }
   // And the menu offers exactly what the registry sorts: an option with no comparator sorts nothing.
-  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
-  const menu = /\[\['name', 'Name \(grouped\)'\][\s\S]{0,200}?\]\)/.exec(src);
+  const src = (read(rel) + '\n' + read('apps/crm/type-chips.js')).replace(/^\s*\/\/.*$/gm, '');
+  const menu = /\[\['name', 'Name \(grouped\)'\][\s\S]{0,500}?\]\)/.exec(src);
   assert.ok(menu, 'the Sort menu for functions is gone - this case has lost its subject');
   for (const key of [...(menu[0].matchAll(/\['(\w+)',/g))].map((m) => m[1])) {
     assert.ok(key in TREE_SORTS, `the menu offers «${key}» and nothing sorts by it`);
@@ -21345,7 +21345,7 @@ test('nothing writes the search box without telling the state', () => {
   for (const f of ['sidepanel.js', 'health.js', 'modules.js', 'automation.js', 'connections.js',
                    'preview-controller.js', 'workspace-controller.js', 'history-controller.js']) {
     const rel = `apps/crm/${f}`;
-    const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+    const src = (read(rel) + '\n' + read('apps/crm/type-chips.js')).replace(/^\s*\/\/.*$/gm, '');
     for (const _m of src.matchAll(/\$\('find'\)\.value\s*=/g)) writers.push(rel);
   }
   // One writer, and it is the painter - which writes the box *from* the state and is the whole

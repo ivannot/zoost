@@ -2201,113 +2201,32 @@ function narrowingName() {
   const on = [typeFilter !== 'all' && 'type', langFilter !== 'all' && 'language'].filter(Boolean);
   return on.length === 2 ? 'type and language filters are' : `${on[0]} filter is`;
 }
+let _buildTypeChips = null;
 function buildTypeChips() {
-  const wrap = $('typechips'); wrap.innerHTML = '';
-  const defs = viewMode === 'functions'
-    ? [['all', 'All'], ...NS.map((n) => [n, n === 'validation_rule' ? 'validation' : n]), ['rest', 'REST']]
-    : viewMode === 'modules'
-    ? [['all', 'All'], ['standard', 'Standard'], ['custom', 'Custom']]
-    : viewMode === 'connections'
-    ? [['all', 'All'], ['used', 'Used'], ['unused', 'Unused'], ['disconnected', 'Disconnected']]
-    : viewMode === 'actions'
-    // Derived from what is on disk, never a written list: `whatsapp`, `assign_owner` and
-    // `create_record` all turned up in one real org and none of them was in anybody's list. A kind
-    // Zoho adds tomorrow gets a filter without anyone remembering, and a kind with nothing in it
-    // gets none - a value nothing lists is a value nothing can filter.
-    ? [['all', 'All'], ...[...new Set(actionData.map((a) => a.kind))].sort().map((k) => [k, actionKindLabel(k)]), ['unused', 'Attached to nothing']]
-    : viewMode === 'workflows'
-    ? [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ['scheduled', 'Has scheduled actions']]
-    : [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']];
-  // The chips were rebuilt after every data load and reset the filter as a side effect: set Kind =
-  // Webhooks, click a row's status dot, and the list was back to All with the control agreeing. The
-  // filter each mode keeps is that mode's own variable, so it survives a rebuild - and a tab switch -
-  // the way that tab's search text does. What must not survive is a value the new list cannot offer:
-  // Actions derives its kinds from what is on disk, so a kind that has just disappeared would filter
-  // everything out with no way back. Derived from the options rather than from which caller it was.
-  const keep = defs.some(([k]) => k === curFilter()) ? curFilter() : 'all';
-  setCurFilter(keep);
-  // A one-line dropdown, not chips: in Functions mode there are 7 filters and they wrapped to a
-  // second row, eating vertical space the tree/preview below needs more than the filter does.
-  const lbl = document.createElement('span'); lbl.className = 'fsellbl';
-  lbl.textContent = viewMode === 'functions' ? 'Type' : (viewMode === 'modules' || viewMode === 'actions') ? 'Kind' : viewMode === 'connections' ? 'Filter' : 'Status';
-  const sel = document.createElement('select'); sel.className = 'filtersel'; sel.setAttribute('aria-label', lbl.textContent + ' filter');
-  defs.forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; sel.appendChild(o); });
-  sel.value = keep;
-  sel.onchange = () => {
-    const k = sel.value;
-    setCurFilter(k);
-    (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : viewMode === 'actions' ? renderActions() : renderConnections());
-  };
-  wrap.appendChild(lbl); wrap.appendChild(sel);
-  // The language control, on the one list that has more than one. Derived from what is in the
-  // workspace and not from a written list, for the reason the Actions kinds carry above: a language
-  // Zoho adds tomorrow gets a filter without anyone remembering, and a language nothing is written
-  // in gets none. An org that is all Deluge - which is most of them - sees no control at all rather
-  // than a dropdown with one thing in it.
-  if (viewMode === 'functions') {
-    // Families, in the order they are declared: six entries where two read «nodejs 22» and
-    // «python 3 12» is a menu that shows Zoho's internal spelling to somebody choosing a language.
-    const seen = new Set(treeData.map((e) => langFamily(e.language)));
-    const langs = LANG_FAMILY.map(([k]) => k).filter((k) => seen.has(k))
-      .concat([...seen].filter((k) => !LANG_FAMILY.some(([n]) => n === k)).sort());
-    if (langs.length > 1) {
-      // Same rule as the filter above: a value the new list cannot offer is dropped, or the list
-      // filters everything out with no way back - which is what happens on the workspace next door.
-      if (langFilter !== 'all' && !langs.includes(langFilter)) langFilter = 'all';
-      const ll = document.createElement('span'); ll.className = 'fsellbl'; ll.textContent = 'Language';
-      const ls = document.createElement('select'); ls.className = 'filtersel';
-      ls.setAttribute('aria-label', 'Language filter');
-      [['all', 'All'], ...langs.map((k) => [k, langFamilyLabel(k)])].forEach(([k, l]) => {
-        const o = document.createElement('option'); o.value = k; o.textContent = l; ls.appendChild(o);
-      });
-      ls.value = langFilter;
-      ls.onchange = () => { langFilter = ls.value; runSearch(); };
-      wrap.appendChild(ll); wrap.appendChild(ls);
-    } else if (langFilter !== 'all') {
-      langFilter = 'all';   // the control is gone; a filter nobody can see must not still be running
-    }
-  }
-  // Two lists have columns worth sorting by, and they get the same control - one built here rather
-  // than a second one written beside it, or the two would drift the way every duplicated thing in
-  // this panel has. What differs is the keys and the state each list keeps.
-  if (viewMode === 'functions' || viewMode === 'actions') {
-    const acts = viewMode === 'actions';
-    const sl = document.createElement('span'); sl.className = 'fsellbl'; sl.textContent = 'Sort';
-    const ss = document.createElement('select'); ss.className = 'filtersel';
-    ss.setAttribute('aria-label', acts ? 'Sort actions' : 'Sort functions');
-    (acts
-      ? [['name', 'Kind, then name'], ['rules', 'Rules that fire it'], ['module', 'Module'], ['modified', MSG.lastModified]]
-      : [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['language', 'Language'], ['modified', MSG.lastModified]])
-      .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
-    ss.value = acts ? actionSort : treeSort;
-    const dirBtn = document.createElement('button'); dirBtn.className = 'sortdir';
-    const paintDir = () => {
-      const asc = (acts ? actionSortDir : treeSortDir) === 'asc';
-      dirBtn.textContent = asc ? '↑' : '↓';
-      // A word reads A to Z; a number reads biggest-first. `language` is a word, and the button
-      // that flips the direction has to offer the pair the reader is actually choosing between.
-      const byName = acts ? (actionSort === 'name' || actionSort === 'module')
-        : (treeSort === 'name' || (TREE_SORTS[treeSort] && TREE_SORTS[treeSort].text));
-      dirBtn.title = byName
-        ? (asc ? 'A to Z - click for Z to A' : 'Z to A - click for A to Z')
-        : (asc ? 'Lowest first - click for highest first' : 'Highest first - click for lowest first');
-      dirBtn.setAttribute('aria-label', dirBtn.title);
-    };
-    // Changing what you sort by resets the direction to the one that is almost always wanted:
-    // names read A→Z, numbers read biggest-first.
-    ss.onchange = () => {
-      if (acts) { actionSort = ss.value; actionSortDir = (actionSort === 'name' || actionSort === 'module') ? 'asc' : 'desc'; }
-      else { treeSort = ss.value; treeSortDir = (treeSort === 'name' || (TREE_SORTS[treeSort] && TREE_SORTS[treeSort].text)) ? 'asc' : 'desc'; }
-      paintDir(); (acts ? renderActions() : renderTree());
-    };
-    dirBtn.onclick = () => {
-      if (acts) actionSortDir = actionSortDir === 'asc' ? 'desc' : 'asc';
-      else treeSortDir = treeSortDir === 'asc' ? 'desc' : 'asc';
-      paintDir(); (acts ? renderActions() : renderTree());
-    };
-    paintDir();
-    wrap.appendChild(sl); wrap.appendChild(ss); wrap.appendChild(dirBtn);
-  }
+  if (!_buildTypeChips) _buildTypeChips = createCrmTypeChips({
+    $,
+    getViewMode: () => viewMode, NS, LANG_FAMILY, langFamily, langFamilyLabel,
+    // automation.js is loaded after this panel. Keep the dependency lazy so the initial
+    // Functions render does not touch its lexical binding before that script exists.
+    actionKindLabel: (value) => actionKindLabel(value),
+    getActionData: () => actionData, getCurFilter: curFilter, setCurFilter,
+    getLangFilter: () => langFilter, setLangFilter: (value) => { langFilter = value; },
+    getActionSort: () => actionSort, setActionSort: (value) => { actionSort = value; },
+    getActionSortDir: () => actionSortDir, setActionSortDir: (value) => { actionSortDir = value; },
+    getTreeSort: () => treeSort, setTreeSort: (value) => { treeSort = value; },
+    getTreeSortDir: () => treeSortDir, setTreeSortDir: (value) => { treeSortDir = value; },
+    TREE_SORTS, lastModified: MSG.lastModified, getTreeData: () => treeData,
+    runSearch: (...args) => runSearch(...args),
+    // These renderers live in scripts loaded after the panel. Pass lazy adapters so the initial
+    // filter bar can be built before those classic-script bindings exist.
+    renderModules: (...args) => renderModules(...args),
+    renderWorkflows: (...args) => renderWorkflows(...args),
+    renderSchedules: (...args) => renderSchedules(...args),
+    renderActions: (...args) => renderActions(...args),
+    renderConnections: (...args) => renderConnections(...args),
+    renderTree: (...args) => renderTree(...args),
+  });
+  return _buildTypeChips();
 }
 $('nameToggle').onclick = () => {
   if (viewMode === 'functions') {
