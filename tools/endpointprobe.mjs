@@ -374,6 +374,7 @@ async function main() {
   let stderr = '';
   child.stderr.on('data', (chunk) => { stderr += String(chunk); if (stderr.length > 8000) stderr = stderr.slice(-8000); });
   let client;
+  let success = '';
   try {
     client = cdp(await debuggerUrl(port, child));
     await client.open();
@@ -455,18 +456,31 @@ async function main() {
     }
     const missing = [...expected].filter((key) => !used.has(key));
     if (missing.length) throw new Error(`expected endpoint(s) not used: ${missing.join(', ')}`);
-    process.stdout.write(`endpoint pull: ${used.size} raw Zoho routes -> ${final.result.files} local files; cache disabled, no network\n`);
+    success = `endpoint pull: ${used.size} raw Zoho routes -> ${final.result.files} local files; cache disabled, no network\n`;
     await client.call('Target.closeTarget', { targetId });
   } finally {
-    if (client) client.close();
-    child.kill('SIGTERM');
-    await Promise.race([
-      new Promise((resolve) => child.once('exit', resolve)),
-      new Promise((resolve) => setTimeout(resolve, 3000)),
-    ]);
-    if (child.exitCode === null) child.kill('SIGKILL');
-    fs.rmSync(profile, { recursive: true, force: true });
+    // Closing only Chrome's parent process was enough on macOS and raced its profile-writing child
+    // on the Linux runner: the pull was green, then cleanup hit ENOTEMPTY. Ask the browser itself to
+    // close, observe the process exit (including the already-exited case), and only then remove the
+    // profile. A cleanup failure must not be printed after an apparent success.
+    if (client) {
+      try { await client.call('Browser.close'); } catch (_) {}
+      client.close();
+    }
+    const waitForExit = async (limit) => {
+      if (child.exitCode !== null) return true;
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(false), limit);
+        child.once('exit', () => { clearTimeout(timer); resolve(true); });
+      });
+    };
+    if (!(await waitForExit(5000))) {
+      child.kill('SIGKILL');
+      await waitForExit(3000);
+    }
+    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
   }
+  process.stdout.write(success);
 }
 
 main().catch((error) => {
