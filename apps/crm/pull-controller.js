@@ -59,6 +59,16 @@ function createCrmPullController(options) {
   // the lifecycle a useful record of what happened instead of a retrospective animation emitted
   // by setPullBusy(false).
   function phase(next) { return lifecycle ? lifecycle.transition(next) : false; }
+  // A runner may own a complete vertical path and advance the lifecycle at the moment its real
+  // planning/writing/refreshing work happens.  The controller still supplies those phases for the
+  // older runners, but must not replay them after a vertical runner has already reached a later
+  // state.  Replaying would turn an authoritative record back into the retrospective animation this
+  // boundary was introduced to remove.
+  function completePhasesIfStillReading() {
+    if (lifecycle && lifecycle.snapshot().state !== 'reading') return false;
+    phase('planning'); phase('writing'); phase('refreshing');
+    return true;
+  }
   function finishPull(warnings = false) {
     return lifecycle && lifecycle.snapshot().state === 'refreshing' ? lifecycle.finish(warnings) : false;
   }
@@ -79,7 +89,7 @@ function createCrmPullController(options) {
     try {
       phase('reading');
       await work();
-      phase('planning'); phase('writing'); phase('refreshing');
+      completePhasesIfStillReading();
       finishPull(options.statusKind() === 'warn');
       return true;
     } catch (error) { failPull(); throw error; }
@@ -97,11 +107,12 @@ function createCrmPullController(options) {
       phase('reading');
       await (runners[view] || runners.functions)();
       if (options.statusKind() === 'busy') {
-        phase('planning'); phase('writing');
+        if (!lifecycle || lifecycle.snapshot().state === 'reading') { phase('planning'); phase('writing'); }
         try { await options.rebuildActive(); }
         catch (_) { options.setStatus('Pull complete.', 'ok'); }
       }
-      phase('refreshing'); finishPull(options.statusKind() === 'warn');
+      if (!lifecycle || lifecycle.snapshot().state === 'writing') phase('refreshing');
+      finishPull(options.statusKind() === 'warn');
     } catch (error) {
       failPull();
       options.setStatus('Pull error: ' + options.errorText(error), 'bad');
@@ -126,15 +137,15 @@ function createCrmPullController(options) {
         done++;
       }
       if (!operation.current()) return;
-      phase('planning');
+      if (!lifecycle || lifecycle.snapshot().state === 'reading') phase('planning');
       await options.takeRechecks(options.answeredRechecks(planned));
       if (!operation.current()) return;
 
       const summary = options.statusSnapshot();
-      phase('writing');
+      if (!lifecycle || lifecycle.snapshot().state === 'planning') phase('writing');
       operation.say('Rebuilding the list\u2026', 'busy');
       try { await options.rebuildActive(); } catch (_) {}
-      phase('refreshing');
+      if (!lifecycle || lifecycle.snapshot().state === 'writing') phase('refreshing');
       options.renderTabs();
       const changed = options.consumePreferencesChanged();
       const note = options.forbiddenNote()

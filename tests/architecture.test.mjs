@@ -180,6 +180,24 @@ test('both extension bootstraps compose their pull boundary', () => {
   assert.equal(typeof wired.requirePerm, 'function');
 });
 
+test('CRM pull adapter keeps census and source requests discriminated', async () => {
+  const sent = [];
+  const { createCrmPullAdapter } = load('crm/pull-adapter.js');
+  const adapter = createCrmPullAdapter(async (request) => {
+    sent.push(request);
+    if (request.cmd === 'listFunctions') return { ok: true, entries: [] };
+    if (request.cmd === 'functionUiIds') return { ok: true, map: {} };
+    return { ok: true, file: { id: request.id } };
+  });
+  await adapter.listFunctions();
+  await adapter.functionUiIds();
+  await adapter.fetchOne({ id: 'fn-1', language: 'deluge' });
+  assert.equal(JSON.stringify(sent), JSON.stringify([
+    { cmd: 'listFunctions' }, { cmd: 'functionUiIds' },
+    { cmd: 'fetchOne', id: 'fn-1', language: 'deluge' },
+  ]));
+});
+
 test('pull controller closes the lifecycle on success and failure', () => {
   const context = {};
   vm.createContext(context);
@@ -204,6 +222,31 @@ test('pull controller closes the lifecycle on success and failure', () => {
   controller.failPull();
   controller.setPullBusy(false);
   assert.equal(controller.pullLifecycle().state, 'failed');
+});
+
+test('CRM pull controller does not replay phases owned by a vertical runner', async () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-lifecycle.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-controller.js', import.meta.url), 'utf8'), context);
+  let busy = false;
+  let controller;
+  const options = {
+    busy: () => busy, publishBusy: (value) => { busy = value; }, blockZoho: () => {}, zohoReady: () => true,
+    hasDirectory: () => true, navigationOpen: () => false, updateWorkspaceButtons: () => {},
+    restoreWorkspaceSelection: () => {}, setStatus: () => {}, currentView: () => 'functions',
+    tabLabel: (id) => id, runners: () => ({ functions: async () => {
+      controller.phase('planning'); controller.phase('writing'); controller.phase('refreshing');
+    }}), statusKind: () => 'ok', rebuildActive: async () => {},
+    beginOperation: () => ({ root: {}, current: () => true, say: () => {} }),
+    plan: () => ({ areas: [{ id: 'functions' }], skipped: [], asked: [], askedBefore: {} }),
+    answeredRechecks: () => [], takeRechecks: async () => {}, renderTabs: () => {}, forbiddenNote: () => '',
+    consumePreferencesChanged: () => false, preferencesChangedNote: '', takeListGap: () => '',
+    statusSnapshot: () => ({ text: '', kind: 'ok' }), errorText: String,
+  };
+  controller = context.createCrmPullController(options);
+  await controller.pullEverything();
+  assert.equal(controller.pullLifecycle().state, 'completed');
 });
 
 test('an HTTP 500 path containing an id starting with 401 is not authentication', () => {

@@ -5350,7 +5350,7 @@ for (const [app, fns] of [
     // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
     // at all, so they are the two that must not refuse.
     const unguarded = [...reach].filter((f) => !fns.includes(f)
-      && !['toBridge', 'getContext', 'createWorkspaceForEntry', 'getAnalyticsPullUseCase', 'createAnalyticsBootstrap'].includes(f));
+      && !['toBridge', 'getContext', 'crmPull', 'createWorkspaceForEntry', 'getAnalyticsPullUseCase', 'createAnalyticsBootstrap'].includes(f));
     assert.deepEqual(unguarded, [], `these reach Zoho and nothing was said about them: ${unguarded}`);
   });
 
@@ -6383,7 +6383,7 @@ for (const app of ['crm', 'analytics']) {
         meta: { id: '1', name: 'x', api_name: 'x', nameSpace: 'standalone', language: 'deluge',
                 updatedTime: 'after', sv: 4 } } }),
     };
-    const m = load([sliceFn(REL, 'writeFunctionMirror'), sliceFn(REL, 'saveMetaIndex'),
+    const m = load([sliceFn(REL, 'crmPull'), sliceFn(REL, 'writeFunctionMirror'), sliceFn(REL, 'saveMetaIndex'),
                     sliceFn(REL, 'downloadOne'), sliceConst(REL, 'errText')], g);
     return { m, op, disk, row, read: () => summary };
   };
@@ -6595,7 +6595,7 @@ for (const app of ['crm', 'analytics']) {
 
   test('the pull learns the mapping, and cannot fail because of it', () => {
     const src = read(REL);
-    const at = src.indexOf("ui = await toBridge({ cmd: 'functionUiIds' });");
+    const at = src.indexOf("ui = await crmPull().functionUiIds();");
     assert.ok(at > 0, 'why=the pull no longer asks for the mapping');
     const before = src.slice(Math.max(0, at - 120), at + 500);
     const after = src.slice(at, at + 500);

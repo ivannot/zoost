@@ -862,6 +862,22 @@ const askFrame = crmZohoBridge.askFrame;
 const crmFrameId = crmZohoBridge.frameId;
 const ensureBridge = crmZohoBridge.ensure;
 const toBridge = crmZohoBridge.send;
+// The pull path uses one typed adapter for the commands it owns.  Other panel reads remain legacy
+// for now, but the census and source download no longer construct raw bridge payloads in several
+// unrelated functions.
+const crmPullAdapter = createCrmPullAdapter(toBridge);
+/** Return the typed pull adapter, with a narrow legacy fallback for isolated diagnostics that load
+ * one panel function without the HTML's script prelude.  The shipped panel always takes the first
+ * branch; keeping the fallback here makes the function-level probes honest without reintroducing
+ * raw command objects into the production path. */
+function crmPull() {
+  if (typeof crmPullAdapter !== 'undefined' && crmPullAdapter) return crmPullAdapter;
+  return {
+    listFunctions: () => toBridge({ cmd: 'listFunctions' }),
+    functionUiIds: () => toBridge({ cmd: 'functionUiIds' }),
+    fetchOne: (request) => toBridge({ cmd: 'fetchOne', ...request }),
+  };
+}
 const getContext = crmZohoBridge.getContext;
 const waitTabComplete = crmZohoBridge.waitTabComplete;
 // ---------- context bar + off-zoho overlay ----------
@@ -2721,7 +2737,7 @@ async function pullAll() {
     const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
-    const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw bridgeError(r, 'list failed');
+    const r = await crmPull().listFunctions(); if (!r?.ok) throw bridgeError(r, 'list failed');
     // **A list that came back short says so.** The org list is asked once per language, and the
     // second ask is deliberately allowed to fail without taking the pull down with it - which is
     // only defensible if the failure is stated. Otherwise a role that does not grant Node
@@ -2758,7 +2774,7 @@ async function pullAll() {
     // every «open this function» the previous one had earned, which is the partial-data rule this
     // repository keeps re-learning in new clothes.
     let ui = null;
-    try { ui = await toBridge({ cmd: 'functionUiIds' }); }
+    try { ui = await crmPull().functionUiIds(); }
     catch (_) { /* optional: a transport failure must not turn a successful function census red */ }
     if (!op.current()) return;
     await carryUiIds(merged, (ui && ui.map) || {}, op);
@@ -2782,9 +2798,14 @@ async function pullAll() {
       const old = previousById.get(String(e.id));
       return mirrorPaths(old && old.mirrorFiles ? old : e);
     }).map((p) => [p, { path: p }]));
+    // This runner owns the real transition: the census and enrichment above are reading, while the
+    // manifest comparison below is planning.  The controller will leave these phases alone once the
+    // runner has advanced them, so Pull all records the work where it actually happened.
+    pullController.phase('planning');
     const mirrorPlan = buildMirrorPlan(previousFiles, nextFiles,
       { complete: !r.capped && !(r.unanswered || []).length });
     if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
+    pullController.phase('writing');
     await op.write('functions/index.json', JSON.stringify(merged, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(merged.map((e) => String(e.id))); const rmF = [];
@@ -2824,6 +2845,7 @@ async function pullAll() {
     await cacheBinding(bound);
     await rebuildTree();
     await downloadMissing(true);   // fetch each function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
+    pullController.phase('refreshing');
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // **The truncation is said where it is discovered, and this line is gone.** It sat here because
@@ -3248,7 +3270,7 @@ async function downloadOne(entry) {
   const info = index.get(entry.id) || {};
   try {
     entry.asked = true;
-    const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source, language: entry.language || info.language, runtime: entry.runtime || info.runtime });
+    const r = await crmPull().fetchOne({ id: entry.id, category: entry.category || info.category, source: entry.source || info.source, language: entry.language || info.language, runtime: entry.runtime || info.runtime });
     // Through `bridgeError`, like every other reply: a bare Error here dropped `forbidden`, which is
     // the fourth place that boundary could lose it and the one that mattered most - a role that can
     // list functions but not read one refuses every download, and each was counted as a failure to
