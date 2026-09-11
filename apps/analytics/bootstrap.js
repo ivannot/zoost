@@ -3,8 +3,8 @@
  * transport adapter to the Pull all use case so the application path has one explicit entry point. */
 /** @param {object} deps @returns {Function} */
 function createAnalyticsBootstrap(deps) {
-  if (typeof createAnalyticsPullUseCase !== 'function') throw new Error('Analytics pull use case is unavailable');
-  if (typeof createAnalyticsPullAdapter !== 'function') throw new Error('Analytics pull adapter is unavailable');
+  if (typeof createAnalyticsPullUseCase !== 'function') throw new Error('Pull use case is unavailable');
+  if (typeof createAnalyticsPullAdapter !== 'function') throw new Error('Pull adapter is unavailable');
   const d = /** @type {any} */ (deps);
   const bridge = createAnalyticsPullAdapter((command) => d.toBridge(command));
   return createAnalyticsPullUseCase({

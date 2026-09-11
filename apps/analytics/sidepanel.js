@@ -1311,7 +1311,7 @@ function refuseIncompleteSnapshot() {
 // ---------- pull ----------
 function getAnalyticsPullUseCase() {
   if (analyticsPullUseCase) return analyticsPullUseCase;
-  if (typeof createAnalyticsBootstrap !== 'function') throw new Error('Analytics bootstrap is unavailable');
+  if (typeof createAnalyticsBootstrap !== 'function') throw new Error('Pull bootstrap is unavailable');
   analyticsPullUseCase = createAnalyticsBootstrap({
     toBridge, requirePerm, setBusy, phase: (name) => pullPhase(name), writeToDisk,
     applySnapshot: (next) => { ({ views, folders, schema, relations, sqls, deps, pullFailed } = next); },
