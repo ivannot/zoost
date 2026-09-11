@@ -42,6 +42,7 @@ cd1749ea548085ba  README.md: --- ## The interface **Top bars** - **Working folde
 921080d3a0c90fe9  README.md: Each compiled function also carries **what Zoho is running**: when it was last published, and whether an edit exists that has not been - a source in the mirror can be code the org has never executed.
 db5f6293ee5d3e25  README.md: Every case is a defect that actually occurred, and the checkers are tested too - two of them shipped broken, and a checker that reports success over the thing it was built to catch is worse than no checker.
 dedfecc7a27bb0c1  README.md: Every chapter the HTML report has, because an assistant cannot see what is missing from what it was given.
+1885ae21c7b170b2  README.md: Every request the page makes is intercepted before the network, the cache is disabled, and an unknown or unused endpoint fails the run.
 ede6fa9df5ce7da0  README.md: Every tool it opens is shown in the chat (🔧).
 490b750dcd12b059  README.md: Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once rather than one function at a time.
 923a7787442427b0  README.md: Filter to **Unused** (used by no function) or **Disconnected**; open one to see every function that uses it.
@@ -53,7 +54,7 @@ c833c593c07bdbfa  README.md: It is the only place an empty field means *erase* r
 f3ab152a4ca5b497  README.md: It is written down because every other security property here is.
 e9e06dc03d49a6f2  README.md: It spans the tabs and is cleared only by changing workspace.
 fe83f80a47c9e2e1  README.md: Later pulls skip a refused area rather than re-asking an answered question every time, so **Settings -> Tabs** carries an **ask again** tick per refused row, saved with the section like every other control there: the next pull then includes that area once, and what Zoho answers becomes the new record.
-815cd6b50adc1f6d  README.md: No framework and nothing to install: node's own test runner and Python's `unittest`.
+72dc6480d38bd471  README.md: No framework and nothing to install: node's own test runner, Python's `unittest` and Chrome.
 413614e4823d7fb9  README.md: Nothing reaches me, ever.
 4f118f3871761cd6  README.md: Only an outright HTTP refusal counts - Zoho saying so with a 401 or a 403: an area that fails for another reason is reported as a failure and stays visible, and that includes the connections catalogue, which answers `400 INVALID_CSRF_TOKEN` to a user it will not serve without ever saying «no permission».
 223c32d18f8175f0  README.md: Other OpenAI-compatible endpoints (OpenRouter, Azure, local models) are deliberately **not** offered: the manifest grants host access to those two origins only, and an untested claim is worse than a missing feature.
@@ -849,7 +850,7 @@ dbe3c715ed89cdc9  site/it/nerd.html: L'archivio allegato alla Release è il file
 6174980ed17427a2  site/it/nerd.html: L'indirizzo viene passato al controllo anti-abuso soltanto per quella verifica.
 68f879c6063f2939  site/it/nerd.html: La pagina nerd Tutto ciò che le pagine di prodotto lasciano fuori di proposito: su quali interfacce si basa Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ciascuna di queste cose senza doverti fidare della mia parola.
 f0a01ac55a349edc  site/it/nerd.html: La riproducibilità è il fondamento del processo, non un dettaglio decorativo: pubblicare uno SHA-256 non vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché zip memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del filesystem.
-8915a0339d71b387  site/it/nerd.html: Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un 4xx deterministico), e il recupero tramite un'azione che è stata misurata - la prima chiamata /deluge/ dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la sistema; questo è stato riprodotto apposta invece che ipotizzato.
+0d6389ced3ddd160  site/it/nerd.html: Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un 4xx deterministico), e il recupero tramite un'azione che è stata misurata - quando Zoho rifiuta il token di sicurezza di una richiesta, Zoost legge il token che usa la pagina di Zoho stessa e riprova quella richiesta una volta.
 fbde53867d0befde  site/it/nerd.html: Mandare una segnalazione L'unico percorso qui che finisce in un posto pubblico, quindi è scritto per esteso invece che riassunto.
 4c7c3b7b057ce3c9  site/it/nerd.html: Nessun aggancio a un'etichetta che cambia con la lingua dell'interfaccia.
 9470d4e19672e09d  site/it/nerd.html: Nessun clic simulato dentro una pagina di terzi.
@@ -867,6 +868,7 @@ dddd84ffc9e12416  site/it/nerd.html: Puoi leggere e modificare il testo, e nient
 4d9e16631d27a8c8  site/it/nerd.html: Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio scoprirlo qui che dopo averla installata.
 e5c2e19061008b34  site/it/nerd.html: Tirare a indovinare un parametro che escluda i dati è esattamente il punto in cui una dichiarazione di sola lettura si rompe per sbaglio.
 d819cdadb14f54dc  site/it/nerd.html: Trentanove file per Zoho CRM e ventiquattro per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto questo ti chiede di fidarti di come il codice è stato prodotto.
+ee0619a5f29574f3  site/it/nerd.html: Un solo tentativo, su quell'unico errore.
 0615b2c5d8138bb4  site/it/nerd.html: Verificalo tu gh attestation verify <file> --repo ivannot/zoost chiede a GitHub se ha costruito esattamente quell'archivio tools/verify.sh lo ricostruisce sulla tua macchina e confronta gli hash RELEASES.md commit, tag e SHA-256 di ogni versione inviata - comprese le due righe che dichiara di non poter verificare, e perché llms.txt la stessa mappa scritta per un assistente a cui viene chiesto di valutare il prodotto invece di riassumere la pagina Nessuno dei due comandi ti chiede di fidarti di me.
 5a96417e721b15e9  site/it/nerd.html: Zoost dichiara di non leggere mai le tue righe, quindi non lo chiama.
 2097a55846824c2f  site/it/privacy.html: 4.3 Gli export I file di export vengono scritti nella tua cartella di lavoro e non vanno da nessuna parte da soli.
