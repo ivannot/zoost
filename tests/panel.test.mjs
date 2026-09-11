@@ -520,9 +520,6 @@ test('a refused deluge call is retried with the token the page itself uses', asy
   const answers = [
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"a":1,"csrfToken":"PAGETOKEN0000000000","b":2}' },
-    // The primer: one ordinary CRM read with the token just fetched, so a refusal that follows can
-    // be told from a token fault. Its own answer is not acted on.
-    { status: 200, ok: true, json: async () => ({ schedules: [] }) },
     { status: 200, ok: true, json: async () => ({ connections: [] }) },
   ];
   const sent = [];
@@ -531,6 +528,9 @@ test('a refused deluge call is retried with the token the page itself uses', asy
               instanceName: () => 'yourinstance',
               document: { cookie: 'CT_CSRF_TOKEN=cookievalue' },
               cookie: (n) => (n === 'CT_CSRF_TOKEN' ? 'cookievalue' : undefined),
+              // The bootstrap sequence is exercised end to end by tools/crm-endpointprobe.mjs;
+              // this unit case isolates the retry and supplies that boundary as a harmless stub.
+              initialiseDeluge: async () => {},
               // The memo is tied to the document it was read from - `memoValid()` clears it on a
               // navigation - so the harness has to say the page has not moved, or the token is
               // dropped between being fetched and being used.
@@ -9648,6 +9648,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     const ctx = {
       ACTION_KINDS: [{ kind: 'tasks', path: '/tasks', key: 'tasks', detail: 'field_mappings' }],
       MAX_PAGES_WIDE: 40, ACT_SV: 4, setTimeout, Promise,
+      pullProgress: () => {},
       actionRow: (kind, r) => ({ kind, id: String(r.id), name: r.name || '' }),
       mapping: (m) => m,
       list: (j, key) => { const v = j && j[key]; if (!Array.isArray(v)) throw new Error('shape'); return v; },
@@ -10097,6 +10098,24 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
               'an overtaken pull leaves the panel it is no longer in looking busy');
     assert.ok(!/return endBusyElsewhere\(\);\s*\n\s*status\(/.test(src),
               'and it writes a sentence about the workspace you left');
+  });
+
+  test('crm: every multi-item bridge pull reports the subject and its progress', () => {
+    const bridge = read('apps/crm/content-bridge.js');
+    const live = read('apps/crm/live-sync.js');
+    assert.match(bridge, /pullProgress\('modules', i \+ 1, mods\.length\)/,
+                 'the module detail loop has no visible progress');
+    assert.match(bridge, /pullProgress\(`files for \$\{functionName\}`, \+\+fileDone, fileTotal\)/,
+                 'the files inside a compiled function have no visible progress');
+    const actions = sliceFn('apps/crm/content-bridge.js', 'pullActions');
+    assert.match(actions, /pullProgress\('task details', i \+ 1, mine\.length\)/,
+                 'the task detail loop has no visible progress');
+    assert.match(actions, /pullProgress\('action types', kindIndex \+ 1, ACTION_KINDS\.length\)/,
+                 'the action-kind loop has no visible progress');
+    assert.match(live, /msg\?\.type === 'pullProgress' && \(pullActive \|\| pullBusy\)/,
+                 'a single-item refresh cannot display its progress');
+    assert.match(live, /const stage = String\(msg\.stage \|\| ''\)\.trim\(\)/,
+                 'the CRM panel discards the subject of a progress message');
   });
 }
 
@@ -18392,11 +18411,12 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
               instanceName: () => 'yourinstance', orgId: () => '1234567890',
               location: { href: 'https://crm.zoho.eu/crm/yourinstance/tab/Contacts' },
               document: { cookie: 'CT_CSRF_TOKEN=' + 'c'.repeat(128), getElementById: () => null },
+              initialiseDeluge: async () => {},
               fetch: async (url, opt) => {
                 const u = String(url).replace('https://crm.zoho.eu', '').split('?')[0];
                 if (u.includes('ConstantsInitial.do')) return { ok: true, status: 200, text: async () => `{"csrfToken":"${live}"}` };
-                const tok = (opt.headers['X-ZCSRF-TOKEN'] || '').split('=')[1] || '';
-                sent.push(tok);
+                const tok = (opt?.headers?.['X-ZCSRF-TOKEN'] || '').split('=')[1] || '';
+                if (tok) sent.push(tok);
                 if (tok === live) return { ok: true, status: 200, json: async () => ({ ok: true }) };
                 return { ok: false, status: 400, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' };
               } };
@@ -18413,11 +18433,11 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
                    'a CRM-family call was refused after Zoho rotated the token and never recovered - '
                    + 'the memo it is pinned to is dropped on the deluge path only, so every area stays '
                    + 'refused until the reader reloads the Zoho tab, which nothing tells them to do');
-  // Three, and each one is named: the stale attempt, the primer that sees the fresh token accepted -
-  // without it a refusal cannot be told from a token fault - and the retry. The number is here so a
-  // recovery that starts looping is a failure rather than a slower success.
-  assert.equal(sent.length, 3,
-               `it sent ${sent.length} request(s); the stale one, the primer and one retry were expected`);
+  // Two token-bearing requests: the stale attempt and one retry after the measured raw Deluge
+  // bootstrap. The number is here so a recovery that starts looping is a failure rather than a
+  // slower success.
+  assert.equal(sent.length, 2,
+               `it sent ${sent.length} token request(s); the stale one and one retry were expected`);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -18959,6 +18979,7 @@ test('a compiled function is fetched as every file in its Zoho project', async (
   const m = load([sliceFn(rel, 'projectPath'), sliceFn(rel, 'projectFiles')], {
     String, Error, Set, Array, RegExp, encodeURIComponent,
     orgId: () => '123456789',
+    pullProgress: () => {},
     list: (body, field) => body[field],
     api: async (path) => {
       calls.push(path);
@@ -19137,7 +19158,6 @@ test('a deluge refusal with a good token is said calmly, and is still not a role
     { status: 200, ok: true, json: async () => ({ functions: [] }) },              // /crm/ accepts it
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => `{"csrfToken":"${T}"}` },            // the refresh: same token
-    { status: 200, ok: true, json: async () => ({ schedules: [] }) },               // the primer accepts it
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
@@ -19147,6 +19167,7 @@ test('a deluge refusal with a good token is said calmly, and is still not a role
               cookie: (n) => (n === 'CT_CSRF_TOKEN' ? T : undefined),
               memoValid: () => true,
               orgId: () => '1234567890',
+              initialiseDeluge: async () => {},
               fetch: async () => answers.shift() };
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
@@ -19194,7 +19215,6 @@ test('a deluge refusal carrying the CRM family cookie is not read as a refusal o
     { status: 200, ok: true, json: async () => ({ functions: [] }) },   // /crm/ accepts CT_CSRF_TOKEN
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"no":"token here"}' }, // the page yields none
-    { status: 200, ok: true, json: async () => ({}) },                  // the primer, which accepts the cookie
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
@@ -19202,7 +19222,7 @@ test('a deluge refusal carrying the CRM family cookie is not read as a refusal o
               instanceName: () => 'yourinstance',
               document: { cookie: 'CT_CSRF_TOKEN=cookievalue; crmcsr=x', getElementById: () => null },
               cookie: (n) => (n === 'CT_CSRF_TOKEN' ? 'cookievalue' : undefined),
-              memoValid: () => true, orgId: () => '1234567890',
+              memoValid: () => true, orgId: () => '1234567890', initialiseDeluge: async () => {},
               fetch: async () => answers.shift() };
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
@@ -19227,9 +19247,6 @@ test('a deluge refusal with a token nothing has accepted keeps the cookie diagno
   const answers = [
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"csrfToken":"PAGETOKEN0000000000"}' },
-    // The primer, refused as well: on this path nothing ever accepts the token, which is the state
-    // the cookie diagnostic was written for and the one it must still fire on.
-    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
@@ -19239,6 +19256,7 @@ test('a deluge refusal with a token nothing has accepted keeps the cookie diagno
               cookie: (n) => (n === 'CT_CSRF_TOKEN' ? 'cookievalue' : undefined),
               memoValid: () => true,
               orgId: () => '1234567890',
+              initialiseDeluge: async () => {},
               fetch: async () => answers.shift() };
   const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
                   sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),

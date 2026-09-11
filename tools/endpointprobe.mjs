@@ -8,8 +8,10 @@
  * panel consumes: content-bridge.js must issue the right HTTP requests and parse every response.
  *
  * Every request is intercepted before the network. An unknown URL, a wrong method/header/body, or
- * an expected route that was never used fails the run. The Chrome profile is new and its cache is
- * disabled, so no response can be inherited from a previous run.
+ * an unexpected call count fails the run. After the complete pull, raw HTTP failures prove that a
+ * failed stage preserves the prior mirror, item failures stay explicit, and Retry repairs them.
+ * The Chrome profile is new and its cache is disabled, so no response can be inherited from a
+ * previous run.
  */
 import fs from 'node:fs';
 import net from 'node:net';
@@ -199,6 +201,9 @@ const DRIVER = String.raw`
       throw new Error(subject + ': got ' + JSON.stringify(actual) + ', expected ' + JSON.stringify(expected));
     }
   };
+  const snapshot = (fs, prefix) => Object.fromEntries(fs.dump()
+    .filter((name) => name.startsWith(prefix))
+    .map((name) => [name, fs.read(name)]));
   window.addEventListener('load', () => {
     (async () => {
       const fs = window.__fsshim;
@@ -259,6 +264,50 @@ const DRIVER = String.raw`
       if (/failed|interrupted|could not/i.test(document.getElementById('statustext').textContent)) {
         throw new Error('the panel ended on ' + document.getElementById('statustext').textContent);
       }
+
+      // A whole-stage failure happens before writeToDisk. The previous snapshot must therefore
+      // survive byte for byte, including its complete marker and workspace metadata.
+      const beforeStageFailure = snapshot(fs, base);
+      await pullAll();
+      same(snapshot(fs, base), beforeStageFailure, 'stage failure changed the previous mirror');
+      if (!/Pull failed: 503/.test(document.getElementById('statustext').textContent)) {
+        throw new Error('the stage failure was not explicit: ' + document.getElementById('statustext').textContent);
+      }
+
+      // Per-item reads are different: one SQL response and one lineage response may fail while the
+      // rest of the workspace is still a coherent snapshot. The gaps must be durable and explicit,
+      // and yesterday's SQL file must not be deleted merely because today's request was refused.
+      const previousSql = fs.read(base + 'sql/' + query.stem + '.sql');
+      await pullAll();
+      const failedState = JSON.parse(fs.read(base + '.pull-state.json') || '{}');
+      const failedLineage = JSON.parse(fs.read(base + 'lineage.json') || '{}');
+      const failedIndex = JSON.parse(fs.read(base + 'sql/index.json') || '{}');
+      same(failedState.state, 'complete', 'per-item failures left an incomplete mirror');
+      same(failedLineage.failed, [
+        { id: '99001002', error: '429 on /clientapi/sqltable/workspaces/99000999/views/99001002/editsql - rate limit', stage: 'sql' },
+        { id: '99001003', error: '403 on /clientapi/dependencyview/workspace/99000999/view/99001003 - access denied', stage: 'lineage' },
+      ], 'durable per-item failures');
+      same(failedIndex, {}, 'failed SQL was presented as current');
+      same(fs.read(base + 'sql/' + query.stem + '.sql'), previousSql, 'failed SQL read deleted the previous capture');
+      if (!/2 could not be read/.test(document.getElementById('statustext').textContent)) {
+        throw new Error('the completed partial pull hid its gaps: ' + document.getElementById('statustext').textContent);
+      }
+
+      // Retry is a user control over the declared gaps. Both endpoints answer normally on their
+      // next call; the failure ledger must clear and the SQL/index pair must become current again.
+      await retryFailed();
+      const recoveredLineage = JSON.parse(fs.read(base + 'lineage.json') || '{}');
+      const recoveredIndex = JSON.parse(fs.read(base + 'sql/index.json') || '{}');
+      same(recoveredLineage.failed, [], 'retry left recovered entries marked as failed');
+      same(recoveredLineage.deps['99001003'], {
+        id: '99001003', parents: [{ id: '99001002', level: 0 }], children: [], dashboards: [],
+      }, 'retry did not restore lineage');
+      same(recoveredIndex['99001002'] && recoveredIndex['99001002'].parents, ['99001001'], 'retry did not restore SQL');
+      same(fs.read(base + 'sql/' + query.stem + '.sql'), previousSql, 'retry restored the wrong SQL source');
+      if (!/All previously failed items are now in/.test(document.getElementById('statustext').textContent)) {
+        throw new Error('retry did not report recovery: ' + document.getElementById('statustext').textContent);
+      }
+
       window.__endpointProbeResult = { files: fs.dump().filter((name) => name.startsWith(base)).length };
       document.title = 'ENDPOINT PULL OK';
     })().catch((error) => {
@@ -298,9 +347,9 @@ function response(status, contentType, body) {
   };
 }
 
-const expected = new Set([
-  'workspace-info', 'view-list', 'erd', 'sql:99001002',
-  'dependency:99001001', 'dependency:99001002', 'dependency:99001003',
+const expected = new Map([
+  ['workspace-info', 3], ['view-list', 3], ['erd', 3], ['sql:99001002', 3],
+  ['dependency:99001001', 2], ['dependency:99001002', 3], ['dependency:99001003', 3],
 ]);
 const used = new Map();
 const failures = [];
@@ -309,7 +358,10 @@ const scripts = new Set(fs.readdirSync(APP).filter((name) => /[.](?:js|css)$/.te
 function mark(key) {
   if (!expected.has(key)) throw new Error(`unexpected endpoint ${key}`);
   used.set(key, (used.get(key) || 0) + 1);
-  if (used.get(key) !== 1) throw new Error(`endpoint ${key} was requested ${used.get(key)} times`);
+  if (used.get(key) > expected.get(key)) {
+    throw new Error(`endpoint ${key} was requested ${used.get(key)} times, expected ${expected.get(key)}`);
+  }
+  return used.get(key);
 }
 
 function apiReply(request) {
@@ -335,7 +387,7 @@ function apiReply(request) {
     }
     body = fixture.viewList;
   } else if (url.pathname === '/ZDBCreateERD.ma') {
-    mark('erd');
+    const call = mark('erd');
     if (request.method !== 'POST') throw new Error(`ERD used ${request.method}, expected POST`);
     if (h['x-requested-with'] !== 'XMLHttpRequest') throw new Error('ERD omitted X-Requested-With');
     if (h['x-zcsrf-token'] !== 'ZDB_CSRF_TOKEN=probe-token') throw new Error('ERD carried the wrong CSRF token');
@@ -345,16 +397,29 @@ function apiReply(request) {
         || url.searchParams.get('_ZVER_') !== '101') throw new Error('ERD query is wrong');
     const form = new URLSearchParams(request.postData || '');
     if (form.get('DBID') !== fixture.workspace || form.get('ISERDGNEWFLOW') !== 'true') throw new Error('ERD body is wrong');
+    if (call === 2) {
+      return response(503, 'application/json; charset=utf-8', JSON.stringify({ status: 'failure', summary: 'service unavailable' }));
+    }
     body = fixture.erd;
   } else {
     let match = url.pathname.match(new RegExp(`^/clientapi/sqltable/workspaces/${fixture.workspace}/views/(\\d+)/editsql$`));
     if (match) {
-      get(); mark(`sql:${match[1]}`); body = fixture.sql[match[1]];
+      get();
+      const call = mark(`sql:${match[1]}`);
+      if (call === 2) {
+        return response(429, 'application/json; charset=utf-8', JSON.stringify({ status: 'failure', summary: 'rate limit' }));
+      }
+      body = fixture.sql[match[1]];
       if (!body) throw new Error(`no synthetic SQL response for ${match[1]}`);
     } else {
       match = url.pathname.match(new RegExp(`^/clientapi/dependencyview/workspace/${fixture.workspace}/view/(\\d+)$`));
       if (!match) throw new Error(`unexpected Zoho endpoint ${request.method} ${url.pathname}`);
-      get(); mark(`dependency:${match[1]}`); body = fixture.dependencies[match[1]];
+      get();
+      const call = mark(`dependency:${match[1]}`);
+      if (match[1] === '99001003' && call === 2) {
+        return response(403, 'application/json; charset=utf-8', JSON.stringify({ status: 'failure', summary: 'access denied' }));
+      }
+      body = fixture.dependencies[match[1]];
       if (!body) throw new Error(`no synthetic dependency response for ${match[1]}`);
     }
   }
@@ -454,9 +519,11 @@ async function main() {
     if (final.title !== 'ENDPOINT PULL OK') {
       throw new Error(final.result?.error || `timed out with title ${JSON.stringify(final.title)}`);
     }
-    const missing = [...expected].filter((key) => !used.has(key));
-    if (missing.length) throw new Error(`expected endpoint(s) not used: ${missing.join(', ')}`);
-    success = `endpoint pull: ${used.size} raw Zoho routes -> ${final.result.files} local files; cache disabled, no network\n`;
+    const wrongCounts = [...expected].filter(([key, count]) => used.get(key) !== count)
+      .map(([key, count]) => `${key}: ${used.get(key) || 0}/${count}`);
+    if (wrongCounts.length) throw new Error(`endpoint request count mismatch: ${wrongCounts.join(', ')}`);
+    const requestCount = [...used.values()].reduce((total, count) => total + count, 0);
+    success = `endpoint pull: success, stage preservation, explicit item failures and retry recovery; ${requestCount} raw requests across ${used.size} Zoho routes -> ${final.result.files} local files; cache disabled, no network\n`;
     await client.call('Target.closeTarget', { targetId });
   } finally {
     // Closing only Chrome's parent process was enough on macOS and raced its profile-writing child

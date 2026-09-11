@@ -11,6 +11,15 @@ encoded `PAROBJID`, and dependency responses in both their object and bare-id fo
 is never copied into this repository. `tools/endpointprobe.mjs` serves this small file as a strict
 fake Zoho server and verifies the mirror the real parser and panel writer produce from it.
 
+`fixtures/crm/raw-pull.json` follows the same rule for CRM. Its values are invented, while the
+response envelopes and the Deluge bootstrap sequence come from `crm2.har`, the successful request
+made by Zoho's own Connections page. `tools/crm-endpointprobe.mjs` drives the shipped CRM panel and
+bridge through the six Pull all areas, including the first `INVALID_CSRF_TOKEN` response and the
+bounded recovery that precedes the successful catalogue read. It also carries one compiled
+`nodejs_22` function, so the endpoint probe exercises the project file list and every source-file
+read before checking the `.files/` mirror. Neither HAR is committed; only sanitised, synthetic
+values are.
+
 **Derive a file shape from the writer, never from what looks reasonable.** The first sample
 workspace invented every one of them - `{items: […]}` where the pull writes a **bare array**,
 `namespace` where the meta says **`nameSpace`**, a boolean `rest` where it is **`rest_api`**, `sv: 3`

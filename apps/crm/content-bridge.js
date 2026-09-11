@@ -259,15 +259,11 @@
       return { message: m ? m[1] : null, code: c ? c[1] : null };
     } catch (_) { return { message: null, code: null }; }
   }
-  // Right after a fresh login the deluge runtime rejects the very first `/deluge/` call with
-  // 400 INVALID_CSRF_TOKEN, and any `/crm/` call in between makes the next attempt succeed -
-  // reproduced deliberately: log out, log in, pull connections (fails), pull schedules, pull
-  // connections (works). It is also why "Pull all" never showed this: functions run first.
-  //
-  // Which of the two explanations is true - `drecn` not yet set/refreshed, or the deluge session not
-  // yet initialised server-side - is **not** established. It does not need to be: the remedy is the
-  // same under both, and it is the one that was measured rather than reasoned about. So on exactly
-  // that error, make one ordinary CRM call and try again, once.
+  // Right after login the deluge runtime can reject the first Connections read even though that
+  // exact token is accepted by CRM and by Zoho's own Connections page a moment later. A captured
+  // Pull all disproved the old recovery: ConstantsInitial plus an ordinary schedules read both
+  // answered 200, then the Connections retry still answered INVALID_CSRF_TOKEN. Zoho's own page
+  // succeeds only after the bounded Deluge initialisation reproduced in `warmDeluge` below.
   //
   // This is the "recovering by a known action" exception, not a retry loop: one attempt, only on a
   // specific error string, only for the deluge family, and the primer's own result is ignored -
@@ -303,15 +299,35 @@
     } catch (_) { return null; }
   }
 
+  /** Reproduce the reads Zoho's own Connections page makes before its successful catalogue read.
+   *
+   * The order, header families and query were captured from that page: public messages without a
+   * CSRF header, user validation without one, then the private messages read with `drepn`. None of
+   * the response bodies is data Zoost consumes; these reads establish the Deluge session. Raw
+   * `fetch` is deliberate: going through `api()` would recursively invoke this recovery.
+   */
+  async function initialiseDeluge() {
+    const org = orgId();
+    if (!org) return false;
+    try {
+      await fetch(BASE + safePath('/deluge/api/ui/v1/getI18n?baseName=EditorMessageResources'),
+        { credentials: 'include' });
+      await fetch(BASE + safePath('/deluge/delugeauth/validateUser?zohoServiceName=ZohoCRM'
+        + `&sharedBy=${encodeURIComponent(org)}&hideUserAccess=false`), { credentials: 'include' });
+      await fetch(BASE + safePath('/deluge/api/ui/v1/getI18n'),
+        { headers: { 'X-ZCSRF-TOKEN': 'drepn=' + csrfToken('drepn') }, credentials: 'include' });
+      return true;
+    } catch (_) { return false; }
+  }
+
   async function warmDeluge() {
     // Its own result is still not acted on - the side effect is the point, and a role that cannot
     // reach this endpoint is no worse off for having asked. What is returned is whether the primer
     // itself got an answer, so a second refusal can say whether it was ever primed at all. That
     // distinction is the difference between «the token is wrong» and «the session is not there».
-    // **The primer stopped being a superstition.** It used to make an ordinary CRM call and hope the
-    // deluge runtime would accept the next attempt - a remedy chosen without knowing which of two
-    // explanations was true, said so in its own comment, and measured not to work. It now fetches the
-    // token the page itself uses; the retry sends that instead of the cookie.
+    // ConstantsInitial refreshes the token. It does not initialise Deluge: that earlier assumption
+    // was measured false by a capture in which this read and the schedules primer both answered 200
+    // while both Connections attempts answered 400.
     //
     // **The memo is dropped first, and the answer is whether a token was actually fetched.** Without
     // that this returned `true` on a memo it had not refreshed: the second refusal in one page's life
@@ -326,34 +342,19 @@
     // is what puts that back.
     _pageCsrf = null;
     const got = await pageCsrfToken();
-    // **The token has to be *seen accepted*, not merely fetched.** Reported from a real org: a pull
-    // of the Connections tab alone makes no other request in that page's life, so nothing had ever
-    // recorded an acceptance and the refusal that followed fell back to the cookie diagnostic - the
-    // alarming one, about a token that was fine. The evidence this needs is one ordinary CRM read
-    // carrying the value we are about to send again, so it is taken here rather than hoped for.
-    //
-    // Through `api()`, so the acceptance is recorded where every other one is; guarded against
-    // re-entry, because this is reached *from* `api()` and a primer that itself answered
-    // INVALID_CSRF_TOKEN would call it again. Its own outcome is still not acted on: a role that
-    // cannot read schedules is no worse off for having asked, and what the next refusal means is
-    // decided by whether the token was accepted, which is a different question.
+    // The recovery itself is exactly the bounded sequence the page makes. `_warming` guards against
+    // a future edit accidentally routing one of these raw reads through `api()` and recursing.
     if (!_warming) {
       _warming = true;
-      // Marked as already retried: a primer that is itself refused must not start a recovery of its
-      // own, or one deluge failure fans out into a second token fetch and another request. The flag
-      // above stops the re-entry; this stops the extra round trip inside it.
-      try { await api('/crm/v9/settings/automation/schedules?page=1&per_page=1', 'crmcsrfparam', true); }
-      catch (_) { /* what it answers says nothing; that it accepted the token is what is recorded */ }
+      try { await initialiseDeluge(); }
       finally { _warming = false; }
     }
-    // **And the old primer's 200 is not a refresh.** `pageCsrfToken` answers null on four paths - no
+    // `pageCsrfToken` answers null on four paths - no
     // instance, a refused read, a body with no `csrfToken`, a network throw - and a `true` here was
     // once read as «a token was fetched», so the retry re-sent the same cookie and the reader was
     // told it had been refused after a refresh. What is returned is only whether a token was
-    // actually fetched; the primer above runs either way, because its purpose is no longer to hope
-    // - it is to see the token accepted, which is what tells the next refusal apart from a fault.
-    // There was a second primer here doing the old job by raw `fetch`, and with the one above it
-    // fired twice per recovery: one request nobody had asked for, found by counting them.
+    // actually fetched. The Deluge sequence still runs: it is the measured session initialisation,
+    // while the returned value describes only whether the token itself was refreshed.
     return !!got;
   }
   // «Zoho said none» and «Zoho answered something this code does not recognise» are two different
@@ -679,6 +680,9 @@
     const directories = [];
     const seen = new Set();
     const directorySet = new Set();
+    const fileTotal = listed.filter((item) => !(item && item.isDirectory)).length;
+    let fileDone = 0;
+    if (fileTotal) pullProgress(`files for ${functionName}`, 0, fileTotal);
     const rememberDirectory = (path) => {
       if (!directorySet.has(path)) { directorySet.add(path); directories.push(path); }
     };
@@ -691,6 +695,7 @@
       if (item && item.isDirectory) { rememberDirectory(path); continue; }
       const content = await apiText(base + `code?${query}&fileName=${encodeURIComponent(path)}`);
       files.push({ path, content });
+      pullProgress(`files for ${functionName}`, ++fileDone, fileTotal);
     }
     if (!files.length) throw new Error('Zoho returned an empty function project.');
     const config = /(^|\/)config\.json$/i;
@@ -1010,7 +1015,7 @@
           id: f.id,
         })),
       });
-      chrome.runtime.sendMessage({ type: 'pullProgress', done: i + 1, total: mods.length }).catch(() => {});
+      pullProgress('modules', i + 1, mods.length);
       await new Promise((r) => setTimeout(r, 80));
     }
     return { total: mods.length, modules: out };
@@ -1079,6 +1084,11 @@
     { kind: 'webhooks', path: '/crm/v8/settings/automation/webhooks', key: 'webhooks',
       detail: 'display_url,related_module.plural_label,module.plural_label' },
   ];
+  // A Pull all command returns only after all four lists and every task detail have answered. Keep
+  // the reader informed while that single message is in flight: the panel already listens for this
+  // event for the module walk, and without it Actions looked frozen for large organisations.
+  const pullProgress = (stage, done, total) =>
+    chrome.runtime.sendMessage({ type: 'pullProgress', stage, done, total }).catch(() => {});
   // Bumped when this starts capturing a field it did not before, exactly as `toFile()` does for a
   // function's meta: a row written by an older pull is missing the field rather than reporting it
   // empty, and those are different sentences. Without it, a field update pulled before `value`
@@ -1154,7 +1164,8 @@
   }
   async function pullActions() {
     const out = [], missed = [], capped = [], detailMissed = [];
-    for (const k of ACTION_KINDS) {
+    for (let kindIndex = 0; kindIndex < ACTION_KINDS.length; kindIndex++) {
+      const k = ACTION_KINDS[kindIndex];
       let page = 1;
       try {
         while (true) {
@@ -1177,12 +1188,18 @@
         // workflow rules are: a list plus a detail per item. Bounded, and the bound is reported.
         if (k.kind === 'tasks') {
           const mine = out.filter((a) => a.kind === 'tasks');
+          pullProgress('task details', 0, mine.length);
           for (let i = 0; i < mine.length; i++) {
             // Beyond the bound the task is still listed - every one of them is - and only its detail
             // was not read. It used to be reported as `capped`, which the panel words as «there are
             // more in Zoho»: false, and it named a kind that does not exist, so nothing downstream
             // could match it against a row. Named by id instead, in the same list as a refusal.
-            if (i >= 500) { mine[i].detail_read = false; detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: 'beyond the per-pull detail bound' }); continue; }
+            if (i >= 500) {
+              mine[i].detail_read = false;
+              detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: 'beyond the per-pull detail bound' });
+              pullProgress('task details', i + 1, mine.length);
+              continue;
+            }
             try {
               const one = await api(`${k.path}/${mine[i].id}`
                 + (k.detail ? `?include_inner_details=${encodeURIComponent(k.detail)}` : ''));
@@ -1197,6 +1214,7 @@
               mine[i].detail_read = false;
               detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: (e && e.message) || String(e) });
             }
+            pullProgress('task details', i + 1, mine.length);
             await new Promise((res) => setTimeout(res, 40));
           }
         }
@@ -1204,6 +1222,10 @@
         // One kind refusing is not the area failing: an org may not have the feature, or the role
         // may not reach it. Say which, and keep the others.
         missed.push({ kind: k.kind, error: (e && e.message) || String(e), status: e && e.status, forbidden: !!(e && e.forbidden) });
+      } finally {
+        // One unit is one complete kind-list. It remains truthful when a kind was refused: the
+        // kind has been attempted and its omission is reported separately in the final status.
+        pullProgress('action types', kindIndex + 1, ACTION_KINDS.length);
       }
     }
     // The bridge says which schema it can write. Reloading the extension does not reload the script

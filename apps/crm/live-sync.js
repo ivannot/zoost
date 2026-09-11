@@ -29,7 +29,10 @@ function onPanelMessage(msg, _sender, sendResponse) {
   // changed. Duplicates are harmless because reconciling is idempotent, which is why the hook no
   // longer needs to collapse them.
   if (msg?.type === 'deleted' || msg?.type === 'created') reconcileFunctions();
-  if (msg?.type === 'pullProgress' && pullActive) setStatus(`Pulling… ${msg.done}/${msg.total}`, 'busy');
+  if (msg?.type === 'pullProgress' && (pullActive || pullBusy)) {
+    const stage = String(msg.stage || '').trim();
+    setStatus(`${stage ? stage[0].toUpperCase() + stage.slice(1) : 'Pulling'}… ${msg.done}/${msg.total}`, 'busy');
+  }
   // The diagram window asking for the other drawing. It has no folder access of its own - by design,
   // and it stays that way - so the graph is built here and left in storage for it to reload from.
   // Through a declaration: `.then(sendResponse)` is a scope nothing can read, and what it carries

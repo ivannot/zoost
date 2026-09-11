@@ -14,9 +14,9 @@
 #     Atom feed, how a version is scraped from a page we do not control, and the three checkers.
 #
 #   covered in Chrome — the main panel paths against an in-memory File System Access adapter, plus
-#     one Analytics Pull all from raw endpoint responses through the shipped content bridge, parser,
-#     panel writer and resulting mirror. The raw server is synthetic and strictly intercepted: it
-#     never contacts Zoho.
+#     Analytics and CRM Pull all paths from raw endpoint responses through the shipped content
+#     bridges, parsers, panel writers and resulting mirrors. The raw servers are synthetic and
+#     strictly intercepted: they never contact Zoho.
 #
 #   not covered — a real Zoho session, Chrome's real extension message bus, and Chrome's real folder
 #     picker/permission lifetime. The panels are not restructured to be importable: helpers are
@@ -34,7 +34,7 @@ trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1116
+NODE_EXPECTED=1117
 PY_EXPECTED=419
 cd "$(dirname "$0")/.."
 

@@ -1,0 +1,451 @@
+{
+  "origin": "https://crm.zoho.eu",
+  "instance": "endpoint-probe",
+  "org": "990000000001",
+  "zuid": "990000001",
+  "folder": "endpoint-probe-990000000001",
+  "csrf": "probe-token-00000000000000000000",
+  "functions": {
+    "list": {
+      "id": "990000000101",
+      "api_name": "build_Invoice",
+      "name": "build_Invoice",
+      "display_name": "Build invoice",
+      "category": "standalone",
+      "source": "crm",
+      "language": "deluge",
+      "updatedTime": 1787904000000,
+      "workflow": {
+        "namespace": "standalone"
+      },
+      "rest_api": [],
+      "associated_place": []
+    },
+    "compiledList": {
+      "id": "990000000104",
+      "api_name": "sync_Report",
+      "name": "sync_Report",
+      "display_name": "Sync report",
+      "category": "standalone",
+      "source": "crm",
+      "language": "nodejs_22",
+      "runtime": "nodejs_22",
+      "updatedTime": 1787904000000,
+      "workflow": {
+        "namespace": "standalone"
+      },
+      "rest_api": [],
+      "associated_place": []
+    },
+    "detail": {
+      "id": "990000000101",
+      "api_name": "build_Invoice",
+      "name": "build_Invoice",
+      "display_name": "Build invoice",
+      "nameSpace": "standalone",
+      "category": "standalone",
+      "source": "crm",
+      "language": "deluge",
+      "script": "invoice = Map();\ninvoice.put(\"Status\", \"Draft\");\nreturn invoice;",
+      "return_type": "map",
+      "params": [],
+      "description": "Builds an invoice draft",
+      "updatedTime": 1787904000000,
+      "modified_by": "Example Admin",
+      "deployed_on": "1787817600000",
+      "is_draft_available": false,
+      "associated_place": [],
+      "workflow": "",
+      "rest_api": [],
+      "connections": [
+        {
+          "connectionLinkName": "billing_api",
+          "connectionName": "Billing API",
+          "serviceName": "billing",
+          "scopes": ["invoices.READ"]
+        }
+      ]
+    },
+    "compiledDetail": {
+      "id": "990000000104",
+      "api_name": "sync_Report",
+      "name": "sync_Report",
+      "display_name": "Sync report",
+      "nameSpace": "standalone",
+      "category": "standalone",
+      "source": "crm",
+      "language": "nodejs_22",
+      "runtime": "nodejs_22",
+      "script": null,
+      "return_type": "void",
+      "params": [],
+      "description": "Synchronises a report",
+      "updatedTime": 1787904000000,
+      "modified_by": "Example Admin",
+      "deployed_on": "1787817600000",
+      "is_draft_available": false,
+      "associated_place": [],
+      "workflow": "",
+      "rest_api": [],
+      "connections": []
+    },
+    "compiledFiles": [
+      {
+        "fullPath": "src",
+        "isDirectory": true
+      },
+      {
+        "fullPath": "src/main.js",
+        "isDirectory": false
+      },
+      {
+        "fullPath": "config.json",
+        "isDirectory": false
+      }
+    ],
+    "compiledFileContents": {
+      "src/main.js": "export function run() { return 'ok'; }\n",
+      "config.json": "{\"runtime\":\"nodejs_22\"}\n"
+    },
+    "viewPreference": {
+      "modules": [
+        {
+          "last_accessed_views": [
+            {
+              "custom_view": {
+                "id": "990000000102"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "bulk": {
+      "data": [
+        {
+          "id": "990000000103",
+          "dependent_id": "990000000101"
+        }
+      ],
+      "info": {
+        "more_records": false,
+        "page": 1,
+        "per_page": 100
+      }
+    }
+  },
+  "modules": {
+    "list": {
+      "modules": [
+        {
+          "api_name": "Contacts",
+          "module_name": "Contacts",
+          "singular_label": "Contact",
+          "plural_label": "Contacts",
+          "id": "990000000201",
+          "generated_type": "default",
+          "deletable": false,
+          "editable": true,
+          "creatable": true,
+          "viewable": true,
+          "visible": true,
+          "api_supported": true
+        }
+      ]
+    },
+    "fields": {
+      "fields": [
+        {
+          "api_name": "Full_Name",
+          "field_label": "Full name",
+          "data_type": "text",
+          "length": 120,
+          "custom_field": false,
+          "system_mandatory": true,
+          "pick_list_values": [],
+          "id": "990000000202"
+        }
+      ]
+    },
+    "layouts": {
+      "layouts": [
+        {
+          "id": "990000000203",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": [
+            {
+              "name": "Contact information",
+              "fields": [
+                {
+                  "api_name": "Full_Name"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "relatedLists": {
+      "related_lists": [
+        {
+          "api_name": "Contact_Notes",
+          "display_label": "Notes",
+          "module": {
+            "api_name": "Notes"
+          },
+          "type": "default",
+          "visible": true,
+          "id": "990000000204"
+        }
+      ]
+    }
+  },
+  "workflows": {
+    "list": {
+      "workflow_rules": [
+        {
+          "id": "990000000301",
+          "name": "Invoice created",
+          "description": "Build an invoice after creation",
+          "module": {
+            "api_name": "Contacts",
+            "id": "990000000201"
+          },
+          "execute_when": {
+            "type": "create"
+          },
+          "status": {
+            "active": true
+          },
+          "source": "crm"
+        }
+      ],
+      "info": {
+        "more_records": false,
+        "page": 1,
+        "per_page": 200
+      }
+    },
+    "detail": {
+      "workflow_rules": [
+        {
+          "id": "990000000301",
+          "name": "Invoice created",
+          "module": {
+            "api_name": "Contacts"
+          },
+          "conditions": [
+            {
+              "criteria": {
+                "field": "Status",
+                "comparator": "equal",
+                "value": "Active"
+              },
+              "instant_actions": [
+                {
+                  "type": "functions",
+                  "id": "990000000101",
+                  "name": "build_Invoice"
+                }
+              ],
+              "scheduled_actions": []
+            }
+          ],
+          "last_executed_time": "2026-09-10T08:00:00+02:00"
+        }
+      ]
+    }
+  },
+  "schedules": {
+    "schedules": [
+      {
+        "id": "990000000401",
+        "name": "Nightly invoice check",
+        "status": "active",
+        "function": {
+          "id": "990000000101",
+          "name": "build_Invoice"
+        },
+        "frequency": {
+          "type": "daily"
+        },
+        "next_execution_time": "2026-09-12T02:00:00+02:00",
+        "last_execution_time": "2026-09-11T02:00:00+02:00"
+      }
+    ],
+    "info": {
+      "more_records": false,
+      "page": 1,
+      "per_page": 200
+    }
+  },
+  "actions": {
+    "email_notifications": {
+      "email_notifications": [
+        {
+          "id": "990000000501",
+          "name": "Invoice ready",
+          "module": {
+            "api_name": "Contacts",
+            "plural_label": "Contacts"
+          },
+          "associated": true,
+          "created_by": {
+            "name": "Example Admin"
+          },
+          "modified_by": {
+            "name": "Example Admin"
+          },
+          "template": {
+            "id": "990000000502",
+            "name": "Invoice ready"
+          },
+          "from_address": {
+            "type": "org_email",
+            "resource": {
+              "name": "Billing mailbox",
+              "email": "billing@example.invalid"
+            }
+          },
+          "recipient_count": 1,
+          "lock_status": {
+            "locked": false
+          }
+        }
+      ],
+      "info": {
+        "more_records": false
+      }
+    },
+    "field_updates": {
+      "field_updates": [
+        {
+          "id": "990000000503",
+          "name": "Mark invoice ready",
+          "module": {
+            "api_name": "Contacts",
+            "plural_label": "Contacts"
+          },
+          "associated": true,
+          "field": {
+            "api_name": "Status",
+            "field_label": "Status",
+            "data_type": "picklist"
+          },
+          "value": "Ready",
+          "type": "static",
+          "lock_status": {
+            "locked": false
+          }
+        }
+      ],
+      "info": {
+        "more_records": false
+      }
+    },
+    "tasks": {
+      "tasks": [
+        {
+          "id": "990000000504",
+          "name": "Review invoice",
+          "module": {
+            "api_name": "Contacts",
+            "plural_label": "Contacts"
+          },
+          "associated": true,
+          "notify": false,
+          "field_mappings": [
+            {
+              "field": {
+                "api_name": "Subject"
+              },
+              "type": "static",
+              "value": "Review invoice",
+              "display_value": "Review invoice"
+            }
+          ],
+          "lock_status": {
+            "locked": false
+          }
+        }
+      ],
+      "info": {
+        "more_records": false
+      }
+    },
+    "taskDetail": {
+      "tasks": [
+        {
+          "id": "990000000504",
+          "field_mappings": [
+            {
+              "field": {
+                "api_name": "Subject"
+              },
+              "type": "static",
+              "value": "Review invoice",
+              "display_value": "Review invoice"
+            },
+            {
+              "field": {
+                "api_name": "Priority"
+              },
+              "type": "static",
+              "value": "High",
+              "display_value": "High"
+            }
+          ]
+        }
+      ]
+    },
+    "webhooks": {
+      "webhooks": [
+        {
+          "id": "990000000505",
+          "name": "Notify billing",
+          "module": {
+            "api_name": "Contacts",
+            "plural_label": "Contacts"
+          },
+          "associated": true,
+          "http_method": "POST",
+          "url": "https://example.invalid/hooks/invoice",
+          "description": "Notify the billing system",
+          "lock_status": {
+            "locked": false
+          }
+        }
+      ],
+      "info": {
+        "more_records": false
+      }
+    }
+  },
+  "connections": {
+    "code": "SUCCESS",
+    "message": "Connections fetched",
+    "status": "success",
+    "connections": [
+      {
+        "name": "billing_api",
+        "displayName": "Billing API",
+        "connector": {
+          "name": "billing",
+          "displayName": "Billing"
+        },
+        "isConnected": true,
+        "createdBy": "Example Admin",
+        "scopes": ["invoices.READ"],
+        "id": "990000000601"
+      }
+    ]
+  },
+  "delugeI18n": {
+    "code": "SUCCESS",
+    "message": "Messages fetched",
+    "status": "success",
+    "i18n": {}
+  }
+}
