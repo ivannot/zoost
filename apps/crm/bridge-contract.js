@@ -6,9 +6,14 @@
  */
 
 /** @typedef {{[field: string]: unknown}} BridgeIdentity */
-/** @typedef {{cmd: string, __zoostExpected?: BridgeIdentity, [field: string]: unknown}} BridgeCommand */
-/** @typedef {{ok?: boolean, error?: unknown, status?: unknown, forbidden?: unknown,
- * note?: unknown, diag?: unknown, [field: string]: unknown}} BridgeReply */
+/** @typedef {{__zoostExpected?: BridgeIdentity} & ({cmd: "context"} | {cmd: "listFunctions"} | {cmd: "functionUiIds"} |
+ * {cmd: "functionRuntime", id: string, language?: string, period?: string, from?: string, to?: string} |
+ * {cmd: "listWorkflows"} | {cmd: "fetchWorkflow", id: string} | {cmd: "workflowUsage", id: string, from?: string, till?: string} |
+ * {cmd: "listSchedules"} | {cmd: "fetchModuleFields", apiName: string} |
+ * {cmd: "fetchOne", id: string, category?: string, source?: string, language?: string, runtime?: string} |
+ * {cmd: "pullModules"} | {cmd: "pullFailures"} | {cmd: "pullActions"} | {cmd: "pullConnections"})} BridgeCommand */
+/** @typedef {{ok: true, [field: string]: unknown} | {ok: false, error: string, status?: number, forbidden?: boolean,
+ * note?: string, diag?: unknown}} BridgeReply */
 /** @typedef {Error & {status: number, forbidden: boolean, note: unknown, diag: unknown}} BridgeReplyError */
 
 /** @param {BridgeCommand} message @param {BridgeIdentity|null} identity @returns {BridgeCommand} */

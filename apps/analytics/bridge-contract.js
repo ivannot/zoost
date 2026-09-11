@@ -6,9 +6,10 @@
  */
 
 /** @typedef {{[field: string]: unknown}} BridgeIdentity */
-/** @typedef {{cmd: string, __zoostExpected?: BridgeIdentity, [field: string]: unknown}} BridgeCommand */
-/** @typedef {{ok?: boolean, error?: unknown, status?: unknown, forbidden?: unknown,
- * note?: unknown, diag?: unknown, [field: string]: unknown}} BridgeReply */
+/** @typedef {{__zoostExpected?: BridgeIdentity} & ({cmd: 'context'} | {cmd: 'workspaceInfo'} | {cmd: 'listViews'} | {cmd: 'workspaceErd'} |
+ * {cmd: 'pullSql', ids: string[]} | {cmd: 'viewDependencies', id: string} | {cmd: 'scanDependencies', ids: string[]})} BridgeCommand */
+/** @typedef {{ok: true, [field: string]: unknown} | {ok: false, error: string, status?: number, forbidden?: boolean,
+ * note?: string, diag?: unknown}} BridgeReply */
 /** @typedef {Error & {status: number, forbidden: boolean, note: unknown, diag: unknown}} BridgeReplyError */
 
 /** @param {BridgeCommand} message @param {BridgeIdentity|null} identity @returns {BridgeCommand} */

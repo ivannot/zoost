@@ -1,0 +1,7 @@
+{
+  "crm.functions": {"type": "object", "keys": {"functions": {"type": "array", "item": {"type": "object", "keys": {"id": {"type": "string"}}}}}},
+  "crm.modules": {"type": "object", "keys": {"modules": {"type": "array", "item": {"type": "object"}}}},
+  "crm.workflow-rules": {"type": "object", "keys": {"workflow_rules": {"type": "array", "item": {"type": "object"}}, "info": {"type": "object"}}},
+  "analytics.workspace-info": {"type": "object", "keys": {"status": {"type": "string"}, "data": {"type": "object", "keys": {"datasheetJson": {"type": "object", "keys": {"DBNAME": {"type": "string"}}}}}}},
+  "analytics.view-list": {"type": "object", "keys": {"status": {"type": "string"}, "data": {"type": "object"}}}
+}

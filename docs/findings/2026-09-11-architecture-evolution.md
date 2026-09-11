@@ -7,7 +7,8 @@
 - Immutable mirror plan that forbids deletion after an incomplete census.
 - Common structured error model classified by area, retryability and UI key.
 - External configuration check and transfer runbook with no secrets in the repository.
-- Controlled read-only Zoho canary, inert without explicit environment variables.
+- Controlled read-only Zoho canary, inert without explicit environment variables and always checked
+  against the reviewed nested contract fixture (an override is allowed only at execution time).
 - Macro budgets for small, medium and large workspaces, using temporary directories.
 - Battery updated to execute the new checks.
 
@@ -28,3 +29,14 @@ benefit.
 
 Every new module declares its role, follows the contracts and passes architecture, performance and
 suite checks before it is connected to a page.
+
+## Follow-up integration
+
+The canary now has independent CRM and Analytics profiles, verifies the configured CRM org/instance
+through the same instance-scoped read and org/CSRF headers as the bridge, keeps credentials out of
+output, and compares nested response shapes against `tools/zoho-canary-contract.json` by default.
+Strict contract entries can detect added fields and every array element is checked for later shape
+variants. Analytics SQL pruning now receives the immutable mirror plan; an incomplete census cannot
+authorize a deletion, and mirror comparisons use canonical key ordering. Bridge command/reply unions
+and the error model cover the principal request variants and distinguish configuration, permission,
+authentication and upstream failures.

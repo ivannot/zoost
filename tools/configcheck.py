@@ -2,13 +2,14 @@
 """Check that external resources and their owners stay documented."""
 from pathlib import Path
 import re
+import json
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
 def check(doc: str, worker: str, wrangler: str) -> list[str]:
     required = ('GitHub Actions', 'Cloudflare Worker', 'Cloudflare KV', 'Cloudflare RUM',
-                'Chrome Web Store', 'Zoho canary', 'GH_TOKEN', 'TURNSTILE_SECRET', 'STATUS')
+                'Chrome Web Store', 'Zoho canary', 'GH_TOKEN', 'TURNSTILE_SECRET', 'STATUS', 'CF_KV_TOKEN', 'CWS_SERVICE_ACCOUNT', 'REPORT_SALT', 'ASSETS', 'CF_VERSION', 'ZOOST_CANARY_CRM_CSRF')
     missing = [item for item in required if item not in doc]
     for binding in ('STATUS', 'CF_VERSION'):
         if binding not in wrangler or binding not in worker:
@@ -22,6 +23,16 @@ def main() -> int:
     worker = (ROOT / 'site' / '_worker.js').read_text(encoding='utf-8')
     wrangler = (ROOT / 'site' / 'wrangler.jsonc').read_text(encoding='utf-8')
     missing = check(doc, worker, wrangler)
+    contract = ROOT / 'tools' / 'zoho-canary-contract.json'
+    if not contract.is_file(): missing.append('zoho canary contract file')
+    else:
+        try:
+            values = json.loads(contract.read_text(encoding='utf-8'))
+            for key in ('crm.functions', 'crm.modules', 'crm.workflow-rules',
+                        'analytics.workspace-info', 'analytics.view-list'):
+                if key not in values: missing.append(f'zoho canary contract {key}')
+        except (OSError, ValueError):
+            missing.append('invalid zoho canary contract')
     if '--self-test' in sys.argv:
         assert not missing
         assert any('STATUS' in item for item in check(doc.replace('STATUS', 'MISSING'), worker, wrangler))

@@ -72,6 +72,17 @@ test('mirror plan output is immutable', () => {
   assert.throws(() => plan.creates.push('y'));
 });
 
+test('mirror plan treats object key order as the same content', () => {
+  const { buildMirrorPlan } = load('analytics/mirror-plan.js');
+  const plan = buildMirrorPlan(
+    { file: { name: 'query', id: 7 } },
+    { file: { id: 7, name: 'query' } },
+    { complete: true },
+  );
+  assert.deepEqual([...plan.updates], []);
+  assert.deepEqual([...plan.keeps], ['file']);
+});
+
 test('structured error classification marks authentication as retryable', () => {
   const { classifyZoostError } = load('crm/error-model.js');
   const error = classifyZoostError(new Error('INVALID_CSRF_TOKEN'), 'connections');
@@ -130,6 +141,32 @@ test('pull controller closes the lifecycle on success and failure', () => {
 test('an HTTP 500 path containing an id starting with 401 is not authentication', () => {
   const { classifyZoostError } = load('analytics/error-model.js');
   const error = classifyZoostError({ status: 500, message: '500 on /crm/functions/401234' }, 'functions');
-  assert.equal(error.code, 'internal');
+  assert.equal(error.code, 'upstream-contract');
+  assert.equal(error.retryable, true);
+});
+
+test('structured errors distinguish configuration from upstream failures', () => {
+  const { classifyZoostError } = load('crm/error-model.js');
+  const error = classifyZoostError(new Error('AI provider is not configured'), 'ai');
+  assert.equal(error.code, 'configuration');
   assert.equal(error.retryable, false);
+});
+
+test('Zoho canary detects a nested contract type change', async () => {
+  const { shape, diffShape } = await import('../tools/zoho-canary.mjs');
+  const expected = shape({ status: 'success', data: { count: 1 } });
+  const changed = shape({ status: 'success', data: { count: '1' } });
+  assert.deepEqual(diffShape(changed, expected), ['$.data.count: expected number, got string']);
+});
+
+test('Zoho canary can enforce strict additions and later array variants', async () => {
+  const { shape, diffShape } = await import('../tools/zoho-canary.mjs');
+  const expected = { type: 'object', strict: true, keys: {
+    rows: { type: 'array', items: [{ type: 'object', keys: { id: { type: 'number' } } },
+      { type: 'object', keys: { id: { type: 'number' } } }] },
+  } };
+  const actual = shape({ rows: [{ id: 1 }, { id: '2' }], extra: true });
+  const differences = diffShape(actual, expected);
+  assert.ok(differences.includes('$.extra: unexpected field'));
+  assert.ok(differences.includes('$.rows[1].id: expected number, got string'));
 });

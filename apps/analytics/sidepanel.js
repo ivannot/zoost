@@ -1539,7 +1539,7 @@ async function writePartialSnapshot(op, next) {
  *  was no map left to even say which were residue. Runs only after the new files and the new index
  *  are written; a removal that fails stays for the next pull, which derives the same keep-set and
  *  retries for free. */
-async function pruneSql(index, op, census) {
+async function pruneSql(index, op, census, mirrorPlan) {
   // **What the workspace has, not what this pull could read.** The keep-set was the new index alone,
   // and a query table is only in that index if its SQL came back *this time* - so a workspace where
   // 60 of 200 queries answered 429 lost 60 previously-good .sql files in one pull, in the folder the
@@ -1583,7 +1583,8 @@ async function pruneSql(index, op, census) {
   const unreadLive = census.map((v) => String(v.id)).filter((id) => !freshIds.has(id)).map((id) => `-${id}.sql`);
   let failed = 0;
   for await (const p of walk(op.root)) {
-    if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p) || unreadLive.some((sfx) => p.endsWith(sfx))) continue;
+    if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p) || unreadLive.some((sfx) => p.endsWith(sfx))
+        || (mirrorPlan && !mirrorPlan.deletes.includes(p))) continue;
     try { await op.remove(p); }
     catch (e) {
       if ((e && e.message) === WS_MOVED) throw e;
@@ -1603,6 +1604,8 @@ async function writeToDisk(info, op, next) {
   // instead of presenting files from two different moments as one. An interrupted pull is repaired
   // by running Pull all again, and the message says exactly that.
   const { views, folders, schema, relations, sqls, deps, pullFailed } = next;
+  let previousSqlIndex = {};
+  try { previousSqlIndex = await readJson('sql/index.json', {}, op); } catch (_) {}
   // Everything below this line is disk, and disk was the one stage of a pull that said nothing. The
   // reading stages each announce themselves and count; then the last one closed with «Reading
   // lineage... 50 / 50» and that line sat there through three JSON files, one .sql per query table
@@ -1632,8 +1635,17 @@ async function writeToDisk(info, op, next) {
       if (++written % 10 === 0 || written === total) op.say(`Writing SQL files\u2026 ${written} / ${total}`, 'busy');
     }
     await writeJson('sql/index.json', index, op);
+    const previousEntries = previousSqlIndex && typeof previousSqlIndex === 'object'
+      ? Object.values(previousSqlIndex).filter((entry) => entry && typeof entry.stem === 'string') : [];
+    const previousFiles = Object.fromEntries(previousEntries.map((entry) =>
+      [`sql/${entry.stem}.sql`, entry]));
+    const nextFiles = Object.fromEntries(Object.values(index).map((entry) =>
+      [`sql/${entry.stem}.sql`, entry]));
+    const mirrorPlan = typeof buildMirrorPlan === 'function'
+      ? buildMirrorPlan(previousFiles, nextFiles, { complete: pullFailed.length === 0 }) : null;
+    if (mirrorPlan && typeof validateMirrorPlan === 'function') validateMirrorPlan(mirrorPlan);
     op.say('Removing what the workspace no longer has\u2026', 'busy');
-    next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'));
+    next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'), mirrorPlan);
     op.say('Finishing the mirror\u2026', 'busy');
     await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
   } catch (e) {

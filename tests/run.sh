@@ -24,7 +24,18 @@
 set -euo pipefail
 PYOUT=$(mktemp)
 NODEOUT=$(mktemp)
-trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
+TREE_BEFORE=$(git status --porcelain=v1)
+cleanup() {
+  rm -f "$PYOUT" "$NODEOUT"
+  TREE_AFTER=$(git status --porcelain=v1)
+  if [ "$TREE_AFTER" != "$TREE_BEFORE" ]; then
+    echo "  test battery changed the checkout; refusing a green result" >&2
+    diff -u <(printf '%s\n' "$TREE_BEFORE") <(printf '%s\n' "$TREE_AFTER") >&2 || true
+    trap - EXIT
+    exit 1
+  fi
+}
+trap cleanup EXIT
 # **What runs, exactly - not a floor under it.** These were `-ge` bounds, and a bound with slack in
 # it stops measuring the thing it is named for: 939 node cases ran against a floor of 922 and 402
 # python against 395, so seventeen and seven could have stopped running with the battery still green.
@@ -34,7 +45,7 @@ trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1134
+NODE_EXPECTED=1139
 PY_EXPECTED=419
 cd "$(dirname "$0")/.."
 

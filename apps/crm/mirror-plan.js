@@ -1,5 +1,12 @@
 // @ts-check
 /* Immutable mirror plan. Deletions are legal only after a complete census. */
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 function buildMirrorPlan(previous, next, options = {}) {
   const oldMap = previous && typeof previous === 'object' ? previous : {};
   const newMap = next && typeof next === 'object' ? next : {};
@@ -7,7 +14,7 @@ function buildMirrorPlan(previous, next, options = {}) {
   const creates = [], updates = [], keeps = [], deletes = [];
   for (const key of Object.keys(newMap).sort()) {
     if (!(key in oldMap)) creates.push(key);
-    else if (JSON.stringify(oldMap[key]) !== JSON.stringify(newMap[key])) updates.push(key);
+    else if (stableStringify(oldMap[key]) !== stableStringify(newMap[key])) updates.push(key);
     else keeps.push(key);
   }
   if (complete) for (const key of Object.keys(oldMap).sort()) if (!(key in newMap)) deletes.push(key);

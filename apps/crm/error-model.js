@@ -11,6 +11,8 @@ function classifyZoostError(error, area = 'unknown') {
   let code = 'internal', retryable = false;
   if ((error && error.status === 401) || text.includes('csrf') || /\b401\b/.test(text) || text.includes('unauthor')) { code = 'authentication'; retryable = true; }
   else if ((error && (error.status === 403 || error.forbidden)) || text.includes('permission') || text.includes('forbidden') || text.includes('denied')) code = 'permission';
+  else if ((error && (error.status === 429 || error.status >= 500)) || text.includes('network') || text.includes('timeout') || text.includes('fetch failed')) { code = 'upstream-contract'; retryable = true; }
+  else if (text.includes('configuration') || text.includes('missing environment') || text.includes('not configured')) code = 'configuration';
   else if (text.includes('partial') || text.includes('incomplete')) code = 'partial-response';
   else if (text.includes('workspace') && text.includes('mismatch')) code = 'workspace-mismatch';
   else if (text.includes('cancel')) code = 'cancelled';

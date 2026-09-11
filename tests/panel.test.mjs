@@ -11209,6 +11209,17 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     assert.match(pa, /cleanupFailed/, 'pullAll overwrites the cleanup warning with its final success line');
   });
 
+  test('analytics: an incomplete mirror plan cannot authorize SQL deletion', async () => {
+    const removed = [];
+    const ctx = { status() {}, WS_MOVED: 'moved',
+      op: { root: {}, current: () => true, remove: async (p) => removed.push(p) },
+      walk: async function* () { yield 'sql/stale.sql'; }, Set, Object, RegExp };
+    vm.createContext(ctx);
+    vm.runInContext(sliceApp('analytics', 'pruneSql'), ctx);
+    await vm.runInContext('pruneSql', ctx)({}, ctx.op, [], { complete: false, deletes: [] });
+    assert.deepEqual(removed, [], 'prune bypassed the incomplete mirror plan and removed a file');
+  });
+
   test('the two privacy pages describe the same graph retention', () => {
     const en = read('site/privacy.html'), it = read('site/it/privacy.html');
     assert.ok(/window consumes its own copy the moment it opens/.test(en),
