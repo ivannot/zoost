@@ -6,8 +6,7 @@
     ],
     "ports": ["bridge-contract.js"],
     "application": [
-      "pull-controller.js", "pull-lifecycle.js", "error-model.js", "workspace-controller.js", "preview-controller.js",
-      "history-controller.js", "workspace.js", "navigation.js"
+      "pull-controller.js", "pull-lifecycle.js", "error-model.js", "workspace.js", "navigation.js"
     ],
     "adapters": [
       "content-bridge.js", "filesystem-adapter.js", "idb.js", "keyvault.js",
@@ -18,11 +17,13 @@
       "highlight.js", "report.js", "reportshell.js", "export.js", "health.js", "ai.js",
       "product-help.js", "sample-org.js", "automation.js", "connections.js", "modules.js",
       "preview-model.js", "tabs.js", "export-scope.js", "analytics-sql.js"
+      , "workspace-controller.js", "preview-controller.js", "history-controller.js"
     ],
     "bootstrap": []
   },
   "forbidden": {
     "domain": ["document.", "window.", "chrome.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem", "location."],
-    "ports": ["document.", "window.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem"]
+    "ports": ["document.", "window.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem"],
+    "application": ["document.", "window.", "chrome.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem", "location."]
   }
 }

@@ -18,6 +18,7 @@
  * noTabMessage: string,
  * sleep: (milliseconds: number) => Promise<unknown>,
  * command: (message: CrmBridgeCommand, identity: Record<string, unknown>|null) => CrmBridgeCommand,
+ * validateReply?: (message: CrmBridgeCommand, reply: unknown) => unknown,
  * context: (reply: unknown) => any,
  * log?: (message: string) => void,
  * }} CrmZohoBridgeOptions */
@@ -141,7 +142,9 @@ function createCrmZohoBridge(options) {
     const target = found === null ? {} : { frameId: found };
     const expected = message && message.cmd !== 'context' && bound
       ? { org: bound.org, origin: bound.base, instance: bound.instance } : null;
-    return options.chromeApi.tabs.sendMessage(id, options.command(message, expected), target);
+    const command = options.command(message, expected);
+    const reply = await options.chromeApi.tabs.sendMessage(id, command, target);
+    return options.validateReply ? options.validateReply(command, reply) : reply;
   }
 
   async function getContext() {

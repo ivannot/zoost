@@ -8,9 +8,16 @@
 /** @typedef {{[field: string]: unknown}} BridgeIdentity */
 /** @typedef {{__zoostExpected?: BridgeIdentity} & ({cmd: 'context'} | {cmd: 'workspaceInfo'} | {cmd: 'listViews'} | {cmd: 'workspaceErd'} |
  * {cmd: 'pullSql', ids: string[]} | {cmd: 'viewDependencies', id: string} | {cmd: 'scanDependencies', ids: string[]})} BridgeCommand */
-/** @typedef {{ok: true, [field: string]: unknown} | {ok: false, error: string, status?: number, forbidden?: boolean,
- * note?: string, diag?: unknown}} BridgeReply */
-/** @typedef {Error & {status: number, forbidden: boolean, note: unknown, diag: unknown}} BridgeReplyError */
+/** @typedef {{ok: true, origin: string, workspace: string, name?: string}} AnalyticsContextReply */
+/** @typedef {{ok: true, workspace: string, folders: object[], views: object[]}} AnalyticsViewsReply */
+/** @typedef {{ok: true, workspace: string, tables: Record<string, object>, relations: object[], count: number}} AnalyticsErdReply */
+/** @typedef {{ok: true, sql: Record<string, object>, failed: object[]}} AnalyticsSqlReply */
+/** @typedef {{ok: true, id: string, parents: object[], children: object[], dashboards: string[]}} AnalyticsDependenciesReply */
+/** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, note?: string, diag?: unknown,
+ * code?: string, detail?: unknown}} BridgeErrorReply */
+/** @typedef {AnalyticsContextReply | AnalyticsViewsReply | AnalyticsErdReply | AnalyticsSqlReply |
+ * AnalyticsDependenciesReply | BridgeErrorReply} BridgeReply */
+/** @typedef {Error & {status: number, forbidden: boolean, note: unknown, diag: unknown, upstreamCode: string|null, detail: unknown}} BridgeReplyError */
 
 /** @param {BridgeCommand} message @param {BridgeIdentity|null} identity @returns {BridgeCommand} */
 function bridgeCommand(message, identity) {
@@ -25,14 +32,50 @@ function bridgeContext(reply) {
     ? /** @type {BridgeReply} */ (reply) : null;
 }
 
+/**
+ * Validate the common bridge envelope at the message boundary. Payload fields stay specific to the
+ * command in the typedefs above; this runtime check catches a missing envelope without pretending
+ * that arbitrary Zoho JSON is a valid typed payload.
+ * @param {unknown} command @param {unknown} reply @returns {BridgeReply}
+ */
+function validateBridgeReply(command, reply) {
+  if (!reply || typeof reply !== 'object') throw new Error('bridge returned no response');
+  const r = /** @type {BridgeReply} */ (reply);
+  if (r.ok === false && typeof r.error !== 'string') throw new Error('bridge returned an invalid error response');
+  if (r.ok !== true && r.ok !== false) throw new Error('bridge returned an invalid response envelope');
+  if (r.ok === true && command && typeof command === 'object') {
+    const cmd = /** @type {{cmd?: string}} */ (command).cmd;
+    const required = {
+      workspaceInfo: ['workspace', 'origin'], listViews: ['views', 'folders'], workspaceErd: ['tables', 'relations'],
+      pullSql: ['sql', 'failed'], viewDependencies: ['parents', 'children', 'dashboards'], scanDependencies: ['deps', 'failed'],
+    }[cmd];
+    if (required && required.some((key) => !(key in r))) throw new Error(`bridge ${cmd} response is incomplete`);
+    const types = {
+      context: { origin: 'string', workspace: 'string' }, workspaceInfo: { workspace: 'string', origin: 'string' },
+      listViews: { views: 'array', folders: 'array' }, workspaceErd: { tables: 'object', relations: 'array' },
+      pullSql: { sql: 'object', failed: 'array' }, viewDependencies: { parents: 'array', children: 'array', dashboards: 'array' },
+      scanDependencies: { deps: 'object', failed: 'array' },
+    }[cmd];
+    if (types) for (const [key, type] of Object.entries(types)) {
+      const value = r[key];
+      if ((type === 'array' && !Array.isArray(value)) || (type === 'object' && (!value || typeof value !== 'object' || Array.isArray(value)))
+          || (type !== 'array' && type !== 'object' && typeof value !== type)) throw new Error(`bridge ${cmd} response has invalid ${key}`);
+    }
+  }
+  return r;
+}
+
 /** @param {BridgeReply|null|undefined} reply @param {unknown} fallback @param {string} stale
  * @returns {BridgeReplyError} */
 function bridgeResponseError(reply, fallback, stale) {
-  const error = /** @type {BridgeReplyError} */ (new Error(String(reply ? (reply.error || fallback) : stale)));
-  error.status = Number(reply && reply.status) || 0;
-  error.forbidden = !!(reply && reply.forbidden);
-  error.note = (reply && reply.note) || null;
-  error.diag = (reply && reply.diag) || null;
+  const negative = reply && reply.ok !== true ? /** @type {BridgeErrorReply} */ (reply) : null;
+  const error = /** @type {BridgeReplyError} */ (new Error(String(negative ? (negative.error || fallback) : stale)));
+  error.status = Number(negative && negative.status) || 0;
+  error.forbidden = !!(negative && negative.forbidden);
+  error.note = (negative && negative.note) || null;
+  error.diag = (negative && negative.diag) || null;
+  error.upstreamCode = (negative && negative.code) || null;
+  error.detail = (negative && negative.detail) || null;
   if (typeof classifyZoostError === 'function') {
     const classified = classifyZoostError(error, 'bridge');
     for (const key of ['code', 'area', 'severity', 'retryable', 'uiKey']) error[key] = classified[key];

@@ -61,6 +61,15 @@ function aiShowLock(on) {
  * passed through untouched rather than dressed up.
  */
 function friendlyError(e) {
+  const structured = {
+    'upstream-unavailable': 'Zoho is temporarily unavailable - try again in a moment.',
+    'rate-limited': 'Zoho is rate-limiting requests - wait a moment, then try again.',
+    'upstream-contract': 'Zoho returned data this version does not understand - no mirror change was made.',
+    authentication: 'Zoho rejected the session - reload the Zoho tab, then try again.',
+    permission: 'Zoho refused this operation for the current role.',
+    configuration: 'This feature is not configured - open Settings to complete it.',
+  };
+  if (e && structured[e.uiKey]) return structured[e.uiKey];
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '

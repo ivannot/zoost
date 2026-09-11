@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 function load(file) {
   const context = {};
@@ -117,6 +119,29 @@ test('bridge errors classify forbidden replies without circular serialization', 
   assert.doesNotThrow(() => JSON.stringify(error));
 });
 
+test('bridge errors preserve an upstream contract code and detail', () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../apps/analytics/error-model.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps/analytics/bridge-contract.js', import.meta.url), 'utf8'), context);
+  const error = context.bridgeResponseError({ ok: false, error: 'shape changed', code: 'UPSTREAM_CONTRACT', detail: { field: 'id' } }, 'fallback', 'stale');
+  assert.equal(error.code, 'upstream-contract');
+  assert.equal(error.upstreamCode, 'UPSTREAM_CONTRACT');
+  assert.deepEqual(error.detail, { field: 'id' });
+});
+
+test('a mirror writer refuses a validator that returns false', () => {
+  const source = readFileSync(new URL('../apps/analytics/sidepanel.js', import.meta.url), 'utf8');
+  assert.match(source, /if \(validateMirrorPlan\(mirrorPlan\) !== true\) throw/);
+});
+
+test('bridge reply validation rejects a payload with the wrong container type', () => {
+  const analytics = load('analytics/bridge-contract.js');
+  assert.throws(() => analytics.validateBridgeReply({ cmd: 'listViews' }, { ok: true, views: {}, folders: [] }), /invalid views/);
+  const crm = load('crm/bridge-contract.js');
+  assert.throws(() => crm.validateBridgeReply({ cmd: 'listFunctions' }, { ok: true, entries: {}, total: 1 }), /invalid entries/);
+});
+
 test('pull controller closes the lifecycle on success and failure', () => {
   const context = {};
   vm.createContext(context);
@@ -130,10 +155,15 @@ test('pull controller closes the lifecycle on success and failure', () => {
   };
   const controller = context.createCrmPullController(options);
   controller.setPullBusy(true);
+  controller.phase('planning');
+  controller.phase('writing');
+  controller.phase('refreshing');
+  controller.finishPull(false);
   controller.setPullBusy(false);
   assert.equal(controller.pullLifecycle().state, 'completed');
   controller.setPullBusy(true);
   kind = 'bad';
+  controller.failPull();
   controller.setPullBusy(false);
   assert.equal(controller.pullLifecycle().state, 'failed');
 });
@@ -141,8 +171,14 @@ test('pull controller closes the lifecycle on success and failure', () => {
 test('an HTTP 500 path containing an id starting with 401 is not authentication', () => {
   const { classifyZoostError } = load('analytics/error-model.js');
   const error = classifyZoostError({ status: 500, message: '500 on /crm/functions/401234' }, 'functions');
-  assert.equal(error.code, 'upstream-contract');
+  assert.equal(error.code, 'upstream-unavailable');
   assert.equal(error.retryable, true);
+});
+
+test('structured errors distinguish rate limits and contract violations', () => {
+  const { classifyZoostError } = load('crm/error-model.js');
+  assert.equal(classifyZoostError({ status: 429, message: 'Too many requests' }, 'pull').code, 'rate-limited');
+  assert.equal(classifyZoostError({ upstreamContract: true, message: 'response changed' }, 'pull').code, 'upstream-contract');
 });
 
 test('structured errors distinguish configuration from upstream failures', () => {
@@ -169,4 +205,52 @@ test('Zoho canary can enforce strict additions and later array variants', async 
   const differences = diffShape(actual, expected);
   assert.ok(differences.includes('$.extra: unexpected field'));
   assert.ok(differences.includes('$.rows[1].id: expected number, got string'));
+});
+
+test('the shipped canary contract accepts the reviewed raw probe fixtures', async () => {
+  const { diffResponse, loadContracts } = await import('../tools/zoho-canary.mjs');
+  const crm = JSON.parse(readFileSync(new URL('../fixtures/crm/raw-pull.json', import.meta.url)));
+  const analytics = JSON.parse(readFileSync(new URL('../fixtures/analytics/raw-pull.json', import.meta.url)));
+  const responses = {
+    'crm.functions': { functions: [crm.functions.list, crm.functions.compiledList] },
+    'crm.modules': crm.modules.list,
+    'crm.workflow-rules': crm.workflows.list,
+    'analytics.workspace-info': { status: 'success', data: { datasheetJson: { DBNAME: analytics.name } } },
+    'analytics.view-list': analytics.viewList,
+  };
+  const contracts = loadContracts();
+  for (const [route, body] of Object.entries(responses)) assert.deepEqual(diffResponse(body, contracts[route]), [], route);
+});
+
+test('the default canary contract catches a later array type change and missing protocol label', async () => {
+  const { diffResponse, loadContracts } = await import('../tools/zoho-canary.mjs');
+  const crm = JSON.parse(readFileSync(new URL('../fixtures/crm/raw-pull.json', import.meta.url)));
+  const analytics = JSON.parse(readFileSync(new URL('../fixtures/analytics/raw-pull.json', import.meta.url)));
+  const functions = { functions: [crm.functions.list, { ...crm.functions.compiledList, id: 123 }] };
+  const changedViews = { ...analytics.viewList, data: { ...analytics.viewList.data,
+    viewListKey: analytics.viewList.data.viewListKey.filter((key) => key !== 'VIEW_NAME') } };
+  const contracts = loadContracts();
+  const functionDiff = diffResponse(functions, contracts['crm.functions']);
+  const viewDiff = diffResponse(changedViews, contracts['analytics.view-list']);
+  assert.ok(functionDiff.some((line) => line.includes('$.functions[1].id: expected string, got number')));
+  assert.ok(viewDiff.some((line) => line.includes('missing required value "VIEW_NAME"')));
+});
+
+test('canary run records are sanitized and distinguish never-run from a recent success', async () => {
+  const { checkRunRecord, writeRunRecord, loadContracts } = await import('../tools/zoho-canary.mjs');
+  const root = mkdtempSync(join(tmpdir(), 'zoost-canary-record-'));
+  try {
+    const file = join(root, 'last-run.json');
+    assert.throws(() => checkRunRecord(new URL('../tools/zoho-canary-status.json', import.meta.url), 30), /never completed/);
+    writeRunRecord(file, [
+      { app: 'crm', results: [{ name: 'functions', status: 200 }] },
+      { app: 'analytics', results: [{ name: 'view-list', status: 200 }] },
+    ], loadContracts());
+    const saved = JSON.parse(readFileSync(file, 'utf8'));
+    assert.equal(checkRunRecord(file, 30).status, 'success');
+    assert.equal(saved.status, 'success');
+    assert.equal(saved.profiles.length, 2);
+    assert.equal(JSON.stringify(saved).includes('session'), false);
+    assert.equal(JSON.stringify(saved).includes('org'), false);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

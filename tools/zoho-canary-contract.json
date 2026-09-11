@@ -1,7 +1,98 @@
 {
-  "crm.functions": {"type": "object", "keys": {"functions": {"type": "array", "item": {"type": "object", "keys": {"id": {"type": "string"}}}}}},
-  "crm.modules": {"type": "object", "keys": {"modules": {"type": "array", "item": {"type": "object"}}}},
-  "crm.workflow-rules": {"type": "object", "keys": {"workflow_rules": {"type": "array", "item": {"type": "object"}}, "info": {"type": "object"}}},
-  "analytics.workspace-info": {"type": "object", "keys": {"status": {"type": "string"}, "data": {"type": "object", "keys": {"datasheetJson": {"type": "object", "keys": {"DBNAME": {"type": "string"}}}}}}},
-  "analytics.view-list": {"type": "object", "keys": {"status": {"type": "string"}, "data": {"type": "object"}}}
+  "version": 2,
+  "crm.functions": {
+    "type": "object", "strict": true,
+    "keys": {
+      "functions": { "type": "array", "nonEmpty": true,
+        "item": { "type": "object", "strict": true,
+          "keys": {
+            "id": { "type": "string" }, "api_name": { "type": "string" },
+            "name": { "type": "string" }, "display_name": { "type": "string" },
+            "category": { "type": "string" }, "source": { "type": "string" },
+            "language": { "type": "string" }, "updatedTime": { "type": "number" },
+            "workflow": { "type": "object", "strict": true, "keys": { "namespace": { "type": "string" } } },
+            "rest_api": { "type": "array" }, "associated_place": { "type": "array" }
+          },
+          "optional": { "runtime": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "crm.modules": {
+    "type": "object", "strict": true,
+    "keys": {
+      "modules": { "type": "array", "nonEmpty": true,
+        "item": { "type": "object", "strict": true,
+          "keys": {
+            "api_name": { "type": "string" }, "module_name": { "type": "string" },
+            "singular_label": { "type": "string" }, "plural_label": { "type": "string" },
+            "id": { "type": "string" }, "generated_type": { "type": "string" },
+            "deletable": { "type": "boolean" }, "editable": { "type": "boolean" },
+            "creatable": { "type": "boolean" }, "viewable": { "type": "boolean" },
+            "visible": { "type": "boolean" }, "api_supported": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  },
+  "crm.workflow-rules": {
+    "type": "object", "strict": true,
+    "keys": {
+      "workflow_rules": { "type": "array", "nonEmpty": true,
+        "item": { "type": "object", "strict": true,
+          "keys": {
+            "id": { "type": "string" }, "name": { "type": "string" },
+            "description": { "type": "string" }, "module": { "type": "object", "strict": true,
+              "keys": { "api_name": { "type": "string" }, "id": { "type": "string" } } },
+            "execute_when": { "type": "object", "strict": true, "keys": { "type": { "type": "string" } } },
+            "status": { "type": "object", "strict": true, "keys": { "active": { "type": "boolean" } } },
+            "source": { "type": "string" }
+          }
+        }
+      },
+      "info": { "type": "object", "strict": true, "keys": {
+        "more_records": { "type": "boolean" }, "page": { "type": "number" }, "per_page": { "type": "number" }
+      } }
+    }
+  },
+  "analytics.workspace-info": {
+    "type": "object", "strict": true,
+    "keys": { "status": { "type": "string" }, "data": { "type": "object", "strict": true,
+      "keys": { "datasheetJson": { "type": "object", "strict": true, "keys": { "DBNAME": { "type": "string" } } } }
+    } }
+  },
+  "analytics.view-list": {
+    "type": "object", "strict": true,
+    "keys": { "status": { "type": "string" }, "data": { "type": "object", "strict": true,
+      "keys": {
+        "viewListKey": { "type": "array", "nonEmpty": true, "exactLength": 28, "item": { "type": "string" }, "requiredValues": [
+          "VIEW_ID", "VIEW_NAME", "VIEW_TYPE", "PARENT_ID", "VIEW_DESC", "FOLD_ID", "VIEW_CREATE_TIME",
+          "CREATED_BY", "LAST_DATA_MODIFY", "LAST_DATA_MODIFY_BY", "LAST_DESIGN_MODIFY", "LAST_DESIGN_MODIFY_BY",
+          "ACT_VIEW_MODTIME", "IS_FAVOURITE", "OWNER_NAME", "IS_LIVE", "TAGS", "IS_SYSTEM_TABLE"
+        ] },
+        "viewListValues": { "type": "array", "nonEmpty": true, "item": {
+          "type": "array", "exactLength": 28,
+          "items": [
+            { "type": "string" }, { "type": "string" }, { "type": "string" },
+            { "types": ["null", "string"] }, { "type": "string" }, { "type": "string" }, { "type": "string" },
+            { "type": "boolean" }, { "type": "string" }, { "type": "string" }, { "type": "number" },
+            { "type": "string" }, { "type": "string" }, { "type": "string" }, { "type": "string" },
+            { "type": "number" }, { "type": "string" }, { "type": "string" }, { "type": "string" },
+            { "type": "boolean" }, { "type": "null" }, { "type": "boolean" }, { "type": "boolean" },
+            { "type": "string" }, { "type": "boolean" }, { "type": "array" }, { "type": "boolean" }, { "type": "array" }
+          ]
+        } },
+        "folderListKey": { "type": "array", "nonEmpty": true, "exactLength": 9, "item": { "type": "string" }, "requiredValues": [
+          "FOLDER_ID", "FOLD_NAME", "FOLD_DESC", "FOL_PARID", "ISDEFAULT"
+        ] },
+        "folderListValues": { "type": "array", "nonEmpty": true, "item": {
+          "type": "array", "exactLength": 9,
+          "items": [
+            { "type": "string" }, { "type": "string" }, { "type": "string" }, { "type": "number" },
+            { "type": "string" }, { "type": "string" }, { "type": "string" }, { "type": "string" }, { "type": "boolean" }
+          ]
+        } }
+      }
+    } }
+  }
 }

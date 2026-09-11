@@ -850,6 +850,7 @@ const crmZohoBridge = createCrmZohoBridge({
   noTabMessage: MSG.noTab,
   sleep,
   command: bridgeCommand,
+  validateReply: validateBridgeReply,
   context: bridgeContext,
   log: (message) => console.info(message),
 });
@@ -2743,6 +2744,10 @@ async function pullAll() {
       await noteAccess('functions', null, op, false);   // asked and answered; nothing was stored
       endPull(); return;
     }
+    // Read the previous manifest once, before any write replaces it.  It is the baseline for the
+    // plan and must not be reconstructed from treeData, which may belong to another workspace.
+    let prev = [];
+    try { const previousIndex = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(previousIndex)) prev = previousIndex; } catch (_) {}
     const merged = await mergeUnanswered(r.entries, r.unanswered, op);
     if (!op.current()) return;
     // Which record the newer Zoho interface calls each of these functions. Optional by
@@ -2758,6 +2763,28 @@ async function pullAll() {
     if (!op.current()) return;
     await carryUiIds(merged, (ui && ui.map) || {}, op);
     if (!op.current()) return;
+    // Build the deletion authority from the old and new file manifests before replacing the
+    // index.  The list is a census only when every language answered; a partial answer may keep
+    // old rows, but it may not authorise removal of anything.  Existing compiled projects are
+    // carried by id so their individual files remain protected until a fresh project replaces
+    // them.
+    const previousById = new Map(prev.map((e) => [String(e.id), e]));
+    const mirrorPaths = (e) => {
+      const known = Array.isArray(e && e.mirrorFiles) ? e.mirrorFiles : [];
+      if (known.length) return known;
+      const folder = sanitize(e && (e.namespace || e.category || 'misc'));
+      const stem = sanitize(e && (e.api_name || e.name || e.id));
+      const primary = fnDefaultPath(folder, stem, e && e.language);
+      return [primary, fnMetaPath(folder, stem)];
+    };
+    const previousFiles = Object.fromEntries(prev.flatMap((e) => mirrorPaths(e)).map((p) => [p, { path: p }]));
+    const nextFiles = Object.fromEntries(merged.flatMap((e) => {
+      const old = previousById.get(String(e.id));
+      return mirrorPaths(old && old.mirrorFiles ? old : e);
+    }).map((p) => [p, { path: p }]));
+    const mirrorPlan = buildMirrorPlan(previousFiles, nextFiles,
+      { complete: !r.capped && !(r.unanswered || []).length });
+    if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
     await op.write('functions/index.json', JSON.stringify(merged, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(merged.map((e) => String(e.id))); const rmF = [];
@@ -2767,7 +2794,9 @@ async function pullAll() {
     }
     // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
     // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
-    const removed = await removeFunctionPaths(rmF, op);
+    // A missing or partial plan cannot silently turn the folder walk into a destructive action.
+    const plannedRemovals = rmF.filter((p) => mirrorPlan.deletes.includes(p));
+    const removed = await removeFunctionPaths(plannedRemovals, op);
     if (removed.moved) return;
     const prunedF = removed.removed.filter((p) => p.endsWith('.meta.json')).length;
     // If you were reading one of the functions the pull has just pruned, the pane is showing

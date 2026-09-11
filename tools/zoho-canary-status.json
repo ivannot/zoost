@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "never-run",
+  "cadenceDays": 30,
+  "lastSuccess": null,
+  "profiles": ["crm", "analytics"],
+  "note": "This tracked marker is deliberately not evidence of a live run. Replace it with the sanitized output of zoho-canary.mjs --record after both profiles complete."
+}

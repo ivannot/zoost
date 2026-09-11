@@ -36,7 +36,7 @@ beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 bridgeCommand	43c239bf9acf	43c239bf9acf	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
-bridgeResponseError	30f09a863146	30f09a863146	identical
+bridgeResponseError	07512ae08e87	07512ae08e87	identical
 buildChips	9091c2364889	9091c2364889	identical
 buildExportHtml	7154ef8959a7	e1a5052dd09d	divergent
 buildExportMarkdown	89b53926d677	f5d0fbdf2c0e	divergent
@@ -47,7 +47,7 @@ buildReport	596a7edd9441	596a7edd9441	identical
 buildSchemaGraph	fbecf3b254ed	d28416eec22e	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
-classifyZoostError	cafb72eefc6a	cafb72eefc6a	identical
+classifyZoostError	5acbca3dc13a	5acbca3dc13a	identical
 clearFocus	e0db54dca347	e0db54dca347	identical
 closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	ce1a122bff29	ce1a122bff29	identical
@@ -133,7 +133,7 @@ escReportA	46ee492a3bf3	46ee492a3bf3	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	a5e28e42df49	33abab42f44e	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
-friendlyError	03ec3f39bd0d	03ec3f39bd0d	identical
+friendlyError	edab5c06776e	edab5c06776e	identical
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	50e566ea6668	9db12f0021b7	divergent
 graphStat	1d87798be903	0fc8a3fd40ae	divergent
@@ -209,7 +209,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	1a97be65e7ed	bd1051a4299b	divergent
+pullAll	3649ba2ae488	e34456fe2e27	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
 rebase	6611b6610c49	6611b6610c49	identical
@@ -255,7 +255,7 @@ select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	f1130b960701	f1130b960701	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
 setFocus	f2a33f350182	9be5357f9740	divergent
-setPullBusy	6f5dd48d8c5e	076bb29d0df9	divergent
+setPullBusy	6f5dd48d8c5e	ca2a00c862b9	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
@@ -283,7 +283,8 @@ updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent
-validateMirrorPlan	415d1959d63e	415d1959d63e	identical
+validateBridgeReply	bff280400de3	73776929b2eb	divergent
+validateMirrorPlan	2afd82c4cab9	2afd82c4cab9	identical
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical
 wasOwn	137c94652f18	137c94652f18	identical
 wireAsideFold	f549a11bd896	f549a11bd896	identical

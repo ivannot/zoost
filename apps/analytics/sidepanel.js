@@ -907,6 +907,7 @@ async function toBridge(msg) {
   const r = await chrome.tabs.sendMessage(id, bridgeCommand(msg, expected),
                                           afid === null ? {} : { frameId: afid });
   if (!r) throw new Error(MSG.staleBridge);
+  validateBridgeReply(msg, r);
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
   // bridge is thrown away one line after crossing the boundary - which is how "your role does not
   // allow this" would end up displayed as a bare status code again.
@@ -1266,13 +1267,15 @@ function setPullBusy(on) {
   }
   pullDepth = Math.max(0, pullDepth + (on ? 1 : -1));
   pullBusy = pullDepth > 0;
-  if (!on && pullDepth === 0 && pullLifecycle) {
-    pullLifecycle.transition('planning');
-    pullLifecycle.transition('writing');
-    pullLifecycle.transition('refreshing');
-    pullLifecycle.finish(pullFailed.length > 0);
-  }
   updateButtons();
+}
+// The lifecycle is advanced by the pull that actually performs each phase.  Releasing the busy
+// counter only releases the UI lock; it must never invent planning/writing/refreshing after an
+// exception or a caller that forgot to execute them.
+function pullPhase(next) { return typeof pullLifecycle !== 'undefined' && pullLifecycle ? pullLifecycle.transition(next) : false; }
+function finishPullLifecycle(warnings = false) {
+  return typeof pullLifecycle !== 'undefined' && pullLifecycle && pullLifecycle.snapshot().state === 'refreshing'
+    ? pullLifecycle.finish(warnings) : false;
 }
 function workspaceChangeRefuse() {
   if (!pullBusy) return false;
@@ -1350,7 +1353,10 @@ async function pullAll() {
       pullFailed: [].concat((sq.failed || []).map((f) => ({ ...f, stage: 'sql' })),
                             (dp.failed || []).map((f) => ({ ...f, stage: 'lineage' }))),
     };
+    if (typeof pullPhase === 'function') pullPhase('planning');
+    if (typeof pullPhase === 'function') pullPhase('writing');
     if (!(await writeToDisk(info, op, next))) return endBusyElsewhere();
+    if (typeof pullPhase === 'function') pullPhase('refreshing');
     ({ views, folders, schema, relations, sqls, deps, pullFailed } = next);
     mergeSchemaIntoViews();
 
@@ -1361,6 +1367,7 @@ async function pullAll() {
       + (next.cleanupFailed ? ` · ${next.cleanupFailed} old SQL file(s) could not be removed - the next pull retries` : ''));
     $('status').className = (pullFailed.length || next.cleanupFailed) ? 'warn' : 'ok';
     render();
+    finishPullLifecycle(pullFailed.length > 0 || next.cleanupFailed > 0);
   } catch (e) {
     // Once the `writing` marker landed, the files on disk may be from two moments. Keeping the old
     // globals alive in this same panel let exports and the assistant combine that old snapshot with
@@ -1383,6 +1390,7 @@ async function pullAll() {
       // write stage does, so a refusal at that moment leaves the previous snapshot intact.
       : 'Pull failed: ' + friendlyError(e));
     $('status').className = 'bad';
+    if (op.current() && typeof pullLifecycle !== 'undefined') pullLifecycle.fail();
     showEmergency(!(e && e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally {
@@ -1432,12 +1440,16 @@ async function pullOne(id) {
     nextDeps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     // Only this item's old report goes, and only if this pull actually replaced it.
     const nextFailed = pullFailed.filter((f) => String(f.id) !== String(id)).concat(still);
+    if (typeof pullPhase === 'function') pullPhase('planning');
+    if (typeof pullPhase === 'function') pullPhase('writing');
     await writePartialSnapshot(op, { sqls: nextSqls, deps: nextDeps, pullFailed: nextFailed });
+    if (typeof pullPhase === 'function') pullPhase('refreshing');
     if (!op.current()) return endBusyElsewhere();
     ({ sqls, deps, pullFailed } = { sqls: nextSqls, deps: nextDeps, pullFailed: nextFailed });
     setBusy(false, still.length ? `«${v.name}»: lineage re-read, its SQL still could not be.` : `«${v.name}» re-read.`);
     $('status').className = still.length ? 'warn' : 'ok';
     render(); await openDetail(id);
+    if (typeof finishPullLifecycle === 'function') finishPullLifecycle(still.length > 0);
   } catch (e) {
     const interrupted = !!(e && e.mirrorIncomplete && op.current());
     if (interrupted) refuseIncompleteSnapshot();
@@ -1445,6 +1457,7 @@ async function pullOne(id) {
       ? `Could not finish writing «${v.name}». The mirror is blocked because its files describe two different moments - run Pull all to repair it.`
       : `Could not re-read «${v.name}»: ` + friendlyError(e));
     $('status').className = 'bad';
+    if (op.current() && typeof pullLifecycle !== 'undefined') pullLifecycle.fail();
     showEmergency(!(e && e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { setPullBusy(false); }
@@ -1481,19 +1494,24 @@ async function retryFailed() {
     // this retry started in, and merging them into another one's memory is the same defect indoors.
     if (!op.current()) return endBusyElsewhere();
     Object.assign(nextDeps, r2.deps || {}); still.push(...(r2.failed || []).map((f) => ({ ...f, stage: 'lineage' })));
+    if (typeof pullPhase === 'function') pullPhase('planning');
+    if (typeof pullPhase === 'function') pullPhase('writing');
     await writePartialSnapshot(op, { sqls: nextSqls, deps: nextDeps, pullFailed: still });
+    if (typeof pullPhase === 'function') pullPhase('refreshing');
     if (!op.current()) return endBusyElsewhere();
     ({ sqls, deps, pullFailed } = { sqls: nextSqls, deps: nextDeps, pullFailed: still });
     mergeSchemaIntoViews();
     setBusy(false, pullFailed.length ? `${pullFailed.length} still unreadable.` : 'All previously failed items are now in.');
     $('status').className = pullFailed.length ? 'warn' : 'ok';
     render();
+    if (typeof finishPullLifecycle === 'function') finishPullLifecycle(pullFailed.length > 0);
   } catch (e) {
     const interrupted = !!(e && e.mirrorIncomplete && op.current());
     if (interrupted) refuseIncompleteSnapshot();
     setBusy(false, interrupted
       ? 'Retry could not finish writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
       : 'Retry failed: ' + friendlyError(e)); $('status').className = 'bad';
+    if (op.current() && typeof pullLifecycle !== 'undefined') pullLifecycle.fail();
     showEmergency(!(e && e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
@@ -1562,6 +1580,15 @@ async function pruneSql(index, op, census, mirrorPlan) {
                     + 'the keep-set is only what was read this time, and a query whose SQL failed '
                     + 'would lose its file.');
   }
+  // The plan is the authority for the destructive half of the mirror.  This is deliberately
+  // fail-closed: the old optional argument made a missing script, a load-order regression, or a
+  // future caller that forgot to build a plan silently fall back to pruning from the current
+  // index.  A partial or absent census must never turn into a deletion merely because the guard
+  // itself was not wired.
+  if (!mirrorPlan || typeof validateMirrorPlan !== 'function') {
+    throw new Error('pruneSql needs a validated mirror plan before it can remove files');
+  }
+  if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
   const keep = new Set(Object.values(index).map((e) => `sql/${e.stem}.sql`));
   for (const v of census) keep.add(`sql/${stemOf(v.name, v.id)}.sql`);
   // **And under any name it has ever had, which the id is the only stable record of.** The stem
@@ -1584,7 +1611,7 @@ async function pruneSql(index, op, census, mirrorPlan) {
   let failed = 0;
   for await (const p of walk(op.root)) {
     if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p) || unreadLive.some((sfx) => p.endsWith(sfx))
-        || (mirrorPlan && !mirrorPlan.deletes.includes(p))) continue;
+        || !mirrorPlan.deletes.includes(p)) continue;
     try { await op.remove(p); }
     catch (e) {
       if ((e && e.message) === WS_MOVED) throw e;
@@ -1641,9 +1668,11 @@ async function writeToDisk(info, op, next) {
       [`sql/${entry.stem}.sql`, entry]));
     const nextFiles = Object.fromEntries(Object.values(index).map((entry) =>
       [`sql/${entry.stem}.sql`, entry]));
-    const mirrorPlan = typeof buildMirrorPlan === 'function'
-      ? buildMirrorPlan(previousFiles, nextFiles, { complete: pullFailed.length === 0 }) : null;
-    if (mirrorPlan && typeof validateMirrorPlan === 'function') validateMirrorPlan(mirrorPlan);
+    if (typeof buildMirrorPlan !== 'function' || typeof validateMirrorPlan !== 'function') {
+      throw new Error('Mirror plan support is unavailable; refusing to modify the mirror.');
+    }
+    const mirrorPlan = buildMirrorPlan(previousFiles, nextFiles, { complete: pullFailed.length === 0 });
+    if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
     op.say('Removing what the workspace no longer has\u2026', 'busy');
     next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'), mirrorPlan);
     op.say('Finishing the mirror\u2026', 'busy');

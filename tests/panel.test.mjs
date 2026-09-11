@@ -10224,7 +10224,8 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
       writeJson: async () => {}, patchCfg: async () => {}, stemOf: (n) => String(n),
       readJson: async () => ({ label: 'B', sample: true }),
       PULL_SV: 1, CFG: '.zoost.json', PULL_STATE: '.pull-state.json',
-      pruneSql: async () => {}, Object, JSON, Date, Boolean,
+      pruneSql: async () => {}, buildMirrorPlan: () => ({ complete: true, creates: [], updates: [], keeps: [], deletes: [] }),
+      validateMirrorPlan: () => true, Object, JSON, Date, Boolean,
     };
     ctx.op = { current: () => live, write: async () => {}, say: () => {} };
     vm.createContext(ctx);
@@ -11181,13 +11182,15 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     const ctx = { status() {},
       op: { root: {}, current: () => true, remove: async (p) => removed.push(p) },
       walk: async function* () { yield 'sql/kept.sql'; yield 'sql/renamed-old.sql'; yield 'sql/deleted.sql'; yield 'views.json'; },
-      Set, Object, RegExp };
+      validateMirrorPlan: () => true, Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceApp('analytics', 'pruneSql'), ctx);
     // The census is required now: these two cases called it with two arguments, which is the shape
     // the data loss had. An empty census here is the honest fixture - this case is about what the
     // *index* keeps - and it is passed explicitly rather than defaulted.
-    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, []);
+    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, [],
+      { complete: true, creates: [], updates: [], keeps: ['sql/kept.sql'],
+        deletes: ['sql/renamed-old.sql', 'sql/deleted.sql'] });
     assert.equal(failed, 0, 'a successful cleanup does not report its result to the pull');
     assert.deepEqual(removed.sort(), ['sql/deleted.sql', 'sql/renamed-old.sql'],
                      'a deleted or renamed query leaves its file behind with no map naming it');
@@ -11195,13 +11198,14 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
 
   test('analytics: a failed SQL prune survives the final success status', async () => {
     const said = [];
-    const ctx = { status: (m, k) => said.push([m, k]), WS_MOVED: 'moved',
+    const ctx = { status: (m, k) => said.push([m, k]), WS_MOVED: 'moved', validateMirrorPlan: () => true,
       op: { root: {}, current: () => true, say: (m, k) => said.push([m, k]),
             remove: async () => { throw new Error('busy'); } },
       walk: async function* () { yield 'sql/old.sql'; }, Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceApp('analytics', 'pruneSql'), ctx);
-    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, []);
+    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, [],
+      { complete: true, creates: [], updates: [], keeps: [], deletes: ['sql/old.sql'] });
     assert.equal(failed, 1, 'the caller cannot know cleanup was incomplete');
     assert.equal(said.length, 1);
     assert.equal(said[0][1], 'warn');
@@ -11211,7 +11215,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
 
   test('analytics: an incomplete mirror plan cannot authorize SQL deletion', async () => {
     const removed = [];
-    const ctx = { status() {}, WS_MOVED: 'moved',
+    const ctx = { status() {}, WS_MOVED: 'moved', validateMirrorPlan: () => true,
       op: { root: {}, current: () => true, remove: async (p) => removed.push(p) },
       walk: async function* () { yield 'sql/stale.sql'; }, Set, Object, RegExp };
     vm.createContext(ctx);
@@ -11761,6 +11765,14 @@ for (const app of ['crm', 'analytics']) {
         `pruneSql is declared with ${params} parameters and called with ${given}: the census is what ` +
         `keeps a query table's .sql file when its SQL could not be read this time`);
     }
+  });
+
+  test('Analytics refuses to prune when the mirror plan is missing', async () => {
+    const rel = 'apps/analytics/sidepanel.js';
+    const g = { console, Array, Set, Object, JSON, String, Error, WS_MOVED: 'moved',
+      walk: async function* () { yield 'sql/old.sql'; }, stemOf: (name, id) => `${name}-${id}` };
+    const m = load([sliceFn(rel, 'pruneSql')], g);
+    await assert.rejects(() => m.pruneSql({}, { root: {}, remove: async () => {} }, []), /validated mirror plan/);
   });
 }
 
@@ -18632,8 +18644,16 @@ test('a renamed query table does not lose the SQL captured under its old name', 
     const g = { console, Object, Set, Array, JSON, String, Error, WS_MOVED: 'moved',
                 walk: async function* () { for (const p of [...disk]) yield p; },
                 stemOf: (name, id) => `${name}-${id}` };
+    const complete = census.every((v) => Object.prototype.hasOwnProperty.call(index, v.id));
+    const next = new Set(Object.values(index).map((e) => `sql/${e.stem}.sql`));
+    const mirrorPlan = { complete, creates: [], updates: [], keeps: [],
+                         deletes: complete ? [...disk].filter((p) => !next.has(p)) : [] };
+    g.validateMirrorPlan = (plan) => {
+      if (!plan || plan.complete !== true && plan.deletes.length) throw new Error('invalid plan');
+      return true;
+    };
     const m = load([sliceFn(rel, 'pruneSql')], g);
-    await m.pruneSql(index, op, census);
+    await m.pruneSql(index, op, census, mirrorPlan);
     return disk;
   };
   const read = { 11: { stem: 'Alpha-11' } };               // only Alpha's SQL came back this pull

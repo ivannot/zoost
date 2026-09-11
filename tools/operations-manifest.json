@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "manual": [
+    {"name": "Cloudflare RUM", "owner": "Cloudflare dashboard", "reason": "dashboard-only setting"},
+    {"name": "Turnstile site key", "owner": "Cloudflare dashboard", "reason": "public site configuration"}
+  ],
+  "github_actions": [
+    {"name": "CF_KV_TOKEN", "secret": true, "consumer": "store-status workflow", "required": true},
+    {"name": "CWS_SERVICE_ACCOUNT", "secret": true, "consumer": "store-status and store-upload workflows", "required": true}
+  ],
+  "worker_secrets": [
+    {"name": "GH_TOKEN", "secret": true, "consumer": "site/_worker.js /api/report", "required": true},
+    {"name": "TURNSTILE_SECRET", "secret": true, "consumer": "site/_worker.js /api/report", "required": true},
+    {"name": "REPORT_SALT", "secret": true, "consumer": "site/_worker.js /api/analytics", "required": false}
+  ],
+  "worker_bindings": [
+    {"name": "STATUS", "secret": false, "consumer": "site/_worker.js and store-status workflow", "required": true},
+    {"name": "ASSETS", "secret": false, "consumer": "site/_worker.js", "required": true},
+    {"name": "CF_VERSION", "secret": false, "consumer": "site/_worker.js", "required": true}
+  ]
+}

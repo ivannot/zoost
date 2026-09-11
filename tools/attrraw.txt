@@ -2,12 +2,12 @@
 # Attribute interpolations that are not attribute-escaped and are inert for a reason
 # syntax cannot see: an anchor through sanitize(), a colour from our own palette, a
 # ternary of literals, a number. It should shrink; growth is printed.
-31488d0bde36f277  apps/analytics/ai.js:620: class="${m.role}" is not attribute-escaped
+31488d0bde36f277  apps/analytics/ai.js:629: class="${m.role}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:340: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:346: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 68f3feec399e35c4  apps/analytics/graphview.js:1511: class="${lk}" is not attribute-escaped
 5a66614f40884692  apps/analytics/options.js:818: data-section="${key}" is not attribute-escaped
-8a035f833293c02f  apps/crm/ai.js:1078: class="${m.role}" is not attribute-escaped
+8a035f833293c02f  apps/crm/ai.js:1087: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:238: class="${stCls}" is not attribute-escaped
 1c786c377b944c97  apps/crm/export.js:174: href="${modAnchor(api)}" is not attribute-escaped
 19d72ce5b2b0915a  apps/crm/export.js:178: href="${fnAnchor(key)}" is not attribute-escaped
@@ -32,13 +32,13 @@ b4e04e5a70731549  apps/crm/modules.js:252: title="${m.fieldCount}" is not attrib
 f8b01d6f38028773  apps/crm/modules.js:253: title="${m.layoutCount}" is not attribute-escaped
 44398a724542c765  apps/crm/options.js:1211: data-section="${key}" is not attribute-escaped
 0c9fff4336ecd938  apps/crm/preview-controller.js:507: class="${kind}" is not attribute-escaped
-90f01aafbbef14dd  apps/crm/sidepanel.js:1182: class="${wide}" is not attribute-escaped
-665da29c964bc7e9  apps/crm/sidepanel.js:1182: title="${st.lines}" is not attribute-escaped
-ac07f9d4e54ff307  apps/crm/sidepanel.js:1182: title="${st.codeLines}" is not attribute-escaped
-b07595ae0886b91b  apps/crm/sidepanel.js:1182: title="${(st.chars / 1024).toFixed(1)}" is not attribute-escaped
-89504cea50a764dd  apps/crm/sidepanel.js:1183: title="${st.apiCalls}" is not attribute-escaped
-5083a2298847431e  apps/crm/sidepanel.js:1183: title="${st.invokeurl}" is not attribute-escaped
-7792d0009a630c58  apps/crm/sidepanel.js:1183: title="${st.crm}" is not attribute-escaped
-bb8f8240f2601514  apps/crm/sidepanel.js:1183: title="${st.zoho}" is not attribute-escaped
-536777999679a23a  apps/crm/sidepanel.js:1183: title="${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}" is not attribute-escaped
-1fdcc594d1fcf9e2  apps/crm/sidepanel.js:1184: class="${stCls}" is not attribute-escaped
+90f01aafbbef14dd  apps/crm/sidepanel.js:1183: class="${wide}" is not attribute-escaped
+665da29c964bc7e9  apps/crm/sidepanel.js:1183: title="${st.lines}" is not attribute-escaped
+ac07f9d4e54ff307  apps/crm/sidepanel.js:1183: title="${st.codeLines}" is not attribute-escaped
+b07595ae0886b91b  apps/crm/sidepanel.js:1183: title="${(st.chars / 1024).toFixed(1)}" is not attribute-escaped
+89504cea50a764dd  apps/crm/sidepanel.js:1184: title="${st.apiCalls}" is not attribute-escaped
+5083a2298847431e  apps/crm/sidepanel.js:1184: title="${st.invokeurl}" is not attribute-escaped
+7792d0009a630c58  apps/crm/sidepanel.js:1184: title="${st.crm}" is not attribute-escaped
+bb8f8240f2601514  apps/crm/sidepanel.js:1184: title="${st.zoho}" is not attribute-escaped
+536777999679a23a  apps/crm/sidepanel.js:1184: title="${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}" is not attribute-escaped
+1fdcc594d1fcf9e2  apps/crm/sidepanel.js:1185: class="${stCls}" is not attribute-escaped

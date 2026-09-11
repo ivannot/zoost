@@ -22,6 +22,17 @@ function buildMirrorPlan(previous, next, options = {}) {
 }
 function validateMirrorPlan(plan) {
   if (!plan || typeof plan !== 'object') throw new Error('invalid mirror plan');
-  if (plan.complete !== true && Array.isArray(plan.deletes) && plan.deletes.length) throw new Error('partial mirror cannot delete files');
+  if (typeof plan.complete !== 'boolean') throw new Error('invalid mirror plan completeness');
+  for (const key of ['creates', 'updates', 'keeps', 'deletes']) {
+    if (!Array.isArray(plan[key])) throw new Error(`invalid mirror plan ${key}`);
+  }
+  const seen = new Set();
+  for (const key of ['creates', 'updates', 'keeps', 'deletes']) {
+    for (const path of plan[key]) {
+      if (typeof path !== 'string' || !path || seen.has(path)) throw new Error('invalid mirror plan paths');
+      seen.add(path);
+    }
+  }
+  if (plan.complete !== true && plan.deletes.length) throw new Error('partial mirror cannot delete files');
   return true;
 }

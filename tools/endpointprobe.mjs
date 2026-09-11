@@ -290,7 +290,7 @@ const DRIVER = String.raw`
       const beforeStageFailure = snapshot(fs, base);
       await pullAll();
       same(snapshot(fs, base), beforeStageFailure, 'stage failure changed the previous mirror');
-      if (!/Pull failed: 503/.test(document.getElementById('statustext').textContent)) {
+      if (!/Zoho is temporarily unavailable/.test(document.getElementById('statustext').textContent)) {
         throw new Error('the stage failure was not explicit: ' + document.getElementById('statustext').textContent);
       }
 

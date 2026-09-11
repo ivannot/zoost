@@ -49,23 +49,20 @@ function createCrmPullController(options) {
       if (id != null) lifecycle?.transition('reading', id);
     }
     depth = Math.max(0, depth + (hold ? 1 : -1));
-    if (!hold && depth === 0 && lifecycle) {
-      const state = lifecycle.snapshot().state;
-      if (options.statusKind() === 'bad') lifecycle.fail();
-      else if (state !== 'failed' && state !== 'cancelled') {
-        // Short pulls do not expose each internal phase, so close the explicit machine through
-        // the remaining phases rather than leaving it in `reading` forever.
-        lifecycle.transition('planning');
-        lifecycle.transition('writing');
-        lifecycle.transition('refreshing');
-        lifecycle.finish(options.statusKind() === 'warn');
-      }
-    }
     options.publishBusy(depth > 0);
     options.blockZoho(options.busy() || !options.zohoReady()
       || !options.hasDirectory() || options.navigationOpen());
     options.updateWorkspaceButtons();
   }
+
+  // Phase changes belong to the operation, not to the lock release.  Keeping them explicit makes
+  // the lifecycle a useful record of what happened instead of a retrospective animation emitted
+  // by setPullBusy(false).
+  function phase(next) { return lifecycle ? lifecycle.transition(next) : false; }
+  function finishPull(warnings = false) {
+    return lifecycle && lifecycle.snapshot().state === 'refreshing' ? lifecycle.finish(warnings) : false;
+  }
+  function failPull() { return lifecycle ? lifecycle.fail() : false; }
 
   function workspaceChangeRefuse() {
     if (!options.busy()) return false;
@@ -79,7 +76,14 @@ function createCrmPullController(options) {
   async function runPullAction(work) {
     if (options.busy()) return false;
     setPullBusy(true);
-    try { await work(); return true; } finally { setPullBusy(false); }
+    try {
+      phase('reading');
+      await work();
+      phase('planning'); phase('writing'); phase('refreshing');
+      finishPull(options.statusKind() === 'warn');
+      return true;
+    } catch (error) { failPull(); throw error; }
+    finally { setPullBusy(false); }
   }
 
   async function pullCurrent() {
@@ -90,12 +94,16 @@ function createCrmPullController(options) {
     setPullBusy(true);
     options.setStatus('Pulling ' + label + '\u2026', 'busy');
     try {
+      phase('reading');
       await (runners[view] || runners.functions)();
       if (options.statusKind() === 'busy') {
+        phase('planning'); phase('writing');
         try { await options.rebuildActive(); }
         catch (_) { options.setStatus('Pull complete.', 'ok'); }
       }
+      phase('refreshing'); finishPull(options.statusKind() === 'warn');
     } catch (error) {
+      failPull();
       options.setStatus('Pull error: ' + options.errorText(error), 'bad');
     } finally { setPullBusy(false); }
   }
@@ -107,6 +115,7 @@ function createCrmPullController(options) {
     const runners = options.runners();
     setPullBusy(true);
     try {
+      phase('reading');
       let done = 0;
       for (const area of planned.areas) {
         if (!operation.current()) return;
@@ -117,12 +126,15 @@ function createCrmPullController(options) {
         done++;
       }
       if (!operation.current()) return;
+      phase('planning');
       await options.takeRechecks(options.answeredRechecks(planned));
       if (!operation.current()) return;
 
       const summary = options.statusSnapshot();
+      phase('writing');
       operation.say('Rebuilding the list\u2026', 'busy');
       try { await options.rebuildActive(); } catch (_) {}
+      phase('refreshing');
       options.renderTabs();
       const changed = options.consumePreferencesChanged();
       const note = options.forbiddenNote()
@@ -131,9 +143,13 @@ function createCrmPullController(options) {
         + (changed ? ` · ${options.preferencesChangedNote}` : '')
         + options.takeListGap();
       if (operation.current()) options.setStatus(summary.text + note, note ? 'warn' : summary.kind);
+      finishPull(!!note || summary.kind !== 'ok');
+    } catch (error) {
+      failPull();
+      throw error;
     } finally { setPullBusy(false); }
   }
 
-  return { setPullBusy, workspaceChangeRefuse, runPullAction, pullCurrent, pullEverything,
+  return { setPullBusy, phase, finishPull, failPull, workspaceChangeRefuse, runPullAction, pullCurrent, pullEverything,
     pullLifecycle: () => lifecycle ? lifecycle.snapshot() : null };
 }
