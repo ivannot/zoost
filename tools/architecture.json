@@ -19,7 +19,7 @@
       "preview-model.js", "tabs.js", "export-scope.js", "analytics-sql.js"
       , "workspace-controller.js", "preview-controller.js", "history-controller.js"
     ],
-    "bootstrap": []
+    "bootstrap": ["bootstrap.js"]
   },
   "forbidden": {
     "domain": ["document.", "window.", "chrome.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem", "location."],

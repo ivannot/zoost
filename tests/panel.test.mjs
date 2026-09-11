@@ -5350,7 +5350,7 @@ for (const [app, fns] of [
     // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
     // at all, so they are the two that must not refuse.
     const unguarded = [...reach].filter((f) => !fns.includes(f)
-      && !['toBridge', 'getContext', 'createWorkspaceForEntry', 'getAnalyticsPullUseCase'].includes(f));
+      && !['toBridge', 'getContext', 'createWorkspaceForEntry', 'getAnalyticsPullUseCase', 'createAnalyticsBootstrap'].includes(f));
     assert.deepEqual(unguarded, [], `these reach Zoho and nothing was said about them: ${unguarded}`);
   });
 
@@ -9988,7 +9988,8 @@ test('analytics: a write failure after the marker blocks the live snapshot too',
     PULL_STATE: '.pull-state.json', PULL_SV: 1, CFG: '.zoost.json',
     writeJson: async (p) => { writes.push(p); throw new Error('disk full'); },
     patchCfg: async () => {}, pruneSql: async () => 0, readJson: async () => ({}),
-    stemOf: (n, id) => `${n}-${id}`, bound: null, Object, JSON, Date, Boolean, Error,
+    stemOf: (n, id) => `${n}-${id}`, buildMirrorPlan: () => ({ deletes: [] }),
+    validateMirrorPlan: () => true, bound: null, Object, JSON, Date, Boolean, Error,
   };
   // `say` is part of an operation, not decoration: a stub without it stands in for something that
   // does not exist, and the failure lands on the assertion three lines down rather than on the gap.

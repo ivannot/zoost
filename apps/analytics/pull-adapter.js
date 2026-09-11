@@ -5,6 +5,11 @@
 /** @typedef {{cmd: 'workspaceInfo'} | {cmd: 'listViews'} | {cmd: 'workspaceErd'} |
  * {cmd: 'pullSql', ids: string[]} | {cmd: 'scanDependencies', ids: string[]}} PullBridgeCommand */
 /** @typedef {(command: PullBridgeCommand) => Promise<unknown>} PullBridgeSend */
+/** @typedef {{workspace: string, origin: string, name?: string}} PullWorkspace */
+/** @typedef {{views?: Array<{id: string, type?: string}>, folders?: object[]}} PullViews */
+/** @typedef {{tables?: Record<string, object>, relations?: object[]}} PullErd */
+/** @typedef {{sql?: Record<string, object>, failed?: object[]}} PullSql */
+/** @typedef {{deps?: Record<string, object>, failed?: object[]}} PullDependencies */
 /** @param {PullBridgeSend} send */
 function createAnalyticsPullAdapter(send) {
   /** @param {PullBridgeCommand} command */
@@ -12,11 +17,15 @@ function createAnalyticsPullAdapter(send) {
     const reply = await send(command);
     return typeof validateBridgeReply === 'function' ? validateBridgeReply(command, reply) : reply;
   }
-  return Object.freeze({
-    readWorkspace: () => ask({ cmd: 'workspaceInfo' }),
-    readViews: () => ask({ cmd: 'listViews' }),
-    readErd: () => ask({ cmd: 'workspaceErd' }),
-    readSql: (ids) => ask({ cmd: 'pullSql', ids }),
-    readDependencies: (ids) => ask({ cmd: 'scanDependencies', ids }),
-  });
+  /** @returns {Promise<PullWorkspace>} */
+  async function readWorkspace() { return /** @type {PullWorkspace} */ (await ask({ cmd: 'workspaceInfo' })); }
+  /** @returns {Promise<PullViews>} */
+  async function readViews() { return /** @type {PullViews} */ (await ask({ cmd: 'listViews' })); }
+  /** @returns {Promise<PullErd>} */
+  async function readErd() { return /** @type {PullErd} */ (await ask({ cmd: 'workspaceErd' })); }
+  /** @param {string[]} ids @returns {Promise<PullSql>} */
+  async function readSql(ids) { return /** @type {PullSql} */ (await ask({ cmd: 'pullSql', ids })); }
+  /** @param {string[]} ids @returns {Promise<PullDependencies>} */
+  async function readDependencies(ids) { return /** @type {PullDependencies} */ (await ask({ cmd: 'scanDependencies', ids })); }
+  return Object.freeze({ readWorkspace, readViews, readErd, readSql, readDependencies });
 }

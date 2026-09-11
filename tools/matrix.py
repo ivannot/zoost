@@ -97,7 +97,7 @@ CAPABILITIES = [
 # derived by reading them - a surface whose files nobody can list is a surface nobody can measure.
 SURFACE_FILES = {
     "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/workspace-controller.js", "apps/crm/live-sync.js", "apps/crm/preview-model.js", "apps/crm/preview-controller.js", "apps/crm/history-controller.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/pull-lifecycle.js", "apps/crm/mirror-plan.js", "apps/crm/error-model.js", "apps/crm/tabs.js", "apps/crm/modules.js",
-                   "apps/crm/automation.js", "apps/crm/connections.js", "apps/crm/health.js",
+                   "apps/crm/automation.js", "apps/crm/connections.js", "apps/crm/health.js", "apps/crm/bootstrap.js",
                    "apps/crm/filesystem-adapter.js", "apps/crm/idb.js", "apps/crm/workspace.js",
                    "apps/crm/navigation.js", "apps/crm/search-state.js", "apps/crm/list-model.js",
                    "apps/crm/highlight.js", "apps/crm/sample-org.js",
@@ -112,7 +112,7 @@ SURFACE_FILES = {
                    "apps/analytics/search-state.js", "apps/analytics/list-model.js",
                    "apps/analytics/highlight.js", "apps/analytics/sample-org.js",
                    "apps/analytics/keyvault.js", "apps/analytics/product-help.js",
-                   "apps/analytics/reportshell.js",
+                   "apps/analytics/reportshell.js", "apps/analytics/bootstrap.js",
                    "apps/analytics/sidepanel.html", "apps/analytics/analytics-sql.js"],
     "options":    ["apps/crm/options.js", "apps/crm/options.html",
                    "apps/analytics/options.js", "apps/analytics/options.html"],
@@ -129,10 +129,10 @@ SURFACE_FILES = {
 
 # The product, in the units somebody works on. Not files: a defect lives in an area.
 SURFACES = [
-    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,preview-model,preview-controller,history-controller,report,overview-view,bridge-contract,pull-plan,pull-controller,pull-lifecycle,mirror-plan,error-model,tabs,modules,automation,connections,health}.js"),
+    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,preview-model,preview-controller,history-controller,report,overview-view,bridge-contract,pull-plan,pull-controller,pull-lifecycle,mirror-plan,error-model,tabs,modules,automation,connections,health,bootstrap}.js"),
     ("crm-ai",       "apps/crm/{ai,keyvault}.js"),
     ("crm-export",   "apps/crm/{export-scope,export}.js"),
-    ("an-panel",     "apps/analytics/{sidepanel,report,overview-view,bridge-contract,pull-lifecycle,pull-usecase,pull-adapter,mirror-plan,error-model,ai,export,health}.js"),
+    ("an-panel",     "apps/analytics/{sidepanel,report,overview-view,bridge-contract,pull-lifecycle,pull-usecase,pull-adapter,mirror-plan,error-model,ai,export,health,bootstrap}.js"),
     ("options",      "apps/*/options.js + options.html"),
     ("bridges",      "apps/*/{hook,content-bridge,background}.js"),
     ("diagrams",     "apps/*/{graphview,graphlogic,graph-core}.js"),

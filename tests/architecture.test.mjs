@@ -133,6 +133,9 @@ test('bridge errors preserve an upstream contract code and detail', () => {
 test('a mirror writer refuses a validator that returns false', () => {
   const source = readFileSync(new URL('../apps/analytics/sidepanel.js', import.meta.url), 'utf8');
   assert.match(source, /if \(validateMirrorPlan\(mirrorPlan\) !== true\) throw/);
+  const writer = source.slice(source.indexOf('async function writeToDisk'));
+  assert.ok(writer.indexOf('validateMirrorPlan(mirrorPlan)') < writer.indexOf("op.write(PULL_STATE"),
+    'Analytics writes the mirror marker before validating its plan');
 });
 
 test('bridge reply validation rejects a payload with the wrong container type', () => {
@@ -156,6 +159,25 @@ test('analytics Pull all use case owns the stage order outside the panel', async
   const result = await runner({ root: {}, current: () => true, say: () => {} });
   assert.deepEqual(phases, ['planning', 'writing', 'refreshing']);
   assert.deepEqual(result.qIds, ['1']);
+});
+
+test('both extension bootstraps compose their pull boundary', () => {
+  const crm = load('crm/bootstrap.js');
+  const crmDeps = { marker: 'crm' };
+  crm.createCrmPullController = (deps) => deps;
+  assert.equal(crm.createCrmBootstrap(crmDeps), crmDeps);
+
+  const analytics = {};
+  vm.createContext(analytics);
+  analytics.createAnalyticsPullAdapter = (send) => ({ readWorkspace: () => send({ cmd: 'workspaceInfo' }) });
+  analytics.createAnalyticsPullUseCase = (deps) => deps;
+  vm.runInContext(readFileSync(new URL('../apps/analytics/bootstrap.js', import.meta.url), 'utf8'), analytics);
+  const analyticsDeps = { toBridge: () => Promise.resolve({}), requirePerm: () => {}, setBusy: () => {},
+    phase: () => {}, writeToDisk: () => {}, applySnapshot: () => {}, mergeSchemaIntoViews: () => {},
+    setStatus: () => {}, render: () => {}, finish: () => {} };
+  const wired = analytics.createAnalyticsBootstrap(analyticsDeps);
+  assert.equal(typeof wired.readWorkspace, 'function');
+  assert.equal(typeof wired.requirePerm, 'function');
 });
 
 test('pull controller closes the lifecycle on success and failure', () => {

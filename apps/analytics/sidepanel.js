@@ -1310,18 +1310,10 @@ function refuseIncompleteSnapshot() {
 
 // ---------- pull ----------
 function getAnalyticsPullUseCase() {
-  if (analyticsPullUseCase || typeof createAnalyticsPullUseCase !== 'function') return analyticsPullUseCase;
-  const bridge = typeof createAnalyticsPullAdapter === 'function'
-    ? createAnalyticsPullAdapter((command) => toBridge(command))
-    : null;
-  analyticsPullUseCase = createAnalyticsPullUseCase({
-    requirePerm, setBusy,
-    ...(bridge || {
-      readWorkspace: () => toBridge({ cmd: 'workspaceInfo' }), readViews: () => toBridge({ cmd: 'listViews' }),
-      readErd: () => toBridge({ cmd: 'workspaceErd' }), readSql: (ids) => toBridge({ cmd: 'pullSql', ids }),
-      readDependencies: (ids) => toBridge({ cmd: 'scanDependencies', ids }),
-    }),
-    phase: (name) => pullPhase(name), writeToDisk,
+  if (analyticsPullUseCase) return analyticsPullUseCase;
+  if (typeof createAnalyticsBootstrap !== 'function') throw new Error('Analytics bootstrap is unavailable');
+  analyticsPullUseCase = createAnalyticsBootstrap({
+    toBridge, requirePerm, setBusy, phase: (name) => pullPhase(name), writeToDisk,
     applySnapshot: (next) => { ({ views, folders, schema, relations, sqls, deps, pullFailed } = next); },
     mergeSchemaIntoViews, setStatus: status, render,
     finish: (warnings) => finishPullLifecycle(warnings),
@@ -1618,6 +1610,22 @@ async function writeToDisk(info, op, next) {
   const { views, folders, schema, relations, sqls, deps, pullFailed } = next;
   let previousSqlIndex = {};
   try { previousSqlIndex = await readJson('sql/index.json', {}, op); } catch (_) {}
+  // Validate the immutable plan before writing the marker or any payload.  A missing plan module
+  // must fail before the mirror is touched; the same plan is reused below for pruning.
+  const previousEntries = previousSqlIndex && typeof previousSqlIndex === 'object'
+    ? Object.values(previousSqlIndex).filter((entry) => entry && typeof entry.stem === 'string') : [];
+  const previousFiles = Object.fromEntries(previousEntries.map((entry) =>
+    [`sql/${entry.stem}.sql`, entry]));
+  const nextFiles = Object.fromEntries(Object.entries(sqls).map(([id, query]) => {
+    const view = views.find((item) => item.id === id);
+    const stem = stemOf(view ? view.name : id, id);
+    return [`sql/${stem}.sql`, { stem, name: view ? view.name : '', parents: query.parents, sources: query.sources }];
+  }));
+  if (typeof buildMirrorPlan !== 'function' || typeof validateMirrorPlan !== 'function') {
+    throw new Error('Mirror plan support is unavailable; refusing to modify the mirror.');
+  }
+  const mirrorPlan = buildMirrorPlan(previousFiles, nextFiles, { complete: pullFailed.length === 0 });
+  if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
   // Everything below this line is disk, and disk was the one stage of a pull that said nothing. The
   // reading stages each announce themselves and count; then the last one closed with «Reading
   // lineage... 50 / 50» and that line sat there through three JSON files, one .sql per query table
@@ -1647,17 +1655,6 @@ async function writeToDisk(info, op, next) {
       if (++written % 10 === 0 || written === total) op.say(`Writing SQL files\u2026 ${written} / ${total}`, 'busy');
     }
     await writeJson('sql/index.json', index, op);
-    const previousEntries = previousSqlIndex && typeof previousSqlIndex === 'object'
-      ? Object.values(previousSqlIndex).filter((entry) => entry && typeof entry.stem === 'string') : [];
-    const previousFiles = Object.fromEntries(previousEntries.map((entry) =>
-      [`sql/${entry.stem}.sql`, entry]));
-    const nextFiles = Object.fromEntries(Object.values(index).map((entry) =>
-      [`sql/${entry.stem}.sql`, entry]));
-    if (typeof buildMirrorPlan !== 'function' || typeof validateMirrorPlan !== 'function') {
-      throw new Error('Mirror plan support is unavailable; refusing to modify the mirror.');
-    }
-    const mirrorPlan = buildMirrorPlan(previousFiles, nextFiles, { complete: pullFailed.length === 0 });
-    if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
     op.say('Removing what the workspace no longer has\u2026', 'busy');
     next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'), mirrorPlan);
     op.say('Finishing the mirror\u2026', 'busy');
