@@ -49,6 +49,25 @@ NODE_EXPECTED=1147
 PY_EXPECTED=419
 cd "$(dirname "$0")/.."
 
+# Prefer a compatible Node automatically.  A developer may have an older system Node first in PATH
+# even though the machine already has a newer nvm/Codex runtime.  Failing on the first executable
+# made the pre-push hook reject an otherwise green commit until the caller manually rebuilt PATH.
+node_major() { "$1" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
+choose_node() {
+  local candidate major best=0 best_path=''
+  for candidate in "$(command -v node 2>/dev/null || true)" \
+    "${HOME:-}"/.cache/codex-runtimes/*/dependencies/node/bin/node \
+    "${HOME:-}"/.nvm/versions/node/*/bin/node \
+    /opt/homebrew/bin/node /usr/local/bin/node; do
+    [ -x "$candidate" ] || continue
+    major=$(node_major "$candidate")
+    if [ "$major" -ge 20 ] && [ "$major" -gt "$best" ]; then best=$major; best_path=$candidate; fi
+  done
+  printf '%s' "$best_path"
+}
+NODE_EXEC=$(choose_node)
+if [ -n "$NODE_EXEC" ]; then export PATH="$(dirname "$NODE_EXEC"):$PATH"; fi
+
 # The machine that runs this is not the machine the extensions are loaded on: Chrome there reads
 # `apps/<app>/` out of a synced folder. That copy used to depend on somebody remembering to ask for
 # it, which is a rule, and rules that live only as prose get broken - so it happens here instead.
