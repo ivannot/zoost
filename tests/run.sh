@@ -68,6 +68,13 @@ python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else (print(f"
 # reduces what runs without changing a line of source, which is exactly the shrinkage the floor is
 # named for. Consume the summary instead.
 node --test --test-reporter=spec tests/*.test.mjs | tee "$NODEOUT"
+# **Colour is decoration on the other side of the number, too.** With `FORCE_COLOR` set - which a
+# Claude Code update started doing for every shell it opens - node colours the summary even into a
+# pipe, and «ℹ tests 1117» arrives as `ESC[34mℹ tests 1117ESC[39m`. The pattern below is anchored on
+# the digits ending the line, so it matched nothing and the battery reported «ran no case(s) and 1117
+# were expected» over a run where all 1117 had passed - red for the environment, and the pre-push hook
+# with it. The codes are removed from the saved copy only: the screen keeps its colour.
+sed -i -E 's/\x1b\[[0-9;]*m//g' "$NODEOUT"
 # The spec reporter writes «ℹ tests N», the tap one «# tests N`»; match the number after the word
 # rather than the decoration in front of it, so changing reporter does not silently stop the floor.
 NODE_RAN=$(sed -nE 's/^[^0-9]*tests ([0-9]+)$/\1/p' "$NODEOUT" | tail -1)
