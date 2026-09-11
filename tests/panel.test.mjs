@@ -1259,7 +1259,7 @@ test('the CRM names each area before it pulls it, and the position in the run', 
 });
 
 test('the CRM says it is rebuilding the list after the last area', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = appPanel('crm');
   const body = src.slice(src.indexOf('async function pullEverything'));
   const say = body.indexOf('Rebuilding the list');
   const call = body.indexOf('await rebuildActive()');
@@ -4999,7 +4999,7 @@ test('every message named is defined, and every message defined is named', () =>
     const GROUPS = [
       ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
       ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
-      ['apps/crm/sidepanel.js', 'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js', 'apps/crm/preview-controller.js', 'apps/crm/history-controller.js', 'apps/crm/ai.js', 'apps/crm/export-scope.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
+      ['apps/crm/sidepanel.js', 'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js', 'apps/crm/preview-controller.js', 'apps/crm/history-controller.js', 'apps/crm/ai.js', 'apps/crm/export-scope.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js', 'apps/crm/graph-session.js', 'apps/crm/crm-pull-graph.js', 'apps/crm/crm-download.js', 'apps/crm/crm-failures.js', 'apps/crm/crm-search.js', 'apps/crm/crm-navigation-ui.js', 'apps/crm/crm-workflow-ui.js', 'apps/crm/crm-tree.js', 'apps/crm/crm-context.js', 'apps/crm/crm-graph.js', 'apps/crm/crm-bootstrap.js'],
       ['apps/analytics/sidepanel.js', 'apps/analytics/ai.js', 'apps/analytics/export.js', 'apps/analytics/health.js'],
     ];
     const group = GROUPS.find((g) => g.includes(rel));
@@ -5785,7 +5785,7 @@ for (const app of ['crm', 'analytics']) {
     for (const app of ['crm', 'analytics']) {
       const src = appPanel(app);
       assert.ok(!/zoost\.it\/report#/.test(src), 'why=' + app + ' still puts the report in a URL');
-      assert.ok(/chrome\.scripting\.executeScript/.test(handlerOf(`apps/${app}/sidepanel.js`, 'repopen')),
+      assert.ok(/chrome\.scripting\.executeScript/.test(handlerApp(app, 'repopen')),
         'why=' + app + ' does not put the text into the page it opened');
       const mf = JSON.parse(read(`apps/${app}/manifest.json`));
       assert.ok(mf.host_permissions.includes('https://zoost.it/*'),
@@ -5800,7 +5800,7 @@ for (const app of ['crm', 'analytics']) {
     // is the part a careless change breaks silently: the injection simply never fires.
     for (const app of ['crm', 'analytics']) {
       const src = appPanel(app);
-      const block = handlerOf(`apps/${app}/sidepanel.js`, 'repopen');
+      const block = handlerApp(app, 'repopen');
       assert.ok(/chrome\.windows\.create/.test(block), 'why=' + app + ' opens the report in a tab');
       assert.ok(!/chrome\.tabs\.create/.test(block), 'why=' + app + ' still opens a tab');
       assert.ok(/win\.tabs\[0\]/.test(block),
@@ -5835,7 +5835,7 @@ for (const app of ['crm', 'analytics']) {
       'two readings of the same instant, said the same way, read as moved - and no pull can clear it');
     assert.equal(movedInZoho(SAID, '2026-03-14 09:00:00.0'), true,
       'a function edited in Zoho is missed when the list does not speak in milliseconds');
-    const src = read('apps/crm/sidepanel.js');
+    const src = appPanel('crm');
     assert.ok(!/row\.listUpdated\s*!==\s*meta\.updatedTime/.test(src),
       'why=crm compares an epoch against a formatted string again');
     // Both paths, or the answer depends on which one loaded the workspace.
@@ -5853,7 +5853,7 @@ for (const app of ['crm', 'analytics']) {
     // two of the six views call it - so on the other four the button kept whatever the last view had
     // put there. The mode is what the function reads on its first line, so the mode is what must
     // call it.
-    const src = read('apps/crm/sidepanel.js');
+    const src = appPanel('crm');
     const fn = src.slice(src.indexOf('function setMode(mode) {'));
     const body = fn.slice(0, fn.indexOf('\n}'));
     assert.ok(body.includes('updateMissingButton()'),
@@ -5904,7 +5904,7 @@ for (const app of ['crm', 'analytics']) {
         assert.ok(!html.includes(`id="${id}"`), `why=${app} still has the dialog element ${id}`);
         assert.ok(!js.includes(`'${id}'`), `why=${app} still wires ${id}`);
       }
-      const block = handlerOf(`apps/${app}/sidepanel.js`, 'repopen');
+      const block = handlerApp(app, 'repopen');
       assert.ok(/buildReport\(reportFacts\(/.test(block),
         `why=${app} does not build the report where the page is opened`);
     }
@@ -6120,14 +6120,14 @@ for (const app of ['crm', 'analytics']) {
     // «Reading sources 150/150…» stood with the spinner going after the read had finished, and a
     // busy status left standing is indistinguishable from a hang. The Analytics twin has always
     // said «N queries read.» at the end; this holds the CRM to the same shape.
-    const crm = read('apps/crm/sidepanel.js');
+    const crm = appPanel('crm');
     const cc = crm.slice(crm.indexOf('async function getCodeCache'), crm.indexOf('async function contentSearch'));
     assert.ok(/source\(s\) read\.`, 'ok'\)/.test(cc),
       'why=the busy line from the tranche loop is never closed');
   });
 
   test('a content search that finished late cannot land, and SQL typing is debounced', () => {
-    const crm = read('apps/crm/sidepanel.js');
+    const crm = appPanel('crm');
     assert.ok(/searchSeq\+\+/.test(crm), 'why=nothing moves the sequence');
     assert.ok(/mine !== searchSeq \|\| !cache/.test(crm),
       'why=a stale contentSearch overwrites the newer result after its await');
@@ -6490,7 +6490,7 @@ for (const app of ['crm', 'analytics']) {
     // The bar is built on a mode switch and the languages come from the workspace, so a workspace
     // with one language shows no control - and must not still be filtering by a value chosen in the
     // one before it. Both halves are in the same block, and both were written for the same defect.
-    const src = read(REL), chips = read('apps/crm/type-chips.js');
+    const src = crmPanel(), chips = read('apps/crm/type-chips.js');
     const at = chips.indexOf("ll.textContent = 'Language'");
     assert.ok(at > 0, 'why=the Language control is gone');
     const block = chips.slice(at - 1200, at + 1600);
@@ -6566,7 +6566,7 @@ for (const app of ['crm', 'analytics']) {
     const g = { encodeURIComponent, String, console, bound: { base: 'https://crm.zoho.eu', instance: 'yourinstance' }, lastCtx: null };
     const { functionUrl } = load([sliceFn('apps/crm/zoho-navigation.js', 'crmFunctionUrl'),
       sliceConst(REL, 'crmNavigationContext'), sliceFn(REL, 'functionUrl')], g);
-    const src = read(REL);
+    const src = appPanel('crm');
     assert.ok(!functionUrl(THEIRS).includes(OURS));
     // `reveal` must ask the row for `uiId`, not for `id`: they are both there, and one of them
     // addresses the wrong function or none.
@@ -6594,7 +6594,7 @@ for (const app of ['crm', 'analytics']) {
   });
 
   test('the pull learns the mapping, and cannot fail because of it', () => {
-    const src = read(REL);
+    const src = appPanel('crm');
     const at = src.indexOf("ui = await crmPull().functionUiIds();");
     assert.ok(at > 0, 'why=the pull no longer asks for the mapping');
     const before = src.slice(Math.max(0, at - 120), at + 500);
@@ -6835,7 +6835,7 @@ for (const app of ['crm', 'analytics']) {
   test('both windows are kept, and each says which one it is', () => {
     // The day is not replaced. Everything that reads this file speaks in 24 hours, and a key that
     // quietly changed window would move every number on screen without a word.
-    const src = read('apps/crm/sidepanel.js');
+    const src = appPanel('crm');
     assert.match(src, /month: r\.month \|\| null/, 'why=the month is not stored');
     assert.match(src, /runs: r\.runs \|\| null/, 'why=the day was replaced rather than joined');
     const h = read(REL);
@@ -6909,7 +6909,7 @@ for (const app of ['crm', 'analytics']) {
   const REL = 'apps/crm/sidepanel.js';
 
   test('it is asked for, never pulled, and never written', () => {
-    const panel = read(REL), bridge = read('apps/crm/content-bridge.js');
+    const panel = appPanel('crm'), bridge = read('apps/crm/content-bridge.js');
     // Not in any pull: the command appears once, in the handler behind the button.
     assert.equal((panel.match(/cmd: 'functionRuntime'/g) || []).length, 1,
       'why=the runtime reading is asked from more than one place - one of them is a pull');
@@ -7190,7 +7190,7 @@ for (const app of ['crm', 'analytics']) {
     // The 1.48.0 feature was invisible on every reopen: the chips came from the sidecar, read only
     // by the slow path, and the summary the fast path serves every reopen from did not carry the
     // two fields - so Live/Draft showed after a Refresh and vanished on the next open.
-    const src = read(REL);
+    const src = appPanel('crm');
     const w = src.indexOf('const written = updateMetaIndex((files) => {');
     assert.ok(w > 0);
     const writer = src.slice(w, w + 1800);
@@ -11517,7 +11517,8 @@ for (const app of ['crm', 'analytics']) {
 // `pullEverything`, `pullCurrent` and `pullHealthRuntime` call no bridge, they call the others.
 {
   const FILES = ['apps/crm/sidepanel.js', 'apps/crm/modules.js', 'apps/crm/automation.js',
-                 'apps/crm/connections.js', 'apps/crm/health.js'];
+                 'apps/crm/connections.js', 'apps/crm/health.js', 'apps/crm/crm-pull-graph.js',
+                 'apps/crm/crm-download.js', 'apps/crm/crm-failures.js', 'apps/crm/crm-workflow-ui.js'];
 
   const pulls = () => {
     const out = [];
@@ -11635,7 +11636,8 @@ for (const app of ['crm', 'analytics']) {
 // first removal, or name the command it used as one the bridge can never cut short.
 {
   const PANEL = ['apps/crm/sidepanel.js', 'apps/crm/modules.js', 'apps/crm/automation.js',
-                 'apps/crm/connections.js', 'apps/crm/health.js'];
+                 'apps/crm/connections.js', 'apps/crm/health.js', 'apps/crm/crm-pull-graph.js',
+                 'apps/crm/crm-download.js', 'apps/crm/crm-failures.js', 'apps/crm/crm-workflow-ui.js'];
 
   // Derived from the bridge: which commands are *provably* whole. A command whose handler mentions
   // `capped` can answer short; a command the bridge does not implement at all says nothing about
@@ -18160,7 +18162,7 @@ test('crm: a refused export default is said, and does not stop the export', asyn
   const src = read('apps/crm/sidepanel.js');
   // By the control it belongs to: `handlerOf` throws when nothing is attached, which is the
   // «derivation broke» this used to assert by hand, and it reads the body whichever shape it is in.
-  const body = handlerOf('apps/crm/sidepanel.js', 'expgo');
+  const body = handlerApp('crm', 'expgo');
 
   const run = async (setter) => {
     const said = [];
@@ -20277,7 +20279,7 @@ test('a function listed without its source is neither downloaded nor missing', (
   }
   assert.equal(m.langLabel('nodejs_22'), 'nodejs 22', 'the badge would show the raw field');
 
-  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+  const src = appPanel('crm').replace(/^\s*\/\/.*$/gm, '');
   // Derived from the places that count: whoever decides what to fetch, and whoever puts a number on
   // «Complete missing», has to ask. Naming them here would leave the third one, added later, unasked.
   const pending = /const pending = treeData\.filter\(([\s\S]+?)\);/.exec(src);
@@ -21343,7 +21345,7 @@ test('the function row shows what the list is sorted by', () => {
 test('nothing writes the search box without telling the state', () => {
   const writers = [];
   for (const f of ['sidepanel.js', 'health.js', 'modules.js', 'automation.js', 'connections.js',
-                   'preview-controller.js', 'workspace-controller.js', 'history-controller.js']) {
+                   'preview-controller.js', 'workspace-controller.js', 'history-controller.js', 'crm-search.js']) {
     const rel = `apps/crm/${f}`;
     const src = (read(rel) + '\n' + read('apps/crm/type-chips.js')).replace(/^\s*\/\/.*$/gm, '');
     for (const _m of src.matchAll(/\$\('find'\)\.value\s*=/g)) writers.push(rel);
@@ -21351,7 +21353,7 @@ test('nothing writes the search box without telling the state', () => {
   // One writer, and it is the painter - which writes the box *from* the state and is the whole
   // point of having one. Counted by file rather than by line: a line number pins the check to a
   // layout, and this file has already reported a comment as a defect twice for exactly that.
-  assert.deepEqual(writers, ['apps/crm/sidepanel.js'],
+  assert.deepEqual(writers, ['apps/crm/crm-search.js'],
                    'the search box is written from somewhere other than the painter, so a filter '
                    + `can be on screen and unknown to the state that restores it: ${writers.join(', ')}`);
   const painter = sliceFn('apps/crm/sidepanel.js', 'paintSearchControls');
@@ -21381,7 +21383,7 @@ test('no script before the composition root binds a runtime listener at load tim
     }
   }
   // And the one that moved is bound by the root, or it is bound nowhere at all.
-  assert.match(read('apps/crm/sidepanel.js'), /chrome\.runtime\.onMessage\.addListener\(onPanelMessage\)/,
+  assert.match(read('apps/crm/crm-bootstrap.js'), /chrome\.runtime\.onMessage\.addListener\(onPanelMessage\)/,
                'the panel no longer listens for a saved function, a deletion or a pull progress');
   assert.match(read('apps/crm/live-sync.js'), /^function onPanelMessage\(/m,
                'the handler is gone, so the root binds a name that does not exist');
