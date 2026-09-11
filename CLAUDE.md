@@ -15,6 +15,8 @@ its file first.** A rule you did not read is a rule that gets broken and then re
 | file | open it |
 |---|---|
 | [`docs/layout.md`](docs/layout.md) | before adding a file, a folder or a second product - and before changing where a workspace puts anything on disk. Includes the checkers that hold the two apps together, and how to run them |
+| [`docs/architecture.md`](docs/architecture.md) | before changing module boundaries, pull lifecycle, mirror writes or dependency roles |
+| [`docs/operations.md`](docs/operations.md) | before transferring Cloudflare, GitHub, Store or canary ownership to another maintainer |
 | [`docs/decisions.md`](docs/decisions.md) | before changing what a pull captures, how a workspace sits on disk, or what happens when Zoho refuses. The one that answers «why is it like this» about the mirror itself |
 | [`docs/diagrams.md`](docs/diagrams.md) | before touching either drawing: what the call graph and the ER model contain, what the filters and the focus mean, how a layout is chosen and what it is allowed to cost |
 | [`docs/fixtures.md`](docs/fixtures.md) | before changing what `+ Sample` writes - and before touching any picture on the site or the Store, because every one of them is rendered from **the workspace `+ Sample` delivers**, through the shipped panel |

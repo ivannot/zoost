@@ -32,5 +32,9 @@ function bridgeResponseError(reply, fallback, stale) {
   error.forbidden = !!(reply && reply.forbidden);
   error.note = (reply && reply.note) || null;
   error.diag = (reply && reply.diag) || null;
+  if (typeof classifyZoostError === 'function') {
+    const classified = classifyZoostError(error, 'bridge');
+    for (const key of ['code', 'area', 'severity', 'retryable', 'uiKey']) error[key] = classified[key];
+  }
   return error;
 }

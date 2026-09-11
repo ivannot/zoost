@@ -208,6 +208,7 @@ let bound = null;           // { workspace, name, origin } of the active workspa
 let ctx = null;             // { origin, workspace, view } of the active tab
 let busy = false;
 let pullDepth = 0, pullBusy = false;
+const pullLifecycle = typeof createPullLifecycle === 'function' ? createPullLifecycle() : null;
 
 let wsList = [];            // workspaces found on disk, cached like the CRM panel's
 let views = [], folders = [], schema = {}, relations = [], sqls = {}, deps = null, pullFailed = [];
@@ -1259,8 +1260,18 @@ function setBusy(on, text) {
   updateButtons();
 }
 function setPullBusy(on) {
+  if (on && pullDepth === 0) {
+    const id = pullLifecycle?.begin();
+    if (id != null) pullLifecycle?.transition('reading', id);
+  }
   pullDepth = Math.max(0, pullDepth + (on ? 1 : -1));
   pullBusy = pullDepth > 0;
+  if (!on && pullDepth === 0 && pullLifecycle) {
+    pullLifecycle.transition('planning');
+    pullLifecycle.transition('writing');
+    pullLifecycle.transition('refreshing');
+    pullLifecycle.finish(pullFailed.length > 0);
+  }
   updateButtons();
 }
 function workspaceChangeRefuse() {

@@ -41,9 +41,26 @@
 /** @param {PullControllerOptions} options */
 function createCrmPullController(options) {
   let depth = 0;
+  const lifecycle = typeof createPullLifecycle === 'function' ? createPullLifecycle() : null;
 
   function setPullBusy(hold) {
+    if (hold && depth === 0) {
+      const id = lifecycle?.begin();
+      if (id != null) lifecycle?.transition('reading', id);
+    }
     depth = Math.max(0, depth + (hold ? 1 : -1));
+    if (!hold && depth === 0 && lifecycle) {
+      const state = lifecycle.snapshot().state;
+      if (options.statusKind() === 'bad') lifecycle.fail();
+      else if (state !== 'failed' && state !== 'cancelled') {
+        // Short pulls do not expose each internal phase, so close the explicit machine through
+        // the remaining phases rather than leaving it in `reading` forever.
+        lifecycle.transition('planning');
+        lifecycle.transition('writing');
+        lifecycle.transition('refreshing');
+        lifecycle.finish(options.statusKind() === 'warn');
+      }
+    }
     options.publishBusy(depth > 0);
     options.blockZoho(options.busy() || !options.zohoReady()
       || !options.hasDirectory() || options.navigationOpen());
@@ -93,6 +110,7 @@ function createCrmPullController(options) {
       let done = 0;
       for (const area of planned.areas) {
         if (!operation.current()) return;
+        lifecycle?.progress({ stage: 'reading', done, total: planned.areas.length });
         operation.say(`${options.tabLabel(area.id)}: ${done + 1} of ${planned.areas.length}\u2026`, 'busy');
         try { await runners[area.id](); }
         catch (_) { /* every runner records its own verdict and states its own message */ }
@@ -116,5 +134,6 @@ function createCrmPullController(options) {
     } finally { setPullBusy(false); }
   }
 
-  return { setPullBusy, workspaceChangeRefuse, runPullAction, pullCurrent, pullEverything };
+  return { setPullBusy, workspaceChangeRefuse, runPullAction, pullCurrent, pullEverything,
+    pullLifecycle: () => lifecycle ? lifecycle.snapshot() : null };
 }

@@ -34,7 +34,7 @@ trap 'rm -f "$PYOUT" "$NODEOUT"' EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1122
+NODE_EXPECTED=1134
 PY_EXPECTED=419
 cd "$(dirname "$0")/.."
 
@@ -196,6 +196,14 @@ python3 tools/sitemap.py --check | tail -1
 python3 tools/stamp.py --check | tail -1
 python3 tools/notescheck.py | tail -1
 python3 tools/langcheck.py | tail -1
+python3 tools/architecturecheck.py --self-test
+python3 tools/architecturecheck.py | tail -1
+python3 tools/configcheck.py --self-test
+python3 tools/configcheck.py | tail -1
+
+echo
+echo "── performance budgets ──"
+node tools/perf-budget.mjs
 
 
 echo

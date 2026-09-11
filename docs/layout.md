@@ -361,6 +361,12 @@ ledger, not an allow-list: nothing is named by hand, a function that becomes a t
 recorded without anyone remembering, and `--accept` acknowledges the current state after it has been
 read - the same differential shape as `tools/absolutes.txt`.
 
+`tools/architecture.json` and `tools/architecturecheck.py` hold the declared dependency roles;
+`tools/perf-budget.mjs` exercises small, medium and large generated workspaces without touching the
+checkout; `tools/zoho-canary.mjs` is the explicit, read-only live-contract probe and requires secrets
+only through environment variables. Operational ownership and transfer steps live in
+`docs/operations.md`.
+
 **Being *behind* is a finding too, and that is the part that makes it work.** A pair that moved on
 both sides honoured the twin rule, so it is not a drift - but leaving it unrecorded means the next
 one-sided change is measured against a state two commits old, reads as having moved on both sides,

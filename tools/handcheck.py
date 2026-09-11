@@ -81,6 +81,7 @@ CHECKS = [
                  'The tree fills, and the counts match what the platform shows you.'),
         'covers': ['apps/*/sidepanel.js', 'apps/*/bridge-contract.js', 'apps/*/filesystem-adapter.js',
                    'apps/crm/zoho-bridge.js', 'apps/crm/pull-plan.js', 'apps/crm/pull-controller.js',
+                   'apps/*/pull-lifecycle.js', 'apps/*/mirror-plan.js', 'apps/*/error-model.js',
                    'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js',
                    'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
                    'apps/*/automation.js', 'apps/*/connections.js'],

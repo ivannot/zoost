@@ -52,7 +52,7 @@ Stated here rather than buried, because it is the part an assessment needs.
 - **No write path to Zoho.** Neither extension calls an endpoint that creates, edits or deletes a
   function, a view, a record or a setting. Note the precise claim: this is a property of *which*
   endpoints are called, not something the browser enforces, and every call either makes is in the
-  39 readable files of the Zoho CRM extension and the 24 of the Zoho Analytics one. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` -
+  42 readable files of the Zoho CRM extension and the 27 of the Zoho Analytics one. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` -
   `ZDBCreateERD.ma`, the call that returns the workspace's ER model. It computes; it does not
   create. It is named here because a reader checking the claim will find it. The Zoho CRM
   extension has one POST of the same kind: `/crm/v8/Functions__s/bulk`, the call Zoho's own newer
@@ -103,7 +103,7 @@ Stated here rather than buried, because it is the part an assessment needs.
 
 ## Verifying the claims rather than believing them
 
-- [Source](https://github.com/ivannot/zoost) - Apache-2.0. 39 files of plain JavaScript for Zoho CRM and 24 for Zoho Analytics,
+- [Source](https://github.com/ivannot/zoost) - Apache-2.0. 42 files of plain JavaScript for Zoho CRM and 27 for Zoho Analytics,
   plus each extension's HTML. No bundler, no minifier, no dependencies, so what is published is what is
   in the repository and there is no build step that could add anything.
 - [RELEASES.md](https://github.com/ivannot/zoost/blob/main/RELEASES.md) - every version submitted to

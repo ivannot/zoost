@@ -96,7 +96,7 @@ CAPABILITIES = [
 # The files each surface is made of. Written as paths rather than prose because the capabilities are
 # derived by reading them - a surface whose files nobody can list is a surface nobody can measure.
 SURFACE_FILES = {
-    "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/workspace-controller.js", "apps/crm/live-sync.js", "apps/crm/preview-model.js", "apps/crm/preview-controller.js", "apps/crm/history-controller.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/tabs.js", "apps/crm/modules.js",
+    "crm-panel":  ["apps/crm/sidepanel.js", "apps/crm/workspace-controller.js", "apps/crm/live-sync.js", "apps/crm/preview-model.js", "apps/crm/preview-controller.js", "apps/crm/history-controller.js", "apps/crm/report.js", "apps/crm/overview-view.js", "apps/crm/bridge-contract.js", "apps/crm/pull-plan.js", "apps/crm/pull-controller.js", "apps/crm/pull-lifecycle.js", "apps/crm/mirror-plan.js", "apps/crm/error-model.js", "apps/crm/tabs.js", "apps/crm/modules.js",
                    "apps/crm/automation.js", "apps/crm/connections.js", "apps/crm/health.js",
                    "apps/crm/filesystem-adapter.js", "apps/crm/idb.js", "apps/crm/workspace.js",
                    "apps/crm/navigation.js", "apps/crm/search-state.js", "apps/crm/list-model.js",
@@ -105,7 +105,7 @@ SURFACE_FILES = {
                    "apps/crm/sidepanel.html"],
     "crm-ai":     ["apps/crm/ai.js", "apps/crm/keyvault.js", "apps/crm/product-help.js"],
     "crm-export": ["apps/crm/export-scope.js", "apps/crm/export.js", "apps/crm/reportshell.js"],
-    "an-panel":   ["apps/analytics/sidepanel.js", "apps/analytics/report.js", "apps/analytics/overview-view.js", "apps/analytics/bridge-contract.js", "apps/analytics/ai.js",
+    "an-panel":   ["apps/analytics/sidepanel.js", "apps/analytics/report.js", "apps/analytics/overview-view.js", "apps/analytics/bridge-contract.js", "apps/analytics/pull-lifecycle.js", "apps/analytics/mirror-plan.js", "apps/analytics/error-model.js", "apps/analytics/ai.js",
                    "apps/analytics/export.js", "apps/analytics/health.js",
                    "apps/analytics/filesystem-adapter.js", "apps/analytics/idb.js",
                    "apps/analytics/workspace.js", "apps/analytics/navigation.js",
@@ -129,10 +129,10 @@ SURFACE_FILES = {
 
 # The product, in the units somebody works on. Not files: a defect lives in an area.
 SURFACES = [
-    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,preview-model,preview-controller,history-controller,report,overview-view,bridge-contract,pull-plan,pull-controller,tabs,modules,automation,connections,health}.js"),
+    ("crm-panel",    "apps/crm/{sidepanel,workspace-controller,live-sync,preview-model,preview-controller,history-controller,report,overview-view,bridge-contract,pull-plan,pull-controller,pull-lifecycle,mirror-plan,error-model,tabs,modules,automation,connections,health}.js"),
     ("crm-ai",       "apps/crm/{ai,keyvault}.js"),
     ("crm-export",   "apps/crm/{export-scope,export}.js"),
-    ("an-panel",     "apps/analytics/{sidepanel,report,overview-view,bridge-contract,ai,export,health}.js"),
+    ("an-panel",     "apps/analytics/{sidepanel,report,overview-view,bridge-contract,pull-lifecycle,mirror-plan,error-model,ai,export,health}.js"),
     ("options",      "apps/*/options.js + options.html"),
     ("bridges",      "apps/*/{hook,content-bridge,background}.js"),
     ("diagrams",     "apps/*/{graphview,graphlogic,graph-core}.js"),
