@@ -12517,13 +12517,13 @@ for (const app of ['crm', 'analytics']) {
 // showed a zero.
 test('a source that could not be read measures as nothing, not as zero', () => {
   const ctx = load([
-    sliceConst('apps/crm/sidepanel.js', 'ZOHO_SERVICES'),
-    sliceConst('apps/crm/sidepanel.js', 'RE_ZOHO_ANY'),
-    sliceConst('apps/crm/sidepanel.js', 'RE_ZOHO_CRM'),
-    sliceConst('apps/crm/sidepanel.js', 'RE_INVOKEURL'),
-    sliceConst('apps/crm/sidepanel.js', 'RE_SENDMAIL'),
-    sliceConst('apps/crm/sidepanel.js', '_count'),
-    sliceFn('apps/crm/sidepanel.js', 'fnStats'),
+    sliceConst('apps/crm/function-stats.js', 'ZOHO_SERVICES'),
+    sliceConst('apps/crm/function-stats.js', 'RE_ZOHO_ANY'),
+    sliceConst('apps/crm/function-stats.js', 'RE_ZOHO_CRM'),
+    sliceConst('apps/crm/function-stats.js', 'RE_INVOKEURL'),
+    sliceConst('apps/crm/function-stats.js', 'RE_SENDMAIL'),
+    sliceConst('apps/crm/function-stats.js', 'countFnStats'),
+    sliceFn('apps/crm/function-stats.js', 'fnStats'),
   ], { stripNonCode: (s) => s });
 
   assert.equal(ctx.fnStats(undefined), null, 'an absent source still measures as a set of zeros');
@@ -12727,7 +12727,7 @@ test('a function that guards one status message guards them all', () => {
 // rules - all true of every workspace and none of it actionable. It said nothing about this one,
 // which is a number about your own mirror and is the only gap that changes what the list means.
 test('the graph carries how much of the org it was built from', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = appPanel('crm');
   // To where the answer is written, not a fixed number of characters: the window was 1400 and a
   // paragraph added above the line pushed it out, failing for the length of a comment.
   const from = src.indexOf('window.buildGraph(');
@@ -19478,7 +19478,7 @@ test('a refused area is described in the words the refusal came with', () => {
 // missing», and the button carried a number that pressing it could only reproduce.
 test('a function whose source the role refuses is an answer, not a retryable failure', () => {
   const rel = 'apps/crm/sidepanel.js';
-  const src = read(rel).replace(/^\s*\/\/.*$/gm, '');
+  const src = appPanel('crm').replace(/^\s*\/\/.*$/gm, '');
   // The reply becomes an Error through the one helper that carries the two facts across.
   const one = sliceFn(rel, 'downloadOne');
   assert.match(one, /throw bridgeError\(r,/,
@@ -20289,7 +20289,7 @@ test('a function listed without its source is neither downloaded nor missing', (
   assert.ok(miss, '«Complete missing» no longer counts - this case has lost its subject');
   assert.match(miss[1], /mirrored !== false/,
                'the button offers to complete something pressing it cannot complete');
-  assert.match(src, /g\.counts\.notInMirror = inOrg === null \? null : Math\.max\(0, inOrg - notMirrorable/,
+  assert.match(read('apps/crm/graph-session.js'), /g\.counts\.notInMirror = inOrg === null \? null : Math\.max\(0, inOrg - notMirrorable/,
                'a function this mirror cannot hold is counted as one that failed to download');
 });
 

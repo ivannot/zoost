@@ -17,7 +17,7 @@
       "highlight.js", "report.js", "reportshell.js", "export.js", "health.js", "ai.js",
       "product-help.js", "sample-org.js", "automation.js", "connections.js", "modules.js",
       "preview-model.js", "tabs.js", "export-scope.js", "analytics-sql.js"
-      , "workspace-controller.js", "preview-controller.js", "history-controller.js", "type-chips.js"
+      , "workspace-controller.js", "preview-controller.js", "history-controller.js", "type-chips.js", "function-stats.js", "graph-session.js"
     ],
     "bootstrap": ["bootstrap.js"]
   },
