@@ -41,20 +41,36 @@ async function debuggerUrl(port, child) {
   }
   throw new Error(`Chrome did not open its debugging port${child.exitCode !== null ? ` (exit ${child.exitCode})` : ''}`);
 }
+// A lost connection rejects everything waiting, and every call has a timeout: see the note on the
+// same function in tools/endpointprobe.mjs for the false pass and the hang this closes.
+const CALL_TIMEOUT_MS = 15000;
 function cdp(wsUrl) {
-  const socket = new WebSocket(wsUrl); let seq = 0;
+  const socket = new WebSocket(wsUrl); let seq = 0, gone = null;
   const waiting = new Map(), listeners = new Set();
+  const fail = (why) => {
+    if (!gone) gone = why;
+    for (const [id, pending] of waiting) { waiting.delete(id); clearTimeout(pending.timer); pending.reject(new Error(`${pending.method}: ${gone}`)); }
+  };
+  socket.addEventListener('close', () => fail('Chrome closed the debugging connection before answering'));
+  socket.addEventListener('error', () => fail('the debugging connection to Chrome failed'));
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
     if (message.id && waiting.has(message.id)) {
-      const pending = waiting.get(message.id); waiting.delete(message.id);
+      const pending = waiting.get(message.id); waiting.delete(message.id); clearTimeout(pending.timer);
       message.error ? pending.reject(new Error(`${pending.method}: ${message.error.message}`)) : pending.resolve(message.result); return;
     }
     for (const listener of listeners) listener(message);
   });
   return {
     open: () => new Promise((resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }); }),
-    call(method, params = {}, sessionId) { return new Promise((resolve, reject) => { const id = ++seq; waiting.set(id, { resolve, reject, method }); socket.send(JSON.stringify({ id, method, params, sessionId })); }); },
+    call(method, params = {}, sessionId, timeoutMs = CALL_TIMEOUT_MS) {
+      return new Promise((resolve, reject) => {
+        if (gone) { reject(new Error(`${method}: ${gone}`)); return; }
+        const id = ++seq;
+        const timer = setTimeout(() => { waiting.delete(id); reject(new Error(`${method}: Chrome did not answer within ${timeoutMs / 1000}s`)); }, timeoutMs);
+        waiting.set(id, { resolve, reject, method, timer }); socket.send(JSON.stringify({ id, method, params, sessionId }));
+      });
+    },
     on(listener) { listeners.add(listener); }, close() { socket.close(); },
   };
 }
@@ -322,10 +338,11 @@ async function main() {
     success = `CRM endpoint pull: six areas, ${count} raw requests across ${used.size} routes -> ${final.result.files} local files; cache disabled, no network\n`;
     await client.call('Target.closeTarget', { targetId });
   } finally {
-    if (client) { try { await client.call('Browser.close'); } catch (_) {} client.close(); }
-    const waitExit = (limit) => child.exitCode !== null ? Promise.resolve(true) : new Promise((resolve) => { const timer = setTimeout(() => resolve(false), limit); child.once('exit', () => { clearTimeout(timer); resolve(true); }); });
+    if (client) { try { await client.call('Browser.close', {}, undefined, 3000); } catch (_) {} client.close(); }
+    const waitExit = (limit) => (child.exitCode !== null || child.signalCode !== null) ? Promise.resolve(true) : new Promise((resolve) => { const timer = setTimeout(() => resolve(false), limit); child.once('exit', () => { clearTimeout(timer); resolve(true); }); });
     if (!(await waitExit(5000))) { child.kill('SIGKILL'); await waitExit(3000); }
-    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
+    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 }); }
+    catch (cleanupError) { if (success) throw cleanupError; process.stderr.write(`(also: could not remove the probe profile - ${cleanupError.message})\n`); }
   }
   process.stdout.write(success);
 }

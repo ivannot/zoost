@@ -1946,11 +1946,13 @@ def main() -> int:
     print(f"  {'endpoint-crm':18s} driving…", flush=True)
     env = os.environ.copy()
     env["CHROME"] = shots.chrome()
-    subprocess.run(["node", str(ROOT / "tools" / "crm-endpointprobe.mjs")], check=True, env=env)
+    # A bound, because a probe that stops answering must fail the battery rather than hold it - and
+    # the pre-push hook with it. The pull itself takes seconds; three minutes is only a ceiling.
+    subprocess.run(["node", str(ROOT / "tools" / "crm-endpointprobe.mjs")], check=True, env=env, timeout=180)
     print(f"  {'endpoint-crm':18s} ok", flush=True)
     print(f"  {'endpoint-analytics':18s} driving…", flush=True)
     env["CHROME"] = shots.chrome()
-    subprocess.run(["node", str(ROOT / "tools" / "endpointprobe.mjs")], check=True, env=env)
+    subprocess.run(["node", str(ROOT / "tools" / "endpointprobe.mjs")], check=True, env=env, timeout=180)
     print(f"  {'endpoint-analytics':18s} ok", flush=True)
     shots._browser_for(1280, 800, 1.0)
     try:

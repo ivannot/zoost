@@ -65,16 +65,31 @@ async function debuggerUrl(port, child) {
   throw new Error(`Chrome did not open its debugging port${child.exitCode !== null ? ` (exit ${child.exitCode})` : ''}`);
 }
 
+// **A lost connection is a failure, and so is silence.** The first version resolved pending calls
+// only when Chrome answered them. When Chrome died mid-run nothing ever rejected, nothing kept Node's
+// event loop alive, and the process exited 0 with nothing printed - `probe.py` then said «ok» over a
+// pull that had not finished. And a page stuck in a loop never answers `Runtime.evaluate`, so the
+// deadline in the polling loop was never reached and the battery hung. Both were reproduced against a
+// stub speaking the protocol. So a close or an error rejects everything still waiting, and every call
+// has a timeout of its own.
+const CALL_TIMEOUT_MS = 15000;
 function cdp(wsUrl) {
   const socket = new WebSocket(wsUrl);
-  let seq = 0;
+  let seq = 0, gone = null;
   const waiting = new Map();
   const listeners = new Set();
+  const fail = (why) => {
+    if (!gone) gone = why;
+    for (const [id, pending] of waiting) { waiting.delete(id); clearTimeout(pending.timer); pending.reject(new Error(`${pending.method}: ${gone}`)); }
+  };
+  socket.addEventListener('close', () => fail('Chrome closed the debugging connection before answering'));
+  socket.addEventListener('error', () => fail('the debugging connection to Chrome failed'));
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
     if (message.id && waiting.has(message.id)) {
-      const { resolve, reject, method } = waiting.get(message.id);
+      const { resolve, reject, method, timer } = waiting.get(message.id);
       waiting.delete(message.id);
+      clearTimeout(timer);
       if (message.error) reject(new Error(`${method}: ${message.error.message}`));
       else resolve(message.result);
       return;
@@ -88,10 +103,15 @@ function cdp(wsUrl) {
         socket.addEventListener('error', reject, { once: true });
       });
     },
-    call(method, params = {}, sessionId) {
+    call(method, params = {}, sessionId, timeoutMs = CALL_TIMEOUT_MS) {
       return new Promise((resolve, reject) => {
+        if (gone) { reject(new Error(`${method}: ${gone}`)); return; }
         const id = ++seq;
-        waiting.set(id, { resolve, reject, method });
+        const timer = setTimeout(() => {
+          waiting.delete(id);
+          reject(new Error(`${method}: Chrome did not answer within ${timeoutMs / 1000}s`));
+        }, timeoutMs);
+        waiting.set(id, { resolve, reject, method, timer });
         socket.send(JSON.stringify({ id, method, params, sessionId }));
       });
     },
@@ -531,11 +551,12 @@ async function main() {
     // close, observe the process exit (including the already-exited case), and only then remove the
     // profile. A cleanup failure must not be printed after an apparent success.
     if (client) {
-      try { await client.call('Browser.close'); } catch (_) {}
+      try { await client.call('Browser.close', {}, undefined, 3000); } catch (_) {}
       client.close();
     }
     const waitForExit = async (limit) => {
-      if (child.exitCode !== null) return true;
+      // A process killed by a signal has `signalCode` and no `exitCode`, and its `exit` has fired.
+      if (child.exitCode !== null || child.signalCode !== null) return true;
       return new Promise((resolve) => {
         const timer = setTimeout(() => resolve(false), limit);
         child.once('exit', () => { clearTimeout(timer); resolve(true); });
@@ -545,7 +566,13 @@ async function main() {
       child.kill('SIGKILL');
       await waitForExit(3000);
     }
-    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
+    // A profile that cannot be removed fails a run that had passed - leaving it behind is not green -
+    // but it must not replace the error of a run that had already failed, which is the one to read.
+    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 }); }
+    catch (cleanupError) {
+      if (success) throw cleanupError;
+      process.stderr.write(`(also: could not remove the probe profile - ${cleanupError.message})\n`);
+    }
   }
   process.stdout.write(success);
 }
