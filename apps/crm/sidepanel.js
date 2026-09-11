@@ -1212,7 +1212,19 @@ function fnRowEl(e) {
  * identity that matters - itself.
  */
 async function fetchThenRedrawRow(e) {
+  // **A progress line is borrowed, and it is handed back when the work that wrote it ends without a
+  // sentence of its own.** The bridge now reports «files for <function> n/m» while a compiled function
+  // downloads, and the panel shows it whenever the pull buttons are held - which a single row click
+  // does. Nothing on this path writes a closing line: success redraws the row and a failure is said on
+  // the row. So the status bar was left spinning on «Files for calc… 2/2» after the download had
+  // finished, or on «1/2» after it had failed. Found by a reader with no memory of the change.
+  //
+  // The criterion is the class and not the words: once this has returned nothing is busy any more, so
+  // a `busy` status still on screen is by definition stale, whoever wrote it. What it said before is
+  // put back without `setStatus`, which would record a step in the problem report that nobody took.
+  const before = { text: $('stxt').textContent, cls: $('status').className };
   await runPullAction(() => downloadOne(e));
+  if ($('status').className === 'busy') { $('stxt').textContent = before.text; $('status').className = before.cls; }
   updateRow(e);
   updateMissingButton();
 }

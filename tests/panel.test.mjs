@@ -520,6 +520,9 @@ test('a refused deluge call is retried with the token the page itself uses', asy
   const answers = [
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"a":1,"csrfToken":"PAGETOKEN0000000000","b":2}' },
+    // The CRM read that sees the fresh token accepted, so a refusal after it can be told from a token
+    // fault. It goes out here because the cookie and the page token differ; its answer is not acted on.
+    { status: 200, ok: true, json: async () => ({ schedules: [] }) },
     { status: 200, ok: true, json: async () => ({ connections: [] }) },
   ];
   const sent = [];
@@ -18433,11 +18436,12 @@ test('a rotated CSRF token is recovered on any path, not only the deluge one', a
                    'a CRM-family call was refused after Zoho rotated the token and never recovered - '
                    + 'the memo it is pinned to is dropped on the deluge path only, so every area stays '
                    + 'refused until the reader reloads the Zoho tab, which nothing tells them to do');
-  // Two token-bearing requests: the stale attempt and one retry after the measured raw Deluge
-  // bootstrap. The number is here so a recovery that starts looping is a failure rather than a
-  // slower success.
-  assert.equal(sent.length, 2,
-               `it sent ${sent.length} token request(s); the stale one and one retry were expected`);
+  // Three token-bearing requests, each named: the stale attempt, the CRM read that sees the rotated
+  // token accepted - without it a later refusal cannot be told from a token fault - and the retry. No
+  // Deluge bootstrap: this refusal is on a CRM path. The number is here so a recovery that starts
+  // looping is a failure rather than a slower success.
+  assert.equal(sent.length, 3,
+               `it sent ${sent.length} token request(s); the stale one, the CRM read and one retry were expected`);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -19204,6 +19208,105 @@ test('a deluge refusal with a good token is said calmly, and is still not a role
                       `the endpoint and the code are back on the status line: ${said}`);
 });
 
+// **Connections alone, which is how the defect was reported.** The case above begins with an
+// ordinary CRM read that vouches for the token, so it could not see what happens when nothing does:
+// a non-admin user pulls only the Connections tab, which makes no other request in that page's life.
+// The recovery used to take that reading itself - one CRM read with the token just fetched - and a
+// later change replaced it with the raw Deluge initialisation measured from Zoho's own page. Both are
+// needed, and with only the second the reader went back to the cookie diagnostic about a token that
+// was fine. Found by a reader with no memory of either change; reproduced on both revisions.
+//
+// Scripted by URL, not by a queue of answers: what is asserted is *which* requests went out.
+{
+  const REL = 'apps/crm/content-bridge.js';
+  const bridgeWith = (cookieToken, pageToken, refuse) => {
+    const sent = [], booted = [];
+    const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,
+                encodeURIComponent, Number,
+                instanceName: () => 'yourinstance',
+                document: { cookie: 'CT_CSRF_TOKEN=' + cookieToken },
+                cookie: (n) => (n === 'CT_CSRF_TOKEN' ? cookieToken : undefined),
+                memoValid: () => true, orgId: () => '1234567890',
+                initialiseDeluge: async () => { booted.push('deluge'); return true; },
+                fetch: async (url, opt) => {
+                  const u = String(url).replace('https://crm.zoho.eu', '').split('?')[0];
+                  sent.push(u);
+                  if (u.endsWith('/ConstantsInitial.do')) return { status: 200, ok: true, text: async () => `{"csrfToken":"${pageToken}"}` };
+                  if (refuse(u)) return { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' };
+                  return { status: 200, ok: true, json: async () => ({}) };
+                } };
+    const m = load([sliceConst(REL, 'NO_CONTENT'), sliceConst(REL, 'CSRF_COOKIES'),
+                    sliceConst(REL, '_org'), sliceConst(REL, 'lastCsrfFrom'), sliceConst(REL, 'lastCsrfShape'),
+                    sliceConst(REL, '_tokenAccepted'), sliceConst(REL, '_warming'), sliceConst(REL, 'tokenOf'),
+                    sliceFn(REL, 'safePath'), sliceFn(REL, 'apiError'), sliceFn(REL, 'errorDetail'),
+                    sliceFn(REL, 'csrfToken'), sliceFn(REL, 'headers'), sliceFn(REL, 'noteTokenAccepted'),
+                    sliceFn(REL, 'pageCsrfToken'), sliceFn(REL, 'warmDeluge'), sliceFn(REL, 'api')], g);
+    return { m, sent, booted };
+  };
+  const CONNECTIONS = '/deluge/api/ui/v1/1234567890/services/ZohoCRM/connections';
+
+  test('crm: Connections pulled alone and refused twice is still said calmly', async () => {
+    const { m, sent, booted } = bridgeWith('COOKIETOKEN0000000000', 'PAGETOKEN000000000000000', (u) => u === CONNECTIONS);
+    const err = await m.api(CONNECTIONS, 'drepn').then(() => null, (e) => e);
+    assert.ok(err, 'Connections succeeded - this case has lost its subject');
+    assert.equal(err.note, 'Zoho refused this read - this Zoho user may not have access to it',
+      `a non-admin user pulling only Connections is shown the cookie diagnostic again: ${err.message}`);
+    assert.ok(sent.some((u) => u.startsWith('/crm/v9/settings/automation/schedules')),
+      `nothing vouched for the token before the retry: ${sent.join(', ')}`);
+    assert.deepEqual(booted, ['deluge'], 'the measured Deluge initialisation did not run before the retry');
+    assert.ok(!err.forbidden, 'an inference was promoted to a role verdict');
+  });
+
+  test('crm: the recovery adds a CRM read only when the token has not been seen accepted', async () => {
+    // Pull all, cookie and page token agreeing: functions have already vouched for it.
+    const T = 'SAMETOKENEVERYWHERE0000000';
+    const { m, sent } = bridgeWith(T, T, (u) => u === CONNECTIONS);
+    await m.api('/crm/v2/settings/functions?type=org');
+    const before = sent.length;
+    await m.api(CONNECTIONS, 'drepn').catch(() => {});
+    const extra = sent.slice(before).filter((u) => u.startsWith('/crm/v9/settings/automation/schedules'));
+    assert.deepEqual(extra, [], 'a token already seen accepted cost an extra CRM request on every recovery');
+  });
+
+  test('crm: a refused CRM read does not initialise Deluge', async () => {
+    let first = true;
+    const { m, booted } = bridgeWith('COOKIETOKEN0000000000', 'PAGETOKEN000000000000000',
+      (u) => (u === '/crm/v2/settings/modules' && first ? !(first = false) : false));
+    await m.api('/crm/v2/settings/modules');
+    assert.deepEqual(booted, [], 'a token rotated under a Modules pull sent the Deluge session bootstrap');
+  });
+}
+
+// **A progress line borrowed by a single-row download is handed back.** The bridge reports «files
+// for <function> n/m» while a compiled function downloads, and the panel shows it whenever the pull
+// buttons are held - which a row click does. Nothing on that path writes a closing sentence, so the
+// status bar was left spinning on the last progress line after the download had ended. Driven with the
+// real handler producing the line, and both outcomes: success, and a failure said only on the row.
+for (const outcome of ['succeeds', 'fails']) {
+  test(`crm: a single function download that ${outcome} does not leave the status bar spinning`, async () => {
+    const nodes = { stxt: { textContent: 'Ready.' }, status: { className: 'ok' } };
+    const g = { String, Promise,
+                $: (id) => nodes[id],
+                pullActive: false, pullBusy: false,
+                setStatus: (t, cls = '') => { nodes.stxt.textContent = t; nodes.status.className = cls; },
+                syncOne: () => {}, reconcileFunctions: () => {}, sendGraphWhenBuilt: () => {},
+                updateRow: () => {}, updateMissingButton: () => {} };
+    const m = load([sliceFn('apps/crm/live-sync.js', 'onPanelMessage'),
+                    sliceFn('apps/crm/sidepanel.js', 'fetchThenRedrawRow')], g);
+    g.runPullAction = async (work) => { g.pullBusy = true; try { return await work(); } finally { g.pullBusy = false; } };
+    g.downloadOne = async () => {
+      m.onPanelMessage({ type: 'pullProgress', stage: 'files for calc', done: 1, total: 2 });
+      if (outcome === 'fails') return false;
+      m.onPanelMessage({ type: 'pullProgress', stage: 'files for calc', done: 2, total: 2 });
+      return true;
+    };
+    await m.fetchThenRedrawRow({ path: 'functions/automation/calc' });
+    assert.notEqual(nodes.status.className, 'busy',
+      `the download ended and the status bar still spins on «${nodes.stxt.textContent}»`);
+    assert.equal(nodes.stxt.textContent, 'Ready.', 'what the status bar said before the click was not put back');
+  });
+}
+
 // **And the evidence must not be a coincidence of spelling.** `tokenOf` strips the prefix, so the
 // CRM family's own cookie sent to the deluge runtime by the fallback in `csrfToken` compares equal
 // to the value the CRM API has been accepting all along - which is the *known* mismatch this file
@@ -19247,6 +19350,9 @@ test('a deluge refusal with a token nothing has accepted keeps the cookie diagno
   const answers = [
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 200, ok: true, text: async () => '{"csrfToken":"PAGETOKEN0000000000"}' },
+    // The CRM read, refused as well: on this path nothing ever accepts the token, which is the state
+    // the cookie diagnostic was written for and the one it must still fire on.
+    { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
     { status: 400, ok: false, text: async () => '{"errorMessage":"INVALID_CSRF_TOKEN"}' },
   ];
   const g = { BASE: 'https://crm.zoho.eu', Object, Error, String, Promise, JSON, console, RegExp,

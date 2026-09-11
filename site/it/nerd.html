@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:231c67ccc0b5f322 -->
+<!-- translated-from: site/nerd.html sha256:9cff9d6412996934 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -136,8 +136,12 @@
     qualcosa che un client possa promettere, per questo la frase parla di cosa Zoost manda.</p>
   <p>Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una
     navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un
-    4xx deterministico), e il recupero tramite un'azione che è stata <em>misurata</em> - la prima
-    chiamata <code>/deluge/</code> dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la sistema; questo è stato riprodotto apposta invece che ipotizzato.</p>
+    4xx deterministico), e il recupero tramite un'azione che è stata <em>misurata</em> - quando Zoho
+    rifiuta il token di sicurezza di una richiesta, Zoost legge il token che usa la pagina di Zoho stessa e
+    riprova quella richiesta una volta. Per una chiamata <code>/deluge/</code>, il catalogo delle
+    connessioni, il nuovo tentativo è preceduto dalle stesse tre letture di sessione che fa per prima la
+    pagina Connections di Zoho, perché una normale chiamata a Zoho CRM, il rimedio precedente, si è
+    misurata insufficiente. Un solo tentativo, su quell'unico errore.</p>
 
   <h2 id="what-is-never-called">Cosa non viene mai chiamato</h2>
   <p>Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa. È una proprietà di quali endpoint stanno scritti nel sorgente, non di qualcosa che il browser

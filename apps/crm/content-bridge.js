@@ -320,7 +320,7 @@
     } catch (_) { return false; }
   }
 
-  async function warmDeluge() {
+  async function warmDeluge(refusedPath) {
     // Its own result is still not acted on - the side effect is the point, and a role that cannot
     // reach this endpoint is no worse off for having asked. What is returned is whether the primer
     // itself got an answer, so a second refusal can say whether it was ever primed at all. That
@@ -342,12 +342,36 @@
     // is what puts that back.
     _pageCsrf = null;
     const got = await pageCsrfToken();
-    // The recovery itself is exactly the bounded sequence the page makes. `_warming` guards against
-    // a future edit accidentally routing one of these raw reads through `api()` and recursing.
+    // **Two jobs, and replacing the first with the second put a reported defect back.** The Deluge
+    // sequence below is what recovers the Connections read - measured from Zoho's own page. What it
+    // does not do is let the *next* refusal be read calmly: that sentence needs to have seen this
+    // exact token accepted by an ordinary CRM read (`noteTokenAccepted`, which only `api()` records
+    // and which ignores `/deluge/` on purpose), and the three raw reads below are neither. So a pull
+    // of Connections alone - which makes no other request in that page's life - went back to telling
+    // a non-admin user about cookies and a token that was fine, the message removed on 2 September
+    // after being reported from a real org. Found by a reader with no memory of either change, and
+    // reproduced against both revisions with one scripted server.
+    //
+    // So the CRM read is back, and only when it is needed: when the token about to be sent again has
+    // not already been seen accepted. In a Pull all whose cookie and page token agree, the functions
+    // pull has already recorded it and nothing extra goes out.
+    //
+    // Before the Deluge sequence rather than after, so the three reads that initialise the session
+    // still sit immediately before the retry, in the order the page makes them. And the Deluge reads
+    // only for a Deluge refusal: this recovery is shared by every family (see `api()`), and a token
+    // rotated under a Modules pull used to send three Deluge requests that have nothing to do with it.
+    //
+    // `_warming` stops the CRM read re-entering this function through `api()`; its own outcome is
+    // not acted on, because a role that cannot read schedules is no worse off for having asked.
     if (!_warming) {
       _warming = true;
-      try { await initialiseDeluge(); }
-      finally { _warming = false; }
+      try {
+        if (got && _pageCsrf !== _tokenAccepted) {
+          try { await api('/crm/v9/settings/automation/schedules?page=1&per_page=1', 'crmcsrfparam', true); }
+          catch (_) { /* what it answers says nothing; whether it accepted the token is what is recorded */ }
+        }
+        if (String(refusedPath || '').startsWith('/deluge/')) await initialiseDeluge();
+      } finally { _warming = false; }
     }
     // `pageCsrfToken` answers null on four paths - no
     // instance, a refused read, a body with no `csrfToken`, a network throw - and a `true` here was
@@ -420,7 +444,7 @@
       // side effect and a role that refuses that endpoint is no worse off - but if it *also* failed,
       // the retry below was sent under exactly the conditions that had just been refused, and the
       // second failure is not a second piece of evidence.
-      const primed = await warmDeluge();
+      const primed = await warmDeluge(path);
       return api(path, csrfPrefix, primed ? true : 'unprimed');
     }
     // **The same three words for three different problems.** «400 INVALID_CSRF_TOKEN» is what you
@@ -505,7 +529,7 @@
     if (res.ok) return res.text();
     const { message, code } = await errorDetail(res);
     if (!retried && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
-      const primed = await warmDeluge();
+      const primed = await warmDeluge(path);
       return apiText(path, primed ? true : 'unprimed');
     }
     throw apiError(res.status, path, message, code);
@@ -533,7 +557,7 @@
     if (res.ok) return res.json();
     const { message, code } = await errorDetail(res);
     if (!retried && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
-      const primed = await warmDeluge();
+      const primed = await warmDeluge(path);
       return apiPostJson(path, primed ? true : 'unprimed');
     }
     throw apiError(res.status, path, message, code);

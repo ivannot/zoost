@@ -132,9 +132,11 @@
     about what Zoost sends.</p>
   <p>The exceptions are narrow and documented. Zoost may wait for a known element after navigation or
     retry once after a genuinely transient failure, such as a network error, 429 or 5xx response, but
-    never after a deterministic 4xx response. It also applies one measured recovery: after a fresh
-    login, Zoho refuses the first <code>/deluge/</code> call, while an ordinary Zoho CRM request makes
-    the next call succeed. This behaviour was reproduced deliberately rather than inferred.</p>
+    never after a deterministic 4xx response. It also applies one measured recovery: when Zoho refuses a request's
+    security token, Zoost reads the token the Zoho page itself uses and tries that request once more.
+    For a <code>/deluge/</code> call - the connections catalogue - the retry is preceded by the same
+    three session reads Zoho's own Connections page makes first, because an ordinary Zoho CRM request,
+    the earlier remedy, was measured not to be enough. One attempt, on that one error.</p>
 
   <h2 id="what-is-never-called">What is never called</h2>
   <p>Neither extension calls an endpoint that creates, edits or deletes anything. That is a property
