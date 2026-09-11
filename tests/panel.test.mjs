@@ -4771,9 +4771,15 @@ test('every entry point that writes the mirror asks for the folder first', () =>
   for (const fn of ['pullAll', 'pullOne', 'retryFailed']) {
     const at = src.indexOf(`async function ${fn}(`);
     assert.ok(at > 0, `id=${fn} is gone from the Analytics panel`);
-    const head = src.slice(at, at + 700);
-    assert.ok(/requirePerm\((?:dir|op\.root)\)/.test(src.slice(at, at + 1200)),
-      `id=${fn} writes the mirror without asking for the folder first`);
+    const head = src.slice(at, at + 1400);
+    if (fn === 'pullAll') {
+      assert.ok(/useCase\(op\)/.test(head), 'pullAll no longer delegates to its guarded use case');
+      assert.ok(/await deps\.requirePerm\(operation\.root\)/.test(read('apps/analytics/pull-usecase.js')),
+        'the Pull all use case writes without asking for the folder first');
+    } else {
+      assert.ok(/requirePerm\((?:dir|op\.root)\)/.test(head),
+        `id=${fn} writes the mirror without asking for the folder first`);
+    }
   }
 });
 
@@ -5344,7 +5350,7 @@ for (const [app, fns] of [
     // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
     // at all, so they are the two that must not refuse.
     const unguarded = [...reach].filter((f) => !fns.includes(f)
-      && !['toBridge', 'getContext', 'createWorkspaceForEntry'].includes(f));
+      && !['toBridge', 'getContext', 'createWorkspaceForEntry', 'getAnalyticsPullUseCase'].includes(f));
     assert.deepEqual(unguarded, [], `these reach Zoho and nothing was said about them: ${unguarded}`);
   });
 
@@ -9969,11 +9975,11 @@ test('analytics: the model is guarded, not only the disk', () => {
   }
   // pullAll is held to the stronger rule: nothing lands in memory until the whole snapshot is on
   // disk - one destructuring after the writeToDisk gate, and no per-stage global assignment left.
-  const pa = sliceApp('analytics', 'pullAll');
-  const gate = pa.indexOf('await writeToDisk(info, op, next)');
-  const publish = pa.indexOf('({ views, folders, schema, relations, sqls, deps, pullFailed } = next)');
-  assert.ok(gate > 0 && publish > gate, 'pullAll publishes memory before the snapshot is on disk');
-  assert.ok(!/^\s*(views|schema|sqls|deps) = /m.test(pa), 'a stage still lands in a global one by one');
+  const uc = read('apps/analytics/pull-usecase.js');
+  const gate = uc.indexOf('await deps.writeToDisk(info, operation, next)');
+  const publish = uc.indexOf('deps.applySnapshot(next)');
+  assert.ok(gate > 0 && publish > gate, 'the Pull all use case publishes memory before the snapshot is on disk');
+  assert.ok(!/^\s*(views|schema|sqls|deps) = /m.test(uc), 'a stage still lands in a global one by one');
 });
 
 test('analytics: a write failure after the marker blocks the live snapshot too', async () => {
@@ -11039,8 +11045,9 @@ test('analytics: health includes SQL files found unreadable after loading the in
     // Every failure records its stage, or sqlState cannot tell sql from lineage.
     assert.ok(!/still\.push\(\.\.\.\(r2?\.failed \|\| \[\]\)\);/.test(an),
               'a partial pull records failures with no stage');
-    assert.ok(/\(sq\.failed \|\| \[\]\)\.map\(\(f\) => \(\{ \.\.\.f, stage: 'sql' \}\)\)/.test(sliceApp('analytics', 'pullAll')),
-              'the full pull records sql failures with no stage');
+    assert.ok(/\(sq\.failed \|\| \[\]\)\.map\(\(f\) => \(\{ \.\.\.f, stage: 'sql' \}\)\)/.test(
+      sliceFileFn('apps/analytics/pull-usecase.js', 'run')),
+              'the Pull use case records sql failures with no stage');
   });
 
   test('analytics: a query table whose pull failed keeps a way into its SQL', () => {

@@ -142,6 +142,22 @@ test('bridge reply validation rejects a payload with the wrong container type', 
   assert.throws(() => crm.validateBridgeReply({ cmd: 'listFunctions' }, { ok: true, entries: {}, total: 1 }), /invalid entries/);
 });
 
+test('analytics Pull all use case owns the stage order outside the panel', async () => {
+  const { createAnalyticsPullUseCase } = load('analytics/pull-usecase.js');
+  const phases = [];
+  const runner = createAnalyticsPullUseCase({
+    requirePerm: async () => {}, setBusy: () => {},
+    readWorkspace: async () => ({ workspace: 'w', origin: 'https://analytics.zoho.eu' }),
+    readViews: async () => ({ views: [{ id: '1', type: 'QueryTable' }], folders: [] }),
+    readErd: async () => ({ tables: {}, relations: [] }), readSql: async () => ({ sql: {}, failed: [] }),
+    readDependencies: async () => ({ deps: {}, failed: [] }), phase: (name) => (phases.push(name), true),
+    writeToDisk: async () => true, applySnapshot: () => {}, mergeSchemaIntoViews: () => {},
+  });
+  const result = await runner({ root: {}, current: () => true, say: () => {} });
+  assert.deepEqual(phases, ['planning', 'writing', 'refreshing']);
+  assert.deepEqual(result.qIds, ['1']);
+});
+
 test('pull controller closes the lifecycle on success and failure', () => {
   const context = {};
   vm.createContext(context);

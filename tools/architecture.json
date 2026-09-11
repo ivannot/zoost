@@ -6,10 +6,10 @@
     ],
     "ports": ["bridge-contract.js"],
     "application": [
-      "pull-controller.js", "pull-lifecycle.js", "error-model.js", "workspace.js", "navigation.js"
+      "pull-controller.js", "pull-lifecycle.js", "pull-usecase.js", "error-model.js", "workspace.js", "navigation.js"
     ],
     "adapters": [
-      "content-bridge.js", "filesystem-adapter.js", "idb.js", "keyvault.js",
+      "content-bridge.js", "filesystem-adapter.js", "pull-adapter.js", "idb.js", "keyvault.js",
       "zoho-bridge.js", "zoho-navigation.js", "background.js", "hook.js", "live-sync.js"
     ],
     "ui": [

@@ -209,6 +209,7 @@ let ctx = null;             // { origin, workspace, view } of the active tab
 let busy = false;
 let pullDepth = 0, pullBusy = false;
 const pullLifecycle = typeof createPullLifecycle === 'function' ? createPullLifecycle() : null;
+let analyticsPullUseCase = null;
 
 let wsList = [];            // workspaces found on disk, cached like the CRM panel's
 let views = [], folders = [], schema = {}, relations = [], sqls = {}, deps = null, pullFailed = [];
@@ -1308,6 +1309,26 @@ function refuseIncompleteSnapshot() {
 }
 
 // ---------- pull ----------
+function getAnalyticsPullUseCase() {
+  if (analyticsPullUseCase || typeof createAnalyticsPullUseCase !== 'function') return analyticsPullUseCase;
+  const bridge = typeof createAnalyticsPullAdapter === 'function'
+    ? createAnalyticsPullAdapter((command) => toBridge(command))
+    : null;
+  analyticsPullUseCase = createAnalyticsPullUseCase({
+    requirePerm, setBusy,
+    ...(bridge || {
+      readWorkspace: () => toBridge({ cmd: 'workspaceInfo' }), readViews: () => toBridge({ cmd: 'listViews' }),
+      readErd: () => toBridge({ cmd: 'workspaceErd' }), readSql: (ids) => toBridge({ cmd: 'pullSql', ids }),
+      readDependencies: (ids) => toBridge({ cmd: 'scanDependencies', ids }),
+    }),
+    phase: (name) => pullPhase(name), writeToDisk,
+    applySnapshot: (next) => { ({ views, folders, schema, relations, sqls, deps, pullFailed } = next); },
+    mergeSchemaIntoViews, setStatus: status, render,
+    finish: (warnings) => finishPullLifecycle(warnings),
+  });
+  return analyticsPullUseCase;
+}
+
 async function pullAll() {
   if (pullBusy) return;
   const op = beginWorkspaceOp();   // the workspace this pull belongs to, carried rather than re-read
@@ -1317,48 +1338,12 @@ async function pullAll() {
   setPullBusy(true);
   setBusy(true, 'Pulling…');
   try {
-    await requirePerm(op.root);
-    setBusy(true, 'Reading the workspace…');
-    const info = await toBridge({ cmd: 'workspaceInfo' });
-
-    // Built whole, published whole. The four stages used to land in the globals one by one, so a
-    // stage that failed left the panel holding the new views over the old schema - a photograph of
-    // two different moments, on screen and in every export until the next successful pull.
-    // Reproduced by an outside scan with `workspaceErd` failing after `listViews`.
-    setBusy(true, 'Reading the view list…');
-    const vl = await toBridge({ cmd: 'listViews' });
-    if (!op.current()) return endBusyElsewhere();   // the answer describes the workspace we were in, not this one
-
-    setBusy(true, 'Reading structure and relations…');
-    const sc = await toBridge({ cmd: 'workspaceErd' });
-    if (!op.current()) return endBusyElsewhere();
-
-    const nextViews = vl.views || [];
-    const qIds = nextViews.filter((v) => v.type === 'QueryTable').map((v) => v.id);
-    setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
-    const sq = await toBridge({ cmd: 'pullSql', ids: qIds });
-    if (!op.current()) return endBusyElsewhere();
-
-    const allIds = nextViews.map((v) => v.id);
-    setBusy(true, `Reading lineage… 0 / ${allIds.length}`);
-    const dp = await toBridge({ cmd: 'scanDependencies', ids: allIds });
-    if (!op.current()) return endBusyElsewhere();
-
-    // The stage travels with each failure: «could not read» means nothing actionable until it says
-    // which half - and sqlState() tells an unread query from an absent one by exactly this field.
-    const next = {
-      views: nextViews, folders: vl.folders || [],
-      schema: sc.tables || {}, relations: sc.relations || [],
-      sqls: sq.sql || {}, deps: dp.deps || {},
-      pullFailed: [].concat((sq.failed || []).map((f) => ({ ...f, stage: 'sql' })),
-                            (dp.failed || []).map((f) => ({ ...f, stage: 'lineage' }))),
-    };
-    if (typeof pullPhase === 'function') pullPhase('planning');
-    if (typeof pullPhase === 'function') pullPhase('writing');
-    if (!(await writeToDisk(info, op, next))) return endBusyElsewhere();
-    if (typeof pullPhase === 'function') pullPhase('refreshing');
-    ({ views, folders, schema, relations, sqls, deps, pullFailed } = next);
-    mergeSchemaIntoViews();
+    const useCase = getAnalyticsPullUseCase();
+    const result = useCase
+      ? await useCase(op)
+      : { moved: true };
+    if (result.moved) return endBusyElsewhere();
+    const { next, qIds } = result;
 
     const orphans = views.filter(isOrphanCandidate).length;
     const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
