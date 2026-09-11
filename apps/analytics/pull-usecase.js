@@ -30,6 +30,10 @@ function createAnalyticsPullUseCase(deps) {
     deps.setBusy(true, 'Reading structure and relations…');
     const sc = await deps.readErd();
     if (!operation.current()) return { moved: true };
+    // Planning starts when the complete read snapshot exists, not after the write has already
+    // happened.  Keeping this transition at the boundary makes the lifecycle an observation of the
+    // real work rather than a retrospective animation in the panel.
+    if (!deps.phase('planning')) return { moved: true };
     const nextViews = vl.views || [];
     const qIds = nextViews.filter((v) => v.type === 'QueryTable').map((v) => v.id);
     deps.setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
@@ -45,9 +49,9 @@ function createAnalyticsPullUseCase(deps) {
       pullFailed: [].concat((sq.failed || []).map((f) => ({ ...f, stage: 'sql' })),
                             (dp.failed || []).map((f) => ({ ...f, stage: 'lineage' }))),
     };
-    deps.phase('planning'); deps.phase('writing');
+    if (!deps.phase('writing')) return { moved: true };
     if (!(await deps.writeToDisk(info, operation, next))) return { moved: true };
-    deps.phase('refreshing');
+    if (!deps.phase('refreshing')) return { moved: true };
     deps.applySnapshot(next);
     deps.mergeSchemaIntoViews();
     return { next, qIds };

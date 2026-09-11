@@ -36,7 +36,8 @@ automatically.
 
 The tracked `tools/zoho-canary-status.json` starts as `never-run` on purpose. It is not a claim that
 Zoho was reached. A live run is performed separately for CRM and Analytics with temporary synthetic
-credentials and a private output path, for example:
+credentials and a private output path. Each run writes one independently verifiable product record;
+do not merge the two records by hand:
 
 ```text
 node tools/zoho-canary.mjs --app=crm --record=/private/zoost-canary/crm.json
@@ -47,10 +48,11 @@ node tools/zoho-canary.mjs --check-record=/private/zoost-canary/analytics.json
 
 The record contains only schema version, timestamp, product, route names, HTTP statuses and the
 SHA-256 of the reviewed contract. Cookies, tokens, organisation ids, workspace ids and response
-values never enter it. `--check-record` fails distinctly for missing, never-run, malformed or stale
-evidence, so a green contract test cannot be mistaken for a live check. Run the two profiles
-independently and retain their sanitized records in the operator's private evidence store according
-to the chosen 30-day cadence; do not commit them to this repository.
+values never enter it. `--check-record` fails distinctly for missing, never-run, malformed, stale,
+contract-mismatched, incomplete or unsuccessful evidence. It also requires exactly the reviewed
+route set for the product recorded in that file, so a green contract test cannot be mistaken for a
+live check. Run the two profiles independently and retain their sanitized records in the operator's
+private evidence store according to the chosen 30-day cadence; do not commit them to this repository.
 
 The CRM canary variables are explicit: `ZOOST_CANARY_CRM_BASE`, `ZOOST_CANARY_CRM_SESSION`,
 `ZOOST_CANARY_CRM_CSRF`, `ZOOST_CANARY_CRM_ORG` and `ZOOST_CANARY_CRM_INSTANCE`. Analytics uses

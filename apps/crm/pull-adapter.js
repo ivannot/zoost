@@ -17,7 +17,14 @@
 function createCrmPullAdapter(send) {
   if (typeof send !== 'function') throw new Error('Zoost CRM pull adapter needs a bridge sender');
   /** @param {CrmPullRequest} request @returns {Promise<CrmPullReply>} */
-  async function ask(request) { return send(request); }
+  async function ask(request) {
+    const reply = await send(request);
+    if (!reply || typeof reply !== 'object' || (reply.ok !== true && reply.ok !== false)) {
+      throw new Error(`bridge ${request.cmd} returned an invalid response envelope`);
+    }
+    if (reply.ok === false && typeof reply.error !== 'string') throw new Error(`bridge ${request.cmd} returned an invalid error response`);
+    return typeof validateBridgeReply === 'function' ? validateBridgeReply(request, reply) : reply;
+  }
   return {
     /** @returns {Promise<CrmPullReply>} */
     listFunctions: () => ask({ cmd: 'listFunctions' }),

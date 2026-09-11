@@ -208,7 +208,9 @@ let bound = null;           // { workspace, name, origin } of the active workspa
 let ctx = null;             // { origin, workspace, view } of the active tab
 let busy = false;
 let pullDepth = 0, pullBusy = false;
-const pullLifecycle = typeof createPullLifecycle === 'function' ? createPullLifecycle() : null;
+// The lifecycle is a required part of the pull contract.  Silently continuing without it would
+// make a broken script order look like a successful, untracked mirror write.
+const pullLifecycle = createPullLifecycle();
 let analyticsPullUseCase = null;
 
 let wsList = [];            // workspaces found on disk, cached like the CRM panel's
@@ -339,6 +341,12 @@ async function patchCfg(o, op) {
 // appended because two views in different folders may legitimately share a name.
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 const stemOf = (name, id) => (String(name || 'unnamed').replace(/[^\w.\- ]/g, '_').trim().slice(0, 80) || 'unnamed') + '-' + id;
+// The writer is composed once with explicit filesystem helpers.  It is deliberately created here,
+// before any pull can call it, while its view lookup remains a callback so it always sees the current
+// snapshot rather than a copy captured during startup.
+const analyticsMirrorWriter = createAnalyticsMirrorWriter({
+  readJson, writeJson, stemOf, views: () => views,
+});
 
 async function appRoot(create) {
   if (!root) return null;
@@ -990,6 +998,7 @@ async function refreshContext() {
     // about the wrong document.
     const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }, afid === null ? {} : { frameId: afid });
     if (!current()) return;
+    validateBridgeReply({ cmd: 'context' }, r);
     ctx = bridgeContext(r);
   } catch (e) { if (!current()) return; ctx = null; _ctxErr = (e && e.message) || String(e); }
 
@@ -1311,6 +1320,9 @@ function refuseIncompleteSnapshot() {
 // ---------- pull ----------
 function getAnalyticsPullUseCase() {
   if (analyticsPullUseCase) return analyticsPullUseCase;
+  // The pull lifecycle is a runtime invariant, not optional telemetry.  A broken script order must
+  // stop the operation before it can write a mirror without an authoritative operation record.
+  if (!pullLifecycle) throw new Error('Pull lifecycle is unavailable');
   if (typeof createAnalyticsBootstrap !== 'function') throw new Error('Pull bootstrap is unavailable');
   analyticsPullUseCase = createAnalyticsBootstrap({
     toBridge, requirePerm, setBusy, phase: (name) => pullPhase(name), writeToDisk,
@@ -1496,18 +1508,19 @@ async function retryFailed() {
 
 // Split out so a single-item refresh rewrites only what it touched, instead of the whole mirror.
 async function writeLineage(op, nextDeps = deps, nextFailed = pullFailed) {
+  if (typeof analyticsMirrorWriter !== 'undefined') return analyticsMirrorWriter.writeLineage(op, bound && bound.workspace, nextDeps, nextFailed);
   if (!op || !op.current()) return;
   await writeJson('lineage.json', { workspace: bound && bound.workspace, deps: nextDeps, failed: nextFailed }, op);
 }
 async function writeSql(op, nextSqls = sqls) {
+  if (typeof analyticsMirrorWriter !== 'undefined') return analyticsMirrorWriter.writeSql(op, nextSqls, views);
   if (!op || !op.current()) return;
   let unreadable = null;
   const index = await readJson('sql/index.json', {}, op, (failure) => { unreadable = failure; });
   if (unreadable) throw new Error(`Could not read ${unreadable.rel} (${unreadable.name}).`);
   for (const [id, q] of Object.entries(nextSqls)) {
-    if (typeof q.sql !== 'string') continue;              // not re-read this session; its file is current
-    const v = viewById().get(id);
-    const stem = q.stem || stemOf(v ? v.name : id, id);
+    if (typeof q.sql !== 'string') continue;
+    const v = viewById().get(id); const stem = q.stem || stemOf(v ? v.name : id, id);
     await op.write(`sql/${stem}.sql`, q.sql);
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
@@ -1802,77 +1815,30 @@ async function sqlReadState(id, op = beginWorkspaceOp()) {
 }
 
 // ---------- derived ----------
-// A candidate, not a verdict. Analytics knows what its own views read from each other; it does not
-// know about a shared link someone bookmarked, a scheduled export, an embedded report or an API
-// consumer. Every surface says "candidate" for that reason.
-function isOrphanCandidate(v) {
-  if (!deps) return false;
-  const d = deps[v.id];
-  if (!d) return false;                        // unread → not claimed either way
-  if (v.type === 'Dashboard') return false;    // a dashboard is consumed by people, not by views
-  return d.children.length === 0 && d.dashboards.length === 0;
-}
-// The ER endpoint carries `lastModTime`, epoch milliseconds, which matched LAST_DESIGN_MODIFY on
-// every one of the 135 objects it describes. It is copied onto the views so the Design column can
-// sort - but only Tables and QueryTables have it. Presentation views still only have Zoho's
-// localized text, which is shown verbatim and never parsed, so they sort last and the note says so.
+// Pure model operations live outside the panel.  The wrappers keep the historical call sites small
+// while making the state they read explicit and independently testable.
+const analyticsViewModel = createAnalyticsViewModel();
+const isOrphanCandidate = (view) => typeof analyticsViewModel !== 'undefined'
+  ? analyticsViewModel.isOrphanCandidate(view, deps)
+  : !!(deps && deps[view.id] && view.type !== 'Dashboard' && deps[view.id].children.length === 0 && deps[view.id].dashboards.length === 0);
 function mergeSchemaIntoViews() {
-  for (const v of views) {
-    const t = schema[v.id];
-    v.designModifiedAt = t ? t.designModifiedAt : null;
-    v.system = t ? !!t.system : false;
-  }
+  const merged = typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.mergeSchema(views, schema)
+    : views.map((view) => ({ ...view, designModifiedAt: schema[view.id]?.designModifiedAt || null, system: !!schema[view.id]?.system }));
+  views.forEach((view, index) => Object.assign(view, merged[index]));
 }
-
-// Foreign keys, per column, derived from the ER model's links. Not inferred: the bridge resolves
-// each link's column indices to names, and rebuilding "(A.col)=(B.col)" from the pair reproduces
-// Zoho's own `relationstring` exactly, on every link in the workspace this was measured on.
-//
-//   out - this column points at another table  (the classic foreign key)
-//   in  - another table's column points at this one
-//
-// Returned keyed by column name so the columns table can annotate a row without searching.
-function foreignKeys(viewId) {
-  const out = new Map(), inc = new Map();
-  for (const r of relations) {
-    if (r.source === viewId) {
-      r.sourceColumns.forEach((c, i) => {
-        if (!out.has(c)) out.set(c, []);
-        out.get(c).push({ id: r.target, name: r.targetName, column: r.targetColumns[i] || r.targetColumns[0] || '' });
-      });
-    }
-    if (r.target === viewId) {
-      r.targetColumns.forEach((c, i) => {
-        if (!inc.has(c)) inc.set(c, []);
-        inc.get(c).push({ id: r.source, name: r.sourceName, column: r.sourceColumns[i] || r.sourceColumns[0] || '' });
-      });
-    }
+const foreignKeys = (viewId) => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.foreignKeys(viewId, relations) : { out: new Map(), inc: new Map() };
+const relationsOf = (id) => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.relationsOf(id, relations) : relations.filter((r) => r.source === id || r.target === id);
+const viewById = () => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.viewById(views) : new Map(views.map((view) => [view.id, view]));
+const nameOf = (id, map) => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.nameOf(id, map ? [...map.values()] : views) : ((map.get(id) && map.get(id).name) || String(id == null ? '?' : id));
+function structureChain(view, map) {
+  if (typeof analyticsViewModel !== 'undefined') return analyticsViewModel.structureChain(view, map ? [...map.values()] : views, schema);
+  const chain = [], seen = new Set(); let current = view;
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id); chain.push(current);
+    if (schema[current.id]) return chain;
+    current = current.parent ? map.get(current.parent) : null;
   }
-  return { out, inc };
-}
-
-// Every relation this view takes part in, either end. Relations are stored once, not per side.
-const relationsOf = (id) => relations.filter((r) => r.source === id || r.target === id);
-
-const viewById = () => { const m = new Map(); for (const v of views) m.set(v.id, v); return m; };
-// A view we cannot resolve is shown by its id - which is at least true. Returning the raw
-// `.name` was how `undefined` reached the diagram as if it were a table's name.
-const nameOf = (id, m) => (m.get(id) && m.get(id).name) || String(id == null ? '?' : id);
-
-// Walk PARENT_ID up to the first view that actually has columns. Only Tables and QueryTables carry
-// structure; a Pivot or a Report is a presentation of one of them, sometimes several steps removed.
-// Following the chain is what lets the panel answer "what is the structure of this report" instead
-// of shrugging - and it costs nothing, because PARENT_ID is already in the view list.
-// Returns the chain from the view down to the data-bearing root, or null if it dangles.
-function structureChain(v, m) {
-  const chain = []; const seen = new Set();
-  let cur = v;
-  while (cur && !seen.has(cur.id)) {
-    seen.add(cur.id); chain.push(cur);
-    if (schema[cur.id]) return chain;
-    cur = cur.parent ? m.get(cur.parent) : null;
-  }
-  return null;               // no data source reachable - say so rather than showing an empty table
+  return null;
 }
 
 // ---------- render ----------

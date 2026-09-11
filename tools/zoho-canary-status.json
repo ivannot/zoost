@@ -4,5 +4,5 @@
   "cadenceDays": 30,
   "lastSuccess": null,
   "profiles": ["crm", "analytics"],
-  "note": "This tracked marker is deliberately not evidence of a live run. Replace it with the sanitized output of zoho-canary.mjs --record after both profiles complete."
+  "note": "This tracked marker is deliberately not evidence of a live run. Keep one sanitized private record per profile and verify each with zoho-canary.mjs --check-record."
 }

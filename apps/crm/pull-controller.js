@@ -36,17 +36,26 @@
  * takeListGap: () => string,
  * statusSnapshot: () => PullControllerStatus,
  * errorText: (error: unknown) => string,
+ * lifecycle?: {begin: () => number|null, transition: (next: string, id?: number) => boolean,
+ *   progress: (event: object, id?: number) => boolean, finish: (warnings?: boolean, id?: number) => boolean,
+ *   fail: (id?: number) => boolean, snapshot: () => {state: string, operationId: number}},
  * }} PullControllerOptions */
 
 /** @param {PullControllerOptions} options */
 function createCrmPullController(options) {
   let depth = 0;
-  const lifecycle = typeof createPullLifecycle === 'function' ? createPullLifecycle() : null;
+  // The production bootstrap injects a lifecycle, making it a required composition dependency.
+  // Keep the optional construction fallback only for this low-level factory's isolated callers
+  // (some diagnostics exercise the lock without loading the browser bundle); the shipped bootstrap
+  // rejects a missing lifecycle before exposing any pull action.
+  const lifecycle = options.lifecycle || (typeof createPullLifecycle === 'function' ? createPullLifecycle() : null);
 
   function setPullBusy(hold) {
     if (hold && depth === 0) {
-      const id = lifecycle?.begin();
-      if (id != null) lifecycle?.transition('reading', id);
+      if (lifecycle) {
+        const id = lifecycle.begin();
+        if (id == null || !lifecycle.transition('reading', id)) throw new Error('Pull lifecycle could not start');
+      }
     }
     depth = Math.max(0, depth + (hold ? 1 : -1));
     options.publishBusy(depth > 0);
@@ -137,15 +146,15 @@ function createCrmPullController(options) {
         done++;
       }
       if (!operation.current()) return;
-      if (!lifecycle || lifecycle.snapshot().state === 'reading') phase('planning');
+      if (lifecycle.snapshot().state === 'reading') phase('planning');
       await options.takeRechecks(options.answeredRechecks(planned));
       if (!operation.current()) return;
 
       const summary = options.statusSnapshot();
-      if (!lifecycle || lifecycle.snapshot().state === 'planning') phase('writing');
+      if (lifecycle.snapshot().state === 'planning') phase('writing');
       operation.say('Rebuilding the list\u2026', 'busy');
       try { await options.rebuildActive(); } catch (_) {}
-      if (!lifecycle || lifecycle.snapshot().state === 'writing') phase('refreshing');
+      if (lifecycle.snapshot().state === 'writing') phase('refreshing');
       options.renderTabs();
       const changed = options.consumePreferencesChanged();
       const note = options.forbiddenNote()

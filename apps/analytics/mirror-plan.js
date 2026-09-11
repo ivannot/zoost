@@ -29,7 +29,15 @@ function validateMirrorPlan(plan) {
   const seen = new Set();
   for (const key of ['creates', 'updates', 'keeps', 'deletes']) {
     for (const path of plan[key]) {
-      if (typeof path !== 'string' || !path || seen.has(path)) throw new Error('invalid mirror plan paths');
+      // Plans are consumed by removeFileAt(), which resolves paths relative to the
+      // workspace directory.  A plan is data, not authority: reject absolute and
+      // traversal paths before an executor can turn a malformed upstream name into
+      // a deletion outside the mirror.
+      if (typeof path !== 'string' || !path || seen.has(path)
+          || path.startsWith('/') || path.includes('\\')
+          || path.split('/').some((part) => part === '..' || part === '.')) {
+        throw new Error('invalid mirror plan paths');
+      }
       seen.add(path);
     }
   }

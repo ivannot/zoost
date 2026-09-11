@@ -86,6 +86,7 @@ CHECKS = [
                    'apps/*/bootstrap.js', 'apps/crm/crm-bootstrap.js', 'apps/crm/crm-search.js',
                    'apps/crm/crm-navigation-ui.js', 'apps/crm/crm-workflow-ui.js', 'apps/crm/crm-tree.js',
                    'apps/crm/crm-context.js', 'apps/crm/crm-graph.js',
+                   'apps/analytics/analytics-view-model.js', 'apps/analytics/analytics-mirror-writer.js',
                    'apps/crm/workspace-controller.js', 'apps/crm/live-sync.js',
                    'apps/*/report.js', 'apps/*/content-bridge.js', 'apps/*/modules.js',
                    'apps/*/automation.js', 'apps/*/connections.js'],

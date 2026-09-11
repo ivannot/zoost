@@ -13,7 +13,7 @@
 /** @typedef {{ok: true, workspace: string, tables: Record<string, object>, relations: object[], count: number}} AnalyticsErdReply */
 /** @typedef {{ok: true, sql: Record<string, object>, failed: object[]}} AnalyticsSqlReply */
 /** @typedef {{ok: true, id: string, parents: object[], children: object[], dashboards: string[]}} AnalyticsDependenciesReply */
-/** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, note?: string, diag?: unknown,
+/** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, area?: string, note?: string, diag?: unknown,
  * code?: string, detail?: unknown}} BridgeErrorReply */
 /** @typedef {AnalyticsContextReply | AnalyticsViewsReply | AnalyticsErdReply | AnalyticsSqlReply |
  * AnalyticsDependenciesReply | BridgeErrorReply} BridgeReply */
@@ -61,6 +61,25 @@ function validateBridgeReply(command, reply) {
       if ((type === 'array' && !Array.isArray(value)) || (type === 'object' && (!value || typeof value !== 'object' || Array.isArray(value)))
           || (type !== 'array' && type !== 'object' && typeof value !== type)) throw new Error(`bridge ${cmd} response has invalid ${key}`);
     }
+    // Container checks alone let a malformed row reach the mirror.  Validate the stable identity
+    // fields consumed by the list, SQL and lineage code while leaving Zoho's optional metadata open.
+    const rows = {
+      listViews: ['views', 'folders'], workspaceErd: ['relations'],
+      pullSql: ['failed'], scanDependencies: ['failed'],
+    }[cmd];
+    for (const key of rows || []) {
+      const value = r[key];
+      if (!Array.isArray(value) || value.some((item) => !item || typeof item !== 'object' || Array.isArray(item))) {
+        throw new Error(`bridge ${cmd} response has invalid ${key} item`);
+      }
+    }
+    const payload = /** @type {any} */ (r);
+    if (cmd === 'listViews' && payload.views.some((view) => typeof view.id !== 'string' || !view.id)) {
+      throw new Error('bridge listViews response has invalid view id');
+    }
+    if (cmd === 'pullSql' && Object.keys(payload.sql).some((id) => !id || !payload.sql[id] || typeof payload.sql[id] !== 'object')) {
+      throw new Error('bridge pullSql response has invalid sql entry');
+    }
   }
   return r;
 }
@@ -77,7 +96,7 @@ function bridgeResponseError(reply, fallback, stale) {
   error.upstreamCode = (negative && negative.code) || null;
   error.detail = (negative && negative.detail) || null;
   if (typeof classifyZoostError === 'function') {
-    const classified = classifyZoostError(error, 'bridge');
+    const classified = classifyZoostError(error, (negative && negative.area) || 'bridge');
     for (const key of ['code', 'area', 'severity', 'retryable', 'uiKey']) error[key] = classified[key];
   }
   return error;

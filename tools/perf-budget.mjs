@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Small deterministic macro budgets for the shipped sample generator. */
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -21,9 +21,10 @@ try {
     if (elapsed > 30000) throw new Error(`large-org budget exceeded for ${size}: ${elapsed}ms`);
     console.log(`perf: ${size} functions, ${result.files} files, ${elapsed}ms`);
   }
-  // Measure the shipped Analytics pull use case after the dataset exists.  This is intentionally
-  // an in-memory adapter: it exercises the product's stage order and snapshot shaping without
-  // charging fixture construction or network/Chrome startup to the product budget.
+  // Measure the shipped Analytics pull use case after the dataset exists.  The adapter is local,
+  // but deliberately uses a real temporary directory: the old benchmark measured empty promises
+  // and could not see JSON serialization, directory creation, or the number of files the mirror
+  // writes.  Fixture construction remains outside the timed region.
   const context = {};
   vm.createContext(context);
   vm.runInContext(readFileSync(join(ROOT, 'apps', 'analytics', 'pull-usecase.js'), 'utf8'), context);
@@ -35,7 +36,8 @@ try {
     const sql = Object.fromEntries(queries.map((view) => [view.id, { sql: `SELECT ${view.id}`, parents: [], sources: {} }]));
     const deps = Object.fromEntries(views.map((view) => [view.id, { id: view.id, parents: [], children: [], dashboards: [] }]));
     const phases = [];
-    let writes = 0;
+    const productRoot = mkdtempSync(join(root, `product-${size}-`));
+    let writes = 0, bytes = 0;
     const started = Date.now();
     const run = pull({
       root: {}, current: () => true, say: () => {}, requirePerm: async () => {},
@@ -43,17 +45,37 @@ try {
       readViews: async () => ({ views, folders: [] }), readErd: async () => ({ tables: {}, relations: [] }),
       readSql: async () => ({ sql, failed: [] }), readDependencies: async () => ({ deps, failed: [] }),
       phase: (name) => { phases.push(name); return true; },
-      writeToDisk: async (_info, _op, next) => { writes += Object.keys(next.sqls).length + 4; return true; },
+      writeToDisk: async (_info, _op, next) => {
+        const dir = join(productRoot, 'workspace');
+        mkdirSync(join(dir, 'sql'), { recursive: true });
+        const files = [
+          ['views.json', { views: next.views, folders: next.folders }],
+          ['structure.json', { schema: next.schema, relations: next.relations }],
+          ['lineage.json', { deps: next.deps, failed: next.pullFailed }],
+        ];
+        for (const [name, value] of files) {
+          const body = JSON.stringify(value);
+          writeFileSync(join(dir, name), body); writes += 1; bytes += Buffer.byteLength(body);
+        }
+        for (const [id, value] of Object.entries(next.sqls)) {
+          const body = JSON.stringify(value);
+          writeFileSync(join(dir, 'sql', `${id}.json`), body); writes += 1; bytes += Buffer.byteLength(body);
+        }
+        return true;
+      },
       applySnapshot: () => {}, mergeSchemaIntoViews: () => {}, setStatus: () => {}, render: () => {}, finish: () => {},
     });
     const result = await run({ root: {}, current: () => true, say: () => {} });
     const elapsed = Date.now() - started;
     if (result.moved || !result.next || result.qIds.length !== queries.length) throw new Error(`pull use case produced an invalid ${size}-view snapshot`);
     if (phases.join(',') !== 'planning,writing,refreshing') throw new Error(`pull phases were ${phases.join(',')}`);
-    if (writes !== queries.length + 4) throw new Error(`pull wrote ${writes} units for ${size} views`);
+    if (writes !== queries.length + 3) throw new Error(`pull wrote ${writes} files for ${size} views`);
+    const onDisk = readdirSync(join(productRoot, 'workspace', 'sql'));
+    if (onDisk.length !== queries.length) throw new Error(`pull wrote ${onDisk.length} SQL files for ${size} views`);
     if (elapsed > 30000) throw new Error(`product pull budget exceeded for ${size}: ${elapsed}ms`);
     productTimes.push(elapsed);
-    console.log(`perf: product pull ${size} views, ${writes} write units, ${elapsed}ms`);
+    console.log(`perf: product pull ${size} views, ${writes} files / ${bytes} bytes, ${elapsed}ms`);
+    rmSync(productRoot, { recursive: true, force: true });
   }
   const base = Math.max(1, productTimes[0]);
   if (productTimes.at(-1) > base * 20) throw new Error(`product pull growth exceeded budget: ${productTimes.join(', ')}ms`);

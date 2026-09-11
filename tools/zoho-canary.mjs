@@ -30,6 +30,28 @@ const PROFILES = Object.freeze({
   }),
 });
 
+// Keep this list next to the runtime profiles so record verification cannot silently accept a
+// profile with an empty or made-up route list.  The context route is intentionally included: it
+// proves the instance-scoped CRM session used by the bridge, although it has no body contract.
+const EXPECTED_RECORD_ROUTES = Object.freeze(Object.fromEntries(
+  Object.entries(PROFILES).map(([app, profile]) => [app, Object.freeze(profile.routes.map((route) => route.name))]),
+));
+
+const ZOHO_DC = '(?:zoho\\.com|zoho\\.eu|zoho\\.in|zoho\\.com\\.au|zoho\\.jp|zohocloud\\.ca|zoho\\.sa|zoho\\.uk|zoho\\.ae)';
+const CANARY_HOSTS = Object.freeze({
+  crm: new RegExp(`^(?:crm|crmsandbox)\\.${ZOHO_DC}$`, 'i'),
+  analytics: new RegExp(`^analytics\\.${ZOHO_DC}$`, 'i'),
+});
+
+function canaryBase(app, raw) {
+  let base;
+  try { base = new URL(raw); } catch (_) { throw new Error(`${app}: canary base is not a valid URL`); }
+  if (base.protocol !== 'https:' || base.username || base.password || !CANARY_HOSTS[app].test(base.hostname)) {
+    throw new Error(`${app}: canary base must be an HTTPS Zoho host for that product`);
+  }
+  return base;
+}
+
 function shape(value) {
   if (value === null) return { type: 'null' };
   if (Array.isArray(value)) return {
@@ -172,15 +194,36 @@ function checkRunRecord(file, ageDays) {
   const at = Date.parse(record.recordedAt);
   if (!Number.isFinite(at)) throw new Error('canary record has an invalid timestamp');
   if (Date.now() - at > ageDays * 86400000) throw new Error(`canary last success is older than ${ageDays} days`);
-  if (!Array.isArray(record.profiles) || !record.profiles.some((profile) => profile.app === 'crm')
-      || !record.profiles.some((profile) => profile.app === 'analytics')) throw new Error('canary record does not contain both product profiles');
-  return { status: 'success', recordedAt: record.recordedAt, profiles: record.profiles.map((profile) => profile.app) };
+  const currentContracts = loadContracts();
+  if (!record.contract || record.contract.file !== path.basename(process.env.ZOOST_CANARY_CONTRACT || 'zoho-canary-contract.json')) {
+    throw new Error('canary record refers to a different contract file');
+  }
+  if (record.contract.sha256 !== contractDigest(currentContracts)) throw new Error('canary record was produced with a different contract');
+  if (!Array.isArray(record.profiles) || record.profiles.length !== 1) {
+    throw new Error('canary record must contain exactly one independently verified product profile');
+  }
+  const [profile] = record.profiles;
+  if (!profile || !Object.prototype.hasOwnProperty.call(EXPECTED_RECORD_ROUTES, profile.app)) {
+    throw new Error('canary record contains an unknown product profile');
+  }
+  const expectedRoutes = EXPECTED_RECORD_ROUTES[profile.app];
+  if (!Array.isArray(profile.routes) || profile.routes.length !== expectedRoutes.length) {
+    throw new Error(`canary ${profile.app} record has missing or extra routes`);
+  }
+  const routeNames = profile.routes.map((route) => route?.name);
+  if (new Set(routeNames).size !== routeNames.length || routeNames.some((name, index) => name !== expectedRoutes[index])) {
+    throw new Error(`canary ${profile.app} record has missing, duplicate or reordered routes`);
+  }
+  if (profile.routes.some((route) => !Number.isInteger(route.status) || route.status < 200 || route.status >= 300)) {
+    throw new Error(`canary ${profile.app} record contains an unsuccessful route`);
+  }
+  return { status: 'success', recordedAt: record.recordedAt, profiles: [profile.app], routes: routeNames };
 }
 
 async function run(app, profile, env, contracts) {
   const missing = required(profile, env);
   if (missing.length) throw new Error(`${app}: missing explicit environment ${missing.join(', ')}`);
-  const base = new URL(env[profile.envBase]);
+  const base = canaryBase(app, env[profile.envBase]);
   const context = { workspace: env.ZOOST_CANARY_ANALYTICS_WORKSPACE, instance: env.ZOOST_CANARY_CRM_INSTANCE };
   const headers = { cookie: env[profile.envSession], 'x-requested-with': 'XMLHttpRequest', accept: 'application/json' };
   if (env[profile.envOrg]) headers['x-crm-org'] = env[profile.envOrg];
@@ -212,6 +255,7 @@ async function run(app, profile, env, contracts) {
 async function main() {
   const selected = process.argv.find((arg) => arg.startsWith('--app='))?.slice(6) || 'all';
   const apps = selected === 'all' ? Object.keys(PROFILES) : [selected];
+  for (const app of apps) if (!PROFILES[app]) throw new Error(`unknown canary app: ${app}`);
   if (process.argv.some((arg) => arg === '--check-record' || arg.startsWith('--check-record='))) {
     const result = checkRunRecord(checkRecordPath(), maxAgeDays());
     console.log(JSON.stringify(result));
@@ -224,7 +268,6 @@ async function main() {
   const contracts = expectedContracts();
   const results = [];
   for (const app of apps) {
-    if (!PROFILES[app]) throw new Error(`unknown canary app: ${app}`);
     results.push(await run(app, PROFILES[app], process.env, contracts));
   }
   const record = recordPath();
@@ -232,7 +275,7 @@ async function main() {
   console.log(JSON.stringify({ mode: 'live', readOnly: true, results }, null, 2));
 }
 
-export { shape, diffShape, diffResponse, loadContracts, contractDigest, writeRunRecord, checkRunRecord };
+export { shape, diffShape, diffResponse, loadContracts, contractDigest, writeRunRecord, checkRunRecord, canaryBase };
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((error) => { console.error(`canary: ${error.message}`); process.exitCode = 1; });
 }

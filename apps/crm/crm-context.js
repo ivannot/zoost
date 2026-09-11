@@ -37,6 +37,7 @@ async function refreshContext() {
   try {
     const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, cfid === null ? {} : { frameId: cfid });
     if (!current()) return;
+    validateBridgeReply({ cmd: 'context' }, r);
     lastCtx = bridgeContext(r);
   } catch (e) { if (!current()) return; lastCtx = null; _ctxErr = (e && e.message) || String(e); }
   // No instance name: this line is written to be pasted into a chat, and the instance is the
@@ -122,4 +123,3 @@ function guardOk() {
   if (bound.instance && lastCtx.instance && bound.instance !== lastCtx.instance) return false; // different specific (sandbox) instance
   return true;
 }
-

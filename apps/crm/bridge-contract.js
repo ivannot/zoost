@@ -16,7 +16,7 @@
 /** @typedef {{ok: true, entries: object[], total: number, capped?: boolean}} CrmListReply */
 /** @typedef {{ok: true, file: object}} CrmFileReply */
 /** @typedef {{ok: true, rule?: object, usage?: object, fields?: object[], window?: object, logs?: object, revisions?: object}} CrmDetailReply */
-/** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, note?: string, diag?: unknown,
+/** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, area?: string, note?: string, diag?: unknown,
  * code?: string, detail?: unknown}} BridgeErrorReply */
 /** @typedef {CrmContextReply | CrmListReply | CrmFileReply | CrmDetailReply | BridgeErrorReply} BridgeReply */
 /** @typedef {Error & {status: number, forbidden: boolean, note: unknown, diag: unknown, upstreamCode: string|null, detail: unknown}} BridgeReplyError */
@@ -58,6 +58,23 @@ function validateBridgeReply(command, reply) {
       if ((type === 'array' && !Array.isArray(value)) || (type === 'object' && (!value || typeof value !== 'object' || Array.isArray(value)))
           || (type !== 'array' && type !== 'object' && typeof value !== type)) throw new Error(`bridge ${cmd} response has invalid ${key}`);
     }
+    const arrays = {
+      listFunctions: ['entries'], listWorkflows: ['entries'], listSchedules: ['entries'],
+      fetchModuleFields: ['fields'],
+    }[cmd];
+    for (const key of arrays || []) {
+      const value = r[key];
+      if (!Array.isArray(value) || value.some((item) => !item || typeof item !== 'object' || Array.isArray(item))) {
+        throw new Error(`bridge ${cmd} response has invalid ${key} item`);
+      }
+    }
+    const payload = /** @type {any} */ (r);
+    if (cmd === 'listFunctions' && payload.entries.some((entry) => entry.id !== undefined && typeof entry.id !== 'string')) {
+      throw new Error('bridge listFunctions response has invalid entry id');
+    }
+    if (cmd === 'fetchOne' && (!payload.file || typeof payload.file !== 'object' || Array.isArray(payload.file))) {
+      throw new Error('bridge fetchOne response has invalid file');
+    }
   }
   return r;
 }
@@ -74,7 +91,7 @@ function bridgeResponseError(reply, fallback, stale) {
   error.upstreamCode = (negative && negative.code) || null;
   error.detail = (negative && negative.detail) || null;
   if (typeof classifyZoostError === 'function') {
-    const classified = classifyZoostError(error, 'bridge');
+    const classified = classifyZoostError(error, (negative && negative.area) || 'bridge');
     for (const key of ['code', 'area', 'severity', 'retryable', 'uiKey']) error[key] = classified[key];
   }
   return error;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -180,6 +180,16 @@ test('both extension bootstraps compose their pull boundary', () => {
   assert.equal(typeof wired.requirePerm, 'function');
 });
 
+test('Analytics view model derives relations and structure without browser globals', () => {
+  const model = load('analytics/analytics-view-model.js').createAnalyticsViewModel();
+  const views = [{ id: 'root', name: 'Orders', type: 'Table' }, { id: 'report', name: 'Report', parent: 'root', type: 'Pivot' }];
+  const schema = { root: { designModifiedAt: 12, system: false } };
+  assert.equal(model.structureChain(views[1], views, schema).map((v) => v.id).join(','), 'report,root');
+  assert.equal(model.isOrphanCandidate({ id: 'root', type: 'Table' }, { root: { children: [], dashboards: [] } }), true);
+  assert.equal(model.nameOf('missing', views), 'missing');
+  assert.equal(model.mergeSchema(views, schema)[0].designModifiedAt, 12);
+});
+
 test('CRM pull adapter keeps census and source requests discriminated', async () => {
   const sent = [];
   const { createCrmPullAdapter } = load('crm/pull-adapter.js');
@@ -324,14 +334,56 @@ test('canary run records are sanitized and distinguish never-run from a recent s
     const file = join(root, 'last-run.json');
     assert.throws(() => checkRunRecord(new URL('../tools/zoho-canary-status.json', import.meta.url), 30), /never completed/);
     writeRunRecord(file, [
-      { app: 'crm', results: [{ name: 'functions', status: 200 }] },
-      { app: 'analytics', results: [{ name: 'view-list', status: 200 }] },
+      { app: 'crm', results: [
+        { name: 'context', status: 200 }, { name: 'functions', status: 200 },
+        { name: 'modules', status: 200 }, { name: 'workflow-rules', status: 200 },
+      ] },
     ], loadContracts());
     const saved = JSON.parse(readFileSync(file, 'utf8'));
     assert.equal(checkRunRecord(file, 30).status, 'success');
     assert.equal(saved.status, 'success');
-    assert.equal(saved.profiles.length, 2);
+    assert.deepEqual(saved.profiles.map((profile) => profile.app), ['crm']);
     assert.equal(JSON.stringify(saved).includes('session'), false);
     assert.equal(JSON.stringify(saved).includes('org'), false);
+
+    const analytics = join(root, 'analytics.json');
+    writeRunRecord(analytics, [
+      { app: 'analytics', results: [
+        { name: 'workspace-info', status: 200 }, { name: 'view-list', status: 200 },
+      ] },
+    ], loadContracts());
+    assert.deepEqual(checkRunRecord(analytics, 30).profiles, ['analytics']);
+
+    const staleContract = JSON.parse(readFileSync(file, 'utf8'));
+    staleContract.contract.sha256 = '0'.repeat(64);
+    const staleContractFile = join(root, 'stale-contract.json');
+    writeFileSync(staleContractFile, `${JSON.stringify(staleContract)}\n`);
+    assert.throws(() => checkRunRecord(staleContractFile, 30), /different contract/);
+
+    const missingRoute = JSON.parse(readFileSync(file, 'utf8'));
+    missingRoute.profiles[0].routes.pop();
+    const missingRouteFile = join(root, 'missing-route.json');
+    writeFileSync(missingRouteFile, `${JSON.stringify(missingRoute)}\n`);
+    assert.throws(() => checkRunRecord(missingRouteFile, 30), /missing or extra routes/);
+
+    const duplicateRoute = JSON.parse(readFileSync(file, 'utf8'));
+    duplicateRoute.profiles[0].routes[1].name = 'context';
+    const duplicateRouteFile = join(root, 'duplicate-route.json');
+    writeFileSync(duplicateRouteFile, `${JSON.stringify(duplicateRoute)}\n`);
+    assert.throws(() => checkRunRecord(duplicateRouteFile, 30), /missing, duplicate or reordered routes/);
+
+    const failedRoute = JSON.parse(readFileSync(file, 'utf8'));
+    failedRoute.profiles[0].routes[1].status = 500;
+    const failedRouteFile = join(root, 'failed-route.json');
+    writeFileSync(failedRouteFile, `${JSON.stringify(failedRoute)}\n`);
+    assert.throws(() => checkRunRecord(failedRouteFile, 30), /unsuccessful route/);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('canary accepts only HTTPS hosts belonging to the selected Zoho product', async () => {
+  const { canaryBase } = await import('../tools/zoho-canary.mjs');
+  assert.equal(canaryBase('crm', 'https://crm.zoho.eu').hostname, 'crm.zoho.eu');
+  assert.equal(canaryBase('analytics', 'https://analytics.zohocloud.ca').hostname, 'analytics.zohocloud.ca');
+  assert.throws(() => canaryBase('crm', 'http://127.0.0.1:8787'), /HTTPS Zoho host/);
+  assert.throws(() => canaryBase('analytics', 'https://analytics.zoho.eu.evil.test'), /HTTPS Zoho host/);
 });

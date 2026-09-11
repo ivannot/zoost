@@ -1,15 +1,15 @@
 {
   "version": 1,
   "categories": {
-    "domain": [
-      "graphlogic.js", "list-model.js", "search-state.js", "pull-plan.js", "mirror-plan.js"
+      "domain": [
+      "graphlogic.js", "list-model.js", "search-state.js", "pull-plan.js", "mirror-plan.js", "analytics-view-model.js"
     ],
     "ports": ["bridge-contract.js"],
     "application": [
       "pull-controller.js", "pull-lifecycle.js", "pull-usecase.js", "error-model.js", "workspace.js", "navigation.js"
     ],
     "adapters": [
-      "content-bridge.js", "filesystem-adapter.js", "pull-adapter.js", "idb.js", "keyvault.js",
+      "content-bridge.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "pull-adapter.js", "idb.js", "keyvault.js",
       "zoho-bridge.js", "zoho-navigation.js", "background.js", "hook.js", "live-sync.js"
     ],
     "ui": [

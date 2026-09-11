@@ -242,6 +242,16 @@ async function notePullFailure(area, e, op) {
   // verdict belongs to the folder we left and cannot be written to it, and the sentence would name
   // an area of an org the reader is no longer looking at. It stops, quietly.
   if (op && !op.current()) return;
+  // Bridge replies already carry a structured error.  Filesystem, configuration and controller
+  // failures do not cross that boundary, though, and used to arrive here as ad-hoc strings.  Give
+  // those failures the same machine-readable classification while preserving the original message
+  // (the user-facing detail and the report must not collapse to a generic error-code label).
+  if (typeof classifyZoostError === 'function' && (!e || !e.code || !e.area)) {
+    const source = e instanceof Error ? e : new Error(String(e || 'unknown'));
+    const structured = classifyZoostError(source, area);
+    if (e && typeof e === 'object') Object.assign(e, structured);
+    else e = structured;
+  }
   // What a report opened from here will be about. Handled failures never reached `lastThrown`,
   // and this is the only place they can.
   noteThrown(e);

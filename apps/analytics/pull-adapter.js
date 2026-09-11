@@ -15,6 +15,13 @@ function createAnalyticsPullAdapter(send) {
   /** @param {PullBridgeCommand} command */
   async function ask(command) {
     const reply = await send(command);
+    const envelope = /** @type {any} */ (reply);
+    // Even an isolated adapter must reject a malformed envelope; the optional richer validator is
+    // an optimisation for the shipped bridge-contract script, never a fail-open escape hatch.
+    if (!reply || typeof reply !== 'object' || (envelope.ok !== true && envelope.ok !== false)) {
+      throw new Error(`bridge ${command.cmd} returned an invalid response envelope`);
+    }
+    if (envelope.ok === false && typeof envelope.error !== 'string') throw new Error(`bridge ${command.cmd} returned an invalid error response`);
     return typeof validateBridgeReply === 'function' ? validateBridgeReply(command, reply) : reply;
   }
   /** @returns {Promise<PullWorkspace>} */

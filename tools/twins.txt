@@ -36,7 +36,7 @@ beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 bridgeCommand	43c239bf9acf	43c239bf9acf	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
-bridgeResponseError	07512ae08e87	07512ae08e87	identical
+bridgeResponseError	2675476e3c3f	2675476e3c3f	identical
 buildChips	9091c2364889	9091c2364889	identical
 buildExportHtml	7154ef8959a7	e1a5052dd09d	divergent
 buildExportMarkdown	89b53926d677	f5d0fbdf2c0e	divergent
@@ -217,7 +217,7 @@ redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 redrawOpenViews	cf2e0a34bf88	5a6c69136e78	divergent
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	f327985da31a	8e247506fb1c	divergent
+refreshContext	afd08923eac3	8db26c9429ea	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
@@ -283,8 +283,8 @@ updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent
-validateBridgeReply	bff280400de3	73776929b2eb	divergent
-validateMirrorPlan	2afd82c4cab9	2afd82c4cab9	identical
+validateBridgeReply	f8091e8c5e93	e0cd2e4989ef	divergent
+validateMirrorPlan	1e1eb19c46d0	1e1eb19c46d0	identical
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical
 wasOwn	137c94652f18	137c94652f18	identical
 wireAsideFold	f549a11bd896	f549a11bd896	identical

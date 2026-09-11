@@ -19,10 +19,54 @@ def _files(app: str) -> set[str]:
     return {p.name for p in (ROOT / "apps" / app).glob("*.js")}
 
 
+def _html_scripts(root: Path, app: str) -> tuple[list[str], list[str]]:
+    """Return the declared script order and structural findings for a panel.
+
+    Classic scripts are the deliberate distribution format, so the order in the HTML is the
+    dependency graph.  A checker that only classifies files cannot see a missing or duplicated
+    provider; this small structural pass does, without pretending to parse JavaScript globals.
+    """
+    html = root / "apps" / app / "sidepanel.html"
+    if not html.exists():
+        return [], [f"{app}: sidepanel.html is missing"]
+    text = html.read_text(encoding="utf-8")
+    scripts = re.findall(r'<script\b[^>]*\bsrc=["\']([^"\']+)["\']', text)
+    findings: list[str] = []
+    seen: set[str] = set()
+    for name in scripts:
+        if name in seen:
+            findings.append(f"{app}: sidepanel loads script more than once: {name}")
+        seen.add(name)
+        if not (root / "apps" / app / name).is_file():
+            findings.append(f"{app}: sidepanel references missing script: {name}")
+    # These are the non-negotiable composition constraints of the two current panels.  Keeping
+    # them here makes an HTML reorder fail before a browser discovers an undefined global.
+    pos = {name: i for i, name in enumerate(scripts)}
+    if app == "analytics":
+        required = ("pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "sidepanel.js")
+        missing = [name for name in required if name not in pos]
+        if missing:
+            findings.append(f"{app}: composition is missing required script(s): {', '.join(missing)}")
+        else:
+            for left, right in zip(required, required[1:]):
+                if pos[left] > pos[right]:
+                    findings.append(f"{app}: {left} must load before {right}")
+    else:
+        required = ("pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-bootstrap.js")
+        missing = [name for name in required if name not in pos]
+        if missing:
+            findings.append(f"{app}: composition is missing required script(s): {', '.join(missing)}")
+        elif pos["crm-bootstrap.js"] != len(scripts) - 1:
+            findings.append(f"{app}: crm-bootstrap.js must be the final script (composition root)")
+    return scripts, findings
+
+
 def scan(root: Path = ROOT) -> list[str]:
     cfg = json.loads((root / "tools" / "architecture.json").read_text(encoding="utf-8"))
     findings: list[str] = []
     for app in ("crm", "analytics"):
+        _scripts, html_findings = _html_scripts(root, app)
+        findings.extend(html_findings)
         actual = {p.name for p in (root / "apps" / app).glob("*.js")}
         cats = cfg["categories"]
         owners: dict[str, list[str]] = {}
@@ -60,7 +104,21 @@ def self_test() -> None:
         (root / "tools").mkdir()
         (root / "apps" / "crm").mkdir(parents=True)
         (root / "apps" / "analytics").mkdir(parents=True)
-        cfg = {"version": 1, "categories": {"domain": ["pure.js"], "ports": [], "application": [], "adapters": [], "ui": [], "bootstrap": []}, "forbidden": {"domain": ["document"]}}
+        (root / "apps" / "crm" / "sidepanel.html").write_text(
+            '<script src="pure.js"></script><script src="pull-lifecycle.js"></script>'
+            '<script src="pull-controller.js"></script><script src="pull-adapter.js"></script>'
+            '<script src="crm-bootstrap.js"></script>', encoding="utf-8")
+        (root / "apps" / "analytics" / "sidepanel.html").write_text(
+            '<script src="pull-lifecycle.js"></script><script src="pull-usecase.js"></script>'
+            '<script src="pull-adapter.js"></script><script src="bootstrap.js"></script>'
+            '<script src="sidepanel.js"></script>', encoding="utf-8")
+        for app, names in {
+            "crm": ["pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-bootstrap.js"],
+            "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "sidepanel.js"],
+        }.items():
+            for name in names:
+                (root / "apps" / app / name).write_text("", encoding="utf-8")
+        cfg = {"version": 1, "categories": {"domain": ["pure.js"], "ports": [], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js"], "ui": ["sidepanel.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
         (root / "tools" / "architecture.json").write_text(json.dumps(cfg), encoding="utf-8")
         (root / "apps" / "crm" / "pure.js").write_text("const x = 1;", encoding="utf-8")
         (root / "apps" / "analytics" / "pure.js").write_text("const x = 2;", encoding="utf-8")

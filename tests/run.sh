@@ -22,11 +22,32 @@
 #     picker/permission lifetime. The panels are not restructured to be importable: helpers are
 #     lifted out and run alone (see slice.mjs), while tools/probe.py owns the browser wiring it can.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 PYOUT=$(mktemp)
 NODEOUT=$(mktemp)
 TREE_BEFORE=$(git status --porcelain=v1)
+LOCK_DIR="$(pwd)/.git/zoost-test-lock"
+acquire_lock() {
+  local attempt=0 owner=''
+  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    owner=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+    if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+      rm -rf "$LOCK_DIR"
+      continue
+    fi
+    attempt=$((attempt + 1))
+    if [ "$attempt" -ge 120 ]; then
+      echo "  another Zoost test battery is still running (lock: $LOCK_DIR)" >&2
+      exit 1
+    fi
+    sleep 0.5
+  done
+  printf '%s\n' "$$" > "$LOCK_DIR/pid"
+}
+acquire_lock
 cleanup() {
   rm -f "$PYOUT" "$NODEOUT"
+  rm -rf "$LOCK_DIR"
   TREE_AFTER=$(git status --porcelain=v1)
   if [ "$TREE_AFTER" != "$TREE_BEFORE" ]; then
     echo "  test battery changed the checkout; refusing a green result" >&2
@@ -45,10 +66,8 @@ trap cleanup EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1151
+NODE_EXPECTED=1153
 PY_EXPECTED=419
-cd "$(dirname "$0")/.."
-
 # Prefer a compatible Node automatically.  A developer may have an older system Node first in PATH
 # even though the machine already has a newer nvm/Codex runtime.  Failing on the first executable
 # made the pre-push hook reject an otherwise green commit until the caller manually rebuilt PATH.
