@@ -153,7 +153,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   due date, status, priority, owner and reminder; a webhook its method and URL. Zoost does not read the
   content of an email template, and never who the recipients are - the count comes back with the rule,
   the list of people does not.
-- "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults, and the
+- "Settings": AI engine and key, export defaults, which tabs to show, diagram defaults, and the
   default data centre. Beside "Go to Zoho CRM" there is a picklist of every data centre: it starts
   on the one the open workspace or the current tab is on, and otherwise on that default, and the
   user can change it - after signing out of one org, nothing here can know which org they want next,

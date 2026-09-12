@@ -349,7 +349,7 @@ relevant function / workflow / schedule.
 
 **AI** (Ask AI) - a toggle that opens the assistant panel below the button bar; single persistent chat,
 Markdown, tool activity shown inline (streaming and tools on the Anthropic path; OpenAI answers in one
-pass), ⚙ settings, Clear.
+pass), settings, Clear.
 
 **Connections** - the org's connections catalogue (pulled with **Pull all**), each with how many
 functions use it, the connector, and its status. Filter to **Unused** (used by no function) or

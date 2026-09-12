@@ -632,7 +632,7 @@ runtime sliders, because there is no single right value across graphs.
 It was `ringR = max(L * erP.ring, needed)` with a default of 420 - a radius that is a fixed multiple of
 the level, so the same for eight boxes as for eighty, and `erFit` then scaled the whole drawing down to
 fit a circle that was mostly empty. Measured on the shipped fixtures at 1280 x 800, default against
-default, which is the comparison that matters because a reader who never opens `Layout ⚙` only ever
+default, which is the comparison that matters because a reader who never opens `Layout` only ever
 sees the default:
 
 | drawing | old default (`ring` 420) | derived radii |

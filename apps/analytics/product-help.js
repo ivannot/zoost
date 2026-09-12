@@ -101,7 +101,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
   folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
   Clearing the field goes back to it.
-- "Settings ⚙": AI engine and key, diagram defaults, and the default data centre -
+- "Settings": AI engine and key, diagram defaults, and the default data centre -
   beside "Go to Zoho Analytics" there is a picklist of every data centre: it starts on the one the
   open workspace or the current tab is on, and otherwise on that default, and the user can change it
   - after signing out, which account they want next is theirs to say.
