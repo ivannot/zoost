@@ -17,12 +17,12 @@
       "version": "1.51.0"
     },
     "fresh-profile": {
-      "at": "2026-09-07T18:16:01+00:00",
-      "commit": "cba97e96b5ada7a4279e005ce1255639b9fd757d",
-      "note": "Ho fatto tutti i test. Per me luce verde. Pubblichiamo tutto. (Ri-registrata sul commit del rilascio: dalla risposta originale sono cambiati solo il numero di versione nel manifest e le note di rilascio.)",
+      "at": "2026-09-12T10:58:50+00:00",
+      "commit": "3292033498ff4c5070bf15448918e5df3db1fe02",
+      "note": "Funziona. (Profilo Chrome nuovo, entrambe le estensioni caricate: il pannello si apre dall'icona e i due pattern predefiniti ci sono.)",
       "result": "pass",
       "title": "A profile that has never seen Zoost",
-      "version": "1.50.0"
+      "version": "1.51.0"
     },
     "live-save": {
       "at": "2026-09-12T10:06:40+00:00",
