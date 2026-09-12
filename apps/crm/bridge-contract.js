@@ -51,7 +51,10 @@ function validateBridgeReply(command, reply) {
       context: { origin: 'string', org: 'string', instance: 'string' },
       listFunctions: { entries: 'array', total: 'number' }, listWorkflows: { entries: 'array', total: 'number' },
       listSchedules: { entries: 'array', total: 'number' }, functionUiIds: { map: 'object' },
-      fetchModuleFields: { fields: 'array' }, fetchOne: { file: 'object' },
+      fetchModuleFields: { fields: 'array' },
+      // `fetchOne` is not here on purpose: its `file` is `null` when Zoho no longer has the function,
+      // which is an answer the panel has a branch for. The shape check for it is below, where `null`
+      // is allowed and a string, a number or an array is not.
     }[cmd];
     if (types) for (const [key, type] of Object.entries(types)) {
       const value = r[key];
@@ -72,7 +75,16 @@ function validateBridgeReply(command, reply) {
     if (cmd === 'listFunctions' && payload.entries.some((entry) => entry.id !== undefined && typeof entry.id !== 'string')) {
       throw new Error('bridge listFunctions response has invalid entry id');
     }
-    if (cmd === 'fetchOne' && (!payload.file || typeof payload.file !== 'object' || Array.isArray(payload.file))) {
+    // `null` is an answer here, and refusing it broke the case it was written to protect. The bridge
+    // returns `file: null` when Zoho no longer has that function - deleted between the census and
+    // the download, which is the ordinary race a pull is built to survive - and the panel has a
+    // branch for it. Rejecting the envelope replaced «detail not found» with «bridge fetchOne
+    // response has invalid file» on the row and in the live-sync message, and made that branch
+    // unreachable; worse, the invented sentence carries no HTTP code, so the retry logic read it as
+    // transient and spent a retry on a function that is gone. What must still be refused is a
+    // *shape* nobody sends: a string, a number, an array.
+    if (cmd === 'fetchOne' && payload.file !== null
+        && (!payload.file || typeof payload.file !== 'object' || Array.isArray(payload.file))) {
       throw new Error('bridge fetchOne response has invalid file');
     }
   }

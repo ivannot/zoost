@@ -83,6 +83,8 @@ async function pullAll() {
     // old rows, but it may not authorise removal of anything.  Existing compiled projects are
     // carried by id so their individual files remain protected until a fresh project replaces
     // them.
+    // `functions/<ns>/<stem>.files/lib/util.js` belongs to the project `functions/<ns>/<stem>.files`.
+    const projectRootOf = (p) => { const m = /^(.*\.files)\//.exec(String(p)); return m ? m[1] : null; };
     const previousById = new Map(prev.map((e) => [String(e.id), e]));
     const mirrorPaths = (e) => {
       const known = Array.isArray(e && e.mirrorFiles) ? e.mirrorFiles : [];
@@ -116,7 +118,19 @@ async function pullAll() {
     // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
     // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
     // A missing or partial plan cannot silently turn the folder walk into a destructive action.
-    const plannedRemovals = rmF.filter((p) => mirrorPlan.deletes.includes(p));
+    // **The plan has to name the same files the walk finds, or the intersection deletes the wrong
+    // half.** `pathsFromMeta` returns every source inside a compiled project - `<stem>.files/index.js`
+    // and its siblings - while `mirrorPaths` fell back to the `.files` *directory* for any row
+    // without `mirrorFiles`, which is every row in `functions/index.json`. So for a Java, Python or
+    // Node function deleted in Zoho the intersection kept only the meta: the manifest was removed
+    // and its sources were left on disk, unreachable by any later prune, since every prune needs the
+    // meta that had just gone. Deluge was unaffected, which is why it read as working. Reproduced
+    // against the shipped mirror plan.
+    //
+    // A path the plan does not name is still not deleted - that guard is the point of the plan - but
+    // the plan is now built from the same reading the walk uses, so «not named» means «not ours»
+    // rather than «spelled differently two functions apart».
+    const plannedRemovals = rmF.filter((p) => mirrorPlan.deletes.includes(p) || mirrorPlan.deletes.includes(projectRootOf(p)));
     const removed = await removeFunctionPaths(plannedRemovals, op);
     if (removed.moved) return;
     const prunedF = removed.removed.filter((p) => p.endsWith('.meta.json')).length;

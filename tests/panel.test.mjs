@@ -21527,3 +21527,47 @@ for (const app of ['crm', 'analytics']) {
       + 'it tests and would now be measuring a row the product does not draw');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// **The plan and the walk must name the same files, or the intersection deletes the wrong half.**
+//
+// A Java, Python or Node function deleted in Zoho: the folder walk offers every source inside
+// `<stem>.files/`, while the plan - built from `functions/index.json`, whose rows carry no
+// `mirrorFiles` - named the `.files` directory. Only the meta was in both, so the manifest was
+// removed and its sources were left on disk, unreachable by any later prune because every prune
+// needs that meta. Deluge was unaffected, which is why it read as working.
+test('crm: a deleted compiled function takes its sources with it, not just its manifest', () => {
+  const REL = 'apps/crm/crm-pull-graph.js';
+  const src = read(REL);
+  const body = src.slice(src.indexOf('const projectRootOf'), src.indexOf('const removed = await removeFunctionPaths'));
+  const projectRootOf = (p) => { const m = /^(.*\.files)\//.exec(String(p)); return m ? m[1] : null; };
+  const onDisk = ['functions/automation/calc.files/index.js', 'functions/automation/calc.files/lib/util.js',
+                  'functions/automation/calc.meta.json'];
+  const planned = ['functions/automation/calc.files', 'functions/automation/calc.meta.json'];
+  const kept = onDisk.filter((p) => planned.includes(p) || planned.includes(projectRootOf(p)));
+  assert.deepEqual(kept, onDisk, 'the sources of a deleted compiled function are left behind');
+  assert.match(body, /projectRootOf\(p\)/,
+    'the shipped filter no longer resolves a project file to the project the plan names');
+  // And a path belonging to no plan is still refused: the plan is the guard, not the walk.
+  assert.deepEqual(['functions/other/live.files/index.js'].filter((p) => planned.includes(p) || planned.includes(projectRootOf(p))), [],
+    'a file the plan does not name became deletable');
+});
+
+// **`null` is an answer.** The bridge returns `file: null` when Zoho no longer has the function -
+// deleted between the census and the download - and the panel has a branch for it. The new envelope
+// validator rejected it, so the row read «bridge fetchOne response has invalid file», the branch
+// became unreachable, and the retry logic - finding no HTTP code in that sentence - spent a retry on
+// a function that is gone.
+test('crm: a function deleted between census and download is «not found», not a broken envelope', () => {
+  const REL = 'apps/crm/bridge-contract.js';
+  const { validateBridgeReply } = load([sliceFn(REL, 'validateBridgeReply')], { Error, Array, String, Object, JSON });
+  // The command is the message the panel sent, not its name - which is how the shipped caller calls it.
+  const ask = { cmd: 'fetchOne', id: 'fn-1', language: 'deluge' };
+  assert.doesNotThrow(() => validateBridgeReply(ask, { ok: true, file: null }),
+    'the deliberate «no such function» answer is refused as a malformed reply');
+  assert.doesNotThrow(() => validateBridgeReply(ask, { ok: true, file: { path: 'x.dg' } }));
+  for (const bad of ['x', 7, ['x'], undefined]) {
+    assert.throws(() => validateBridgeReply(ask, { ok: true, file: bad }), /invalid file/,
+      `a file of ${JSON.stringify(bad) ?? 'undefined'} is not a shape anything sends`);
+  }
+});
