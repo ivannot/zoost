@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * keyvault.js - optional passphrase protection for the API key.
  *

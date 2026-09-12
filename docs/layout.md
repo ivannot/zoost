@@ -41,7 +41,8 @@ Each side panel is deliberately assembled from small classic scripts and a linke
 Health, problem-report redaction, pure state and panel orchestration at separate maintenance
 boundaries.
 
-Pure modules opt into checked JSDoc one at a time. `tools/typecheck.sh` derives that set and checks
+Pure modules opt into checked JSDoc one at a time. `tools/typecheck.sh` checks the complete Analytics
+application/boundary manifest (18/18) and derives CRM's incremental set from the source, then checks
 each extension as its own classic-script world in CI, with no emitted file and no runtime package.
 The checked set includes the bridge message boundary and filesystem adapter in both products, plus
 the CRM pull controller, Zoho bridge and Zoho navigation adapter;

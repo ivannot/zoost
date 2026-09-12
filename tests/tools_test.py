@@ -4411,6 +4411,20 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
         self.assertIn("grep -l '^// @ts-check'", tool,
                       'new opted-in modules are not derived and can miss the gate')
 
+    def test_analytics_boundary_is_complete_and_has_no_legacy_fallbacks(self):
+        tool = (ROOT / 'tools/typecheck.sh').read_text(encoding='utf-8')
+        panel = (ROOT / 'apps/analytics/sidepanel.js').read_text(encoding='utf-8')
+        for name in ('analytics-sql.js', 'analytics-mirror-writer.js', 'analytics-view-model.js',
+                     'bootstrap.js', 'bridge-contract.js', 'content-bridge.js', 'error-model.js',
+                     'filesystem-adapter.js', 'idb.js', 'keyvault.js', 'list-model.js',
+                     'mirror-plan.js', 'navigation.js', 'pull-adapter.js', 'pull-lifecycle.js',
+                     'pull-usecase.js', 'search-state.js', 'workspace.js'):
+            self.assertIn(name, tool, f'Analytics boundary module {name} is outside the type gate')
+            self.assertTrue((ROOT / 'apps/analytics' / name).read_text(encoding='utf-8').startswith('// @ts-check'),
+                            f'Analytics boundary module {name} is not checked')
+        self.assertNotRegex(panel, r'typeof\s+(?:pullLifecycle|analyticsMirrorWriter|analyticsViewModel|pullPhase|finishPullLifecycle)\s*!==|if\s*\(typeof\s+(?:pullPhase|finishPullLifecycle)\s*===',
+                            'Analytics still silently falls back when a required boundary module is missing')
+
 
 class CssScannerReadsEveryRule(unittest.TestCase):
     """The checker read 1318 of the 1487 rules in this tree and printed «0 findings».

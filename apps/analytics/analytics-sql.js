@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * analytics-sql.js - what Zoho Analytics' query-table SQL actually allows.
  *
@@ -15,7 +16,7 @@
  * Zoost never runs, validates or deploys SQL. Whatever comes out is a draft for the user to paste
  * into Analytics, which is the only thing that can say whether it compiles.
  */
-window.ZOHO_ANALYTICS_SQL = {
+window.ZOHO_ANALYTICS_SQL = /** @type {any} */ ({
   sources: [
     'https://www.zoho.com/analytics/help/query-tables.html',
     'https://help.zoho.com/portal/en/kb/analytics/knowledge-base/data-modeling-preparation/query-tables-for-data-preparation-1/articles/what-are-the-sql-dialects-supported-by-zoho-analytics',
@@ -45,4 +46,4 @@ window.ZOHO_ANALYTICS_SQL = {
       + this.rules.map((r) => '- ' + r).join('\n')
       + '\n\nSources:\n' + this.sources.map((u) => `- <${u}>`).join('\n') + '\n';
   },
-};
+});

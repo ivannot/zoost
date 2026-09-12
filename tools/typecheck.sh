@@ -8,11 +8,42 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TYPESCRIPT_VERSION=5.9.2
+GLOBALS=tools/typecheck-globals.d.ts
+
+# Analytics' application and integration boundary is now closed: every module that participates in
+# pull, mirror, bridge, lifecycle, workspace or persistence contracts is listed here. DOM-only
+# surfaces (the two graph windows, options and the legacy panel renderer) remain outside this gate
+# until they are converted to explicit modules; they do not define application contracts. Keeping
+# that boundary in a versioned manifest prevents the denominator from silently shrinking back to
+# whichever files happen to carry a comment.
+ANALYTICS_BOUNDARY=(
+  analytics-sql.js analytics-mirror-writer.js analytics-view-model.js bootstrap.js bridge-contract.js
+  content-bridge.js error-model.js filesystem-adapter.js idb.js keyvault.js list-model.js mirror-plan.js
+  navigation.js pull-adapter.js pull-lifecycle.js pull-usecase.js search-state.js workspace.js
+)
+ANALYTICS_DOM_ONLY=(
+  ai.js background.js export.js graphlogic.js graphview.js health.js highlight.js options.js
+  overview-view.js product-help.js report.js reportshell.js sample-org.js sidepanel.js
+)
 
 for app in crm analytics; do
   # Plain `grep` is present on the GitHub runner and, unlike `git grep`, sees a new opted-in module
   # before it has been staged. That makes the local gate test the same files the next commit ships.
-  files=$(grep -l '^// @ts-check' apps/"$app"/*.js | sort || true)
+  if [ "$app" = analytics ]; then
+    all="$(for path in apps/analytics/*.js; do basename "$path"; done | sort)"
+    declared="$(printf '%s\n' "${ANALYTICS_BOUNDARY[@]}" "${ANALYTICS_DOM_ONLY[@]}" | sort)"
+    [ "$all" = "$declared" ] || { echo "analytics: typecheck scope does not account for every script" >&2; diff -u <(printf '%s\n' "$all") <(printf '%s\n' "$declared") >&2 || true; exit 1; }
+    files=""
+    for name in "${ANALYTICS_BOUNDARY[@]}"; do
+      path="apps/analytics/$name"
+      [ -f "$path" ] || { echo "analytics: boundary module missing: $path" >&2; exit 1; }
+      grep -q '^// @ts-check' "$path" || { echo "analytics: boundary module is not @ts-check: $path" >&2; exit 1; }
+      files+="$path"
+      files+=$'\n'
+    done
+  else
+    files=$(grep -l '^// @ts-check' apps/"$app"/*.js | sort || true)
+  fi
   if [ -z "$files" ]; then
     echo "$app: no @ts-check modules found" >&2
     exit 1
@@ -25,18 +56,16 @@ for app in crm analytics; do
   # works around: the next module to iterate a NodeList would have been opted *out* to get green.
   # Measured by planting that loop in an opted-in module and reading the exit code: 2 before, 0 after.
   npx --yes --package "typescript@$TYPESCRIPT_VERSION" tsc \
-    --allowJs --checkJs --noEmit --skipLibCheck --target ES2022 --lib ES2022,DOM,DOM.Iterable $files
-  # **The count, its denominator, and what it does not read.** «13 contract module(s)» said nothing
-  # about the 26 it skips, which is the shape this project already names: a headline that counts what
-  # was opened and is silent about what was examined. The denominator is derived by a cruder method
-  # than the check itself - a plain file count - so it cannot drift with the checker's own idea of
-  # what a module is.
-  #
-  # The stated limit, because a limit that is not written down is a blind spot: this checks each
-  # opted-in module's internals and the calls *between* opted-in modules. It does not read the call
-  # sites in the files that are not opted in, which is where the wiring lives - a wrong argument
-  # passed from `sidepanel.js` is invisible here and caught only by the same call inside a checked
-  # module. Measured, not assumed.
-  echo "$app: $(printf '%s\n' "$files" | wc -l | tr -d ' ') of $(ls apps/"$app"/*.js | wc -l | tr -d ' ') script(s) opted in;" \
-       "their internals and the calls between them are checked, call sites in the rest are NOT"
+    --allowJs --checkJs --noEmit --skipLibCheck --target ES2022 --lib ES2022,DOM,DOM.Iterable "$GLOBALS" $files
+  # The count names a deliberate boundary. Analytics' application, bridge, persistence and pure
+  # model modules are an explicit 18/18 contract set; DOM-only surfaces remain outside until they
+  # are converted to modules with their own contracts. CRM retains its incremental opt-in list.
+  # This is not a claim that every line of UI is typed: it is a gate that cannot silently lose a
+  # required application module when a file is renamed or a script tag is removed.
+  if [ "$app" = analytics ]; then
+    echo "analytics: $(printf '%s\n' "${ANALYTICS_BOUNDARY[@]}" | wc -l | tr -d ' ') / $(printf '%s\n' "${ANALYTICS_BOUNDARY[@]}" | wc -l | tr -d ' ') boundary module(s) checked (100%); all $(printf '%s\n' "$all" | sed '/^$/d' | wc -l | tr -d ' ') scripts classified, DOM-only surfaces remain outside the contract gate"
+  else
+    echo "$app: $(printf '%s\n' "$files" | wc -l | tr -d ' ') of $(ls apps/"$app"/*.js | wc -l | tr -d ' ') script(s) opted in;" \
+         "their internals and the calls between them are checked, call sites in the rest are NOT"
+  fi
 done

@@ -10047,8 +10047,14 @@ test('analytics: partial refreshes publish only after a marked disk snapshot', a
 test('analytics: a partial SQL update never replaces an unreadable index with an empty one', async () => {
   for (const name of ['NotReadableError', 'NotAllowedError']) {
     const ctx = {
-      sqls: {}, Object, Error,
+      sqls: {}, views: [], Object, Error,
       readJson: async (_p, fallback, _op, fail) => { fail({ rel: 'sql/index.json', name }); return fallback; },
+      analyticsMirrorWriter: { writeSql: async (op) => {
+        let unreadable = null;
+        const index = await ctx.readJson('sql/index.json', {}, op, (failure) => { unreadable = failure; });
+        if (unreadable) throw new Error(`Could not read ${unreadable.rel} (${unreadable.name}).`);
+        return index;
+      } },
     };
     ctx.op = { current: () => true };
     vm.createContext(ctx);
@@ -10315,6 +10321,10 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
       showEmergency() {}, endBusyElsewhere: () => { ctx.busy = false; },
       $: () => ({ set className(v) { ctx.className = v; }, get className() { return ctx.className; } }),
       setBusy: (on, text) => { ctx.busy = on; ctx.status.push(String(text || '')); },
+      friendlyError: (e) => e && e.message ? e.message : String(e),
+      noteThrown: () => {},
+      pullLifecycle: { begin: () => 1, transition: () => true, snapshot: () => ({ state: 'refreshing' }), finish: () => true, fail: () => true },
+      pullPhase: () => true, finishPullLifecycle: () => true,
       setPullBusy: (on) => { ctx.pullBusy = on; },
       chrome: { runtime: { onMessage: { addListener() {}, removeListener() { ctx.listenerGone = true; } } } },
       beginWorkspaceOp: () => ({ root: ctx.dir, current: () => !over(), say() {} }),
@@ -10895,6 +10905,13 @@ test('analytics: every declared tool runs on the minimum input its schema declar
     sqls: { q1: { id: 'q1', sql: 'select Revenue from T1', stem: 'q1', parents: [], sources: {} } },
     deps: { q1: { id: 'q1', parents: ['t1'], children: [], dashboards: [] } },
     pullFailed: [], relations: [], bound: { workspace: 'w' }, sqlDiskUnread: new Set(),
+    analyticsViewModel: {
+      viewById: (items) => new Map(items.map((view) => [view.id, view])),
+      nameOf: (id, items) => ((items.find((view) => view.id === id) || {}).name || String(id)),
+      relationsOf: (id, rs) => rs.filter((r) => r.source === id || r.target === id),
+      structureChain: () => null,
+      isOrphanCandidate: () => false,
+    },
     String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
   };
   vm.createContext(ctx);
@@ -10953,6 +10970,13 @@ test('analytics: a missing indexed SQL file makes search coverage incomplete', a
     views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }], schema: {}, relations: [],
     sqls: { q1: { id: 'q1', sql: null, stem: 'q1', parents: [], sources: {} } },
     deps: {}, pullFailed: [], bound: { workspace: 'w' }, sqlDiskUnread: new Set(),
+    analyticsViewModel: {
+      viewById: (items) => new Map(items.map((view) => [view.id, view])),
+      nameOf: (id, items) => ((items.find((view) => view.id === id) || {}).name || String(id)),
+      relationsOf: (id, rs) => rs.filter((r) => r.source === id || r.target === id),
+      structureChain: () => null,
+      isOrphanCandidate: () => false,
+    },
     String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
   };
   vm.createContext(ctx);
@@ -11061,6 +11085,7 @@ test('analytics: health includes SQL files found unreadable after loading the in
     const ctx = {
       views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }, { id: 't1', name: 'T1', type: 'Table' }],
       sqls: {}, pullFailed: [{ id: 'q1', stage: 'sql', error: 'HTTP 429' }], sqlDiskUnread: new Set(),
+      analyticsViewModel: { viewById: (items) => new Map(items.map((view) => [view.id, view])) },
       String, Object, Map, Array,
     };
     vm.createContext(ctx);
@@ -11084,6 +11109,13 @@ test('analytics: health includes SQL files found unreadable after loading the in
     const ctx = {
       views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }], schema: {}, relations: [],
       sqls: {}, deps: {}, pullFailed: [{ id: 'q1', stage: 'sql', error: '429' }], sqlDiskUnread: new Set(),
+      analyticsViewModel: {
+        viewById: (items) => new Map(items.map((view) => [view.id, view])),
+        nameOf: (id, items) => ((items.find((view) => view.id === id) || {}).name || String(id)),
+        relationsOf: (id, rs) => rs.filter((r) => r.source === id || r.target === id),
+        structureChain: () => null,
+        isOrphanCandidate: () => false,
+      },
       String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
     };
     vm.createContext(ctx);

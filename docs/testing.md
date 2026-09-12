@@ -15,7 +15,10 @@ the first dependency in a repository whose pitch is that it has none.
 The opted-in JSDoc contracts are a separate development gate: `bash tools/typecheck.sh` asks `npx`
 for one exact TypeScript version and runs `checkJs` with `noEmit`, once per extension. It is not in
 the offline battery and it never changes the shipped files; the official CI runs it after the
-battery. The file set is derived from `// @ts-check`, so opting in and entering the gate are one act.
+battery. Analytics' application, bridge, persistence and pure-model boundary is an explicit 18/18
+set: every file in that set must carry `// @ts-check` and is compiled on every run. DOM-only pages
+remain outside until they are extracted behind contracts. CRM continues to opt in incrementally;
+new opted-in files are discovered automatically.
 
 **Every case is a bug that actually happened.** A test written from imagination tests the
 imagination; these were lifted from the throwaway checks run while fixing real defects — the Deluge

@@ -1,7 +1,8 @@
+// @ts-check
 // The smallest possible persistence of a FileSystemDirectoryHandle, in IndexedDB.
 const IDB_NAME = 'zoost';
 
-window.idbHandle = {
+window.idbHandle = /** @type {any} */ ({
   async _db() {
     if (this.__db) return this.__db;
     this.__db = await new Promise((res, rej) => {
@@ -30,4 +31,4 @@ window.idbHandle = {
       rq.onerror = () => rej(rq.error);
     });
   },
-};
+});

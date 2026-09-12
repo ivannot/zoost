@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * content-bridge.js - ISOLATED world on the Zoho Analytics page.
  * Wrapped in a guard so it is safe to (re)inject via chrome.scripting.

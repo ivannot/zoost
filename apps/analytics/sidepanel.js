@@ -347,7 +347,6 @@ const stemOf = (name, id) => (String(name || 'unnamed').replace(/[^\w.\- ]/g, '_
 const analyticsMirrorWriter = createAnalyticsMirrorWriter({
   readJson, writeJson, stemOf, views: () => views,
 });
-const ANALYTICS_WRITER_UNAVAILABLE = 'Required mirror writer is unavailable';
 
 async function appRoot(create) {
   if (!root) return null;
@@ -1283,9 +1282,9 @@ function setPullBusy(on) {
 // The lifecycle is advanced by the pull that actually performs each phase.  Releasing the busy
 // counter only releases the UI lock; it must never invent planning/writing/refreshing after an
 // exception or a caller that forgot to execute them.
-function pullPhase(next) { return typeof pullLifecycle !== 'undefined' && pullLifecycle ? pullLifecycle.transition(next) : false; }
+function pullPhase(next) { return pullLifecycle.transition(next); }
 function finishPullLifecycle(warnings = false) {
-  return typeof pullLifecycle !== 'undefined' && pullLifecycle && pullLifecycle.snapshot().state === 'refreshing'
+  return pullLifecycle.snapshot().state === 'refreshing'
     ? pullLifecycle.finish(warnings) : false;
 }
 function workspaceChangeRefuse() {
@@ -1380,7 +1379,7 @@ async function pullAll() {
       // write stage does, so a refusal at that moment leaves the previous snapshot intact.
       : 'Pull failed: ' + friendlyError(e));
     $('status').className = 'bad';
-    if (op.current() && typeof pullLifecycle !== 'undefined') pullLifecycle.fail();
+    if (op.current()) pullLifecycle.fail();
     showEmergency(!(e && e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally {
@@ -1430,16 +1429,16 @@ async function pullOne(id) {
     nextDeps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     // Only this item's old report goes, and only if this pull actually replaced it.
     const nextFailed = pullFailed.filter((f) => String(f.id) !== String(id)).concat(still);
-    if (typeof pullPhase === 'function') pullPhase('planning');
-    if (typeof pullPhase === 'function') pullPhase('writing');
+    pullPhase('planning');
+    pullPhase('writing');
     await writePartialSnapshot(op, { sqls: nextSqls, deps: nextDeps, pullFailed: nextFailed });
-    if (typeof pullPhase === 'function') pullPhase('refreshing');
+    pullPhase('refreshing');
     if (!op.current()) return endBusyElsewhere();
     ({ sqls, deps, pullFailed } = { sqls: nextSqls, deps: nextDeps, pullFailed: nextFailed });
     setBusy(false, still.length ? `«${v.name}»: lineage re-read, its SQL still could not be.` : `«${v.name}» re-read.`);
     $('status').className = still.length ? 'warn' : 'ok';
     render(); await openDetail(id);
-    if (typeof finishPullLifecycle === 'function') finishPullLifecycle(still.length > 0);
+    finishPullLifecycle(still.length > 0);
   } catch (e) {
     const interrupted = !!(e && e.mirrorIncomplete && op.current());
     if (interrupted) refuseIncompleteSnapshot();
@@ -1447,7 +1446,7 @@ async function pullOne(id) {
       ? `Could not finish writing «${v.name}». The mirror is blocked because its files describe two different moments - run Pull all to repair it.`
       : `Could not re-read «${v.name}»: ` + friendlyError(e));
     $('status').className = 'bad';
-    if (op.current() && typeof pullLifecycle !== 'undefined') pullLifecycle.fail();
+    if (op.current()) pullLifecycle.fail();
     showEmergency(!(e && e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { setPullBusy(false); }
@@ -1484,24 +1483,24 @@ async function retryFailed() {
     // this retry started in, and merging them into another one's memory is the same defect indoors.
     if (!op.current()) return endBusyElsewhere();
     Object.assign(nextDeps, r2.deps || {}); still.push(...(r2.failed || []).map((f) => ({ ...f, stage: 'lineage' })));
-    if (typeof pullPhase === 'function') pullPhase('planning');
-    if (typeof pullPhase === 'function') pullPhase('writing');
+    pullPhase('planning');
+    pullPhase('writing');
     await writePartialSnapshot(op, { sqls: nextSqls, deps: nextDeps, pullFailed: still });
-    if (typeof pullPhase === 'function') pullPhase('refreshing');
+    pullPhase('refreshing');
     if (!op.current()) return endBusyElsewhere();
     ({ sqls, deps, pullFailed } = { sqls: nextSqls, deps: nextDeps, pullFailed: still });
     mergeSchemaIntoViews();
     setBusy(false, pullFailed.length ? `${pullFailed.length} still unreadable.` : 'All previously failed items are now in.');
     $('status').className = pullFailed.length ? 'warn' : 'ok';
     render();
-    if (typeof finishPullLifecycle === 'function') finishPullLifecycle(pullFailed.length > 0);
+    finishPullLifecycle(pullFailed.length > 0);
   } catch (e) {
     const interrupted = !!(e && e.mirrorIncomplete && op.current());
     if (interrupted) refuseIncompleteSnapshot();
     setBusy(false, interrupted
       ? 'Retry could not finish writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
       : 'Retry failed: ' + friendlyError(e)); $('status').className = 'bad';
-    if (op.current() && typeof pullLifecycle !== 'undefined') pullLifecycle.fail();
+    if (op.current()) pullLifecycle.fail();
     showEmergency(!(e && e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
@@ -1509,23 +1508,10 @@ async function retryFailed() {
 
 // Split out so a single-item refresh rewrites only what it touched, instead of the whole mirror.
 async function writeLineage(op, nextDeps = deps, nextFailed = pullFailed) {
-  if (typeof analyticsMirrorWriter !== 'undefined') return analyticsMirrorWriter.writeLineage(op, bound && bound.workspace, nextDeps, nextFailed);
-  if (!op || !op.current()) return;
-  throw new Error(ANALYTICS_WRITER_UNAVAILABLE);
+  return analyticsMirrorWriter.writeLineage(op, bound && bound.workspace, nextDeps, nextFailed);
 }
 async function writeSql(op, nextSqls = sqls) {
-  if (typeof analyticsMirrorWriter !== 'undefined') return analyticsMirrorWriter.writeSql(op, nextSqls, views);
-  if (!op || !op.current()) return;
-  let unreadable = null;
-  const index = await readJson('sql/index.json', {}, op, (failure) => { unreadable = failure; });
-  if (unreadable) throw new Error(`Could not read ${unreadable.rel} (${unreadable.name}).`);
-  for (const [id, q] of Object.entries(nextSqls)) {
-    if (typeof q.sql !== 'string') continue;
-    const v = viewById().get(id); const stem = q.stem || stemOf(v ? v.name : id, id);
-    await op.write(`sql/${stem}.sql`, q.sql);
-    index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
-  }
-  await writeJson('sql/index.json', index, op);
+  return analyticsMirrorWriter.writeSql(op, nextSqls, views);
 }
 
 /** A one-view refresh still changes several files. Keep the old in-memory model until all of them
@@ -1819,27 +1805,17 @@ async function sqlReadState(id, op = beginWorkspaceOp()) {
 // Pure model operations live outside the panel.  The wrappers keep the historical call sites small
 // while making the state they read explicit and independently testable.
 const analyticsViewModel = createAnalyticsViewModel();
-const isOrphanCandidate = (view) => typeof analyticsViewModel !== 'undefined'
-  ? analyticsViewModel.isOrphanCandidate(view, deps)
-  : !!(deps && deps[view.id] && view.type !== 'Dashboard' && deps[view.id].children.length === 0 && deps[view.id].dashboards.length === 0);
+const isOrphanCandidate = (view) => analyticsViewModel.isOrphanCandidate(view, deps);
 function mergeSchemaIntoViews() {
-  const merged = typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.mergeSchema(views, schema)
-    : views.map((view) => ({ ...view, designModifiedAt: schema[view.id]?.designModifiedAt || null, system: !!schema[view.id]?.system }));
+  const merged = analyticsViewModel.mergeSchema(views, schema);
   views.forEach((view, index) => Object.assign(view, merged[index]));
 }
-const foreignKeys = (viewId) => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.foreignKeys(viewId, relations) : { out: new Map(), inc: new Map() };
-const relationsOf = (id) => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.relationsOf(id, relations) : relations.filter((r) => r.source === id || r.target === id);
-const viewById = () => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.viewById(views) : new Map(views.map((view) => [view.id, view]));
-const nameOf = (id, map) => typeof analyticsViewModel !== 'undefined' ? analyticsViewModel.nameOf(id, map ? [...map.values()] : views) : ((map.get(id) && map.get(id).name) || String(id == null ? '?' : id));
+const foreignKeys = (viewId) => analyticsViewModel.foreignKeys(viewId, relations);
+const relationsOf = (id) => analyticsViewModel.relationsOf(id, relations);
+const viewById = () => analyticsViewModel.viewById(views);
+const nameOf = (id, map) => analyticsViewModel.nameOf(id, map ? [...map.values()] : views);
 function structureChain(view, map) {
-  if (typeof analyticsViewModel !== 'undefined') return analyticsViewModel.structureChain(view, map ? [...map.values()] : views, schema);
-  const chain = [], seen = new Set(); let current = view;
-  while (current && !seen.has(current.id)) {
-    seen.add(current.id); chain.push(current);
-    if (schema[current.id]) return chain;
-    current = current.parent ? map.get(current.parent) : null;
-  }
-  return null;
+  return analyticsViewModel.structureChain(view, map ? [...map.values()] : views, schema);
 }
 
 // ---------- render ----------
