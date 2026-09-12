@@ -69,7 +69,12 @@ def sweep(app: str) -> list:
         # wrap everything in an IIFE, so every declaration in them is indented by two - and this swept
         # 0 of their 54 functions while printing «34 shipped scripts swept». `asynccheck` learnt exactly
         # this, on exactly those two files, and the sibling walk did not reach here.
-        for kind, pat in (("function", r'^[ \t]*(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)'),
+        # **`function` must end where the keyword ends.** With `function\s*` a zero-width gap was
+        # allowed, so the property `functionUiIds: () => ask(...)` was read as a declaration of
+        # `UiIds` - a name that exists nowhere - and this printed it as dead. In a tool whose output
+        # is a list of things to delete, an invented name is the dangerous direction. A generator
+        # still declares with a star, so that spelling is kept and the space is required otherwise.
+        for kind, pat in (("function", r'^[ \t]*(?:async\s+)?function(?:\s*\*\s*|\s+)([A-Za-z_$][\w$]*)'),
                           ("const", r'^[ \t]*const\s+([A-Za-z_$][\w$]*)\s*=')):
             for name in sorted(set(re.findall(pat, s, re.M))):
                 seen = len(re.findall(r'(?<![\w$.])' + re.escape(name) + r'(?![\w$])', code))
