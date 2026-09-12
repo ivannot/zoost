@@ -8912,6 +8912,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       assert.deepEqual(half.queued, [failed],
                        `the path that failed is ${JSON.stringify(half.queued)} - a failure nobody kept `
                        + 'is a file nothing will come back to, because the index no longer mentions it.');
+      assert.deepEqual(JSON.parse(half.files['functions/index.json']), [{ id: 7 }, { id: 8 }],
+                       `${failed} left a partial capture but the durable index forgot the function`);
       assert.deepEqual(half.said, [],
                        `it said ${JSON.stringify(half.said)} over a file still on disk`);
     }

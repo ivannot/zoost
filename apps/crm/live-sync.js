@@ -280,6 +280,11 @@ async function pruneFunction(id, entry = null) {
     }
   }
   if (!op.current()) return false;
+  // The index is the durable recovery manifest.  Do not remove the row after a partial delete:
+  // the browser may close before the in-memory retry queue runs again, and without the row the
+  // next startup cannot discover the source/meta file still on disk.  Keeping the row is safe:
+  // the next reconciliation retries the exact paths, treating already-absent halves as success.
+  if (!whole) return false;
   try {
     const idx = JSON.parse(await op.read('functions/index.json'));
     if (!op.current()) return false;
