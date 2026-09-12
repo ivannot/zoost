@@ -1,20 +1,20 @@
 {
   "checks": {
     "assistant": {
-      "at": "2026-09-07T18:16:01+00:00",
-      "commit": "cba97e96b5ada7a4279e005ce1255639b9fd757d",
-      "note": "Ho fatto tutti i test. Per me luce verde. Pubblichiamo tutto. (Ri-registrata sul commit del rilascio: dalla risposta originale sono cambiati solo il numero di versione nel manifest e le note di rilascio.)",
+      "at": "2026-09-12T10:06:40+00:00",
+      "commit": "de6eee17c727936f0a24e4e3890b022b11420e78",
+      "note": "Ho fatto tutti i test da ui. Tutto verde. Pubblichiamo prima crm e poi analytics",
       "result": "pass",
       "title": "The assistant answers about the org, with a real key",
-      "version": "1.32.0"
+      "version": "1.32.1"
     },
     "export": {
-      "at": "2026-09-07T18:16:01+00:00",
-      "commit": "cba97e96b5ada7a4279e005ce1255639b9fd757d",
-      "note": "Ho fatto tutti i test. Per me luce verde. Pubblichiamo tutto. (Ri-registrata sul commit del rilascio: dalla risposta originale sono cambiati solo il numero di versione nel manifest e le note di rilascio.)",
+      "at": "2026-09-12T10:06:40+00:00",
+      "commit": "de6eee17c727936f0a24e4e3890b022b11420e78",
+      "note": "Ho fatto tutti i test da ui. Tutto verde. Pubblichiamo prima crm e poi analytics",
       "result": "pass",
       "title": "An export opens and reads as the panel reads",
-      "version": "1.32.0"
+      "version": "1.32.1"
     },
     "fresh-profile": {
       "at": "2026-09-07T18:16:01+00:00",
@@ -25,28 +25,28 @@
       "version": "1.32.0"
     },
     "passphrase": {
-      "at": "2026-09-07T18:16:01+00:00",
-      "commit": "cba97e96b5ada7a4279e005ce1255639b9fd757d",
-      "note": "Ho fatto tutti i test. Per me luce verde. Pubblichiamo tutto. (Ri-registrata sul commit del rilascio: dalla risposta originale sono cambiati solo il numero di versione nel manifest e le note di rilascio.)",
+      "at": "2026-09-12T10:06:40+00:00",
+      "commit": "de6eee17c727936f0a24e4e3890b022b11420e78",
+      "note": "Ho fatto tutti i test da ui. Tutto verde. Pubblichiamo prima crm e poi analytics",
       "result": "pass",
       "title": "The API key under a passphrase, across a browser restart",
-      "version": "1.32.0"
+      "version": "1.32.1"
     },
     "pull-all": {
-      "at": "2026-09-07T18:16:01+00:00",
-      "commit": "cba97e96b5ada7a4279e005ce1255639b9fd757d",
-      "note": "Ho fatto tutti i test. Per me luce verde. Pubblichiamo tutto. (Ri-registrata sul commit del rilascio: dalla risposta originale sono cambiati solo il numero di versione nel manifest e le note di rilascio.)",
+      "at": "2026-09-12T10:06:40+00:00",
+      "commit": "de6eee17c727936f0a24e4e3890b022b11420e78",
+      "note": "Ho fatto tutti i test da ui. Tutto verde. Pubblichiamo prima crm e poi analytics",
       "result": "pass",
       "title": "Pull all, on a real org, from an empty workspace",
-      "version": "1.32.0"
+      "version": "1.32.1"
     },
     "restart": {
-      "at": "2026-09-07T17:38:33+00:00",
-      "commit": "ae9bc00b8ff0813711341ada76d99c14975f12a3",
-      "note": "Ho fatto tutti i test. Per me luce verde. Pubblichiamo tutto.",
+      "at": "2026-09-12T10:06:40+00:00",
+      "commit": "de6eee17c727936f0a24e4e3890b022b11420e78",
+      "note": "Ho fatto tutti i test da ui. Tutto verde. Pubblichiamo prima crm e poi analytics",
       "result": "pass",
       "title": "A full browser restart: the folder, and what you changed in Settings",
-      "version": "1.32.0"
+      "version": "1.32.1"
     }
   }
 }
