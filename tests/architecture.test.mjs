@@ -259,6 +259,13 @@ test('CRM pull controller does not replay phases owned by a vertical runner', as
   assert.equal(controller.pullLifecycle().state, 'completed');
 });
 
+test('CRM pull controller rejects construction without a lifecycle', () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-controller.js', import.meta.url), 'utf8'), context);
+  assert.throws(() => context.createCrmPullController({}), /Pull lifecycle is required/);
+});
+
 test('an HTTP 500 path containing an id starting with 401 is not authentication', () => {
   const { classifyZoostError } = load('analytics/error-model.js');
   const error = classifyZoostError({ status: 500, message: '500 on /crm/functions/401234' }, 'functions');

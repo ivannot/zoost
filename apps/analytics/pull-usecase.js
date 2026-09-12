@@ -30,10 +30,6 @@ function createAnalyticsPullUseCase(deps) {
     deps.setBusy(true, 'Reading structure and relations…');
     const sc = await deps.readErd();
     if (!operation.current()) return { moved: true };
-    // Planning starts when the complete read snapshot exists, not after the write has already
-    // happened.  Keeping this transition at the boundary makes the lifecycle an observation of the
-    // real work rather than a retrospective animation in the panel.
-    if (!deps.phase('planning')) return { moved: true };
     const nextViews = vl.views || [];
     const qIds = nextViews.filter((v) => v.type === 'QueryTable').map((v) => v.id);
     deps.setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
@@ -43,6 +39,10 @@ function createAnalyticsPullUseCase(deps) {
     deps.setBusy(true, `Reading lineage… 0 / ${allIds.length}`);
     const dp = await deps.readDependencies(allIds);
     if (!operation.current()) return { moved: true };
+    // Planning starts only after every remote read has produced the snapshot that will be written.
+    // Entering this phase earlier made the lifecycle claim that planning was underway while SQL and
+    // lineage requests were still in flight.
+    if (!deps.phase('planning')) return { moved: true };
     const next = {
       views: nextViews, folders: vl.folders || [], schema: sc.tables || {}, relations: sc.relations || [],
       sqls: sq.sql || {}, deps: dp.deps || {},

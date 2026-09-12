@@ -23,6 +23,10 @@ governs the shipped flow.
   fixture generation.
 - Canary bases are restricted to HTTPS Zoho hosts for the selected product, unknown `--app` values
   fail even in dry-run mode, and Analytics context replies are validated before entering panel state.
+- Analytics planning begins only after SQL and lineage reads complete; CRM controllers reject
+  construction without a lifecycle instead of failing later during a pull.
+- Public source-count claims are derived from the shipped trees and now agree across English,
+  Italian and llms.txt (58 CRM scripts, 32 Analytics scripts).
 
 The live Zoho canary remains `never-run`: credentials and a controlled synthetic organisation are not
 available in this environment, so no live evidence is fabricated.

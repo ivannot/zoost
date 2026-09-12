@@ -25,5 +25,19 @@
     "domain": ["document.", "window.", "chrome.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem", "location."],
     "ports": ["document.", "window.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem"],
     "application": ["document.", "window.", "chrome.", "fetch(", "XMLHttpRequest", "indexedDB", "FileSystem", "location."]
+  },
+  "requires": {
+    "crm": {
+      "pull-controller.js": ["pull-lifecycle.js"],
+      "crm-pull-graph.js": ["pull-controller.js", "mirror-plan.js", "filesystem-adapter.js"],
+      "crm-bootstrap.js": ["pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-pull-graph.js"]
+    },
+    "analytics": {
+      "pull-usecase.js": ["pull-lifecycle.js"],
+      "analytics-mirror-writer.js": ["filesystem-adapter.js", "mirror-plan.js"],
+      "analytics-view-model.js": ["list-model.js", "search-state.js"],
+      "bootstrap.js": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js"],
+      "sidepanel.js": ["bootstrap.js", "analytics-mirror-writer.js", "analytics-view-model.js"]
+    }
   }
 }

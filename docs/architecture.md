@@ -4,11 +4,14 @@ The declarative map in `tools/architecture.json` assigns every distributed CRM a
 to a role: domain, ports, application, adapters, UI or bootstrap. `tools/architecturecheck.py`
 verifies that no file is unclassified or assigned twice and that pure modules do not introduce DOM,
 network, Chrome, filesystem or IndexedDB effects. It also checks that every panel script exists exactly
-once and that required composition-root ordering is preserved.
+once, that required composition-root ordering is preserved, and that the reviewed `requires` edges in
+the manifest point only to providers loaded earlier in the page.
 
 The check is intentionally conservative: it does not replace semantic JavaScript review or prove every
 classic-script global. It makes declared direction and load-time composition visible, and blocks missing
-providers, duplicate scripts and the most dangerous pure-boundary drift as soon as it is introduced.
+providers, duplicate scripts, inverted declared edges and the most dangerous pure-boundary drift as
+soon as it is introduced. The edge manifest is intentionally explicit: an unlisted global is still a
+review item, while a listed provider cannot silently disappear from the shipped page.
 
 ## Operating rules
 

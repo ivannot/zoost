@@ -23,6 +23,22 @@
 #     lifted out and run alone (see slice.mjs), while tools/probe.py owns the browser wiring it can.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+# Mutation tests deliberately plant broken source to prove that a checker turns red.  Running
+# them in the checkout itself and restoring in `finally` is not isolation: SIGKILL, a second
+# process, or a pre-existing dirty file can leave a real source file changed while the final
+# `git status` still looks identical.  Start the battery from a byte-for-byte disposable copy;
+# every path derived by a test (including git metadata) then points at that copy.  The opt-out is
+# only the private recursive invocation, never a user-facing mode.
+if [ "${ZOOST_TEST_ISOLATED:-0}" != "1" ]; then
+  TEST_COPY=$(mktemp -d "${TMPDIR:-/tmp}/zoost-tests.XXXXXX")
+  cp -a . "$TEST_COPY/repo"
+  set +e
+  (cd "$TEST_COPY/repo" && ZOOST_TEST_ISOLATED=1 bash tests/run.sh)
+  TEST_STATUS=$?
+  rm -rf "$TEST_COPY"
+  exit "$TEST_STATUS"
+fi
 PYOUT=$(mktemp)
 NODEOUT=$(mktemp)
 TREE_BEFORE=$(git status --porcelain=v1)
@@ -66,7 +82,7 @@ trap cleanup EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1153
+NODE_EXPECTED=1154
 PY_EXPECTED=419
 # Prefer a compatible Node automatically.  A developer may have an older system Node first in PATH
 # even though the machine already has a newer nvm/Codex runtime.  Failing on the first executable

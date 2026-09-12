@@ -9853,12 +9853,15 @@ test('a nested release leaves the buttons off while anything still holds the pul
                 TABS: [{ id: 'functions', label: 'Functions' }, { id: 'modules', label: 'Modules' }],
                 Math };
   const made = load([sliceFn('apps/crm/sidepanel.js', 'blockZoho'),
+                     sliceFileConst('apps/crm/pull-lifecycle.js', 'PULL_STATES'),
+                     sliceFileConst('apps/crm/pull-lifecycle.js', 'PULL_TRANSITIONS'),
+                     sliceFn('apps/crm/pull-lifecycle.js', 'createPullLifecycle'),
                      sliceFn('apps/crm/pull-controller.js', 'createCrmPullController')], ctx);
   let busy = false;
   const controller = made.createCrmPullController({
     busy: () => busy, publishBusy: (value) => { busy = value; }, blockZoho: made.blockZoho,
     zohoReady: () => true, hasDirectory: () => true, navigationOpen: () => false,
-    updateWorkspaceButtons() {},
+    updateWorkspaceButtons() {}, lifecycle: made.createPullLifecycle(),
   });
   controller.setPullBusy(true); controller.setPullBusy(true); controller.setPullBusy(false);
   assert.equal(busy, true, 'the flag itself stopped counting its holders');

@@ -347,6 +347,7 @@ const stemOf = (name, id) => (String(name || 'unnamed').replace(/[^\w.\- ]/g, '_
 const analyticsMirrorWriter = createAnalyticsMirrorWriter({
   readJson, writeJson, stemOf, views: () => views,
 });
+const ANALYTICS_WRITER_UNAVAILABLE = 'Required mirror writer is unavailable';
 
 async function appRoot(create) {
   if (!root) return null;
@@ -1510,7 +1511,7 @@ async function retryFailed() {
 async function writeLineage(op, nextDeps = deps, nextFailed = pullFailed) {
   if (typeof analyticsMirrorWriter !== 'undefined') return analyticsMirrorWriter.writeLineage(op, bound && bound.workspace, nextDeps, nextFailed);
   if (!op || !op.current()) return;
-  await writeJson('lineage.json', { workspace: bound && bound.workspace, deps: nextDeps, failed: nextFailed }, op);
+  throw new Error(ANALYTICS_WRITER_UNAVAILABLE);
 }
 async function writeSql(op, nextSqls = sqls) {
   if (typeof analyticsMirrorWriter !== 'undefined') return analyticsMirrorWriter.writeSql(op, nextSqls, views);

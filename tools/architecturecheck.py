@@ -43,7 +43,9 @@ def _html_scripts(root: Path, app: str) -> tuple[list[str], list[str]]:
     # them here makes an HTML reorder fail before a browser discovers an undefined global.
     pos = {name: i for i, name in enumerate(scripts)}
     if app == "analytics":
-        required = ("pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "sidepanel.js")
+        required = ("pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js",
+                    "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js",
+                    "sidepanel.js")
         missing = [name for name in required if name not in pos]
         if missing:
             findings.append(f"{app}: composition is missing required script(s): {', '.join(missing)}")
@@ -61,12 +63,36 @@ def _html_scripts(root: Path, app: str) -> tuple[list[str], list[str]]:
     return scripts, findings
 
 
+def _dependency_findings(cfg: dict, app: str, scripts: list[str]) -> list[str]:
+    """Check the declared classic-script dependency graph.
+
+    Classic scripts have no import syntax: their only runtime provider is an earlier script in the
+    panel.  Requiring each application boundary to name its providers catches a missing or reordered
+    module even when the browser would only discover it after a user clicks a rarely used control.
+    This is deliberately a manifest of reviewed edges, not a claim that text inspection can infer
+    every global read.
+    """
+    findings: list[str] = []
+    pos = {name: i for i, name in enumerate(scripts)}
+    for consumer, providers in cfg.get("requires", {}).get(app, {}).items():
+        if consumer not in pos:
+            findings.append(f"{app}: dependency consumer is not loaded: {consumer}")
+            continue
+        for provider in providers:
+            if provider not in pos:
+                findings.append(f"{app}: {consumer} requires missing provider {provider}")
+            elif pos[provider] >= pos[consumer]:
+                findings.append(f"{app}: {provider} must load before {consumer}")
+    return findings
+
+
 def scan(root: Path = ROOT) -> list[str]:
     cfg = json.loads((root / "tools" / "architecture.json").read_text(encoding="utf-8"))
     findings: list[str] = []
     for app in ("crm", "analytics"):
-        _scripts, html_findings = _html_scripts(root, app)
+        scripts, html_findings = _html_scripts(root, app)
         findings.extend(html_findings)
+        findings.extend(_dependency_findings(cfg, app, scripts))
         actual = {p.name for p in (root / "apps" / app).glob("*.js")}
         cats = cfg["categories"]
         owners: dict[str, list[str]] = {}
@@ -111,20 +137,29 @@ def self_test() -> None:
         (root / "apps" / "analytics" / "sidepanel.html").write_text(
             '<script src="pull-lifecycle.js"></script><script src="pull-usecase.js"></script>'
             '<script src="pull-adapter.js"></script><script src="bootstrap.js"></script>'
+            '<script src="filesystem-adapter.js"></script><script src="analytics-mirror-writer.js"></script>'
+            '<script src="analytics-view-model.js"></script>'
             '<script src="sidepanel.js"></script>', encoding="utf-8")
         for app, names in {
             "crm": ["pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-bootstrap.js"],
-            "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "sidepanel.js"],
+            "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js", "sidepanel.js"],
         }.items():
             for name in names:
                 (root / "apps" / app / name).write_text("", encoding="utf-8")
-        cfg = {"version": 1, "categories": {"domain": ["pure.js"], "ports": [], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js"], "ui": ["sidepanel.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
+        cfg = {"version": 1, "categories": {"domain": ["pure.js", "analytics-view-model.js"], "ports": [], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js", "filesystem-adapter.js", "analytics-mirror-writer.js"], "ui": ["sidepanel.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
         (root / "tools" / "architecture.json").write_text(json.dumps(cfg), encoding="utf-8")
         (root / "apps" / "crm" / "pure.js").write_text("const x = 1;", encoding="utf-8")
         (root / "apps" / "analytics" / "pure.js").write_text("const x = 2;", encoding="utf-8")
         assert not scan(root)
         (root / "apps" / "analytics" / "pure.js").write_text("document.title = 'bad';", encoding="utf-8")
         assert any("document" in item for item in scan(root))
+        # A classification-only checker stayed green when a required provider disappeared.  The
+        # manifest edge must turn that mutation red even though every remaining file is classified.
+        (root / "apps" / "analytics" / "pure.js").write_text("const x = 2;", encoding="utf-8")
+        html = (root / "apps" / "analytics" / "sidepanel.html").read_text(encoding="utf-8")
+        (root / "apps" / "analytics" / "sidepanel.html").write_text(
+            html.replace('<script src="analytics-view-model.js"></script>', ''), encoding="utf-8")
+        assert any("analytics-view-model.js" in item for item in scan(root))
 
 
 if __name__ == "__main__":

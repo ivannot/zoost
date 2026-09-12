@@ -36,7 +36,7 @@
  * takeListGap: () => string,
  * statusSnapshot: () => PullControllerStatus,
  * errorText: (error: unknown) => string,
- * lifecycle?: {begin: () => number|null, transition: (next: string, id?: number) => boolean,
+ * lifecycle: {begin: () => number|null, transition: (next: string, id?: number) => boolean,
  *   progress: (event: object, id?: number) => boolean, finish: (warnings?: boolean, id?: number) => boolean,
  *   fail: (id?: number) => boolean, snapshot: () => {state: string, operationId: number}},
  * }} PullControllerOptions */
@@ -44,18 +44,15 @@
 /** @param {PullControllerOptions} options */
 function createCrmPullController(options) {
   let depth = 0;
-  // The production bootstrap injects a lifecycle, making it a required composition dependency.
-  // Keep the optional construction fallback only for this low-level factory's isolated callers
-  // (some diagnostics exercise the lock without loading the browser bundle); the shipped bootstrap
-  // rejects a missing lifecycle before exposing any pull action.
+  // The lifecycle is a required composition dependency.  Constructing a controller without one
+  // must fail at the boundary, rather than allowing a pull to run and crash later at snapshot().
   const lifecycle = options.lifecycle || (typeof createPullLifecycle === 'function' ? createPullLifecycle() : null);
+  if (!lifecycle) throw new Error('Pull lifecycle is required');
 
   function setPullBusy(hold) {
     if (hold && depth === 0) {
-      if (lifecycle) {
-        const id = lifecycle.begin();
-        if (id == null || !lifecycle.transition('reading', id)) throw new Error('Pull lifecycle could not start');
-      }
+      const id = lifecycle.begin();
+      if (id == null || !lifecycle.transition('reading', id)) throw new Error('Pull lifecycle could not start');
     }
     depth = Math.max(0, depth + (hold ? 1 : -1));
     options.publishBusy(depth > 0);
@@ -67,7 +64,7 @@ function createCrmPullController(options) {
   // Phase changes belong to the operation, not to the lock release.  Keeping them explicit makes
   // the lifecycle a useful record of what happened instead of a retrospective animation emitted
   // by setPullBusy(false).
-  function phase(next) { return lifecycle ? lifecycle.transition(next) : false; }
+  function phase(next) { return lifecycle.transition(next); }
   // A runner may own a complete vertical path and advance the lifecycle at the moment its real
   // planning/writing/refreshing work happens.  The controller still supplies those phases for the
   // older runners, but must not replay them after a vertical runner has already reached a later
@@ -79,9 +76,9 @@ function createCrmPullController(options) {
     return true;
   }
   function finishPull(warnings = false) {
-    return lifecycle && lifecycle.snapshot().state === 'refreshing' ? lifecycle.finish(warnings) : false;
+    return lifecycle.snapshot().state === 'refreshing' ? lifecycle.finish(warnings) : false;
   }
-  function failPull() { return lifecycle ? lifecycle.fail() : false; }
+  function failPull() { return lifecycle.fail(); }
 
   function workspaceChangeRefuse() {
     if (!options.busy()) return false;
@@ -116,11 +113,11 @@ function createCrmPullController(options) {
       phase('reading');
       await (runners[view] || runners.functions)();
       if (options.statusKind() === 'busy') {
-        if (!lifecycle || lifecycle.snapshot().state === 'reading') { phase('planning'); phase('writing'); }
+        if (lifecycle.snapshot().state === 'reading') { phase('planning'); phase('writing'); }
         try { await options.rebuildActive(); }
         catch (_) { options.setStatus('Pull complete.', 'ok'); }
       }
-      if (!lifecycle || lifecycle.snapshot().state === 'writing') phase('refreshing');
+      if (lifecycle.snapshot().state === 'writing') phase('refreshing');
       finishPull(options.statusKind() === 'warn');
     } catch (error) {
       failPull();
