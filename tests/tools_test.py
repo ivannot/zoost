@@ -7615,7 +7615,12 @@ class JavaScriptCommentsAreScannedNotMatched(unittest.TestCase):
         # One backslash or two: `architecturecheck.py` carried the doubled form - the signature of an
         # edit applied through a script - and this guard, written for the single one, reported nothing
         # while that checker was deleting live code between any two slashes in its subject.
-        naive = re.compile(r"re\.sub\(\s*r?['\"]/\\+\*")
+        #
+        # **A call, not a mention.** Widened to both spellings, it then accused `jstext.py`'s own
+        # docstring, which quotes the bad pattern to explain why that scanner exists - a gate refusing
+        # correct work, which is the defect this repository fixed elsewhere the day before. So the
+        # line must *be* the substitution: start of line, optional assignment, then the call.
+        naive = re.compile(r"^\s*(?:\w+\s*=\s*)?re\.sub\(\s*r?['\"]/\\+\*")
         findings = []
         for f in sorted((ROOT / 'tools').glob('*.py')):
             for n, line in enumerate(f.read_text(encoding='utf-8').split('\n'), 1):

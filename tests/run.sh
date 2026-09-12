@@ -88,7 +88,7 @@ trap cleanup EXIT
 # Exact, in both directions, for the reason every ledger in this repository is: a fall is cases that
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
-NODE_EXPECTED=1154
+NODE_EXPECTED=1158
 PY_EXPECTED=420
 # Prefer a compatible Node automatically.  A developer may have an older system Node first in PATH
 # even though the machine already has a newer nvm/Codex runtime.  Failing on the first executable

@@ -209,7 +209,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	7f4880c097ae	cc8974705fdb	divergent
+pullAll	dc6e14ffd344	cc8974705fdb	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
 rebase	6611b6610c49	6611b6610c49	identical
@@ -255,7 +255,7 @@ select	a415fad61600	e1eca3d924a3	divergent
 serializeArrangement	f1130b960701	f1130b960701	identical
 setDepth	770f0a0cfad3	770f0a0cfad3	identical
 setFocus	f2a33f350182	9be5357f9740	divergent
-setPullBusy	6f5dd48d8c5e	ca2a00c862b9	divergent
+setPullBusy	6f5dd48d8c5e	c6e007362990	divergent
 setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
@@ -283,7 +283,7 @@ updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent
-validateBridgeReply	f8091e8c5e93	e0cd2e4989ef	divergent
+validateBridgeReply	36ac8f1a3e55	e0cd2e4989ef	divergent
 validateMirrorPlan	1e1eb19c46d0	1e1eb19c46d0	identical
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical
 wasOwn	137c94652f18	137c94652f18	identical
