@@ -1270,10 +1270,24 @@ function setBusy(on, text) {
   if (text !== null) status(text || (on ? 'Working…' : 'Ready.'), on ? 'busy' : '');
   updateButtons();
 }
+// **The lock closes what it opens**, or the next pull reads the whole workspace and throws it away.
+//
+// `begin()` is declined from any non-terminal state, and this ignored the refusal - so after a pull
+// interrupted while writing or refreshing, the lifecycle rested there and `pullPhase('planning')`
+// returned false on the next Pull all. The use case only consults the phase *after* every remote
+// read, so the panel re-read the entire workspace, wrote nothing, said nothing, and left the status
+// line frozen on the last progress line. It looked hung, and it repeated on every press. The CRM
+// twin had the same shape with a louder failure. Reproduced by driving the shipped lifecycle through
+// the panel's own sequence.
 function setPullBusy(on) {
   if (on && pullDepth === 0) {
-    const id = pullLifecycle?.begin();
+    let id = pullLifecycle?.begin();
+    if (id == null) { pullLifecycle?.cancel(); id = pullLifecycle?.begin(); }
     if (id != null) pullLifecycle?.transition('reading', id);
+  }
+  if (!on && pullDepth === 1 && pullLifecycle) {
+    const state = pullLifecycle.snapshot().state;
+    if (state !== 'completed' && state !== 'completed-with-warnings' && state !== 'failed' && state !== 'cancelled') pullLifecycle.cancel();
   }
   pullDepth = Math.max(0, pullDepth + (on ? 1 : -1));
   pullBusy = pullDepth > 0;

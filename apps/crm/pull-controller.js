@@ -49,10 +49,30 @@ function createCrmPullController(options) {
   const lifecycle = options.lifecycle || (typeof createPullLifecycle === 'function' ? createPullLifecycle() : null);
   if (!lifecycle) throw new Error('Pull lifecycle is required');
 
+  // **The lifecycle is a record of the pull, and a record may not refuse the thing it records.**
+  //
+  // This threw when `begin()` was declined, and `begin()` is declined from any non-terminal state -
+  // so one ordinary gesture killed the product. «Complete missing» and the Workflows twin take this
+  // lock directly and advance no phase, and a per-tab pull whose runner ends on a non-busy status
+  // skips them too: the lifecycle was left resting in `reading`, and from that moment Pull all, the
+  // per-tab pull and a click on a row's status dot all threw - *before* the `try`, so no status line
+  // was written and the rejection was unhandled. Buttons still enabled, nothing said, nothing
+  // working until the panel was reopened. Reproduced by driving the shipped controller: three
+  // gestures, three throws, zero sentences. Found by three readers independently.
+  //
+  // Two changes, and the second is the one that keeps it fixed. A declined `begin()` now cancels the
+  // abandoned operation and starts a new one, because the reader asked for a pull and the alternative
+  // is refusing it for ever. And the lock closes what it opened: releasing at depth 0 drives any
+  // non-terminal state to `cancelled`, so an abandoned phase cannot outlive the work that left it.
   function setPullBusy(hold) {
     if (hold && depth === 0) {
-      const id = lifecycle.begin();
+      let id = lifecycle.begin();
+      if (id == null) { lifecycle.cancel(); id = lifecycle.begin(); }
       if (id == null || !lifecycle.transition('reading', id)) throw new Error('Pull lifecycle could not start');
+    }
+    if (!hold && depth === 1) {
+      const state = lifecycle.snapshot().state;
+      if (state !== 'completed' && state !== 'completed-with-warnings' && state !== 'failed' && state !== 'cancelled') lifecycle.cancel();
     }
     depth = Math.max(0, depth + (hold ? 1 : -1));
     options.publishBusy(depth > 0);

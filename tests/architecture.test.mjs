@@ -394,3 +394,84 @@ test('canary accepts only HTTPS hosts belonging to the selected Zoho product', a
   assert.throws(() => canaryBase('crm', 'http://127.0.0.1:8787'), /HTTPS Zoho host/);
   assert.throws(() => canaryBase('analytics', 'https://analytics.zoho.eu.evil.test'), /HTTPS Zoho host/);
 });
+
+// ---------------------------------------------------------------------------------------------
+// **A record of the pull may not refuse the pull.**
+//
+// `setPullBusy(true)` began the lifecycle and threw when `begin()` declined - and `begin()` declines
+// from any non-terminal state. «Complete missing», its Workflows twin, and a per-tab pull whose
+// runner ends on a non-busy status all take the lock and advance no phase, so the lifecycle was left
+// resting in `reading`; from that moment Pull all, the per-tab pull and a click on a row's status dot
+// threw *before* their `try`, writing no status and leaving the rejection unhandled. Buttons enabled,
+// nothing said, nothing working until the panel was reopened. Three readers found it independently.
+test('CRM: an ordinary gesture that advances no phase does not kill every later pull', async () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-lifecycle.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-controller.js', import.meta.url), 'utf8'), context);
+  let busy = false;
+  const said = [];
+  const controller = context.createCrmPullController({
+    busy: () => busy, publishBusy: (value) => { busy = value; }, blockZoho: () => {}, zohoReady: () => true,
+    hasDirectory: () => true, navigationOpen: () => false, updateWorkspaceButtons: () => {},
+    restoreWorkspaceSelection: () => {}, setStatus: (t, k) => said.push(`${k}: ${t}`),
+    currentView: () => 'modules', tabLabel: (id) => id, errorText: String,
+    runners: () => ({ modules: async () => {}, functions: async () => {} }),
+    rebuildActive: async () => {}, renderTabs: () => {}, forbiddenNote: () => '',
+    beginOperation: () => ({ root: {}, current: () => true, say: () => {} }),
+    plan: () => ({ areas: [], skipped: [], asked: [], askedBefore: {} }),
+    answeredRechecks: () => [], takeRechecks: async () => {}, takeListGap: () => '',
+    consumePreferencesChanged: () => false, preferencesChangedNote: '',
+    statusSnapshot: () => ({ text: '', kind: 'ok' }), statusKind: () => 'ok',
+  });
+
+  // The gesture: «Complete missing» takes the lock and releases it, advancing no phase.
+  controller.setPullBusy(true);
+  controller.setPullBusy(false);
+  assert.ok(['completed', 'completed-with-warnings', 'failed', 'cancelled'].includes(controller.pullLifecycle().state),
+    `the lock was released and left the lifecycle at «${controller.pullLifecycle().state}», where nothing can begin`);
+
+  // And everything the user can press afterwards still works.
+  await assert.doesNotReject(() => controller.pullEverything(), 'Pull all is dead after one ordinary gesture');
+  await assert.doesNotReject(() => controller.pullCurrent(), 'the per-tab pull is dead after one ordinary gesture');
+  await assert.doesNotReject(() => controller.runPullAction(async () => {}),
+    'a single function download is dead after one ordinary gesture');
+});
+
+// The same shape in the Analytics twin, where `begin()` does not throw: the pull performs every
+// remote read and only then finds `phase('planning')` false, returns `moved`, writes nothing and says
+// nothing - the panel looks hung on the last progress line, and it repeats on every press.
+test('Analytics: a pull interrupted while writing does not silence the next one', () => {
+  // The shipped lock, lifted and executed - not a copy of it written here, which would stay green
+  // while the product regressed. `setPullBusy` is a declaration in the panel; the lifecycle and the
+  // two globals it touches come with it.
+  const context = { Math, Object, Error, String, JSON, updateButtons: () => {} };
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../apps/analytics/pull-lifecycle.js', import.meta.url), 'utf8'), context);
+  const panel = readFileSync(new URL('../apps/analytics/sidepanel.js', import.meta.url), 'utf8');
+  const lock = panel.slice(panel.indexOf('function setPullBusy(on) {'), panel.indexOf('function workspaceChangeRefuse'));
+  vm.runInContext('let pullDepth = 0, pullBusy = false; const pullLifecycle = createPullLifecycle();', context);
+  vm.runInContext(lock, context);
+  const setPullBusy = vm.runInContext('setPullBusy', context);
+  const phase = (next) => vm.runInContext('pullLifecycle', context).transition(next);
+  const state = () => vm.runInContext('pullLifecycle', context).snapshot().state;
+
+  // A pull interrupted while writing: the workspace moved, so nothing finishes it.
+  setPullBusy(true); phase('planning'); phase('writing');
+  setPullBusy(false);
+
+  // **Two guards, and this sees one of them.** Measured, both ways: with the release closing what it
+  // opened, the reopening branch never fires, so removing it leaves this green - they are each
+  // other's net, and no single case can tell them apart. What is asserted is the property that must
+  // hold either way, plus the half that keeps the record honest: an abandoned pull must read as
+  // cancelled, not as one still writing. Removing the release alone does turn this red.
+  assert.ok(['completed', 'completed-with-warnings', 'failed', 'cancelled'].includes(state()),
+    `releasing the lock left the lifecycle at «${state()}», which is a pull that never ended`);
+
+  // The next Pull all must be able to plan. The use case consults the phase only after every remote
+  // read, so a false here means the panel re-reads the whole workspace, writes nothing and says
+  // nothing - it looks hung on the last progress line, and it repeats on every press.
+  setPullBusy(true);
+  assert.ok(phase('planning'),
+    `the next Pull all cannot plan: the lifecycle rests at «${state()}»`);
+});
