@@ -7612,7 +7612,10 @@ class JavaScriptCommentsAreScannedNotMatched(unittest.TestCase):
     """
 
     def test_no_tool_strips_js_comments_with_a_regex(self):
-        naive = re.compile(r"re\.sub\(\s*r?['\"]/\\\*")
+        # One backslash or two: `architecturecheck.py` carried the doubled form - the signature of an
+        # edit applied through a script - and this guard, written for the single one, reported nothing
+        # while that checker was deleting live code between any two slashes in its subject.
+        naive = re.compile(r"re\.sub\(\s*r?['\"]/\\+\*")
         findings = []
         for f in sorted((ROOT / 'tools').glob('*.py')):
             for n, line in enumerate(f.read_text(encoding='utf-8').split('\n'), 1):

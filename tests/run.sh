@@ -30,7 +30,13 @@ cd "$(dirname "$0")/.."
 # `git status` still looks identical.  Start the battery from a byte-for-byte disposable copy;
 # every path derived by a test (including git metadata) then points at that copy.  The opt-out is
 # only the private recursive invocation, never a user-facing mode.
+# **The lock belongs to the checkout, not to the copy.** `LOCK_DIR` is derived from `pwd` below, and
+# once the run re-execs inside a fresh `mktemp -d` that path is unique per run: `mkdir` always
+# succeeded and «another battery is still running» could never fire. What it protects is real - the
+# `--delete` rsync into the single shared test folder, which two concurrent batteries aim at the same
+# destination - so the lock is taken out here, in the real checkout, and carried in.
 if [ "${ZOOST_TEST_ISOLATED:-0}" != "1" ]; then
+  export ZOOST_TEST_LOCK_DIR="$(cd "$(dirname "$0")/.." && pwd)/.git/zoost-test-lock"
   TEST_COPY=$(mktemp -d "${TMPDIR:-/tmp}/zoost-tests.XXXXXX")
   cp -a . "$TEST_COPY/repo"
   set +e
@@ -42,7 +48,7 @@ fi
 PYOUT=$(mktemp)
 NODEOUT=$(mktemp)
 TREE_BEFORE=$(git status --porcelain=v1)
-LOCK_DIR="$(pwd)/.git/zoost-test-lock"
+LOCK_DIR="${ZOOST_TEST_LOCK_DIR:-$(pwd)/.git/zoost-test-lock}"
 acquire_lock() {
   local attempt=0 owner=''
   while ! mkdir "$LOCK_DIR" 2>/dev/null; do

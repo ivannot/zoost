@@ -12,6 +12,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from jstext import strip_js  # noqa: E402 - one scanner, every checker that reads JavaScript
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -114,8 +117,15 @@ def scan(root: Path = ROOT) -> list[str]:
             # Comments describe the browser but do not create a dependency. Keep string literals
             # intact (a user-facing message mentioning `window` is harmless), while removing the
             # two comment forms used by shipped scripts.
-            text = re.sub(r"/\\*.*?\\*/", "", text, flags=re.S)
-            text = re.sub(r"//[^\\n]*", "", text)
+            #
+            # **Through the scanner, not a regex.** These two lines were written with doubled
+            # backslashes, so the first was effectively `/.*?/` with DOTALL - it deleted everything
+            # between any two slashes in the file, a URL in a comment or a division being enough -
+            # and the second stopped at the first letter `n`. Measured: 97,908 characters inspected
+            # where 99,627 are code, ~2,300 of `graphlogic.js` invisible, and a planted `fetch(` in a
+            # pure module went unreported. Third instance of this class; `tools/jstext.py` exists for
+            # it, and the guard in tests/tools_test.py now recognises the doubled form too.
+            text = strip_js(text)
             for token in forbidden:
                 if token in text:
                     findings.append(f"{app}/{name}: {category} may not contain {token!r}")

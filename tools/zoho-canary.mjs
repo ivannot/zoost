@@ -271,6 +271,13 @@ async function main() {
     results.push(await run(app, PROFILES[app], process.env, contracts));
   }
   const record = recordPath();
+  // **Refuse to write evidence this tool would not accept.** A bare `--record` runs both profiles and
+  // wrote both into one file, while `checkRunRecord` requires exactly one - so the operator ended up
+  // holding a record its own verifier rejects, and learnt that only later. The runbook already
+  // prescribes one run per product; this says so at the moment it matters.
+  if (record && apps.length !== 1) {
+    throw new Error('--record writes one product profile: run it with --app=crm or --app=analytics');
+  }
   if (record) writeRunRecord(record, results, contracts);
   console.log(JSON.stringify({ mode: 'live', readOnly: true, results }, null, 2));
 }
