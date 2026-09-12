@@ -11,6 +11,7 @@ analytics:.ck	apps/analytics/options.html,apps/analytics/sidepanel.css
 analytics:.ck input	apps/analytics/options.html,apps/analytics/sidepanel.css
 analytics:.empty	apps/analytics/graphview.html,apps/analytics/sidepanel.css
 analytics:.erbox	apps/analytics/graphview.html
+analytics:.mk	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.css
 analytics:.wrap	apps/analytics/graphview.html,apps/analytics/options.html
 analytics:[hidden]	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.css
 analytics:body	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.css
@@ -32,6 +33,7 @@ crm:.ftbl td	apps/crm/graphview.html,apps/crm/sidepanel.css
 crm:.ftbl td.mono	apps/crm/graphview.html,apps/crm/sidepanel.css
 crm:.ftbl th	apps/crm/graphview.html,apps/crm/sidepanel.css
 crm:.ftbl tr:hover	apps/crm/graphview.html,apps/crm/sidepanel.css
+crm:.mk	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.css
 crm:.tabrow	apps/crm/graphview.html,apps/crm/options.html
 crm:.tabs	apps/crm/graphview.html,apps/crm/options.html
 crm:.wrap	apps/crm/graphview.html,apps/crm/options.html

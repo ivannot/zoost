@@ -6,6 +6,13 @@
 <meta name="author" content="Ivan Notaristefano">
 <meta name="generator" content="Zoost">
 <style>
+  /* The drawn-mark rule, once per document. `.mk` lives in the panel's stylesheet and this page has
+     its own: an `<svg class="mk">` pasted here without it falls back to `fill:black` and the
+     container's width - a black disc the size of the card, which is what shipped and what the author
+     photographed. The class-defined-beside-its-first-user trap, in the one direction `csscheck`
+     cannot see, because nothing is duplicated: it is simply absent. */
+  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
+
   /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
