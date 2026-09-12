@@ -567,7 +567,7 @@ a5b636681017c17d  site/it/docs-analytics.html: Lo stesso insieme viene disposto 
 448dc709768c5cea  site/it/docs-analytics.html: MD ( Export Markdown ) produce la stessa cosa nella forma adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.
 ae53f00950b84fab  site/it/docs-analytics.html: Metterlo sotto Git Nella cartella del workspace: cd <cartella di lavoro>/analytics/<workspace> git init && git add -A && git commit -m "initial mirror" Quello che ti ritrovi su disco: views.json il censimento: ogni vista con tipo, cartella, proprietario, date, tag schema.json colonne e tipi di dato per tabella, più le relazioni lineage.json chi legge da cosa, nelle due direzioni .pull-state.json il marcatore di commit: un pull completo interrotto viene rifiutato invece di sembrare un'unica fotografia sql/*.sql un file per query table - la parte su cui il diff ha qualcosa da dire sql/index.json la mappa id-file e quali colonne sorgente coinvolge ogni query export/ i report che generi I file .sql sono il punto.
 e2d892922103975b  site/it/docs-analytics.html: Non crea, non modifica e non cancella mai una vista, né legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori delle celle esistono e deliberatamente non vengono chiamati.
-78fe9f5a84c17538  site/it/docs-analytics.html: Non esiste un valore adatto a ogni grafo: i valori iniziali sono in ⚙ Settings , che modifica le stesse impostazioni.
+2217f43fae2c498a  site/it/docs-analytics.html: Non esiste un valore adatto a ogni grafo: i valori iniziali sono in Settings , che modifica le stesse impostazioni.
 06f424b258f45003  site/it/docs-analytics.html: Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge.
 dd2390c5e9059aa7  site/it/docs-analytics.html: Non parla mai con Zoho.
 6f10e4fba26f67ae  site/it/docs-analytics.html: Non può andare a leggere niente da sé, quindi ti dirà cosa gli manca invece di andarselo a prendere.
@@ -661,7 +661,7 @@ de4e237adb55a4ba  site/it/docs-crm.html: Il riquadro del codice tiene le righe c
 3c714c80587856c8  site/it/docs-crm.html: Il selettore .* lì accanto legge il testo come espressione regolare - sintassi JavaScript, senza distinzione fra maiuscole e minuscole, ^ e $ valgono su ogni riga - e un pattern che non si lascia interpretare lo dice, invece di rispondere «nessun risultato».
 6294efcfc843335a  site/it/docs-crm.html: Il suo dettaglio ha tre tab - Fields , Related lists e Details - e le related list hanno tutto il tab di mezzo per sé.
 a162655f352adef9  site/it/docs-crm.html: L'assistente è l'unica funzionalità che manda dati fuori dalla tua macchina.
-bc901bbb92a42266  site/it/docs-crm.html: L'unica protezione vera è un segreto che l'estensione non possiede, quindi ⚙ Settings → AI assistant offre Protect the key with a passphrase .
+055038f34cec4b1e  site/it/docs-crm.html: L'unica protezione vera è un segreto che l'estensione non possiede, quindi Settings → AI assistant offre Protect the key with a passphrase .
 f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra porta il nome che hai dato al workspace, se gliene hai dato uno - accanto all'istanza e all'org della piattaforma, mai al posto loro.
 8f28b0569b3318b3  site/it/docs-crm.html: La scheda Connections ribalta la prospettiva: tutto il catalogo, a livello di org - vedi la sezione 8, Le connessioni .
 098c0a6c541ed90f  site/it/docs-crm.html: La stessa azione è la scelta principale sulla schermata Not on a Zoho tab , come Sample workspace : un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.
@@ -836,6 +836,7 @@ df6d46747427fffb  site/it/index.html: Zoost CRM sul Chrome Web Store Zoost - wor
 b0fb9fc7bd100def  site/it/index.html: È scritta qui invece di essere lasciata trovare: da un browser si può affermare che cosa Zoost manda , mai che cosa il server ne faccia.
 b39284f035c84205  site/it/nerd.html: C'è chi ha dato per scontato che il server dietro fosse da qualche parte non leggibile - ragionevole per quasi tutti i siti, sbagliato per questo.
 e698e82b4980297f  site/it/nerd.html: Chi lo ha scritto materialmente è la cosa meno verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.
+76542649b1d97315  site/it/nerd.html: Cinquantotto file per Zoho CRM e trentadue per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto questo ti chiede di fidarti di come il codice è stato prodotto.
 08459da24ef9cf4d  site/it/nerd.html: Come legge Zoho CRM Legge due identificativi - l'id della tua org e quello dell'utente - dall'HTML della pagina, perché nessun endpoint li offre.
 368fbba3c7362f30  site/it/nerd.html: Cosa non viene mai chiamato Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa.
 60bc5dc5f24ce0ce  site/it/nerd.html: Cosa è promesso e cosa no Quelle interfacce interne non portano nessuna promessa di compatibilità.
@@ -867,7 +868,6 @@ dddd84ffc9e12416  site/it/nerd.html: Puoi leggere e modificare il testo, e nient
 083698287c0e0788  site/it/nerd.html: Rifiuta se non passa il controllo anti-abuso, limita le richieste per indirizzo tramite un hash con sale , così niente di quello che questo sito scrive può essere ricondotto a un indirizzo - nemmeno da chi legge l'archivio.
 4d9e16631d27a8c8  site/it/nerd.html: Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio scoprirlo qui che dopo averla installata.
 e5c2e19061008b34  site/it/nerd.html: Tirare a indovinare un parametro che escluda i dati è esattamente il punto in cui una dichiarazione di sola lettura si rompe per sbaglio.
-d819cdadb14f54dc  site/it/nerd.html: Trentanove file per Zoho CRM e ventiquattro per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto questo ti chiede di fidarti di come il codice è stato prodotto.
 ee0619a5f29574f3  site/it/nerd.html: Un solo tentativo, su quell'unico errore.
 0615b2c5d8138bb4  site/it/nerd.html: Verificalo tu gh attestation verify <file> --repo ivannot/zoost chiede a GitHub se ha costruito esattamente quell'archivio tools/verify.sh lo ricostruisce sulla tua macchina e confronta gli hash RELEASES.md commit, tag e SHA-256 di ogni versione inviata - comprese le due righe che dichiara di non poter verificare, e perché llms.txt la stessa mappa scritta per un assistente a cui viene chiesto di valutare il prodotto invece di riassumere la pagina Nessuno dei due comandi ti chiede di fidarti di me.
 5a96417e721b15e9  site/it/nerd.html: Zoost dichiara di non leggere mai le tue righe, quindi non lo chiama.
@@ -976,7 +976,7 @@ f49716e095d6f5e3  site/llms.txt: Every statement below is checkable, and the las
 fe1a3d028735a173  site/llms.txt: It also records what it *cannot* prove, including versions that predate the reproducible build.
 4953e27cb730c937  site/llms.txt: It is generated rather than fetched, needs no Zoho tab and no sign-in, carries `sample: true` in its own config, and every action that would reach the platform is refused for it.
 93f3f223ab1a4fdc  site/llms.txt: It reads no headers and no response bodies, and alters nothing the page sends or receives.
-26506b6fe02cab70  site/llms.txt: Note the precise claim: this is a property of *which* endpoints are called, not something the browser enforces, and every call either makes is in the 39 readable files of the Zoho CRM extension and the 24 of the Zoho Analytics one.
+6de631368f9fd37e  site/llms.txt: Note the precise claim: this is a property of *which* endpoints are called, not something the browser enforces, and every call either makes is in the 58 readable files of the Zoho CRM extension and the 32 of the Zoho Analytics one.
 d1ebf81009aef07f  site/llms.txt: Nothing is joined to an extension, a report or Store attribution.
 147e79068e408c5d  site/llms.txt: Separately it watches that page for one thing only: the URL and method of the request that saves a function, so the local copy can follow.
 8f0426e1a7a15681  site/llms.txt: That part is reading the code, and nothing removes it.
