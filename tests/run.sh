@@ -252,6 +252,22 @@ python3 tools/probe.py
 
 echo
 echo "── checks ──"
+# **The gate that only CI ran, and the push it let through.** `tools/typecheck.sh` lived in
+# `battery.yml` alone, so the pre-push hook could be green while `main` went red minutes later - which
+# is exactly what happened to the lifecycle fix, whose `cancel()` is real at run time and was missing
+# from the declared contract. It costs two seconds with the compiler cached.
+#
+# A machine with no network cannot fetch the compiler, and a battery that refuses to run at all there
+# would be a worse defect than the one this closes - so that case says so and carries on, the way the
+# browser probe does when there is no Chrome. A *failing* check still fails the battery.
+if out=$(bash tools/typecheck.sh 2>&1); then
+  echo "$out" | tail -2 | sed 's/^/  /'
+elif printf '%s' "$out" | grep -qiE "getaddrinfo|ENOTFOUND|network|offline|EAI_AGAIN|npm error code E"; then
+  echo "  static contracts skipped: the compiler could not be fetched on this machine."
+else
+  printf '%s\n' "$out" >&2
+  exit 1
+fi
 python3 tools/twincheck.py | tail -1
 python3 tools/asynccheck.py | tail -1
 python3 tools/sitecheck.py | tail -1

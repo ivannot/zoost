@@ -38,7 +38,8 @@
  * errorText: (error: unknown) => string,
  * lifecycle: {begin: () => number|null, transition: (next: string, id?: number) => boolean,
  *   progress: (event: object, id?: number) => boolean, finish: (warnings?: boolean, id?: number) => boolean,
- *   fail: (id?: number) => boolean, snapshot: () => {state: string, operationId: number}},
+ *   fail: (id?: number) => boolean, cancel: (id?: number) => boolean,
+ *   snapshot: () => {state: string, operationId: number}},
  * }} PullControllerOptions */
 
 /** @param {PullControllerOptions} options */
