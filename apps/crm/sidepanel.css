@@ -50,6 +50,13 @@
   .bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer}
   button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
+  /* Keyboard focus, which this panel had no style for at all: the inputs drew a ring and nothing
+     else did, so Tab moved through the toolbar leaving no trace and the reader could not tell where
+     they were. `:focus-visible` rather than `:focus`, so a mouse click does not leave a ring behind -
+     the same decision the site records, in the accent this product already uses for a focused
+     field. It is here, once, rather than on each control: a rule per control is a rule that will be
+     missing from the next one. */
+  :focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:4px}
   button.primary{background:var(--sel);border-color:var(--sel);color:#fff}
   button.primary:hover:not(:disabled){background:#2f6fe0}
   .controls{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);background:#131a27;flex-wrap:wrap}

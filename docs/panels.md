@@ -87,6 +87,24 @@ never seen Analytics and would otherwise write SQL that cannot run. If a rule ca
 is left out: an incomplete reference is recoverable, an invented one sends the user to paste a query
 that fails. Zoost never runs, validates or deploys SQL — what the assistant writes is a draft.
 
+**Keyboard focus is drawn by the panel, because the browser's own ring is invisible here.** Neither
+panel had a focus style at all: the search box drew one and nothing else did. Chrome *does* draw a
+default ring, which is exactly why this looked handled and was not - measured inside the panel it
+computes to `auto 1px rgb(16,16,16)`, which is **1.21:1** against the toolbar it lands on. A
+`:focus-visible` rule in each panel's own stylesheet draws 2px of the product accent at a 2px offset:
+5.10:1 in the CRM, 4.19:1 in Analytics, against the 3:1 a non-text indicator is asked for. One rule
+per panel rather than one per control - a rule per control is the one that will be missing from the
+next control.
+
+**And the case that holds it asserts contrast, not spelling, because the first version could not
+fail.** It read «the outline is not `none` and is at least 1px», which the browser default satisfies,
+so it was green with the panel's rule removed and would have been committed as a proof. Planting the
+defect is the only thing that found it. The case in `tools/probe.py` computes the ratio against the
+first painted ancestor - derived rather than named, because the ring is offset and therefore lands
+behind the control instead of on it - and the two panels carry it word for word, so they cannot
+answer differently by accident. The class is the one this repository keeps meeting: **a gate is only
+as good as its ability to say no, and asserting how a rule is spelled is how it loses that ability.**
+
 **The panel's width is Chrome's, and the segment row has to live with that.** `chrome.sidePanel`
 offers no say in it - `getLayout()` reports which side the panel is on and nothing else - so «make it
 wider» is not an option the API has, and the sixth tab wrapped the row onto two lines at whatever

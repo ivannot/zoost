@@ -933,6 +933,47 @@ CRM = """
     $('about').click(); await settle('About never opened');
     if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent)) say('About says nothing about what it is');
     $('aboutok').click(); await settle('About never closed');
+
+    // ---- The keyboard focus ring is legible ----
+    // **The first version of this case could not fail, and was planted against to find out.** It
+    // asserted «the outline is not `none` and is at least 1px»; with the panel's rule removed it
+    // stayed green, because Chrome draws a ring of its own - measured in this panel as `auto 1px
+    // rgb(16,16,16)`, against the rule's `solid 2px rgb(59,130,246)`. Both satisfied the condition,
+    // so the gate had no ability to say no. What made it one was asserting the *spelling*: `solid`
+    // versus `auto` is how a rule is written, not what a reader receives.
+    //
+    // What a reader receives is contrast, so that is what is asked. The backdrop is derived rather
+    // than named - the first painted ancestor - because the ring is offset and therefore lands
+    // behind the control instead of on it, and a hardcoded colour here would be a second copy of the
+    // palette waiting to disagree with it. Measured: the browser default reads 1.02:1 on this
+    // background, the CRM accent 5.10:1 and the Analytics accent 4.19:1. The bar is the 3:1 asked of
+    // a non-text indicator, which refuses the default and passes both products.
+    {
+      const el = document.querySelector('button:not(:disabled)');
+      if (!el) say('no enabled control to focus - the panel is not in the state this case assumes');
+      el.focus({ focusVisible: true });
+      if (!el.matches(':focus-visible')) say('a focused control does not match :focus-visible, so no ring can be measured');
+      const rgb = (s) => (String(s).match(/\\d+(\\.\\d+)?/g) || []).slice(0, 3).map(Number);
+      const lum = (c) => {
+        const f = c.map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+        return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2];
+      };
+      const contrast = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
+      let node = el.parentElement, back = null, backEl = null;
+      while (node && !back) {
+        const bg = getComputedStyle(node).backgroundColor;
+        if (bg && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(bg)) { back = rgb(bg); backEl = node; }
+        node = node.parentElement;
+      }
+      if (!back) say('nothing is painted behind the focused control, so the ring has no measurable backdrop');
+      const cs = getComputedStyle(el);
+      const ring = contrast(rgb(cs.outlineColor), back);
+      if (!(ring >= 3))
+        say('the focus ring is not legible: ' + ring.toFixed(2) + ':1 against '
+            + (backEl.id || backEl.className || backEl.tagName) + ' (outline ' + cs.outlineStyle
+            + ' ' + cs.outlineWidth + ' ' + cs.outlineColor + ')');
+      el.blur();
+    }
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message + ' @@ ' + (e.stack || '').split('\\n').slice(0, 3).join(' / '); });
 """
@@ -1261,6 +1302,39 @@ AN = """
     if (getComputedStyle($('retry')).display !== 'none')
       say('Retry is offered with nothing failed - pressing it can only produce a refusal');
 
+    // ---- The keyboard focus ring is legible ----
+    // The twin of the CRM case, in the same shape so the two panels cannot answer differently by
+    // accident. The reasoning is written there: the first version asserted the spelling of the rule
+    // and stayed green with the rule removed, because the browser draws a ring of its own; this one
+    // asks what a reader receives, which is contrast against whatever is painted behind the control.
+    // This product's accent is the pink one and reads 4.19:1 where the CRM's blue reads 5.10:1 -
+    // both above the 3:1 a non-text indicator is asked for, and the browser default is 1.02:1.
+    {
+      const el = document.querySelector('button:not(:disabled)');
+      if (!el) say('no enabled control to focus - the panel is not in the state this case assumes');
+      el.focus({ focusVisible: true });
+      if (!el.matches(':focus-visible')) say('a focused control does not match :focus-visible, so no ring can be measured');
+      const rgb = (s) => (String(s).match(/\\d+(\\.\\d+)?/g) || []).slice(0, 3).map(Number);
+      const lum = (c) => {
+        const f = c.map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+        return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2];
+      };
+      const contrast = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
+      let node = el.parentElement, back = null, backEl = null;
+      while (node && !back) {
+        const bg = getComputedStyle(node).backgroundColor;
+        if (bg && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(bg)) { back = rgb(bg); backEl = node; }
+        node = node.parentElement;
+      }
+      if (!back) say('nothing is painted behind the focused control, so the ring has no measurable backdrop');
+      const cs = getComputedStyle(el);
+      const ring = contrast(rgb(cs.outlineColor), back);
+      if (!(ring >= 3))
+        say('the focus ring is not legible: ' + ring.toFixed(2) + ':1 against '
+            + (backEl.id || backEl.className || backEl.tagName) + ' (outline ' + cs.outlineStyle
+            + ' ' + cs.outlineWidth + ' ' + cs.outlineColor + ')');
+      el.blur();
+    }
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """

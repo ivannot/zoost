@@ -24,6 +24,13 @@
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);display:flex;flex-direction:column;font-size:13px;overflow-x:hidden}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
   button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
+  /* Keyboard focus, which this panel had no style for at all: the inputs drew a ring and nothing
+     else did, so Tab moved through the toolbar leaving no trace and the reader could not tell where
+     they were. `:focus-visible` rather than `:focus`, so a mouse click does not leave a ring behind -
+     the same decision the site records, in the accent this product already uses for a focused
+     field. It is here, once, rather than on each control: a rule per control is a rule that will be
+     missing from the next one. */
+  :focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:4px}
 
   /* button semantics - identical meaning to the CRM panel:
      .zbtn  solid accent  - reads from / talks to Zoho (pull)
