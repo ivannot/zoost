@@ -65,6 +65,7 @@ EXPECTED_ABSENT = {
     # that empties the history, and two controls sharing an accessible name is worse for the reader
     # this label exists for than having no page mention at all.
     'Clear the search': 'empties the search box - an undo, like Cancel, and it acts on nothing',
+    'Clear the focus': 'the diagram twin of the line above: it drops a selection and produces nothing',
     'Hide this notice': 'dismisses an in-panel notice until next time; the same family as Close',
 }
 

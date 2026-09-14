@@ -373,17 +373,17 @@
            the same shape the chips use, because it answers its own question. -->
       <span id="focusg" class="dim focusg">
         <span class="dimt">Focus</span>
-        <span class="chip" id="focusnode" role="button"></span>
-        <span class="chip" id="focusall" role="button">Everything</span>
+        <button type="button" class="chip" id="focusnode"></button>
+        <button type="button" class="chip" id="focusall">Everything</button>
         <span class="fdepth" id="erdepth" style="display:none">depth<button id="erdMinus" aria-label="One hop less">−</button><b id="erdVal">2</b><span id="erdMax">/ 6</span><button id="erdPlus" aria-label="One hop more">+</button></span>
-        <span class="chipx" id="focusx" role="button" aria-label="Clear the focus" title="Clear the focus">✕</span>
+        <button type="button" class="chipx" id="focusx" aria-label="Clear the focus" title="Clear the focus">✕</button>
       </span>
     </div>
   </header>
   <div class="wrap">
     <div class="view on" id="v-explorer">
       <aside>
-        <div class="search"><input id="q" placeholder="Search table…  (/ to focus)" autocomplete="off"><span class="qx" id="qx" role="button" aria-label="Clear the search" title="Clear the search">✕</span></div>
+        <div class="search"><input id="q" placeholder="Search table…  (/ to focus)" autocomplete="off"><button type="button" class="qx" id="qx" aria-label="Clear the search" title="Clear the search">✕</button></div>
         <div class="list" id="list"></div>
       </aside>
       <button id="asidebtn" aria-expanded="true" aria-label="Hide the list"
@@ -422,7 +422,7 @@
         <div class="lrow" id="rowSub"><label for="pSub">Show lookup field</label><input type="checkbox" id="pSub"><span class="lval"></span></div>
         <div class="lrow lfoot"><button id="erlayReset">Reset to preset</button></div>
       </div>
-      <div id="ertip"></div><div id="erpick"><span class="pkx" id="erpickx">✕</span><div id="erpickbody"></div></div>
+      <div id="ertip"></div><div id="erpick"><button type="button" class="pkx" id="erpickx" aria-label="Close" title="Close">✕</button><div id="erpickbody"></div></div>
       <div id="ernone"><p></p></div>
       <div id="ervp"><svg id="ersvg"><defs><marker id="erarrow" viewBox="0 0 7 6" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c3aed"/></marker><marker id="erarrowsel" viewBox="0 0 8 6" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#d97706"/></marker></defs></svg><div id="erboxes"></div><div id="ermarks"></div></div>
       <div class="hint2">scroll or double-click to zoom · drag to pan or to arrange · click a table to inspect</div>
