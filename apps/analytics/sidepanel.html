@@ -41,19 +41,19 @@
 </div>
 
 <div id="main">
-  <div id="overviewview"><div class="ovhead"><span>Workspace overview</span><span class="ovx" id="overviewx" title="Close">✕</span></div><div id="overviewbody"></div></div>
+  <div id="overviewview"><div class="ovhead"><span>Workspace overview</span><button type="button" class="ovx bare" id="overviewx" title="Close" aria-label="Close">✕</button></div><div id="overviewbody"></div></div>
   <!-- The history, as a view over everything: the same footprint as the AI and Health
        views beside it in the toolbar, tab row included. It covers the search box, so it
        carries its own - and its own Name, where the product has one. -->
   <div id="navview">
-    <div class="nvh"><span>History</span><span class="nvr"><span id="navcount"></span><span class="nvclear" id="navclear" title="Empty the history - what is open stays open">Clear</span><span class="nvx" id="navx" title="Close">✕</span></span></div>
+    <div class="nvh"><span>History</span><span class="nvr"><span id="navcount"></span><span class="nvclear" id="navclear" title="Empty the history - what is open stays open">Clear</span><button type="button" class="nvx bare" id="navx" title="Close" aria-label="Close">✕</button></span></div>
     <div class="nvtools"><input id="navfind" placeholder="Find in the history…" autocomplete="off"></div>
     <div id="navbody"></div>
   </div>
 
 <div class="controls">
   <div class="findgrp">
-    <div class="findwrap"><input id="find" type="search" placeholder="Find…" autocomplete="off"><span class="fx" id="findclear" title="Clear">✕</span></div>
+    <div class="findwrap"><input id="find" type="search" placeholder="Find…" autocomplete="off"><button type="button" class="fx bare" id="findclear" title="Clear" aria-label="Clear the search">✕</button></div>
     <button id="smode" class="smode" title="What the search looks at: names, folders and columns, or the full text of every query's SQL">in: names</button>
     <button id="rxmode" class="smode" style="display:none" title="Treat the search text as a regular expression - JavaScript syntax, case-insensitive, ^ and $ match at each line">.*</button>
     <button id="rxpick" class="smode" style="display:none" title="Saved patterns - pick one to search with it. The list is yours to edit, in Settings">▾</button>
@@ -86,20 +86,20 @@
   <div id="aiview">
     <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation - also resets what is sent with each message, which keeps answers focused and cost down" style="display:none">Clear</span><span id="aigear" class="aiicon" title="Settings" aria-label="Settings"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.6"/><circle cx="8" cy="8" r="1.7"/><path d="M8 1.5v1.9M8 12.6v1.9M14.5 8h-1.9M3.4 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7 3.4 3.4"/></svg></span><span id="aix" class="aiicon" title="Close" aria-label="Close"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></span></div>
     <div id="aictx" class="aictx"></div>
-    <div id="ainote" class="ainote"><span id="ainotex" class="ainotex" title="Hide until next time you open the chat">✕</span><span id="ainotetxt"></span></div>
+    <div id="ainote" class="ainote"><button type="button" id="ainotex" class="ainotex bare" title="Hide until next time you open the chat" aria-label="Hide this notice">✕</button><span id="ainotetxt"></span></div>
     <div id="aimsgs" class="aimsgs"></div>
     <div id="ailockrow" class="ailockrow" hidden><span class="ailocktxt">The API key is protected by a passphrase. It is needed once per browser session.</span><input id="ailockpass" type="password" placeholder="Passphrase" autocomplete="off"><button id="ailockgo" class="abtn">Unlock</button><span id="ailockmsg" class="ailockmsg" hidden></span></div>
     <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about a view, a column, what depends on what… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend">Send</button></div>
   </div>
 
   <div id="healthview">
-    <div class="hh"><span>Workspace health</span><span class="hx" id="healthx" title="Close">✕</span></div>
+    <div class="hh"><span>Workspace health</span><button type="button" class="hx bare" id="healthx" title="Close" aria-label="Close">✕</button></div>
     <div id="healthbody"></div>
   </div>
 
   <div id="resizer"></div>
   <div id="detail">
-    <div class="dhead"><span class="back" id="dback" title="Back (Alt+←)" aria-label="Back"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5 4.5 8l5.5 5.5"/></svg></span><span class="back" id="dfwd" title="Forward (Alt+→)" aria-label="Forward"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5 11.5 8 6 13.5"/></svg></span><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram - opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror - &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><button id="dzoho" class="znav" style="height:22px;padding:0 8px;font-size:11px" title="Open this view in Zoho Analytics" aria-label="Open in Zoho">Open in Zoho ↗</button><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="back" id="dback" title="Back (Alt+←)" aria-label="Back"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5 4.5 8l5.5 5.5"/></svg></span><span class="back" id="dfwd" title="Forward (Alt+→)" aria-label="Forward"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5 11.5 8 6 13.5"/></svg></span><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram - opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror - &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><button id="dzoho" class="znav" style="height:22px;padding:0 8px;font-size:11px" title="Open this view in Zoho Analytics" aria-label="Open in Zoho">Open in Zoho ↗</button><button type="button" class="dx bare" id="dclose" title="Close" aria-label="Close">&times;</button></div>
     <div class="dtabs">
       <button class="dtab active" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>
@@ -124,7 +124,7 @@
 
 <div id="scrim" class="scrim"></div>
 <div id="expscope" class="dlg">
-  <div class="dh"><span>What goes into the export</span><span class="dx" id="expx">✕</span></div>
+  <div class="dh"><span>What goes into the export</span><button type="button" class="dx bare" id="expx" aria-label="Close">✕</button></div>
   <div class="db">
     <p class="dnote">An export is a file that leaves this machine. Pick what it may contain - the choice is remembered.</p>
     <div class="preset"><button id="pspFull">Everything</button><button id="pspSafe">Share-safe</button></div>
@@ -139,7 +139,7 @@
 </div>
 
 <div id="aboutdlg" class="dlg full">
-  <div class="dh"><span>About</span><span class="dx" id="aboutx">✕</span></div>
+  <div class="dh"><span>About</span><button type="button" class="dx bare" id="aboutx" aria-label="Close">✕</button></div>
   <div class="db" id="aboutbody"></div>
   <div class="df"><button id="aboutok" class="zbtn">Close</button></div>
 </div>

@@ -57,6 +57,19 @@
      field. It is here, once, rather than on each control: a rule per control is a rule that will be
      missing from the next one. */
   :focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:4px}
+  /* A control that *is* a button and must not look like one. The panel's chrome is full of marks
+     and glyphs - the ✕ that closes a dialog, the gear that opens Settings - which were spans with a
+     click handler: styled like controls, and unreachable by a keyboard, because focus is something
+     the browser gives to a <button> and to nothing else. They are buttons now, and this undoes what
+     `button` above gives them: the box, the border, the padding and the font.
+     Written once rather than beside each control, because the four ad-hoc copies of these same
+     declarations already in this file (#repopen, #repdismiss, .rxmenu button, .ovissue) are the
+     duplication `csscheck` exists to stop, in the one form it cannot see - repeated *declarations*
+     rather than a repeated selector.
+     The hover is in the same rule on purpose: `button:hover:not(:disabled)` is (0,2,1) and would
+     otherwise beat it, painting a box behind the glyph on hover only - a defect that appears in no
+     screenshot and no test, and that the user would have found. */
+  button.bare,button.bare:hover:not(:disabled){background:none;border:0;border-radius:0;padding:0;font:inherit;color:inherit;line-height:inherit}
   button.primary{background:var(--sel);border-color:var(--sel);color:#fff}
   button.primary:hover:not(:disabled){background:#2f6fe0}
   .controls{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);background:#131a27;flex-wrap:wrap}

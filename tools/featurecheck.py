@@ -51,6 +51,21 @@ EXPECTED_ABSENT = {
     # The folder picker. Every quick start on the site opens with choosing a folder; it is described
     # as the action it is rather than quoted as a button, because it is the one step nobody misses.
     'Choose folder…': 'the folder picker, described as the first step of every quick start',
+    # These two arrived the day the panel's glyph controls became real buttons. They were invisible
+    # here before, and not because they were unimportant: a bare `✕` has no name of its own, so
+    # `_named()` skipped it with a reason. Giving each an `aria-label` - so a screen reader says what
+    # the control does instead of reading out a glyph - is what made them countable, which is the
+    # improvement working as intended and not a regression.
+    #
+    # They are declared rather than described because they are the same kind as Cancel and Close
+    # above: affordances that *undo* rather than do. Emptying a search box and dismissing a notice
+    # act on nothing, leave nothing behind, and explaining them on a page would be the noise that
+    # makes a document stop being read. The alternative considered and rejected was renaming them to
+    # «Clear», which the site does say - but the panel already has a control called Clear, the one
+    # that empties the history, and two controls sharing an accessible name is worse for the reader
+    # this label exists for than having no page mention at all.
+    'Clear the search': 'empties the search box - an undo, like Cancel, and it acts on nothing',
+    'Hide this notice': 'dismisses an in-panel notice until next time; the same family as Close',
 }
 
 # Labels written differently in prose than on the button — the same thing, said in a sentence rather
