@@ -231,6 +231,17 @@ def guides_depict_marks(findings: list) -> None:
         depicted = {re.sub(r'<[^>]*>', '', chip).strip()
                     for chip in re.findall(r'<b class="ui">((?:(?!</b>).)*?<svg class="mk".*?)</b>', guide, re.S)}
         for name in sorted(marked_controls(app)):
+            # A control this file deliberately does not require the site to *name* cannot coherently
+            # be required to be *drawn*. Both passes in `main()` skip `EXPECTED_ABSENT`; this one did
+            # not, so one checker held two positions on the same control - «Close» needs no
+            # explanation, and «Close» must be depicted in both guides.
+            #
+            # It surfaced the day the panels' glyph controls became real buttons: the assistant's ✕
+            # had carried a drawn mark all along, and `marked_controls()` matches `<button><svg
+            # class="mk">`, so a control that had always been there became countable for the first
+            # time. The inconsistency was older than the change that revealed it.
+            if name in EXPECTED_ABSENT:
+                continue
             if not any(name == d or d.endswith(name) for d in depicted):
                 findings.append(f'{page}: “{name}” is a mark in the panel and the guide only spells it out')
 

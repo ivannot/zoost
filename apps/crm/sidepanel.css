@@ -662,7 +662,11 @@
   #pfoot .pfsp{flex:1}
   #pfoot #opts,#pfoot #about,#pfoot #help{cursor:pointer}
   #pfoot #opts:hover,#pfoot #about:hover,#pfoot #help:hover{color:var(--ink)}
-  #pfoot a{color:var(--muted);text-decoration:none} #pfoot a:hover{color:#f472b6} #pfoot .sep{color:var(--border)}
+  /* `button` alongside `a`: Settings and About are buttons now - they open a window, they do not
+     navigate - and this rule was keyed on the tag, so converting them would have dropped both out of
+     the footer's own colour and into the global button box. Help stays an anchor: it really does
+     carry an href. */
+  #pfoot a,#pfoot button{color:var(--muted);text-decoration:none} #pfoot a:hover,#pfoot button:hover{color:#f472b6} #pfoot .sep{color:var(--border)}
   #pvgutter,#pvcode{margin:0;padding:10px;font:11.5px/1.55 var(--mono);white-space:pre;tab-size:2}
   #pvgutter{color:#4a5877;text-align:right;user-select:none;border-right:1px solid var(--line);background:#141b29}
   #pvcode{flex:1;color:#cbd5e1}
