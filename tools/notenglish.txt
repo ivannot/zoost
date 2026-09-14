@@ -59,3 +59,4 @@ fe3c2eef462e1d35  tools/samplecheck.py: ROW = re.compile(r'<td data-label="(?:Wh
 cda47b8dc268550f  tools/sitecheck.py: Cross-language links that are deliberate — «la versione inglese di questa pagina», the switch in
 46d274eb652a77c6  tools/sitecheck.py: twice. The Italian pages said eleven of those twenty differently: «leggi ciò che viene spedito»
 86b84dc40e6fb8d0  tools/sitecheck.py: against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio manuale».
+77923b1d8602ace5  tools/keycheck.py: Reported by the author on 14 September 2026, from the outside: «questa modalità di dichiarare i

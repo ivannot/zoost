@@ -1,0 +1,67 @@
+# Derived by tools/keycheck.py - do not edit by hand; run it with --accept.
+# Each line is a control a mouse can use and a keyboard cannot reach: clickable
+# markup that is not a button, a link, a field, or anything carrying tabindex.
+# Being here means it is known and not yet fixed. It should shrink; growth is printed.
+#
+# Three of these are not conversions, and saying so here is the point of a ledger: an entry means
+# somebody read it and decided, not that a fix is pending.
+#
+#   #scrim (both panels) and #v-er (both diagrams) are dismissal surfaces - the backdrop behind a
+#   dialog, and the empty canvas around the drawing. Clicking them cancels; they carry no label and
+#   fill the viewport. A <button> there would be one enormous tab stop announcing nothing, so what
+#   they owe a keyboard is Escape, not focus. Neither panel answers Escape on its dialogs today.
+#
+#   #pvtable is not a control at all. It holds one delegated listener for every fields table there
+#   will ever be, and the thing it acts on - .plbtn - is already a real <button> with aria-expanded.
+#   It is recorded because this check keys on the element that carries the handler, and it cannot
+#   tell a delegation host from a control. Stated rather than taught: the alternative is a checker
+#   that guesses at intent.
+a763933857578555  apps/crm/sidepanel.html: <div id="scrim">
+39db84166d909eb2  apps/crm/sidepanel.html: <span id="expx">
+70cdac6d2b636755  apps/crm/sidepanel.html: <span id="aboutx">
+9fa52e35b5ba1da8  apps/crm/sidepanel.html: <span id="overviewx">
+7e95ad6b95adf771  apps/crm/sidepanel.html: <span id="navclear">
+3bfdcc14c3a6f37a  apps/crm/sidepanel.html: <span id="navx">
+e6c25ae542b701c7  apps/crm/sidepanel.html: <span id="findx">
+cc7b5c47a5f756d7  apps/crm/sidepanel.html: <span id="pvback">
+10aaffd164808323  apps/crm/sidepanel.html: <span id="pvfwd">
+aaf767f862461087  apps/crm/sidepanel.html: <span id="pvreveal">
+9aa5eff5ce5dd7f4  apps/crm/sidepanel.html: <span id="pvfind">
+1ecbd8d4be402e88  apps/crm/sidepanel.html: <span id="pvx">
+11bf3d144ba35433  apps/crm/sidepanel.html: <div id="pvtable">
+f260f1029c765968  apps/crm/sidepanel.html: <span id="healthx">
+2a0d57c00057ec92  apps/crm/sidepanel.html: <span id="aiclear">
+dcae757a3d4b2256  apps/crm/sidepanel.html: <span id="aigear">
+c273af2adbde97c1  apps/crm/sidepanel.html: <span id="aix">
+6535eefd069a3a35  apps/crm/sidepanel.html: <span id="ainotex">
+76faefc8030d3eac  apps/crm/sidepanel.html: <a id="opts">
+a25ab5284cc44e0c  apps/crm/sidepanel.html: <a id="about">
+cde0c504c5ea6f34  apps/crm/graphview.html: <span id="focusnode">
+9f083185048ecef5  apps/crm/graphview.html: <span id="focusall">
+9dd3028642450a97  apps/crm/graphview.html: <span id="focusx">
+5e13136e5bebf328  apps/crm/graphview.html: <span id="qx">
+037463c0118ca959  apps/crm/graphview.html: <div id="v-er">
+27f4ab0eb3b6cc52  apps/crm/graphview.html: <span id="erpickx">
+13fc008f08bafcbe  apps/analytics/sidepanel.html: <span id="overviewx">
+a0b79866dd654b19  apps/analytics/sidepanel.html: <span id="navclear">
+0617e4d159a2a70f  apps/analytics/sidepanel.html: <span id="navx">
+07868508d947acb3  apps/analytics/sidepanel.html: <span id="findclear">
+b23cc3c4d3835ce1  apps/analytics/sidepanel.html: <span id="aiclear">
+2d8cb923095278ed  apps/analytics/sidepanel.html: <span id="aigear">
+5598612fc6119537  apps/analytics/sidepanel.html: <span id="aix">
+ac8340199c299012  apps/analytics/sidepanel.html: <span id="ainotex">
+fdc53a75c54c4b6b  apps/analytics/sidepanel.html: <span id="healthx">
+3385515d510f89c9  apps/analytics/sidepanel.html: <span id="dback">
+b45af8ee3ffe827c  apps/analytics/sidepanel.html: <span id="dfwd">
+d347e32281a3a09b  apps/analytics/sidepanel.html: <span id="dclose">
+92ebb63a051245ca  apps/analytics/sidepanel.html: <a id="opts">
+e7e6d7ad4bcf5fc6  apps/analytics/sidepanel.html: <a id="about">
+3e9894e17adead25  apps/analytics/sidepanel.html: <div id="scrim">
+fdbe86d1ec4e1449  apps/analytics/sidepanel.html: <span id="expx">
+8a0f7c8ca09b86ae  apps/analytics/sidepanel.html: <span id="aboutx">
+ca82047cdf6a328e  apps/analytics/graphview.html: <span id="focusnode">
+28b91defb658d71d  apps/analytics/graphview.html: <span id="focusall">
+d6c63c74bc846077  apps/analytics/graphview.html: <span id="focusx">
+44240baf91542b3f  apps/analytics/graphview.html: <span id="qx">
+fe088aab502ceb79  apps/analytics/graphview.html: <div id="v-er">
+b3c8e2b1ab04bfbe  apps/analytics/graphview.html: <span id="erpickx">

@@ -7724,5 +7724,75 @@ class EverySurfaceNamesTheFilesItIsMadeOf(unittest.TestCase):
         gone = sorted(f for f in set(listed) if not (ROOT / f).exists())
         self.assertEqual(gone, [], 'a surface names a file that does not exist: ' + ', '.join(gone))
 
+class KeyCheckFindsWhatNoKeyboardReaches(unittest.TestCase):
+    """A control a mouse can use and a keyboard cannot, and the one that only looks like one.
+
+    Reported from outside on 14 September 2026: `<span role="button">` shuts the keyboard out. It had
+    survived because nothing here could see it - `featurecheck.py` proves the site names every control
+    the panels have and enumerates `<button>` and nothing else, so a span that closes a dialog was
+    never a control to it, and its own cruder denominator shared the blind spot.
+
+    These are fixtures rather than assertions about the tree: the tree shrinks as controls are
+    converted, the shapes do not."""
+
+    def _mod(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('keycheck', ROOT / 'tools' / 'keycheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        return mod
+
+    WIRED = {
+        'the ordinary form': "$('x').onclick = () => f();",
+        'a listener instead of a property': "$('x').addEventListener('click', f);",
+        'the long way round': "document.getElementById('x').onclick = f;",
+    }
+
+    def test_a_click_is_found_however_it_is_wired(self):
+        m = self._mod()
+        for what, js in self.WIRED.items():
+            with self.subTest(what):
+                self.assertTrue(m.wired(js, 'x'), f'{what}: not seen as a click')
+
+    def test_naming_an_element_is_not_wiring_it(self):
+        # The control, and the half that keeps a checker readable: this exact line exists in both
+        # diagrams - the canvas handler compares the event target against the view - and reading it
+        # as a wiring would report every element any handler ever mentions.
+        m = self._mod()
+        self.assertFalse(m.wired("if (e.target !== $('x') && !e.target.closest('#p')) return;", 'x'))
+
+    def test_an_id_that_starts_with_another_is_not_that_other(self):
+        # `expx` and `expx2` are one character apart, and a pattern without the closing quote would
+        # score the second as wiring for the first - silently, and in the direction that hides a
+        # finding.
+        m = self._mod()
+        self.assertFalse(m.wired("$('x2').onclick = f;", 'x'))
+
+    def test_a_ledger_entry_is_an_id_and_a_place(self):
+        # Editing the markup around a control keeps it recorded - the entry is about the control -
+        # while the same id on a second page is its own entry, because reaching it there is its own
+        # question.
+        m = self._mod()
+        self.assertNotEqual(m.key('apps/crm/sidepanel.html', 'aix'),
+                            m.key('apps/analytics/sidepanel.html', 'aix'))
+        self.assertNotEqual(m.key('apps/crm/sidepanel.html', 'aix'),
+                            m.key('apps/crm/sidepanel.html', 'aigear'))
+        self.assertEqual(m.key('apps/crm/sidepanel.html', 'aix'),
+                         m.key('apps/crm/sidepanel.html', 'aix'))
+
+    def test_the_crude_pass_sees_nothing_the_careful_one_missed(self):
+        # The mechanism htmlcheck and featurecheck already use here, and the one that found this
+        # whole class: the careful pass reads elements, the crude one counts every id attribute, and
+        # a position only the crude one sees is a finding about the tool, printed above any finding
+        # about the code.
+        self.assertEqual(self._mod().unread(), [])
+
+    def test_the_ledger_is_in_step_with_the_tree(self):
+        # Being behind is itself a finding, exactly as in langcheck, twincheck and csscheck: a ledger
+        # recording controls that are no longer unreachable stops being a record of anything.
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'keycheck.py')],
+                             capture_output=True, text=True, cwd=str(ROOT))
+        self.assertEqual(out.returncode, 0, out.stdout)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -127,9 +127,24 @@ python3 tools/stamp.py               # write the dates and versions the pages pr
 python3 tools/stamp.py --check       # ...and report them if they have drifted (the suite runs this)
 python3 tools/namecheck.py           # no shipped file may name, link to or identify as the other product
 python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
+python3 tools/keycheck.py            # ...and every one of them must be reachable by a keyboard
 python3 tools/sitemap.py --check     # the sitemap is derived from the site, never typed
 python3 tools/notescheck.py          # how much room CLAUDE.md has left, printed whether or not it is short
 ```
+
+**Those two lines are one question with two halves, and for months only the first half had a
+guardian.** `featurecheck` proves the site names every control the panels have, and it enumerates
+`<button ...>...</button>` - so a `<span>` that closes a dialog was never a control to it. Neither
+was the gear that opens Settings, nor the arrows that step through the history: **49 of them across
+six pages**, invisible to the one check whose whole subject is «what controls does this product
+have». Its own cruder denominator could not notice either, because that counts `<button` too:
+numerator and blind spot agreed. It took a report from outside - a keyboard cannot Tab to a
+`<span>` - to find a class of control that nothing here had ever counted.
+
+The rule this leaves is not about keyboards. **When a check derives its subject by one shape, ask
+what that shape cannot be** - and derive the denominator by a method that does not share the
+assumption, or the count on screen becomes the evidence that stops anyone looking. `keycheck` reads
+every tag and counts every `id` attribute against what it inspected, for that reason.
 
 **The last one exists because the notes themselves failed the way everything else here can.**
 CLAUDE.md reached **280,013 characters against a limit of 150,000**, so nearly half of it was not
