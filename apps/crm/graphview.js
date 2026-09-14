@@ -351,10 +351,17 @@ function buildChips() {
   // right while you are reading a result and wrong while you are hunting for one kind: isolating
   // «standalone» meant switching eight things off, which is the same eight clicks the first model
   // charged for the opposite job. «None» empties it so one click brings back what you want.
+  // A real button, not a span wearing `role="button"`. That pair announces a control to a screen
+  // reader and gives a keyboard nothing - told there is a button, unable to reach it - and these two
+  // survived the day the markup was converted only because they are built here rather than written
+  // in the page. The role goes with the tag: a button element saying it is a button is redundancy that
+  // later diverges. `.chipx` declares its own font, padding, border and background, so there is
+  // nothing of the browser's own chrome to undo - the same reason #focusx needed no reset either.
   const btn = (id, label, title, fn) => {
-    const e = document.createElement('span');
+    const e = document.createElement('button');
+    e.type = 'button';
     e.className = 'chipx'; e.id = id; e.textContent = label; e.title = title;
-    e.setAttribute('role', 'button'); e.setAttribute('aria-label', title);
+    e.setAttribute('aria-label', title);
     e.onclick = fn; box.appendChild(e);
   };
   btn('chipall', '\u21ba All', 'Show everything again',
@@ -594,8 +601,27 @@ $('qx').onclick = () => { $('q').value = ''; render(); updateQx(); $('q').focus(
 // rather than where it lives. `erSelEdge` is asked first: Escape that closes nothing must not
 // swallow the keypress, because the browser has its own uses for it.
 document.addEventListener('keydown', (e) => {
-  if (e.key === '/' && document.activeElement.id !== 'q') { e.preventDefault(); $('q').focus(); return; }
-  if (e.key === 'Escape' && erSelEdge) { e.preventDefault(); erClearPick(); }
+  const ae = document.activeElement, q = $('q');
+  // `/` belongs to the Explorer's search box, so it is only taken when that box is on screen. The
+  // box lives inside the Explorer view; in Relations and in the ER tab that view is display:none, so
+  // the key was swallowed and the focus moved nowhere - typing `/` into the Relations search wrote
+  // nothing at all. And never while a field already holds the focus, where `/` is just a character.
+  if (e.key === '/' && q && q.offsetParent !== null && ae !== q
+      && !/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) { e.preventDefault(); q.focus(); return; }
+  if (e.key !== 'Escape') return;
+  // Topmost first, and here the popovers are above the drawing. Escape used to reach past an open
+  // Layout or file menu and clear the picked arc behind it: the menu the reader was looking at
+  // stayed, and something they could not see changed instead.
+  for (const [panel, opener] of [['erlay', 'erLayBtn'], ['erfile', 'erFileBtn']]) {
+    const p = $(panel);
+    if (p && p.classList.contains('on')) {
+      e.preventDefault();
+      p.classList.remove('on');
+      const b = $(opener); if (b) b.classList.remove('on');
+      return;
+    }
+  }
+  if (erSelEdge) { e.preventDefault(); erClearPick(); }
 });
 
 // ---------------- Relations (relation-first catalogue) ----------------
@@ -2567,10 +2593,15 @@ function erInitControls() {
   // canvas stops a click from travelling and this has to hear it either way.
   document.addEventListener('click', (e) => {
     if (curView !== 'er') return;
-    const p = $('erfile');
-    if (!p || !p.classList.contains('on')) return;
-    if (e.target.closest && e.target.closest('#erFileBtn')) return;
-    p.classList.remove('on'); $('erFileBtn').classList.remove('on');
+    // Both menus, not only the file one. Layout had no outside closer at all, so its only dismissal
+    // was pressing its own button again - a menu that stays open while the reader has plainly gone
+    // elsewhere, and the one place in this window where two controls of one kind behaved differently.
+    for (const [panel, opener] of [['erfile', 'erFileBtn'], ['erlay', 'erLayBtn']]) {
+      const p = $(panel);
+      if (!p || !p.classList.contains('on')) continue;
+      if (e.target.closest && (e.target.closest('#' + opener) || e.target.closest('#' + panel))) continue;
+      p.classList.remove('on'); const b = $(opener); if (b) b.classList.remove('on');
+    }
   }, true);
   erParamsToUI(); erUpdateControlVis();
 }

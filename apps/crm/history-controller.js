@@ -103,6 +103,12 @@ function closeNavMenu() { navShow(false); }
 function redrawNavMenu() { if (navOpenNow()) renderNav(); }
 const navOpenNow = () => $('navview').classList.contains('show');
 function navShow(on) {
+  // One panel at a time, which every other opener already did and this one did not: toggleAI and
+  // openHealth and openOverview each close their siblings, so the history was the only view that
+  // could be opened *underneath* another. It is z-index 7 against the assistant's 8, so the screen
+  // did not change - and the toolbar control that opens it is dimmed with `pointer-events:none`,
+  // which stops a mouse and lets a keyboard straight through. Reached by Tab and Enter, measured.
+  if (on) { closeAI(); closeHealth(); closeOverview(); }
   $('navview').classList.toggle('show', on);
   // The same class the health and AI views set, driving the same rules: while this is up, every
   // other control in the toolbar is dimmed and inert. Three views of the workspace, one behaviour.

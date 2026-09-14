@@ -75,5 +75,9 @@ function renderHealth() {
 }
 // `#health.on` is in this panel's own stylesheet and nothing ever set it, so the audit button stayed
 // unlit while the AI button beside it lights - the rule was dead CSS and the twin did it right.
-function openHealth() { closeOverview(); renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); $('health').classList.add('on'); }
+// `closeAI()` and `navShow(false)` alongside the overview: this closed one sibling of three, so
+// Health could be opened over the assistant or over the history and leave it underneath. The CRM
+// twin closes the assistant already; the history is new to both, and it is what made the second
+// overlay reachable at all.
+function openHealth() { closeAI(); closeOverview(); navShow(false); renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); $('health').classList.add('on'); }
 function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); $('health').classList.remove('on'); }
