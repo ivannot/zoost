@@ -130,7 +130,7 @@ erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
 escReport	2987a53e5c62	2987a53e5c62	identical
 escReportA	46ee492a3bf3	46ee492a3bf3	identical
-escapeCloses	fb3bc679f819	fb3bc679f819	identical
+escapeCloses	689dae1b2284	689dae1b2284	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	a5e28e42df49	33abab42f44e	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
@@ -283,7 +283,7 @@ updateDepthUI	77a910d07585	77a910d07585	identical
 updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
-updateScopeUI	df33d4b78b99	75ff890b9278	divergent
+updateScopeUI	fb2e5760e9e9	ff54308a4864	divergent
 validateBridgeReply	36ac8f1a3e55	e0cd2e4989ef	divergent
 validateMirrorPlan	1e1eb19c46d0	1e1eb19c46d0	identical
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical

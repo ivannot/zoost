@@ -790,6 +790,13 @@ function updateScopeUI() {
   if (has) { nodeChip.dataset.hue = KINDOF(N[curFocus]); nodeChip.style.setProperty('--hue', KINDCOL(KINDOF(N[curFocus])) || '#94a3b8'); }
   else { delete nodeChip.dataset.hue; nodeChip.style.removeProperty('--hue'); }
   nodeChip.classList.toggle('off', !has);
+  // Both chips do nothing without a selection - their handlers are `if (curFocus)` - and since they
+  // became buttons that made them two Tab stops that take the focus ring and answer nothing. The
+  // state was already known here; `disabled` is what carries it to the keyboard. Measured: with a
+  // background and a colour declared by the class, a disabled button is pixel-identical, so this
+  // costs no appearance - `.chip.off` above is what says «unavailable» to the eye.
+  nodeChip.disabled = !has;
+  allChip.disabled = !has;
   nodeChip.setAttribute('aria-pressed', String(has && !scopeAll));
   allChip.setAttribute('aria-pressed', String(!has || scopeAll));
   allChip.title = has

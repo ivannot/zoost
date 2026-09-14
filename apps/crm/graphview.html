@@ -120,7 +120,8 @@
   .search input{width:100%;padding:9px 30px 9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
   /* Absent while the box is empty: with nothing typed there is nothing to clear. */
   .search .qx{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:13px var(--sans);line-height:1;
-              color:var(--muted);cursor:pointer;padding:3px 5px;border-radius:6px;display:none}
+              color:var(--muted);cursor:pointer;padding:3px 5px;border-radius:6px;display:none;
+              background:none;border:0}   /* it is a real button now: without these it takes Chrome's grey bevelled box */
   .search .qx.on{display:block} .search .qx:hover{background:var(--sel-soft);color:var(--sel)}
   .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
   /* Window-wide, so it lives in the header and not inside the Explorer column. It was in the
@@ -388,7 +389,13 @@
   #erpick .pk2 b{color:#33415a;font-family:var(--mono);font-weight:600}
   #erpick .pksnip{font:11.5px var(--mono);background:#fffbeb;border:1px solid #f0d9a8;border-radius:7px;padding:6px 8px;cursor:pointer;word-break:break-all;color:#7c4a10}
   #erpick .pksnip:hover{border-color:#d97706;background:#fef3c7}
-  #erpick .pkx{position:absolute;top:6px;right:9px;color:#b9c2cf;cursor:pointer;font-size:14px;line-height:1}
+  /* `background`, `border`, `padding` and `font-family` are here because this became a real button:
+     as a span it inherited them and declared none. The commit that converted it claimed this class
+     dressed itself, which was true of .chip and .chipx and false of this one and .qx - so both took
+     Chrome's grey bevelled box, 2.4x wider than the glyph. `font-size` alone does not carry the
+     family, which a button does not inherit. */
+  #erpick .pkx{position:absolute;top:6px;right:9px;color:#b9c2cf;cursor:pointer;font-size:14px;line-height:1;
+               background:none;border:0;padding:0;font-family:inherit}
   #erpick .pkalt{margin-top:6px;font:11px var(--mono);color:#94a3b8}
   @media print{ #erpick{display:none !important} }
   .erbox .errow{display:flex;gap:8px;padding:2px 9px;border-top:1px solid #eef1f6}

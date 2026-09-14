@@ -5,7 +5,7 @@
 31488d0bde36f277  apps/analytics/ai.js:629: class="${m.role}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:340: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 97a1176ce268894d  apps/analytics/graphview.js:346: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-68f3feec399e35c4  apps/analytics/graphview.js:1524: class="${lk}" is not attribute-escaped
+68f3feec399e35c4  apps/analytics/graphview.js:1531: class="${lk}" is not attribute-escaped
 5a66614f40884692  apps/analytics/options.js:818: data-section="${key}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:1087: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:238: class="${stCls}" is not attribute-escaped
@@ -33,8 +33,8 @@ fcf2869833b3c20b  apps/crm/export.js:423: href="${fnAnchor(fnKey(n))}" is not at
 43eae51bbdfcc8ce  apps/crm/export.js:445: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:421: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:429: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
-c5d27cb218f749c5  apps/crm/graphview.js:1232: title="${why}" is not attribute-escaped
-5859e8f4ffb251d8  apps/crm/graphview.js:1948: class="${lk}" is not attribute-escaped
+c5d27cb218f749c5  apps/crm/graphview.js:1239: title="${why}" is not attribute-escaped
+5859e8f4ffb251d8  apps/crm/graphview.js:1955: class="${lk}" is not attribute-escaped
 20867c10b8f60824  apps/crm/health.js:325: class="${g.items.length ? (g.bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
 84ff11af55c61f48  apps/crm/highlight.js:192: title="${why}" is not attribute-escaped
 1fb496710d9f6227  apps/crm/modules.js:250: class="${ref ? 'st-none' : m.error ? 'st-err' : 'st-ok'}" is not attribute-escaped

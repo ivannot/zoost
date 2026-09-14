@@ -105,8 +105,13 @@ function escapeCloses() {
   if ($('aboutdlg').classList.contains('on')) { closeAbout(); return true; }
   if ($('aiview').classList.contains('show')) { closeAI(); return true; }
   if ($('healthview').classList.contains('show')) { closeHealth(); return true; }
-  if ($('overviewview').classList.contains('show')) { closeOverview(); return true; }
+  // History before the overview, and the order is read from the stylesheet rather than from how the
+  // panel looks: #navview is z-index 7 and #overviewview is 6, so the history paints on top. The
+  // first version had these the other way round and closed the one underneath - measured, with both
+  // open: overview closed, history stayed, and the keypress read as «Escape did nothing».
+  // `navShow(true)` closes no sibling, so that stack is reachable, which is the other half of this.
   if (navOpenNow()) { navShow(false); return true; }
+  if ($('overviewview').classList.contains('show')) { closeOverview(); return true; }
   return false;
 }
 
