@@ -82,9 +82,37 @@ $('navx').onclick = () => navShow(false);
 $('pvback').onclick = () => navTo(navHistory.snapshot().position - 1);
 $('pvfwd').onclick = () => navTo(navHistory.snapshot().position + 1);
 // Alt+arrows, because that is what a browser answers to and the hands already know it. Left alone
+/** What Escape closes, decided in one place, in the order the overlays cover each other.
+ *
+ *  Escape used to close the history view and nothing else, so the export dialog, About, Health, the
+ *  workspace overview and the assistant could each only be dismissed with the mouse: their ✕ was a
+ *  span no keyboard could reach, and the backdrop behind a dialog is not a control at all. Those
+ *  three are recorded in `tools/keyreach.txt` as owing a keyboard Escape rather than focus, and this
+ *  is that debt paid.
+ *
+ *  One decider rather than a listener per overlay, and the reason is the shape this repository has
+ *  already had to fix once in `emptyReason()`: several handlers answering the same key each know
+ *  their own case and none knows the order, so the answer depends on which was registered last. It
+ *  asks the page what is open instead of remembering - the state is on the element, and a second
+ *  copy of that knowledge is one careless edit away from disagreeing.
+ *
+ *  The saved-pattern menu keeps its own listener further down. It is a different layer - it also
+ *  closes on any click outside it - and a case pins the spelling of that line, having been proven to
+ *  pass with the listener deleted when it was written loosely.
+ */
+function escapeCloses() {
+  if ($('expscope').classList.contains('on')) { closeScope(false); return true; }
+  if ($('aboutdlg').classList.contains('on')) { closeAbout(); return true; }
+  if ($('aiview').classList.contains('show')) { closeAI(); return true; }
+  if ($('healthview').classList.contains('show')) { closeHealth(); return true; }
+  if ($('overviewview').classList.contains('show')) { closeOverview(); return true; }
+  if (navOpenNow()) { navShow(false); return true; }
+  return false;
+}
+
 // inside a field, where the arrows belong to the text.
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && navOpenNow()) { navShow(false); return; }
+  if (e.key === 'Escape' && escapeCloses()) { e.preventDefault(); return; }
   if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   const at = navHistory.snapshot().position;
   if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(at - 1); }

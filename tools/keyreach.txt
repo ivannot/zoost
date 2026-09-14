@@ -9,7 +9,11 @@
 #   #scrim (both panels) and #v-er (both diagrams) are dismissal surfaces - the backdrop behind a
 #   dialog, and the empty canvas around the drawing. Clicking them cancels; they carry no label and
 #   fill the viewport. A <button> there would be one enormous tab stop announcing nothing, so what
-#   they owe a keyboard is Escape, not focus. Neither panel answers Escape on its dialogs today.
+#   they owe a keyboard is Escape, not focus. That debt is paid: `escapeCloses()` in each panel
+#   closes whatever is on top - export dialog, About, assistant, Health, overview, history - and the
+#   diagram window's own listener dismisses a picked relation. They stay recorded because they are
+#   still clickable surfaces no keyboard can focus, which is true and is not a defect: the action
+#   behind them has a keyboard path now, and it is not this one.
 #
 #   #pvtable is not a control at all. It holds one delegated listener for every fields table there
 #   will ever be, and the thing it acts on - .plbtn - is already a real <button> with aria-expanded.
@@ -17,13 +21,7 @@
 #   tell a delegation host from a control. Stated rather than taught: the alternative is a checker
 #   that guesses at intent.
 a763933857578555  apps/crm/sidepanel.html: <div id="scrim">
-cc7b5c47a5f756d7  apps/crm/sidepanel.html: <span id="pvback">
-10aaffd164808323  apps/crm/sidepanel.html: <span id="pvfwd">
-aaf767f862461087  apps/crm/sidepanel.html: <span id="pvreveal">
-9aa5eff5ce5dd7f4  apps/crm/sidepanel.html: <span id="pvfind">
 11bf3d144ba35433  apps/crm/sidepanel.html: <div id="pvtable">
 037463c0118ca959  apps/crm/graphview.html: <div id="v-er">
-3385515d510f89c9  apps/analytics/sidepanel.html: <span id="dback">
-b45af8ee3ffe827c  apps/analytics/sidepanel.html: <span id="dfwd">
 3e9894e17adead25  apps/analytics/sidepanel.html: <div id="scrim">
 fe088aab502ceb79  apps/analytics/graphview.html: <div id="v-er">

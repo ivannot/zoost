@@ -934,6 +934,19 @@ CRM = """
     if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent)) say('About says nothing about what it is');
     $('aboutok').click(); await settle('About never closed');
 
+    // ---- Escape closes what is on top ----
+    // Written because the code for it can be read and still be wrong: `escapeCloses()` asks the page
+    // what is open, and nothing that reads source can tell whether the listener is reached, whether
+    // a class name matches the one the product actually sets, or whether the overlay is still there
+    // afterwards. Before this, Escape closed the history view alone - every dialog had to be
+    // dismissed with a mouse, because its ✕ was a span no keyboard could focus.
+    $('about').click(); await settle('About never reopened for the Escape case');
+    if (!$('aboutdlg').classList.contains('on')) say('About did not open, so Escape has nothing to close');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle('Escape never reached the dialog');
+    if ($('aboutdlg').classList.contains('on')) say('Escape left About open');
+    if ($('scrim').classList.contains('on')) say('Escape closed About and left its backdrop behind');
+
     // ---- The keyboard focus ring is legible ----
     // **The first version of this case could not fail, and was planted against to find out.** It
     // asserted «the outline is not `none` and is at least 1px»; with the panel's rule removed it
@@ -1301,6 +1314,16 @@ AN = """
     // file. What holds instead is the product's actual behaviour: nothing to retry, nothing offered.
     if (getComputedStyle($('retry')).display !== 'none')
       say('Retry is offered with nothing failed - pressing it can only produce a refusal');
+
+    // ---- Escape closes what is on top ----
+    // The twin of the CRM case, and for the same reason: the decider reads the page, so only the
+    // page can say whether it is reached and whether the class it tests is the one the product sets.
+    $('about').click(); await settle('About never reopened for the Escape case');
+    if (!$('aboutdlg').classList.contains('on')) say('About did not open, so Escape has nothing to close');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle('Escape never reached the dialog');
+    if ($('aboutdlg').classList.contains('on')) say('Escape left About open');
+    if ($('scrim').classList.contains('on')) say('Escape closed About and left its backdrop behind');
 
     // ---- The keyboard focus ring is legible ----
     // The twin of the CRM case, in the same shape so the two panels cannot answer differently by

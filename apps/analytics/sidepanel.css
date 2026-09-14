@@ -280,6 +280,13 @@
      They also carry their own display rule: the earlier chain-panel edit took the old one with it,
      and with no rule at all every arrow was permanently visible. */
   .nvmk{width:16px;height:16px;stroke-width:1.8}
+  /* The history arrows are 16px, and they stayed spans long enough for that to be accidental: the
+     moment they became real buttons they fell into `.dhead button .mk` above - written for this
+     header's other three buttons, which want 12 - and shrank by a quarter. `.nvmk` alone is (0,1,0)
+     and loses to that rule's (0,2,1), so the size is restated at equal weight and later in the file.
+     Found by the browser probe, which measures the drawn mark; every check that reads source was
+     green. */
+  .dhead button .nvmk{width:16px;height:16px}
   /* A mark on its own does not read as a control beside buttons that have a border and a
      background - reported: «non sembra cliccabile ma lo e'». The cursor was already a
      pointer over the whole icon (measured), so what was missing is the affordance, not the

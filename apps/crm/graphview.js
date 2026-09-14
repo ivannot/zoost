@@ -583,7 +583,20 @@ function select(id, nopush) {
 $('q').addEventListener('input', () => { render(); updateQx(); });
 function updateQx() { const x = $('qx'); if (x) x.classList.toggle('on', !!$('q').value); }
 $('qx').onclick = () => { $('q').value = ''; render(); updateQx(); $('q').focus(); };
-document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.id !== 'q') { e.preventDefault(); $('q').focus(); } });
+// `/` focuses the search; Escape dismisses the picked relation card. Both live in one listener
+// because they answer the same event, and the panel next door has just had to undo the opposite
+// shape - several handlers on one key, none of them knowing the order, so which one wins depends on
+// which was registered last.
+//
+// **This window needed its own.** The panel's `escapeCloses()` is in the panel's scripts; the
+// diagram is a separate page that loads none of them, so the fix that reached the dialogs' backdrop
+// left the diagram's canvas exactly where it was - the same defect, corrected where it was found
+// rather than where it lives. `erSelEdge` is asked first: Escape that closes nothing must not
+// swallow the keypress, because the browser has its own uses for it.
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement.id !== 'q') { e.preventDefault(); $('q').focus(); return; }
+  if (e.key === 'Escape' && erSelEdge) { e.preventDefault(); erClearPick(); }
+});
 
 // ---------------- Relations (relation-first catalogue) ----------------
 // The ER diagram puts modules first and relations second. This view inverts it: one row per

@@ -130,6 +130,7 @@ erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
 escReport	2987a53e5c62	2987a53e5c62	identical
 escReportA	46ee492a3bf3	46ee492a3bf3	identical
+escapeCloses	fb3bc679f819	fb3bc679f819	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	a5e28e42df49	33abab42f44e	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical

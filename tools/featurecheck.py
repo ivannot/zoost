@@ -66,6 +66,12 @@ EXPECTED_ABSENT = {
     # this label exists for than having no page mention at all.
     'Clear the search': 'empties the search box - an undo, like Cancel, and it acts on nothing',
     'Clear the focus': 'the diagram twin of the line above: it drops a selection and produces nothing',
+    # The history arrows. They became countable when the pattern above stopped missing marks that
+    # carry a second class - so this is a choice made rather than a silence relied on. Both guides
+    # describe the history as a view and name the shortcut; the arrows are one way into a thing the
+    # pages already explain, and Alt+Left / Alt+Right do the same job without them.
+    'Back': 'a step through the history, which both guides describe; Alt+Left does the same',
+    'Forward': 'ditto, Alt+Right',
     'Hide this notice': 'dismisses an in-panel notice until next time; the same family as Close',
 }
 
@@ -174,7 +180,12 @@ def unread(app: str):
     return out
 
 
-MARKED = re.compile(r'<button([^>]*)>\s*<svg class="mk"')
+# `class="mk"` and `class="mk nvmk"` are both a drawn mark; the first version of this pattern closed
+# the quote straight after `mk`, so a mark carrying a second class was not a mark to it. Measured when
+# the history arrows became buttons: 10 seen, 12 there, and the two it could not see were the pair
+# this check would otherwise have had an opinion about. The same shape as this file's own `<button>`
+# enumeration - a subject derived by one spelling, and the count on screen standing in for coverage.
+MARKED = re.compile(r'<button([^>]*)>\s*<svg class="mk[ "]')
 
 
 def marked_controls(app: str) -> set:

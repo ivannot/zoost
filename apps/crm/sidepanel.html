@@ -102,12 +102,12 @@
     <div id="resizer"></div>
     <div id="preview">
       <div id="pvhead">
-        <span class="back" id="pvback" title="Back (Alt+←)" aria-label="Back"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5 4.5 8l5.5 5.5"/></svg></span>
-        <span class="back" id="pvfwd" title="Forward (Alt+→)" aria-label="Forward"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5 11.5 8 6 13.5"/></svg></span>
+        <button type="button" class="back bare" id="pvback" title="Back (Alt+←)" aria-label="Back"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5 4.5 8l5.5 5.5"/></svg></button>
+        <button type="button" class="back bare" id="pvfwd" title="Forward (Alt+→)" aria-label="Forward"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5 11.5 8 6 13.5"/></svg></button>
         <span id="pvname"></span>
         <span id="pvfile"></span>
-        <span class="reveal" id="pvreveal" title="Open in Zoho">Open in Zoho ↗</span>
-        <span class="reveal2" id="pvfind" title="Open Zoho's own functions page">Functions in Zoho ↗</span>
+        <button type="button" class="reveal" id="pvreveal" title="Open in Zoho">Open in Zoho ↗</button>
+        <button type="button" class="reveal2" id="pvfind" title="Open Zoho's own functions page">Functions in Zoho ↗</button>
         <button type="button" class="x bare" id="pvx" title="Close" aria-label="Close">✕</button>
       </div>
       <!-- Two tabs rather than one long column. The detail of a function had grown to its callers,
