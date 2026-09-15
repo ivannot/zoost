@@ -257,9 +257,18 @@ async function downloadOneWf(entry) {
     return true;
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
-async function downloadMissingWf() {
+/** Fetch rule details: the ones not on disk, or - from a pull - every one of them.
+ *
+ *  A pull fetched a rule's detail only when its file was missing, so a rule edited in Zoho after its
+ *  first download was never read again: its conditions and actions stayed as they were, on screen, in
+ *  the reports and in every field's Workflows count, while the list beside them was current. Found by
+ *  the author watching the network during a pull - one request, where he expected one per rule.
+ *  Every rule now, not the ones whose `modified_time` moved: whether an edit to a condition or an
+ *  action moves the rule's own time is a claim about Zoho nothing here has measured, and a hundred
+ *  rules cost seconds. «Complete missing» keeps the narrow meaning its name says. */
+async function downloadMissingWf(all = false) {
   const op = beginWorkspaceOp();   // the workspace these workflows belong to - see downloadMissing()
-  const pending = workflowData.filter((e) => !e.downloaded);
+  const pending = workflowData.filter((e) => all || !e.downloaded);
   if (!pending.length) { setStatus('All workflows downloaded.', 'ok'); updateMissingButton(); return; }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0;
@@ -267,7 +276,7 @@ async function downloadMissingWf() {
     for (let i = 0; i < pending.length; i++) {
       if (!op.current()) return;
       const e = pending[i];
-      op.say(`Downloading workflow ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
+      op.say(`${all ? 'Reading' : 'Downloading'} workflow ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
       let done = await downloadOneWf(e);
       if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOneWf(e); }
       done ? ok++ : fail++;

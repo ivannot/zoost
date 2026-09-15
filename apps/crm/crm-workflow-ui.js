@@ -28,7 +28,7 @@ async function pullWorkflows() {
     for await (const p of walk(op.root)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await op.remove(p); prunedW++; } catch (e) { if ((e && e.message) === WS_MOVED) return; wfRmFail.push(p); } } } }
     if (!(await loadWorkflowIndex(op))) return;
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
-    await downloadMissingWf();
+    await downloadMissingWf(true);   // every rule, so an edit made in Zoho since the last pull arrives
     // The writes above dropped \u00abwhich rule fires this action\u00bb - it is read out of these very rules.
     // Dropping it is the write's business; rebuilding it has to happen where there is an await, and
     // this is that place: `actionFiredBy()` is called while a row is being drawn and cannot read a

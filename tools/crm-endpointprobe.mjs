@@ -191,6 +191,13 @@ const DRIVER = String.raw`
     same(actions && actions.find((row) => row.kind === 'tasks').mappings.map((row) => row.field), ['Subject', 'Priority'], 'task detail');
     same(connections, [{ name: 'billing_api', label: 'Billing API', connector: 'billing', connectorLabel: 'Billing', connected: true, createdBy: 'Example Admin', scopes: ['invoices.READ'], id: '990000000601' }], 'connection catalogue');
     same(Object.keys(cfg.access || {}).sort(), ['actions', 'connections', 'functions', 'modules', 'schedules', 'workflows'], 'area access record');
+    // A rule edited in Zoho after it was downloaded. A pull fetched a rule only when its file was
+    // missing, so this edit never arrived and the mirror kept the old conditions for ever - found by
+    // the author watching the network, not by this probe, which pulled once into an empty folder.
+    await pullWorkflows();
+    await until(() => !pullActive && pullBusy === false, 'the second workflows pull never released its lock');
+    const again = JSON.parse(fs.read(base + 'workflows/990000000301.json') || 'null');
+    same(again && again.description, 'Edited in Zoho after the first pull', 'a rule edited in Zoho, after a second pull');
     if (/failed|error|could not/i.test(document.getElementById('stxt').textContent)) throw new Error('the panel ended on ' + document.getElementById('stxt').textContent);
     window.__crmEndpointProbeResult = { files: fs.dump().filter((name) => name.startsWith(base)).length };
     document.title = 'CRM ENDPOINT PULL OK';
@@ -213,7 +220,7 @@ const expected = new Map([
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
   ['modules', 1], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 1], ['workflow-detail', 1], ['schedules', 1], ['actions:email_notifications', 1], ['actions:field_updates', 1], ['actions:tasks', 1], ['actions:task-detail', 1], ['actions:webhooks', 1],
+  ['workflows', 2], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 1], ['actions:field_updates', 1], ['actions:tasks', 1], ['actions:task-detail', 1], ['actions:webhooks', 1],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];
@@ -265,7 +272,10 @@ function apiReply(request) {
   } else if (p === '/crm/v2.2/settings/layouts') { requireGet(request, url); mark('layouts'); onlyQuery(url, { module: 'Contacts', fields: 'id,status' }); body = fixture.modules.layouts;
   } else if (p === '/crm/v2/settings/related_lists') { requireGet(request, url); mark('related-lists'); onlyQuery(url, { module: 'Contacts' }); body = fixture.modules.relatedLists;
   } else if (p === '/crm/v8/settings/automation/workflow_rules') { requireGet(request, url); mark('workflows'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.workflows.list;
-  } else if (p === `/crm/v8/settings/automation/workflow_rules/${fixture.workflows.list.workflow_rules[0].id}`) { requireGet(request, url); mark('workflow-detail'); onlyQuery(url, {}); body = fixture.workflows.detail;
+  } else if (p === `/crm/v8/settings/automation/workflow_rules/${fixture.workflows.list.workflow_rules[0].id}`) { requireGet(request, url); mark('workflow-detail'); onlyQuery(url, {});
+    // The second pull finds the rule edited in Zoho since the first: it has to arrive on disk.
+    body = used.get('workflow-detail') === 1 ? fixture.workflows.detail
+      : { ...fixture.workflows.detail, workflow_rules: fixture.workflows.detail.workflow_rules.map((r) => ({ ...r, description: 'Edited in Zoho after the first pull' })) };
   } else if (p === '/crm/v9/settings/automation/schedules' && url.searchParams.get('per_page') === '200') { requireGet(request, url); mark('schedules'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.schedules;
   } else if (p === '/crm/v9/settings/automation/schedules' && url.searchParams.get('per_page') === '1') { requireGet(request, url); mark('schedule-primer'); onlyQuery(url, { page: 1, per_page: 1 }); body = { schedules: [], info: { more_records: false } };
   } else if (/^\/crm\/v[89]\/settings\/automation\/(email_notifications|field_updates|tasks|webhooks)$/.test(p)) {
