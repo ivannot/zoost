@@ -9332,10 +9332,15 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     }
   });
 
-  test('crm: a full functions pull records details only when every source answered', () => {
-    const body = sliceFn('apps/crm/crm-pull-graph.js', 'pullAll');
-    assert.match(body, /full && !\(r\.unanswered \|\| \[\]\)\.length && !\(dl && \(dl\.failed \|\| dl\.refused\)\)/,
-                 'a refused language or source is still recorded as a complete details pull');
+  test('crm: a full pull records details only when every item answered, in all four areas', () => {
+    // Every gap the run can produce goes into the depth: a refusal, a failure, an unanswered language, a
+    // kind that refused or stopped, a module Zoho would not describe or that could not be written.
+    for (const [file, fn, re] of [
+      ['apps/crm/crm-pull-graph.js', 'pullAll', /pullDepth\(full, \{ refused: dl \? dl\.refused : 0, unread: dl \? dl\.failed : 0, languages: \(r\.unanswered \|\| \[\]\)\.length \}\)/],
+      ['apps/crm/crm-workflow-ui.js', 'pullWorkflows', /pullDepth\(full, \{ unread: dl \? dl\.failed : 0 \}\)/],
+      ['apps/crm/automation.js', 'pullActions', /pullDepth\(full, \{ kinds: missed\.length \+ capped\.length, unread: detailMissed\.length \}\)/],
+      ['apps/crm/modules.js', 'pullModules', /pullDepth\(true, \{ refused: refused\.length, unread: notRead\.length \+ wFail\.length \}\)/],
+    ]) assert.match(sliceFn(file, fn), re, `${fn}: a refused or unread item is still recorded as a complete details pull`);
   });
 }
 
@@ -9546,12 +9551,14 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                                  read: async () => { throw new Error('not stubbed'); } }),
       loadActionsIndex: async () => prevIdx,
       rebuildActions: async () => {}, noteAccess: async (...args) => { ctx.access.push(args); },
+      pullDepth: null,
       notePullFailure: async (_a, e) => { throw e; },
       // The pull marks itself running and releases through the one helper. Stubbed here because this
       // case runs the function, which is exactly how the free reference was caught the moment the
       // three pulls that had never owned the flag were given it.
       pullActive: false, endPull: () => {},
     };
+    ctx.pullDepth = load([sliceFn('apps/crm/export-scope.js', 'pullDepth')]).pullDepth;
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/crm/automation.js', 'pullActions') + '\npullActions();', ctx);
     await new Promise((r) => setImmediate(r));
@@ -9620,11 +9627,12 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   test('a partial action pull cannot advance the details timestamp', async () => {
     const refused = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }],
                                 missed: [{ kind: 'webhooks', error: '403' }] }, PREV);
-    assert.equal(refused.access.at(-1)[4], 'list',
+    assert.equal(refused.access.at(-1)[4], 'partial',
                  'a refused action kind was recorded as a complete details pull');
+    assert.equal(refused.access.at(-1)[5].kinds, 1, 'the refused kind is not counted, so the bar cannot say what is missing');
     const capped = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }],
                                capped: ['webhooks'] }, PREV);
-    assert.equal(capped.access.at(-1)[4], 'list',
+    assert.equal(capped.access.at(-1)[4], 'partial',
                  'a capped action kind was recorded as a complete details pull');
     const complete = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }] }, PREV);
     assert.equal(complete.access.at(-1)[4], 'full',
@@ -18688,7 +18696,9 @@ test('a refused module is not emptied by the pull that was refused', async () =>
                 rebuildModules: async () => {}, noteAccess: async () => {},
                 notePullFailure: async (a, e) => status.push(['bad', String(e)]),
                 endPull: () => {}, pullActive: false, WS_MOVED: 'moved' };
-    const m = load([sliceFn(rel, 'pullModules')], g);
+    // `pullDepth` is the one helper the pull records its depth through - the panel is one scope across
+    // its scripts, and a lift that stops at one file throws where the real page would not.
+    const m = load([sliceFn(rel, 'pullModules'), sliceFn('apps/crm/export-scope.js', 'pullDepth')], g);
     await m.pullModules();
     return { file: JSON.parse(disk.get('modules/Contacts.json') || '{}'), last: status.at(-1) };
   };
@@ -19926,7 +19936,7 @@ test('an empty list says what Zoho last answered about that area', () => {
     const body = sliceFn(file, fn);
     const at = body.lastIndexOf('noteAccess(');
     // A pull that reads a list apart from its items also says which of the two it did.
-    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true(?:, [^,]+)?\)$/,
+    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true(?:, [\s\S]+)?\)$/,
                  `${fn}: a pull that wrote the mirror and came up short is recorded as one that did not`);
   }
 });
@@ -21925,4 +21935,46 @@ test('opening another workspace repaints the notice of what a list pull left', a
   });
   await m.loadAccess({ current: () => true });
   assert.equal(painted, 1, 'the notice keeps the workspace that was left');
+});
+
+
+// «Partial» rather than «list» for a full pull that came up short, with the counts: a first pull that
+// read nearly everything is not told it read nothing, and a notice that stays on for good - a role that
+// will never read 27 modules - says what it is about. Asked for after the author's own fix.
+test('a full pull that came up short is partial, counted, cleared by a complete one and kept by a list', async () => {
+  const run = async (prev, depth, gaps) => {
+    let wrote = null;
+    const m = load([sliceFn('apps/crm/sidepanel.js', 'noteAccess')], {
+      console, Object, Date, TAB: { modules: {} }, AREA_SCOPE: { modules: 1 },
+      accessOf: () => 'ok', tabAccess: { modules: prev },
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      setStatus: () => {}, tabLabel: (a) => a,
+    });
+    await m.noteAccess('modules', null, { current: () => true }, true, depth, gaps);
+    return wrote.access.modules;
+  };
+  const { pullDepth } = load([sliceFn('apps/crm/export-scope.js', 'pullDepth')]);
+  assert.deepEqual([...pullDepth(false, { refused: 3 })], ['list', null], 'a list pull is partial');
+  assert.deepEqual([...pullDepth(true, { refused: 0, unread: 0 })], ['full', null], 'nothing missing is not full');
+  const [d, g] = pullDepth(true, { refused: 27, unread: 0 });
+  assert.equal(d, 'partial');
+  assert.deepEqual({ ...g }, { refused: 27 }, 'a zero is counted as a gap');
+
+  const first = await run({}, d, g);
+  assert.equal(first.detailsNever, false, 'a first pull that read nearly everything says nothing was read');
+  assert.equal(first.detailsAt, null, 'a partial pull claims every item was read');
+  assert.equal(first.detailsGap.refused, 27);
+  const listed = await run(first, 'list', null);
+  assert.equal(listed.detailsGap && listed.detailsGap.refused, 27, 'a list pull forgot the items still unread');
+  const complete = await run(listed, 'full', null);
+  assert.equal(complete.detailsGap, null, 'a complete pull still reports a gap');
+
+  const { detailsBehind, behindLabel } = load([sliceFn('apps/crm/crm-download.js', 'detailsBehind'),
+    sliceConst('apps/crm/crm-download.js', 'GAP_WORDS'), sliceFn('apps/crm/crm-download.js', 'behindLabel')]);
+  assert.equal(detailsBehind(complete), null);
+  const gap = detailsBehind({ ...first, listAt: '2026-09-15T10:00:00.000Z', detailsAt: '2026-09-15T11:00:00.000Z' });
+  assert.ok(gap && gap.gap, 'a partial pull newer than its details is not behind');
+  const label = behindLabel(detailsBehind({ listAt: 'x', detailsGap: { refused: 27, unread: 2, at: 'x' } }), (x) => x, (x) => x);
+  assert.equal(label.text, '◐ 27 refused by Zoho, 2 not read', 'the notice does not count what it is about');
+  assert.match(label.title, /pulling again will not change it/, 'the tooltip does not say a refusal is final');
 });

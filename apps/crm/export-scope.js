@@ -156,7 +156,17 @@ function bridgeError(r, fallback) {
  *  says a third of itself was read today when it was not is the half-truth `freshnessLine` exists to
  *  prevent, and it was thirty minutes old. Found by a reader with no memory of writing it.
  */
-async function noteAccess(area, err, op, stored = !err, depth = null) {
+/** A pull's depth for `noteAccess`, from everything it could not read: `list` when it read the list
+ *  alone, `full` when it read every item, and `partial` - with the counts - when it meant to read every
+ *  item and some did not come. A refusal counts: it is an answer, and the detail is still not here.
+ *  Asked for after «full» had been claimed over refused kinds and sources; `partial` rather than `list`
+ *  so a first pull that read nearly everything is not told it read nothing. */
+function pullDepth(full, gaps) {
+  if (!full) return ['list', null];
+  const g = Object.fromEntries(Object.entries(gaps || {}).filter(([, n]) => Number(n) > 0));
+  return Object.keys(g).length ? ['partial', g] : ['full', null];
+}
+async function noteAccess(area, err, op, stored = !err, depth = null, gaps = null) {
   // An **area**, not a tab. The two are nearly the same list and not quite: `failures` is pulled,
   // can be refused, and has no tab of its own - a failure is a property of a function, so it shows
   // in the function's detail and in the health view. This guard read `TAB[area]`, so every
@@ -188,8 +198,12 @@ async function noteAccess(area, err, op, stored = !err, depth = null) {
     listAt: stored && depth ? new Date().toISOString() : (prev.listAt || null),
     detailsAt: stored && depth === 'full' ? new Date().toISOString() : (prev.detailsAt || null),
     // An area whose very first stored pull was a list pull has had nothing read - not «older details».
-    detailsNever: stored && depth === 'full' ? false
+    detailsNever: stored && (depth === 'full' || depth === 'partial') ? false
       : (stored && depth === 'list' && !prev.pulledAt && !prev.detailsAt) ? true : !!prev.detailsNever,
+    // What the last pull that meant to read every item could not read, counted. A list pull leaves it:
+    // those items are still unread. A full pull that read them all clears it.
+    detailsGap: stored && depth === 'partial' ? Object.assign({}, gaps, { at: new Date().toISOString() })
+      : stored && depth === 'full' ? null : (prev.detailsGap || null),
     // **«It did not work» and «it worked and came up short» were the same record.** Three pulls
     // report a gap - a module Zoho would not describe, a stale file that would not delete -
     // with a pseudo-error, so a workspace whose 1,200 functions are all on disk was marked

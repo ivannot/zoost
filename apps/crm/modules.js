@@ -141,7 +141,10 @@ async function pullModules(depth = {}) {
       + (refused.length ? ` ${refused.length} module(s) Zoho would not describe - what was captured before is kept: `
         + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
-    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, 'full');   // the mirror was written; the gap is what came up short in it
+    // «Every module read» only when it was: a module Zoho would not describe, one whose fields did not come
+    // and one that could not be written are each a detail not here - the third instance of a full read
+    // claimed over a gap, after functions and actions. Measured: 27 of 87 and 16 of 84 modules refused.
+    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, ...pullDepth(true, { refused: refused.length, unread: notRead.length + wFail.length }));   // the mirror was written; the gap is what came up short in it
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
 }
 

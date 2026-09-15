@@ -218,8 +218,31 @@ function updateRow(e) {
 function detailsBehind(access) {
   const a = access || {};
   if (!a.listAt) return null;
+  // A pull that meant to read every item and could not is behind however recent it is.
+  if (a.detailsGap) return { detailsAt: a.detailsAt || null, listAt: a.listAt, never: false, gap: a.detailsGap };
   if (a.detailsAt && String(a.detailsAt) >= String(a.listAt)) return null;
-  return { detailsAt: a.detailsAt || null, listAt: a.listAt, never: !!a.detailsNever };
+  return { detailsAt: a.detailsAt || null, listAt: a.listAt, never: !!a.detailsNever, gap: null };
+}
+/** The notice's words, from what `detailsBehind` found - counts where there are counts, because a
+ *  notice that stays on for good (a role that will never read 27 modules) is only worth its place if it
+ *  says what it is about. `day` and `when` format a date; passed in so this stays a pure function. */
+const GAP_WORDS = { refused: (n) => `${n} refused by Zoho`, unread: (n) => `${n} not read`,
+                    kinds: (n) => `${n} kind(s) not read`, languages: (n) => `${n} language(s) not listed` };
+function behindLabel(gap, day, when) {
+  if (gap.gap) {
+    const parts = Object.keys(GAP_WORDS).filter((k) => Number(gap.gap[k]) > 0).map((k) => GAP_WORDS[k](gap.gap[k]));
+    return { text: `◐ ${parts.join(', ')}`,
+      title: `The last Pull list + details, on ${when(gap.gap.at || gap.listAt)}, could not read every item: ${parts.join(', ')}. `
+        + 'A refusal is Zoho’s answer for this user and pulling again will not change it; the rest the next Pull list + details retries. '
+        + (gap.detailsAt ? `Every item was last read on ${when(gap.detailsAt)}.` : 'No pull has read every item yet.') };
+  }
+  // `never` is an area whose first pull was a list pull: nothing was ever read, which is neither a date
+  // nor «older». Found by review, on a new workspace.
+  return { text: gap.detailsAt ? `◐ details from ${day(gap.detailsAt)}` : gap.never ? '◐ details not read' : '◐ details older than the list',
+    title: `The list was pulled on ${when(gap.listAt)}; `
+      + (gap.detailsAt ? `each item was last read on ${when(gap.detailsAt)}`
+        : gap.never ? 'no pull has read each item yet' : 'each item was last read by an earlier pull, before Zoost recorded when')
+      + ` - anything changed in Zoho since then is not here. Pull list + details reads them again.` };
 }
 function paintBehind() {
   const el = $('behind'); if (!el) return;
@@ -227,16 +250,10 @@ function paintBehind() {
     ? detailsBehind(tabAccess[viewMode]) : null;
   el.hidden = !gap;
   if (!gap) return;
-  const day = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  // No `detailsAt` is a workspace whose items were read by pulls made before that time was recorded -
-  // read, and older than the list, not «never read», which is what this said. Found by review.
-  // `never` is an area whose first pull was a list pull: nothing was ever read, which is neither a date
-  // nor «older». Found by review, on a new workspace.
-  el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : gap.never ? '\u25d0 details not read' : '\u25d0 details older than the list';
-  el.title = `The list was pulled on ${new Date(gap.listAt).toLocaleString()}; `
-    + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}`
-      : gap.never ? 'no pull has read each item yet' : 'each item was last read by an earlier pull, before Zoost recorded when')
-    + ` - anything changed in Zoho since then is not here. Pull list + details reads them again.`;
+  const label = behindLabel(gap, (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+    (iso) => new Date(iso).toLocaleString());
+  el.textContent = label.text;
+  el.title = label.title;
 }
 function updateMissingButton() {
   paintBehind();

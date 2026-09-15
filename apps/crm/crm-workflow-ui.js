@@ -47,7 +47,7 @@ async function pullWorkflows(depth = {}) {
     // so the residue is what the reader sees - said, recorded, retried by the next pull for free.
     if (wfRmFail.length) setStatus($('stxt').textContent + ` \u00b7 ${wfRmFail.length} deleted rule(s) could not be removed - the next pull retries`, 'warn');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list stopped early - some workflows may be missing', 'warn');
-    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op, true, full && !(dl && dl.failed) ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
+    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op, true, ...pullDepth(full, { unread: dl ? dl.failed : 0 }));   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('workflows', e, op); } finally { endPull(); }
 }
 async function openWorkflowInZoho(id) {

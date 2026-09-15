@@ -743,7 +743,7 @@ async function pullActions(depth = {}) {
     // capped kind is still a measured gap even though its previous rows were safely kept, and a
     // detail refusal is the same for that item.  Marking the area full here made the freshness bar
     // say all action details were current while one category was still from the previous pull.
-    await noteAccess('actions', null, op, true, full && !missed.length && !capped.length && !detailMissed.length ? 'full' : 'list');
+    await noteAccess('actions', null, op, true, ...pullDepth(full, { kinds: missed.length + capped.length, unread: detailMissed.length }));
   } catch (e) { await notePullFailure('actions', e, op); } finally { endPull(); }
 }
 async function rebuildActions() {
