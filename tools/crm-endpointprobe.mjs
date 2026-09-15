@@ -205,6 +205,27 @@ const DRIVER = String.raw`
     const listed = (JSON.parse(fs.read(base + '.zoost.json') || 'null') || {}).access || {};
     const wa = listed.workflows || {};
     if (!(wa.listAt && wa.detailsAt && wa.listAt > wa.detailsAt)) throw new Error('a list pull left no gap between the list and the rules: ' + JSON.stringify(wa));
+    // Modules: the list again, and no module read - the counter refuses a second fields request.
+    const moduleBefore = fs.read(base + 'modules/Contacts.json');
+    await pullModules({ full: false });
+    await until(() => !pullActive && pullBusy === false, 'the modules list pull never released its lock');
+    same(fs.read(base + 'modules/Contacts.json'), moduleBefore, 'a module on disk, after a list pull');
+    // Actions, on its own tab: the four lists and no task read, the last mappings kept - and the bar says
+    // so with nothing else pressed, which it did not until a tab switch. Then a Pull clears it.
+    setMode('actions');
+    await pullActions({ full: false });
+    await until(() => !pullActive && pullBusy === false, 'the actions list pull never released its lock');
+    const acts2 = JSON.parse(fs.read(base + 'actions/index.json') || 'null');
+    same(acts2 && acts2.find((row) => row.kind === 'tasks').mappings.map((row) => row.field), ['Subject', 'Priority'], 'task mappings after a list pull');
+    const acc2 = (JSON.parse(fs.read(base + '.zoost.json') || 'null') || {}).access || {};
+    for (const area of ['modules', 'actions']) {
+      const a = acc2[area] || {};
+      if (!(a.listAt && a.detailsAt && a.listAt > a.detailsAt)) throw new Error(area + ': a list pull left no gap between the list and the details: ' + JSON.stringify(a));
+    }
+    if (document.getElementById('behind').hidden) throw new Error('the bar does not say what the actions list pull left behind');
+    await pullActions();
+    await until(() => !pullActive && pullBusy === false, 'the actions pull never released its lock');
+    if (!document.getElementById('behind').hidden) throw new Error('a Pull read every task and the bar still says the details are old');
     if (/failed|error|could not/i.test(document.getElementById('stxt').textContent)) throw new Error('the panel ended on ' + document.getElementById('stxt').textContent);
     window.__crmEndpointProbeResult = { files: fs.dump().filter((name) => name.startsWith(base)).length };
     document.title = 'CRM ENDPOINT PULL OK';
@@ -226,8 +247,8 @@ const expected = new Map([
   ['functions:deluge', 1], ['functions:java', 1], ['functions:java17', 1], ['functions:nodejs', 1], ['functions:nodejs_22', 1], ['functions:python_3_12', 1], ['functions:all', 1],
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
-  ['modules', 1], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 1], ['actions:field_updates', 1], ['actions:tasks', 1], ['actions:task-detail', 1], ['actions:webhooks', 1],
+  ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1],
+  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 3], ['actions:field_updates', 3], ['actions:tasks', 3], ['actions:task-detail', 2], ['actions:webhooks', 3],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];

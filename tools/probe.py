@@ -1026,7 +1026,7 @@ CRM = """
     }
 
     // «Pull list» is offered where a list and its items are read apart, and nowhere else.
-    for (const [tab, shown] of [['functions', true], ['workflows', true], ['schedules', false], ['modules', false]]) {
+    for (const [tab, shown] of [['functions', true], ['modules', true], ['workflows', true], ['actions', true], ['schedules', false], ['connections', false]]) {
       setMode(tab); await settle('the ' + tab + ' view never finished drawing');
       if (($('pulllist').style.display !== 'none') !== shown) say('Pull list is ' + (shown ? 'missing from ' : 'offered on ') + tab);
     }

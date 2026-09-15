@@ -246,6 +246,7 @@ function renderWorkflows() {
 }
 async function downloadOneWf(entry) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  const had = !!entry.downloaded;   // a re-read that fails leaves the file on disk, and the row says so
   if (mismatchRefuse()) return false;
   if (!dir) return false;
   if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
@@ -255,7 +256,7 @@ async function downloadOneWf(entry) {
     await op.write(entry.path, JSON.stringify(r.rule, null, 2));
     entry.downloaded = true; entry.error = false; entry.errorMsg = '';
     return true;
-  } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
+  } catch (e) { entry.error = true; entry.downloaded = had; entry.errorMsg = errText(e); return false; }
 }
 /** Fetch rule details: the ones not on disk, or - from a pull - every one of them.
  *
@@ -286,6 +287,7 @@ async function downloadMissingWf(all = false) {
     if (!op.current()) return;
     updateMissingButton();
     setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
+    return { failed: fail };   // a pull that could not read every rule must not record that it did
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 async function pullSchedules() {
@@ -629,8 +631,11 @@ async function loadActionsIndex(op = beginWorkspaceOp()) {
   if (!op.current()) return null;
   return Array.isArray(idx) ? idx : [];
 }
-async function pullActions() {
+async function pullActions(depth = {}) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  // «Pull list» reads the four lists and no task one by one; the bridge then reports every task as a
+  // detail not read, which is exactly the case this pull already keeps the last reading for.
+  const full = !(depth && depth.full === false);
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // see pullSchedules above for why, and why it is released in a finally
@@ -639,7 +644,7 @@ async function pullActions() {
     const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.wrongTab, 'warn'); return; }
     setStatus('Pulling automation actions\u2026', 'busy');
-    const r = await toBridge({ cmd: 'pullActions' });
+    const r = await toBridge({ cmd: 'pullActions', taskDetails: full });
     // It said «Actions pull failed: unknown» - `toBridge` resolves `undefined` when nothing is
     // listening, so a reloaded Zoho tab produced the one sentence that names neither the problem
     // nor the remedy, and `setStatus` then hid the report button. Every other pull reports through
@@ -710,13 +715,19 @@ async function pullActions() {
     // still a row this pull could not read, and counting only the empty ones meant the one case
     // where something was salvaged reported «1 action(s) pulled.» with no warning at all.
     const kept = detailMissed.filter((d) => actions.some((x) => `${x.kind}:${String(x.id)}` === `${d.kind}:${String(d.id)}` && x.detail_kept));
+    // A task a list pull did not read was not asked for, so it is not a failure to report - the bar
+    // says how old those mappings are. What a full pull could not read still is.
+    const unread = detailMissed.filter((d) => d.reason !== 'list pull');
     const note = (missed.length ? ` ${missed.length} kind(s) could not be read - what the last pull saw of them was kept.` : '')
       + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho, and nothing was removed.` : '')
-      + (detailMissed.length ? ` ${detailMissed.length} task(s) whose detail Zoho did not return`
+      + (unread.length ? ` ${unread.length} task(s) whose detail Zoho did not return`
           + (kept.length ? ` - ${kept.length} of them still show the field mappings the last pull read.` : ' - they are listed, their field mappings are not read.') : '');
-    if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${actions.length} action(s).` + note, 'warn'); }
-    else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length || detailMissed.length) ? 'warn' : 'ok');
-    await noteAccess('actions', null, op);
+    const said = full ? `${actions.length} action(s) pulled.` : `Actions list pulled: ${actions.length}. Task field mappings on disk were not read again - Pull reads them.`;
+    if (viewMode === 'actions') { await rebuildActions(); setStatus(said + note, note ? 'warn' : 'ok'); }
+    else setStatus(said + note, (missed.length || capped.length || unread.length) ? 'warn' : 'ok');
+    // «Every item read» only when it was: a task past the per-pull bound, or one Zoho did not answer,
+    // leaves the details older than the list, and the bar has to be able to say so.
+    await noteAccess('actions', null, op, true, full && !detailMissed.length ? 'full' : 'list');
   } catch (e) { await notePullFailure('actions', e, op); } finally { endPull(); }
 }
 async function rebuildActions() {

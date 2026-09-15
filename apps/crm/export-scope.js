@@ -205,6 +205,9 @@ async function noteAccess(area, err, op, stored = !err, depth = null) {
   if (op && !op.current()) return false;
   tabAccess = nextAccess;
   publishAccess();
+  // The notice of what a list pull left is drawn from this record, and every pull reaches here after
+  // its own last redraw - so without this the bar showed the state from before the pull. Found by review.
+  if (typeof paintBehind === 'function') paintBehind();
   if (before !== state && (before === 'forbidden' || state === 'forbidden')) renderTabs();   // the set of tabs just changed
   return true;
 }

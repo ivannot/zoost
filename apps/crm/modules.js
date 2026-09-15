@@ -6,7 +6,9 @@
  */
 
 // ---------- modules: pull ----------
-async function pullModules() {
+async function pullModules(depth = {}) {
+  // «Pull list» reads which modules exist, and is a pull of its own - see pullModuleList.
+  if (depth && depth.full === false) return pullModuleList();
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
@@ -139,7 +141,76 @@ async function pullModules() {
       + (refused.length ? ` ${refused.length} module(s) Zoho would not describe - what was captured before is kept: `
         + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
-    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true);   // the mirror was written; the gap is what came up short in it
+    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, 'full');   // the mirror was written; the gap is what came up short in it
+  } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
+}
+
+/** «Pull list» on Modules: which modules exist in Zoho, and nothing about their fields.
+ *
+ *  A module already on disk keeps its file and its index rows exactly as the last Pull left them - that
+ *  reading is the best one there is, and the bar says how old it is. A module new since then lands as
+ *  its identity with the three reads marked as not made, so its table says «press Pull» rather than
+ *  «no fields». A module gone from the list goes from the mirror, as it does in a full Pull: the list is
+ *  one unpaged answer, the same one the full Pull prunes by. A pull of its own - the same checks of the
+ *  folder, the tab and the binding, its own failure record and its own end - because a guard on the
+ *  caller is the one the next caller forgets. */
+async function pullModuleList() {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  if (mismatchRefuse()) return;
+  try {
+    pullActive = true;   // its own, like every path to Zoho: a save notice meanwhile waits for the pull to end
+    await requirePerm(op.root);
+    const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
+    const cfg = await opReadCfg(op);
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
+      throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
+    setStatus('Listing modules…', 'busy');
+    const r = await toBridge({ cmd: 'listModules' }); if (!r?.ok) throw bridgeError(r, 'list failed');
+    if (!op.current()) return;
+    let prevIdx = [], prevLay = [];
+    try { prevIdx = JSON.parse(await op.read('modules/index.json')) || []; } catch (_) {}
+    try { prevLay = JSON.parse(await op.read('modules/layouts/index.json')) || []; } catch (_) {}
+    const rowOf = new Map((Array.isArray(prevIdx) ? prevIdx : []).map((x) => [x && x.api_name, x]));
+    const layOf = new Map((Array.isArray(prevLay) ? prevLay : []).map((x) => [x && x.module, x]));
+    const modRows = [], layIndex = [], added = [], wFail = [];
+    for (const m of r.modules || []) {
+      if (!op.current()) return;
+      const f = `modules/${sanitize(m.api_name || 'unknown')}.json`;
+      // The file decides, not the index: a module whose file is there and whose row went missing must
+      // not be taken for a new one - that would write an empty shell over its fields.
+      let prev = null; try { prev = JSON.parse(await op.read(f)); } catch (_) {}
+      if (prev) {
+        modRows.push(rowOf.get(m.api_name) || { api_name: prev.api_name, module_name: prev.module_name, generated_type: prev.generated_type,
+          fields: (prev.fields || []).length, layouts: (prev.layouts || []).length, related_lists: (prev.related_lists || []).length });
+        layIndex.push(layOf.get(m.api_name) || { module: prev.api_name, generated: prev.module_name, layouts: prev.layouts || [] });
+        continue;
+      }
+      try {
+        await op.write(f, JSON.stringify({ ...m, fields: [], layouts: [], related_lists: [],
+          fields_read: false, layouts_read: false, related_read: false, unreadable: null }, null, 2));
+      } catch (e) { if ((e && e.message) === WS_MOVED) return; wFail.push(m.api_name); continue; }
+      modRows.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: 0, layouts: 0, related_lists: 0 });
+      layIndex.push({ module: m.api_name, generated: m.module_name, layouts: [] });
+      added.push(m.api_name);
+    }
+    if (!op.current()) return;
+    await op.write('modules/index.json', JSON.stringify(modRows, null, 2));
+    await op.write('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
+    const live = new Set((r.modules || []).map((m) => sanitize(m.api_name || 'unknown')));
+    let pruned = 0; const rFail = [];
+    for await (const p of walk(op.root)) {
+      if (!op.current()) return;
+      const stem = p.split('/').pop().replace(/\.json$/, '');
+      if (!(isModuleFile(p) || isLayoutFile(p)) || live.has(stem)) continue;
+      try { await op.remove(p); pruned++; } catch (e) { if ((e && e.message) === WS_MOVED) return; rFail.push(p); }
+    }
+    await rebuildModules(op);
+    if (!op.current()) return;
+    const gap = (wFail.length ? ` ${wFail.length} new module(s) could not be written: ${wFail.slice(0, 3).join(', ')}.` : '')
+      + (rFail.length ? ` ${rFail.length} file(s) of removed modules could not be deleted - the next pull retries.` : '');
+    setStatus(`Modules list pulled: ${(r.modules || []).length} in Zoho${added.length ? `, ${added.length} new - Pull reads their fields` : ''}`
+      + `${pruned ? `, ${pruned} file(s) of removed modules deleted` : ''}. Fields on disk were not read again.${gap}`, gap ? 'warn' : 'ok');
+    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, 'list');
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
 }
 

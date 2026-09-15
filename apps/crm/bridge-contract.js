@@ -11,7 +11,7 @@
  * {cmd: "listWorkflows"} | {cmd: "fetchWorkflow", id: string} | {cmd: "workflowUsage", id: string, from?: string, till?: string} |
  * {cmd: "listSchedules"} | {cmd: "fetchModuleFields", apiName: string} |
  * {cmd: "fetchOne", id: string, category?: string, source?: string, language?: string, runtime?: string} |
- * {cmd: "pullModules"} | {cmd: "pullFailures"} | {cmd: "pullActions"} | {cmd: "pullConnections"})} BridgeCommand */
+ * {cmd: "pullModules"} | {cmd: "listModules"} | {cmd: "pullFailures"} | {cmd: "pullActions", taskDetails?: boolean} | {cmd: "pullConnections"})} BridgeCommand */
 /** @typedef {{ok: true, origin: string, org: string, instance: string}} CrmContextReply */
 /** @typedef {{ok: true, entries: object[], total: number, capped?: boolean}} CrmListReply */
 /** @typedef {{ok: true, file: object}} CrmFileReply */

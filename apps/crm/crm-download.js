@@ -19,6 +19,9 @@ async function downloadOne(entry) {
   // it had been. `refused` acquired a second writer when it began to be loaded from disk, and this
   // is the reader that question was owed - «who else owns this flag».
   entry.asked = false;
+  // What was on disk before this attempt: a re-read that fails leaves the file where it was, so the
+  // row must not start saying «not here». Before a pull re-read every source, only missing ones failed.
+  const had = !!entry.downloaded;
   if (mismatchRefuse()) return false;
   if (!dir) return false;
   if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
@@ -61,7 +64,7 @@ async function downloadOne(entry) {
     return true;
   // «Refused» is kept apart from «failed» on the row for the same reason it is kept apart on an
   // area: one of them is worth trying again and the other is an answer.
-  } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); entry.refused = !!(e && e.forbidden); return false; }
+  } catch (e) { entry.error = true; entry.downloaded = had; entry.errorMsg = errText(e); entry.refused = !!(e && e.forbidden); return false; }
 }
 /** What this run learnt about which sources Zoho will not serve, written where it survives.
  *
@@ -182,6 +185,8 @@ async function downloadMissing(recheck, all = false) {
       : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`
       : `All ${ok} functions downloaded.`) + short,
       (fail || cleanup || short) ? 'warn' : 'ok');
+    // What a pull needs to know to say whether it read every source: a refusal is an answer, a failure is not.
+    return { failed: fail - refused };
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 function updateRow(e) {
@@ -213,9 +218,11 @@ function paintBehind() {
   el.hidden = !gap;
   if (!gap) return;
   const day = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : '\u25d0 details not read';
+  // No `detailsAt` is a workspace whose items were read by pulls made before that time was recorded -
+  // read, and older than the list, not «never read», which is what this said. Found by review.
+  el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : '\u25d0 details older than the list';
   el.title = `The list was pulled on ${new Date(gap.listAt).toLocaleString()}; `
-    + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}` : 'no pull has read each item yet')
+    + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}` : 'each item was last read by an earlier pull, before Zoost recorded when')
     + ` - anything changed in Zoho since then is not here. Pull reads them again.`;
 }
 function updateMissingButton() {

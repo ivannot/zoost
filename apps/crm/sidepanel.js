@@ -55,7 +55,7 @@ const ZOHO_BTNS = ['pull', 'pullone', 'pulllist', 'funcs', 'pvreveal', 'pvfind']
 // The tabs whose list does not carry each item's detail, so a pull can read the one without the other:
 // «Pull list» says what exists in Zoho in seconds, «Pull» reads every item again. The rest are a list
 // and nothing else, and one button is all they have.
-const LIST_PULL_TABS = new Set(['functions', 'workflows']);
+const LIST_PULL_TABS = new Set(['functions', 'modules', 'workflows', 'actions']);
 function blockZoho(on) {
   document.body.classList.toggle('zoho-blocked', on);
   ZOHO_BTNS.forEach((id) => {

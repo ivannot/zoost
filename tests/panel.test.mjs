@@ -4478,8 +4478,9 @@ test('a failed pull records and reports through one helper', () => {
   // line - which threw away what the bridge had said about *why* and, because `setStatus` hides the
   // emergency button, took away the way to report it: the one failure in the product that carries a
   // diagnostic was the one that could not be reported. Every pull is one of these, and a new one
-  // that forgot the helper shows up here as a count that did not move.
-  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 9,
+  // that forgot the helper shows up here as a count that did not move. Ten since the Modules list
+  // pull became a pull of its own.
+  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 10,
     'a pull failure site stopped going through notePullFailure()');
   // the helper must keep the order: the verdict is on disk before the sentence is on screen
   const body = src.slice(src.indexOf('async function notePullFailure'), src.indexOf('\n}', src.indexOf('async function notePullFailure')));
@@ -5329,7 +5330,7 @@ for (const app of ['crm', 'analytics']) {
 // function from Zoho with nothing else in front of it. The overlay is gone, so every path that
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
-  ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
+  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
            // `reconcileNow` is what reaches Zoho, which is what has to refuse.
@@ -10154,7 +10155,10 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
     const body = sliceFn('apps/crm/automation.js', 'pullActions');
     assert.ok(/return \{ \.\.\.a, mappings: p\.mappings, detail_read: false, detail_kept: true,/.test(body),
               'the row this pull read is replaced by one from before it - name, module and date included');
-    assert.ok(/detailMissed\.length \? ` \$\{detailMissed\.length\} task\(s\)/.test(body),
+    // A list pull's unread tasks were not asked for, so they are not warned about - and what is warned
+    // about is still every task this pull could not read, salvaged or not, never only the empty ones.
+    assert.ok(/const unread = detailMissed\.filter\(\(d\) => d\.reason !== 'list pull'\);/.test(body)
+              && /unread\.length \? ` \$\{unread\.length\} task\(s\)/.test(body),
               'the warning counts what survived the salvage, so a salvaged one reports nothing');
   });
 
@@ -19898,7 +19902,7 @@ test('an empty list says what Zoho last answered about that area', () => {
     const body = sliceFn(file, fn);
     const at = body.lastIndexOf('noteAccess(');
     // A pull that reads a list apart from its items also says which of the two it did.
-    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true(?:, full \? 'full' : 'list')?\)$/,
+    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true(?:, [^,]+)?\)$/,
                  `${fn}: a pull that wrote the mirror and came up short is recorded as one that did not`);
   }
 });
@@ -21709,6 +21713,13 @@ test('a watched field is named on its rule and on its module in both reports, ne
   assert.match(md, /\| Status \| `Status` \|.*\| Status moved \(on change\); Status moved \(checks is Open\); Status moved \(writes Won\) \|/, 'Markdown: the field does not name the rule that starts on it, checks it and writes it');
   assert.match(html, /<th>Workflows<\/th>/);
   assert.match(html, /\(writes Won\)/, 'HTML: the field does not say which rule writes it');
+  // An empty census is a pulled one: only a workspace with no actions file is told they are missing.
+  assert.ok(!md.includes('Automation actions are not in this workspace') && !html.includes('Automation actions are not in this workspace'),
+            'a census with the field update in it is reported as missing');
+  const noCensus = m.buildExportMarkdown({ ...data, acts: null }, MD_SCOPE);
+  assert.ok(noCensus.includes('Automation actions are not in this workspace'), 'a workspace with no actions file is not told why no rule writes a field');
+  assert.ok(!m.buildExportMarkdown({ ...data, acts: [] }, MD_SCOPE).includes('Automation actions are not in this workspace'),
+            'an org with no actions at all is told its actions were never pulled');
   // The census is read whatever the chapters: unticking Actions must not unwrite a field.
   assert.match(m.buildExportMarkdown(data, { ...MD_SCOPE, actions: false }), /Status moved \(writes Won\)/);
   assert.match(html, /<a href="#wf-w9">Status moved<\/a>/, 'HTML: the field does not link to the rule it fires');
@@ -21806,4 +21817,23 @@ test('the fields a rule checks are read from its conditions, as Zoho writes them
   assert.equal(ruleCount(map.get('Deals:Stage')), 1, 'a rule that starts on a field and checks it was counted twice');
   assert.deepEqual([...map.keys()].sort(), ['Deals:Amount', 'Deals:Owner', 'Deals:Paid', 'Deals:Stage', 'Deals:Status', 'Deals:Tags'],
                    'a condition with no criteria, or a null relational criteria, produced a field - or a real one was missed');
+});
+
+
+// With every rule re-read on each pull, a re-read that fails reaches rules already on disk - and the
+// failure path said «not downloaded» about a file that was still there, so the row offered a download
+// and opening it asked Zoho again. Found by review.
+test('a rule re-read that fails keeps the rule that is on disk', async () => {
+  const m = load([sliceFn('apps/crm/automation.js', 'downloadOneWf')], {
+    beginWorkspaceOp: () => ({ current: () => true, root: {}, write: async () => {} }),
+    mismatchRefuse: () => false, dir: {}, ensurePerm: async () => true, setStatus: () => {}, MSG: { folder: 'folder' },
+    toBridge: async () => ({ ok: false, error: 'HTTP 502' }), errText: (e) => String(e && e.message),
+  });
+  const onDisk = { id: 'w1', path: 'workflows/w1.json', downloaded: true };
+  assert.equal(await m.downloadOneWf(onDisk), false);
+  assert.equal(onDisk.error, true, 'the failure is not on the row');
+  assert.equal(onDisk.downloaded, true, 'a rule still on disk is marked not downloaded after a failed re-read');
+  const missing = { id: 'w2', path: 'workflows/w2.json', downloaded: false };
+  await m.downloadOneWf(missing);
+  assert.equal(missing.downloaded, false, 'a rule never downloaded is marked as here');
 });

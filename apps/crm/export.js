@@ -135,6 +135,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
   conns = scope.connections ? (conns || []) : [];
   const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
+  const actsMissing = acts == null;
   acts = scope.actions ? (acts || []) : [];
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const esc = escHtml;
@@ -304,7 +305,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(roleText(r))}${r.active ? '' : ', off'})</span>`).join('<br>');
   let modHtml = (fTrig && wfUnread && mods.length
     ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».</p>` : '')
-    + (fTrig && !allActs.length && mods.length ? '<p class="note">Automation actions are not in this workspace, so a rule that writes a field is not marked for it.</p>' : '');
+    + (fTrig && actsMissing && mods.length ? '<p class="note">Automation actions are not in this workspace, so a rule that writes a field is not marked for it.</p>' : '');
   for (const g2 of ['Standard', 'Custom']) {
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
@@ -716,7 +717,9 @@ async function loadExportData(op = beginWorkspaceOp()) {
   // The automation actions, and the map of which rules fire each - built from the rules that were
   // just read rather than from the panel's cache, because an export must not depend on which tab
   // the reader happened to open.
-  let acts = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) acts = a; } catch (_) {}
+  // null, not [], when there is no census: «no actions» and «actions were never pulled» are two facts, and
+  // the reports' Workflows column says the second one only when it is true. Found by review.
+  let acts = null; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) acts = a; } catch (_) {}
   const actUsers = new Map();
   wfs.forEach((w) => ((w.detail && w.detail.conditions) || []).forEach((c) => {
     const list = [];
@@ -761,6 +764,7 @@ function buildExportMarkdown(d, scope) {
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
   const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
+  const actsMissing = acts == null;
   const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail)), allActs) : null;
   const wfUnread = (wfs || []).filter((w) => !w.detail).length;
   conns = scope.connections ? (conns || []) : [];
@@ -918,7 +922,7 @@ function buildExportMarkdown(d, scope) {
   }
   md += '---\n\n## Modules (schema)\n\n';
   if (fTrig && wfUnread && mods.length) md += `${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».\n\n`;
-  if (fTrig && !allActs.length && mods.length) md += 'Automation actions are not in this workspace, so a rule that writes a field is not marked for it.\n\n';
+  if (fTrig && actsMissing && mods.length) md += 'Automation actions are not in this workspace, so a rule that writes a field is not marked for it.\n\n';
   if (!mods.length) md += mdAbsent(scope.modules, 'modules');
   mods.slice().sort(byField('api_name')).forEach((m) => {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;

@@ -162,8 +162,8 @@ async function pullAll(depth = {}) {
     bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: _c.label || '', sample: !!_c.sample };
     await cacheBinding(bound);
     await rebuildTree();
-    if (full) await downloadMissing(true, true);   // every function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
-    else { updateMissingButton(); setStatus(`Functions list pulled: ${merged.length} in Zoho. Sources on disk were not read again - Pull reads them.`, 'ok'); }
+    const dl = full ? await downloadMissing(true, true) : null;   // every function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
+    if (!full) { updateMissingButton(); setStatus(`Functions list pulled: ${merged.length} in Zoho. Sources on disk were not read again - Pull reads them.`, 'ok'); }
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // **The truncation is said where it is discovered, and this line is gone.** It sat here because
@@ -172,7 +172,7 @@ async function pullAll(depth = {}) {
     // above, so nothing could ever reach this. Two warnings about one fact, one of them unreachable,
     // is worse than one - it reads as cover that is not there. The live one refuses to prune and says
     // so after the tree is drawn, which is where a reader is looking.
-    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true, full ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
+    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true, full && !(dl && dl.failed) ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.

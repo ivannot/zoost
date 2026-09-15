@@ -929,6 +929,20 @@
     return file;
   }
 
+  // «Pull list» on Modules: which modules exist, and nothing else. One request instead of three per
+  // module; the identity fields are the ones `pullModules` writes, so a module new since the last
+  // Pull lands on disk shaped like any other, with its three reads marked as not made.
+  async function listModules() {
+    const mods = list(await api('/crm/v2/settings/modules'), 'modules', 'modules');
+    return { modules: mods.filter((m) => m.api_name).map((m) => ({
+      api_name: m.api_name, module_name: m.module_name || m.api_name,
+      singular_label: m.singular_label || null, plural_label: m.plural_label || null,
+      id: m.id, generated_type: m.generated_type || null,
+      deletable: !!m.deletable, editable: !!m.editable, creatable: !!m.creatable,
+      viewable: m.viewable !== false, visible: m.visible !== false,
+      api_supported: m.api_supported !== false,
+    })) };
+  }
   async function pullModules() {
     const mods = list(await api('/crm/v2/settings/modules'), 'modules', 'modules');
     const out = [];
@@ -1186,7 +1200,9 @@
     }
     return row;
   }
-  async function pullActions() {
+  // `taskDetails: false` is «Pull list»: the four lists, and no task read one by one. Every task is
+  // then reported as a detail not read, which is what the panel already keeps the last reading for.
+  async function pullActions(taskDetails = true) {
     const out = [], missed = [], capped = [], detailMissed = [];
     for (let kindIndex = 0; kindIndex < ACTION_KINDS.length; kindIndex++) {
       const k = ACTION_KINDS[kindIndex];
@@ -1218,9 +1234,9 @@
             // was not read. It used to be reported as `capped`, which the panel words as «there are
             // more in Zoho»: false, and it named a kind that does not exist, so nothing downstream
             // could match it against a row. Named by id instead, in the same list as a refusal.
-            if (i >= 500) {
+            if (!taskDetails || i >= 500) {
               mine[i].detail_read = false;
-              detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: 'beyond the per-pull detail bound' });
+              detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: taskDetails ? 'beyond the per-pull detail bound' : 'list pull' });
               pullProgress('task details', i + 1, mine.length);
               continue;
             }
@@ -1519,8 +1535,9 @@
     if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));
     if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source, msg.language, msg.runtime), (file) => ({ ok: true, file }));
     if (msg?.cmd === 'pullModules') return reply(pullModules());
+    if (msg?.cmd === 'listModules') return reply(listModules());
     if (msg?.cmd === 'pullFailures') return reply(pullFailures());
-    if (msg?.cmd === 'pullActions') return reply(pullActions());
+    if (msg?.cmd === 'pullActions') return reply(pullActions(msg.taskDetails !== false));
     if (msg?.cmd === 'pullConnections') return reply(pullConnections());
   });
 
