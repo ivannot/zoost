@@ -163,7 +163,7 @@ async function pullAll(depth = {}) {
     await cacheBinding(bound);
     await rebuildTree();
     const dl = full ? await downloadMissing(true, true) : null;   // every function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
-    if (!full) { updateMissingButton(); setStatus(`Functions list pulled: ${merged.length} in Zoho. Sources on disk were not read again - Pull reads them.`, 'ok'); }
+    if (!full) { updateMissingButton(); setStatus(`Functions list pulled: ${merged.length} in Zoho. Sources on disk were not read again - Pull list + details reads them.`, 'ok'); }
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // **The truncation is said where it is discovered, and this line is gone.** It sat here because

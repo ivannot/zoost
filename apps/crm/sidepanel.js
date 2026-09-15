@@ -171,9 +171,9 @@ function showEmergency(link, report = link) {
 // with nothing to hold together. tests/panel.test.mjs enforces the rule in the other direction.
 const MSG = {
   actNotHere: 'That action is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Actions.',
-  actNotPulled: 'Actions have not been pulled into this workspace yet - press Pull here first.',
+  actNotPulled: 'Actions have not been pulled into this workspace yet - press Pull list + details here first.',
   modNotHere: 'That module is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Modules.',
-  modNotPulled: 'Modules have not been pulled into this workspace yet - press Pull here first.',
+  modNotPulled: 'Modules have not been pulled into this workspace yet - press Pull list + details here first.',
   openInZoho: 'Open in Zoho \u2197',
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   copyFailed: 'Could not copy: ',
@@ -181,7 +181,7 @@ const MSG = {
   noWorkspaceHere: 'Something changed in Zoho - no workspace is open here.',
   navGone: 'That step is not in this workspace any more.',
   wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
-  wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
+  wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull list + details here first.',
   schNotHere: 'That schedule is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Schedules.',
   schNotPulled: 'Schedules have not been pulled into this workspace yet - press Pull here first.',
   openThis: 'Open this ',   // two places compose their own ending onto it
@@ -851,8 +851,12 @@ function setMode(mode) {
   // the word on every mode change, so the button reverted the moment anyone touched a segment.
   // Only the title varies, because only the type does.
   const _split = LIST_PULL_TABS.has(mode);
+  // Named for what it reads beside «Pull list», which is the list and nothing more - «Pull» alone did
+  // not say it read every item, and next to its sibling could be read as the lesser of the two. The
+  // mark stays; the name lives where a mark's name lives, and it is never emptied.
+  $('pullone').setAttribute('aria-label', _split ? 'Pull list + details' : 'Pull');
   $('pullone').title = _split
-    ? `Pull ${_typeLabel} - the list and every item read again from Zoho. "Pull all" does every type`
+    ? `Pull list + details - the list of ${_typeLabel} and every item read again from Zoho. "Pull all" does every type`
     : `Pull only ${_typeLabel} into the local mirror - "Pull all" pulls every type`;
   $('pulllist').style.display = _split ? '' : 'none';
   $('pulllist').title = `Pull list - which ${_typeLabel} exist in Zoho, in a few requests rather than one per item; what is already on disk is not read again, and the bar says since when`;

@@ -30,7 +30,7 @@ async function pullWorkflows(depth = {}) {
     if (!(await loadWorkflowIndex(op))) return;
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     const dl = full ? await downloadMissingWf(true) : null;   // every rule, so an edit made in Zoho since the last pull arrives
-    if (!full) setStatus(`Workflows list pulled: ${r.entries.length} in Zoho. Rules on disk were not read again - Pull reads them.`, 'ok');
+    if (!full) setStatus(`Workflows list pulled: ${r.entries.length} in Zoho. Rules on disk were not read again - Pull list + details reads them.`, 'ok');
     // The writes above dropped \u00abwhich rule fires this action\u00bb - it is read out of these very rules.
     // Dropping it is the write's business; rebuilding it has to happen where there is an await, and
     // this is that place: `actionFiredBy()` is called while a row is being drawn and cannot read a

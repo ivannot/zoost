@@ -149,7 +149,7 @@ async function pullModules(depth = {}) {
  *
  *  A module already on disk keeps its file and its index rows exactly as the last Pull left them - that
  *  reading is the best one there is, and the bar says how old it is. A module new since then lands as
- *  its identity with the three reads marked as not made, so its table says «press Pull» rather than
+ *  its identity with the three reads marked as not made, so its table says «press Pull list + details» rather than
  *  «no fields». A module gone from the list goes from the mirror, as it does in a full Pull: the list is
  *  one unpaged answer, the same one the full Pull prunes by. A pull of its own - the same checks of the
  *  folder, the tab and the binding, its own failure record and its own end - because a guard on the
@@ -208,7 +208,7 @@ async function pullModuleList() {
     if (!op.current()) return;
     const gap = (wFail.length ? ` ${wFail.length} new module(s) could not be written: ${wFail.slice(0, 3).join(', ')}.` : '')
       + (rFail.length ? ` ${rFail.length} file(s) of removed modules could not be deleted - the next pull retries.` : '');
-    setStatus(`Modules list pulled: ${(r.modules || []).length} in Zoho${added.length ? `, ${added.length} new - Pull reads their fields` : ''}`
+    setStatus(`Modules list pulled: ${(r.modules || []).length} in Zoho${added.length ? `, ${added.length} new - Pull list + details reads their fields` : ''}`
       + `${pruned ? `, ${pruned} file(s) of removed modules deleted` : ''}. Fields on disk were not read again.${gap}`, gap ? 'warn' : 'ok');
     await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, 'list');
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
@@ -524,7 +524,7 @@ function renderFieldsTable(m, found = fieldTriggers) {
       // reader can see. `failed` is written by a pull that worked and came up short, which is exactly
       // the pull that produces this state. The workspace-level blockers above it still apply, and
       // those are what `emptyReason()` is being asked for.
-      : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
+      : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull list + details</b> above to read them from Zoho.')}</div>`;
   }
   // The values have no column: a column of them is what once made the table scroll sideways, and
   // their count sits in Type, where the word «picklist» already is. The rules do have one - a number,

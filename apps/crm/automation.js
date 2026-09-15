@@ -722,7 +722,7 @@ async function pullActions(depth = {}) {
       + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho, and nothing was removed.` : '')
       + (unread.length ? ` ${unread.length} task(s) whose detail Zoho did not return`
           + (kept.length ? ` - ${kept.length} of them still show the field mappings the last pull read.` : ' - they are listed, their field mappings are not read.') : '');
-    const said = full ? `${actions.length} action(s) pulled.` : `Actions list pulled: ${actions.length}. Task field mappings on disk were not read again - Pull reads them.`;
+    const said = full ? `${actions.length} action(s) pulled.` : `Actions list pulled: ${actions.length}. Task field mappings on disk were not read again - Pull list + details reads them.`;
     if (viewMode === 'actions') { await rebuildActions(); setStatus(said + note, note ? 'warn' : 'ok'); }
     else setStatus(said + note, (missed.length || capped.length || unread.length) ? 'warn' : 'ok');
     // «Every item read» only when it was: a task past the per-pull bound, or one Zoho did not answer,
@@ -840,7 +840,7 @@ function renderActions() {
       + `<span class="fname">${escHtml(a.name || a.id)}</span>`
       + `<span class="rest rm" title="${escA(a.module_label || a.module || 'no module')}">${escHtml(a.module || '')}</span>`
       + kindSlot
-      + `<span class="rest rs" title="${escA('Pulled before this version captured everything about it - press Pull to complete it')}">${actStale(a) ? '\u25d0' : ''}</span>`
+      + `<span class="rest rs" title="${escA('Pulled before this version captured everything about it - press Pull list + details to complete it')}">${actStale(a) ? '\u25d0' : ''}</span>`
       + `<span class="rest ru${used || a.associated ? '' : ' none'}" title="${escA(used ? 'rules that fire it, read from the rules on disk' : a.associated ? 'Zoho reports it as in use; no rule on disk names it' : 'no rule uses it, as far as Zoho reports')}">${used}\u00d7</span>`;
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshActions(); };
     el.onclick = () => openAction(a);
@@ -925,7 +925,7 @@ function openAction(a) {
     // looked like after the first version shipped, and it read as an org where nothing writes
     // anything.
     + (a.kind === 'field_updates' ? row('Writes', actStale(a)
-        ? '<span style="color:var(--warn)">not read by the pull that wrote this - press Pull to read it</span>'
+        ? '<span style="color:var(--warn)">not read by the pull that wrote this - press Pull list + details to read it</span>'
         : (a.value === null || a.value === undefined)
           ? '<span style="color:var(--muted)">clears the field</span>'
           : `<b>${escHtml(String(a.value))}</b>`) : '')

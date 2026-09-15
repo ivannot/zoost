@@ -1029,6 +1029,10 @@ CRM = """
     for (const [tab, shown] of [['functions', true], ['modules', true], ['workflows', true], ['actions', true], ['schedules', false], ['connections', false]]) {
       setMode(tab); await settle('the ' + tab + ' view never finished drawing');
       if (($('pulllist').style.display !== 'none') !== shown) say('Pull list is ' + (shown ? 'missing from ' : 'offered on ') + tab);
+      // And the full pull says it reads every item where the quick one sits beside it.
+      const named = $('pullone').getAttribute('aria-label');
+      if (named !== (shown ? 'Pull list + details' : 'Pull')) say('the full pull on ' + tab + ' is named «' + named + '»');
+      if (!$('pullone').title) say('the full pull on ' + tab + ' lost its title');
     }
 
     // And a function has no Related lists tab at all - absent, not disabled.

@@ -223,7 +223,7 @@ function paintBehind() {
   el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : '\u25d0 details older than the list';
   el.title = `The list was pulled on ${new Date(gap.listAt).toLocaleString()}; `
     + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}` : 'each item was last read by an earlier pull, before Zoost recorded when')
-    + ` - anything changed in Zoho since then is not here. Pull reads them again.`;
+    + ` - anything changed in Zoho since then is not here. Pull list + details reads them again.`;
 }
 function updateMissingButton() {
   paintBehind();
