@@ -134,13 +134,14 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
   conns = scope.connections ? (conns || []) : [];
+  const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
   acts = scope.actions ? (acts || []) : [];
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const esc = escHtml;
   const ws = bound || {};
   // Which rules each field makes fire - the panel's Fields table, carried into the report. Only when
   // the workflows are in it: a column of blanks in a report without them would say «none».
-  const fTrig = wfs.length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail))) : null;
+  const fTrig = wfs.length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail)), allActs) : null;
   const wfUnread = wfs.filter((w) => !w.detail).length;
   const now = new Date().toLocaleString();
 
@@ -300,9 +301,10 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   };
   const groups = { Standard: [], Custom: [] }; mods.forEach((m) => (m.generated_type === 'custom' ? groups.Custom : groups.Standard).push(m));
   const trigTd = (m, fl) => (fTrig.get(`${m.api_name}:${fl.api_name}`) || [])
-    .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ', off'})</span>`).join('<br>');
-  let modHtml = fTrig && wfUnread && mods.length
-    ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they watch are not marked under «Fires workflows».</p>` : '';
+    .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(roleText(r))}${r.active ? '' : ', off'})</span>`).join('<br>');
+  let modHtml = (fTrig && wfUnread && mods.length
+    ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».</p>` : '')
+    + (fTrig && !allActs.length && mods.length ? '<p class="note">Automation actions are not in this workspace, so a rule that writes a field is not marked for it.</p>' : '');
   for (const g2 of ['Standard', 'Custom']) {
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
@@ -326,7 +328,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
         + (mref ? `<div class="refs"><span><b>Not described by Zoho.</b> ${esc(mref.text)}</span></div>` : '')
-        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Fires workflows</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
+        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
     });
   }
 
@@ -758,7 +760,8 @@ function buildExportMarkdown(d, scope) {
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
-  const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail))) : null;
+  const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
+  const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail)), allActs) : null;
   const wfUnread = (wfs || []).filter((w) => !w.detail).length;
   conns = scope.connections ? (conns || []) : [];
   acts = scope.actions ? (acts || []) : [];
@@ -914,15 +917,16 @@ function buildExportMarkdown(d, scope) {
     emit(rels.filter((r) => r.sys), 'System related lists (notes, attachments, activities\u2026)');
   }
   md += '---\n\n## Modules (schema)\n\n';
-  if (fTrig && wfUnread && mods.length) md += `${wfUnread} workflow rule(s) were not downloaded, so the fields they watch are not marked under «Fires workflows».\n\n`;
+  if (fTrig && wfUnread && mods.length) md += `${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».\n\n`;
+  if (fTrig && !allActs.length && mods.length) md += 'Automation actions are not in this workspace, so a rule that writes a field is not marked for it.\n\n';
   if (!mods.length) md += mdAbsent(scope.modules, 'modules');
   mods.slice().sort(byField('api_name')).forEach((m) => {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
     const mref = moduleRefusal(m.unreadable);
     if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
-    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |${fTrig ? ' Fires workflows |' : ''}\n|---|---|---|---|---|${fTrig ? '---|' : ''}\n`;
+    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |${fTrig ? ' Workflows |' : ''}\n|---|---|---|---|---|${fTrig ? '---|' : ''}\n`;
     const trigMd = (f) => (fTrig.get(`${m.api_name}:${f.api_name}`) || [])
-      .map((r) => `${_mdCell(r.name)} (${_mdCell(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ', off'})`).join('; ');
+      .map((r) => `${_mdCell(r.name)} (${_mdCell(roleText(r))}${r.active ? '' : ', off'})`).join('; ');
     (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${_pick(f.picklist, 12, _mdCell)} |${fTrig ? ' ' + trigMd(f) + ' |' : ''}\n`; });
     md += '\n';
     if (scope.relations && (m.related_lists || []).length) {

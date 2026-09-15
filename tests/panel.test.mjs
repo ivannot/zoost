@@ -476,8 +476,8 @@ const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN',
     .map((k) => sliceFn('apps/crm/export.js', k)))
   // The trigger readers live in automation.js and both builders call them: the panel is one scope
   // across its scripts, and a lift that stops at one file throws where the page would not.
-  .concat([sliceConst('apps/crm/automation.js', 'ANY_VALUE')])
-  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap']
+  .concat(['ANY_VALUE', 'ruleCount'].map((k) => sliceConst('apps/crm/automation.js', k)))
+  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText']
     .map((k) => sliceFn('apps/crm/automation.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
@@ -21582,8 +21582,8 @@ test('crm: a function deleted between census and download is «not found», not 
 // shapes are the ones measured there - one `${ANYVALUE}` leaf, OR groups nested four deep, a date
 // field with an offset - with placeholder names. `details.fields`, which the detail pane and both
 // reports looked for, is in none of them.
-const TRIGGER_READERS = () => [sliceConst('apps/crm/automation.js', 'ANY_VALUE'),
-  ...['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap']
+const TRIGGER_READERS = () => [sliceConst('apps/crm/automation.js', 'ANY_VALUE'), sliceConst('apps/crm/automation.js', 'ruleCount'),
+  ...['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText']
     .map((k) => sliceFn('apps/crm/automation.js', k))];
 const watchLeaf = (api) => ({ comparator: '${ANYVALUE}', field: { api_name: api, id: '1' }, value: '${ANYVALUE}' });
 
@@ -21617,7 +21617,31 @@ test('the fields that make a rule fire are read from the shapes Zoho writes', ()
   assert.equal(map.has('Contacts:Name'), false);
 });
 
-const FIELDS_TABLE = () => ['lookupOf', 'FIELD_SORTS'].map((k) => sliceConst('apps/crm/modules.js', k))
+test('the fields a rule writes are read from its field updates, by id and then by an unshared name', () => {
+  const { fieldTriggerMap, ruleCount } = load(TRIGGER_READERS());
+  const acts = [
+    { kind: 'field_updates', id: '11', name: 'Set status', module: 'Contacts', field: 'Status', value: 'Won' },
+    { kind: 'field_updates', id: '12', name: 'Clear owner', module: 'Contacts', field: 'Owner', value: null },
+    { kind: 'field_updates', id: '13', name: 'Twin', module: 'Contacts', field: 'Stage', value: 'A' },
+    { kind: 'field_updates', id: '14', name: 'twin', module: 'Contacts', field: 'Stage', value: 'B' },
+    { kind: 'field_updates', id: '15', name: 'Old pull', module: 'Contacts', field: '', value: null },
+    { kind: 'email_notifications', id: '16', name: 'Set status', module: 'Contacts' },
+  ];
+  const rule = { id: 'r1', name: 'Rule', module: { api_name: 'Contacts' }, status: { active: true },
+    execute_when: { type: 'field_update', details: { criteria: watchLeaf('Status') } },
+    conditions: [{ instant_actions: { actions: [{ type: 'field_updates', id: '999', name: 'SET STATUS' }, { type: 'field_updates', id: '15', name: 'Old pull' }] },
+                   scheduled_actions: [{ actions: [{ type: 'field_updates', id: '12', name: 'renamed since' }, { type: 'field_updates', id: '0', name: 'twin' }] }] }] };
+  const map = fieldTriggerMap([rule], acts);
+  assert.deepEqual([...map.get('Contacts:Status')].map((e) => [e.role, e.when]), [['starts', ''], ['writes', 'writes Won']],
+                   'a rule that starts on a field and writes it is not listed as both');
+  assert.equal(ruleCount(map.get('Contacts:Status')), 1, 'one rule with two roles was counted twice');
+  assert.deepEqual([...map.get('Contacts:Owner')].map((e) => e.when), ['clears it'], 'the id did not win over a renamed action, or no value read as unknown');
+  assert.equal(map.has('Contacts:Stage'), false, 'a name two actions share picked one of them');
+  assert.equal([...map.keys()].some((k) => k.endsWith(':')), false, 'an action pulled before the field was recorded wrote an empty field');
+});
+
+const FIELDS_TABLE = () => [sliceConst('apps/crm/automation.js', 'ruleCount')]
+  .concat(['lookupOf', 'FIELD_SORTS'].map((k) => sliceConst('apps/crm/modules.js', k)))
   .concat(['pickCell', 'trigCell', 'sortedFields', 'nextFieldSort', 'renderFieldsTable'].map((k) => sliceFn('apps/crm/modules.js', k)));
 
 test('the Fields table counts the rules a field fires in a column of its own, and says when it cannot know', () => {
@@ -21668,21 +21692,26 @@ test('a watched field is named on its rule and on its module in both reports, ne
              detail: { id: 'w9', name: 'Status moved', module: mod, status: { active: true }, conditions: [],
                        execute_when: { type: 'field_update', details: { trigger_module: mod, criteria: watchLeaf('Status'), repeat: true, match_all: false } } } },
            { id: 'w10', name: 'Not here', module: 'Contacts', type: 'create', active: true, detail: null }];
+  f.wfs[0].detail.conditions = [{ instant_actions: { actions: [{ type: 'field_updates', id: 'a1', name: 'Win it' }] }, scheduled_actions: [] }];
+  const acts = [{ kind: 'field_updates', id: 'a1', name: 'Win it', module: 'Contacts', field: 'Status', value: 'Won', sv: 4 }];
   const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportMarkdown'), sliceFn(rel, 'buildExportHtml'),
                   sliceFn(rel, '_mdCell')], MD_STUBS());
-  const data = { fns: f.fns, mods: f.mods, g: f.g, wfs: f.wfs, scheds: f.scheds, conns: [], fails: { failures: [] }, acts: [], actUsers: {} };
+  const data = { fns: f.fns, mods: f.mods, g: f.g, wfs: f.wfs, scheds: f.scheds, conns: [], fails: { failures: [] }, acts, actUsers: {} };
   const md = m.buildExportMarkdown(data, MD_SCOPE);
-  const html = await m.buildExportHtml(f.fns, f.mods, f.g, {}, f.wfs, f.scheds, [], { failures: [] }, [], {}, MD_SCOPE);
+  const html = await m.buildExportHtml(f.fns, f.mods, f.g, {}, f.wfs, f.scheds, [], { failures: [] }, acts, new Map(), MD_SCOPE);
   for (const [name, text] of [['Markdown', md], ['HTML', html]]) {
     assert.ok(!text.includes('ANYVALUE'), `${name}: the watched field is printed as a condition`);
     assert.match(text, /fields: Status/, `${name}: the rule does not say which field starts it`);
     assert.match(text, /1 workflow rule\(s\) were not downloaded/, `${name}: a rule it could not read is not admitted`);
   }
-  assert.match(md, /\| Status \| `Status` \|.*\| Status moved \(on change\) \|/, 'Markdown: the field does not name the rule it fires');
-  assert.match(html, /<th>Fires workflows<\/th>/);
+  assert.match(md, /\| Status \| `Status` \|.*\| Status moved \(on change\); Status moved \(writes Won\) \|/, 'Markdown: the field does not name the rule that starts on it and writes it');
+  assert.match(html, /<th>Workflows<\/th>/);
+  assert.match(html, /\(writes Won\)/, 'HTML: the field does not say which rule writes it');
+  // The census is read whatever the chapters: unticking Actions must not unwrite a field.
+  assert.match(m.buildExportMarkdown(data, { ...MD_SCOPE, actions: false }), /Status moved \(writes Won\)/);
   assert.match(html, /<a href="#wf-w9">Status moved<\/a>/, 'HTML: the field does not link to the rule it fires');
   // Without the workflows chapter there is nothing to link to, and an empty column would read «none».
-  assert.ok(!m.buildExportMarkdown(data, { ...MD_SCOPE, workflows: false }).includes('Fires workflows'));
+  assert.ok(!m.buildExportMarkdown(data, { ...MD_SCOPE, workflows: false }).includes('| Picklist | Workflows |'));
 });
 
 test('a rule written while the field map is being read does not leave the older reading cached', async () => {

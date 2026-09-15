@@ -46,6 +46,7 @@
   .ftnote{padding:6px 10px;color:var(--muted);font-size:11px}
   .fllist{margin:0;padding:0 0 0 2.6em;font:12px var(--mono);color:#cbd5e1}
   ul.fllist{list-style:none;padding-left:0}
+  .flrole{margin:12px 0 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px} .flrole:first-child{margin-top:0} .flrole span{color:var(--ink)}
   .fllist li{padding:6px 2px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
   .fllist .wflink{color:var(--accent);cursor:pointer;text-align:left} .fllist .wflink:hover{text-decoration:underline}
   .fllist .wfwhen{display:block;color:var(--muted);font-size:11px;margin-top:2px}

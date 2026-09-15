@@ -323,8 +323,8 @@ function pickCell(f) {
   return `<button class="plbtn" data-list="values" data-f="${escA(f.api_name)}" aria-haspopup="dialog" title="Show the values, one per line">${v.length} value${v.length === 1 ? '' : 's'}</button>`;
 }
 function trigCell(f, rules) {
-  if (!rules.length) return '';
-  return `<button class="plbtn" data-list="rules" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Workflows" title="Workflow rules that watch this field for a change or count a date from it">${rules.length}</button>`;
+  const n = ruleCount(rules); if (!n) return '';
+  return `<button class="plbtn" data-list="rules" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Workflows" title="Workflow rules this field starts, or that write it">${n}</button>`;
 }
 const lookupOf = (f) => (typeof f.lookup === 'string' ? f.lookup
   : (f.lookup && (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module))))) || '';
@@ -368,10 +368,16 @@ function openFieldList(kind, api, opener) {
     $('fieldlisth').textContent = `${name} · ${v.length} value${v.length === 1 ? '' : 's'}`;
     $('fieldlistbody').innerHTML = `<ol class="fllist">${v.map((x) => `<li>${escHtml(x)}</li>`).join('')}</ol>`;
   } else {
-    const rules = shown.trig(f);
-    $('fieldlisth').textContent = `${name} · ${rules.length} workflow${rules.length === 1 ? '' : 's'}`;
-    $('fieldlistbody').innerHTML = `<ul class="fllist">${rules.map((r) => `<li><button type="button" class="bare wflink" data-wfid="${escA(r.id)}" title="Open this workflow">${escHtml(r.name)}</button>`
-      + `<span class="wfwhen">${escHtml(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ' · off'}</span></li>`).join('')}</ul>`;
+    const rules = shown.trig(f), n = ruleCount(rules);
+    $('fieldlisth').textContent = `${name} · ${n} workflow${n === 1 ? '' : 's'}`;
+    // Grouped by what the rule does with the field: a rule that both starts on it and writes it is
+    // listed under each, because those are two different reasons to be looking at it.
+    const li = (r) => `<li><button type="button" class="bare wflink" data-wfid="${escA(r.id)}" title="Open this workflow">${escHtml(r.name)}</button>`
+      + `<span class="wfwhen">${escHtml(roleText(r))}${r.active ? '' : ' · off'}</span></li>`;
+    $('fieldlistbody').innerHTML = [['starts', 'Starts it'], ['writes', 'Writes it']].map(([role, title]) => {
+      const mine = rules.filter((r) => r.role === role);
+      return mine.length ? `<h4 class="flrole">${title} <span>${mine.length}</span></h4><ul class="fllist">${mine.map(li).join('')}</ul>` : '';
+    }).join('');
   }
   fieldListOpener = opener || null;
   $('scrim').classList.add('on'); panelInert(true); $('fieldlist').classList.add('on');
@@ -429,7 +435,7 @@ async function showChosenLayout(sel, m, mine, op) {
 function renderFieldsTable(m, found = fieldTriggers) {
   const trig = (f) => (found && found.map.get(`${m.api_name}:${f.api_name}`)) || [];
   fieldListShown = { m, found, trig };
-  const rows = sortedFields(m.fields, (f) => trig(f).length).map(({ f }) => `<tr>
+  const rows = sortedFields(m.fields, (f) => ruleCount(trig(f))).map(({ f }) => `<tr>
     <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
     <td class="mono">${escHtml(f.api_name)}</td>
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f)}</td>
@@ -453,9 +459,10 @@ function renderFieldsTable(m, found = fieldTriggers) {
   // their count sits in Type, where the word «picklist» already is. The rules do have one - a number,
   // narrow - because a count that cannot be sorted cannot answer «which field fires the most».
   // Silence here would read as «no field starts a rule», which is only true when the rules were read.
-  const note = !found ? ''
-    : !found.pulled ? 'No workflow rules are in this workspace, so no field here shows the rules it makes fire.'
-    : found.unread ? `${found.unread} workflow rule(s) are not downloaded, so the fields they watch are not marked.` : '';
+  const notes = !found ? []
+    : !found.pulled ? ['No workflow rules are in this workspace, so no field here shows the rules that touch it.']
+    : [found.unread ? `${found.unread} workflow rule(s) are not downloaded, so the fields they touch are not counted.` : '',
+       found.actions === false ? 'Automation actions are not pulled, so a rule that writes a field is not counted for it.' : ''].filter(Boolean);
   // A header is a button: sorting is reached by Tab and Enter like every other control here.
   const th = (key) => {
     const on = fieldSort.key === key, s = FIELD_SORTS[key];
@@ -463,7 +470,7 @@ function renderFieldsTable(m, found = fieldTriggers) {
       + `<button type="button" class="bare thsort" data-sort="${escA(key)}" title="Sort by this column - again to reverse, a third time for Zoho's order">${escHtml(s.text)}${on ? (fieldSort.dir === 1 ? ' \u25b4' : ' \u25be') : ''}</button></th>`;
   };
   return `<table class="ftbl"><thead><tr>${Object.keys(FIELD_SORTS).map(th).join('')}</tr></thead><tbody>${rows}</tbody></table>`
-    + (note ? `<div class="ftnote">${escHtml(note)}</div>` : '');
+    + notes.map((t) => `<div class="ftnote">${escHtml(t)}</div>`).join('');
 }
 // Selecting a different item must start the reader at the top of the new content;
 // keeping the previous scroll offset lands you in the middle of an unrelated document.

@@ -952,9 +952,33 @@ CRM = """
       if (!rb) say('no field in Accounts counts the workflow rules it fires');
       const nRules = Number(rb.textContent);
       rb.click(); await until(() => $('fieldlist').classList.contains('on'), 'the workflows layer never opened');
-      if (items().length !== nRules) say(`the layer lists ${items().length} of ${nRules} rules`);
+      const listed = new Set(items().map((x) => (x.querySelector('.wflink') || { dataset: {} }).dataset.wfid));
+      if (listed.size !== nRules) say(`the layer names ${listed.size} rule(s) and the count says ${nRules}`);
       if (!oneEach(items())) say('the rules in the layer are not one per line');
       $('fieldlistx').click(); await until(() => !$('fieldlist').classList.contains('on'), 'Close never closed the layer');
+
+      // A rule's field update is a second way to touch a field: the sample's merge rule writes
+      // Contacts.Status, so that layer has a «Writes it» group naming what it writes.
+      {
+        modSeg.click(); await settle();
+        // Opened directly: the tree is narrowed by whatever an earlier case typed into the search box,
+        // and this case is about the layer, not about finding a row. A narrowed tree with an empty box
+        // would be a defect of its own, so that much is asked.
+        if (![...document.querySelectorAll('#tree .f')].some((e) => /Contacts/.test(e.textContent)) && !$('find').value.trim())
+          say('the modules tree is narrowed with nothing in the search box: ' + [...document.querySelectorAll('#tree .f')].map((e) => e.textContent.trim().slice(0, 24)).join(' | '));
+        await openModule('modules/Contacts.json'); await until(() => currentPath === 'modules/Contacts.json', 'Contacts never opened');
+        $('pvtab_code').click(); await settle();
+        const row = [...$('pvfields').querySelectorAll('tbody tr')].find((tr) => tr.querySelector('.plbtn[data-list="values"][data-f="Status"]'));
+        const wb = row && row.querySelector('.plbtn[data-list="rules"]');
+        if (!wb) say('Contacts.Status, which a rule writes, has no workflow count');
+        wb.click(); await until(() => $('fieldlist').classList.contains('on'), 'the Contacts.Status layer never opened');
+        const heads2 = [...$('fieldlistbody').querySelectorAll('.flrole')].map((h) => h.textContent);
+        if (!heads2.some((h) => /^Writes it/.test(h))) say('the layer has no Writes it group: ' + heads2.join(' | '));
+        if (!/writes Negotiation/.test($('fieldlistbody').textContent)) say('the layer does not say what the rule writes');
+        $('fieldlistx').click(); await until(() => !$('fieldlist').classList.contains('on'), 'Close never closed the layer');
+        await openModule('modules/Accounts.json'); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never reopened');
+        $('pvtab_code').click(); await settle();
+      }
 
       const sortBtn = () => $('pvfields').querySelector('.thsort[data-sort="wf"]');
       const counts = () => [...$('pvfields').querySelectorAll('tbody tr')]

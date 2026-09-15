@@ -448,6 +448,44 @@ function ruleTriggerFields(rule) {
   }
   return { module, kind: null, fields, when: '' };
 }
+/** The fields a rule writes: its field-update actions, looked up in the actions census.
+ *
+ *  A rule names an action as {type, id, name}, and the id there is not always the census id - measured,
+ *  77 of 77 references matched by name and none by id - so the id is tried first, where it is exact,
+ *  and a name second, only when it identifies one action. The census is what knows the field and the
+ *  module: an action pulled before it recorded the field (`field` empty) writes nothing this can name. */
+function ruleWrittenFields(rule, actions) {
+  const out = [];
+  const byId = new Map(), byName = new Map();
+  for (const a of actions || []) {
+    if (!a || a.kind !== 'field_updates') continue;
+    byId.set(String(a.id), a);
+    const k = String(a.name || '').toLowerCase();
+    byName.set(k, byName.has(k) ? null : a);   // null: two actions share it, so it names neither
+  }
+  for (const c of (rule && rule.conditions) || []) {
+    const acts = [];
+    if (c && c.instant_actions && Array.isArray(c.instant_actions.actions)) acts.push(...c.instant_actions.actions);
+    for (const sa of Array.isArray(c && c.scheduled_actions) ? c.scheduled_actions : []) acts.push(...((sa && sa.actions) || []));
+    for (const ref of acts) {
+      if (!ref || ref.type !== 'field_updates') continue;
+      const a = byId.get(String(ref.id)) || byName.get(String(ref.name || '').toLowerCase());
+      if (a && a.field && a.module && !out.some((o) => o.module === a.module && o.field === a.field)) {
+        out.push({ module: a.module, field: a.field, value: writtenValue(a) });
+      }
+    }
+  }
+  return out;
+}
+/** What a field update puts in the field, in words: absent is «clears it», which is what Zoho means
+ *  by no value - not «unknown». */
+function writtenValue(a) {
+  const v = a.value;
+  if (v === null || v === undefined) return 'clears it';
+  if (Array.isArray(v)) return `writes ${v.join(', ')}`;
+  if (typeof v === 'object') return `writes ${v.name || v.display_value || JSON.stringify(v)}`;
+  return `writes ${String(v)}`;
+}
 /** «3 days after at 13:00», from the offset a date rule carries. A negative unit is before the date
  *  and zero is the day itself, both measured; a unit that is absent says nothing rather than «on the
  *  date», which would be a claim. */
@@ -469,20 +507,25 @@ function critWatchesOnly(crit) {
   if (Array.isArray(crit.group)) return crit.group.length > 0 && crit.group.every(critWatchesOnly);
   return crit.comparator === ANY_VALUE && crit.value === ANY_VALUE;
 }
-/** `module:field` -> the rules that field makes fire. One builder for the panel and both reports, so
- *  the three cannot disagree about which rule watches what. */
-function fieldTriggerMap(rules) {
+/** `module:field` -> the rules that touch it, each with its role: `starts` (the field's change or
+ *  its date makes the rule fire) or `writes` (a field update the rule runs). One builder for the panel
+ *  and both reports, so the three cannot disagree. A rule with two roles on one field is two entries;
+ *  `ruleCount` counts it once. */
+function fieldTriggerMap(rules, actions) {
   const map = new Map();
+  const put = (key, entry) => { if (!map.has(key)) map.set(key, []); map.get(key).push(entry); };
   for (const r of rules || []) {
+    const base = { id: String(r.id), name: r.name || String(r.id), active: !!(r.status && r.status.active) };
     const t = ruleTriggerFields(r);
-    for (const f of t.fields) {
-      const key = `${t.module}:${f}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push({ id: String(r.id), name: r.name || String(r.id), kind: t.kind, when: t.when,
-                          active: !!(r.status && r.status.active) });
-    }
+    for (const f of t.fields) put(`${t.module}:${f}`, { ...base, role: 'starts', kind: t.kind, when: t.when });
+    for (const w of ruleWrittenFields(r, actions)) put(`${w.module}:${w.field}`, { ...base, role: 'writes', kind: 'write', when: w.value });
   }
   return map;
+}
+const ruleCount = (entries) => new Set((entries || []).map((e) => e.id)).size;
+/** A rule's role on a field, in the words the layer and both reports use. */
+function roleText(r) {
+  return r.role === 'writes' ? r.when : r.kind === 'date' ? (r.when || 'on a date') : 'on change';
 }
 /** The same map for the panel, from the rule files on disk. A rule in the index with no file is
  *  counted rather than skipped: it may watch any field, so the table says how many it cannot see. */
@@ -490,14 +533,17 @@ let fieldTriggers = null;
 async function buildFieldTriggers(op = beginWorkspaceOp()) {
   if (!op.current()) return null;
   let idx = null; try { idx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
-  if (!Array.isArray(idx)) return op.current() ? { map: new Map(), pulled: false, unread: 0 } : null;
+  if (!Array.isArray(idx)) return op.current() ? { map: new Map(), pulled: false, unread: 0, actions: false } : null;
+  // Without the census a rule's field updates name no field, so «writes» is unknown rather than none.
+  let acts = null; try { acts = JSON.parse(await op.read('actions/index.json')); } catch (_) {}
+  if (!op.current()) return null;
   const rules = []; let unread = 0;
   for (const w of idx) {
     if (!op.current()) return null;
     let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
     if (d) rules.push(Object.assign({ id: w.id, name: w.name }, d)); else unread++;
   }
-  return op.current() ? { map: fieldTriggerMap(rules), pulled: true, unread } : null;
+  return op.current() ? { map: fieldTriggerMap(rules, Array.isArray(acts) ? acts : []), pulled: true, unread, actions: Array.isArray(acts) } : null;
 }
 /** The map for a table about to be drawn: built when absent, and kept only if no rule was written
  *  while it was being read. A pull writes rule files one at a time, so a reading taken across one of

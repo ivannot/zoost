@@ -521,7 +521,7 @@ const noteWrite = (rel) => {
   // every module reading the panel is about to resolve.
   if (rel === 'modules/index.json') { modNamesCache = null; graphCache = null; aiConnCache = null; return; }
   if (rel === 'connections/index.json') { aiConnCache = null; return; }
-  if (rel === 'actions/index.json') { aiActCache = null; return; }
+  if (rel === 'actions/index.json') { aiActCache = null; fieldTriggers = null; return; }
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
   // the answer - and the actions pull was the only one that rebuilt it.
   if (rel.startsWith('workflows/')) { actionUsers = null; fieldTriggers = null; aiActCache = null; return; }

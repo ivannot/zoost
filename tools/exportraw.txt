@@ -55,7 +55,6 @@ apps/crm/export.js	_mdCell(n.namespace)
 apps/crm/export.js	_mdCell(r.api)
 apps/crm/export.js	_mdCell(r.api_name)
 apps/crm/export.js	_mdCell(r.field)
-apps/crm/export.js	_mdCell(r.kind === 'date' ? (r.when || 'on a date') : 'on change')
 apps/crm/export.js	_mdCell(r.label || '')
 apps/crm/export.js	_mdCell(r.label)
 apps/crm/export.js	_mdCell(r.module || r.connected_module || '')
@@ -67,6 +66,7 @@ apps/crm/export.js	_mdCell(r.target)
 apps/crm/export.js	_mdCell(r.type || '')
 apps/crm/export.js	_mdCell(r.type)
 apps/crm/export.js	_mdCell(r.via || '')
+apps/crm/export.js	_mdCell(roleText(r))
 apps/crm/export.js	_mdCell(sc.frequency || '')
 apps/crm/export.js	_mdCell(sc.function_name || '?')
 apps/crm/export.js	_mdCell(sc.name)
@@ -117,9 +117,9 @@ apps/crm/export.js	f.stats.lines
 apps/crm/export.js	f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''
 apps/crm/export.js	f.stats.zoho
 apps/crm/export.js	fTrig ? ' ' + trigMd(f) + ' |' : ''
-apps/crm/export.js	fTrig ? ' Fires workflows |' : ''
+apps/crm/export.js	fTrig ? ' Workflows |' : ''
 apps/crm/export.js	fTrig ? '---|' : ''
-apps/crm/export.js	fTrig ? '<th>Fires workflows</th>' : ''
+apps/crm/export.js	fTrig ? '<th>Workflows</th>' : ''
 apps/crm/export.js	fTrig ? `<td>${trigTd(m, fl)}</td>` : ''
 apps/crm/export.js	failHtml
 apps/crm/export.js	failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''

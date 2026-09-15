@@ -512,10 +512,12 @@ function deluge(ns, name, params, calls) {
       if (kind === 'field_updates') {
         // The three shapes a value comes in - a picklist string, a boolean, and none at all, which
         // means «clear it» and not «unknown». 69 of 97 in a real org write a picklist.
-        a.field = ['Stage', 'Owner', 'Reviewed', 'Priority'][i % 4];
-        a.field_label = ['Stage', 'Owner', 'Reviewed', 'Priority'][i % 4];
+        // Fields every generated module has, bar the boolean, so a rule's field update can be seen
+        // from the Fields table of the module it writes - «Stage» was on no module at all.
+        a.field = ['Status', 'Owner', 'Reviewed', 'Currency'][i % 4];
+        a.field_label = ['Status', 'Owner', 'Reviewed', 'Currency'][i % 4];
         a.field_type = ['picklist', 'ownerlookup', 'boolean', 'picklist'][i % 4];
-        a.value = [ 'Won', null, true, 'High' ][i % 4];
+        a.value = [ 'Negotiation', null, true, 'Two' ][i % 4];
         a.value_kind = a.value === null ? 'cleared' : 'static';
       }
       if (kind === 'tasks') {

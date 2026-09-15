@@ -144,10 +144,10 @@
     "created_time": "2026-06-01T09:00:00+00:00",
     "modified_time": "2026-07-11T09:00:00+00:00",
     "locked": false,
-    "field": "Stage",
-    "field_label": "Stage",
+    "field": "Status",
+    "field_label": "Status",
     "field_type": "picklist",
-    "value": "Won",
+    "value": "Negotiation",
     "value_kind": "static"
   },
   {
@@ -200,8 +200,8 @@
     "created_time": "2026-06-04T09:00:00+00:00",
     "modified_time": "2026-07-14T09:00:00+00:00",
     "locked": false,
-    "field": "Priority",
-    "field_label": "Priority",
+    "field": "Currency",
+    "field_label": "Currency",
     "value_kind": "static"
   },
   {
