@@ -7,7 +7,7 @@
 97a1176ce268894d  apps/analytics/graphview.js:353: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 68f3feec399e35c4  apps/analytics/graphview.js:1557: class="${lk}" is not attribute-escaped
 5a66614f40884692  apps/analytics/options.js:818: data-section="${key}" is not attribute-escaped
-8a035f833293c02f  apps/crm/ai.js:1087: class="${m.role}" is not attribute-escaped
+8a035f833293c02f  apps/crm/ai.js:1090: class="${m.role}" is not attribute-escaped
 2780b78f9b3eac45  apps/crm/automation.js:238: class="${stCls}" is not attribute-escaped
 82ac1a1f5d7593e1  apps/crm/crm-tree.js:206: class="${wide}" is not attribute-escaped
 8986f4113f4ca66c  apps/crm/crm-tree.js:206: title="${st.lines}" is not attribute-escaped

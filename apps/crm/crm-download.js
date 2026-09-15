@@ -19,6 +19,7 @@ async function downloadOne(entry) {
   // it had been. `refused` acquired a second writer when it began to be loaded from disk, and this
   // is the reader that question was owed - «who else owns this flag».
   entry.asked = false;
+  entry.fetched = false;   // whether this attempt read the source - `downloaded` now outlives a failure
   // What was on disk before this attempt: a re-read that fails leaves the file where it was, so the
   // row must not start saying «not here». Before a pull re-read every source, only missing ones failed.
   const had = !!entry.downloaded;
@@ -57,7 +58,7 @@ async function downloadOne(entry) {
     entry.previousPath = null; entry.pathChanged = false;
     if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
     entry.path = written.primary; entry.mirrorFiles = written.paths; entry.mirrorDirectories = written.directories; entry.namespace = f.folder;
-    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = ''; entry.refused = false;
+    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = ''; entry.refused = false; entry.fetched = true;
     // From what was written, never from what this function believed it was about to write.
     entry.fetchedAgainst = written.listUpdated; entry.updatedTime = written.updatedTime;
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, language: f.meta.language, runtime: f.meta.runtime, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
@@ -93,11 +94,13 @@ async function noteSourceRefusals(attempted, op) {
       // The date is refreshed on every refusal, as the per-area verdict beside it is: it is when we
       // asked, and the tooltip says «asked». Frozen at the first refusal it would name a day on
       // which the question was not put, which is the same lie one field along.
-      if (e.refused && !e.downloaded) { map[id] = { at: new Date().toISOString() }; e.refusedAt = map[id].at; moved = true; }
+      // On what this attempt did, not on what is on disk: a source already mirrored stays `downloaded`
+      // through a refused re-read, and reading that flag here dropped the refusal instead of renewing it.
+      if (e.refused && !e.fetched) { map[id] = { at: new Date().toISOString() }; e.refusedAt = map[id].at; moved = true; }
       // Cleared only by an actual success. A failure for some other reason - a bridge that has gone
       // away, a 500 - is not evidence that the role has been granted, and dropping the record on it
       // would put the button and its sixteen refusals straight back.
-      else if (e.downloaded && map[id]) { delete map[id]; moved = true; }
+      else if (e.fetched && map[id]) { delete map[id]; moved = true; }
     }
     if (moved) await patchCfg({ srcRefused: map }, op);
   } catch (_) { /* a record of a refusal is not worth failing a pull over */ }
@@ -177,11 +180,15 @@ async function downloadMissing(recheck, all = false) {
     // lists functions but will not open one: Zoho refuses every source, and the closing line named
     // the button that had just been refused 32 times. A refusal is an answer - said as one, with the
     // count, and \u00abComplete missing\u00bb is only offered for what pressing it could actually fetch.
-    const retryable = fail - refused;
+    // A source already on disk whose re-read failed is kept and is not «missing»: the button does not
+    // count it, so the sentence may not send the reader there for it. Found by review.
+    const kept = pending.filter((e) => e.error && !e.refused && e.downloaded).length;
+    const retryable = fail - refused - kept;
+    const keptNote = kept ? ` ${kept} could not be read again - the copy on disk is kept, and the next Pull list + details retries.` : '';
     setStatus((refused
       ? `Zoho refused the source of ${refused} function${refused > 1 ? 's' : ''} - this Zoho user can list them but not read them. `
-        + `${ok ? `Downloaded ${ok}. ` : ''}${retryable ? `${retryable} other(s) still missing - use "Complete missing".` : 'Their names and details are what this workspace has.'}`
-      : fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
+        + `${ok ? `Downloaded ${ok}. ` : ''}${retryable ? `${retryable} other(s) still missing - use "Complete missing".` : 'Their names and details are what this workspace has.'}` + keptNote
+      : fail ? `Downloaded ${ok}${retryable ? `, ${retryable} still missing - use "Complete missing".` : '.'}` + keptNote
       : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`
       : `All ${ok} functions downloaded.`) + short,
       (fail || cleanup || short) ? 'warn' : 'ok');
@@ -209,7 +216,7 @@ function detailsBehind(access) {
   const a = access || {};
   if (!a.listAt) return null;
   if (a.detailsAt && String(a.detailsAt) >= String(a.listAt)) return null;
-  return { detailsAt: a.detailsAt || null, listAt: a.listAt };
+  return { detailsAt: a.detailsAt || null, listAt: a.listAt, never: !!a.detailsNever };
 }
 function paintBehind() {
   const el = $('behind'); if (!el) return;
@@ -220,9 +227,12 @@ function paintBehind() {
   const day = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   // No `detailsAt` is a workspace whose items were read by pulls made before that time was recorded -
   // read, and older than the list, not «never read», which is what this said. Found by review.
-  el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : '\u25d0 details older than the list';
+  // `never` is an area whose first pull was a list pull: nothing was ever read, which is neither a date
+  // nor «older». Found by review, on a new workspace.
+  el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : gap.never ? '\u25d0 details not read' : '\u25d0 details older than the list';
   el.title = `The list was pulled on ${new Date(gap.listAt).toLocaleString()}; `
-    + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}` : 'each item was last read by an earlier pull, before Zoost recorded when')
+    + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}`
+      : gap.never ? 'no pull has read each item yet' : 'each item was last read by an earlier pull, before Zoost recorded when')
     + ` - anything changed in Zoho since then is not here. Pull list + details reads them again.`;
 }
 function updateMissingButton() {

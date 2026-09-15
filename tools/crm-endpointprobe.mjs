@@ -217,6 +217,13 @@ const DRIVER = String.raw`
     await until(() => !pullActive && pullBusy === false, 'the actions list pull never released its lock');
     const acts2 = JSON.parse(fs.read(base + 'actions/index.json') || 'null');
     same(acts2 && acts2.find((row) => row.kind === 'tasks').mappings.map((row) => row.field), ['Subject', 'Priority'], 'task mappings after a list pull');
+    // A second list pull in a row: the row kept by the first still carries the mappings, and says why it
+    // has them - found by review, where the second pass dropped both.
+    await pullActions({ full: false });
+    await until(() => !pullActive && pullBusy === false, 'the second actions list pull never released its lock');
+    const task3 = (JSON.parse(fs.read(base + 'actions/index.json') || 'null') || []).find((row) => row.kind === 'tasks') || {};
+    same((task3.mappings || []).map((row) => row.field), ['Subject', 'Priority'], 'task mappings after a second list pull');
+    if (!task3.detail_kept || !task3.detail_list) throw new Error('a task two list pulls did not read is not said to be one: ' + JSON.stringify(task3));
     const acc2 = (JSON.parse(fs.read(base + '.zoost.json') || 'null') || {}).access || {};
     for (const area of ['modules', 'actions']) {
       const a = acc2[area] || {};
@@ -248,7 +255,7 @@ const expected = new Map([
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
   ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 3], ['actions:field_updates', 3], ['actions:tasks', 3], ['actions:task-detail', 2], ['actions:webhooks', 3],
+  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];

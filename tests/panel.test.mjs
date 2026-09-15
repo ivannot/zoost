@@ -9690,9 +9690,11 @@ test('every cache in a shipped panel is named by something that tests it', () =>
               'the bound is reported as «there are more in Zoho», which is not what it means');
     const surfaces = {
       'the action detail': /actStale\(a\) \|\| actThin\(a\)/,
-      'the HTML export': /a\.kind === 'tasks' && actThin\(a\) \? esc\(MISS_DETAIL\)/,
-      'the Markdown export': /a\.kind === 'tasks' && actThin\(a\) \? MISS_DETAIL/,
-      'the assistant': /a\.kind === 'tasks' && actThin\(a\) \? ` - \$\{MISS_DETAIL\}`/,
+      // A list pull's row says it was not asked, rather than that Zoho did not answer - either sentence
+      // is a statement of the unread detail, and one of them is what every surface prints.
+      'the HTML export': /a\.kind === 'tasks' && actThin\(a\) \? esc\((?:a\.detail_list \? LIST_MISS_DETAIL : )?MISS_DETAIL\)/,
+      'the Markdown export': /a\.kind === 'tasks' && actThin\(a\) \? \(?(?:a\.detail_list \? LIST_MISS_DETAIL : )?MISS_DETAIL/,
+      'the assistant': /a\.kind === 'tasks' && actThin\(a\) \? ` - \$\{(?:a\.detail_list \? LIST_MISS_DETAIL : )?MISS_DETAIL\}`/,
     };
     for (const [what, re] of Object.entries(surfaces))
       assert.ok(re.test(panel), `${what} shows a task with unread detail as a task with no mappings`);
@@ -9700,13 +9702,13 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // as current, which is the one thing a mirror may not do.
     for (const [what, re] of Object.entries({
       'the action detail': /actKept\(a\) \|\| \(!\(a\.mappings \|\| \[\]\)\.length/,
-      'the HTML export': /a\.kind === 'tasks' && actKept\(a\) \? esc\(KEPT_DETAIL\)/,
-      'the Markdown export': /a\.kind === 'tasks' && actKept\(a\) \? KEPT_DETAIL/,
+      'the HTML export': /a\.kind === 'tasks' && actKept\(a\) \? esc\((?:a\.detail_list \? LIST_KEPT_DETAIL : )?KEPT_DETAIL\)/,
+      'the Markdown export': /a\.kind === 'tasks' && actKept\(a\) \? \(?(?:a\.detail_list \? LIST_KEPT_DETAIL : )?KEPT_DETAIL/,
       // The assistant says it in its own words rather than by reusing the panel's constant: that
       // sentence ends «the field mappings **below**», which is true in the detail pane and false in
       // a JSON block and in a one-line entry, neither of which has a below. Held on the fact -
       // «what is listed came from an earlier reading» - not on the spelling.
-      'the assistant': /actKept\(a\)[^\n]*what is listed is what the last pull that could read it saw/,
+      'the assistant': /actKept\(a\)[\s\S]{0,300}?what is listed is what the last pull that could read it saw/,
     })) assert.ok(re.test(panel), `${what} shows inherited mappings as if this pull had read them`);
   });
 
@@ -20156,8 +20158,8 @@ test('a refused source is remembered by the workspace, not by the run', async ()
   });
   // Two shapes in one run - one refused, one that came back after having been refused - beside an id
   // recorded earlier that this run never asked about.
-  await m.noteSourceRefusals([{ id: 'a', asked: true, refused: true, downloaded: false },
-                              { id: 'keep2', asked: true, refused: false, downloaded: true }], { current: () => true });
+  await m.noteSourceRefusals([{ id: 'a', asked: true, refused: true, downloaded: false, fetched: false },
+                              { id: 'keep2', asked: true, refused: false, downloaded: true, fetched: true }], { current: () => true });
   assert.ok(written && written.srcRefused, 'nothing was recorded, so the next rebuild forgets again');
   assert.ok(written.srcRefused.a, 'the function Zoho refused is not written down');
   assert.equal(written.srcRefused.keep2, undefined,
@@ -20170,20 +20172,20 @@ test('a refused source is remembered by the workspace, not by the run', async ()
   // And nothing is written when there is nothing to say: a pull that changed no verdict must not
   // rewrite the workspace config for the sake of it.
   written = null;
-  await m.noteSourceRefusals([{ id: 'nothing', asked: false, refused: true, downloaded: false }], { current: () => true });
+  await m.noteSourceRefusals([{ id: 'nothing', asked: false, refused: true, downloaded: false, fetched: false }], { current: () => true });
   assert.equal(written, null, 'a run that never reached Zoho rewrote the record anyway');
 
   // A run that did ask refreshes the date, because the tooltip says «asked» and a date frozen at the
   // first refusal names a day on which the question was not put - the per-area verdict beside it
   // refreshes for the same reason.
   written = null;
-  await m.noteSourceRefusals([{ id: 'keep', asked: true, refused: true, downloaded: false }], { current: () => true });
+  await m.noteSourceRefusals([{ id: 'keep', asked: true, refused: true, downloaded: false, fetched: false }], { current: () => true });
   assert.ok(written && written.srcRefused.keep.at !== '2026-09-01T00:00:00.000Z',
             'the date is frozen at the first refusal, so the tooltip names a day nobody asked on');
 
   // Only a success clears it. A bridge that has gone away is not evidence that the role was granted.
   written = null;
-  await m.noteSourceRefusals([{ id: 'keep', asked: true, refused: false, downloaded: false }], { current: () => true });
+  await m.noteSourceRefusals([{ id: 'keep', asked: true, refused: false, downloaded: false, fetched: false }], { current: () => true });
   assert.equal(written, null, 'a failure for some other reason drops the verdict, and the button returns');
 
   // The half that reads it is in `rebuildTree`, which is the function that dropped the mark in the
@@ -21836,4 +21838,69 @@ test('a rule re-read that fails keeps the rule that is on disk', async () => {
   const missing = { id: 'w2', path: 'workflows/w2.json', downloaded: false };
   await m.downloadOneWf(missing);
   assert.equal(missing.downloaded, false, 'a rule never downloaded is marked as here');
+});
+
+// Four from the regression review of the two-button pull.
+test('an area whose first pull was a list pull says nothing was read, not that it is older', async () => {
+  const run = async (prev, depth) => {
+    let wrote = null;
+    const m = load([sliceFn('apps/crm/sidepanel.js', 'noteAccess')], {
+      console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
+      accessOf: () => 'ok', tabAccess: { workflows: prev },
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      setStatus: () => {}, tabLabel: (a) => a,
+    });
+    await m.noteAccess('workflows', null, { current: () => true }, true, depth);
+    return wrote.access.workflows;
+  };
+  const first = await run({}, 'list');
+  assert.equal(first.detailsNever, true, 'the first list pull of a new workspace does not say nothing was read');
+  assert.equal((await run(first, 'list')).detailsNever, true, 'a second list pull forgot nothing was ever read');
+  assert.equal((await run(first, 'full')).detailsNever, false, 'a full pull still says nothing was read');
+  const old = await run({ state: 'ok', pulledAt: '2026-05-01T10:00:00.000Z' }, 'list');
+  assert.equal(old.detailsNever, false, 'an area pulled before the dates existed is said never to have been read');
+  const { detailsBehind } = load([sliceFn('apps/crm/crm-download.js', 'detailsBehind')]);
+  assert.equal(detailsBehind(first).never, true);
+  assert.equal(detailsBehind(old).never, false);
+});
+
+test('a refused re-read of a source on disk renews the refusal instead of dropping it', async () => {
+  let wrote = null;
+  const m = load([sliceFn('apps/crm/crm-download.js', 'noteSourceRefusals')], {
+    Object, Date,
+    opReadCfg: async () => ({ srcRefused: { f1: { at: '2026-05-01T10:00:00.000Z' }, f2: { at: '2026-05-01T10:00:00.000Z' } } }),
+    patchCfg: async (o) => { wrote = o; },
+  });
+  await m.noteSourceRefusals([{ id: 'f1', asked: true, refused: true, downloaded: true, fetched: false },
+                              { id: 'f2', asked: true, refused: false, downloaded: true, fetched: true }], { current: () => true });
+  assert.ok(wrote && wrote.srcRefused.f1 && wrote.srcRefused.f1.at > '2026-05-01T10:00:00.000Z',
+            'a source Zoho refused again, with its old copy on disk, lost or kept stale its refusal');
+  assert.equal(wrote.srcRefused.f2, undefined, 'a source read again is still recorded as refused');
+});
+
+test('a rule on disk that could not be read again is not sent to Complete missing', async () => {
+  const said = [];
+  const rows = [{ id: 'w1', downloaded: true }, { id: 'w2', downloaded: true }];
+  const m = load([sliceFn('apps/crm/automation.js', 'downloadMissingWf')], {
+    beginWorkspaceOp: () => ({ current: () => true, say: () => {} }), workflowData: rows,
+    setStatus: (t, k) => said.push([t, k]), updateMissingButton: () => {}, setPullBusy: () => {},
+    $: () => ({ disabled: false }), isTransient: () => false, sleep: async () => {}, viewMode: 'functions', updateRow: () => {},
+    downloadOneWf: async (e) => { e.error = e.id === 'w1'; return !e.error; },
+  });
+  const r = await m.downloadMissingWf(true);
+  const [text, kind] = said[said.length - 1];
+  assert.equal(kind, 'warn');
+  assert.ok(!/Complete missing/.test(text), `a kept rule is sent to a hidden button: ${text}`);
+  assert.ok(/1 could not be read again - the copy on disk is kept/.test(text), `the kept rule is not said: ${text}`);
+  assert.equal(r.failed, 1, 'a failed re-read does not stop the pull recording every rule as read');
+});
+
+test('opening another workspace repaints the notice of what a list pull left', async () => {
+  let painted = 0;
+  const m = load([sliceFn('apps/crm/export-scope.js', 'loadAccess')], {
+    opReadCfg: async () => ({ access: { modules: { listAt: '2026-09-01T10:00:00.000Z' } } }),
+    publishAccess: () => {}, paintBehind: () => { painted++; }, beginWorkspaceOp: () => ({ current: () => true }),
+  });
+  await m.loadAccess({ current: () => true });
+  assert.equal(painted, 1, 'the notice keeps the workspace that was left');
 });

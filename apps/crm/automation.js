@@ -286,7 +286,11 @@ async function downloadMissingWf(all = false) {
     }
     if (!op.current()) return;
     updateMissingButton();
-    setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
+    // A rule already on disk whose re-read failed is not missing - its file is there, the row says so, and
+    // «Complete missing» does not count it. Sending the reader to that hidden button was the review's find.
+    const kept = pending.filter((e) => e.error && e.downloaded).length;
+    setStatus(fail ? `Downloaded ${ok}${fail - kept ? `, ${fail - kept} still missing - use "Complete missing"` : ''}${kept ? `, ${kept} could not be read again - the copy on disk is kept, and the next Pull list + details retries` : ''}.`
+      : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
     return { failed: fail };   // a pull that could not read every rule must not record that it did
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
@@ -379,6 +383,10 @@ const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
 // are «not read», neither is «has none», and the wording is here once because four surfaces show it.
 const MISS_DETAIL = 'Zoho did not answer for this one when it was pulled - its field mappings are not read';
 const KEPT_DETAIL = 'Zoho did not answer for this one when it was pulled - the field mappings below are what the last pull that could read them saw';
+// A «Pull list» does not ask for the detail at all, so «Zoho did not answer» would be a claim about a
+// question nobody put. Found by review, on every task of an org after one list pull.
+const LIST_MISS_DETAIL = 'Not read by the list pull that wrote this - its field mappings are not read yet';
+const LIST_KEPT_DETAIL = 'Not read by the list pull that wrote this - the field mappings below are what the last pull that read them saw';
 const actThin = (a) => a && a.detail_read === false;
 const actKept = (a) => a && a.detail_kept === true;
 /** Which rules fire each action, read from the workflow files already on disk.
@@ -690,20 +698,24 @@ async function pullActions(depth = {}) {
       if (kept.length) actions = actions.concat(kept);
       if (detailMissed.length) {
         const thin = new Set(detailMissed.map((d) => `${d.kind}:${String(d.id)}`));
+        const listed = new Set(detailMissed.filter((d) => d.reason === 'list pull').map((d) => `${d.kind}:${String(d.id)}`));
         const before = new Map(prev.map((a) => [`${a.kind}:${String(a.id)}`, a]));
         actions = actions.map((a) => {
           const k = `${a.kind}:${String(a.id)}`;
           if (!thin.has(k)) return a;
-          const p = before.get(k);
-          if (!p || p.detail_read === false || !(p.mappings || []).length) return a;
+          const p = before.get(k), byList = listed.has(k);
+          // A row that was itself kept still carries the last mappings anybody read: a second list pull
+          // in a row replaced it with the list's five of six and dropped the reminder, with no warning.
+          // Found by review. Only a row that never had them has nothing to give.
+          if (!p || (p.detail_read === false && !p.detail_kept) || !(p.mappings || []).length) return byList ? { ...a, detail_list: true } : a;
           // Only the mappings, and said so. Keeping the previous row *whole* was worse than losing
           // it: everything this pull did read - the name, the module, the modified date - was thrown
           // away in favour of a row from before, and the result carried `detail_read: true`, so the
           // panel presented last week's name as current and nothing warned. The fields this pull
           // read win; the half it could not read comes from the last pull that could, and the row
           // says where it came from.
-          return { ...a, mappings: p.mappings, detail_read: false, detail_kept: true,
-                   detail_kept_from: p.modified_time || null };
+          return { ...a, mappings: p.mappings, detail_read: false, detail_kept: true, detail_list: byList,
+                   detail_kept_from: p.detail_kept ? (p.detail_kept_from || null) : (p.modified_time || null) };
         });
       }
       if (!op.current()) return;   // reading the previous census is an await, and the folder can move under one
@@ -937,7 +949,7 @@ function openAction(a) {
     // fallback for a shape this code has not met.
     + ((a.mappings || []).map((m) => row(m.field.replace(/_/g, ' '), mappingHtml(m))).join(''))
     + (a.kind === 'tasks' && (actKept(a) || (!(a.mappings || []).length && (actStale(a) || actThin(a))))
-        ? row('Detail', `<span style="color:var(--warn)">${actKept(a) ? escHtml(KEPT_DETAIL) : actThin(a) ? escHtml(MISS_DETAIL) : 'not read by the pull that wrote this'} - press Pull to read it</span>`) : '')
+        ? row('Detail', `<span style="color:var(--warn)">${actKept(a) ? escHtml(a.detail_list ? LIST_KEPT_DETAIL : KEPT_DETAIL) : actThin(a) ? escHtml(a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL) : 'not read by the pull that wrote this'} - press Pull list + details to read it</span>`) : '')
     + (a.notify === true ? row('Notify', 'yes') : '')
     + (a.modified_by ? row(MSG.lastModified, escHtml(a.modified_by) + (a.modified_time ? ' \u00b7 ' + escHtml(String(a.modified_time).slice(0, 16)) : '')) : '')
     + (a.locked ? row('Locked', 'yes') : '');

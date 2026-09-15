@@ -102,6 +102,9 @@ async function loadAccess(op = beginWorkspaceOp()) {
   if (!op.current()) return false;
   tabAccess = access; wsLastPull = last;
   publishAccess();
+  // Another workspace's record: the notice of what a list pull left is drawn from it, and on Modules
+  // and Actions nothing else repaints it after a switch. Found by review.
+  if (typeof paintBehind === 'function') paintBehind();
   return true;
 }
 // The settings page cannot read the workspace's `.zoost.json` - it has no folder handle and no
@@ -184,6 +187,9 @@ async function noteAccess(area, err, op, stored = !err, depth = null) {
     // An area that does not say its depth keeps whatever it had - neither is invented for it.
     listAt: stored && depth ? new Date().toISOString() : (prev.listAt || null),
     detailsAt: stored && depth === 'full' ? new Date().toISOString() : (prev.detailsAt || null),
+    // An area whose very first stored pull was a list pull has had nothing read - not «older details».
+    detailsNever: stored && depth === 'full' ? false
+      : (stored && depth === 'list' && !prev.pulledAt && !prev.detailsAt) ? true : !!prev.detailsNever,
     // **«It did not work» and «it worked and came up short» were the same record.** Three pulls
     // report a gap - a module Zoho would not describe, a stale file that would not delete -
     // with a pseudo-error, so a workspace whose 1,200 functions are all on disk was marked

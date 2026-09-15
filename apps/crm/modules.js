@@ -429,7 +429,7 @@ function nextFieldSort(key, sort = fieldSort) {
   return { key: null, dir: 1 };
 }
 /** What a count in the table on screen opens - that table's module and map, not a new reading. */
-let fieldListShown = null, fieldListOpener = null;
+let fieldListShown = null, fieldListOpener = null, fieldListAgain = null;
 function openFieldList(kind, api, opener) {
   const shown = fieldListShown; if (!shown) return;
   const f = (shown.m.fields || []).find((x) => x.api_name === api); if (!f) return;
@@ -450,15 +450,22 @@ function openFieldList(kind, api, opener) {
       return mine.length ? `<h4 class="flrole">${title} <span>${mine.length}</span></h4><ul class="fllist">${mine.map(li).join('')}</ul>` : '';
     }).join('');
   }
-  fieldListOpener = opener || null;
+  fieldListOpener = opener || null; fieldListAgain = { kind, api };
   $('scrim').classList.add('on'); panelInert(true); $('fieldlist').classList.add('on');
   $('fieldlistx').focus();
 }
 function closeFieldList() {
   if (!$('fieldlist').classList.contains('on')) return;
   $('scrim').classList.remove('on'); panelInert(false); $('fieldlist').classList.remove('on');
-  const back = fieldListOpener; fieldListOpener = null;
+  const back = fieldListOpener, again = fieldListAgain; fieldListOpener = null; fieldListAgain = null;
+  // The table can be drawn again while the layer is open - a pull finishing underneath it - and the
+  // button that opened it is then gone. Its successor in the new table takes the keyboard instead of
+  // the page body. Seen by review.
   if (back && back.isConnected) back.focus();
+  else if (again) {
+    const twin = [...document.querySelectorAll('#pvfields .plbtn')].find((b) => b.dataset.list === again.kind && b.dataset.f === again.api);
+    if (twin) twin.focus();
+  }
 }
 /** Every report cuts a long picklist, and none of them said so: twelve values printed and the rest
  *  gone, which makes the report quietly wrong rather than merely shorter. It states what it dropped

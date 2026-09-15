@@ -947,6 +947,17 @@ CRM = """
       await until(() => !$('fieldlist').classList.contains('on'), 'Escape never closed the layer');
       if (document.activeElement !== vb) say('closing the layer did not give the keyboard back to the count that opened it');
       if (currentPath !== 'modules/Accounts.json') say('Escape on the layer closed something underneath it');
+      // The table drawn again while the layer is open - a pull ending underneath it - takes away the button
+      // that opened it; closing gives the keyboard to its successor, not to the page. Seen by review.
+      {
+        const opener = $('pvfields').querySelector('.plbtn[data-list="values"]');
+        opener.focus(); opener.click(); await until(() => $('fieldlist').classList.contains('on'), 'the values layer never reopened');
+        $('laybody').innerHTML = renderFieldsTable(fieldListShown.m, fieldListShown.found);
+        $('fieldlistx').click(); await until(() => !$('fieldlist').classList.contains('on'), 'Close never closed the layer');
+        const f = document.activeElement;
+        if (!(f && f.matches && f.matches('.plbtn[data-list="values"]') && f.dataset.f === opener.dataset.f))
+          say('closing the layer over a redrawn table left the keyboard on ' + (f ? f.tagName : 'nothing'));
+      }
 
       const rb = $('pvfields').querySelector('.plbtn[data-list="rules"]');
       if (!rb) say('no field in Accounts counts the workflow rules it fires');

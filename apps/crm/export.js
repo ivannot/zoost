@@ -500,8 +500,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         : a.kind === 'field_updates' ? (a.field ? esc(a.field_label || a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
             + ' \u2190 ' + (actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : esc(String(a.value))) : '')
         : a.kind === 'webhooks' ? [esc(a.method || ''), esc(a.url || '')].filter(Boolean).join(' ')
-        : a.kind === 'tasks' && actKept(a) ? esc(KEPT_DETAIL)
-        : a.kind === 'tasks' && actThin(a) ? esc(MISS_DETAIL)
+        : a.kind === 'tasks' && actKept(a) ? esc(a.detail_list ? LIST_KEPT_DETAIL : KEPT_DETAIL)
+        : a.kind === 'tasks' && actThin(a) ? esc(a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL)
         // Same six fields as the Markdown and as the panel - see the note there. `mapVal` is shared
         // so the two reports cannot come to read a task differently.
         : (a.mappings || []).length
@@ -1035,8 +1035,8 @@ function buildExportMarkdown(d, scope) {
            a.recipient_count != null ? a.recipient_count + ' recipient(s)' : ''].filter(Boolean).join(' - ')
         : a.kind === 'field_updates' ? (a.field ? `${a.field_label || a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}` : '')
         : a.kind === 'webhooks' ? [a.method || '', a.url || ''].filter(Boolean).join(' ')
-        : a.kind === 'tasks' && actKept(a) ? KEPT_DETAIL
-        : a.kind === 'tasks' && actThin(a) ? MISS_DETAIL
+        : a.kind === 'tasks' && actKept(a) ? (a.detail_list ? LIST_KEPT_DETAIL : KEPT_DETAIL)
+        : a.kind === 'tasks' && actThin(a) ? (a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL)
         // What the task actually says. The panel renders every `mappings` row - subject, due date,
         // status, priority, owner, reminder - and both reports fell through every arm to «notifies»
         // or to nothing, so a task's Detail cell was **empty** while six fields were on screen. The

@@ -548,8 +548,10 @@ function actionForModel(a, fired, addresses) {
     // The two sentences are the panel's, and one of them says «the field mappings **below**», which
     // is true in the detail pane and false in a JSON block that has no below. Said here in the words
     // that are true here.
-    if (actKept(a)) out.detail = 'Zoho did not answer for this one when it was pulled - what «creates» holds is what the last pull that could read it saw';
-    else if (actThin(a)) out.detail = MISS_DETAIL;
+    // A list pull never asked, so it is not «Zoho did not answer» - the same distinction the panel draws.
+    if (actKept(a)) out.detail = a.detail_list ? 'Not read by the list pull that wrote this - what «creates» holds is what the last pull that read it saw'
+      : 'Zoho did not answer for this one when it was pulled - what «creates» holds is what the last pull that could read it saw';
+    else if (actThin(a)) out.detail = a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL;
   }
   return out;
 }
@@ -896,10 +898,11 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
         : a.kind === 'email_notifications'
           ? ` template ${(a.template && a.template.name) || '?'}${acts.addresses && a.from_address ? ', from ' + a.from_address : a.from_type ? ', from ' + (a.from_type === 'user' ? 'a user address' : 'an organisation address') : ''}`
           : a.kind === 'webhooks' ? ` ${a.method || ''} ${webhookForModel(a.url)}`
-          : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}`
+          : a.kind === 'tasks' && actThin(a) ? ` - ${a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL}`
           : a.kind === 'tasks' ? `${(a.mappings || []).length ? ' creates ' + (a.mappings || []).map((x) => `${x.field || x.api_name || '?'} <- ${x.value === undefined ? '' : x.value}`).join(', ') : ''}`
-            + (actKept(a) ? ' - Zoho did not answer for this one when it was pulled; what is listed is what the last pull that could read it saw' : '')
-          : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}` : '';
+            + (actKept(a) ? (a.detail_list ? ' - not read by the list pull that wrote this; what is listed is what the last pull that read it saw'
+              : ' - Zoho did not answer for this one when it was pulled; what is listed is what the last pull that could read it saw') : '')
+          : a.kind === 'tasks' && actThin(a) ? ` - ${a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL}` : '';
       return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;
     });
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `kind`, `module` or `unused`.');
