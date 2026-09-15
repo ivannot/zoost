@@ -3048,7 +3048,9 @@ function escapeCloses() {
 $('navfind').oninput = renderNav;
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && escapeCloses()) { e.preventDefault(); return; }
-  if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
+  // Not behind a dialog: it makes the panel inert, which stops clicks and focus and not a listener
+  // on the document, so Alt+Left walked the history underneath an open layer. Found by review.
+  if (!e.altKey || document.querySelector('.dlg.on') || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   const at = navHistory.snapshot().position;
   if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(at - 1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(at + 1); }

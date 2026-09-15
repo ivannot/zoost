@@ -916,6 +916,12 @@ CRM = """
       if (items().length !== want) say(`the layer lists ${items().length} of ${want} values`);
       if (!oneEach(items())) say('the values in the layer are not one per line');
       if (document.activeElement !== $('fieldlistx')) say('the layer opened and the keyboard stayed behind it');
+      // Alt+Left walks the history - and walked it behind the layer, which stayed open over another
+      // module. Found by review; the same hole was open behind About and the export dialog.
+      if (navHistory.snapshot().position < 1) say('no step to go back to - this case would pass on nothing');
+      document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true }));
+      await settle();
+      if (currentPath !== 'modules/Accounts.json') say('Alt+Left changed the panel behind the open layer');
       document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await until(() => !$('fieldlist').classList.contains('on'), 'Escape never closed the layer');
       if (document.activeElement !== vb) say('closing the layer did not give the keyboard back to the count that opened it');
