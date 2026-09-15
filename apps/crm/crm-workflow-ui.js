@@ -1,6 +1,7 @@
 // CRM workflow list and detail UI.
-async function pullWorkflows() {
+async function pullWorkflows(depth = {}) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  const full = !(depth && depth.full === false);   // «Pull list» stops at the index; see pullAll
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
@@ -28,7 +29,8 @@ async function pullWorkflows() {
     for await (const p of walk(op.root)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await op.remove(p); prunedW++; } catch (e) { if ((e && e.message) === WS_MOVED) return; wfRmFail.push(p); } } } }
     if (!(await loadWorkflowIndex(op))) return;
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
-    await downloadMissingWf(true);   // every rule, so an edit made in Zoho since the last pull arrives
+    if (full) await downloadMissingWf(true);   // every rule, so an edit made in Zoho since the last pull arrives
+    else setStatus(`Workflows list pulled: ${r.entries.length} in Zoho. Rules on disk were not read again - Pull reads them.`, 'ok');
     // The writes above dropped \u00abwhich rule fires this action\u00bb - it is read out of these very rules.
     // Dropping it is the write's business; rebuilding it has to happen where there is an await, and
     // this is that place: `actionFiredBy()` is called while a row is being drawn and cannot read a
@@ -45,7 +47,7 @@ async function pullWorkflows() {
     // so the residue is what the reader sees - said, recorded, retried by the next pull for free.
     if (wfRmFail.length) setStatus($('stxt').textContent + ` \u00b7 ${wfRmFail.length} deleted rule(s) could not be removed - the next pull retries`, 'warn');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list stopped early - some workflows may be missing', 'warn');
-    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op, true);   // the mirror was written; the gap is what could not be tidied after it
+    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op, true, full ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('workflows', e, op); } finally { endPull(); }
 }
 async function openWorkflowInZoho(id) {

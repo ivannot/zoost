@@ -153,7 +153,7 @@ function bridgeError(r, fallback) {
  *  says a third of itself was read today when it was not is the half-truth `freshnessLine` exists to
  *  prevent, and it was thirty minutes old. Found by a reader with no memory of writing it.
  */
-async function noteAccess(area, err, op, stored = !err) {
+async function noteAccess(area, err, op, stored = !err, depth = null) {
   // An **area**, not a tab. The two are nearly the same list and not quite: `failures` is pulled,
   // can be refused, and has no tab of its own - a failure is a property of a function, so it shows
   // in the function's detail and in the health view. This guard read `TAB[area]`, so every
@@ -179,6 +179,11 @@ async function noteAccess(area, err, op, stored = !err) {
     // moment an area stops being pulled, and that gap is the whole point: it is what makes a stale
     // section detectable instead of silently old.
     pulledAt: stored ? new Date().toISOString() : (prev.pulledAt || null),
+    // For the areas that pull a list and then each item: when the list was last read, and when every
+    // item was. A «Pull list» moves only the first, and the gap is what the tab says it left behind.
+    // An area that does not say its depth keeps whatever it had - neither is invented for it.
+    listAt: stored && depth ? new Date().toISOString() : (prev.listAt || null),
+    detailsAt: stored && depth === 'full' ? new Date().toISOString() : (prev.detailsAt || null),
     // **«It did not work» and «it worked and came up short» were the same record.** Three pulls
     // report a gap - a module Zoho would not describe, a stale file that would not delete -
     // with a pseudo-error, so a workspace whose 1,200 functions are all on disk was marked

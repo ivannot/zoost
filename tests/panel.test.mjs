@@ -19897,7 +19897,8 @@ test('an empty list says what Zoho last answered about that area', () => {
                             ['apps/crm/sidepanel.js', 'pullWorkflows']]) {
     const body = sliceFn(file, fn);
     const at = body.lastIndexOf('noteAccess(');
-    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true\)/,
+    // A pull that reads a list apart from its items also says which of the two it did.
+    assert.match(body.slice(at, body.indexOf(';', at)), /, op, true(?:, full \? 'full' : 'list')?\)$/,
                  `${fn}: a pull that wrote the mirror and came up short is recorded as one that did not`);
   }
 });
@@ -21738,4 +21739,38 @@ test('a rule written while the field map is being read does not leave the older 
   const gone = rig('(() => false)');
   assert.equal(await gone.fieldTriggersNow({}, () => false), null, 'a draw nobody is waiting for still returned a map');
   assert.equal(gone.state().cached, null, 'an abandoned reading left its mark in the cache, where the next draw reads it as a map');
+});
+
+// A «Pull list» reads what exists in Zoho and not each item, and the tab has to say what that left
+// behind - asked for with the two-button pull. The record carries two times per area, the list's and
+// every item's; the notice is the gap between them, and an area that says no depth invents neither.
+test('a list pull moves the list time and not the details time, and the tab says what it left', async () => {
+  const run = async (prev, depth) => {
+    let wrote = null;
+    const m = load([sliceFn('apps/crm/sidepanel.js', 'noteAccess')], {
+      console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
+      accessOf: () => 'ok', tabAccess: { workflows: prev },
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      setStatus: () => {}, tabLabel: (a) => a,
+    });
+    await m.noteAccess('workflows', null, { current: () => true }, true, depth);
+    return wrote.access.workflows;
+  };
+  const old = { state: 'ok', listAt: '2026-05-01T10:00:00.000Z', detailsAt: '2026-05-01T10:00:00.000Z' };
+  const listed = await run(old, 'list');
+  assert.ok(listed.listAt > old.listAt, 'a list pull did not record when it read the list');
+  assert.equal(listed.detailsAt, old.detailsAt, 'a list pull claims to have read every item');
+  const full = await run(old, 'full');
+  assert.ok(full.detailsAt > old.detailsAt && full.detailsAt >= full.listAt, 'a full pull did not date its items with the list');
+  const quiet = await run(old, null);
+  assert.equal(quiet.listAt, old.listAt, 'an area that says no depth moved the list time');
+  assert.equal(quiet.detailsAt, old.detailsAt, 'an area that says no depth moved the details time');
+
+  const { detailsBehind } = load([sliceFn('apps/crm/crm-download.js', 'detailsBehind')]);
+  assert.equal(detailsBehind(full), null, 'a full pull still says something was left behind');
+  assert.equal(detailsBehind(old), null, 'the same moment for both is not a gap');
+  assert.equal(detailsBehind({}), null, 'a workspace from before the two times existed invents a gap');
+  const gap = detailsBehind(listed);
+  assert.ok(gap && gap.detailsAt === old.detailsAt && gap.listAt === listed.listAt, 'a list pull leaves no gap to show');
+  assert.equal(detailsBehind({ listAt: listed.listAt }).detailsAt, null, 'a list never followed by a full pull reads as details from some date');
 });

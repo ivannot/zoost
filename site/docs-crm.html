@@ -168,7 +168,12 @@
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> mirrors functions, module schema, layouts, related lists, workflows, schedules
       and the connections catalogue.</li>
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (in the mode bar) refreshes only the current type - whichever of Functions,
-      Modules, Workflows, Schedules, Actions or Connections is the active tab - faster when you just changed one thing.</li>
+      Modules, Workflows, Schedules, Actions or Connections is the active tab - faster when you just changed one thing.
+      On Functions and Workflows it reads every item again, not only the ones missing, so an edit made in Zoho since
+      the last pull arrives.</li>
+    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5v8"/><path d="M1.5 7 4 9.5 6.5 7"/><path d="M9 3h5.5"/><path d="M9 6.5h5.5"/><path d="M9 10h5.5"/><path d="M1.5 13.5h13"/></svg> Pull list</b> (Functions and Workflows) reads only which items exist in Zoho - a few
+      requests rather than one per item - and leaves what is already on disk as it was. The bar then says so: <b class="ui">&#9680; details from
+      12 Sep</b> is the day each item was last read, and <b class="ui">Pull</b> reads them again.</li>
     <li><b>Auto-sync while you work</b>: save a function in the Zoho editor and the matching local file
       updates by itself; create one and Zoost fetches it; delete one and it goes from the mirror. No
       action needed.<br>

@@ -44,6 +44,8 @@
   .ftbl th .thsort{color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;white-space:nowrap}
   .ftbl th .thsort:hover{color:var(--ink)}
   .ftnote{padding:6px 10px;color:var(--muted);font-size:11px}
+  /* What a «Pull list» left as it was: the details on disk are older than the list beside them. */
+  .behind{font-size:11px;color:#f59e0b;white-space:nowrap}
   .fllist{margin:0;padding:0 0 0 2.6em;font:12px var(--mono);color:#cbd5e1}
   ul.fllist{list-style:none;padding-left:0}
   .flrole{margin:12px 0 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px} .flrole:first-child{margin-top:0} .flrole span{color:var(--ink)}

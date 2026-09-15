@@ -475,3 +475,33 @@ test('Analytics: a pull interrupted while writing does not silence the next one'
   assert.ok(phase('planning'),
     `the next Pull all cannot plan: the lifecycle rests at «${state()}»`);
 });
+
+// «Pull list» and «Pull» are one dispatcher with a depth, and Pull all passes none - which every runner
+// reads as «everything». A depth dropped on the way would make the quick button read every item.
+test('CRM: the per-tab pull hands its depth to the runner, and Pull all hands none', async () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-lifecycle.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps/crm/pull-controller.js', import.meta.url), 'utf8'), context);
+  let busy = false;
+  const got = [];
+  const controller = context.createCrmPullController({
+    busy: () => busy, publishBusy: (value) => { busy = value; }, blockZoho: () => {}, zohoReady: () => true,
+    hasDirectory: () => true, navigationOpen: () => false, updateWorkspaceButtons: () => {},
+    restoreWorkspaceSelection: () => {}, setStatus: () => {},
+    currentView: () => 'workflows', tabLabel: (id) => id, errorText: String,
+    runners: () => ({ workflows: async (depth) => { got.push(depth); }, functions: async () => {} }),
+    rebuildActive: async () => {}, renderTabs: () => {}, forbiddenNote: () => '',
+    beginOperation: () => ({ root: {}, current: () => true, say: () => {} }),
+    plan: () => ({ areas: [{ id: 'workflows' }], skipped: [], asked: [], askedBefore: {} }),
+    answeredRechecks: () => [], takeRechecks: async () => {}, takeListGap: () => '',
+    consumePreferencesChanged: () => false, preferencesChangedNote: '',
+    statusSnapshot: () => ({ text: '', kind: 'ok' }), statusKind: () => 'ok',
+  });
+  await controller.pullCurrent({ full: false });
+  assert.equal(got.length, 1);
+  assert.equal(got[0] && got[0].full, false, 'the quick pull reached its runner without its depth');
+  await controller.pullEverything();
+  assert.equal(got.length, 2);
+  assert.equal(got[1], undefined, 'Pull all handed its runners a depth, where none means everything');
+});

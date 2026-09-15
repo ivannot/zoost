@@ -198,6 +198,13 @@ const DRIVER = String.raw`
     await until(() => !pullActive && pullBusy === false, 'the second workflows pull never released its lock');
     const again = JSON.parse(fs.read(base + 'workflows/990000000301.json') || 'null');
     same(again && again.description, 'Edited in Zoho after the first pull', 'a rule edited in Zoho, after a second pull');
+    // And «Pull list» reads the list and no rule: a third detail request is refused by the counter above,
+    // and the area's record dates the list after the details - the gap the tab says it left behind.
+    await pullWorkflows({ full: false });
+    await until(() => !pullActive && pullBusy === false, 'the workflows list pull never released its lock');
+    const listed = (JSON.parse(fs.read(base + '.zoost.json') || 'null') || {}).access || {};
+    const wa = listed.workflows || {};
+    if (!(wa.listAt && wa.detailsAt && wa.listAt > wa.detailsAt)) throw new Error('a list pull left no gap between the list and the rules: ' + JSON.stringify(wa));
     if (/failed|error|could not/i.test(document.getElementById('stxt').textContent)) throw new Error('the panel ended on ' + document.getElementById('stxt').textContent);
     window.__crmEndpointProbeResult = { files: fs.dump().filter((name) => name.startsWith(base)).length };
     document.title = 'CRM ENDPOINT PULL OK';
@@ -220,7 +227,7 @@ const expected = new Map([
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
   ['modules', 1], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 2], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 1], ['actions:field_updates', 1], ['actions:tasks', 1], ['actions:task-detail', 1], ['actions:webhooks', 1],
+  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 1], ['actions:field_updates', 1], ['actions:tasks', 1], ['actions:task-detail', 1], ['actions:webhooks', 1],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];

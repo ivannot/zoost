@@ -26,8 +26,12 @@ async function mergeUnanswered(entries, unanswered, op) {
   const kept = prev.filter((e) => e && !isDeluge(e.language) && !have.has(String(e.id)));
   return kept.length ? entries.concat(kept) : entries;
 }
-async function pullAll() {
+async function pullAll(depth = {}) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  // «Pull list» reads the census and stops; «Pull», and every Pull all, reads each source again - a
+  // function whose list time did not move is not proof that nothing in it changed, which is the claim
+  // the timestamp-only refresh was making.
+  const full = !(depth && depth.full === false);
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
@@ -158,7 +162,8 @@ async function pullAll() {
     bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: _c.label || '', sample: !!_c.sample };
     await cacheBinding(bound);
     await rebuildTree();
-    await downloadMissing(true);   // fetch each function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
+    if (full) await downloadMissing(true, true);   // every function's code, resiliently (partials stay; failures can be retried); a pull re-asks what was refused
+    else { updateMissingButton(); setStatus(`Functions list pulled: ${merged.length} in Zoho. Sources on disk were not read again - Pull reads them.`, 'ok'); }
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // **The truncation is said where it is discovered, and this line is gone.** It sat here because
@@ -167,7 +172,7 @@ async function pullAll() {
     // above, so nothing could ever reach this. Two warnings about one fact, one of them unreachable,
     // is worse than one - it reads as cover that is not there. The live one refuses to prune and says
     // so after the tree is drawn, which is where a reader is looking.
-    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true);   // the mirror was written; the gap is what could not be tidied after it
+    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true, full ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.

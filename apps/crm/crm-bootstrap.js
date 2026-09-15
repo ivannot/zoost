@@ -86,7 +86,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $('fieldlist').classList.contains('on')) { e.preventDefault(); e.stopImmediatePropagation(); closeFieldList(); }
 }, true);
 document.querySelectorAll('#pvtabs .dtab').forEach((b) => (b.onclick = () => setPvTab(b.dataset.pv)));
-$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One group in the health view is read from Zoho; the rest is computed from the mirror. Before this
+$('pull').onclick = pullEverything; $('pullone').onclick = () => pullCurrent({ full: true }); $('pulllist').onclick = () => pullCurrent({ full: false }); // One group in the health view is read from Zoho; the rest is computed from the mirror. Before this
 // existed the only way to refresh that group was «Pull all» - the whole org re-downloaded to update
 // one reading, which he pointed out. It refuses on the wrong tab and on a sample like every other
 // Zoho-bound control, and it rebuilds the view in place rather than closing it.

@@ -1022,6 +1022,12 @@ CRM = """
         say('after a workflows write, All fields from the layout picker lost the rules its fields fire');
     }
 
+    // «Pull list» is offered where a list and its items are read apart, and nowhere else.
+    for (const [tab, shown] of [['functions', true], ['workflows', true], ['schedules', false], ['modules', false]]) {
+      setMode(tab); await settle('the ' + tab + ' view never finished drawing');
+      if (($('pulllist').style.display !== 'none') !== shown) say('Pull list is ' + (shown ? 'missing from ' : 'offered on ') + tab);
+    }
+
     // And a function has no Related lists tab at all - absent, not disabled.
     setMode('functions'); await settle('the functions view never finished drawing');
     const fn = [...document.querySelectorAll('#tree .f')][0];

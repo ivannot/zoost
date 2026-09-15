@@ -114,6 +114,8 @@ PRODUCT_ONLY = {
         'funcs': 'the functions view',
         'missing': 'per-type "complete missing"; Analytics retries failed items instead',
         'pullone': 'per-type pull; Analytics pulls one view from its detail pane',
+        'pulllist': 'the CRM reads a tab\'s list apart from its items; Analytics has no tabs and pulls one view from its detail pane',
+        'behind': 'ditto - the notice of what a list pull left as it was',
         'smode': 'search scope, names vs source text — no source to search here',
         'stxt': 'ditto',
         'nameToggle': 'internal vs display name, a CRM-only distinction',

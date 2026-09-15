@@ -112,7 +112,7 @@ async function noteSourceRefusals(attempted, op) {
  *  role that had since been granted would stay refused for ever. So the pull asks and the button
  *  does not.
  */
-async function downloadMissing(recheck) {
+async function downloadMissing(recheck, all = false) {
   const op = beginWorkspaceOp();   // the workspace these functions belong to
   // It downloads, so it is refused on the wrong tab like every other pull. A guard rather than a
   // disabled button: the button is `display:none` unless something is missing, and disabling it
@@ -121,7 +121,8 @@ async function downloadMissing(recheck) {
   if (!zohoReady()) { setStatus(MSG.wrongTab, 'warn'); return; }
   // `mirrored` first: asking `fetchOne` for one of these answers nothing, and counting that as a
   // failed download would put a number on screen that no retry could ever bring down.
-  const pending = treeData.filter((e) => e.mirrored !== false && (!e.downloaded || e.stale || e.pathChanged)
+  // `all` is a pull: every source again, because the list's time not moving is not proof that nothing did.
+  const pending = treeData.filter((e) => e.mirrored !== false && (all || !e.downloaded || e.stale || e.pathChanged)
                                     && (recheck || !isDenied(e)));   // stale = older schema, a rename, or Zoho's updatedTime moved
   if (!pending.length) {
     // Nothing to fetch is a pull outcome like any other, and it is the outcome of every pull after
@@ -196,7 +197,29 @@ function updateRow(e) {
   st.textContent = denied ? '\u2298' : e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
   st.title = denied ? MSG.srcRefused(e.refusedAt) : e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : ok ? 'In workspace - click to refresh' : MSG.notHere;
 }
+/** Whether a tab's details are older than its list, from the area's own record: `listAt` is the last
+ *  pull that read the list, `detailsAt` the last one that read every item. A «Pull list» moves the
+ *  first and not the second - that gap is what it left behind, and it is said rather than hidden. */
+function detailsBehind(access) {
+  const a = access || {};
+  if (!a.listAt) return null;
+  if (a.detailsAt && String(a.detailsAt) >= String(a.listAt)) return null;
+  return { detailsAt: a.detailsAt || null, listAt: a.listAt };
+}
+function paintBehind() {
+  const el = $('behind'); if (!el) return;
+  const gap = (typeof LIST_PULL_TABS !== 'undefined' && LIST_PULL_TABS.has(viewMode) && !isSample())
+    ? detailsBehind(tabAccess[viewMode]) : null;
+  el.hidden = !gap;
+  if (!gap) return;
+  const day = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  el.textContent = gap.detailsAt ? `\u25d0 details from ${day(gap.detailsAt)}` : '\u25d0 details not read';
+  el.title = `The list was pulled on ${new Date(gap.listAt).toLocaleString()}; `
+    + (gap.detailsAt ? `each item was last read on ${new Date(gap.detailsAt).toLocaleString()}` : 'no pull has read each item yet')
+    + ` - anything changed in Zoho since then is not here. Pull reads them again.`;
+}
 function updateMissingButton() {
+  paintBehind();
   const b = $('missing'); if (!b) return;
   if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'connections' || viewMode === 'actions') { b.style.display = 'none'; return; }
   const arr = viewMode === 'workflows' ? workflowData : treeData;

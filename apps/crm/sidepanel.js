@@ -51,7 +51,11 @@ const LOCAL_BTNS = ['overview', 'graph', 'refresh', 'export', 'exportmd', 'healt
 // One list now, and it is applied by `blockZoho()` rather than by two mechanisms that have to be
 // remembered together: `disabled` where the element has it, and a class in every case, so the
 // stylesheet stops naming controls one by one and a control added tomorrow inherits both.
-const ZOHO_BTNS = ['pull', 'pullone', 'funcs', 'pvreveal', 'pvfind'];
+const ZOHO_BTNS = ['pull', 'pullone', 'pulllist', 'funcs', 'pvreveal', 'pvfind'];
+// The tabs whose list does not carry each item's detail, so a pull can read the one without the other:
+// «Pull list» says what exists in Zoho in seconds, «Pull» reads every item again. The rest are a list
+// and nothing else, and one button is all they have.
+const LIST_PULL_TABS = new Set(['functions', 'workflows']);
 function blockZoho(on) {
   document.body.classList.toggle('zoho-blocked', on);
   ZOHO_BTNS.forEach((id) => {
@@ -846,7 +850,12 @@ function setMode(mode) {
   // The label is in the markup and stays there - writing textContent here replaced the mark with
   // the word on every mode change, so the button reverted the moment anyone touched a segment.
   // Only the title varies, because only the type does.
-  $('pullone').title = `Pull only ${_typeLabel} into the local mirror - "Pull all" pulls every type`;
+  const _split = LIST_PULL_TABS.has(mode);
+  $('pullone').title = _split
+    ? `Pull ${_typeLabel} - the list and every item read again from Zoho. "Pull all" does every type`
+    : `Pull only ${_typeLabel} into the local mirror - "Pull all" pulls every type`;
+  $('pulllist').style.display = _split ? '' : 'none';
+  $('pulllist').title = `Pull list - which ${_typeLabel} exist in Zoho, in a few requests rather than one per item; what is already on disk is not read again, and the bar says since when`;
   buildTypeChips();
   $('funcs').style.display = mode === 'functions' ? '' : 'none';
   // It lives in the workspace bar now, beside Export and Health, so it no longer comes and goes with
@@ -1017,8 +1026,8 @@ function workspaceChangeRefuse() { return pullController.workspaceChangeRefuse()
 async function runPullAction(work) {
   return pullController.runPullAction(work);
 }
-async function pullCurrent() {
-  return pullController.pullCurrent();
+async function pullCurrent(depth) {
+  return pullController.pullCurrent(depth);
 }
 // "Pull all" means every area this user can actually reach. An area Zoho refused last time is
 // skipped rather than re-tried on every pull: re-asking a question already answered turns each pull

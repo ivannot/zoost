@@ -22,7 +22,7 @@
  * setStatus: (text: string, kind?: string) => void,
  * currentView: () => string,
  * tabLabel: (id: string) => string,
- * runners: () => Record<string, () => Promise<unknown>>,
+ * runners: () => Record<string, (depth?: {full?: boolean}) => Promise<unknown>>,
  * statusKind: () => string,
  * rebuildActive: () => Promise<unknown>,
  * beginOperation: () => PullControllerOperation,
@@ -123,16 +123,19 @@ function createCrmPullController(options) {
     finally { setPullBusy(false); }
   }
 
-  async function pullCurrent() {
+  // `depth` is handed to the runner as it is: `{ full: false }` from «Pull list» reads what exists in
+  // Zoho and leaves each item's detail as it is; nothing - «Pull» and every Pull all - reads it all.
+  /** @param {{full?: boolean}} [depth] */
+  async function pullCurrent(depth) {
     if (options.busy()) return;
     const view = options.currentView() || 'functions';
     const label = options.tabLabel(view).toLowerCase();
     const runners = options.runners();
     setPullBusy(true);
-    options.setStatus('Pulling ' + label + '\u2026', 'busy');
+    options.setStatus((depth && depth.full === false ? 'Pulling the list of ' : 'Pulling ') + label + '\u2026', 'busy');
     try {
       phase('reading');
-      await (runners[view] || runners.functions)();
+      await (runners[view] || runners.functions)(depth);
       if (options.statusKind() === 'busy') {
         if (lifecycle.snapshot().state === 'reading') { phase('planning'); phase('writing'); }
         try { await options.rebuildActive(); }
