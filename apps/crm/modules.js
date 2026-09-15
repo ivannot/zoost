@@ -374,7 +374,13 @@ async function copyRelatedName(text) {
  */
 async function showChosenLayout(sel, m, mine, op) {
   const body = document.getElementById('laybody'); const v = sel.value;
-  if (v === '__all__') { body.innerHTML = renderFieldsTable(m); return; }
+  if (v === '__all__') {
+    // Read again rather than drawn from the cache: a workflows write since the module opened dropped
+    // it, and a table drawn without it lost every mark and the note that explains their absence.
+    const trig = await fieldTriggersNow(op, () => previewCurrent(mine, op));
+    if (!previewCurrent(mine, op)) return;
+    body.innerHTML = renderFieldsTable(m, trig); return;
+  }
   body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
   let full = []; try { full = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
   if (!previewCurrent(mine, op)) return;
@@ -382,8 +388,8 @@ async function showChosenLayout(sel, m, mine, op) {
   body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found - re-pull modules.</div>';
 }
 
-function renderFieldsTable(m) {
-  const trig = (f) => (fieldTriggers && fieldTriggers.map.get(`${m.api_name}:${f.api_name}`)) || [];
+function renderFieldsTable(m, found = fieldTriggers) {
+  const trig = (f) => (found && found.map.get(`${m.api_name}:${f.api_name}`)) || [];
   const rows = (m.fields || []).map((f) => `<tr>
     <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''} ${trigCell(trig(f))}</td>
     <td class="mono">${escHtml(f.api_name)}</td>
@@ -408,9 +414,9 @@ function renderFieldsTable(m) {
   // button that opens it, in the last position, off screen at 400px. It sits in Type, where the word
   // «picklist» already is and where the reader is already looking.
   // Silence here would read as «no field starts a rule», which is only true when the rules were read.
-  const note = !fieldTriggers ? ''
-    : !fieldTriggers.pulled ? 'No workflow rules are in this workspace, so no field here shows the rules it makes fire.'
-    : fieldTriggers.unread ? `${fieldTriggers.unread} workflow rule(s) are not downloaded, so the fields they watch are not marked.` : '';
+  const note = !found ? ''
+    : !found.pulled ? 'No workflow rules are in this workspace, so no field here shows the rules it makes fire.'
+    : found.unread ? `${found.unread} workflow rule(s) are not downloaded, so the fields they watch are not marked.` : '';
   return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th></tr></thead><tbody>${rows}</tbody></table>`
     + (note ? `<div class="ftnote">${escHtml(note)}</div>` : '');
 }
@@ -449,11 +455,8 @@ async function openModule(path, layoutId) {
   let m; try { m = JSON.parse(await op.read(path)); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
   // Which rules each field makes fire is read from every rule file, once, and dropped when one is written.
-  if (fieldTriggers === null) {
-    const t = await buildFieldTriggers(op);
-    if (!previewCurrent(mine, op)) return;
-    fieldTriggers = t;
-  }
+  const trig = await fieldTriggersNow(op, () => previewCurrent(mine, op));
+  if (!previewCurrent(mine, op)) return;
   navNames({ display: m.plural_label || m.singular_label || m.module_name || m.api_name,
              gen: m.module_name || m.api_name, api: m.api_name });
   const nav = moduleNavigable(m);
@@ -511,7 +514,7 @@ async function openModule(path, layoutId) {
   // So it goes home before the write and comes back after it. The rule is general and worth the line:
   // an element that outlives a render must not be inside what the render replaces.
   $('pvcallershome').after($('pvcallers'));
-  $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m)}</div></div>`
+  $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m, trig)}</div></div>`
     + `<div id="pvrels">${rlBlock}</div>`
     + `<div id="pvdetails">${refBanner}${namesBlock}</div>`;
   pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before

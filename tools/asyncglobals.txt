@@ -105,6 +105,7 @@ apps/analytics/sidepanel.js	refreshWorkspaces	viewsPulledAt
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
+apps/crm/automation.js	fieldTriggersNow	fieldTriggers
 apps/crm/content-bridge.js	pageCsrfToken	_pageCsrf
 apps/crm/content-bridge.js	warmDeluge	_warming
 apps/crm/crm-failures.js	pullFailures	failIndex
@@ -134,7 +135,6 @@ apps/crm/live-sync.js	runSyncSlot	syncAgain
 apps/crm/live-sync.js	runSyncSlot	syncBusy
 apps/crm/live-sync.js	runSyncSlot	syncing
 apps/crm/modules.js	openModule	currentPath
-apps/crm/modules.js	openModule	fieldTriggers
 apps/crm/modules.js	pullModules	index
 apps/crm/modules.js	rebuildModules	moduleLoad
 apps/crm/options.js	loadAi	aiLoadFailed

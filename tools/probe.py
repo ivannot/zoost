@@ -929,6 +929,21 @@ CRM = """
       const said = shown.textContent;
       if (said.includes('ANYVALUE')) say('the opened rule prints its watched field as a condition');
       if (!/fields: /.test(said)) say('the opened rule does not say which field starts it');
+
+      // A write under workflows/ drops the map, and «All fields» from the layout picker drew the table
+      // without it: every mark gone, and the note that explains an absence gone too. Found by review.
+      modSeg.click(); await settle();
+      const acc2 = [...document.querySelectorAll('#tree .f')].find((e) => /Accounts/.test(e.textContent));
+      acc2.click(); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never reopened');
+      $('pvtab_code').click(); await settle();
+      await writeFile('workflows/index.json', await readFile('workflows/index.json'));
+      if (fieldTriggers !== null) say('a write under workflows/ left the field map cached');
+      const sel = $('laysel');
+      if (!sel || sel.options.length < 2) say('Accounts has no layout to pick');
+      sel.value = sel.options[1].value; await sel.onchange();
+      sel.value = '__all__'; await sel.onchange(); await settle();
+      if (!$('pvfields').querySelector('.plbtn[data-row="rules"]'))
+        say('after a workflows write, All fields from the layout picker lost the rules its fields fire');
     }
 
     // And a function has no Related lists tab at all - absent, not disabled.

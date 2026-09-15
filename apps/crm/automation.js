@@ -499,6 +499,25 @@ async function buildFieldTriggers(op = beginWorkspaceOp()) {
   }
   return op.current() ? { map: fieldTriggerMap(rules), pulled: true, unread } : null;
 }
+/** The map for a table about to be drawn: built when absent, and kept only if no rule was written
+ *  while it was being read. A pull writes rule files one at a time, so a reading taken across one of
+ *  those writes was assigned over the null `noteWrite` had just left - an older map outliving the
+ *  pull that replaced it. Found by review. The slot holds a mark while it reads, and a write replaces
+ *  the mark with null the way it drops every other cache, so «was anything written» is one identity
+ *  test and `noteWrite` stays a table of nulls. Three readings at most; past that the last one is
+ *  drawn and not kept, so the next table reads again. `null` means the caller is no longer drawing. */
+async function fieldTriggersNow(op, stillMine) {
+  let t = fieldTriggers && !fieldTriggers.reading ? fieldTriggers : null;
+  for (let tries = 0; t === null && tries < 3; tries++) {
+    const mark = { reading: true };
+    fieldTriggers = mark;
+    t = await buildFieldTriggers(op);
+    if (!stillMine() || !t) { if (fieldTriggers === mark) fieldTriggers = null; return null; }
+    if (fieldTriggers === mark) fieldTriggers = t;
+    else if (tries < 2) t = null;
+  }
+  return t;
+}
 const ACTION_LABEL = { email_notifications: 'Email notifications', field_updates: 'Field updates',
                        tasks: 'Tasks', webhooks: 'Webhooks' };
 // A kind Zoho invents tomorrow gets a readable label without anyone editing this: underscores out,

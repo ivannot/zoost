@@ -21663,3 +21663,29 @@ test('a watched field is named on its rule and on its module in both reports, ne
   // Without the workflows chapter there is nothing to link to, and an empty column would read «none».
   assert.ok(!m.buildExportMarkdown(data, { ...MD_SCOPE, workflows: false }).includes('Fires workflows'));
 });
+
+test('a rule written while the field map is being read does not leave the older reading cached', async () => {
+  // Found by review: `noteWrite` nulls the map, the reading that was already under way assigned
+  // itself over the null, and a pull's last write left the panel on the map from before it.
+  const rig = (writesOn) => load([
+    'let fieldTriggers = null; let builds = 0;',
+    `async function buildFieldTriggers() { builds++; if (${writesOn}(builds)) fieldTriggers = null; return { map: new Map(), pulled: true, unread: builds }; }`,
+    sliceFn('apps/crm/automation.js', 'fieldTriggersNow'),
+    'function state() { return { cached: fieldTriggers, builds }; }',
+  ]);
+  const once = rig('((n) => n === 1)');
+  const t = await once.fieldTriggersNow({}, () => true);
+  assert.equal(t.unread, 2, 'the reading taken across a write is the one drawn');
+  assert.equal(once.state().cached && once.state().cached.unread, 2, 'the reading taken across a write was the one kept');
+  assert.equal((await once.fieldTriggersNow({}, () => true)).unread, 2, 'a kept map was read again');
+
+  const always = rig('(() => true)');
+  const u = await always.fieldTriggersNow({}, () => true);
+  assert.equal(always.state().builds, 3, 'a map that is written on every reading is read for ever');
+  assert.equal(u.unread, 3);
+  assert.equal(always.state().cached, null, 'a reading that never settled was kept anyway');
+
+  const gone = rig('(() => false)');
+  assert.equal(await gone.fieldTriggersNow({}, () => false), null, 'a draw nobody is waiting for still returned a map');
+  assert.equal(gone.state().cached, null, 'an abandoned reading left its mark in the cache, where the next draw reads it as a map');
+});
