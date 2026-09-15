@@ -895,33 +895,58 @@ CRM = """
       const o = getComputedStyle(e).overflowY; return o === 'auto' || o === 'scroll';
     });
     if (scrolls.length) say(scrolls.length + ' box(es) inside Details scroll on their own: ' + scrolls.map((e) => e.id || e.className).join(', '));
-    // A field that makes a rule fire shows how many, opens them under itself - beside its picklist
-    // values, each button finding its own row - and a rule opens on the Workflows tab. Asked for on a
-    // real org: Zoho states a rule's trigger inside the rule and nowhere else.
+    // A field's rules are counted in a column of their own; that count, like a picklist's, opens a
+    // layer with one entry per line; the table sorts by any column; a rule opens on the Workflows tab.
+    // Asked for on a real org, then reshaped after the first version: the lists sat side by side
+    // under the field and were hard to read.
     {
-      // Accounts, because the sample's rule there watches a picklist: the one field shape with two
-      // rows under it, which is the shape a listener finding «the next row» gets wrong.
       const acc = [...document.querySelectorAll('#tree .f')].find((e) => /Accounts/.test(e.textContent));
       if (!acc) say('the fixture has no Accounts module to open');
       acc.click(); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never opened');
       $('pvtab_code').click(); await settle();
-      const rb = [...$('pvfields').querySelectorAll('.plbtn[data-row="rules"]')]
-        .find((x) => x.closest('tr').querySelector('.plbtn[data-row="values"]'));
-      if (!rb) say('no picklist in ' + (currentPath || 'the module') + ' shows the workflow rules it makes fire');
-      const tr = rb.closest('tr');
-      const rowOf = (kind) => { let r = tr.nextElementSibling; while (r && r.classList.contains('plrow') && r.dataset.row !== kind) r = r.nextElementSibling; return r && r.dataset.row === kind ? r : null; };
-      const rules = rowOf('rules');
-      if (!rules || !rules.hidden) say('the rules under a field are missing, or open before anybody asked');
-      rb.click(); await settle();
-      if (rules.hidden) say('the workflow count under a field opened nothing');
-      if (rb.getAttribute('aria-expanded') !== 'true') say('the workflow count opened its row and does not say so');
-      const vb = tr.querySelector('.plbtn[data-row="values"]');
-      if (vb) { vb.click(); await settle(); if (rowOf('values').hidden || rules.hidden) say('the values and the rules of one field toggle each other'); }
-      const link = rules.querySelector('.wflink');
+      const heads = [...$('pvfields').querySelectorAll('thead th')].map((t) => t.textContent.trim());
+      if (!/^Workflows/.test(heads[heads.length - 1] || '')) say('the rules count has no column of its own: ' + heads.join(' | '));
+      const items = () => [...$('fieldlistbody').querySelectorAll('li')];
+      const oneEach = (li) => li.every((x, i) => i === 0 || x.getBoundingClientRect().top >= li[i - 1].getBoundingClientRect().bottom - 1);
+
+      const vb = $('pvfields').querySelector('.plbtn[data-list="values"]');
+      if (!vb) say('no picklist in Accounts offers its values');
+      const want = Number((vb.textContent.match(/\d+/) || [0])[0]);
+      vb.focus(); vb.click(); await until(() => $('fieldlist').classList.contains('on'), 'the values layer never opened');
+      if (items().length !== want) say(`the layer lists ${items().length} of ${want} values`);
+      if (!oneEach(items())) say('the values in the layer are not one per line');
+      if (document.activeElement !== $('fieldlistx')) say('the layer opened and the keyboard stayed behind it');
+      document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await until(() => !$('fieldlist').classList.contains('on'), 'Escape never closed the layer');
+      if (document.activeElement !== vb) say('closing the layer did not give the keyboard back to the count that opened it');
+      if (currentPath !== 'modules/Accounts.json') say('Escape on the layer closed something underneath it');
+
+      const rb = $('pvfields').querySelector('.plbtn[data-list="rules"]');
+      if (!rb) say('no field in Accounts counts the workflow rules it fires');
+      const nRules = Number(rb.textContent);
+      rb.click(); await until(() => $('fieldlist').classList.contains('on'), 'the workflows layer never opened');
+      if (items().length !== nRules) say(`the layer lists ${items().length} of ${nRules} rules`);
+      if (!oneEach(items())) say('the rules in the layer are not one per line');
+      $('fieldlistx').click(); await until(() => !$('fieldlist').classList.contains('on'), 'Close never closed the layer');
+
+      const sortBtn = () => $('pvfields').querySelector('.thsort[data-sort="wf"]');
+      const counts = () => [...$('pvfields').querySelectorAll('tbody tr')]
+        .map((tr) => Number((tr.querySelector('.plbtn[data-list="rules"]') || { textContent: '0' }).textContent));
+      sortBtn().click(); await settle();
+      const c1 = counts();
+      if (!c1[0] || c1.some((x, i) => i && x > c1[i - 1])) say('sorting by Workflows did not put the largest first: ' + c1.join(','));
+      if (document.activeElement !== sortBtn()) say('sorting took the keyboard off the header that was pressed');
+      sortBtn().click(); await settle(); sortBtn().click(); await settle();
+      if (sortBtn().closest('th').hasAttribute('aria-sort')) say('a third press did not give Zoho its order back');
+
+      $('pvfields').querySelector('.plbtn[data-list="rules"]').click();
+      await until(() => $('fieldlist').classList.contains('on'), 'the workflows layer never reopened');
+      const link = $('fieldlistbody').querySelector('.wflink');
       const wid = link && link.dataset.wfid;
-      if (!wid) say('a rule under a field is not a link');
+      if (!wid) say('a rule in the layer is not a link');
       link.click();
-      await until(() => viewMode === 'workflows' && currentPath === 'workflows/' + wid + '.json', 'the rule under a field never opened on the Workflows tab', 4000);
+      await until(() => viewMode === 'workflows' && currentPath === 'workflows/' + wid + '.json', 'the rule in the layer never opened on the Workflows tab', 4000);
+      if ($('fieldlist').classList.contains('on')) say('the layer stayed open over the rule it opened');
       await settle();
       // What the pane *says*: the collapsed Raw JSON beside it is the file verbatim and rightly holds
       // the placeholder, and textContent reads a closed <details> as readily as an open one.
@@ -931,7 +956,7 @@ CRM = """
       if (!/fields: /.test(said)) say('the opened rule does not say which field starts it');
 
       // A write under workflows/ drops the map, and «All fields» from the layout picker drew the table
-      // without it: every mark gone, and the note that explains an absence gone too. Found by review.
+      // without it: every count gone, and the note that explains an absence gone too. Found by review.
       modSeg.click(); await settle();
       const acc2 = [...document.querySelectorAll('#tree .f')].find((e) => /Accounts/.test(e.textContent));
       acc2.click(); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never reopened');
@@ -942,7 +967,7 @@ CRM = """
       if (!sel || sel.options.length < 2) say('Accounts has no layout to pick');
       sel.value = sel.options[1].value; await sel.onchange();
       sel.value = '__all__'; await sel.onchange(); await settle();
-      if (!$('pvfields').querySelector('.plbtn[data-row="rules"]'))
+      if (!$('pvfields').querySelector('.plbtn[data-list="rules"]'))
         say('after a workflows write, All fields from the layout picker lost the rules its fields fire');
     }
 

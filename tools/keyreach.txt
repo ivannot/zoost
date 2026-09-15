@@ -15,12 +15,14 @@
 #   still clickable surfaces no keyboard can focus, which is true and is not a defect: the action
 #   behind them has a keyboard path now, and it is not this one.
 #
-#   #pvtable is not a control at all. It holds one delegated listener for every fields table there
-#   will ever be, and the thing it acts on - .plbtn - is already a real <button> with aria-expanded.
-#   It is recorded because this check keys on the element that carries the handler, and it cannot
-#   tell a delegation host from a control. Stated rather than taught: the alternative is a checker
-#   that guesses at intent.
+#   #pvtable and #fieldlistbody are not controls at all. Each holds one delegated listener: #pvtable
+#   for every fields table there will ever be - its .plbtn counts and .thsort headers are real
+#   <button>s - and #fieldlistbody for the layer those counts open, whose .wflink rules are buttons
+#   too. They are recorded because this check keys on the element that carries the handler, and it
+#   cannot tell a delegation host from a control. Stated rather than taught: the alternative is a
+#   checker that guesses at intent.
 a763933857578555  apps/crm/sidepanel.html: <div id="scrim">
+3eae3cda6eabc3a2  apps/crm/sidepanel.html: <div id="fieldlistbody">
 11bf3d144ba35433  apps/crm/sidepanel.html: <div id="pvtable">
 037463c0118ca959  apps/crm/graphview.html: <div id="v-er">
 3e9894e17adead25  apps/analytics/sidepanel.html: <div id="scrim">

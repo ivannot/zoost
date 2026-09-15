@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:e85af05cc2b31c99 -->
+<!-- translated-from: site/docs-crm.html sha256:7a7f7a0acd13106c -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -215,7 +215,7 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>le funzioni Deluge come file <code>.dg</code>; quelle Java, Python e Node come progetti <code>&lt;nome&gt;.files/</code>, con tutti i file restituiti da Zoho. Ogni funzione ha anche il proprio <code>.meta.json</code></td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>il censimento: ogni funzione con namespace, id e dove è agganciata</td></tr>
-      <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist. Nel pannello una picklist mostra il <b>numero</b> di valori e si apre verso il basso con un clic, uno per riga: quaranta opzioni su una riga facevano scorrere la tabella di lato senza fine. Un campo che una regola di workflow osserva per una modifica, o da cui conta una data, mostra <b class="ui">▸ 2 workflows</b> accanto al nome e si apre allo stesso modo, un link per regola. Le regole innescate da un'intera sezione, e quelle non scaricate, non sono contate - la tabella dice quante non ha potuto leggere</td></tr>
+      <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist. Nel pannello una picklist mostra il <b>numero</b> di valori, e un clic li apre in un pannello, uno per riga. La colonna <b class="ui">Workflows</b> conta le regole che osservano un campo per una modifica o contano una data da esso; il numero le apre allo stesso modo, un link per regola, e ogni intestazione di colonna ordina la tabella. Le regole innescate da un'intera sezione, e quelle non scaricate, non sono contate - la tabella dice quante non ha potuto leggere</td></tr>
       <tr><td class="k"><code>modules/layouts/</code></td><td>un file per modulo, con le sezioni e i campi di ogni layout - sotto i moduli che descrivono</td></tr>
       <tr><td class="k"><code>workflows/</code></td><td>un file per regola: trigger, criteri, azioni immediate e differite</td></tr>
       <tr><td class="k"><code>schedules/</code>, <code>connections/</code></td><td>l'elenco delle schedulazioni e il catalogo delle connessioni dell'org</td></tr>

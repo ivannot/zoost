@@ -36,19 +36,19 @@
   .ftbl th{position:sticky;top:0;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
   .ftbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top;white-space:nowrap}
   .ftbl td.mono{color:#82d2ff} .ftbl tr:hover{background:#16263f}
-  /* A picklist of forty options laid out on one line made the fields table scroll sideways
-     for ever, and a horizontal scrollbar in a 400px panel hides the columns that matter. The
-     cell carries the count and opens downwards; ▸/▾ is the pair this panel already uses for
-     a group that folds. */
-  .ftbl td.pl{white-space:normal}
+  /* A picklist of forty options on one line made the fields table scroll sideways for ever, and a
+     row of chips under the field was hard to read. A count opens a layer instead, one entry per line. */
   .plbtn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font:11px var(--mono);padding:1px 6px;cursor:pointer}
   .plbtn:hover{color:var(--ink);border-color:var(--sel)}
-  .ftbl tr.plrow td{white-space:normal;background:#101827;padding:7px 8px}
-  .plv .wflink{color:var(--accent);cursor:pointer} .plv .wflink:hover{text-decoration:underline} .plv .wfwhen{color:var(--muted)}
+  .ftbl th.num,.ftbl td.num{text-align:right}
+  .ftbl th .thsort{color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;white-space:nowrap}
+  .ftbl th .thsort:hover{color:var(--ink)}
   .ftnote{padding:6px 10px;color:var(--muted);font-size:11px}
-  .plvals{display:flex;flex-wrap:wrap;gap:4px;max-height:180px;overflow:auto}
-  .plv{border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#cbd5e1;background:#16203099;
-       max-width:100%;overflow-wrap:anywhere}
+  .fllist{margin:0;padding:0 0 0 2.6em;font:12px var(--mono);color:#cbd5e1}
+  ul.fllist{list-style:none;padding-left:0}
+  .fllist li{padding:6px 2px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+  .fllist .wflink{color:var(--accent);cursor:pointer;text-align:left} .fllist .wflink:hover{text-decoration:underline}
+  .fllist .wfwhen{display:block;color:var(--muted);font-size:11px;margin-top:2px}
   .bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer}
   button:hover:not(:disabled):not(.bare){background:#2b3a58} button:disabled{opacity:.5;cursor:default}

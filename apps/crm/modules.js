@@ -313,37 +313,75 @@ async function resyncModule(m) {
  *  horizontal scrollbar in a 400px panel hides the columns somebody came for. The count is the
  *  summary, because a number is a fact and «many» is not, and the list opens under it one value per
  *  line. Reported. */
-function pickCell(values) {
-  const v = values || []; if (!v.length) return '';
-  return `<button class="plbtn" data-row="values" data-n="${escA(String(v.length))}" aria-expanded="false" title="Show the values">\u25b8 ${v.length} value${v.length === 1 ? '' : 's'}</button>`;
-}
-/** The values, in a row of their own that spans the table.
+/** A field's picklist values and the workflow rules that watch it, each a count that opens a list.
  *
- *  They were put inside the picklist cell first, and that was the wrong place twice over: it is the
- *  last of six columns in a 400px pane, so «WhatsApp/SMS» came out broken across two lines at about
- *  ninety pixels wide, with a scrollbar inside a scrollbar and no line between one value and the
- *  next. Reported, with a picture, and the report was that it had become worse than the sideways
- *  scroll it replaced - which it had. A cell cannot be widened; a row can, so the values get the
- *  whole width, and each one wears a border because a list of names needs a boundary, not a newline. */
-function pickRow(values, cols) {
-  const v = values || []; if (!v.length) return '';
-  return `<tr class="plrow" data-row="values" hidden><td colspan="${escA(String(cols))}"><div class="plvals">`
-    + v.map((x) => `<span class="plv">${escHtml(x)}</span>`).join('')
-    + '</div></td></tr>';
+ *  Both used to open downwards, in a row spanning the table, with the entries side by side as chips -
+ *  reported as hard to read. They open a layer now, one entry per line, the width of the panel. The
+ *  count for the rules has a column of its own so the table sorts by it. */
+function pickCell(f) {
+  const v = f.picklist || []; if (!v.length) return '';
+  return `<button class="plbtn" data-list="values" data-f="${escA(f.api_name)}" aria-haspopup="dialog" title="Show the values, one per line">${v.length} value${v.length === 1 ? '' : 's'}</button>`;
 }
-/** The workflow rules a field makes fire, in the picklist's shape: a count in the row, and the names
- *  in a row of their own under it. The same kind of fact about a field, in the same 400px, so the same
- *  control - and one listener serves both, which is why each row says which button it belongs to. */
-function trigCell(rules) {
-  if (!rules || !rules.length) return '';
-  return `<button class="plbtn" data-row="rules" data-n="${escA(String(rules.length))}" aria-expanded="false" title="Workflow rules that fire when this field changes, or on the date it holds">▸ ${rules.length} workflow${rules.length === 1 ? '' : 's'}</button>`;
+function trigCell(f, rules) {
+  if (!rules.length) return '';
+  return `<button class="plbtn" data-list="rules" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Workflows" title="Workflow rules that watch this field for a change or count a date from it">${rules.length}</button>`;
 }
-function trigRow(rules, cols) {
-  if (!rules || !rules.length) return '';
-  return `<tr class="plrow" data-row="rules" hidden><td colspan="${escA(String(cols))}"><div class="plvals">`
-    + rules.map((r) => `<span class="plv"><button type="button" class="bare wflink" data-wfid="${escA(r.id)}" title="Open this workflow">${escHtml(r.name)}</button>`
-      + ` <span class="wfwhen">${escHtml(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ' · off'}</span></span>`).join('')
-    + '</div></td></tr>';
+const lookupOf = (f) => (typeof f.lookup === 'string' ? f.lookup
+  : (f.lookup && (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module))))) || '';
+/** How the Fields table is ordered. `key: null` is Zoho's own order, the default; a header cycles
+ *  through its first direction, the other one, and back to Zoho's. Numbers start from the largest,
+ *  because «which field fires the most rules» is the question a count column is sorted to answer.
+ *  Kept across modules: comparing modules by one column should not mean asking for it each time. */
+let fieldSort = { key: null, dir: 1 };
+const FIELD_SORTS = {
+  label: { text: 'Field', of: (f) => String(f.label || f.api_name || '').toLowerCase() },
+  api: { text: 'API name', of: (f) => String(f.api_name || '').toLowerCase() },
+  type: { text: 'Type', of: (f) => String(f.data_type || '') },
+  req: { text: 'Req', of: (f) => (f.mandatory ? 1 : 0), numeric: true },
+  lookup: { text: 'Lookup', of: (f) => lookupOf(f).toLowerCase() },
+  wf: { text: 'Workflows', of: (f, n) => n, numeric: true },
+};
+function sortedFields(fields, countOf, sort = fieldSort) {
+  const list = (fields || []).map((f, i) => ({ f, i, n: countOf(f) }));
+  const s = sort && FIELD_SORTS[sort.key];
+  if (!s) return list;
+  return list.sort((a, b) => {
+    const x = s.of(a.f, a.n), y = s.of(b.f, b.n);
+    const c = s.numeric ? x - y : String(x).localeCompare(String(y));
+    return (c * sort.dir) || (a.i - b.i);
+  });
+}
+function nextFieldSort(key, sort = fieldSort) {
+  const first = FIELD_SORTS[key] && FIELD_SORTS[key].numeric ? -1 : 1;
+  if (sort.key !== key) return { key, dir: first };
+  if (sort.dir === first) return { key, dir: -first };
+  return { key: null, dir: 1 };
+}
+/** What a count in the table on screen opens - that table's module and map, not a new reading. */
+let fieldListShown = null, fieldListOpener = null;
+function openFieldList(kind, api, opener) {
+  const shown = fieldListShown; if (!shown) return;
+  const f = (shown.m.fields || []).find((x) => x.api_name === api); if (!f) return;
+  const name = f.label || f.api_name;
+  if (kind === 'values') {
+    const v = f.picklist || [];
+    $('fieldlisth').textContent = `${name} · ${v.length} value${v.length === 1 ? '' : 's'}`;
+    $('fieldlistbody').innerHTML = `<ol class="fllist">${v.map((x) => `<li>${escHtml(x)}</li>`).join('')}</ol>`;
+  } else {
+    const rules = shown.trig(f);
+    $('fieldlisth').textContent = `${name} · ${rules.length} workflow${rules.length === 1 ? '' : 's'}`;
+    $('fieldlistbody').innerHTML = `<ul class="fllist">${rules.map((r) => `<li><button type="button" class="bare wflink" data-wfid="${escA(r.id)}" title="Open this workflow">${escHtml(r.name)}</button>`
+      + `<span class="wfwhen">${escHtml(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ' · off'}</span></li>`).join('')}</ul>`;
+  }
+  fieldListOpener = opener || null;
+  $('scrim').classList.add('on'); panelInert(true); $('fieldlist').classList.add('on');
+  $('fieldlistx').focus();
+}
+function closeFieldList() {
+  if (!$('fieldlist').classList.contains('on')) return;
+  $('scrim').classList.remove('on'); panelInert(false); $('fieldlist').classList.remove('on');
+  const back = fieldListOpener; fieldListOpener = null;
+  if (back && back.isConnected) back.focus();
 }
 /** Every report cuts a long picklist, and none of them said so: twelve values printed and the rest
  *  gone, which makes the report quietly wrong rather than merely shorter. It states what it dropped
@@ -390,13 +428,15 @@ async function showChosenLayout(sel, m, mine, op) {
 
 function renderFieldsTable(m, found = fieldTriggers) {
   const trig = (f) => (found && found.map.get(`${m.api_name}:${f.api_name}`)) || [];
-  const rows = (m.fields || []).map((f) => `<tr>
-    <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''} ${trigCell(trig(f))}</td>
+  fieldListShown = { m, found, trig };
+  const rows = sortedFields(m.fields, (f) => trig(f).length).map(({ f }) => `<tr>
+    <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
     <td class="mono">${escHtml(f.api_name)}</td>
-    <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f.picklist)}</td>
+    <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
-    <td class="mono">${f.lookup ? '\u2192 ' + escHtml(typeof f.lookup === 'string' ? f.lookup : (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module)) || '')) : ''}</td>
-  </tr>${pickRow(f.picklist, 5)}${trigRow(trig(f), 5)}`).join('');
+    <td class="mono">${f.lookup ? '\u2192 ' + escHtml(lookupOf(f)) : ''}</td>
+    <td class="num">${trigCell(f, trig(f))}</td>
+  </tr>`).join('');
   if (!rows) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
     // under Related lists put the same sixty words on screen three times.
@@ -409,15 +449,20 @@ function renderFieldsTable(m, found = fieldTriggers) {
       // those are what `emptyReason()` is being asked for.
       : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
   }
-  // Five columns, not six. The values used to have one of their own, which is what made the table
-  // scroll sideways - and once they moved to a row of their own the column left behind held only the
-  // button that opens it, in the last position, off screen at 400px. It sits in Type, where the word
-  // «picklist» already is and where the reader is already looking.
+  // The values have no column: a column of them is what once made the table scroll sideways, and
+  // their count sits in Type, where the word «picklist» already is. The rules do have one - a number,
+  // narrow - because a count that cannot be sorted cannot answer «which field fires the most».
   // Silence here would read as «no field starts a rule», which is only true when the rules were read.
   const note = !found ? ''
     : !found.pulled ? 'No workflow rules are in this workspace, so no field here shows the rules it makes fire.'
     : found.unread ? `${found.unread} workflow rule(s) are not downloaded, so the fields they watch are not marked.` : '';
-  return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th></tr></thead><tbody>${rows}</tbody></table>`
+  // A header is a button: sorting is reached by Tab and Enter like every other control here.
+  const th = (key) => {
+    const on = fieldSort.key === key, s = FIELD_SORTS[key];
+    return `<th${key === 'wf' ? ' class="num"' : ''}${on ? ` aria-sort="${fieldSort.dir === 1 ? 'ascending' : 'descending'}"` : ''}>`
+      + `<button type="button" class="bare thsort" data-sort="${escA(key)}" title="Sort by this column - again to reverse, a third time for Zoho's order">${escHtml(s.text)}${on ? (fieldSort.dir === 1 ? ' \u25b4' : ' \u25be') : ''}</button></th>`;
+  };
+  return `<table class="ftbl"><thead><tr>${Object.keys(FIELD_SORTS).map(th).join('')}</tr></thead><tbody>${rows}</tbody></table>`
     + (note ? `<div class="ftnote">${escHtml(note)}</div>` : '');
 }
 // Selecting a different item must start the reader at the top of the new content;

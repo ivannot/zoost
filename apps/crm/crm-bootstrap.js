@@ -53,7 +53,7 @@ $('expgo').onclick = onExpgo;
 $('pspFull').onclick = () => { dlgScope = Object.assign({}, dlgScope, SCOPE_FULL); dlgAutoCleared.clear(); scopeToUI(); };
 $('pspSafe').onclick = () => { dlgScope = Object.assign({}, dlgScope, SCOPE_SAFE); dlgAutoCleared.clear(); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
-$('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else closeAbout(); };
+$('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else if ($('fieldlist').classList.contains('on')) closeFieldList(); else closeAbout(); };
 void readRememberedSample();
 loadScope();
 loadZohoDc();
@@ -65,20 +65,26 @@ loadTabPrefs().then(renderTabs);
 // module and again by the layout picker, so a handler attached after an innerHTML is one somebody
 // forgets to re-attach - which is how a control ends up dead on the second render only.
 $('pvtable').addEventListener('click', (e) => {
-  const wl = e.target.closest('.wflink'); if (wl) { openWorkflowById(wl.dataset.wfid); return; }
-  const b = e.target.closest('.plbtn'); if (!b) return;
-  // A field can carry two rows under it - its values and the rules it fires - so each button finds
-  // the row that names it, not merely the next one.
-  const kind = b.dataset.row;
-  let box = b.closest('tr') && b.closest('tr').nextElementSibling;
-  while (box && box.classList.contains('plrow') && box.dataset.row !== kind) box = box.nextElementSibling;
-  if (!box || !box.classList.contains('plrow')) return;
-  const opening = box.hidden;
-  box.hidden = !opening;
-  b.setAttribute('aria-expanded', String(opening));
-  const n = b.dataset.n;
-  b.textContent = `${opening ? '\u25be' : '\u25b8'} ${n} ${kind === 'rules' ? 'workflow' : 'value'}${n === '1' ? '' : 's'}`;
+  const h = e.target.closest('.thsort');
+  if (h && fieldListShown) {
+    const key = h.dataset.sort;
+    fieldSort = nextFieldSort(key);
+    $('laybody').innerHTML = renderFieldsTable(fieldListShown.m, fieldListShown.found);
+    const again = [...$('laybody').querySelectorAll('.thsort')].find((x) => x.dataset.sort === key); if (again) again.focus();
+    return;
+  }
+  const b = e.target.closest('.plbtn'); if (b) openFieldList(b.dataset.list, b.dataset.f, b);
 });
+$('fieldlistx').onclick = closeFieldList;
+$('fieldlistbody').addEventListener('click', (e) => {
+  const wl = e.target.closest('.wflink'); if (!wl) return;
+  closeFieldList(); openWorkflowById(wl.dataset.wfid);
+});
+// Escape closes the list before anything else hears it: it is on top of everything, and the
+// panel's own Escape would otherwise close a view underneath the layer the reader is looking at.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('fieldlist').classList.contains('on')) { e.preventDefault(); e.stopImmediatePropagation(); closeFieldList(); }
+}, true);
 document.querySelectorAll('#pvtabs .dtab').forEach((b) => (b.onclick = () => setPvTab(b.dataset.pv)));
 $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One group in the health view is read from Zoho; the rest is computed from the mirror. Before this
 // existed the only way to refresh that group was «Pull all» - the whole org re-downloaded to update

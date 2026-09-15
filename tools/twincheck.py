@@ -104,6 +104,9 @@ EQUIV = {
 # Elements that exist in one product because the other has no such concept. Each owes a reason.
 PRODUCT_ONLY = {
     'crm': {
+        'fieldlist': 'the layer listing one field\'s picklist values or the workflow rules watching it - '
+                     'Analytics tables have no picklists and it has no workflows',
+        'fieldlisth': 'ditto', 'fieldlistbody': 'ditto', 'fieldlistx': 'ditto',
         'healthpull': 'one group in the CRM health view is read from Zoho at runtime and needs its own '
                       'refresh; the Analytics health view is computed from the mirror end to end',
         'healthmsg': 'what the CRM health view says about its own Pull, beside it - the status line '

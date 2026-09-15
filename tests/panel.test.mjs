@@ -21617,25 +21617,46 @@ test('the fields that make a rule fire are read from the shapes Zoho writes', ()
   assert.equal(map.has('Contacts:Name'), false);
 });
 
-test('the Fields table marks a field that fires a rule, and says when it cannot know', () => {
-  const rel = 'apps/crm/modules.js';
-  const parts = ['pickCell', 'pickRow', 'trigCell', 'trigRow', 'renderFieldsTable'].map((k) => sliceFn(rel, k));
-  const g = { escHtml: (x) => String(x), escA: (x) => String(x), emptyReason: () => '' };
+const FIELDS_TABLE = () => ['lookupOf', 'FIELD_SORTS'].map((k) => sliceConst('apps/crm/modules.js', k))
+  .concat(['pickCell', 'trigCell', 'sortedFields', 'nextFieldSort', 'renderFieldsTable'].map((k) => sliceFn('apps/crm/modules.js', k)));
+
+test('the Fields table counts the rules a field fires in a column of its own, and says when it cannot know', () => {
+  const g = { escHtml: (x) => String(x), escA: (x) => String(x), emptyReason: () => '', fieldSort: { key: null, dir: 1 } };
   const m = { api_name: 'Contacts', fields: [{ api_name: 'Status', data_type: 'picklist', picklist: ['A', 'B'] }, { api_name: 'Name' }] };
   const map = new Map([['Contacts:Status', [{ id: 'w1', name: 'Status moved', kind: 'change', when: '', active: false }]]]);
 
-  const html = load(parts, { ...g, fieldTriggers: { map, pulled: true, unread: 2 } }).renderFieldsTable(m);
-  assert.ok(html.includes('data-row="rules" data-n="1" aria-expanded="false"'), 'the field that fires a rule has no count');
-  assert.ok(html.includes('▸ 1 workflow</button>'), 'the count does not say what it counts');
-  assert.ok(html.includes('data-wfid="w1"') && html.includes('on change · off'), 'the rule is not named, linked or marked off');
-  assert.equal(html.split('data-row="rules"').length - 1, 2, 'a field that fires nothing was given a rules control');
-  // Both rows sit under the same field, so the listener tells them apart by name, never by position.
-  assert.ok(html.indexOf('<tr class="plrow" data-row="values"') < html.indexOf('<tr class="plrow" data-row="rules"'));
+  const html = load(FIELDS_TABLE(), { ...g, fieldTriggers: { map, pulled: true, unread: 2 } }).renderFieldsTable(m);
+  const heads = [...html.matchAll(/data-sort="(\w+)"/g)].map((x) => x[1]);
+  assert.deepEqual(heads, ['label', 'api', 'type', 'req', 'lookup', 'wf'], 'the headers are not the six columns the table sorts by');
+  const rows = html.split('<tbody>')[1].split('</tr>').filter((r) => r.includes('<td'));
+  assert.equal(rows.length, 2, 'a field grew a second row - its lists open in a layer now');
+  assert.ok(rows.every((r) => r.split('<td').length - 1 === 6), 'a row does not have one cell per header');
+  assert.match(rows[0], /data-list="rules" data-f="Status"[^>]*>1<\/button><\/td>\s*$/, 'the rules count is not in the last column');
+  assert.match(rows[0], /data-list="values" data-f="Status"[^>]*>2 values<\/button>/, 'the picklist count is gone');
+  assert.ok(!rows[1].includes('data-list'), 'a field with no values and no rules was given a control');
   assert.ok(html.includes('2 workflow rule(s) are not downloaded'), 'rules it could not read are not admitted');
 
-  const none = load(parts, { ...g, fieldTriggers: { map: new Map(), pulled: false, unread: 0 } }).renderFieldsTable(m);
-  assert.ok(none.includes('No workflow rules are in this workspace'), 'no marks with no rules read looks like «no field fires anything»');
-  assert.ok(!load(parts, { ...g, fieldTriggers: null }).renderFieldsTable(m).includes('ftnote'));
+  const none = load(FIELDS_TABLE(), { ...g, fieldTriggers: { map: new Map(), pulled: false, unread: 0 } }).renderFieldsTable(m);
+  assert.ok(none.includes('No workflow rules are in this workspace'), 'an empty column with no rules read looks like «no field fires anything»');
+  assert.ok(!load(FIELDS_TABLE(), { ...g, fieldTriggers: null }).renderFieldsTable(m).includes('ftnote'));
+});
+
+test('the Fields table sorts by a column, and a third press gives Zoho its order back', () => {
+  const { sortedFields, nextFieldSort } = load(FIELDS_TABLE(), { fieldSort: { key: null, dir: 1 } });
+  const fields = [{ api_name: 'b', label: 'Beta' }, { api_name: 'a', label: 'alpha', mandatory: true }, { api_name: 'c', label: 'Gamma' }];
+  const n = { a: 0, b: 3, c: 3 };
+  const order = (sort) => sortedFields(fields, (f) => n[f.api_name], sort).map((x) => x.f.api_name).join('');
+  const zoho = { key: null, dir: 1 };
+  assert.equal(order(zoho), 'bac', 'unsorted is not Zoho order');
+  let s = nextFieldSort('wf', zoho);
+  assert.equal(order(s), 'bca', 'a count does not start from the largest, or a tie loses Zoho order');
+  s = nextFieldSort('wf', s);
+  assert.equal(order(s), 'abc', 'a second press does not reverse');
+  s = nextFieldSort('wf', s);
+  assert.equal(s.key, null, 'a third press does not give Zoho its order back');
+  s = nextFieldSort('label', { key: 'wf', dir: -1 });
+  assert.equal(order(s), 'abc', 'names do not start from A, or case decides the order');
+  assert.equal(order(nextFieldSort('label', s)), 'cba');
 });
 
 test('a watched field is named on its rule and on its module in both reports, never as ${ANYVALUE}', async () => {
