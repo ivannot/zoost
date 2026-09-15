@@ -476,8 +476,8 @@ const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN',
     .map((k) => sliceFn('apps/crm/export.js', k)))
   // The trigger readers live in automation.js and both builders call them: the panel is one scope
   // across its scripts, and a lift that stops at one file throws where the page would not.
-  .concat(['ANY_VALUE', 'ruleCount'].map((k) => sliceConst('apps/crm/automation.js', k)))
-  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText']
+  .concat(['ANY_VALUE', 'ruleCount', 'COMPARED'].map((k) => sliceConst('apps/crm/automation.js', k)))
+  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText', 'ruleCheckedFields', 'comparedText']
     .map((k) => sliceFn('apps/crm/automation.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
@@ -21583,8 +21583,8 @@ test('crm: a function deleted between census and download is «not found», not 
 // shapes are the ones measured there - one `${ANYVALUE}` leaf, OR groups nested four deep, a date
 // field with an offset - with placeholder names. `details.fields`, which the detail pane and both
 // reports looked for, is in none of them.
-const TRIGGER_READERS = () => [sliceConst('apps/crm/automation.js', 'ANY_VALUE'), sliceConst('apps/crm/automation.js', 'ruleCount'),
-  ...['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText']
+const TRIGGER_READERS = () => [sliceConst('apps/crm/automation.js', 'ANY_VALUE'), sliceConst('apps/crm/automation.js', 'ruleCount'), sliceConst('apps/crm/automation.js', 'COMPARED'),
+  ...['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText', 'ruleCheckedFields', 'comparedText']
     .map((k) => sliceFn('apps/crm/automation.js', k))];
 const watchLeaf = (api) => ({ comparator: '${ANYVALUE}', field: { api_name: api, id: '1' }, value: '${ANYVALUE}' });
 
@@ -21693,7 +21693,8 @@ test('a watched field is named on its rule and on its module in both reports, ne
              detail: { id: 'w9', name: 'Status moved', module: mod, status: { active: true }, conditions: [],
                        execute_when: { type: 'field_update', details: { trigger_module: mod, criteria: watchLeaf('Status'), repeat: true, match_all: false } } } },
            { id: 'w10', name: 'Not here', module: 'Contacts', type: 'create', active: true, detail: null }];
-  f.wfs[0].detail.conditions = [{ instant_actions: { actions: [{ type: 'field_updates', id: 'a1', name: 'Win it' }] }, scheduled_actions: [] }];
+  f.wfs[0].detail.conditions = [{ criteria_details: { criteria: { comparator: 'equal', field: { api_name: 'Status', id: '1' }, type: 'value', value: 'Open' }, relational_criteria: { module: null, criteria: null, module_selection: null } },
+                                   instant_actions: { actions: [{ type: 'field_updates', id: 'a1', name: 'Win it' }] }, scheduled_actions: [] }];
   const acts = [{ kind: 'field_updates', id: 'a1', name: 'Win it', module: 'Contacts', field: 'Status', value: 'Won', sv: 4 }];
   const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportMarkdown'), sliceFn(rel, 'buildExportHtml'),
                   sliceFn(rel, '_mdCell')], MD_STUBS());
@@ -21705,7 +21706,7 @@ test('a watched field is named on its rule and on its module in both reports, ne
     assert.match(text, /fields: Status/, `${name}: the rule does not say which field starts it`);
     assert.match(text, /1 workflow rule\(s\) were not downloaded/, `${name}: a rule it could not read is not admitted`);
   }
-  assert.match(md, /\| Status \| `Status` \|.*\| Status moved \(on change\); Status moved \(writes Won\) \|/, 'Markdown: the field does not name the rule that starts on it and writes it');
+  assert.match(md, /\| Status \| `Status` \|.*\| Status moved \(on change\); Status moved \(checks is Open\); Status moved \(writes Won\) \|/, 'Markdown: the field does not name the rule that starts on it, checks it and writes it');
   assert.match(html, /<th>Workflows<\/th>/);
   assert.match(html, /\(writes Won\)/, 'HTML: the field does not say which rule writes it');
   // The census is read whatever the chapters: unticking Actions must not unwrite a field.
@@ -21773,4 +21774,36 @@ test('a list pull moves the list time and not the details time, and the tab says
   const gap = detailsBehind(listed);
   assert.ok(gap && gap.detailsAt === old.detailsAt && gap.listAt === listed.listAt, 'a list pull leaves no gap to show');
   assert.equal(detailsBehind({ listAt: listed.listAt }).detailsAt, null, 'a list never followed by a full pull reads as details from some date');
+});
+
+
+// Relation 2: the fields a rule's conditions check. The shapes are the ones measured on two orgs, 379
+// conditions: `criteria_details.criteria` as a leaf or nested AND/OR groups, a leaf's value a string, a
+// boolean, a list or a {name, display_label, id} object, `${EMPTY}` for empty, 50 conditions with no
+// criteria at all, and `relational_criteria` null in every one - so a related module is not read.
+test('the fields a rule checks are read from its conditions, as Zoho writes them', () => {
+  const { fieldTriggerMap, ruleCount } = load(TRIGGER_READERS());
+  const leaf = (api, comparator, value, type = 'value') => ({ comparator, field: { api_name: api, id: '1' }, type, value });
+  const rel = { module: null, criteria: null, module_selection: null };
+  const rule = { id: 'r1', name: 'Rule', module: { api_name: 'Deals' }, status: { active: true },
+    execute_when: { type: 'field_update', details: { criteria: watchLeaf('Stage') } },
+    conditions: [
+      { criteria_details: { relational_criteria: rel, criteria: { group_operator: 'AND', group: [
+        leaf('Stage', 'equal', 'Won'), leaf('Paid', 'equal', true),
+        { group_operator: 'OR', group: [leaf('Tags', 'equal', ['A', 'B']), leaf('Owner', 'equal', { name: 'Sam', display_label: 'Sam S', id: '9' })] }] } } },
+      { criteria_details: { relational_criteria: rel, criteria: null } },
+      { criteria_details: { relational_criteria: rel, criteria: { group_operator: 'AND', group: [leaf('Status', 'not_equal', '${EMPTY}'), leaf('Stage', 'not_equal', 'Lost')] } } },
+      { criteria_details: { relational_criteria: rel, criteria: leaf('Amount', 'equal', { api_name: 'Budget' }, 'field') } },
+    ] };
+  const map = fieldTriggerMap([rule], []);
+  const said = (f) => [...(map.get(`Deals:${f}`) || [])].filter((e) => e.role === 'checks').map((e) => e.when);
+  assert.deepEqual(said('Stage'), ['checks is Won; is not Lost'], 'one field in two conditions is not one entry naming both');
+  assert.deepEqual(said('Paid'), ['checks is true']);
+  assert.deepEqual(said('Tags'), ['checks is A, B'], 'a list value is not spelled out');
+  assert.deepEqual(said('Owner'), ['checks is Sam S'], 'an object value is not named by its label');
+  assert.deepEqual(said('Status'), ['checks is not empty'], '${EMPTY} is printed as a placeholder');
+  assert.deepEqual(said('Amount'), ['checks is another field'], 'a comparison with another field invents a value');
+  assert.equal(ruleCount(map.get('Deals:Stage')), 1, 'a rule that starts on a field and checks it was counted twice');
+  assert.deepEqual([...map.keys()].sort(), ['Deals:Amount', 'Deals:Owner', 'Deals:Paid', 'Deals:Stage', 'Deals:Status', 'Deals:Tags'],
+                   'a condition with no criteria, or a null relational criteria, produced a field - or a real one was missed');
 });

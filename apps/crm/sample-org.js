@@ -574,6 +574,9 @@ function deluge(ns, name, params, calls) {
         unit: 7, period: 'days', field: { api_name: 'Opened_On', id: fieldIdOf(mod, 'Opened_On') },
         recur_cycle: 'once', repeat: false, execute_at: '09:00:00+02:00' } }),
     };
+    // A field reference with its id where the module has the field, and without where the fixture's
+    // module list does not name it - an id invented for a field that is not there would be a lie.
+    const statusRef = (mod) => { try { return { api_name: 'Status', id: fieldIdOf(mod, 'Status') }; } catch (_) { return { api_name: 'Status' }; } };
     wfList.forEach(([mod, name, fn, sched, trig], i) => {
       const wid = String(4000 + i);
       const t = (TRIGGERS[trig] || (() => ({ type: 'create', details: {} })))(mod);
@@ -610,8 +613,15 @@ function deluge(ns, name, params, calls) {
         module: { api_name: mod, id: String(6000 + i) },
         execute_when: trigger,
         status: { active: true },
+        // `criteria_details`, the shape measured on two orgs' 379 conditions: the criteria beside a
+        // `relational_criteria` that was null in every one. The sample wrote a bare `criteria` on the
+        // condition, so no reader ever found a condition in it and «When» was never drawn.
         conditions: [{
-          sequence_number: 1, criteria: { field: { api_name: 'Status' }, comparator: 'not_equal', value: '' },
+          sequence_number: 1, id: String(4600 + i),
+          criteria_details: {
+            criteria: { comparator: 'not_equal', field: statusRef(mod), type: 'value', value: '${EMPTY}' },
+            relational_criteria: { module: null, criteria: null, module_selection: null },
+          },
           // `instant_actions.actions`, which is where Zoho puts an immediate action and where all
           // nine readers look. The fixture wrote a bare `actions` on the condition - a key nothing
           // reads - so only the *scheduled* half of the sample ever had an action at all.

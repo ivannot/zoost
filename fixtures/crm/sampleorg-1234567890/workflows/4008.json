@@ -44,12 +44,22 @@
   "conditions": [
     {
       "sequence_number": 1,
-      "criteria": {
-        "field": {
-          "api_name": "Status"
+      "id": "4608",
+      "criteria_details": {
+        "criteria": {
+          "comparator": "not_equal",
+          "field": {
+            "api_name": "Status",
+            "id": "7003"
+          },
+          "type": "value",
+          "value": "${EMPTY}"
         },
-        "comparator": "not_equal",
-        "value": ""
+        "relational_criteria": {
+          "module": null,
+          "criteria": null,
+          "module_selection": null
+        }
       },
       "instant_actions": {
         "actions": [

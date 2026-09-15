@@ -975,6 +975,9 @@ CRM = """
         const heads2 = [...$('fieldlistbody').querySelectorAll('.flrole')].map((h) => h.textContent);
         if (!heads2.some((h) => /^Writes it/.test(h))) say('the layer has no Writes it group: ' + heads2.join(' | '));
         if (!/writes Negotiation/.test($('fieldlistbody').textContent)) say('the layer does not say what the rule writes');
+        // And the rule's condition on the same field, in words: the sample checks «Status is not empty».
+        if (!heads2.some((h) => /^Checks it/.test(h))) say('the layer has no Checks it group: ' + heads2.join(' | '));
+        if (!/checks is not empty/.test($('fieldlistbody').textContent)) say('the layer does not say what the rule checks');
         $('fieldlistx').click(); await until(() => !$('fieldlist').classList.contains('on'), 'Close never closed the layer');
         await openModule('modules/Accounts.json'); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never reopened');
         $('pvtab_code').click(); await settle();

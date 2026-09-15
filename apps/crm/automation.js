@@ -486,6 +486,44 @@ function ruleWrittenFields(rule, actions) {
   }
   return out;
 }
+/** The fields a rule's conditions check, and what each is compared with.
+ *
+ *  Measured on two orgs, 379 conditions: `conditions[].criteria_details.criteria` is one leaf or an
+ *  AND/OR group of them, nested; a leaf is {comparator, field: {api_name, id}, type: 'value', value},
+ *  the value a string, a boolean, a list of strings or a {name, display_label, id} object, and
+ *  `${EMPTY}` for «empty». 50 conditions had no criteria at all - they apply to every record - and
+ *  `relational_criteria` was null in every one of the 379, so a condition on a related module is not
+ *  read: what it would look like has not been seen. A leaf whose value names another field (`type`
+ *  other than 'value') was not seen either, and is read as «compared with another field», naming neither. */
+function ruleCheckedFields(rule) {
+  const own = rule && rule.module, det = ((rule && rule.execute_when) || {}).details || {};
+  const module = (det.trigger_module && det.trigger_module.api_name)
+    || (typeof own === 'string' ? own : (own && own.api_name)) || '';
+  const out = new Map();
+  const walk = (c) => {
+    if (!c || typeof c !== 'object') return;
+    if (Array.isArray(c.group)) { c.group.forEach(walk); return; }
+    const api = c.field && c.field.api_name; if (!api) return;
+    const said = comparedText(c);
+    if (!out.has(api)) out.set(api, []);
+    if (said && !out.get(api).includes(said)) out.get(api).push(said);
+  };
+  for (const cond of (rule && rule.conditions) || []) walk(cond && cond.criteria_details && cond.criteria_details.criteria);
+  return [...out].map(([field, said]) => ({ module, field, when: said.length ? `checks ${said.join('; ')}` : 'checks it' }));
+}
+const COMPARED = { equal: 'is', not_equal: 'is not', contains: 'contains', not_contains: 'does not contain',
+                   starts_with: 'starts with', ends_with: 'ends with', between: 'between', not_between: 'not between',
+                   greater_than: 'greater than', less_than: 'less than' };
+function comparedText(leaf) {
+  const v = leaf.value;
+  const words = COMPARED[leaf.comparator] || String(leaf.comparator || '').replace(/_/g, ' ');
+  if (leaf.type && leaf.type !== 'value') return `${words} another field`;
+  const val = v === '${EMPTY}' || v === '${empty}' ? 'empty'
+    : Array.isArray(v) ? v.join(', ')
+    : v && typeof v === 'object' ? (v.display_label || v.name || '')
+    : v == null ? '' : String(v);
+  return `${words} ${val}`.trim();
+}
 /** What a field update puts in the field, in words: absent is «clears it», which is what Zoho means
  *  by no value - not «unknown». */
 function writtenValue(a) {
@@ -517,7 +555,8 @@ function critWatchesOnly(crit) {
   return crit.comparator === ANY_VALUE && crit.value === ANY_VALUE;
 }
 /** `module:field` -> the rules that touch it, each with its role: `starts` (the field's change or
- *  its date makes the rule fire) or `writes` (a field update the rule runs). One builder for the panel
+ *  its date makes the rule fire), `checks` (a condition compares it) or `writes` (a field update the
+ *  rule runs). One builder for the panel
  *  and both reports, so the three cannot disagree. A rule with two roles on one field is two entries;
  *  `ruleCount` counts it once. */
 function fieldTriggerMap(rules, actions) {
@@ -527,6 +566,7 @@ function fieldTriggerMap(rules, actions) {
     const base = { id: String(r.id), name: r.name || String(r.id), active: !!(r.status && r.status.active) };
     const t = ruleTriggerFields(r);
     for (const f of t.fields) put(`${t.module}:${f}`, { ...base, role: 'starts', kind: t.kind, when: t.when });
+    for (const c of ruleCheckedFields(r)) put(`${c.module}:${c.field}`, { ...base, role: 'checks', kind: 'check', when: c.when });
     for (const w of ruleWrittenFields(r, actions)) put(`${w.module}:${w.field}`, { ...base, role: 'writes', kind: 'write', when: w.value });
   }
   return map;
@@ -534,7 +574,7 @@ function fieldTriggerMap(rules, actions) {
 const ruleCount = (entries) => new Set((entries || []).map((e) => e.id)).size;
 /** A rule's role on a field, in the words the layer and both reports use. */
 function roleText(r) {
-  return r.role === 'writes' ? r.when : r.kind === 'date' ? (r.when || 'on a date') : 'on change';
+  return r.role === 'writes' || r.role === 'checks' ? r.when : r.kind === 'date' ? (r.when || 'on a date') : 'on change';
 }
 /** The same map for the panel, from the rule files on disk. A rule in the index with no file is
  *  counted rather than skipped: it may watch any field, so the table says how many it cannot see. */

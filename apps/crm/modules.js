@@ -324,7 +324,7 @@ function pickCell(f) {
 }
 function trigCell(f, rules) {
   const n = ruleCount(rules); if (!n) return '';
-  return `<button class="plbtn" data-list="rules" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Workflows" title="Workflow rules this field starts, or that write it">${n}</button>`;
+  return `<button class="plbtn" data-list="rules" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Workflows" title="Workflow rules this field starts, that check it, or that write it">${n}</button>`;
 }
 const lookupOf = (f) => (typeof f.lookup === 'string' ? f.lookup
   : (f.lookup && (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module))))) || '';
@@ -374,7 +374,7 @@ function openFieldList(kind, api, opener) {
     // listed under each, because those are two different reasons to be looking at it.
     const li = (r) => `<li><button type="button" class="bare wflink" data-wfid="${escA(r.id)}" title="Open this workflow">${escHtml(r.name)}</button>`
       + `<span class="wfwhen">${escHtml(roleText(r))}${r.active ? '' : ' · off'}</span></li>`;
-    $('fieldlistbody').innerHTML = [['starts', 'Starts it'], ['writes', 'Writes it']].map(([role, title]) => {
+    $('fieldlistbody').innerHTML = [['starts', 'Starts it'], ['checks', 'Checks it'], ['writes', 'Writes it']].map(([role, title]) => {
       const mine = rules.filter((r) => r.role === role);
       return mine.length ? `<h4 class="flrole">${title} <span>${mine.length}</span></h4><ul class="fllist">${mine.map(li).join('')}</ul>` : '';
     }).join('');
