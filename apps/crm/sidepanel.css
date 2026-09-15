@@ -31,7 +31,7 @@
   .seg{flex:1 1 auto;min-width:0;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 3px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .segnone{flex:1;color:var(--muted);font-size:11px;padding:6px 3px;text-align:center}
   .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}
-  #pvtable{display:none;flex:1;overflow:auto}
+  #pvtable{display:none;flex:1;overflow:auto;container-type:inline-size}
   .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
   .ftbl th{position:sticky;top:0;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
   .ftbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top;white-space:nowrap}
@@ -696,7 +696,15 @@
   #pvtabsr:empty{display:none}
   #pvtabsr select{padding:0 4px;font-size:10.5px}   /* no height: a native select clips its value */
   #pvtabsr .laylocal{margin-left:0;padding:1px 6px;line-height:1}
-  .laybar{padding:7px 10px;border-bottom:1px solid var(--border);background:#0f1522;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  /* A fields table wider than the panel scrolls sideways, and the picker and View travelled with it
+     off screen. Reported. Sticky alone could not hold them: a sticky box never leaves its parent, and
+     the parent was exactly as wide as the panel. So the parent grows to the table, and the bar keeps
+     the width of what is visible - `cqw` of #pvtable, the scrolling box - pinned to its left edge. */
+  #pvfields{width:max-content;min-width:100%}
+  /* And prose inside it keeps the visible width too, or a box grown to its content lays a sentence
+     on one line and scrolls sideways because of it. */
+  #pvfields .ftnote,#pvfields .empty{position:sticky;left:0;width:100cqw;box-sizing:border-box}
+  .laybar{padding:7px 10px;border-bottom:1px solid var(--border);background:#0f1522;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;position:sticky;left:0;width:100cqw;box-sizing:border-box}
   .laybar select,#pvtabsr select{background:var(--tree);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
   .laymod{margin-left:auto;cursor:pointer;color:#9fc4f5;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
   .laymod:hover{background:rgba(47,111,237,.26);border-color:var(--sel);color:#cfe1fb}

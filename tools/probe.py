@@ -904,6 +904,27 @@ CRM = """
       if (!acc) say('the fixture has no Accounts module to open');
       acc.click(); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never opened');
       $('pvtab_code').click(); await settle();
+      // The layout bar holds still when a table wider than the panel scrolls sideways - reported: it
+      // travelled with the columns, taking the picker and View with it.
+      {
+        const box = $('pvtable'), bar = $('pvfields').querySelector('.laybar');
+        if (!bar) say('Accounts has no layout bar to hold still');
+        const w = box.style.width; box.style.width = '220px'; await settle();
+        if (box.scrollWidth <= box.clientWidth) say('the fields table does not overflow even at 220px - this case measures nothing');
+        const x0 = bar.getBoundingClientRect().left, v0 = $('laymod').getBoundingClientRect().right;
+        box.scrollLeft = 120;   // read back at once: a rect forces layout, sticky offsets included
+        const moved = bar.getBoundingClientRect().left - x0, viewMoved = $('laymod').getBoundingClientRect().right - v0;
+        box.scrollLeft = 0; box.style.width = w; await settle();
+        if (Math.abs(moved) > 1 || Math.abs(viewMoved) > 1) say(`the layout bar scrolled sideways with the table (bar ${moved}px, View ${viewMoved}px)`);
+        // Growing the box to its table must not grow it to a sentence: a note laid on one line would
+        // make the panel scroll sideways by itself. And the box keeps the width of the pane.
+        const probeNote = document.createElement('div'); probeNote.className = 'ftnote';
+        probeNote.textContent = 'a note long enough to be wider than any panel this runs in '.repeat(6);
+        $('pvfields').appendChild(probeNote); await settle();
+        const noteW = probeNote.getBoundingClientRect().width; probeNote.remove(); await settle();
+        if (noteW > box.clientWidth + 1) say(`a note under the fields table is laid on one line, ${Math.round(noteW)}px wide in a ${box.clientWidth}px pane`);
+        if (box.clientWidth < $('preview').clientWidth - 20) say(`the fields pane is narrower than the preview (${box.clientWidth} of ${$('preview').clientWidth})`);
+      }
       const heads = [...$('pvfields').querySelectorAll('thead th')].map((t) => t.textContent.trim());
       if (!/^Workflows/.test(heads[heads.length - 1] || '')) say('the rules count has no column of its own: ' + heads.join(' | '));
       const items = () => [...$('fieldlistbody').querySelectorAll('li')];
@@ -911,7 +932,7 @@ CRM = """
 
       const vb = $('pvfields').querySelector('.plbtn[data-list="values"]');
       if (!vb) say('no picklist in Accounts offers its values');
-      const want = Number((vb.textContent.match(/\d+/) || [0])[0]);
+      const want = Number((vb.textContent.match(/[0-9]+/) || [0])[0]);
       vb.focus(); vb.click(); await until(() => $('fieldlist').classList.contains('on'), 'the values layer never opened');
       if (items().length !== want) say(`the layer lists ${items().length} of ${want} values`);
       if (!oneEach(items())) say('the values in the layer are not one per line');
