@@ -172,7 +172,7 @@ async function pullAll(depth = {}) {
     // above, so nothing could ever reach this. Two warnings about one fact, one of them unreachable,
     // is worse than one - it reads as cover that is not there. The live one refuses to prune and says
     // so after the tree is drawn, which is where a reader is looking.
-    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true, full && !(dl && dl.failed) ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
+    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op, true, full && !(r.unanswered || []).length && !(dl && (dl.failed || dl.refused)) ? 'full' : 'list');   // the mirror was written; the gap is what could not be tidied after it
   } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
@@ -342,5 +342,3 @@ async function openGraph() {
     setStatus(`Graph: ${g.counts.nodes} nodes, ${g.counts.edges} edges.`, 'ok');
   } catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(MSG.graphErr + e.message, 'bad'); }
 }
-
-

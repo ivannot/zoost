@@ -9331,6 +9331,12 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       if (write > 0) assert.ok(capped > 0 && capped < write, `${name} replaces its index from a partial list`);
     }
   });
+
+  test('crm: a full functions pull records details only when every source answered', () => {
+    const body = sliceFn('apps/crm/crm-pull-graph.js', 'pullAll');
+    assert.match(body, /full && !\(r\.unanswered \|\| \[\]\)\.length && !\(dl && \(dl\.failed \|\| dl\.refused\)\)/,
+                 'a refused language or source is still recorded as a complete details pull');
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -9527,7 +9533,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 {
   const RUN = async (resp, prevIdx) => {
     const ctx = {
-      wsGen: 1, viewMode: 'functions', dir: {}, ACT_SV: 4, written: null, status: [],
+      wsGen: 1, viewMode: 'functions', dir: {}, ACT_SV: 4, written: null, status: [], access: [],
       MSG: { staleBridge: 'reload that tab', noTab: 'no tab', wrongTab: 'wrong tab' },
       mismatchRefuse: () => false, ensurePerm: async () => true, sameWs: () => true,
       getContext: async () => ({ org: 'o', origin: 'https://crm.example', instance: 'i' }),
@@ -9539,7 +9545,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                                  write: async (_p, txt) => { ctx.written = JSON.parse(txt); },
                                  read: async () => { throw new Error('not stubbed'); } }),
       loadActionsIndex: async () => prevIdx,
-      rebuildActions: async () => {}, noteAccess: async () => {},
+      rebuildActions: async () => {}, noteAccess: async (...args) => { ctx.access.push(args); },
       notePullFailure: async (_a, e) => { throw e; },
       // The pull marks itself running and releases through the one helper. Stubbed here because this
       // case runs the function, which is exactly how the free reference was caught the moment the
@@ -9609,6 +9615,20 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     const c = await RUN({ ...OK, sv: 3, actions: [{ kind: 'webhooks', id: '1' }] }, PREV);
     assert.equal(c.written, null, 'an older copy of the extension overwrote fields it cannot capture');
     assert.ok(c.status.some((s) => /reload that tab/.test(s)), 'and it did not say whose copy is old');
+  });
+
+  test('a partial action pull cannot advance the details timestamp', async () => {
+    const refused = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }],
+                                missed: [{ kind: 'webhooks', error: '403' }] }, PREV);
+    assert.equal(refused.access.at(-1)[4], 'list',
+                 'a refused action kind was recorded as a complete details pull');
+    const capped = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }],
+                               capped: ['webhooks'] }, PREV);
+    assert.equal(capped.access.at(-1)[4], 'list',
+                 'a capped action kind was recorded as a complete details pull');
+    const complete = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }] }, PREV);
+    assert.equal(complete.access.at(-1)[4], 'full',
+                 'a complete action pull was downgraded despite reading every kind');
   });
 }
 
@@ -19558,7 +19578,7 @@ test('a function whose source the role refuses is an answer, not a retryable fai
     treeData: Array.from({ length: 32 }, (_, i) => ({ id: String(i), mirrored: true, downloaded: false })),
     downloadOne: async (e) => { e.asked = true; e.refused = true; e.error = true; return false; },
   });
-  return m.downloadMissing().then(() => {
+  return m.downloadMissing().then((result) => {
     const last = said[said.length - 1];
     assert.ok(last, 'the run says nothing at all now');
     assert.match(last[0], /refused the source of 32/,
@@ -19568,6 +19588,8 @@ test('a function whose source the role refuses is an answer, not a retryable fai
     assert.equal(recorded, 32,
                  'the run heard 32 refusals and wrote none of them down, so the rebuild that ends '
                  + 'the pull forgets them and «Complete missing» comes straight back');
+    assert.equal(result.refused, 32,
+                 'the caller cannot distinguish 32 measured refusals from a completely read area');
   });
 });
 

@@ -193,7 +193,10 @@ async function downloadMissing(recheck, all = false) {
       : `All ${ok} functions downloaded.`) + short,
       (fail || cleanup || short) ? 'warn' : 'ok');
     // What a pull needs to know to say whether it read every source: a refusal is an answer, a failure is not.
-    return { failed: fail - refused };
+    // Keep refusals separate from transport failures.  Callers use the distinction to decide
+    // whether every source was actually read: a refusal is a measured gap, not a retryable
+    // failure, but it still means the area's details are not complete.
+    return { failed: fail - refused, refused };
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 function updateRow(e) {
@@ -255,5 +258,4 @@ function updateMissingButton() {
   b.style.display = (n > 0 && !isSample()) ? '' : 'none';
   b.textContent = (stale && !miss) ? `Refresh ${stale} outdated` : `Complete missing (${n})`;
 }
-
 

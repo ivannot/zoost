@@ -739,7 +739,11 @@ async function pullActions(depth = {}) {
     else setStatus(said + note, (missed.length || capped.length || unread.length) ? 'warn' : 'ok');
     // «Every item read» only when it was: a task past the per-pull bound, or one Zoho did not answer,
     // leaves the details older than the list, and the bar has to be able to say so.
-    await noteAccess('actions', null, op, true, full && !detailMissed.length ? 'full' : 'list');
+    // "full" is an area-level claim: every kind and every item must have answered.  A refused or
+    // capped kind is still a measured gap even though its previous rows were safely kept, and a
+    // detail refusal is the same for that item.  Marking the area full here made the freshness bar
+    // say all action details were current while one category was still from the previous pull.
+    await noteAccess('actions', null, op, true, full && !missed.length && !capped.length && !detailMissed.length ? 'full' : 'list');
   } catch (e) { await notePullFailure('actions', e, op); } finally { endPull(); }
 }
 async function rebuildActions() {
