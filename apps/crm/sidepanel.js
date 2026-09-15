@@ -524,7 +524,7 @@ const noteWrite = (rel) => {
   if (rel === 'actions/index.json') { aiActCache = null; return; }
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
   // the answer - and the actions pull was the only one that rebuilt it.
-  if (rel.startsWith('workflows/')) { actionUsers = null; aiActCache = null; return; }
+  if (rel.startsWith('workflows/')) { actionUsers = null; fieldTriggers = null; aiActCache = null; return; }
   // The runtime reading. `failIndex` was dropped at one call site - inside `pullFailures`, and only
   // when the reader happened to be standing on the Functions tab - so pulling from any other tab left
   // the panel holding the pre-pull numbers while the export, which reads the file, printed the new

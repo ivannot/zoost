@@ -895,6 +895,42 @@ CRM = """
       const o = getComputedStyle(e).overflowY; return o === 'auto' || o === 'scroll';
     });
     if (scrolls.length) say(scrolls.length + ' box(es) inside Details scroll on their own: ' + scrolls.map((e) => e.id || e.className).join(', '));
+    // A field that makes a rule fire shows how many, opens them under itself - beside its picklist
+    // values, each button finding its own row - and a rule opens on the Workflows tab. Asked for on a
+    // real org: Zoho states a rule's trigger inside the rule and nowhere else.
+    {
+      // Accounts, because the sample's rule there watches a picklist: the one field shape with two
+      // rows under it, which is the shape a listener finding «the next row» gets wrong.
+      const acc = [...document.querySelectorAll('#tree .f')].find((e) => /Accounts/.test(e.textContent));
+      if (!acc) say('the fixture has no Accounts module to open');
+      acc.click(); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never opened');
+      $('pvtab_code').click(); await settle();
+      const rb = [...$('pvfields').querySelectorAll('.plbtn[data-row="rules"]')]
+        .find((x) => x.closest('tr').querySelector('.plbtn[data-row="values"]'));
+      if (!rb) say('no picklist in ' + (currentPath || 'the module') + ' shows the workflow rules it makes fire');
+      const tr = rb.closest('tr');
+      const rowOf = (kind) => { let r = tr.nextElementSibling; while (r && r.classList.contains('plrow') && r.dataset.row !== kind) r = r.nextElementSibling; return r && r.dataset.row === kind ? r : null; };
+      const rules = rowOf('rules');
+      if (!rules || !rules.hidden) say('the rules under a field are missing, or open before anybody asked');
+      rb.click(); await settle();
+      if (rules.hidden) say('the workflow count under a field opened nothing');
+      if (rb.getAttribute('aria-expanded') !== 'true') say('the workflow count opened its row and does not say so');
+      const vb = tr.querySelector('.plbtn[data-row="values"]');
+      if (vb) { vb.click(); await settle(); if (rowOf('values').hidden || rules.hidden) say('the values and the rules of one field toggle each other'); }
+      const link = rules.querySelector('.wflink');
+      const wid = link && link.dataset.wfid;
+      if (!wid) say('a rule under a field is not a link');
+      link.click();
+      await until(() => viewMode === 'workflows' && currentPath === 'workflows/' + wid + '.json', 'the rule under a field never opened on the Workflows tab', 4000);
+      await settle();
+      // What the pane *says*: the collapsed Raw JSON beside it is the file verbatim and rightly holds
+      // the placeholder, and textContent reads a closed <details> as readily as an open one.
+      const shown = $('pvtable').cloneNode(true); shown.querySelectorAll('.wfraw').forEach((x) => x.remove());
+      const said = shown.textContent;
+      if (said.includes('ANYVALUE')) say('the opened rule prints its watched field as a condition');
+      if (!/fields: /.test(said)) say('the opened rule does not say which field starts it');
+    }
+
     // And a function has no Related lists tab at all - absent, not disabled.
     setMode('functions'); await settle('the functions view never finished drawing');
     const fn = [...document.querySelectorAll('#tree .f')][0];

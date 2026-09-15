@@ -486,7 +486,7 @@ function dropWorkspaceState() {
  *  Listed once, so a cache added tomorrow is dropped by both without anybody remembering. */
 function dropFileCaches() {
   graphCache = null; codeCache = null; modNamesCache = null;
-  moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null;
+  moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; fieldTriggers = null;
   failIndex = null; healthData = null;
 }
 /** What is on *screen* when a different workspace is opened - the other half of the above.

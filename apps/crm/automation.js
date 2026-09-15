@@ -422,6 +422,83 @@ function firedBy(a, map = actionUsers) {
       || map.get(`${a.kind}:name:${String(a.name || '').toLowerCase()}`) || [];
 }
 function actionFiredBy(a) { return firedBy(a); }
+/** The fields that make a rule fire, read out of the rule's own trigger.
+ *
+ *  Zoho CRM states a rule's trigger inside the rule and nowhere else, so «which workflows start when
+ *  this field changes» has no answer on the platform - asked for by the author, on a real org, looking
+ *  for exactly that. Two trigger types name a field, measured on an org of 106 rules: `field_update`
+ *  lists the watched fields as criteria leaves whose comparator and value are both `${ANYVALUE}`,
+ *  alone or inside OR groups nested four deep; `date_or_datetime` names one date field in
+ *  `details.field`, with the offset beside it. Nothing else is read: the Calls module's
+ *  `*_call_field_update` types are documented and were never seen, and `section_update` names section
+ *  ids rather than fields - so a field those watch shows no rule, never a guessed one. */
+const ANY_VALUE = '${ANYVALUE}';
+function ruleTriggerFields(rule) {
+  const ew = (rule && rule.execute_when) || {}, det = ew.details || {};
+  const own = rule && rule.module;
+  const module = (det.trigger_module && det.trigger_module.api_name)
+    || (typeof own === 'string' ? own : (own && own.api_name)) || '';
+  const fields = [];
+  const add = (f) => { if (f && f.api_name && !fields.includes(f.api_name)) fields.push(f.api_name); };
+  if (ew.type === 'date_or_datetime') { add(det.field); return { module, kind: 'date', fields, when: dateTriggerText(det) }; }
+  if (ew.type === 'field_update') {
+    const walk = (c) => { if (!c) return; if (Array.isArray(c.group)) c.group.forEach(walk); else add(c.field); };
+    walk(det.criteria);
+    return { module, kind: 'change', fields, when: '' };
+  }
+  return { module, kind: null, fields, when: '' };
+}
+/** «3 days after at 13:00», from the offset a date rule carries. A negative unit is before the date
+ *  and zero is the day itself, both measured; a unit that is absent says nothing rather than «on the
+ *  date», which would be a claim. */
+function dateTriggerText(det) {
+  const parts = [];
+  if (det.unit != null && Number.isFinite(Number(det.unit))) {
+    const n = Number(det.unit), per = String(det.period || 'days');
+    parts.push(n === 0 ? 'on the date'
+      : `${Math.abs(n)} ${Math.abs(n) === 1 ? per.replace(/s$/, '') : per} ${n < 0 ? 'before' : 'after'}`);
+  }
+  if (typeof det.execute_at === 'string' && det.execute_at) parts.push(`at ${det.execute_at.slice(0, 5)}`);
+  if (det.recur_cycle && det.recur_cycle !== 'once') parts.push(`repeats ${det.recur_cycle}`);
+  return parts.join(' ');
+}
+/** True when a criteria tree only names fields to watch - every leaf `${ANYVALUE}` on both sides - so
+ *  printing it as a condition would read «Status ${ANYVALUE} ${ANYVALUE}», which it used to. */
+function critWatchesOnly(crit) {
+  if (!crit) return false;
+  if (Array.isArray(crit.group)) return crit.group.length > 0 && crit.group.every(critWatchesOnly);
+  return crit.comparator === ANY_VALUE && crit.value === ANY_VALUE;
+}
+/** `module:field` -> the rules that field makes fire. One builder for the panel and both reports, so
+ *  the three cannot disagree about which rule watches what. */
+function fieldTriggerMap(rules) {
+  const map = new Map();
+  for (const r of rules || []) {
+    const t = ruleTriggerFields(r);
+    for (const f of t.fields) {
+      const key = `${t.module}:${f}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push({ id: String(r.id), name: r.name || String(r.id), kind: t.kind, when: t.when,
+                          active: !!(r.status && r.status.active) });
+    }
+  }
+  return map;
+}
+/** The same map for the panel, from the rule files on disk. A rule in the index with no file is
+ *  counted rather than skipped: it may watch any field, so the table says how many it cannot see. */
+let fieldTriggers = null;
+async function buildFieldTriggers(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
+  let idx = null; try { idx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
+  if (!Array.isArray(idx)) return op.current() ? { map: new Map(), pulled: false, unread: 0 } : null;
+  const rules = []; let unread = 0;
+  for (const w of idx) {
+    if (!op.current()) return null;
+    let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
+    if (d) rules.push(Object.assign({ id: w.id, name: w.name }, d)); else unread++;
+  }
+  return op.current() ? { map: fieldTriggerMap(rules), pulled: true, unread } : null;
+}
 const ACTION_LABEL = { email_notifications: 'Email notifications', field_updates: 'Field updates',
                        tasks: 'Tasks', webhooks: 'Webhooks' };
 // A kind Zoho invents tomorrow gets a readable label without anyone editing this: underscores out,

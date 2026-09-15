@@ -65,13 +65,19 @@ loadTabPrefs().then(renderTabs);
 // module and again by the layout picker, so a handler attached after an innerHTML is one somebody
 // forgets to re-attach - which is how a control ends up dead on the second render only.
 $('pvtable').addEventListener('click', (e) => {
+  const wl = e.target.closest('.wflink'); if (wl) { openWorkflowById(wl.dataset.wfid); return; }
   const b = e.target.closest('.plbtn'); if (!b) return;
-  const box = b.closest('tr') && b.closest('tr').nextElementSibling; if (!box || !box.classList.contains('plrow')) return;
+  // A field can carry two rows under it - its values and the rules it fires - so each button finds
+  // the row that names it, not merely the next one.
+  const kind = b.dataset.row;
+  let box = b.closest('tr') && b.closest('tr').nextElementSibling;
+  while (box && box.classList.contains('plrow') && box.dataset.row !== kind) box = box.nextElementSibling;
+  if (!box || !box.classList.contains('plrow')) return;
   const opening = box.hidden;
   box.hidden = !opening;
   b.setAttribute('aria-expanded', String(opening));
   const n = b.dataset.n;
-  b.textContent = `${opening ? '\u25be' : '\u25b8'} ${n} value${n === '1' ? '' : 's'}`;
+  b.textContent = `${opening ? '\u25be' : '\u25b8'} ${n} ${kind === 'rules' ? 'workflow' : 'value'}${n === '1' ? '' : 's'}`;
 });
 document.querySelectorAll('#pvtabs .dtab').forEach((b) => (b.onclick = () => setPvTab(b.dataset.pv)));
 $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One group in the health view is read from Zoho; the rest is computed from the mirror. Before this

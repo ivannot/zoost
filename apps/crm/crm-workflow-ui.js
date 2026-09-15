@@ -56,6 +56,15 @@ async function openWorkflowInZoho(id) {
   try { if (await goToZoho(url)) setStatus('Opened workflow in Zoho.', 'ok'); }
   catch (e) { setStatus('Could not open: ' + e.message, 'warn'); }
 }
+/** A rule named by id from another tab - the Fields table's links. The id is the rule file's own, so
+ *  it is exact; `healthOpenWorkflow` matches by name because the ids it holds are not. */
+async function openWorkflowById(id) {
+  if (!tabReachable('workflows')) return;
+  setMode('workflows'); await rebuildWorkflows();
+  const e = workflowData.find((w) => String(w.id) === String(id));
+  if (e) { openWorkflow(e); return; }
+  setStatus(workflowData.length ? MSG.wfNotHere : MSG.wfNotPulled, 'warn');
+}
 async function openWorkflow(e) {
   const mine = ++previewLoad;
   const op = beginWorkspaceOp();
@@ -129,11 +138,15 @@ function renderWorkflowDetail(rule) {
   const ew = rule.execute_when || {}, det = ew.details || {};
   const trigParts = [esc(ew.type || '?')];
   if (det.repeat != null) trigParts.push(`repeat: ${det.repeat ? 'yes' : 'no'}`);
-  if (Array.isArray(det.fields) && det.fields.length) trigParts.push(`fields: ${det.fields.map((fl) => esc((fl.field && fl.field.api_name) || fl.api_name || String(fl))).join(', ')}`);
-  Object.keys(det).forEach((k) => { if (['trigger_module', 'repeat', 'fields'].includes(k)) return; const v = det[k]; if (v != null && typeof v !== 'object') trigParts.push(`${esc(k)}: ${esc(String(v))}`); });
+  // The fields it watches, from the one reader the Fields tab and both reports use. This read
+  // `details.fields`, a key no rule has: measured, Zoho puts them in `details.criteria`.
+  const tf = ruleTriggerFields(rule);
+  if (tf.fields.length) trigParts.push(`${tf.kind === 'date' ? 'date field' : 'fields'}: ${tf.fields.map(esc).join(', ')}${tf.when ? ' · ' + esc(tf.when) : ''}`);
+  const said = ['trigger_module', 'repeat'].concat(tf.kind === 'date' && tf.when ? ['unit', 'period', 'recur_cycle', 'execute_at'] : []);
+  Object.keys(det).forEach((k) => { if (said.includes(k)) return; const v = det[k]; if (v != null && typeof v !== 'object') trigParts.push(`${esc(k)}: ${esc(String(v))}`); });
   h += `<div class="wfrow"><span class="wk">Trigger</span> ${trigParts.join(' \u00b7 ')}</div>`;
   if (rule.category && rule.category !== 'default') h += `<div class="wfrow"><span class="wk">Category</span> ${esc(rule.category)}</div>`;
-  const ewCrit = critText(det.criteria || ew.criteria);
+  const ewCrit = tf.kind === 'change' && critWatchesOnly(det.criteria) ? '' : critText(det.criteria || ew.criteria);
   if (ewCrit) h += `<div class="wfrow"><span class="wk">When</span> ${esc(ewCrit)}</div>`;
   h += `<div class="wfrow"><span class="wk">Status</span> ${rule.status && rule.status.active ? 'active' : 'inactive'}</div>`;
   // Same row, same words as the Schedules preview: "Last run" is one fact and must not be two names.

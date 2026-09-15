@@ -44,6 +44,8 @@
   .plbtn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font:11px var(--mono);padding:1px 6px;cursor:pointer}
   .plbtn:hover{color:var(--ink);border-color:var(--sel)}
   .ftbl tr.plrow td{white-space:normal;background:#101827;padding:7px 8px}
+  .plv .wflink{color:var(--accent);cursor:pointer} .plv .wflink:hover{text-decoration:underline} .plv .wfwhen{color:var(--muted)}
+  .ftnote{padding:6px 10px;color:var(--muted);font-size:11px}
   .plvals{display:flex;flex-wrap:wrap;gap:4px;max-height:180px;overflow:auto}
   .plv{border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#cbd5e1;background:#16203099;
        max-width:100%;overflow-wrap:anywhere}

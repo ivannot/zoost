@@ -5,7 +5,7 @@
     "description": "",
     "module": "Orders",
     "module_id": "6000",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -15,7 +15,7 @@
     "description": "",
     "module": "Orders",
     "module_id": "6001",
-    "type": "Record Action",
+    "type": "field_update",
     "active": true,
     "source": "crm"
   },
@@ -25,7 +25,7 @@
     "description": "",
     "module": "Invoices",
     "module_id": "6002",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -35,7 +35,7 @@
     "description": "",
     "module": "Tickets",
     "module_id": "6003",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -45,7 +45,7 @@
     "description": "",
     "module": "Contacts",
     "module_id": "6004",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -55,7 +55,7 @@
     "description": "",
     "module": "Deals",
     "module_id": "6005",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -65,7 +65,7 @@
     "description": "",
     "module": "Shipments",
     "module_id": "6006",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -75,7 +75,7 @@
     "description": "",
     "module": "Leads",
     "module_id": "6007",
-    "type": "Record Action",
+    "type": "date_or_datetime",
     "active": true,
     "source": "crm"
   },
@@ -85,7 +85,7 @@
     "description": "",
     "module": "Accounts",
     "module_id": "6008",
-    "type": "Record Action",
+    "type": "field_update",
     "active": true,
     "source": "crm"
   },
@@ -95,7 +95,7 @@
     "description": "",
     "module": "Quotes",
     "module_id": "6009",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   },
@@ -105,7 +105,7 @@
     "description": "",
     "module": "Orders",
     "module_id": "6010",
-    "type": "Record Action",
+    "type": "create",
     "active": true,
     "source": "crm"
   }

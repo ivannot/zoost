@@ -7,8 +7,13 @@
     "id": "6003"
   },
   "execute_when": {
-    "type": "Record Action",
-    "on": "created"
+    "type": "create",
+    "details": {
+      "trigger_module": {
+        "api_name": "Tickets",
+        "id": "6003"
+      }
+    }
   },
   "status": {
     "active": true

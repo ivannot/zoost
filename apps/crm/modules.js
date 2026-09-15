@@ -315,7 +315,7 @@ async function resyncModule(m) {
  *  line. Reported. */
 function pickCell(values) {
   const v = values || []; if (!v.length) return '';
-  return `<button class="plbtn" data-n="${escA(String(v.length))}" aria-expanded="false" title="Show the values">\u25b8 ${v.length} value${v.length === 1 ? '' : 's'}</button>`;
+  return `<button class="plbtn" data-row="values" data-n="${escA(String(v.length))}" aria-expanded="false" title="Show the values">\u25b8 ${v.length} value${v.length === 1 ? '' : 's'}</button>`;
 }
 /** The values, in a row of their own that spans the table.
  *
@@ -327,8 +327,22 @@ function pickCell(values) {
  *  whole width, and each one wears a border because a list of names needs a boundary, not a newline. */
 function pickRow(values, cols) {
   const v = values || []; if (!v.length) return '';
-  return `<tr class="plrow" hidden><td colspan="${escA(String(cols))}"><div class="plvals">`
+  return `<tr class="plrow" data-row="values" hidden><td colspan="${escA(String(cols))}"><div class="plvals">`
     + v.map((x) => `<span class="plv">${escHtml(x)}</span>`).join('')
+    + '</div></td></tr>';
+}
+/** The workflow rules a field makes fire, in the picklist's shape: a count in the row, and the names
+ *  in a row of their own under it. The same kind of fact about a field, in the same 400px, so the same
+ *  control - and one listener serves both, which is why each row says which button it belongs to. */
+function trigCell(rules) {
+  if (!rules || !rules.length) return '';
+  return `<button class="plbtn" data-row="rules" data-n="${escA(String(rules.length))}" aria-expanded="false" title="Workflow rules that fire when this field changes, or on the date it holds">▸ ${rules.length} workflow${rules.length === 1 ? '' : 's'}</button>`;
+}
+function trigRow(rules, cols) {
+  if (!rules || !rules.length) return '';
+  return `<tr class="plrow" data-row="rules" hidden><td colspan="${escA(String(cols))}"><div class="plvals">`
+    + rules.map((r) => `<span class="plv"><button type="button" class="bare wflink" data-wfid="${escA(r.id)}" title="Open this workflow">${escHtml(r.name)}</button>`
+      + ` <span class="wfwhen">${escHtml(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ' · off'}</span></span>`).join('')
     + '</div></td></tr>';
 }
 /** Every report cuts a long picklist, and none of them said so: twelve values printed and the rest
@@ -369,13 +383,14 @@ async function showChosenLayout(sel, m, mine, op) {
 }
 
 function renderFieldsTable(m) {
+  const trig = (f) => (fieldTriggers && fieldTriggers.map.get(`${m.api_name}:${f.api_name}`)) || [];
   const rows = (m.fields || []).map((f) => `<tr>
-    <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
+    <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''} ${trigCell(trig(f))}</td>
     <td class="mono">${escHtml(f.api_name)}</td>
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f.picklist)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
     <td class="mono">${f.lookup ? '\u2192 ' + escHtml(typeof f.lookup === 'string' ? f.lookup : (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module)) || '')) : ''}</td>
-  </tr>${pickRow(f.picklist, 5)}`).join('');
+  </tr>${pickRow(f.picklist, 5)}${trigRow(trig(f), 5)}`).join('');
   if (!rows) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
     // under Related lists put the same sixty words on screen three times.
@@ -392,7 +407,12 @@ function renderFieldsTable(m) {
   // scroll sideways - and once they moved to a row of their own the column left behind held only the
   // button that opens it, in the last position, off screen at 400px. It sits in Type, where the word
   // «picklist» already is and where the reader is already looking.
-  return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th></tr></thead><tbody>${rows}</tbody></table>`;
+  // Silence here would read as «no field starts a rule», which is only true when the rules were read.
+  const note = !fieldTriggers ? ''
+    : !fieldTriggers.pulled ? 'No workflow rules are in this workspace, so no field here shows the rules it makes fire.'
+    : fieldTriggers.unread ? `${fieldTriggers.unread} workflow rule(s) are not downloaded, so the fields they watch are not marked.` : '';
+  return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th></tr></thead><tbody>${rows}</tbody></table>`
+    + (note ? `<div class="ftnote">${escHtml(note)}</div>` : '');
 }
 // Selecting a different item must start the reader at the top of the new content;
 // keeping the previous scroll offset lands you in the middle of an unrelated document.
@@ -428,6 +448,12 @@ async function openModule(path, layoutId) {
   selectRow(path);
   let m; try { m = JSON.parse(await op.read(path)); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
+  // Which rules each field makes fire is read from every rule file, once, and dropped when one is written.
+  if (fieldTriggers === null) {
+    const t = await buildFieldTriggers(op);
+    if (!previewCurrent(mine, op)) return;
+    fieldTriggers = t;
+  }
   navNames({ display: m.plural_label || m.singular_label || m.module_name || m.api_name,
              gen: m.module_name || m.api_name, api: m.api_name });
   const nav = moduleNavigable(m);

@@ -473,7 +473,12 @@ const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN',
   .map((k) => sliceConst('apps/crm/export.js', k))
   .concat([sliceConst('apps/crm/export.js', 'isDelugeLang'), sliceConst('apps/crm/export.js', 'langLabelOf')])
   .concat(['healthFacts', 'wfFunctionActions', 'publishStateOf', 'publishTextOf', 'pubBadge']
-    .map((k) => sliceFn('apps/crm/export.js', k)));
+    .map((k) => sliceFn('apps/crm/export.js', k)))
+  // The trigger readers live in automation.js and both builders call them: the panel is one scope
+  // across its scripts, and a lift that stops at one file throws where the page would not.
+  .concat([sliceConst('apps/crm/automation.js', 'ANY_VALUE')])
+  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap']
+    .map((k) => sliceFn('apps/crm/automation.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -18887,7 +18892,7 @@ const MD_FIXTURE = () => {
     mods: [{ api_name: 'Contacts', module_name: 'Contacts', fields: [{ api_name: 'Owner', lookup: 'Ghosts' }], related_lists: [] }],
     wfs: [{ id: 'w1', name: 'On create', module: 'Contacts', type: 'on_create', active: true,
             detail: { description: 'when a contact lands', last_executed_time: '2026-08-01T10:00:00Z',
-                      execute_when: { type: 'on_create', details: { repeat: false, fields: [{ api_name: 'Email' }],
+                      execute_when: { type: 'on_create', details: { repeat: false,
                                       criteria: { comparator: 'equal', field: { api_name: 'Lead_Source' }, value: 'Web' } } },
                       conditions: [{ sequence_number: 1,
                                      criteria_details: { criteria: { comparator: 'not_equal', field: { api_name: 'Email' }, value: 'x' } },
@@ -21570,4 +21575,91 @@ test('crm: a function deleted between census and download is «not found», not 
     assert.throws(() => validateBridgeReply(ask, { ok: true, file: bad }), /invalid file/,
       `a file of ${JSON.stringify(bad) ?? 'undefined'} is not a shape anything sends`);
   }
+});
+
+// ---- which workflow rules a field makes fire ----
+// Asked for on a real org, where Zoho states a rule's trigger inside the rule and nowhere else. The
+// shapes are the ones measured there - one `${ANYVALUE}` leaf, OR groups nested four deep, a date
+// field with an offset - with placeholder names. `details.fields`, which the detail pane and both
+// reports looked for, is in none of them.
+const TRIGGER_READERS = () => [sliceConst('apps/crm/automation.js', 'ANY_VALUE'),
+  ...['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap']
+    .map((k) => sliceFn('apps/crm/automation.js', k))];
+const watchLeaf = (api) => ({ comparator: '${ANYVALUE}', field: { api_name: api, id: '1' }, value: '${ANYVALUE}' });
+
+test('the fields that make a rule fire are read from the shapes Zoho writes', () => {
+  const { ruleTriggerFields, fieldTriggerMap } = load(TRIGGER_READERS());
+  const mod = { api_name: 'Contacts', id: '1' }, tm = { trigger_module: mod };
+  const rule = (id, active, type, details) => ({ id, name: id, module: mod, status: { active }, execute_when: { type, details: { ...tm, ...details } } });
+  const single = rule('r1', true, 'field_update', { criteria: watchLeaf('Status'), repeat: true, match_all: false });
+  const nested = rule('r2', false, 'field_update', { repeat: true, match_all: false, criteria: { group_operator: 'OR', group: [
+    { group_operator: 'OR', group: [{ group_operator: 'OR', group: [watchLeaf('Start'), watchLeaf('Status')] }, watchLeaf('End')] },
+    watchLeaf('Email')] } });
+  const dated = rule('r3', true, 'date_or_datetime', { unit: -1, period: 'days', field: { api_name: 'Start', id: '2' },
+                                                      recur_cycle: 'once', repeat: false, execute_at: '13:00:00+02:00' });
+  const created = rule('r4', true, 'create', {});
+  const section = rule('r5', true, 'section_update', { section_ids: ['9'], repeat: true });
+
+  assert.deepEqual([...ruleTriggerFields(single).fields], ['Status']);
+  assert.deepEqual([...ruleTriggerFields(nested).fields], ['Start', 'Status', 'End', 'Email'], 'a field inside nested groups was missed');
+  const d = ruleTriggerFields(dated);
+  assert.equal(d.kind, 'date');
+  assert.deepEqual([...d.fields], ['Start']);
+  assert.equal(d.when, '1 day before at 13:00');
+  assert.equal(ruleTriggerFields(rule('r6', true, 'date_or_datetime', { unit: 0, period: 'days', field: { api_name: 'End' } })).when, 'on the date');
+  assert.equal(ruleTriggerFields(created).fields.length, 0, 'a rule that fires on create was said to watch a field');
+  assert.equal(ruleTriggerFields(section).fields.length, 0, 'section ids were read as fields');
+
+  const map = fieldTriggerMap([single, nested, dated, created, section]);
+  assert.deepEqual([...map.get('Contacts:Status').map((r) => r.id)], ['r1', 'r2']);
+  assert.deepEqual([...map.get('Contacts:Start').map((r) => [r.id, r.kind])], [['r2', 'change'], ['r3', 'date']]);
+  assert.equal(map.get('Contacts:Status')[1].active, false, 'an inactive rule is not marked as one');
+  assert.equal(map.has('Contacts:Name'), false);
+});
+
+test('the Fields table marks a field that fires a rule, and says when it cannot know', () => {
+  const rel = 'apps/crm/modules.js';
+  const parts = ['pickCell', 'pickRow', 'trigCell', 'trigRow', 'renderFieldsTable'].map((k) => sliceFn(rel, k));
+  const g = { escHtml: (x) => String(x), escA: (x) => String(x), emptyReason: () => '' };
+  const m = { api_name: 'Contacts', fields: [{ api_name: 'Status', data_type: 'picklist', picklist: ['A', 'B'] }, { api_name: 'Name' }] };
+  const map = new Map([['Contacts:Status', [{ id: 'w1', name: 'Status moved', kind: 'change', when: '', active: false }]]]);
+
+  const html = load(parts, { ...g, fieldTriggers: { map, pulled: true, unread: 2 } }).renderFieldsTable(m);
+  assert.ok(html.includes('data-row="rules" data-n="1" aria-expanded="false"'), 'the field that fires a rule has no count');
+  assert.ok(html.includes('▸ 1 workflow</button>'), 'the count does not say what it counts');
+  assert.ok(html.includes('data-wfid="w1"') && html.includes('on change · off'), 'the rule is not named, linked or marked off');
+  assert.equal(html.split('data-row="rules"').length - 1, 2, 'a field that fires nothing was given a rules control');
+  // Both rows sit under the same field, so the listener tells them apart by name, never by position.
+  assert.ok(html.indexOf('<tr class="plrow" data-row="values"') < html.indexOf('<tr class="plrow" data-row="rules"'));
+  assert.ok(html.includes('2 workflow rule(s) are not downloaded'), 'rules it could not read are not admitted');
+
+  const none = load(parts, { ...g, fieldTriggers: { map: new Map(), pulled: false, unread: 0 } }).renderFieldsTable(m);
+  assert.ok(none.includes('No workflow rules are in this workspace'), 'no marks with no rules read looks like «no field fires anything»');
+  assert.ok(!load(parts, { ...g, fieldTriggers: null }).renderFieldsTable(m).includes('ftnote'));
+});
+
+test('a watched field is named on its rule and on its module in both reports, never as ${ANYVALUE}', async () => {
+  const rel = 'apps/crm/export.js';
+  const f = MD_FIXTURE();
+  const mod = { api_name: 'Contacts', id: '1' };
+  f.mods = [{ api_name: 'Contacts', module_name: 'Contacts', fields: [{ api_name: 'Status', label: 'Status' }, { api_name: 'Owner' }], related_lists: [] }];
+  f.wfs = [{ id: 'w9', name: 'Status moved', module: 'Contacts', type: 'field_update', active: true,
+             detail: { id: 'w9', name: 'Status moved', module: mod, status: { active: true }, conditions: [],
+                       execute_when: { type: 'field_update', details: { trigger_module: mod, criteria: watchLeaf('Status'), repeat: true, match_all: false } } } },
+           { id: 'w10', name: 'Not here', module: 'Contacts', type: 'create', active: true, detail: null }];
+  const m = load([...EXPORT_PARTS, sliceFn(rel, 'buildExportMarkdown'), sliceFn(rel, 'buildExportHtml'),
+                  sliceFn(rel, '_mdCell')], MD_STUBS());
+  const data = { fns: f.fns, mods: f.mods, g: f.g, wfs: f.wfs, scheds: f.scheds, conns: [], fails: { failures: [] }, acts: [], actUsers: {} };
+  const md = m.buildExportMarkdown(data, MD_SCOPE);
+  const html = await m.buildExportHtml(f.fns, f.mods, f.g, {}, f.wfs, f.scheds, [], { failures: [] }, [], {}, MD_SCOPE);
+  for (const [name, text] of [['Markdown', md], ['HTML', html]]) {
+    assert.ok(!text.includes('ANYVALUE'), `${name}: the watched field is printed as a condition`);
+    assert.match(text, /fields: Status/, `${name}: the rule does not say which field starts it`);
+    assert.match(text, /1 workflow rule\(s\) were not downloaded/, `${name}: a rule it could not read is not admitted`);
+  }
+  assert.match(md, /\| Status \| `Status` \|.*\| Status moved \(on change\) \|/, 'Markdown: the field does not name the rule it fires');
+  assert.match(html, /<th>Fires workflows<\/th>/);
+  assert.match(html, /<a href="#wf-w9">Status moved<\/a>/, 'HTML: the field does not link to the rule it fires');
+  // Without the workflows chapter there is nothing to link to, and an empty column would read «none».
+  assert.ok(!m.buildExportMarkdown(data, { ...MD_SCOPE, workflows: false }).includes('Fires workflows'));
 });

@@ -38,8 +38,6 @@
   const BASE = 'https://crm.zoho.eu';
   const WHEN = '2026-08-07T10:00:00.000Z';
   const AUTHOR = 'Sample User';       // the one name every generated record is attributed to
-  const WF_TRIGGER = 'Record Action'; // the rule's own `execute_when.type` and its index row say the
-                                      // same fact, so they are the same string or the fixture lies
 
   // ---- the readable core -------------------------------------------------------------------
   // ns, name, category, params, what it calls. Written out because these are the ones a reader
@@ -191,14 +189,14 @@
   ];
   const WORKFLOWS = [
     ['Orders', 'New order received', 'automation.onOrderCreate', false],
-    ['Orders', 'Order amount changed', 'automation.recalcTotals', false],
+    ['Orders', 'Order amount changed', 'automation.recalcTotals', false, 'amount'],
     ['Invoices', 'Invoice overdue', 'schedule.dunningRun', true],
     ['Tickets', 'Ticket unanswered', 'standalone.escalateTicket', true],
     ['Contacts', 'Contact merged', 'automation.onContactMerge', false],
     ['Deals', 'Deal won', 'automation.onDealWon', false],
     ['Shipments', 'Shipment dispatched', 'standalone.trackParcel', false],
-    ['Leads', 'Lead untouched', null, true],
-    ['Accounts', 'Credit limit changed', 'validation_rule.checkCreditLimit', false],
+    ['Leads', 'Lead untouched', null, true, 'opened'],
+    ['Accounts', 'Credit limit changed', 'validation_rule.checkCreditLimit', false, 'money'],
     ['Quotes', 'Quote accepted', 'automation.onOrderCreate', false],
   ];
   // Which rule fires which function, keyed the way Zoho keys `associated_place`: a function's own
@@ -554,8 +552,30 @@ function deluge(ns, name, params, calls) {
     // opens on their first day.
     const wfList = WORKFLOWS.concat(o.edgeCases
       ? [['Orders', 'Order archived', 'standalone.archiveOrderLegacy', false]] : []);
-    wfList.forEach(([mod, name, fn, sched], i) => {
+    // **The trigger, in the shape Zoho writes it.** Every rule here said `Record Action` with an `on`
+    // key, both invented, so a sample could never show a field that starts a rule. Measured on a real
+    // org: `create` carries only the trigger module; `field_update` names the watched fields as
+    // `${ANYVALUE}` criteria leaves, alone or in OR groups; `date_or_datetime` names one date field and
+    // an offset. One of each field shape, on rules whose names already describe them.
+    const fieldIdOf = (mod, api) => {
+      const i = modList.findIndex(([a]) => a === mod), k = FIELD_POOL.findIndex(([a]) => a === api);
+      if (i < 0 || k < 0 || k >= 6 + (i % 6)) throw new Error(`sample: ${mod} has no field ${api}`);
+      return String(7000 + i * 20 + k);
+    };
+    const watch = (mod, api) => ({ comparator: '${ANYVALUE}', field: { api_name: api, id: fieldIdOf(mod, api) }, value: '${ANYVALUE}' });
+    // Keyed by the fifth element of a WORKFLOWS row; a row without one fires on create.
+    const TRIGGERS = {
+      amount: (mod) => ({ type: 'field_update', details: { criteria: watch(mod, 'Amount'), repeat: true, match_all: false } }),
+      money: (mod) => ({ type: 'field_update', details: {
+        criteria: { group_operator: 'OR', group: [watch(mod, 'Amount'), watch(mod, 'Currency')] }, repeat: true, match_all: false } }),
+      opened: (mod) => ({ type: 'date_or_datetime', details: {
+        unit: 7, period: 'days', field: { api_name: 'Opened_On', id: fieldIdOf(mod, 'Opened_On') },
+        recur_cycle: 'once', repeat: false, execute_at: '09:00:00+02:00' } }),
+    };
+    wfList.forEach(([mod, name, fn, sched, trig], i) => {
       const wid = String(4000 + i);
+      const t = (TRIGGERS[trig] || (() => ({ type: 'create', details: {} })))(mod);
+      const trigger = { type: t.type, details: Object.assign({ trigger_module: { api_name: mod, id: String(6000 + i) } }, t.details) };
       // Three shapes here were invented rather than derived, and each one silently removed a
       // feature from the sample: the action went in a bare `actions` on the condition where Zoho
       // puts `instant_actions.actions`; its type was `function` where Zoho writes `functions`; and
@@ -586,7 +606,7 @@ function deluge(ns, name, params, calls) {
       J('workflows/' + wid + '.json', {
         id: wid, name: name, description: '',
         module: { api_name: mod, id: String(6000 + i) },
-        execute_when: { type: WF_TRIGGER, on: 'created' },
+        execute_when: trigger,
         status: { active: true },
         conditions: [{
           sequence_number: 1, criteria: { field: { api_name: 'Status' }, comparator: 'not_equal', value: '' },
@@ -599,7 +619,7 @@ function deluge(ns, name, params, calls) {
         last_executed_time: '2026-07-2' + (i % 9) + 'T11:20:00+00:00',
       });
       wfs.push({ id: wid, name: name, description: '', module: mod, module_id: String(6000 + i),
-                 type: WF_TRIGGER, active: true, source: 'crm' });
+                 type: trigger.type, active: true, source: 'crm' });
     });
     J('workflows/index.json', wfs);
 

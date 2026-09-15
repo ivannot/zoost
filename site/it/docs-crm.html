@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:4421527ba16bc5da -->
+<!-- translated-from: site/docs-crm.html sha256:fd113f0e55be8170 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · aggiornata il <span class="dd" data-stamp="updated">14 settembre 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · aggiornata il <span class="dd" data-stamp="updated">15 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -215,7 +215,7 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>le funzioni Deluge come file <code>.dg</code>; quelle Java, Python e Node come progetti <code>&lt;nome&gt;.files/</code>, con tutti i file restituiti da Zoho. Ogni funzione ha anche il proprio <code>.meta.json</code></td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>il censimento: ogni funzione con namespace, id e dove è agganciata</td></tr>
-      <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist. Nel pannello una picklist mostra il <b>numero</b> di valori e si apre verso il basso con un clic, uno per riga: quaranta opzioni su una riga facevano scorrere la tabella di lato senza fine</td></tr>
+      <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist. Nel pannello una picklist mostra il <b>numero</b> di valori e si apre verso il basso con un clic, uno per riga: quaranta opzioni su una riga facevano scorrere la tabella di lato senza fine. Un campo che fa partire una regola di workflow - quando cambia, o alla data che contiene - mostra <b class="ui">▸ 2 workflows</b> accanto al nome e si apre allo stesso modo, un link per regola</td></tr>
       <tr><td class="k"><code>modules/layouts/</code></td><td>un file per modulo, con le sezioni e i campi di ogni layout - sotto i moduli che descrivono</td></tr>
       <tr><td class="k"><code>workflows/</code></td><td>un file per regola: trigger, criteri, azioni immediate e differite</td></tr>
       <tr><td class="k"><code>schedules/</code>, <code>connections/</code></td><td>l'elenco delle schedulazioni e il catalogo delle connessioni dell'org</td></tr>

@@ -7,8 +7,36 @@
     "id": "6008"
   },
   "execute_when": {
-    "type": "Record Action",
-    "on": "created"
+    "type": "field_update",
+    "details": {
+      "trigger_module": {
+        "api_name": "Accounts",
+        "id": "6008"
+      },
+      "criteria": {
+        "group_operator": "OR",
+        "group": [
+          {
+            "comparator": "${ANYVALUE}",
+            "field": {
+              "api_name": "Amount",
+              "id": "7004"
+            },
+            "value": "${ANYVALUE}"
+          },
+          {
+            "comparator": "${ANYVALUE}",
+            "field": {
+              "api_name": "Currency",
+              "id": "7005"
+            },
+            "value": "${ANYVALUE}"
+          }
+        ]
+      },
+      "repeat": true,
+      "match_all": false
+    }
   },
   "status": {
     "active": true

@@ -7,8 +7,13 @@
     "id": "6002"
   },
   "execute_when": {
-    "type": "Record Action",
-    "on": "created"
+    "type": "create",
+    "details": {
+      "trigger_module": {
+        "api_name": "Invoices",
+        "id": "6002"
+      }
+    }
   },
   "status": {
     "active": true

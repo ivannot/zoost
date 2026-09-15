@@ -138,6 +138,10 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const esc = escHtml;
   const ws = bound || {};
+  // Which rules each field makes fire - the panel's Fields table, carried into the report. Only when
+  // the workflows are in it: a column of blanks in a report without them would say «none».
+  const fTrig = wfs.length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail))) : null;
+  const wfUnread = wfs.filter((w) => !w.detail).length;
   const now = new Date().toLocaleString();
 
   // function cross-references (uses / used by), navigable via anchors
@@ -295,12 +299,15 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       + `</tbody></table>`;
   };
   const groups = { Standard: [], Custom: [] }; mods.forEach((m) => (m.generated_type === 'custom' ? groups.Custom : groups.Standard).push(m));
-  let modHtml = '';
+  const trigTd = (m, fl) => (fTrig.get(`${m.api_name}:${fl.api_name}`) || [])
+    .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ', off'})</span>`).join('<br>');
+  let modHtml = fTrig && wfUnread && mods.length
+    ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they watch are not marked under «Fires workflows».</p>` : '';
   for (const g2 of ['Standard', 'Custom']) {
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
     list.sort(byField('api_name')).forEach((m) => {
-      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td></tr>`).join('');
+      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td>${fTrig ? `<td>${trigTd(m, fl)}</td>` : ''}</tr>`).join('');
       const inbound = (modRefs && modRefs[m.api_name]) || [];
       const refBy = inbound.length ? `<div class="refs"><span><b>Referenced by (${inbound.length}):</b> ${inbound.map((r) => `${modLink(r.module)} <span class="none">(${esc(r.field)})</span>`).join(', ')}</span></div>` : '';
       const laySrc = !scope.layouts ? [] : ((m._layouts && m._layouts.length) ? m._layouts : (m.layouts || []));
@@ -319,7 +326,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
         + (mref ? `<div class="refs"><span><b>Not described by Zoho.</b> ${esc(mref.text)}</span></div>` : '')
-        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th></tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
+        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Fires workflows</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
     });
   }
 
@@ -383,8 +390,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       const ew = d.execute_when || {}, det = ew.details || {};
       const trigParts = [esc(w.type || ew.type || '')];
       if (det.repeat != null) trigParts.push(`repeat: ${det.repeat ? 'yes' : 'no'}`);
-      if (Array.isArray(det.fields) && det.fields.length) trigParts.push(`fields: ${det.fields.map((fl) => esc((fl.field && fl.field.api_name) || fl.api_name || String(fl))).join(', ')}`);
-      const ewCrit = wfCrit(det.criteria || ew.criteria);
+      const tf = ruleTriggerFields(d);
+      if (tf.fields.length) trigParts.push(`${tf.kind === 'date' ? 'date field' : 'fields'}: ${tf.fields.map(esc).join(', ')}${tf.when ? ' · ' + esc(tf.when) : ''}`);
+      const ewCrit = tf.kind === 'change' && critWatchesOnly(det.criteria) ? '' : wfCrit(det.criteria || ew.criteria);
       let meta = `<div class="refs"><span><b>Trigger:</b> ${trigParts.join(' \u00b7 ')}</span>`;
       if (ewCrit) meta += `<span><b>When:</b> ${esc(ewCrit)}</span>`;
       if (d.description) meta += `<span><b>Description:</b> ${esc(d.description)}</span>`;
@@ -750,6 +758,8 @@ function buildExportMarkdown(d, scope) {
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
+  const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail))) : null;
+  const wfUnread = (wfs || []).filter((w) => !w.detail).length;
   conns = scope.connections ? (conns || []) : [];
   acts = scope.actions ? (acts || []) : [];
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
@@ -904,13 +914,16 @@ function buildExportMarkdown(d, scope) {
     emit(rels.filter((r) => r.sys), 'System related lists (notes, attachments, activities\u2026)');
   }
   md += '---\n\n## Modules (schema)\n\n';
+  if (fTrig && wfUnread && mods.length) md += `${wfUnread} workflow rule(s) were not downloaded, so the fields they watch are not marked under «Fires workflows».\n\n`;
   if (!mods.length) md += mdAbsent(scope.modules, 'modules');
   mods.slice().sort(byField('api_name')).forEach((m) => {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
     const mref = moduleRefusal(m.unreadable);
     if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
-    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |\n|---|---|---|---|---|\n`;
-    (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${_pick(f.picklist, 12, _mdCell)} |\n`; });
+    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |${fTrig ? ' Fires workflows |' : ''}\n|---|---|---|---|---|${fTrig ? '---|' : ''}\n`;
+    const trigMd = (f) => (fTrig.get(`${m.api_name}:${f.api_name}`) || [])
+      .map((r) => `${_mdCell(r.name)} (${_mdCell(r.kind === 'date' ? (r.when || 'on a date') : 'on change')}${r.active ? '' : ', off'})`).join('; ');
+    (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${_pick(f.picklist, 12, _mdCell)} |${fTrig ? ' ' + trigMd(f) + ' |' : ''}\n`; });
     md += '\n';
     if (scope.relations && (m.related_lists || []).length) {
       md += `#### Related lists (use the API name in zoho.crm.getRelatedRecords)\n\n| API name | Label | Target module | Type |\n|---|---|---|---|\n`;
@@ -967,9 +980,10 @@ function buildExportMarkdown(d, scope) {
         const ew = det.execute_when || {}, dt = ew.details || {};
         const trig = [w.type || ew.type || ''];
         if (dt.repeat != null) trig.push(`repeat: ${dt.repeat ? 'yes' : 'no'}`);
-        if (Array.isArray(dt.fields) && dt.fields.length) trig.push(`fields: ${dt.fields.map((fl) => (fl.field && fl.field.api_name) || fl.api_name || String(fl)).join(', ')}`);
+        const tf = ruleTriggerFields(det);
+        if (tf.fields.length) trig.push(`${tf.kind === 'date' ? 'date field' : 'fields'}: ${tf.fields.join(', ')}${tf.when ? ' · ' + tf.when : ''}`);
         md += `- trigger: ${_mdCell(trig.filter(Boolean).join(' \u00b7 '))}\n`;
-        const ewc = wfCrit(dt.criteria || ew.criteria);
+        const ewc = tf.kind === 'change' && critWatchesOnly(dt.criteria) ? '' : wfCrit(dt.criteria || ew.criteria);
         if (ewc) md += `- when: ${_mdCell(ewc)}\n`;
         if (det.description) md += `- description: ${_mdCell(det.description)}\n`;
         if (det.last_executed_time) md += `- last run: ${_mdCell(String(det.last_executed_time).slice(0, 16))}\n`;

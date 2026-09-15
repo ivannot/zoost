@@ -7,8 +7,22 @@
     "id": "6007"
   },
   "execute_when": {
-    "type": "Record Action",
-    "on": "created"
+    "type": "date_or_datetime",
+    "details": {
+      "trigger_module": {
+        "api_name": "Leads",
+        "id": "6007"
+      },
+      "unit": 7,
+      "period": "days",
+      "field": {
+        "api_name": "Opened_On",
+        "id": "7046"
+      },
+      "recur_cycle": "once",
+      "repeat": false,
+      "execute_at": "09:00:00+02:00"
+    }
   },
   "status": {
     "active": true

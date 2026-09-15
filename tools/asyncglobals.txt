@@ -134,6 +134,7 @@ apps/crm/live-sync.js	runSyncSlot	syncAgain
 apps/crm/live-sync.js	runSyncSlot	syncBusy
 apps/crm/live-sync.js	runSyncSlot	syncing
 apps/crm/modules.js	openModule	currentPath
+apps/crm/modules.js	openModule	fieldTriggers
 apps/crm/modules.js	pullModules	index
 apps/crm/modules.js	rebuildModules	moduleLoad
 apps/crm/options.js	loadAi	aiLoadFailed

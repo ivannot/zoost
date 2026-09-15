@@ -7,8 +7,23 @@
     "id": "6001"
   },
   "execute_when": {
-    "type": "Record Action",
-    "on": "created"
+    "type": "field_update",
+    "details": {
+      "trigger_module": {
+        "api_name": "Orders",
+        "id": "6001"
+      },
+      "criteria": {
+        "comparator": "${ANYVALUE}",
+        "field": {
+          "api_name": "Amount",
+          "id": "7144"
+        },
+        "value": "${ANYVALUE}"
+      },
+      "repeat": true,
+      "match_all": false
+    }
   },
   "status": {
     "active": true

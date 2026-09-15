@@ -7,8 +7,13 @@
     "id": "6010"
   },
   "execute_when": {
-    "type": "Record Action",
-    "on": "created"
+    "type": "create",
+    "details": {
+      "trigger_module": {
+        "api_name": "Orders",
+        "id": "6010"
+      }
+    }
   },
   "status": {
     "active": true

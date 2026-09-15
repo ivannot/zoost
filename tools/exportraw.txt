@@ -55,11 +55,13 @@ apps/crm/export.js	_mdCell(n.namespace)
 apps/crm/export.js	_mdCell(r.api)
 apps/crm/export.js	_mdCell(r.api_name)
 apps/crm/export.js	_mdCell(r.field)
+apps/crm/export.js	_mdCell(r.kind === 'date' ? (r.when || 'on a date') : 'on change')
 apps/crm/export.js	_mdCell(r.label || '')
 apps/crm/export.js	_mdCell(r.label)
 apps/crm/export.js	_mdCell(r.module || r.connected_module || '')
 apps/crm/export.js	_mdCell(r.module)
 apps/crm/export.js	_mdCell(r.name || r.id)
+apps/crm/export.js	_mdCell(r.name)
 apps/crm/export.js	_mdCell(r.parent)
 apps/crm/export.js	_mdCell(r.target)
 apps/crm/export.js	_mdCell(r.type || '')
@@ -95,12 +97,12 @@ apps/crm/export.js	count ? rows : '<p class="hxnone">None</p>'
 apps/crm/export.js	desc
 apps/crm/export.js	desc ? `<p class="hxd">${desc}</p>` : ''
 apps/crm/export.js	det.repeat ? 'yes' : 'no'
-apps/crm/export.js	dt.fields.map((fl) => (fl.field && fl.field.api_name) || fl.api_name |
 apps/crm/export.js	dt.repeat ? 'yes' : 'no'
 apps/crm/export.js	ea.period || ''
 apps/crm/export.js	ea.unit
 apps/crm/export.js	empty
 apps/crm/export.js	env
+apps/crm/export.js	f.api_name
 apps/crm/export.js	f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href
 apps/crm/export.js	f.count
 apps/crm/export.js	f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''
@@ -114,6 +116,11 @@ apps/crm/export.js	f.stats.invokeurl
 apps/crm/export.js	f.stats.lines
 apps/crm/export.js	f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''
 apps/crm/export.js	f.stats.zoho
+apps/crm/export.js	fTrig ? ' ' + trigMd(f) + ' |' : ''
+apps/crm/export.js	fTrig ? ' Fires workflows |' : ''
+apps/crm/export.js	fTrig ? '---|' : ''
+apps/crm/export.js	fTrig ? '<th>Fires workflows</th>' : ''
+apps/crm/export.js	fTrig ? `<td>${trigTd(m, fl)}</td>` : ''
 apps/crm/export.js	failHtml
 apps/crm/export.js	failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''
 apps/crm/export.js	fails.at || 'an unknown date'
@@ -122,6 +129,7 @@ apps/crm/export.js	fails.credits.used ?? 'unknown'
 apps/crm/export.js	fails.usage.failure ?? 'unknown'
 apps/crm/export.js	fails.usage.success ?? 'unknown'
 apps/crm/export.js	fl
+apps/crm/export.js	fl.api_name
 apps/crm/export.js	fl.lookup ? '→ ' + modLink(fl.lookup) : ''
 apps/crm/export.js	fl.mandatory ? '●' : ''
 apps/crm/export.js	fl.required ? '\u25cf' : ''
@@ -192,6 +200,7 @@ apps/crm/export.js	p.name ? ' ' + p.name : ''
 apps/crm/export.js	params(n)
 apps/crm/export.js	publishTextOf(n)
 apps/crm/export.js	publishTextOf(n) ? ' \u00b7 ' + publishTextOf(n) : ''
+apps/crm/export.js	r.active ? '' : ', off'
 apps/crm/export.js	r.child ? '`' + _mdCell(r.child) + '`' : ''
 apps/crm/export.js	r.child ? modLink(r.child) : ''
 apps/crm/export.js	r.count == null ? 'unknown' : r.count
@@ -228,11 +237,14 @@ apps/crm/export.js	secs || '<div class=\"none\" style=\"padding:4px 0\">Section 
 apps/crm/export.js	stamp
 apps/crm/export.js	status
 apps/crm/export.js	tabLabel(t.id)
+apps/crm/export.js	tf.kind === 'date' ? 'date field' : 'fields'
+apps/crm/export.js	tf.when ? ' · ' + tf.when : ''
 apps/crm/export.js	tim
 apps/crm/export.js	tim ? ` (${_mdCell(tim)})` : ''
 apps/crm/export.js	tim ? ` (${tim})` : ''
 apps/crm/export.js	title
 apps/crm/export.js	toc
+apps/crm/export.js	trigTd(m, fl)
 apps/crm/export.js	usesLinks
 apps/crm/export.js	w
 apps/crm/export.js	w.active ? '' : ' (inactive)'
@@ -241,6 +253,7 @@ apps/crm/export.js	w.id
 apps/crm/export.js	w.module ? ' (' + w.module + ')' : ''
 apps/crm/export.js	w.name
 apps/crm/export.js	wfHtml
+apps/crm/export.js	wfUnread
 apps/crm/export.js	wfValOf(g)
 apps/crm/export.js	what
 apps/crm/export.js	when
