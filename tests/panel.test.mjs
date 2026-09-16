@@ -4482,8 +4482,9 @@ test('a failed pull records and reports through one helper', () => {
   // emergency button, took away the way to report it: the one failure in the product that carries a
   // diagnostic was the one that could not be reported. Every pull is one of these, and a new one
   // that forgot the helper shows up here as a count that did not move. Ten since the Modules list
-  // pull became a pull of its own.
-  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 10,
+  // pull became a pull of its own; twelve since blueprints, which reports on both of its exits -
+  // the bridge refusing the read, and the catch around everything after it.
+  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 12,
     'a pull failure site stopped going through notePullFailure()');
   // the helper must keep the order: the verdict is on disk before the sentence is on screen
   const body = src.slice(src.indexOf('async function notePullFailure'), src.indexOf('\n}', src.indexOf('async function notePullFailure')));
@@ -5333,7 +5334,7 @@ for (const app of ['crm', 'analytics']) {
 // function from Zoho with nothing else in front of it. The overlay is gone, so every path that
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
-  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
+  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'blueprintDetailNow', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
            // `reconcileNow` is what reaches Zoho, which is what has to refuse.
@@ -9315,7 +9316,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 
   test('crm: every pull that writes an index checks it is still where it started', () => {
     const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    for (const name of ['pullModules', 'pullSchedules', 'pullActions', 'pullConnections', 'pullWorkflows']) {
+    for (const name of ['pullModules', 'pullSchedules', 'pullBlueprints', 'pullActions', 'pullConnections', 'pullWorkflows']) {
       const at = src.indexOf(`async function ${name}`);
       const body = src.slice(at, src.indexOf('\n}', at));
       assert.ok(/const op = beginWorkspaceOp\(\);/.test(body), `${name} does not remember which workspace it belongs to`);
@@ -9326,7 +9327,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 
   test('crm: a partial list never replaces an index, in any pull', () => {
     const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    for (const [name, idx] of [['pullSchedules', 'schedules'], ['pullActions', 'actions'],
+    for (const [name, idx] of [['pullSchedules', 'schedules'], ['pullBlueprints', 'blueprints'], ['pullActions', 'actions'],
                                ['pullWorkflows', 'workflows'], ['pullAll', 'functions']]) {
       const at = src.indexOf(`async function ${name}`);
       const body = src.slice(at, src.indexOf('\n}', at));
@@ -22047,3 +22048,50 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
   assert.match(pull, /m\.pipelines_kept = true;/,
                'the kept ladders are not marked as kept, so the pane presents them as current');
 });
+
+// ---------- blueprints: the one read in this file written from documentation ----------
+// Every other read in `content-bridge.js` was written by watching a real org answer. This one was
+// not - `/crm/v8/settings/blueprints` is described by Zoho's documentation and has not been seen
+// replying here - so the property worth holding is not «it parses the shape we expect». It is what
+// happens when the shape is something else, because that is the case nobody has ruled out.
+//
+// An empty list is the damaging answer: «this org has no blueprints» is a claim, and nobody knows
+// whether it is true. A refusal carrying `shape` is the honest one, and it is what the panel turns
+// into «asked, and the answer was not readable», with the keys that were actually there.
+{
+  const BR = 'apps/crm/content-bridge.js';
+  // One `NO_CONTENT`, shared by both pieces: `list` compares it by identity, so two frozen objects
+  // would make the 204 branch quietly unreachable and these cases would be proving something else.
+  const g = { NO_CONTENT: Object.freeze({}), MAX_PAGES_WIDE: 40, api: null };
+  const { listBlueprints } = load([sliceFn(BR, 'list'), sliceFn(BR, 'listBlueprints')], g);
+
+  test('crm: a blueprint response without the documented list refuses, and never reads as an empty org', async () => {
+    g.api = async () => ({ profiles: [], info: {} });   // Zoho answered, but not in the shape this reads
+    await assert.rejects(() => listBlueprints(),
+      (e) => e.shape === true && /blueprints/.test(e.message),
+      'an unexpected envelope became an empty blueprint list - the org is then reported as having none');
+  });
+
+  // The half a gate that always refuses would fail: the documented shape has to come through whole,
+  // including the two spellings of «switched off» that the list can carry.
+  test('crm: the documented blueprint shape is read whole', async () => {
+    // **The spellings are Zoho's, measured, not invented.** The first version of this case wrote
+    // `status: 'inactive'` because the shape came from documentation, and a lowercase comparison in
+    // the reader then agreed with it: every blueprint read as active, including the ones that are
+    // not. A real org answers `Active` and `Inactive`, capitalised - 12 of them on the org this was
+    // measured against - so the case carries that and the reader is held to it.
+    g.api = async () => ({ blueprints: [
+      { id: 7, name: 'Deal cycle', module: { api_name: 'Deals' }, layout: { name: 'Standard' },
+        field: { api_name: 'Stage' }, status: 'Active' },
+      { id: 9, name: 'Onboarding', module: { api_name: 'Contacts' }, status: 'Inactive' },
+    ], info: { more_records: false } });
+    const r = await listBlueprints();
+    assert.equal(r.total, 2);
+    assert.equal(r.capped, false);
+    // `Array.from` in this realm rather than `entries.map`: the list comes back from the vm context,
+    // so its prototype is that context's and a strict deep-equal refuses it as «same structure, not
+    // reference-equal» while every value matches. The idiom the rest of this file already uses.
+    assert.deepEqual(Array.from(r.entries, (e) => [e.id, e.module, e.layout, e.active]),
+                     [['7', 'Deals', 'Standard', true], ['9', 'Contacts', '', false]]);
+  });
+}

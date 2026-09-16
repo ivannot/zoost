@@ -214,6 +214,15 @@
     (usedIn[fn] ||= []).push({ _type: 'workflow_rules', id: String(900000 + i), name: name,
                                module: mod, status: true });
   });
+  // Three processes on modules this sample actually has, all running on `Status`, which all three
+  // of them actually carry - a blueprint naming a field the sample does not have would be a lie in
+  // the one artefact the site's pictures are rendered from. One is switched off, so the list has
+  // both spellings Zoho answers with.
+  const BLUEPRINTS = [
+    ['Deal approval', 'Deals', true],
+    ['Lead qualification', 'Leads', true],
+    ['Ticket triage', 'Tickets', false],
+  ];
   const SCHEDULES = [
     ['Nightly dispatch', 'schedule.nightlyDispatch', 'Every day at 02:00'],
     ['Dunning run', 'schedule.dunningRun', 'Every day at 06:00'],
@@ -673,6 +682,19 @@ function deluge(ns, name, params, calls) {
     });
     J('workflows/index.json', wfs);
 
+    // ---- blueprints ----
+    // **What the panel stores, not what Zoho answers.** `pullBlueprints` writes its mapped entries
+    // to this file, so the sample carries that shape - Zoho's own capitalised `status` beside the
+    // `active` flag rather than instead of it. Writing the raw `{blueprints, info}` envelope here
+    // would make a sample no part of the product can read, and the overview card would still say
+    // «not available» - the same red screen from the opposite cause.
+    J('blueprints/index.json', BLUEPRINTS.map(([n, mod, on], i) => ({
+      id: String(7000 + i), name: n, api_name: n.replace(/ /g, '_'),
+      module: mod, layout: 'Standard', field: 'Status', field_label: 'Status',
+      description: '', continuous: false,
+      status: on ? 'Active' : 'Inactive', active: on, modified_by: '',
+    })));
+
     // ---- schedules and connections ----
     J('schedules/index.json', SCHEDULES.map(([n, f, r], i) => {
       const [ns, nm] = f.split('.');
@@ -750,7 +772,7 @@ function deluge(ns, name, params, calls) {
     // it was missed in `noteAccess` before that. A sample that records an absence the product cannot
     // read is worse than one that records nothing, because the file looks complete.
     const areas = {};
-    ['functions', 'modules', 'workflows', 'schedules', 'actions', 'connections', 'failures']
+    ['functions', 'modules', 'workflows', 'schedules', 'blueprints', 'actions', 'connections', 'failures']
       .forEach((a) => (areas[a] = { state: 'ok', status: 0, at: WHEN, pulledAt: WHEN }));
     J('.zoost.json', {
       org: ORG, instance: INSTANCE, base: BASE, sandbox: false, label: 'Sample org',

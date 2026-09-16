@@ -14,6 +14,7 @@
  *  TREE_SORTS: Record<string, {text?: boolean}>, lastModified: string,
  *  getTreeData: () => Array<{language?: string}>, runSearch: () => void,
  *  renderModules: () => void, renderWorkflows: () => void, renderSchedules: () => void,
+ *  renderBlueprints: () => void,
  *  renderActions: () => void, renderConnections: () => void, renderTree: () => void
  * }} CrmTypeChipDeps */
 
@@ -43,7 +44,7 @@ function createCrmTypeChips(deps) {
     sel.value = keep;
     sel.onchange = () => {
       const k = sel.value; deps.setCurFilter(k);
-      (mode === 'functions' ? deps.runSearch : mode === 'modules' ? deps.renderModules : mode === 'workflows' ? deps.renderWorkflows : mode === 'schedules' ? deps.renderSchedules : mode === 'actions' ? deps.renderActions : deps.renderConnections)();
+      (mode === 'functions' ? deps.runSearch : mode === 'modules' ? deps.renderModules : mode === 'workflows' ? deps.renderWorkflows : mode === 'schedules' ? deps.renderSchedules : mode === 'blueprints' ? deps.renderBlueprints : mode === 'actions' ? deps.renderActions : deps.renderConnections)();
     };
     wrap.appendChild(lbl); wrap.appendChild(sel);
     if (mode === 'functions') {

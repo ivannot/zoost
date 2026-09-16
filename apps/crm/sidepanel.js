@@ -122,6 +122,7 @@ let codeCache = null, _searchT = null;
 let searchSeq = 0;              // every runSearch() bumps it, so a content search that finished late knows it
 let workflowData = [], workflowFilter = 'all', wfIndex = new Map();
 let scheduleData = [], scheduleFilter = 'all';
+let blueprintData = [], blueprintFilter = 'all';
 const collapsed = new Set();
 const expandedMods = new Set();
 let pullActive = false, pullBusy = false;
@@ -186,6 +187,10 @@ const MSG = {
   schNotPulled: 'Schedules have not been pulled into this workspace yet - press Pull here first.',
   openThis: 'Open this ',   // two places compose their own ending onto it
   mismatchRefused: 'The active tab is a different org from this workspace - nothing here reads Zoho until they match.',
+  // Its sibling above is the *click* being refused; this one is a pull that had already started and
+  // found the org under it had changed. Two sentences, two moments - and this one was written out
+  // twice, in two pulls, until a check said so.
+  envMismatch: 'Environment mismatch - refusing.',
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
@@ -972,7 +977,7 @@ const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
 const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
   && p !== 'modules/layouts/index.json';
 
-async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'actions' ? rebuildActions() : rebuildConnections(); }
+async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'blueprints' ? rebuildBlueprints() : viewMode === 'actions' ? rebuildActions() : rebuildConnections(); }
 function consumePullPreferenceChange() {
   const changed = prefsSavedDuringPull;
   prefsSavedDuringPull = false;
@@ -1000,7 +1005,7 @@ const pullController = createCrmBootstrap({
   currentView: () => viewMode || 'functions',
   tabLabel,
   runners: () => ({ functions: pullAll, modules: pullModules, workflows: pullWorkflows,
-    schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures }),
+    schedules: pullSchedules, blueprints: pullBlueprints, actions: pullActions, connections: pullConnections, failures: pullFailures }),
   statusKind: () => $('status').className,
   rebuildActive,
   beginOperation: beginWorkspaceOp,

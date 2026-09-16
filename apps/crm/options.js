@@ -41,8 +41,8 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 // The panel's stamp, kept in step by a case: this page writes the same preference and must say
 // which build wrote it, or the panel's one-shot migration fires over a fresh choice.
 const SCOPE_SV = 2;
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'blueprints', 'actions', 'addresses', 'connections', 'failures', 'health'];
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, blueprints: true, actions: true, addresses: false, connections: true, failures: true, health: true };
 // **What an export contains when nobody has chosen yet - and it is not «everything».** The panel
 // starts from this; this page started from `SCOPE_FULL`, which has `code: true`. So a reader who had
 // never opened the export dialog came here and was shown «Deluge source code» already ticked, over a
@@ -53,7 +53,7 @@ const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, 
 //
 // Byte-identical to the panel's own constant, and a case holds the two in step.
 const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { code: false, sv: SCOPE_SV });
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, blueprints: false, actions: true, addresses: false, connections: true, failures: true, health: false };
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
 const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
 const CFG_FILE = '.zoost.json';

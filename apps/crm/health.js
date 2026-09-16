@@ -39,7 +39,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
   try {
     const cfg = JSON.parse(await op.read('.zoost.json'));
     const acc = (cfg && cfg.access) || {};
-    ['functions', 'modules', 'workflows', 'schedules'].forEach((a) => {
+    ['functions', 'modules', 'workflows', 'schedules', 'blueprints'].forEach((a) => {
       const st = acc[a] && acc[a].state;
       if (st && st !== 'ok') areaShort.add(a);
     });
@@ -393,6 +393,12 @@ async function healthOpenWorkflow(id, name) {
   }
   setStatus(workflowData.length ? MSG.wfNotHere : MSG.wfNotPulled, 'warn');
 }
+async function healthOpenBlueprint(id, name) {
+  closeHealth(); if (!tabReachable('blueprints')) return; setMode('blueprints'); await rebuildBlueprints();
+  const e = blueprintData.find((x) => String(x.id) === String(id))
+    || (name && blueprintData.find((x) => (x.name || '') === name));
+  if (e) openBlueprint(e);
+}
 async function healthOpenSchedule(id, name) {
   closeHealth(); if (!tabReachable('schedules')) return; setMode('schedules'); await rebuildSchedules();
   const e = scheduleData.find((x) => String(x.id) === String(id))
@@ -407,7 +413,7 @@ async function healthOpenSchedule(id, name) {
 // mapped here rather than matched loosely, and an unknown kind falls through to text.
 // Which tab each opener lands on. Deliberately a map beside AP_OPEN rather than a string inside each
 // opener: the two lists have to stay in step, and side by side a missing row is visible.
-const AP_TAB = { workflow: 'workflows', schedule: 'schedules', action: 'actions', module: 'modules' };
+const AP_TAB = { workflow: 'workflows', schedule: 'schedules', blueprint: 'blueprints', action: 'actions', module: 'modules' };
 /** Whether a jump into `tab` can land. An area the Zoho role forbids has no segment and can never be
  *  pulled, so arriving there shows an empty list with no way back to it - the panel looking lost
  *  instead of saying what happened. Hiding a tab in Settings is *not* this: `renderTabs()` puts that
@@ -468,7 +474,7 @@ function apLink(kind, p) {
   }
   return escHtml(label);
 }
-const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule,
+const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule, blueprint: healthOpenBlueprint,
                       action: healthOpenAction, module: healthOpenModule };
 function toggleHealth() { if ($('healthview').classList.contains('show')) closeHealth(); else openHealth(); }
 function closeHealth() { $('healthview').classList.remove('show'); $('health').classList.remove('on'); document.body.classList.remove('health-open'); }

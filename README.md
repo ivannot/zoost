@@ -316,7 +316,7 @@ offer zero-retention.
   the tooltip and in the bar underneath, and clearing the field goes back to it); the **🗑** (Remove)
   button deletes that subfolder (local mirror only, re-pullable).
 - Workspace actions: **Overview · Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
-- Mode segments: **Functions · Modules · Workflows · Schedules · Actions · Connections** - which of these
+- Mode segments: **Functions · Modules · Workflows · Schedules · Blueprints · Actions · Connections** - which of these
   appear, and in what order, is yours to set in **Settings → Tabs**, where each also carries a
   **pull** switch - whether `Pull all` asks Zoho for that type at all. Turning a tab off clears it,
   since a tab is usually turned off for an area the account cannot read. A tab your Zoho role has no

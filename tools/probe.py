@@ -107,8 +107,8 @@ CRM = """
     };
     await until(() => !$('overview').disabled, 'the workspace overview never became available');
     $('overview').click();
-    await until(() => $('overviewview').classList.contains('show') && document.querySelectorAll('.ovcard').length === 6,
-      'the CRM overview never drew its six areas');
+    await until(() => $('overviewview').classList.contains('show') && document.querySelectorAll('.ovcard').length === 7,
+      'the CRM overview never drew its seven areas');
     if (!document.body.classList.contains('overview-open')) say('the CRM overview did not own the panel');
     for (const card of document.querySelectorAll('.ovcard')) {
       if (!/^[0-9]+$/.test(card.querySelector('.ovcount').textContent.trim()))

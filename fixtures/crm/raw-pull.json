@@ -423,6 +423,35 @@
       }
     }
   },
+  "blueprints": {
+    "blueprints": [
+      {
+        "layout": { "api_name": "Standard__s", "name": "Standard", "id": "990000000811" },
+        "field": { "api_name": "Lead_Status", "field_label": "Lead Status", "id": "990000000812" },
+        "continuous": false,
+        "module": { "api_name": "Leads", "id": "990000000813", "precedence": 1 },
+        "name": "Lead nurturing",
+        "api_name": "Lead_nurturing",
+        "description": "",
+        "modified_by": { "name": "A Maintainer", "id": "990000000814" },
+        "created_by": { "name": "A Maintainer", "id": "990000000814" },
+        "id": "990000000815",
+        "status": "Active"
+      },
+      {
+        "layout": { "api_name": "Standard__s", "name": "Standard", "id": "990000000821" },
+        "field": { "api_name": "Status", "field_label": "Status", "id": "990000000822" },
+        "continuous": false,
+        "module": { "api_name": "Contacts", "id": "990000000823", "precedence": 1 },
+        "name": "Contact onboarding",
+        "modified_by": { "id": "null" },
+        "created_by": { "id": "null" },
+        "id": "990000000824",
+        "status": "Inactive"
+      }
+    ],
+    "info": { "per_page": 200, "count": 2, "page": 1, "more_records": false }
+  },
   "connections": {
     "code": "SUCCESS",
     "message": "Connections fetched",

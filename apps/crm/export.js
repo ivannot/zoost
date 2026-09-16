@@ -123,7 +123,11 @@ function healthFacts(g, mods, wfs, scheds, fns) {
            total: orphans.length + unresolved.length + ambiguous.length + broken.length + missingFk.length };
 }
 
-function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope) {
+// `bps` is last and defaulted on purpose: this signature is positional and eleven long, and several
+// callers pass every slot by hand. A new parameter anywhere but the end shifts every argument after
+// it - silently, since they are all arrays and objects - so the one place it cannot break a caller
+// that has not been updated is after the last of them.
+function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope, bps = []) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
   // **What the org has, kept before the scope empties it.** The audit asks «does this function
   // exist», and that does not depend on which chapters the reader ticked - unticking Functions turned
@@ -133,6 +137,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   if (!scope.functions) fns = [];
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
+  bps = scope.blueprints ? (bps || []) : [];
   conns = scope.connections ? (conns || []) : [];
   const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
   const actsMissing = acts == null;
@@ -454,6 +459,27 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       + `<div class="refs"><span><b>Runs function:</b> ${fl}</span>${sc.next ? `<span><b>Next:</b> ${esc(sc.next)}</span>` : ''}</div></section>`;
   });
 
+  let bpHtml = '';
+  bps.slice().sort(byField('name')).forEach((bp) => {
+    const m = mods.find((x) => x.api_name === bp.module);
+    const ml = m ? `<a href="#${modAnchor(m.api_name)}">${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</a>`
+                 : `<span class="none">${esc(bp.module || '?')}</span>`;
+    // The field's label and its API name are different words on a localised org, so both are given:
+    // one is what the reader recognises, the other is what Deluge needs.
+    const fld = bp.field_label && bp.field_label !== bp.field
+      ? `${esc(bp.field_label)} <code>${esc(bp.field)}</code>` : esc(bp.field_label || bp.field || '');
+    bpHtml += `<section class="item" data-name="${escA(((bp.name || '') + ' ' + (bp.module || '')).toLowerCase())}">`
+      + `<div class="ih"><b>${esc(bp.name)}</b>${bp.api_name ? ` <code>${esc(bp.api_name)}</code>` : ''}`
+      + `${bp.active ? '' : `<span class="badge no">${esc(bp.status || 'Inactive')}</span>`}</div>`
+      + `<div class="refs"><span><b>Module:</b> ${ml}</span>`
+      + (fld ? `<span><b>Runs on field:</b> ${fld}</span>` : '')
+      + (bp.layout ? `<span><b>Layout:</b> ${esc(bp.layout)}</span>` : '')
+      + (bp.modified_by ? `<span><b>Last modified by:</b> ${esc(bp.modified_by)}</span>` : '')
+      + `</div>`
+      + (bp.description ? `<div class="refs"><span>${esc(bp.description)}</span></div>` : '')
+      + `</section>`;
+  });
+
   // health / audit (same checks as the panel, rendered statically with links to #fn anchors)
   const H = healthFacts(g, mods, wfs, scheds, allFns);
   const hNodes = H.nodes, hStat = H.stat, hOrph = H.orphans, hUnres = H.unresolved,
@@ -605,6 +631,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     { title: 'Relations', count: allRels.length, href: 'relations', note: 'Relation-first catalogue - related-list API names for Deluge' },
     wfs.length ? { title: 'Workflows', count: wfs.length, href: 'workflows', note: 'Triggers, criteria, actions' } : null,
     scheds.length ? { title: 'Schedules', count: scheds.length, href: 'schedules', note: 'Frequency, status, the function each runs' } : null,
+    bps.length ? { title: 'Blueprints', count: bps.length, href: 'blueprints', note: 'The process records walk, per module - list only' } : null,
     acts.length ? { title: 'Actions', count: acts.length, href: 'actions', note: 'Notifications, field updates, tasks and webhooks - and which rules fire each' } : null,
     conns.length ? { title: 'Connections', count: conns.length, href: 'connections', note: 'Connectors, status, and which functions use each' } : null,
     failHtml ? { title: 'Failures', count: failRows.length, href: 'failures', note: `What is breaking, as read on ${esc(fails.at ? new Date(fails.at).toISOString().slice(0, 10) : 'the last reading')}` } : null,
@@ -626,7 +653,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
                  // reader has in their toolbar. It is the only thing about the two headers that
                  // differs, and it is the thing that says which export this is.
                  { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version, tile: '#2563eb' })
-    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
+    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${bps.length ? `<h2 id="blueprints">Blueprints</h2><p class="none">Only the list is read: the states a record moves through, and the transitions that update fields or call functions, are not in this mirror.</p>${bpHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + reportFoot(PRODUCT_NAME, PRODUCT_URL)
     + `<script>${REPORT_FILTER_JS}</script></body></html>`;
 }
@@ -724,6 +751,7 @@ async function loadExportData(op = beginWorkspaceOp()) {
   let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
   let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
+  let bps = []; try { bps = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
   // connections catalogue + usage (which functions reference each), joined on connectionLinkName
   let connCat = []; try { connCat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(connCat)) connCat = [];
@@ -756,7 +784,7 @@ async function loadExportData(op = beginWorkspaceOp()) {
         if (!actUsers.get(k).some((x) => String(x.id) === String(w.id))) actUsers.get(k).push({ id: w.id, name: w.name });
       } });
   }));
-  return { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers };
+  return { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers };
 }
 /** A task mapping's value, as the panel reads it: `{name}` for a person or a picklist entry, the
  *  bare value otherwise. Written once because the two reports and the panel must not disagree about
@@ -781,10 +809,11 @@ function mapVal(m) {
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
-  let { mods, g, wfs, scheds, conns, fails, acts } = d;
+  let { mods, g, wfs, scheds, bps, conns, fails, acts } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
+  bps = scope.blueprints ? (bps || []) : [];
   const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
   const actsMissing = acts == null;
   const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail)), allActs) : null;
@@ -1068,6 +1097,18 @@ function buildExportMarkdown(d, scope) {
     });
     md += '\n';
   }
+  if (bps.length) {
+    md += '---\n\n## Blueprints\n\nThe process records walk, and the module and field each runs on. '
+        + 'Only the list is read: the states a record moves through, and the transitions that update '
+        + 'fields or call functions, are not in this mirror.\n\n';
+    md += '| Blueprint | Module | Runs on field | Layout | Status | Last modified by |\n|---|---|---|---|---|---|\n';
+    bps.slice().sort(byField('name')).forEach((bp) => {
+      const fld = bp.field_label && bp.field_label !== bp.field
+        ? `${bp.field_label} (${bp.field})` : (bp.field_label || bp.field || '');
+      md += `| ${_mdCell(bp.name)} | ${_mdCell(bp.module || '')} | ${_mdCell(fld)} | ${_mdCell(bp.layout || '')} | ${_mdCell(bp.status || (bp.active ? 'Active' : 'Inactive'))} | ${_mdCell(bp.modified_by || '')} |\n`;
+    });
+    md += '\n';
+  }
   if (acts.length) {
     const withheld = acts.filter((a) => a.from_address).length;
     md += '---\n\n## Actions\n\nWhat a workflow rule fires: notifications, field updates, tasks and webhooks. Each exists on its own in Zoho and is reused across rules. "Fired by" is read from the rules in this workspace.\n\n';
@@ -1212,8 +1253,8 @@ async function exportHtml() {
   try {
     await requirePerm(op.root);
     op.say('Building HTML export\u2026', 'busy');
-    const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData(op);
-    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope);
+    const { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers } = await loadExportData(op);
+    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope, bps);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize(whose)}-${stamp}.html`;
     await op.write(name, html);

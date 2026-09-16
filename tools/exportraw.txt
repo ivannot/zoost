@@ -33,6 +33,11 @@ apps/crm/export.js	_mdCell(actionKindLabel(a.kind))
 apps/crm/export.js	_mdCell(b.fn || '?')
 apps/crm/export.js	_mdCell(b.kind)
 apps/crm/export.js	_mdCell(b.name || '?')
+apps/crm/export.js	_mdCell(bp.layout || '')
+apps/crm/export.js	_mdCell(bp.modified_by || '')
+apps/crm/export.js	_mdCell(bp.module || '')
+apps/crm/export.js	_mdCell(bp.name)
+apps/crm/export.js	_mdCell(bp.status || (bp.active ? 'Active' : 'Inactive'))
 apps/crm/export.js	_mdCell(c.connector || '')
 apps/crm/export.js	_mdCell(c.label || '')
 apps/crm/export.js	_mdCell(c.name)
@@ -49,6 +54,7 @@ apps/crm/export.js	_mdCell(f.reason)
 apps/crm/export.js	_mdCell(fl.api_name || '')
 apps/crm/export.js	_mdCell(fl.data_type || '')
 apps/crm/export.js	_mdCell(fl.field_label || fl.display_label || fl.api_name)
+apps/crm/export.js	_mdCell(fld)
 apps/crm/export.js	_mdCell(mod)
 apps/crm/export.js	_mdCell(n.namespace + '.' + n.name)
 apps/crm/export.js	_mdCell(n.namespace)
@@ -94,6 +100,9 @@ apps/crm/export.js	actWithheld
 apps/crm/export.js	areaAsOf(t.id)
 apps/crm/export.js	behind
 apps/crm/export.js	bound.label
+apps/crm/export.js	bp.field
+apps/crm/export.js	bp.field_label
+apps/crm/export.js	bpHtml
 apps/crm/export.js	c.sequence_number || i + 1
 apps/crm/export.js	connHtml
 apps/crm/export.js	count
@@ -138,6 +147,7 @@ apps/crm/export.js	fl.lookup ? '→ ' + modLink(fl.lookup) : ''
 apps/crm/export.js	fl.mandatory ? '●' : ''
 apps/crm/export.js	fl.required ? '\u25cf' : ''
 apps/crm/export.js	fl.required ? '●' : ''
+apps/crm/export.js	fld
 apps/crm/export.js	fnHtml || absent(scope.functions, 'functions')
 apps/crm/export.js	freshnessLine()
 apps/crm/export.js	frows
@@ -159,6 +169,7 @@ apps/crm/export.js	linkByName(f.name)
 apps/crm/export.js	linkByName(r.name || String(r.id || '?'))
 apps/crm/export.js	m.api_name
 apps/crm/export.js	mapVal(m)
+apps/crm/export.js	ml
 apps/crm/export.js	modHtml || absent(scope.modules, 'modules')
 apps/crm/export.js	modLink(r.module)
 apps/crm/export.js	modLink(r.parent)

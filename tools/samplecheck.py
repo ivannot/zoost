@@ -94,6 +94,7 @@ def measure() -> dict:
             "schedules": len(_load(CRM / "schedules/index.json")), "schedules.files": files(CRM / "schedules"),
             "connections": len(_load(CRM / "connections/index.json")), "connections.files": files(CRM / "connections"),
             "actions": len(_load(CRM / "actions/index.json")), "actions.files": files(CRM / "actions"),
+            "blueprints": len(_load(CRM / "blueprints/index.json")), "blueprints.files": files(CRM / "blueprints"),
             "failures.files": files(CRM / "failures"),
             # The page gives these a row of their own, so they are measured rather than assumed. A
             # row whose number nothing computes is a claim on a public page with no check behind it,
@@ -130,6 +131,7 @@ CLAIMS = [
     (r'(\d+)\s*(?:schedules|schedulazioni)\b', "crm.schedules"),
     (r'(\d+)\s*(?:connections|connessioni)\b', "crm.connections"),
     (r'(\d+)\s*(?:automation actions|azioni di automazione)', "crm.actions"),
+    (r'(\d+)\s*(?:blueprints|blueprint)\b', "crm.blueprints"),
     (r'Zoost Analytics\s*-\s*(\d+)\s*fil', "analytics.total"),
     # Not `views.json`: with the tags stripped, «<td>1</td>…<code>views.json</code>» reads as «1 views»
     # and the file name became a claim about the count. Harmless while the check only asked whether the
@@ -164,6 +166,7 @@ ROW_KEYS = [
     (r'schedul', "schedules.files"),
     (r'connection|connession', "connections.files"),
     (r'automation action|azioni di automazione', "actions.files"),
+    (r'blueprint', "blueprints.files"),
     (r'runtime', "failures.files"),
     (r'query table', "sql.files"),
     (r'\bviews\b|\bviste\b', "views.files"),

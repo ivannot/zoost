@@ -3,10 +3,12 @@
 // same six variables - the shape that drifts the moment a seventh mode is added to one of them.
 const curFilter = () => viewMode === 'functions' ? typeFilter : viewMode === 'modules' ? moduleFilter
   : viewMode === 'workflows' ? workflowFilter : viewMode === 'schedules' ? scheduleFilter
+  : viewMode === 'blueprints' ? blueprintFilter
   : viewMode === 'actions' ? actionFilter : connCatFilter;
 function setCurFilter(k) {
   if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k;
   else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k;
+  else if (viewMode === 'blueprints') blueprintFilter = k;
   else if (viewMode === 'actions') actionFilter = k; else connCatFilter = k;
 }
 // Which of the two is narrowing, named. «The type filter» over a list held down by the language one
@@ -36,6 +38,7 @@ function buildTypeChips() {
     renderModules: (...args) => renderModules(...args),
     renderWorkflows: (...args) => renderWorkflows(...args),
     renderSchedules: (...args) => renderSchedules(...args),
+    renderBlueprints: (...args) => renderBlueprints(...args),
     renderActions: (...args) => renderActions(...args),
     renderConnections: (...args) => renderConnections(...args),
     renderTree: (...args) => renderTree(...args),
@@ -269,6 +272,7 @@ function runSearch() {
   if (viewMode === 'modules') { renderModules(); return; }
   if (viewMode === 'workflows') { renderWorkflows(); return; }
   if (viewMode === 'schedules') { renderSchedules(); return; }
+  if (viewMode === 'blueprints') { renderBlueprints(); return; }
   if (viewMode === 'actions') { renderActions(); return; }
   if (viewMode === 'connections') { renderConnections(); return; }
   if (search.mode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }

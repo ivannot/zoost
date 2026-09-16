@@ -58,6 +58,7 @@ async function navOpen(p) {
   if (!tabReachable(navKind(p) === 'function' ? 'functions' : navKind(p) + 's')) return;
   if (p.startsWith('workflows/')) { goMode('workflows'); await rebuildWorkflows(); const e = find(workflowData); return e ? openWorkflow(e) : gone(); }
   if (p.startsWith('schedules/')) { goMode('schedules'); await rebuildSchedules(); const e = find(scheduleData); return e ? openSchedule(e) : gone(); }
+  if (p.startsWith('blueprints/')) { goMode('blueprints'); await rebuildBlueprints(); const e = find(blueprintData); return e ? openBlueprint(e) : gone(); }
   if (p.startsWith('connections/')) { goMode('connections'); await rebuildConnections(); const e = find(connectionData); return e ? openConnection(e) : gone(); }
   if (p.startsWith('actions/')) { goMode('actions'); await rebuildActions(); const e = find(actionData); return e ? openAction(e) : gone(); }
   if (p.startsWith('modules/')) { goMode('modules'); await rebuildModules(); return openModule(p); }
@@ -185,6 +186,7 @@ function navLabelNow(e) {
 function navKind(p) {
   if (p.startsWith('workflows/')) return 'workflow';
   if (p.startsWith('schedules/')) return 'schedule';
+  if (p.startsWith('blueprints/')) return 'blueprint';
   if (p.startsWith('connections/')) return 'connection';
   if (p.startsWith('actions/')) return 'action';
   if (p.startsWith('modules/')) return 'module';

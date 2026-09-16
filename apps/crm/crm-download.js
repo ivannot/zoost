@@ -258,7 +258,7 @@ function paintBehind() {
 function updateMissingButton() {
   paintBehind();
   const b = $('missing'); if (!b) return;
-  if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'connections' || viewMode === 'actions') { b.style.display = 'none'; return; }
+  if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'blueprints' || viewMode === 'connections' || viewMode === 'actions') { b.style.display = 'none'; return; }
   const arr = viewMode === 'workflows' ? workflowData : treeData;
   // «Complete missing» offers to fetch what is missing, and nothing it can fetch is missing here:
   // counting these would put a number on the button that pressing it can never reduce.

@@ -190,7 +190,7 @@ const DRIVER = String.raw`
     same(actions && actions.map((row) => row.kind), ['email_notifications', 'field_updates', 'tasks', 'webhooks'], 'action kinds');
     same(actions && actions.find((row) => row.kind === 'tasks').mappings.map((row) => row.field), ['Subject', 'Priority'], 'task detail');
     same(connections, [{ name: 'billing_api', label: 'Billing API', connector: 'billing', connectorLabel: 'Billing', connected: true, createdBy: 'Example Admin', scopes: ['invoices.READ'], id: '990000000601' }], 'connection catalogue');
-    same(Object.keys(cfg.access || {}).sort(), ['actions', 'connections', 'functions', 'modules', 'schedules', 'workflows'], 'area access record');
+    same(Object.keys(cfg.access || {}).sort(), ['actions', 'blueprints', 'connections', 'functions', 'modules', 'schedules', 'workflows'], 'area access record');
     // A rule edited in Zoho after it was downloaded. A pull fetched a rule only when its file was
     // missing, so this edit never arrived and the mirror kept the old conditions for ever - found by
     // the author watching the network, not by this probe, which pulled once into an empty folder.
@@ -255,7 +255,7 @@ const expected = new Map([
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
   ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
+  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['blueprints', 1], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];
@@ -313,6 +313,7 @@ function apiReply(request) {
       : { ...fixture.workflows.detail, workflow_rules: fixture.workflows.detail.workflow_rules.map((r) => ({ ...r, description: 'Edited in Zoho after the first pull' })) };
   } else if (p === '/crm/v9/settings/automation/schedules' && url.searchParams.get('per_page') === '200') { requireGet(request, url); mark('schedules'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.schedules;
   } else if (p === '/crm/v9/settings/automation/schedules' && url.searchParams.get('per_page') === '1') { requireGet(request, url); mark('schedule-primer'); onlyQuery(url, { page: 1, per_page: 1 }); body = { schedules: [], info: { more_records: false } };
+  } else if (p === '/crm/v8/settings/blueprints') { requireGet(request, url); mark('blueprints'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.blueprints;
   } else if (/^\/crm\/v[89]\/settings\/automation\/(email_notifications|field_updates|tasks|webhooks)$/.test(p)) {
     requireGet(request, url); const kind = p.split('/').at(-1); mark(`actions:${kind}`);
     if (url.searchParams.get('page') !== '1' || url.searchParams.get('per_page') !== '200' || !url.searchParams.get('include_inner_details')) throw new Error(`${kind} query changed`);
@@ -380,7 +381,7 @@ async function main() {
     const wrong = [...expected].filter(([key, count]) => used.get(key) !== count).map(([key, count]) => `${key}: ${used.get(key) || 0}/${count}`);
     if (wrong.length) throw new Error(`endpoint request count mismatch: ${wrong.join(', ')}`);
     const count = [...used.values()].reduce((sum, n) => sum + n, 0);
-    success = `CRM endpoint pull: six areas, ${count} raw requests across ${used.size} routes -> ${final.result.files} local files; cache disabled, no network\n`;
+    success = `CRM endpoint pull: seven areas, ${count} raw requests across ${used.size} routes -> ${final.result.files} local files; cache disabled, no network\n`;
     await client.call('Target.closeTarget', { targetId });
   } finally {
     if (client) { try { await client.call('Browser.close', {}, undefined, 3000); } catch (_) {} client.close(); }

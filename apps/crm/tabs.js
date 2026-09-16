@@ -14,6 +14,7 @@ window.ZOOST_TABS = [
   { id: 'modules', label: 'Modules', names: true, note: 'fields, layouts, related lists' },
   { id: 'workflows', label: 'Workflows', note: 'rules, triggers, actions' },
   { id: 'schedules', label: 'Schedules', note: 'scheduled functions' },
+  { id: 'blueprints', label: 'Blueprints', note: 'the process records walk, per module' },
   { id: 'actions', label: 'Actions', note: 'what a rule fires: notifications, field updates, tasks, webhooks' },
   { id: 'connections', label: 'Connections', note: 'the org connection catalogue' },
 ];

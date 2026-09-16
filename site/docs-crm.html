@@ -168,10 +168,10 @@
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> mirrors functions, module schema, layouts, related lists, workflows, schedules
       and the connections catalogue.</li>
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (in the mode bar) refreshes only the current type - whichever of Functions,
-      Modules, Workflows, Schedules, Actions or Connections is the active tab - faster when you just changed one thing.
-      On Functions, Modules, Workflows and Actions it is called <b class="ui">Pull list + details</b> and reads every item again (Schedules and Connections are one list and nothing more), not only the ones missing, so an edit made in Zoho since
+      Modules, Workflows, Schedules, Blueprints, Actions or Connections is the active tab - faster when you just changed one thing.
+      On Functions, Modules, Workflows and Actions it is called <b class="ui">Pull list + details</b> and reads every item again (some areas have nothing below the list, and the next item says which), not only the ones missing, so an edit made in Zoho since
       the last pull arrives - on Actions, the detail of up to 500 tasks per pull, and the bar says when some were left.</li>
-    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5v8"/><path d="M1.5 7 4 9.5 6.5 7"/><path d="M9 3h5.5"/><path d="M9 6.5h5.5"/><path d="M9 10h5.5"/><path d="M1.5 13.5h13"/></svg> Pull list</b> - on Functions, Modules, Workflows and Actions, not on Schedules or Connections, whose list is all there is - reads only which items exist in Zoho - a few
+    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5v8"/><path d="M1.5 7 4 9.5 6.5 7"/><path d="M9 3h5.5"/><path d="M9 6.5h5.5"/><path d="M9 10h5.5"/><path d="M1.5 13.5h13"/></svg> Pull list</b> - on Functions, Modules, Workflows and Actions, not on Schedules, Blueprints or Connections, whose list is all there is - reads only which items exist in Zoho - a few
       requests rather than one per item - and leaves what is already on disk as it was - except what Zoho no longer has, which goes, as it does with Pull list + details. The bar then says so: <b class="ui">&#9680; details from
       12 Sep</b> is the day each item was last read, and <b class="ui">Pull list + details</b> reads them again.</li>
     <li><b>Auto-sync while you work</b>: save a function in the Zoho editor and the matching local file
@@ -410,6 +410,8 @@ git commit -m "baseline"</code></pre>
       fires</em>, which are the ones worth seeing; and so is every module those rules and actions touch.
       The chips above the tabs group them: <b>Functions</b> by Deluge category, <b>Actions</b> by kind,
       then one chip each for <b>Workflows</b>, <b>Schedules</b>, <b>Connections</b> and <b>Modules</b>.
+      <b>Blueprints</b> have no chip here and are not in the drawing: only their list is read, so nothing
+      yet joins a blueprint to the functions its transitions call.
       Switch a group off and the drawing, the list and Relations all narrow together.</li>
     <li class="note">What is <b>not</b> in it: a function's own record access. Nothing here reads the
       Deluge to work out which modules a function touches, so a function is never joined to a module -

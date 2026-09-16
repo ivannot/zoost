@@ -435,6 +435,20 @@ function scheduleForModel(x) {
     next: x.next || null, last: x.last || null,
   };
 }
+function blueprintForModel(x) {
+  return {
+    name: x.name || '', api_name: x.api_name || null, module: x.module || '',
+    // Both spellings of the field, for the same reason the pane shows both: on a localised org the
+    // label and the API name are different words, and a question about either has to land.
+    field: x.field || null, field_label: x.field_label || null,
+    layout: x.layout || null, description: x.description || null,
+    status: x.status || null, active: x.active === undefined ? null : x.active,
+    modified_by: x.modified_by || null,
+    continuous: x.continuous === undefined ? null : x.continuous,
+    // The model is told what is missing, or it will answer about transitions it cannot see.
+    read: 'list only - states and transitions are not in this mirror',
+  };
+}
 function connectionForModel(c) {
   return {
     name: c.name || '', label: c.label || '',
@@ -583,6 +597,10 @@ async function aiFocus(op = beginWorkspaceOp()) {
     if (p.startsWith('schedules/')) {
       const e = scheduleData.find((x) => x.path === p);
       if (e) return block(`the schedule «${e.name || '?'}»`, aiTrunc(JSON.stringify(scheduleForModel(e), null, 2), 3000));
+    }
+    if (p.startsWith('blueprints/')) {
+      const e = blueprintData.find((x) => x.path === p);
+      if (e) return block(`the blueprint «${e.name || '?'}»`, aiTrunc(JSON.stringify(blueprintForModel(e), null, 2), 3000));
     }
     if (p.startsWith('connections/')) {
       const e = connectionData.find((x) => x.path === p);
@@ -1195,6 +1213,7 @@ function aiFocusLabel() {
   const at = (arr, name) => { const e = (arr || []).find((x) => x.path === p); return e ? `${name} \u00ab${e.name || e.label || e.api_name || e.id}\u00bb` : null; };
   if (p.startsWith('workflows/')) return at(workflowData, 'workflow');
   if (p.startsWith('schedules/')) return at(scheduleData, 'schedule');
+  if (p.startsWith('blueprints/')) return at(blueprintData, 'blueprint');
   if (p.startsWith('connections/')) return at(connectionData, 'connection');
   if (p.startsWith('modules/')) return at(moduleData, 'module');
   if (p.startsWith('actions/')) {

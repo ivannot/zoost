@@ -38,8 +38,8 @@ bridgeCommand	43c239bf9acf	43c239bf9acf	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
 bridgeResponseError	2675476e3c3f	2675476e3c3f	identical
 buildChips	8a88fe99de94	8a88fe99de94	identical
-buildExportHtml	a95e0d4ac6e1	e1a5052dd09d	divergent
-buildExportMarkdown	14cb9a3a5ee1	f5d0fbdf2c0e	divergent
+buildExportHtml	504418b30d6d	e1a5052dd09d	divergent
+buildExportMarkdown	088af6d85151	f5d0fbdf2c0e	divergent
 buildMirrorPlan	44136fa355b3	44136fa355b3	identical
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
@@ -69,7 +69,7 @@ createWorkspaceForContext	7c94d5996f02	63746ab6a1c9	divergent
 createZoostError	0ab2449affb3	0ab2449affb3	identical
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirtyPeer	5f62d305d70c	5f62d305d70c	identical
-dropWorkspaceState	11e68b98b27d	167539fa76e8	divergent
+dropWorkspaceState	1b146385d06d	167539fa76e8	divergent
 egoStat	07126f3c9de0	07126f3c9de0	identical
 emptyReason	52a2cc9b794f	1c45640bf913	divergent
 engineIncomplete	54560440576d	54560440576d	identical

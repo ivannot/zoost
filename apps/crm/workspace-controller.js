@@ -471,7 +471,7 @@ function dropWorkspaceState() {
   // next workspace's project arrived with this one's folders closed.
   langFilter = 'all'; projCollapsed = new Set(); projRootOpen = '';
   treeData = []; index = new Map();
-  moduleData = []; workflowData = []; wfIndex = new Map(); scheduleData = [];
+  moduleData = []; workflowData = []; wfIndex = new Map(); scheduleData = []; blueprintData = [];
   actionData = []; connectionData = [];
   return had;
 }

@@ -892,6 +892,70 @@
     const resp = await api(`/crm/v8/settings/automation/workflow_rules/${encodeURIComponent(id)}/actions/usage?executed_from=${fromD}&executed_till=${tillD}&include_inner_details=related_details.sent_percentage`);
     return { usage: list(resp, 'workflow_rules', 'workflow_rules/' + id + '/actions/usage')[0] || null };
   }
+  // Blueprints - the process a record walks through, state by state. Each transition can carry
+  // field updates and can call a function, which is why this area exists at all: without it, a
+  // field written by a blueprint looks written by nobody and a function called by one looks called
+  // by nobody.
+  //
+  // **Measured, after being written from documentation first - which cost a defect.** 12 blueprints
+  // on one org: the envelope is `{blueprints, info}` with `info.more_records`, and every one carries
+  // layout, field, module, name, id, status, continuous, created_by and modified_by; `api_name` and
+  // `description` on 10 of the 12 (the stock processes have neither). `status` reads **`Active` or
+  // `Inactive`, capitalised** - the first version of this compared it against lowercase and reported
+  // every blueprint as active, the org's inactive ones included, which is what reading a shape out of
+  // documentation buys you.
+  //
+  // What is mapped but *not* interpreted anywhere: `continuous` was `false` on all 12, and
+  // `description` was present and empty on all 10 that have it, so neither has been seen carrying
+  // anything. `modified_by.name` is a person and is deliberately not kept.
+  //
+  // `list()` still guards the envelope: if the `blueprints` key is ever absent it throws with
+  // `shape` set, so a changed endpoint arrives as «asked, and the answer was not readable» - with
+  // the keys that *were* there - rather than as an org that has none.
+  async function listBlueprints() {
+    let page = 1, raw = [], capped = false;
+    while (true) {
+      const resp = await api(`/crm/v8/settings/blueprints?page=${page}&per_page=200`);
+      if (resp === NO_CONTENT) break;   // 204: this org has no blueprints, which is an answer
+      const bps = list(resp, 'blueprints', 'blueprints'); raw = raw.concat(bps);
+      const info = resp.info || {}; if (!info.more_records || bps.length === 0) break; page++;
+      if (page > MAX_PAGES_WIDE) { capped = true; break; }
+    }
+    const entries = raw.map((b) => ({
+      id: String(b.id), name: b.name || '', api_name: b.api_name || '',
+      module: (b.module && b.module.api_name) || '',
+      layout: (b.layout && b.layout.name) || '',
+      // The field is what the process runs on, and its label is the word the org actually uses -
+      // `field_label` is «Lead Status» where `api_name` is `Lead_Status`, and on a localised org the
+      // two are different languages. Both are kept: one reads, the other is what Deluge needs.
+      field: (b.field && b.field.api_name) || '',
+      field_label: (b.field && b.field.field_label) || '',
+      description: b.description || '',
+      continuous: b.continuous === true,
+      // Zoho's own spelling is kept beside the flag, because the flag is a reading of it and the
+      // panel should be able to show what was actually said.
+      status: b.status || '',
+      active: String(b.status || '').toLowerCase() !== 'inactive',
+      // Who last touched it, the way a function already records it. The stock processes answer
+      // `modified_by: {"id":"null"}` with no name at all - measured, not assumed - so the absence is
+      // the ordinary case here and reads as blank rather than as «null».
+      modified_by: (b.modified_by && b.modified_by.name) || '',
+    }));
+    return { total: raw.length, entries, capped };
+  }
+  // One blueprint, whole. **Documented, not yet measured** - the same position the list read was in
+  // this morning, and the reason nothing downstream parses this yet: the documentation says a
+  // blueprint carries `transitions[]`, each with `criteria` and an `actions[]` whose entries are
+  // typed (`field_updates`, `functions`) and carry their own `details`, plus a top-level
+  // `connections[]` joining states through transition api_names. That is exactly what the panel is
+  // missing - which fields a process writes, and which functions it calls - so it is worth asking
+  // for; it is not worth building on until an org has answered. `list()` guards the envelope, so a
+  // reply in another shape arrives as a refusal naming the keys that were there.
+  async function fetchBlueprint(id) {
+    const resp = await api(`/crm/v8/settings/blueprints/${encodeURIComponent(id)}`);
+    const bp = list(resp, 'blueprints', 'blueprints/' + id)[0]; if (!bp) throw new Error('not found');
+    return { blueprint: bp };
+  }
   // Scheduled functions - the list already carries the called function {id, name}.
   async function fetchModuleFields(apiName) {
     const fr = await api(`/crm/v2/settings/fields?module=${encodeURIComponent(apiName)}&type=all`);
@@ -1595,6 +1659,8 @@
     if (msg?.cmd === 'fetchWorkflow') return reply(fetchWorkflow(msg.id));
     if (msg?.cmd === 'workflowUsage') return reply(workflowUsage(msg.id, msg.from, msg.till));
     if (msg?.cmd === 'listSchedules') return reply(listSchedules());
+    if (msg?.cmd === 'listBlueprints') return reply(listBlueprints());
+    if (msg?.cmd === 'fetchBlueprint') return reply(fetchBlueprint(msg.id));
     if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));
     if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source, msg.language, msg.runtime), (file) => ({ ok: true, file }));
     if (msg?.cmd === 'pullModules') return reply(pullModules());

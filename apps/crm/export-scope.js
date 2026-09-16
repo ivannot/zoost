@@ -7,7 +7,7 @@
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
 // permission system, and a permission system that is not enforced anywhere is theatre.
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'blueprints', 'actions', 'addresses', 'connections', 'failures', 'health'];
 // `addresses` is off in both, and that is the one default here that is a decision rather than a
 // convenience: an export is a file you hand to somebody, and an address is the one thing in this
 // mirror that belongs to a person rather than to a configuration. It is one tick away, and the
@@ -16,8 +16,8 @@ const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'wor
 // export left the chapter out - and pressing «Everything» *unticked* a box the reader had ticked,
 // because the preset is assigned whole. A key in the list and not in the presets is a control that
 // disagrees with itself. Found by a review; `tests/panel.test.mjs` now holds the three in step.
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, blueprints: true, actions: true, addresses: false, connections: true, failures: true, health: true };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, blueprints: false, actions: true, addresses: false, connections: true, failures: true, health: false };
 // Which build wrote a stored preference. Declared *here*, above the default that stamps itself with
 // it: a `const` used before its declaration is a temporal dead zone, and putting the stamp on
 // `SCOPE_DEFAULT` while this sat forty lines below made the whole panel throw at load. Caught by the
@@ -332,6 +332,7 @@ const AREA_SCOPE = {
   modules: ['modules', 'layouts', 'relations'],
   workflows: ['workflows'],
   schedules: ['schedules'],
+  blueprints: ['blueprints'],
   actions: ['actions', 'addresses'],
   connections: ['connections'],
   failures: ['failures'],

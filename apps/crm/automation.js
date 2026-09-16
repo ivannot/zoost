@@ -20,6 +20,165 @@ async function loadScheduleIndex(op = beginWorkspaceOp()) {
   scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: 'schedules/' + String(e.id) }));
   return true;
 }
+// ---------- blueprints ----------
+// A blueprint is the process a record walks through: states, and transitions between them that can
+// update fields and call functions. That is the whole reason this area exists - without it a field
+// written by a transition looks written by nobody, and a function a transition calls looks called by
+// nobody. Read like schedules (one list, written whole) and shown like them: no tab strip, one table
+// in the preview, because a blueprint has no second thing to look at until transitions are read.
+async function loadBlueprintIndex(op = beginWorkspaceOp()) {
+  // Same reason as `loadScheduleIndex` above: this publishes a whole list into the panel's memory
+  // after a read, and what overtakes a read is a change of workspace.
+  let idx = []; try { idx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  if (!op.current()) return false;
+  blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: 'blueprints/' + String(e.id) }));
+  return true;
+}
+async function rebuildBlueprints() {
+  const op = beginWorkspaceOp();
+  if (!dir) return;
+  try {
+    if (!(await ensurePerm(dir))) { op.say(MSG.folder, 'warn'); return; }
+    op.say('Reading blueprints…', 'busy');
+    const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
+    if (!(await loadBlueprintIndex(op))) return;
+    renderBlueprints();
+    op.say(blueprintData.length ? `${blueprintData.length} blueprints.`
+                                : (emptyReason('blueprints') || 'No blueprints pulled yet - use Pull all.'),
+           blueprintData.length ? 'ok' : 'warn');
+  } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
+  if (op.current()) await refreshContext();
+}
+function renderBlueprints() {
+  if (viewMode !== 'blueprints') return;
+  const term = $('find').value.trim().toLowerCase();
+  // Grouped by module, which is the thing a blueprint belongs to - the equivalent of grouping
+  // schedules by status. A blueprint with no module is possible in the shape the documentation
+  // describes, so it gets a group of its own rather than being dropped.
+  const byModule = {};
+  blueprintData
+    .filter((e) => blueprintFilter === 'all' || (blueprintFilter === 'active' ? e.active : !e.active))
+    .filter((e) => !term || (e.name || '').toLowerCase().includes(term) || (e.module || '').toLowerCase().includes(term))
+    .forEach((e) => (byModule[e.module || '(no module)'] ||= []).push(e));
+  const tree = $('tree'); tree.innerHTML = '';
+  const keys = Object.keys(byModule).sort();
+  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (blueprintData.length ? '<b>No matches.</b>' : (emptyReason('blueprints') || '<b>No blueprints yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
+  keys.forEach((mod) => {
+    const list = byModule[mod].sort(byField('name'));
+    // The module's own word, not its API name: a process grouped under «CustomModule20» tells the
+    // reader nothing, and `moduleData` already carries the label the org uses. The grouping key stays
+    // the API name, which is stable, so a group left collapsed stays collapsed on the pull that fills
+    // Modules in and makes the label appear.
+    const mrow = (moduleData || []).find((x) => x.api_name === mod);
+    // The folded state is read next to the header it paints, the way the other four headers read
+    // theirs. Four lines of comment had pushed it away from them, and a check that derives the pair
+    // from the lines around `className = 'grp'` said so - rightly, because that adjacency is what
+    // makes the wiring reviewable at all.
+    const isCol = collapsed.has('bp:' + mod);
+    const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
+    g.innerHTML = `<span class="chev">▾</span><span>${escHtml((mrow && mrow.label) || mod)}</span><span class="cnt">${list.length}</span>`;
+    g.onclick = () => { isCol ? collapsed.delete('bp:' + mod) : collapsed.add('bp:' + mod); renderBlueprints(); };
+    tree.appendChild(g);
+    if (isCol) return;
+    list.forEach((e) => {
+      const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path;
+      el.setAttribute('aria-selected', e.path === currentPath);
+      // The field the process runs on, not the layout: the layout was «Standard» on all 12 measured,
+      // so it spent the row's one informative slot saying nothing. The field is what differs.
+      el.innerHTML = `<span class="st st-ok" title="In workspace - click to refresh blueprints from Zoho">●</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshBlueprints(); };
+      el.onclick = () => openBlueprint(e);
+      tree.appendChild(el);
+    });
+  });
+}
+async function openBlueprint(e) {
+  // `mine` and the op together: the detail below is read after an await, and what overtakes it is
+  // either another blueprint being opened or the workspace changing under it. `previewCurrent`
+  // answers both in one question, which is why it exists.
+  const mine = ++previewLoad, op = beginWorkspaceOp();
+  currentPath = e.path; navHere(e.name);
+  selectRow(e.path);
+  setPvName(e.name, e.path);
+  $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last item's bar lingers
+  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  // The field's label and its API name are different words on a localised org - «Lead Status» against
+  // `Lead_Status`, and in another language entirely where the org works in one - so both are shown
+  // when they differ: one is what the org calls it, the other is what Deluge needs.
+  const fieldTxt = e.field_label && e.field_label !== e.field
+    ? `${escHtml(e.field_label)} <span class="wfoff">${escHtml(e.field)}</span>`
+    : escHtml(e.field_label || e.field || '');
+  // The module is a place you can go, so it is a chip and not a word - the same `.mod[data-mod]` the
+  // code pane and the graph tables already use, wired to the same opener a few lines down. Shown by
+  // the org's own label, with the API name beside it when they differ, because that is the string
+  // Deluge needs and the label is the one the reader recognises.
+  const mrow = (moduleData || []).find((x) => x.api_name === e.module);
+  const modLabel = (mrow && mrow.label) || e.module || '';
+  const modTxt = e.module
+    ? `<span class="mod" data-mod="${escA(e.module)}" title="${escA(e.module + ' - click to open the module')}">${escHtml(modLabel)}</span>`
+      + (modLabel !== e.module ? ` <span class="wfoff">${escHtml(e.module)}</span>` : '')
+    : '';
+  $('pvtable').innerHTML = `<div class="wfd">`
+    + `<div class="wfrow"><span class="wk">Module</span> ${modTxt}</div>`
+    + (e.field || e.field_label ? `<div class="wfrow"><span class="wk">Field</span> ${fieldTxt}</div>` : '')
+    + (e.layout ? `<div class="wfrow"><span class="wk">Layout</span> ${escHtml(e.layout)}</div>` : '')
+    // Zoho's own spelling, not a word of ours: it answers `Active` or `Inactive`, and a panel that
+    // rewrites that is a panel the reader cannot check against the screen they came from.
+    + `<div class="wfrow"><span class="wk">Status</span> ${escHtml(e.status || (e.active ? 'Active' : 'Inactive'))}</div>`
+    + (e.api_name ? `<div class="wfrow"><span class="wk">API name</span> ${escHtml(e.api_name)}</div>` : '')
+    + (e.description ? `<div class="wfrow"><span class="wk">Description</span> ${escHtml(e.description)}</div>` : '')
+    + `</div>`
+    // Said here rather than left to be discovered: this pane is thin because the list is all that is
+    // read. The states a record moves through, and the transitions that update fields and call
+    // functions - the reason this area is worth having at all - are not in this mirror yet.
+    + `<div class="ftnote">Only the list of blueprints is read. The states a record moves through, and the`
+    + ` transitions that update fields or call functions, are not in this mirror.</div>`;
+  // Wired in the same breath as the draw: a chip that looks clickable and does nothing is worse than
+  // a plain word, because it spends the reader's attention twice. Same opener as the code pane and
+  // the graph tables - one mechanism for «take me to that module», not a second one here.
+  $('pvtable').querySelectorAll('.mod[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  showPreview();
+  await blueprintDetailNow(e, mine, op);
+}
+/** The one read of Zoho behind a blueprint, kept out of `openBlueprint` deliberately.
+ *
+ *  The pane itself is drawn from the mirror and must draw whatever the active tab happens to be;
+ *  reaching the platform is a different act, and that one refuses when the tab is another org. Put
+ *  the guard on the whole opener and a mismatch would stop the blueprint being *looked at*, which is
+ *  a local file. Same division every pull already makes, and a check derives the set from `toBridge`
+ *  so a path added tomorrow is measured rather than remembered.
+ *
+ *  **An experiment, and deliberately nothing more.** Zoho documents a per-blueprint read carrying
+ *  the transitions - which fields each writes, which functions each calls - and nothing here has
+ *  watched it answer. So this asks, says what came back, and stores none of it. Writing the parser
+ *  now would be reading a shape out of documentation for the second time today; the first time put
+ *  every blueprint on screen as active, because the real answer is capitalised. */
+async function blueprintDetailNow(e, mine, op) {
+  if (mismatchRefuse()) return;
+  let r = null; try { r = await toBridge({ cmd: 'fetchBlueprint', id: e.id }); } catch (_) {}
+  if (!previewCurrent(mine, op)) return;   // another blueprint was opened while this was reading
+  const note = $('pvtable').querySelector('.ftnote'); if (!note) return;
+  if (!r?.ok) {
+    note.textContent = `Only the list is read. The detail was asked for and refused: ${bridgeError(r, 'unknown').message}`;
+    return;
+  }
+  const bp = r.blueprint || {};
+  const trs = Array.isArray(bp.transitions) ? bp.transitions.length : 0;
+  note.textContent = `Only the list is stored. The detail answered with ${trs} transition(s)`
+    + ` - the fields they write and the functions they call are not read into the mirror yet.`;
+}
+async function refreshBlueprintsNow() {
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus('Refreshing blueprints…', 'busy');
+  // The pull owns the message, for the reason written out over `refreshSchedulesNow`: every early
+  // return in it sets its own line, so a count painted here would be the length of the list already
+  // in memory and would read as a refresh that happened when it did not.
+  await pullBlueprints();
+}
+async function refreshBlueprints() {
+  return runPullAction(refreshBlueprintsNow);
+}
 async function rebuildSchedules() {
   const op = beginWorkspaceOp();   // the workspace this rebuild is about
   if (!dir) return;
@@ -294,6 +453,34 @@ async function downloadMissingWf(all = false) {
     return { failed: fail };   // a pull that could not read every rule must not record that it did
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
+// Org-wide blueprint list → blueprints/index.json. Written whole, like schedules: there is no
+// per-item file yet, because nothing below the list has been read from a real org.
+async function pullBlueprints() {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  if (mismatchRefuse()) return;
+  try {
+    pullActive = true;   // see pullSchedules below for why, and why it is released in a finally
+    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
+    const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
+    const cfg = await opReadCfg(op);
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.envMismatch, 'warn'); return; }
+    setStatus('Pulling blueprints…', 'busy');
+    const r = await toBridge({ cmd: 'listBlueprints' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('blueprints', e, op); return; }
+    if (!op.current()) return;   // you changed workspace while this was reading
+    // A partial list is still an answer about access, and nothing is written to the mirror - the
+    // same reasoning as `pullSchedules`, where bailing before `noteAccess` left a stale refusal on
+    // record and a tab hidden for ever.
+    if (r.capped) {
+      setStatus('Zoho returned a partial list of blueprints - nothing was replaced.', 'warn');
+      await noteAccess('blueprints', null, op, false);
+      return;
+    }
+    await op.write('blueprints/index.json', JSON.stringify(r.entries, null, 2));
+    if (!(await loadBlueprintIndex(op))) return; if (viewMode === 'blueprints') renderBlueprints();
+    setStatus(`Blueprints pull complete: ${(r.entries || []).length} blueprints.`, 'ok');
+    await noteAccess('blueprints', null, op);
+  } catch (e) { await notePullFailure('blueprints', e, op); } finally { endPull(); }
+}
 async function pullSchedules() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
@@ -307,7 +494,7 @@ async function pullSchedules() {
     if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await opReadCfg(op);
-    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.envMismatch, 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e, op); return; }
     if (!op.current()) return;   // you changed workspace while this was reading
