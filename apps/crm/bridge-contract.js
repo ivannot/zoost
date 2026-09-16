@@ -10,6 +10,7 @@
  * {cmd: "functionRuntime", id: string, language?: string, period?: string, from?: string, to?: string} |
  * {cmd: "listWorkflows"} | {cmd: "fetchWorkflow", id: string} | {cmd: "workflowUsage", id: string, from?: string, till?: string} |
  * {cmd: "listSchedules"} | {cmd: "listBlueprints"} | {cmd: "fetchBlueprint", id: string} |
+ * {cmd: "fetchBlueprintInternal", id: string} |
  * {cmd: "fetchTransition", id: string} | {cmd: "fetchFunctionAction", id: string} |
  * {cmd: "fetchModuleFields", apiName: string} |
  * {cmd: "fetchOne", id: string, category?: string, source?: string, language?: string, runtime?: string} |

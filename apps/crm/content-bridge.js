@@ -995,6 +995,58 @@
    *  An action carries **its own id**, not the id of the thing it runs: `{name, id, type, details}`.
    *  That id joins to the automation catalogue of its kind - the one the Actions tab already pulls -
    *  and for `functions` the function itself is one call further, which `fetchFunctionAction` makes. */
+  /** The same blueprint, from the endpoint Zoho's own screen uses - only after the documented one
+   *  has refused.
+   *
+   *  **Measured, on the org where it happens.** `/crm/v8/settings/blueprints/{id}` answers 500
+   *  `INTERNAL_ERROR` for one blueprint of twelve, with and without `include=transition`, while the
+   *  list and every other blueprint answer normally. It is Zoho failing on that record, not a bad
+   *  request, so there is nothing to fix on our side and nothing to retry. The UI draws that same
+   *  blueprint, through `ProcessFlow.do?action=getProcessDetails`, which answered 200 for it.
+   *
+   *  **Second road, and the rules that keep it honest.** It is asked for *only* when the documented
+   *  call has already failed - never as the primary - so it costs at most one request per broken
+   *  blueprint, which is a different profile from the per-transition endpoint that throttled this
+   *  org. `_via` records which road produced the file: a mirror that mixes two sources in silence is
+   *  one nobody can check.
+   *
+   *  The shapes differ and are mapped here rather than stored raw. `ChartData` is a JSON *string*
+   *  whose nodes carry geometry and a `nodeId`; the readable state name lives in `PicklistValues`,
+   *  because a blueprint runs on a picklist and its states are that field's values. `TransitionsMeta`
+   *  carries `SourceId`/`TargetId`/`Name` and `TransitionId` - the last being the id the documented
+   *  per-transition endpoint takes, which still answers for this blueprint. */
+  async function fetchBlueprintInternal(id) {
+    const inst = instanceName();
+    if (!inst) throw new Error('no instance');
+    const j = await api(`/crm/${inst}/ProcessFlow.do?action=getProcessDetails`
+      + `&processId=${encodeURIComponent(id)}&isFromBack=true`);
+    if (!j || !j.Id) throw new Error('not found');
+    let chart = null;
+    try { chart = typeof j.ChartData === 'string' ? JSON.parse(j.ChartData) : j.ChartData; } catch (_) {}
+    const stateName = new Map((j.PicklistValues || [])
+      .filter((p) => p && p.Id).map((p) => [String(p.Id), p.DisplayValue || p.ActualValue || '']));
+    const nodes = ((chart && chart.nodes) || [])
+      .map((n) => ({ state: stateName.get(String(n && n.nodeId)) || '' })).filter((n) => n.state);
+    const connections = (j.TransitionsMeta || []).filter((t) => t && t.TransitionId).map((t) => ({
+      id: String(t.Id || t.TransitionId),
+      from_state: { id: String(t.SourceId || ''), name: stateName.get(String(t.SourceId)) || '' },
+      to_state: { id: String(t.TargetId || ''), name: stateName.get(String(t.TargetId)) || '' },
+      transitions: { id: String(t.TransitionId), name: t.Name || '', precedence: t.Precedence },
+    }));
+    return { blueprint: {
+      id: String(j.Id), name: j.Name || '', api_name: '',
+      module: { api_name: j.Module || '' },
+      layout: (j.Layout && { name: j.Layout.Name || '', id: String(j.Layout.Id || '') }) || null,
+      field: (j.Field && { api_name: j.Field.Name || '', field_label: j.Field.Name || '' }) || null,
+      continuous: j.Continuous === true, description: j.Description || '',
+      status: j.ProcessStatus || j.Status || '',
+      chart_data: { nodes },
+      connections,
+      // Which road this came from. The pane says so, because a reader checking the panel against
+      // Zoho's own screen must know when the two were read differently.
+      _via: 'ProcessFlow.do',
+    } };
+  }
   async function fetchTransition(id) {
     const resp = await api(`/crm/v8/settings/blueprints/transitions/${encodeURIComponent(id)}`);
     if (resp === NO_CONTENT) throw new Error('not found');
@@ -1734,6 +1786,7 @@
     if (msg?.cmd === 'listSchedules') return reply(listSchedules());
     if (msg?.cmd === 'listBlueprints') return reply(listBlueprints());
     if (msg?.cmd === 'fetchBlueprint') return reply(fetchBlueprint(msg.id));
+    if (msg?.cmd === 'fetchBlueprintInternal') return reply(fetchBlueprintInternal(msg.id));
     if (msg?.cmd === 'fetchTransition') return reply(fetchTransition(msg.id));
     if (msg?.cmd === 'fetchFunctionAction') return reply(fetchFunctionAction(msg.id));
     if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));

@@ -22336,6 +22336,43 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
                            'an unexpected envelope became a transition with no actions');
     });
 
+    // ---------- the blueprint Zoho's own API will not serve ----------
+    // Measured on a production org: one blueprint of twelve answers 500 INTERNAL_ERROR from
+    // /settings/blueprints/{id}, with and without `include`, while the list and every other blueprint
+    // answer normally - and Zoho's own screen draws it. So the failover is a mapping, not a retry:
+    // ChartData arrives as a JSON *string* whose nodes carry only geometry, and the readable state
+    // name lives in PicklistValues, because a blueprint runs on a picklist.
+    {
+      const gi = { api: null, instanceName: () => 'si_dev' };
+      const { fetchBlueprintInternal } = load([sliceFn(BR, 'fetchBlueprintInternal')], gi);
+
+      test('crm: a blueprint the documented API refuses is mapped from the endpoint the UI uses', async () => {
+        gi.api = async (p) => {
+          assert.match(p, /ProcessFlow\.do\?action=getProcessDetails/, 'the failover asks some other route');
+          assert.match(p, /processId=700/, 'it does not ask for the blueprint that was refused');
+          return {
+            Id: '700', Name: 'Onboarding', Module: 'CustomModule20', ProcessStatus: 'Active',
+            Continuous: false, Description: '', Layout: { Name: 'Standard', Id: '9' },
+            Field: { Name: 'Stato' },
+            PicklistValues: [{ Id: 's1', DisplayValue: 'Draft' }, { Id: 's2', DisplayValue: 'In review' }],
+            ChartData: JSON.stringify({ nodes: [{ nodeId: 's1' }, { nodeId: 's2' }] }),
+            TransitionsMeta: [{ TransitionId: 't1', Id: 'edge1', SourceId: 's1', TargetId: 's2', Name: 'Send' }],
+          };
+        };
+        const { blueprint: b } = await fetchBlueprintInternal('700');
+        assert.deepEqual(Array.from(b.chart_data.nodes, (n) => n.state), ['Draft', 'In review'],
+                         'the states are geometry only - the names come from the picklist and were lost');
+        const c = b.connections[0];
+        assert.equal(c.from_state.name, 'Draft');
+        assert.equal(c.to_state.name, 'In review');
+        // The id the documented per-transition endpoint takes, which still answers for this
+        // blueprint: with the edge id instead, what each transition does could never be read.
+        assert.equal(c.transitions.id, 't1', 'the transition carries the edge id, so its actions cannot be fetched');
+        assert.equal(b.module.api_name, 'CustomModule20');
+        assert.equal(b._via, 'ProcessFlow.do', 'the file does not record which road produced it');
+      });
+    }
+
     test('crm: the function behind an action is asked for by the action id, and answers the function id', async () => {
       // Measured on a real org: the id a transition carries is the action's, it matches none of the
       // functions in the catalogue, and a chip built on it opens nothing. The two must not be folded.
@@ -22416,6 +22453,40 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       assert.equal(r.read, 1, 'the transition that answered was lost');
       assert.equal(writes.length, 1, 'what was read before the refusal was not written');
       assert.ok(JSON.parse(writes[0][1])['77'], 'the file was written without the transition that answered');
+    });
+  }
+
+  // ---------- the failover is a failover ----------
+  // It costs one extra request and only for a blueprint that would otherwise be lost. Asked first it
+  // would be a second road taken by default, on the same internal family that throttled this org.
+  {
+    const asked = [];
+    const g = {
+      mismatchRefuse: () => false, dir: {}, ensurePerm: async () => true,
+      setStatus: () => {}, errText: (e) => String(e && e.message), MSG: { folder: 'folder' },
+      beginWorkspaceOp: () => ({ current: () => true, root: {}, write: async () => {} }),
+      toBridge: null,
+    };
+    const { downloadOneBp } = load([sliceFn('apps/crm/automation.js', 'downloadOneBp')], g);
+
+    test('crm: the internal road is not taken while the documented one answers', async () => {
+      asked.length = 0;
+      g.toBridge = async (m) => { asked.push(m.cmd); return { ok: true, blueprint: { id: '7000' } }; };
+      assert.equal(await downloadOneBp({ id: '7000', path: 'blueprints/7000.json' }), true);
+      assert.deepEqual(asked, ['fetchBlueprint'], 'the failover was asked for a blueprint that answered');
+    });
+
+    test('crm: a blueprint the documented call refuses is read the other way rather than lost', async () => {
+      asked.length = 0;
+      g.toBridge = async (m) => {
+        asked.push(m.cmd);
+        return m.cmd === 'fetchBlueprint' ? { ok: false, error: 'INTERNAL_ERROR' }
+                                          : { ok: true, blueprint: { id: '7000', _via: 'ProcessFlow.do' } };
+      };
+      const entry = { id: '7000', path: 'blueprints/7000.json' };
+      assert.equal(await downloadOneBp(entry), true, 'the blueprint stayed unreadable although Zoho draws it');
+      assert.deepEqual(asked, ['fetchBlueprint', 'fetchBlueprintInternal'], 'the documented call is no longer first');
+      assert.equal(entry.error, false);
     });
   }
 

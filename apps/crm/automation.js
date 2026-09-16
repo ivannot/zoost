@@ -368,6 +368,12 @@ function renderBlueprintDetail(bp, acts, actIndex) {
     + `<div class="wfrow"><span class="wk">With actions</span> ${withActions.length} of ${conns.length}${actKinds.length ? ' · ' + escHtml(actKinds.join(', ')) : ''}</div>`
     + `<div class="wfrow"><span class="wk">Transitions</span> ${conns.length}</div></div>`
     + (rows.length ? `<div class="wfd">${rows.join('')}</div>` : '')
+    // Which road produced this file. Said rather than hidden: the documented call refused for this
+    // blueprint and the internal one answered, and a reader comparing the panel against Zoho's own
+    // screen has to know when the two were read differently.
+    + (bp._via ? `<div class="ftnote">Zoho's documented API refused this blueprint, so its states and`
+                 + ` transitions were read from the endpoint its own screen uses (<b>${escHtml(bp._via)}</b>).`
+                 + ` What each transition does still comes from the documented call.</div>` : '')
     // Only what applies. This used to state all of it every time - two sentences about things to pull,
     // on a pane where both had already been pulled - and a note that is always there is one nobody
     // reads on the day it means something.
@@ -685,7 +691,16 @@ async function downloadOneBp(entry) {
   if (!dir) return false;
   if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
   try {
-    const r = await toBridge({ cmd: 'fetchBlueprint', id: entry.id });
+    let r = await toBridge({ cmd: 'fetchBlueprint', id: entry.id });
+    // **Only after the documented call has refused.** Measured: Zoho answers 500 INTERNAL_ERROR for
+    // one blueprint of twelve on a real org, with and without `include`, while its own screen draws
+    // that blueprint through an internal endpoint. So the second road is a failover and never the
+    // primary - at most one extra request, and only for a blueprint that would otherwise be lost.
+    if (!r?.ok || !r.blueprint) {
+      let alt = null;
+      try { alt = await toBridge({ cmd: 'fetchBlueprintInternal', id: entry.id }); } catch (_) {}
+      if (alt?.ok && alt.blueprint) r = alt;
+    }
     if (!r?.ok || !r.blueprint) throw new Error(r?.error || 'not found');
     await op.write(entry.path, JSON.stringify(r.blueprint, null, 2));
     entry.downloaded = true; entry.error = false; entry.errorMsg = '';
