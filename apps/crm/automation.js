@@ -50,6 +50,14 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
   // how the same report came back four times. `renderBlueprints` is synchronous (the search calls
   // it), so the read cannot happen there: it happens once here, for the distinct modules only.
   bpModLabel = new Map();
+  // **From disk, not from `moduleData`.** That list is in memory and only the Modules tab fills it,
+  // so opening Blueprints first left it empty - and then a standard module still resolved, because
+  // its file is named by the same api name the blueprint carries, while a custom one could not:
+  // learning that `CustomModule20` is stored as `Iscrizioni.json` needs the index row. That is why
+  // this survived five fixes: it worked for every module except the ones the reader asked about.
+  let modIdx = []; try { modIdx = JSON.parse(await op.read('modules/index.json')); } catch (_) {}
+  if (!op.current()) return false;
+  const modRows = (Array.isArray(modIdx) && modIdx.length) ? modIdx : (moduleData || []);
   for (const api of new Set(idx.map((e) => e && e.module).filter(Boolean))) {
     // **The fields that exist, measured.** This asked for `row.label`, and a row here comes from
     // `modules/index.json`, which carries `api_name`, `module_name` and counts and has never had a
@@ -62,7 +70,7 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
     // one key could never hit, and the file read asked for `modules/CustomModule20.json`, which the
     // pull never writes - it names the file by the row's `api_name`. One dimension error, reported
     // five times, and it kept looking like a missing fallback.
-    const row = (moduleData || []).find((x) => x && (x.api_name === api || x.module_name === api));
+    const row = modRows.find((x) => x && (x.api_name === api || x.module_name === api));
     const fileApi = (row && row.api_name) || api;
     let m = null; try { m = JSON.parse(await op.read(`modules/${sanitize(fileApi)}.json`)); } catch (_) {}
     if (!op.current()) return false;
@@ -146,9 +154,26 @@ function renderBlueprints() {
  *
  *  Same shape as `wfDotClick`, deliberately: one item, through `runPullAction` so the pull lock and
  *  the busy state behave as they do everywhere, then the list redraws to show the new dot. */
+/** One blueprint, whole: the detail **and** what its transitions do.
+ *
+ *  A dot that fetched only the states left the pane saying the actions had never been read, which is
+ *  the opposite of what «read this one» means to whoever clicked it.
+ *
+ *  A named declaration and not the arrow it started as: `asynccheck` can only enter an async scope
+ *  that is a named function, so `async () => {}` is a blind spot in the check that finds globals
+ *  written after an await. Its ceiling is zero, so this is converted rather than recorded. */
+async function bpReadOne(e) {
+  const op = beginWorkspaceOp();
+  if (!(await downloadOneBp(e))) return;
+  const tr = await downloadTransitionsFor(e, op, () => {});
+  if (!op.current()) return;
+  setStatus(tr.hidden ? `${e.name}: its module is hidden from your Zoho profile, so its transitions cannot be read.`
+    : tr.throttled ? `${e.name}: Zoho is refusing further requests for now - the rest is read by the next pull.`
+    : `${e.name}: read, ${tr.read} transition(s).`, tr.failed ? 'warn' : 'ok');
+}
 async function bpDotClick(ev, e) {
   ev.stopPropagation();
-  await runPullAction(() => downloadOneBp(e));
+  await runPullAction(() => bpReadOne(e));
   if (viewMode === 'blueprints') renderBlueprints();
 }
 async function openBlueprint(e) {
@@ -282,8 +307,13 @@ function renderBlueprintDetail(bp, acts, actIndex) {
    *
    *  Plain when the id is in no catalogue - Actions not pulled, or an action removed since - because
    *  a link that leads nowhere spends the reader's attention twice. */
+  // `.wf-fn` is the chip this panel already uses for «this opens something», so the action links
+  // look like the function chip beside them instead of like bold text. No new selector: `.aplink`
+  // carries no appearance of its own - in the function pane it only looks like a link because a
+  // `#pvcallers a` rule colours it, and this pane is not inside that box. Reported as «they are
+  // clickable and the interface does not say so».
   const actLink = (act, text) => (actIndex && act && act.id && actIndex.get(String(act.id))
-    ? `<a class="aplink" data-ap="action" data-apid="${escA(String(act.id))}" data-apname="${escA(act.name || '')}" title="Open this action">${escHtml(text)}</a>`
+    ? `<a class="wf-fn aplink" data-ap="action" data-apid="${escA(String(act.id))}" data-apname="${escA(act.name || '')}" title="Open this action">${escHtml(text)}</a>`
     : `<b>${escHtml(text)}</b>`);
   const rows = conns.map((c) => {
     const from = nameOf(c.from_state), to = nameOf(c.to_state);

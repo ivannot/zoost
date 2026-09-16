@@ -22226,7 +22226,10 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       new Map([['812', { id: '812', field: 'Lead_Status', field_label: 'Lead Status', value: 'In review' }]]));
     // Three facts in one line, and all three were reported missing at some point: the field, the
     // value it is set to, and the action that writes it, which is a link because the catalogue holds it.
-    assert.match(html, /writes <a class="aplink" data-ap="action" data-apid="812"[^>]*>Lead Status<\/a> = In review/,
+    // `.wf-fn` is the chip the panel already uses for «this opens something», and `.aplink` is the
+    // hook the click handler reads: the appearance is shared with the function chip beside it rather
+    // than invented, which is what «use a style already used elsewhere» asked for.
+    assert.match(html, /writes <a class="wf-fn aplink" data-ap="action" data-apid="812"[^>]*>Lead Status<\/a> = In review/,
                  'a field update lost the field, the value, or the link to the action that writes it');
     // The id that matters: the action's opens nothing, and a chip that does nothing is worse than
     // a plain word because it spends the reader's attention twice.
@@ -22426,15 +22429,24 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     const g = {
       runPullAction: async (fn) => { calls.push('runPullAction'); return fn(); },
       downloadOneBp: async (e) => { calls.push('downloadOneBp:' + e.id); return true; },
+      // «Read this blueprint» means the whole of it: the detail and what its transitions do. A dot
+      // that fetched only the states left the pane saying the actions had never been read.
+      downloadTransitionsFor: async (e) => { calls.push('downloadTransitionsFor:' + e.id); return { failed: 0, read: 2 }; },
+      beginWorkspaceOp: () => ({ current: () => true, root: {} }),
+      setStatus: (t) => { calls.push('status:' + String(t).slice(0, 12)); },
       refreshBlueprints: async () => { calls.push('refreshBlueprints'); },
       renderBlueprints: () => { calls.push('renderBlueprints'); },
       viewMode: 'blueprints',
     };
-    const { bpDotClick } = load([sliceFn('apps/crm/automation.js', 'bpDotClick')], g);
+    // `bpReadOne` is what the dot actually runs; the panel is one scope and a lifted realm is not.
+    const { bpDotClick } = load([sliceFn('apps/crm/automation.js', 'bpReadOne'),
+                                 sliceFn('apps/crm/automation.js', 'bpDotClick')], g);
 
     test('crm: the dot on a blueprint row re-reads that blueprint, not every one of them', async () => {
       await bpDotClick({ stopPropagation: () => {} }, { id: '7000', path: 'blueprints/7000.json' });
       assert.ok(calls.includes('downloadOneBp:7000'), 'the row the reader clicked is not the one that was read');
+      assert.ok(calls.includes('downloadTransitionsFor:7000'),
+                'only the states were read, so the pane still says the actions were never fetched');
       assert.ok(!calls.includes('refreshBlueprints'), 'one click re-read the whole area');
       // Through the pull lock, like every other path here that reaches Zoho: without it two clicks
       // overlap and the busy state never comes back.
@@ -22520,6 +22532,32 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       await run();
       assert.equal(g.bpModLabel.get('CustomModule20'), undefined,
                    'a label was invented for a module this workspace has never read');
+    });
+
+    test('crm: the module index is read from disk, not taken from whichever tab was opened', async () => {
+      // This is what kept the defect alive through five fixes. `moduleData` is in memory and only the
+      // Modules tab fills it, so opening Blueprints first left it empty - and a standard module still
+      // resolved, because its file is named by the same api name the blueprint carries, while a
+      // custom one could not: learning that `CustomModule20` is stored as `Iscrizioni.json` needs the
+      // index row. It worked for every module except the ones the reader was asking about.
+      const onDisk = {
+        'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding', module: 'CustomModule20' }]),
+        'modules/index.json': JSON.stringify([{ api_name: 'Iscrizioni', module_name: 'CustomModule20' }]),
+        'modules/Iscrizioni.json': JSON.stringify({ api_name: 'Iscrizioni', plural_label: 'Iscrizioni' }),
+      };
+      const g = {
+        moduleData: [], blueprintData: [], bpModLabel: new Map(), collapsed: new Set(),
+        sanitize: (x) => String(x), viewMode: 'blueprints',
+        walk: async function* () { yield 'blueprints/7000.json'; },
+        beginWorkspaceOp: () => ({ current: () => true, root: {},
+          read: async (p) => { if (!(p in onDisk)) throw new Error('no such file'); return onDisk[p]; } }),
+      };
+      const m = load([sliceFn('apps/crm/automation.js', 'loadBlueprintIndex')], g);
+      await m.loadBlueprintIndex(g.beginWorkspaceOp());
+      const hit = g.bpModLabel.get('CustomModule20');
+      assert.equal(hit && hit.label, 'Iscrizioni',
+                   'with Modules never opened the group header falls back to the internal name');
+      assert.equal(hit && hit.api, 'Iscrizioni', 'and the chip still points at a name no index has');
     });
   }
 
