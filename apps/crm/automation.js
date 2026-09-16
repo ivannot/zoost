@@ -44,6 +44,20 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
   // - so an extension-less path would write files nothing recognises and nothing ever removes. The
   // four readers of this path (the history routing, its kind, and the two AI lookups) all test the
   // `blueprints/` prefix and none of them looks at the suffix, which is what makes this safe.
+  // **One resolver, filled here, used by both the list and the pane.** The label was looked up in
+  // `moduleData` - which only the Modules rebuild fills - so a blueprint seen before that tab had
+  // been opened showed the API name. Fixing it in the pane alone left the list still wrong, which is
+  // how the same report came back four times. `renderBlueprints` is synchronous (the search calls
+  // it), so the read cannot happen there: it happens once here, for the distinct modules only.
+  bpModLabel = new Map();
+  for (const api of new Set(idx.map((e) => e && e.module).filter(Boolean))) {
+    const row = (moduleData || []).find((x) => x.api_name === api);
+    if (row && row.label) { bpModLabel.set(api, row.label); continue; }
+    let m = null; try { m = JSON.parse(await op.read(`modules/${sanitize(api)}.json`)); } catch (_) {}
+    if (!op.current()) return false;
+    const lab = m && (m.plural_label || m.singular_label || m.module_name);
+    if (lab) bpModLabel.set(api, lab);
+  }
   blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: `blueprints/${String(e.id)}.json`,
                                     downloaded: have.has(String(e.id)), error: false }));
   return true;
@@ -83,14 +97,14 @@ function renderBlueprints() {
     // reader nothing, and `moduleData` already carries the label the org uses. The grouping key stays
     // the API name, which is stable, so a group left collapsed stays collapsed on the pull that fills
     // Modules in and makes the label appear.
-    const mrow = (moduleData || []).find((x) => x.api_name === mod);
+    const shown = bpModLabel.get(mod) || mod;
     // The folded state is read next to the header it paints, the way the other four headers read
     // theirs. Four lines of comment had pushed it away from them, and a check that derives the pair
     // from the lines around `className = 'grp'` said so - rightly, because that adjacency is what
     // makes the wiring reviewable at all.
     const isCol = collapsed.has('bp:' + mod);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
-    g.innerHTML = `<span class="chev">▾</span><span>${escHtml((mrow && mrow.label) || mod)}</span><span class="cnt">${list.length}</span>`;
+    g.innerHTML = `<span class="chev">▾</span><span>${escHtml(shown)}</span><span class="cnt">${list.length}</span>`;
     g.onclick = () => { isCol ? collapsed.delete('bp:' + mod) : collapsed.add('bp:' + mod); renderBlueprints(); };
     tree.appendChild(g);
     if (isCol) return;
@@ -115,7 +129,8 @@ async function openBlueprint(e) {
   selectRow(e.path);
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last item's bar lingers
-  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
+  $('pvreveal').style.display = ''; $('pvreveal').textContent = MSG.openInZoho; $('pvreveal').title = 'Open the blueprint in Zoho';
+  $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   // The field's label and its API name are different words on a localised org - «Lead Status» against
   // `Lead_Status`, and in another language entirely where the org works in one - so both are shown
@@ -127,21 +142,10 @@ async function openBlueprint(e) {
   // code pane and the graph tables already use, wired to the same opener a few lines down. Shown by
   // the org's own label, with the API name beside it when they differ, because that is the string
   // Deluge needs and the label is the one the reader recognises.
-  const mrow = (moduleData || []).find((x) => x.api_name === e.module);
-  // **From the mirror, not from where the reader has been.** `moduleData` is filled by the Modules
-  // rebuild and by nothing else, so a blueprint opened in a fresh session showed the API name - the
-  // one string the org never calls the module by. The label is not in `modules/index.json` either
-  // (measured: that file carries api_name, module_name, fields, layouts, related_lists and the
-  // generated type); it lives in the module's own file, so that is what is read, once, and only when
-  // the list is not already in memory.
-  let modLabel = (mrow && mrow.label) || '';
-  if (!modLabel && e.module) {
-    let m = null;
-    try { m = JSON.parse(await op.read(`modules/${sanitize(e.module)}.json`)); } catch (_) {}
-    if (!previewCurrent(mine, op)) return;   // another blueprint was opened while this was reading
-    modLabel = (m && (m.plural_label || m.singular_label || m.module_name)) || '';
-  }
-  modLabel = modLabel || e.module || '';
+  // The same resolver the list uses, filled once by `loadBlueprintIndex`. It had its own lookup here
+  // and a different one there, so fixing the pane left the list showing the API name and the report
+  // came back a fourth time. One map, or the two drift again.
+  const modLabel = bpModLabel.get(e.module) || e.module || '';
   const modTxt = e.module
     ? `<span class="mod" data-mod="${escA(e.module)}" title="${escA(e.module + ' - click to open the module')}">${escHtml(modLabel)}</span>`
       + (modLabel !== e.module ? ` <span class="wfoff">${escHtml(e.module)}</span>` : '')
@@ -203,6 +207,16 @@ function renderBlueprintDetail(bp) {
     + (rows.length ? `<div class="wfd">${rows.join('')}</div>` : '')
     + `<div class="ftnote">States and transitions are stored in this mirror. What a transition <i>does</i>`
     + ` - the fields it writes, the functions it calls - Zoho does not include in this reply.</div>`;
+}
+/** The blueprint in Zoho's own editor. The module query the UI adds is optional - measured: the URL
+ *  works without it - so it is not sent, and nothing here depends on a parameter we would be
+ *  guessing the meaning of. */
+async function openBlueprintInZoho(id) {
+  if (sampleRefuse()) return;
+  const ws = bound || {};
+  if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding - pull first.', 'warn'); return; }
+  try { if (await goToZoho(`${ws.base}/crm/${ws.instance}/settings/blueprint/${id}`)) setStatus('Opened blueprint in Zoho.', 'ok'); }
+  catch (e) { setStatus('Could not open: ' + e.message, 'warn'); }
 }
 async function refreshBlueprintsNow() {
   if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }

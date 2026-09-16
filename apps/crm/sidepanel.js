@@ -122,7 +122,7 @@ let codeCache = null, _searchT = null;
 let searchSeq = 0;              // every runSearch() bumps it, so a content search that finished late knows it
 let workflowData = [], workflowFilter = 'all', wfIndex = new Map();
 let scheduleData = [], scheduleFilter = 'all';
-let blueprintData = [], blueprintFilter = 'all';
+let blueprintData = [], blueprintFilter = 'all', bpModLabel = new Map();
 const collapsed = new Set();
 const expandedMods = new Set();
 let pullActive = false, pullBusy = false;

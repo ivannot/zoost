@@ -175,6 +175,7 @@ async function reveal(fn) {
 
 async function revealFromPreview(action) {
   if (currentPath && currentPath.startsWith('workflows/')) { await openWorkflowInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }
+  if (currentPath && currentPath.startsWith('blueprints/')) { await openBlueprintInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }
   if (currentPath && currentPath.startsWith('actions/')) { const a = actionData.find((x) => x.path === currentPath); if (a) await openActionInZoho(a); return; }
   if (currentPath && currentPath.startsWith('modules/')) {
     const m = moduleData.find((x) => x.path === currentPath); if (!m) return; if (action === 'filter') await openModuleLayouts(m.gen); else await openModulePage(m.gen, m.navigable, m.label); return;

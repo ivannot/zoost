@@ -69,7 +69,7 @@ createWorkspaceForContext	7c94d5996f02	63746ab6a1c9	divergent
 createZoostError	0ab2449affb3	0ab2449affb3	identical
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirtyPeer	5f62d305d70c	5f62d305d70c	identical
-dropWorkspaceState	1b146385d06d	167539fa76e8	divergent
+dropWorkspaceState	b6eb6efecb47	167539fa76e8	divergent
 egoStat	07126f3c9de0	07126f3c9de0	identical
 emptyReason	52a2cc9b794f	1c45640bf913	divergent
 engineIncomplete	54560440576d	54560440576d	identical
