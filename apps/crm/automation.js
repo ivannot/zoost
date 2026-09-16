@@ -914,7 +914,14 @@ async function downloadMissingBp(all = false) {
         // Zoho stopped answering: the rest of this run would be seventy more refusals. What was read
         // is on disk, the ids not read are simply absent from it, and the next run continues from
         // there - so this stops rather than emptying the budget it has already been refused.
-        if (tr.throttled) { throttled = true; break; }
+        if (tr.throttled) {
+          // The progress callback runs before the request, so this attempt is not a read.  Remove
+          // it from the numerator; otherwise a throttle on the first transition was reported as
+          // "1 of 1 read" and the access record could be advanced to full below.
+          if (tRead > 0) tRead--;
+          throttled = true;
+          break;
+        }
         // A blueprint whose module this profile cannot see is skipped and the run carries on - unlike
         // throttling, which is about the whole org. Measured: 164 transitions of the other blueprints
         // answered while seven of this one refused, so stopping would have thrown away a good pull.
@@ -923,7 +930,7 @@ async function downloadMissingBp(all = false) {
         // close, and this one never closes by pulling - the module would have to be made visible to
         // this reader in Zoho first. `tRead--` because the step counter is incremented before the
         // call, so the transition that was refused had already been counted as read.
-        if (tr.hidden) { hidden++; tRead--; }
+        if (tr.hidden) { hidden++; if (tRead > 0) tRead--; }
       }
       if (viewMode === 'blueprints') renderBlueprints();
       await sleep(120);
@@ -939,15 +946,17 @@ async function downloadMissingBp(all = false) {
     // is said plainly and does not turn the line amber: nothing here is broken, and there is nothing
     // to retry. What would be wrong is silence - the shortfall against `tTotal` is visible either way,
     // and an unexplained shortfall is the reader assuming the mirror is unreliable.
-    const trSaid = tRead ? ` · ${tRead - tFail} of ${tTotal} transition(s) read${tFail ? `, ${tFail} refused` : ''}`
+    const trSaid = (tRead || tFail || hidden || throttled) ? ` · ${tRead - tFail} of ${tTotal} transition(s) read${tFail ? `, ${tFail} refused` : ''}`
                            + (hidden ? ` · ${hidden} blueprint(s) run on a module your Zoho profile cannot see, so their transitions cannot be read` : '')
                            + (throttled ? ' · stopped: Zoho is refusing further requests for now, the rest is read by the next pull' : '') : '';
     setStatus(fail ? `Read ${ok} blueprint(s)${fail - kept ? `, ${fail - kept} could not be read` : ''}${kept ? `, ${kept} kept from the last pull that read them` : ''}.${trSaid}`
-      : `All ${ok} blueprint(s) read.${trSaid}`, fail || tFail ? 'warn' : 'ok');
+      : `All ${ok} blueprint(s) read.${trSaid}`, fail || tFail || hidden || throttled ? 'warn' : 'ok');
     // Transitions count towards the gap, not only blueprints: a run that read every blueprint and
     // lost half their actions is not a run that read everything, and recording it as one is the
     // defect this project has already paid for once.
-    return { failed: fail + tFail };
+    // Hidden and throttled transitions are not retryable failures, but they are still unread.  The
+    // caller must not advance the area to a full-details timestamp while either gap remains.
+    return { failed: fail + tFail + hidden + (throttled ? 1 : 0) };
   } finally { setPullBusy(false); }
 }
 // Org-wide blueprint list → blueprints/index.json, plus one file per blueprint when the pull is a

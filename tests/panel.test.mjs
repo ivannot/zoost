@@ -22574,6 +22574,32 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       assert.equal(writes.length, 0, 'an empty map was written, so the pane will say the transitions do nothing');
     });
 
+    test('crm: hidden or throttled transitions keep the blueprint pull partial', async () => {
+      const run = async (transitionResult) => {
+        const said = [];
+        const g2 = {
+          mismatchRefuse: () => false, sleep: async () => {},
+          blueprintData: [{ id: '7000', name: 'Deal approval', path: 'blueprints/7000.json', downloaded: false }],
+          beginWorkspaceOp: () => ({ current: () => true, root: {}, say: (t) => said.push(String(t)),
+            read: async () => JSON.stringify({ connections: [{ transitions: { id: '76000' } }] }) }),
+          setStatus: (t, kind) => said.push(`${kind}:${t}`), setPullBusy: () => {},
+          downloadOneBp: async (e) => { e.downloaded = true; return true; },
+          downloadTransitionsFor: async () => transitionResult,
+          isTransient: () => false, viewMode: 'blueprints', renderBlueprints: () => {},
+        };
+        const { downloadMissingBp } = load([sliceFn('apps/crm/automation.js', 'downloadMissingBp')], g2);
+        const result = await downloadMissingBp(true);
+        return { result, said };
+      };
+      const hidden = await run({ failed: 0, read: 0, hidden: true });
+      assert.equal(hidden.result.failed, 1, 'a hidden transition keeps the pull partial');
+      assert.ok(hidden.said.some((s) => s.startsWith('warn:')), 'a hidden transition leaves a warning status');
+      assert.match(hidden.said.join('\n'), /0 of 1 transition\(s\) read/, 'hidden work is not counted as read');
+      const throttled = await run({ failed: 0, read: 0, throttled: true });
+      assert.equal(throttled.result.failed, 1, 'a throttled transition keeps the pull partial');
+      assert.match(throttled.said.join('\n'), /0 of 1 transition\(s\) read/, 'the throttled request is not counted as read');
+    });
+
     test('crm: a stop keeps what it had already read', async () => {
       // The other half: stopping must not throw away the transitions that did answer, or a blueprint
       // half-read comes back empty and the next pull starts from nothing.
