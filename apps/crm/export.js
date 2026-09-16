@@ -579,12 +579,18 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         // right-aligns a count. This report carries EXPORT_CSS and nothing else, and EXPORT_CSS has
         // no `.num` - so the class has never done anything here. Removed rather than given a rule,
         // because the rule would be new styling nobody asked for, invented to justify a leftover.
-        + '<td>' + users.length + '</td><td>' + users.map((w) => esc(w.name || w.id)).join(', ') + '</td><td>' + detail + '</td></tr>';
+        // A blueprint transition was counted under «Rules», because the column was named before a
+        // transition could fire anything. Two counts, and the transition named beside the process.
+        + '<td>' + users.filter((w) => w.kind !== 'blueprint').length + '</td>'
+        + '<td>' + users.filter((w) => w.kind === 'blueprint').length + '</td>'
+        + '<td>' + users.map((w) => esc(w.name || w.id)
+            + (w.kind === 'blueprint' ? ' <span class="none">(blueprint' + (w.transition ? ', ' + esc(w.transition) : '') + ')</span>' : '')).join(', ')
+        + '</td><td>' + detail + '</td></tr>';
     });
   const actHtml = acts.length
-    ? '<p class="hxd">What a workflow rule fires, and which rules fire it. \u00abFired by\u00bb is read from the rules in this workspace, so a rule that was never pulled cannot appear in it.</p>'
+    ? '<p class="hxd">What an automation fires, and what fires it. \u00abFired by\u00bb is read from the workflow rules <i>and</i> the blueprint transitions in this workspace, so one that was never pulled cannot appear in it.</p>'
       + ((actWithheld && !scope.addresses) ? `<p class="note">${actWithheld} sender address(es) withheld - that section was left off. Nothing else about those notifications is missing.</p>` : '')
-      + `<table class="ftbl"><thead><tr><th>Action</th><th>Kind</th><th>Module</th><th>Rules</th><th>Fired by</th><th>Detail</th></tr></thead><tbody>${actRows.join('')}</tbody></table>`
+      + `<table class="ftbl"><thead><tr><th>Action</th><th>Kind</th><th>Module</th><th>Rules</th><th>Blueprints</th><th>Fired by</th><th>Detail</th></tr></thead><tbody>${actRows.join('')}</tbody></table>`
     : '';
   const connHtml = conns.length
     ? `<p class="hxd">The org's connections and the functions that use each - the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
@@ -858,7 +864,9 @@ function mapVal(m) {
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
-  let { mods, g, wfs, scheds, bps, conns, fails, acts } = d;
+  // `modRefs` is which modules point *at* this one. It was read by the HTML report alone, so the
+  // Markdown reader saw a module's outgoing lookups and never the incoming ones - half a relation.
+  let { mods, g, modRefs, wfs, scheds, bps, conns, fails, acts } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
@@ -1031,6 +1039,13 @@ function buildExportMarkdown(d, scope) {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
     const mref = moduleRefusal(m.unreadable);
     if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
+    // The other direction of a lookup: which modules point at this one. The HTML report has carried
+    // it since it was written; this one listed only what this module points to.
+    const inbound = (modRefs && modRefs[m.api_name]) || [];
+    if (inbound.length) {
+      md += `Referenced by (${inbound.length}): `
+        + inbound.map((r) => `${_mdCell(r.module)} (${_mdCell(r.field)})`).join(', ') + '\n\n';
+    }
     md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |${fTrig ? ' Workflows |' : ''}${bpTrig.size ? ' Blueprints |' : ''}\n|---|---|---|---|---|${fTrig ? '---|' : ''}${bpTrig.size ? '---|' : ''}\n`;
     const trigMd = (f) => (fTrig.get(`${m.api_name}:${f.api_name}`) || [])
       .map((r) => `${_mdCell(r.name)} (${_mdCell(roleText(r))}${r.active ? '' : ', off'})`).join('; ');
@@ -1185,9 +1200,11 @@ function buildExportMarkdown(d, scope) {
   }
   if (acts.length) {
     const withheld = acts.filter((a) => a.from_address).length;
-    md += '---\n\n## Actions\n\nWhat a workflow rule fires: notifications, field updates, tasks and webhooks. Each exists on its own in Zoho and is reused across rules. "Fired by" is read from the rules in this workspace.\n\n';
+    md += '---\n\n## Actions\n\nWhat an automation fires: notifications, field updates, tasks and webhooks. Each exists on its own in Zoho and is reused. "Fired by" is read from the workflow rules *and* the blueprint transitions in this workspace, so one that was never pulled cannot appear in it.\n\n';
     if (withheld && !scope.addresses) md += `> ${withheld} sender address(es) withheld - that section was left off. Nothing else about those notifications is missing.\n\n`;
-    md += '| Action | Kind | Module | Rules | Fired by | Detail |\n|---|---|---|---|---|---|\n';
+    // «Rules» counted a blueprint transition as a rule, because the column was named before a
+    // transition could fire anything. Two counts, because they are two different things in Zoho.
+    md += '| Action | Kind | Module | Rules | Blueprints | Fired by | Detail |\n|---|---|---|---|---|---|---|\n';
     acts.slice().sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b)).forEach((a) => {
       const users = firedBy(a, d.actUsers);
       const detail = a.kind === 'email_notifications'
@@ -1205,7 +1222,12 @@ function buildExportMarkdown(d, scope) {
         // too, or the report is a quietly lesser copy and the reader cannot know what is missing.
         : (a.mappings || []).length ? a.mappings.map((m) => `${String(m.field || '').replace(/_/g, ' ')}: ${mapVal(m)}`).join(' \u00b7 ')
         : a.notify === true ? 'notifies' : '';
-      md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(actProv(a))} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
+      const uWf = users.filter((w) => w.kind !== 'blueprint');
+      const uBp = users.filter((w) => w.kind === 'blueprint');
+      md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(actProv(a))} | ${uWf.length} | ${uBp.length} | ${_mdCell(
+        uWf.map((w) => w.name || w.id)
+          .concat(uBp.map((w) => `${w.name || w.id} (blueprint${w.transition ? ', ' + w.transition : ''})`))
+          .join(', '))} | ${_mdCell(detail)} |\n`;
     });
     md += '\n';
   }

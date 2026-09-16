@@ -248,7 +248,7 @@ async function aiLoadConnections(op = beginWorkspaceOp()) {
   Object.keys(used).forEach((nm) => { if (!known.has(nm)) list.push({ name: nm, label: nm, connector: null, connected: null, missing: true, uses: used[nm].slice() }); });
   aiConnCache = list; return list;
 }
-function aiModuleText(m) {
+function aiModuleText(m, trig, bpt) {
   // Told before the empty table, not after: an assistant handed "Module Invoices" with no fields
   // will reason about why a module has none, and the answer is that nobody was ever allowed to look.
   const ref = moduleRefusal(m.unreadable);
@@ -263,8 +263,24 @@ function aiModuleText(m) {
     return `Module ${m.api_name}\nFIELDS NOT READ. The last pull could not read this module's fields - `
       + `Zoho did not refuse, the read failed - so nothing here says what it has. Do not infer them.\n`;
   }
-  let s = `Module ${m.api_name}\n| Field | API name | Type | Lookup | Picklist |\n`;
-  (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${_pick(f.picklist, 15, (x) => x)} |\n`; });
+  // What automates each field, which the panel and both reports carry and this did not: the model
+  // could see a field and not what starts a rule on it or what process writes it.
+  const rulesOf = (f) => ((trig && trig.map && trig.map.get(`${m.api_name}:${f.api_name}`)) || [])
+    .map((r) => `${r.name} (${roleText(r)})`).join('; ');
+  const bpsOf = (f) => ((bpt && bpt.map && bpt.map.get(`${m.api_name}:${f.api_name}`)) || [])
+    .map((r) => `${r.name} (${r.role}${r.transition ? ', ' + r.transition : ''})`).join('; ');
+  let s = `Module ${m.api_name}\n| Field | API name | Type | Lookup | Picklist | Workflows | Blueprints |\n`;
+  (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${_pick(f.picklist, 15, (x) => x)} | ${rulesOf(f)} | ${bpsOf(f)} |\n`; });
+  // The related lists, which are the one string Deluge actually needs - both reports give them a
+  // chapter of their own and the model was never told they exist, so it could not answer \u00abhow do I
+  // read the records hanging off this module\u00bb.
+  const rls = m.related_lists || [];
+  if (rls.length) {
+    s += `Related lists (${rls.length}) - the api_name is what zoho.crm.getRelatedRecords() takes:\n`;
+    rls.forEach((r) => { s += `- ${r.api_name} -> ${r.module || r.connected_module || '?'}${r.linking_module ? ' via ' + r.linking_module : ''}${r.type ? ' [' + r.type + ']' : ''}\n`; });
+  } else if (m.related_read === false) {
+    s += 'Related lists: not read when this module was pulled - whether it has any is unknown.\n';
+  }
   return s;
 }
 // The org, stated as compactly as it can be, in layers of decreasing importance.
@@ -344,6 +360,22 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
       + '\nUse `list_actions` for names, what each writes or sends, and which rules fire it.\n'
     : '';
 
+  // **Two areas the index did not have at all.** A schedule is what runs a function on a timer and a
+  // blueprint is what runs one from a process, and neither appeared here - so «what runs this
+  // nightly» and «which process calls this» were unanswerable unless the reader had happened to
+  // click that very item. Both are one file each, already on disk.
+  let schedList = []; try { schedList = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
+  const schedules = (Array.isArray(schedList) && schedList.length)
+    ? `\n## Schedules (${schedList.length})\n`
+      + schedList.map((s) => `- ${s.name}${s.frequency ? ' [' + s.frequency + ']' : ''} · runs ${s.function_name || s.function_id || '?'}${s.status && s.status !== 'active' ? ' · ' + s.status : ''}`).join('\n') + '\n'
+    : '';
+  let bpList = []; try { bpList = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  const blueprints = (Array.isArray(bpList) && bpList.length)
+    ? `\n## Blueprints (${bpList.length})\n`
+      + bpList.map((b) => `- ${b.name}${b.module ? ' on ' + b.module : ''}${b.field ? ' · field ' + (b.field_label || b.field) : ''}${b.active === false ? ' · inactive' : ''}`).join('\n')
+      + '\nWhat each transition writes and calls is in the blueprint itself; select one to be given it.\n'
+    : '';
+
   // «the 1 connections» was what this wrote, in a sentence the model reads and reasons from.
   const many = (n, one, rest) => `the ${n} ${n === 1 ? one : rest}`;
   const omitted = [];
@@ -351,6 +383,8 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   if (out.length + modules.length <= cap) out += modules; else omitted.push(many(mk.length, 'module name', 'module names'));
   if (out.length + actions.length <= cap) out += actions; else if (actions) omitted.push(many(acts.list.length, 'automation action', 'automation actions'));
   if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(many(conns.length, 'connection', 'connections'));
+  if (out.length + schedules.length <= cap) out += schedules; else if (schedules) omitted.push(many(schedList.length, 'schedule', 'schedules'));
+  if (out.length + blueprints.length <= cap) out += blueprints; else if (blueprints) omitted.push(many(bpList.length, 'blueprint', 'blueprints'));
   if (!op.current()) throw new Error(WS_MOVED);
   // One list, read by both readers. The function index being cut used to **replace**
   // `aiSeedOmitted` while the note inside the index went on naming the other three - so on the
@@ -816,7 +850,12 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.${overMirror}\n`
       + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n') + gap;
   }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return notFound(input.name); return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
+  // One reader for the three module lines. Written out three times the answer grew past the window a
+  // case measures - that `get_function` reaches the file - and a check widened to fit the code it
+  // checks is no check at all.
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return notFound(input.name);
+    const md = (f) => (n.modules || []).filter(f).map((m) => m.name).join(', ') || '(none)';
+    return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => `${p._type}${p.name ? ' ' + p.name : ''}${p.module ? ' (' + p.module + ')' : ''}`).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${md((m) => m.mode === 'read')}\nwrites_modules: ${md((m) => m.mode === 'write')}\ntouches_modules: ${md((m) => m.mode !== 'read' && m.mode !== 'write')}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
   // The caveat rides the *negative* answer only: a list of callers is a fact about what is here and
   // needs no hedge, while «none» is a claim about the org that this cannot make on its own.
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)' + overMirror) : notFound(input.name); }
@@ -837,7 +876,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.' + caveat, 60)
                        : `(no matches in ${Object.keys(nodes).length - unread} function(s))${caveat}${overMirror}`;
   }
-  if (name === 'get_module') { const mods = await loadModuleFiles(op); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_module') { const mods = await loadModuleFiles(op); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m, await fieldTriggersNow(op, () => true), await blueprintFieldsNow(op, () => true)) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
     let d = null; try { d = JSON.parse(await op.read('failures/index.json')); } catch (_) {}
     if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';
@@ -877,15 +916,20 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
       let det = null; try { det = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
       if (!det) unread++;
       const s = wfScheduled(det);
-      const fns = []; const instant = [];
+      const fns = []; const instant = []; const other = [];
+      // What else the rule fires. Only the Deluge half was collected, so a model asked «what does
+      // this rule do» could answer with the functions and count the rest - on a real org the larger
+      // half. The panel and both reports name them; this is the surface that could not.
+      const note = (a) => { if (isFnAction(a)) fns.push(a.name); else if (a && a.type) other.push(`${a.type}: ${a.name || a.id}`); };
       ((det && det.conditions) || []).forEach((c) => {
         const ia = (c.instant_actions && c.instant_actions.actions) || [];
-        ia.forEach((a) => { instant.push(a); if (isFnAction(a)) fns.push(a.name); });
+        ia.forEach((a) => { instant.push(a); note(a); });
         (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) =>
-          (sa.actions || []).forEach((a) => { if (isFnAction(a)) fns.push(a.name); }));
+          (sa.actions || []).forEach(note));
       });
       rows.push({ w, det, read: !!det, sched: s.count, delays: s.delays, instant: instant.length,
-                  fns: [...new Set(fns)], last: (det && det.last_executed_time) || null });
+                  fns: [...new Set(fns)], other: [...new Set(other)],
+                  last: (det && det.last_executed_time) || null });
     }
     if (name === 'get_workflow') {
       const q = String(input.query || '').toLowerCase();
@@ -897,7 +941,8 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
         + `last_executed: ${r.last || '(never, or not reported by Zoho)'}\n`
         + `instant_actions: ${r.instant}\n`
         + `scheduled_actions: ${r.sched}${r.sched && r.delays.length ? ' - after ' + r.delays.join(', ') : ''}\n`
-        + `functions: ${r.fns.join(', ') || '(none)'}`
+        + `functions: ${r.fns.join(', ') || '(none)'}\n`
+        + `actions: ${(r.other || []).join(', ') || '(none)'}`
         + (r.read ? '' : '\nNOTE: this rule has not been downloaded, so the action and execution figures above are absent, not zero.');
     }
     const want = input.has_scheduled_actions;
@@ -948,7 +993,14 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
             + (actKept(a) ? (a.detail_list ? ' - not read by the list pull that wrote this; what is listed is what the last pull that read it saw'
               : ' - Zoho did not answer for this one when it was pulled; what is listed is what the last pull that could read it saw') : '')
           : a.kind === 'tasks' && actThin(a) ? ` - ${a.detail_list ? LIST_MISS_DETAIL : MISS_DETAIL}` : '';
-      return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;
+      // A blueprint transition fires actions too, and this said «rule(s)» about all of them - so the
+      // model was told a process was a workflow rule. Each kind in its own words, with the transition.
+      const uWf = users.filter((w) => w.kind !== 'blueprint');
+      const uBp = users.filter((w) => w.kind === 'blueprint');
+      const by = [uWf.length ? `${uWf.length} rule(s): ${uWf.map((w) => w.name).join(', ')}` : '',
+                  uBp.length ? `${uBp.length} blueprint(s): ${uBp.map((w) => w.name + (w.transition ? ' (' + w.transition + ')' : '')).join(', ')}` : '']
+        .filter(Boolean).join('; ') || 'nothing on disk';
+      return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${by}${extra}`;
     });
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `kind`, `module` or `unused`.');
   }

@@ -369,6 +369,19 @@ async function modulesOf(node) {
 function wireFnChips(root, open) {
   if (!root) return;
   root.querySelectorAll('.wf-fn, a[data-file]').forEach((el) => {
+    // **Which tab this chip opens, derived from what it carries.** `.wf-fn` is the panel's one chip
+    // for «this opens something», and it is no longer only functions: a rule fires an action, a
+    // transition fires an action, a rule runs on a module. Every one of those was read as a function
+    // chip here - so with Functions hidden or refused they were turned into dead spans *before* their
+    // own wiring ran, and a module chip was greyed out for a tab it never pointed at. Both reported.
+    // **Only the chips this helper opens are its business.** `.wf-fn` is the panel's one chip for
+    // «this opens something» and it is no longer only functions: a rule fires an action, a transition
+    // fires an action, a rule runs on a module. Each of those is wired by the pane that drew it, a
+    // line later - and this helper was rewriting them into spans first, so they were dead before
+    // their own handler ran, and a module chip was greyed out for a tab it never pointed at. Both
+    // reported. A chip that carries its own opener is left exactly as it is.
+    const d = el.dataset;
+    if (d.ap != null || d.mod != null || d.bp != null || d.bpx != null || d.wfx != null || d.conn != null) return;
     const target = el.dataset.wf != null ? 'workflows' : 'functions';
     if (tabReachable(target, true)) { el.onclick = () => open(el); return; }
     // Not a link any more, and that has to be true of the *element* and not only of its handler.

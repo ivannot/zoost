@@ -25,6 +25,7 @@ apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
 apps/crm/export.js	String(n.refusedAt).slice(0, 10)
 apps/crm/export.js	String(source.code).replace(/```/g, '`\u200b``')
 apps/crm/export.js	String(source.name).replace(/`/g, '\\`')
+apps/crm/export.js	_mdCell( uWf.map((w) => w.name || w.id) .concat(uBp.map((w) => `${w.na
 apps/crm/export.js	_mdCell((rel.module && rel.module.api_name) || rel.module || '')
 apps/crm/export.js	_mdCell((t && t.name) || 'transition')
 apps/crm/export.js	_mdCell(L.name || String(L.id))
@@ -287,7 +288,9 @@ apps/crm/export.js	w.active ? '' : '<span class="badge no">inactive</span>'
 apps/crm/export.js	w.id
 apps/crm/export.js	w.module ? ' (' + w.module + ')' : ''
 apps/crm/export.js	w.name
+apps/crm/export.js	w.name || w.id
 apps/crm/export.js	w.probability == null ? '' : w.probability + '%'
+apps/crm/export.js	w.transition ? ', ' + w.transition : ''
 apps/crm/export.js	wfHtml
 apps/crm/export.js	wfUnread
 apps/crm/export.js	wfValOf(g)

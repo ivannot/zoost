@@ -75,6 +75,10 @@ $('pvtable').addEventListener('click', (e) => {
     const again = [...$('laybody').querySelectorAll('.thsort')].find((x) => x.dataset.sort === key); if (again) again.focus();
     return;
   }
+  // Delegated for the same reason the picklist buttons are: the fields table is rebuilt by the
+  // layout picker and by every column sort, so a handler attached once per open is one that dies on
+  // the second render - which is what happened to the lookup chips, drawn and dead.
+  const md = e.target.closest('[data-mod]'); if (md) { healthOpenModule(md.dataset.mod); return; }
   const b = e.target.closest('.plbtn'); if (b) openFieldList(b.dataset.list, b.dataset.f, b);
 });
 $('fieldlistx').onclick = closeFieldList;

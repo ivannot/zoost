@@ -25,6 +25,8 @@ analytics	read_by	the dependency graph
 analytics	reads_from	the dependency graph
 analytics	system_table	what kind of view each is (the flag Zoho sets on a table it made itself)
 analytics	type	what kind of view each is
+crm	actions	workflow definitions
+crm	touches_modules	Deluge source code (which modules it touches, read out of it)
 crm	api_name	module schemas - API names
 crm	called_by	Deluge source code (who calls what is read out of it)
 crm	calls	Deluge source code (who calls what is read out of it)

@@ -766,9 +766,9 @@ async function openModule(path, layoutId) {
   $('pvdetails').appendChild($('pvcallers'));
   $('pvtabsr').innerHTML = relBar;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => copyRelatedName(c.dataset.c)));
-  // A lookup and a related list both name another module, and both were plain text: the one relation
-  // this pane is *about* was the one you could not follow. Wired here, where the table is inserted.
-  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  // The lookup and related-list chips are wired by the delegated listener on `#pvtable`, not here:
+  // this table is rebuilt by the layout picker and by every column sort, and a handler attached once
+  // per open dies on the second render - which is exactly how those chips came to be drawn and dead.
   $('pvdetails').querySelectorAll('[data-wfx]').forEach((c) => (c.onclick = () => healthOpenWorkflow(c.dataset.wfx)));
   $('pvdetails').querySelectorAll('[data-bpx]').forEach((c) => (c.onclick = () => healthOpenBlueprint(c.dataset.bpx)));
   const relOpen = $('pvtabsr').querySelector('#relopen');

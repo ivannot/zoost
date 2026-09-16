@@ -966,6 +966,22 @@ test('crm: the helper decides from the tab the chip declares, and says which rea
   assert.match(fn, /isForbidden\(target\)/, 'both reasons read as one, and they are two different actions');
 });
 
+test('crm: a chip that carries its own opener is left alone by the helper', () => {
+  // `.wf-fn` is the panel's one chip for «this opens something», and it stopped being only about
+  // functions: a rule fires an action, a transition fires an action, a rule runs on a module. This
+  // helper rewrote every one of them into a span when Functions was hidden or refused - before the
+  // pane that drew them had wired them - so those relations were dead, and a module chip was greyed
+  // out for a tab it never pointed at. Found by an audit of both ends of every relation.
+  const fn = sliceFn('apps/crm/sidepanel.js', 'wireFnChips');
+  for (const attr of ['ap', 'mod', 'bp', 'bpx', 'wfx', 'conn']) {
+    assert.match(fn, new RegExp(`d\\.${attr} != null`),
+                 `a chip carrying data-${attr} is still treated as a function chip, so its own wiring never runs`);
+  }
+  // Early, and before the tab is decided: the point is that the helper does not touch the element.
+  assert.ok(fn.indexOf('!= null) return;') < fn.indexOf("tabReachable(target, true)"),
+            'the chip is rewritten first and skipped afterwards, which is the defect this prevents');
+});
+
 test('crm: no container may style away the inertness by id', () => {
   // The rule that generalises: an inert chip must not be reachable by an `a` selector. This reads the
   // panel's own stylesheet for id-scoped anchor rules that set a pointer or a hover, and requires the
@@ -22526,6 +22542,26 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       assert.equal(await downloadOneBp(entry), true, 'the blueprint stayed unreadable although Zoho draws it');
       assert.deepEqual(asked, ['fetchBlueprint', 'fetchBlueprintInternal'], 'the documented call is no longer first');
       assert.equal(entry.error, false);
+    });
+  }
+
+  // ---------- a dot says what the pull did, not what we hope ----------
+  // Reported: the list showed «1 not read» above a column of green dots. Every row carried the
+  // literal st-ok, so a blueprint Zoho refused was indistinguishable from one on disk - and the
+  // reader had no way to tell which of the twelve was missing.
+  {
+    const { bpRowState } = load([sliceFn('apps/crm/automation.js', 'bpRowState')], {});
+
+    test('crm: a blueprint refused by Zoho is not drawn as one that was read', () => {
+      const bad = bpRowState({ downloaded: false, error: true, errorMsg: 'INTERNAL_ERROR' });
+      assert.equal(bad.cls, 'st-err', 'a refused blueprint keeps the mark of one that is in the mirror');
+      assert.match(bad.title, /INTERNAL_ERROR/, 'the row does not carry the reason Zoho gave');
+      // A file on disk whose re-read failed is *not* missing: its copy is still there, and the row
+      // must say the re-read failed rather than that the process is absent.
+      assert.equal(bpRowState({ downloaded: true, error: true, errorMsg: 'x' }).cls, 'st-err');
+      assert.equal(bpRowState({ downloaded: true, error: false }).cls, 'st-ok');
+      assert.equal(bpRowState({ downloaded: false, error: false }).cls, 'st-no',
+                   'a blueprint never read is drawn as one that is in the mirror');
     });
   }
 

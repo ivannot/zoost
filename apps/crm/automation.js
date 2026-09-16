@@ -100,6 +100,21 @@ async function rebuildBlueprints() {
   } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }
+/** The mark on a blueprint row, derived from what the pull did to it.
+ *
+ *  It was the literal `st-ok` on every row, so a process Zoho refused sat among the others looking
+ *  read while the line above the list counted it as not read - two surfaces of one pull contradicting
+ *  each other, and the one carrying the marks was the one that lied. Three states, the same three
+ *  every other list here draws: read, never read, and refused with the reason on the row. */
+function bpRowState(e) {
+  if (e && e.error) {
+    return { cls: 'st-err', mark: '⟳',
+             title: `Could not be read${e.errorMsg ? ' - ' + e.errorMsg : ''} - click to try again` };
+  }
+  return e && e.downloaded
+    ? { cls: 'st-ok', mark: '●', title: 'In workspace - click to re-read this blueprint from Zoho' }
+    : { cls: 'st-no', mark: '○', title: 'Not in the mirror yet - click to read it from Zoho' };
+}
 function renderBlueprints() {
   if (viewMode !== 'blueprints') return;
   const term = $('find').value.trim().toLowerCase();
@@ -142,12 +157,8 @@ function renderBlueprints() {
       // the list counted it as not read. Two surfaces of one pull contradicting each other, and the
       // one with the marks was the one that lied. The three states are the ones every other list
       // here draws: read, never read, and refused with the reason on the row.
-      const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
-      const stMark = e.error ? '⟳' : e.downloaded ? '●' : '○';
-      const stTitle = e.error ? `Could not be read${e.errorMsg ? ' - ' + e.errorMsg : ''} - click to try again`
-        : e.downloaded ? 'In workspace - click to re-read this blueprint from Zoho'
-        : 'Not in the mirror yet - click to read it from Zoho';
-      el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stMark}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      const st = bpRowState(e);
+      el.innerHTML = `<span class="st ${st.cls}" title="${escA(st.title)}">${st.mark}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => bpDotClick(ev, e);
       el.onclick = () => openBlueprint(e);
       tree.appendChild(el);
