@@ -435,7 +435,7 @@ function scheduleForModel(x) {
     next: x.next || null, last: x.last || null,
   };
 }
-function blueprintForModel(x) {
+function blueprintForModel(x, detail) {
   return {
     name: x.name || '', api_name: x.api_name || null, module: x.module || '',
     // Both spellings of the field, for the same reason the pane shows both: on a localised org the
@@ -445,8 +445,17 @@ function blueprintForModel(x) {
     status: x.status || null, active: x.active === undefined ? null : x.active,
     modified_by: x.modified_by || null,
     continuous: x.continuous === undefined ? null : x.continuous,
-    // The model is told what is missing, or it will answer about transitions it cannot see.
-    read: 'list only - states and transitions are not in this mirror',
+    // The states and the transitions between them, counted from the stored detail. Absent is a fact
+    // too: a blueprint read by «Pull list» alone has no file, and saying «0» would be a claim about
+    // the process rather than about this mirror.
+    states: detail && detail.chart_data && Array.isArray(detail.chart_data.nodes) ? detail.chart_data.nodes.length : null,
+    transitions: detail && Array.isArray(detail.connections) ? detail.connections.length : null,
+    // The model is told what is missing, or it will answer about things it cannot see. What is
+    // missing is no longer the states - those are read now - but what each transition *does*: the
+    // reply Zoho gives for a blueprint carries no field update and no function anywhere in it.
+    read: detail
+      ? 'states and transitions read; what each transition does - fields written, functions called - is not in the reply Zoho gives'
+      : 'list only - the detail of this blueprint has not been read into the mirror yet',
   };
 }
 function connectionForModel(c) {
@@ -600,7 +609,13 @@ async function aiFocus(op = beginWorkspaceOp()) {
     }
     if (p.startsWith('blueprints/')) {
       const e = blueprintData.find((x) => x.path === p);
-      if (e) return block(`the blueprint «${e.name || '?'}»`, aiTrunc(JSON.stringify(blueprintForModel(e), null, 2), 3000));
+      // The detail is a file, not a field on the row: the states and the transitions between them
+      // live in `blueprints/<id>.json`, so the model gets what the pane gets rather than the thinner
+      // index the list is built from.
+      if (e) {
+        let detail = null; try { detail = JSON.parse(await op.read(e.path)); } catch (_) {}
+        return block(`the blueprint «${e.name || '?'}»`, aiTrunc(JSON.stringify(blueprintForModel(e, detail), null, 2), 3000));
+      }
     }
     if (p.startsWith('connections/')) {
       const e = connectionData.find((x) => x.path === p);

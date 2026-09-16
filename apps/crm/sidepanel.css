@@ -28,6 +28,12 @@
   .modebar.tight{gap:2px;padding:6px 3px}
   .modebar.tight .seg{padding:6px 2px}
   .modebar.tighter .seg{font-size:10px;padding:6px 1px}
+  /* The last rung of `fitTabs`, below closing the spacing and below 10px type: a short word that can
+     be read beats a long one that cannot, and beats a button wrapped onto a line of its own. Both
+     names are always in the markup - CSS chooses - so nothing rewrites a label at run time. */
+  .modebar .sshort{display:none}
+  .modebar.shortnames .sfull{display:none}
+  .modebar.shortnames .sshort{display:inline}
   .seg{flex:1 1 auto;min-width:0;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 3px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .segnone{flex:1;color:var(--muted);font-size:11px;padding:6px 3px;text-align:center}
   .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}

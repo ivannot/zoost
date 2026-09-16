@@ -18,6 +18,7 @@ apps/crm/export.js	PRODUCT_URL
 apps/crm/export.js	REPORT_FILTER_JS
 apps/crm/export.js	String(a.id)
 apps/crm/export.js	String(a.name || '').toLowerCase()
+apps/crm/export.js	String(b.id)
 apps/crm/export.js	String(fails.month.from || '').slice(0, 10) || 'the last 30 days'
 apps/crm/export.js	String(fails.month.to || '').slice(0, 10) || 'now'
 apps/crm/export.js	String(m.field || '').replace(/_/g, ' ')
@@ -80,11 +81,13 @@ apps/crm/export.js	_mdCell(sc.name)
 apps/crm/export.js	_mdCell(sc.next || '')
 apps/crm/export.js	_mdCell(sc.status || '')
 apps/crm/export.js	_mdCell(sec.display_label || sec.name || 'Section')
+apps/crm/export.js	_mdCell(st)
 apps/crm/export.js	_mdCell(st.forecast_category || w.forecast_category || '')
 apps/crm/export.js	_mdCell(st.forecast_type || '')
 apps/crm/export.js	_mdCell(st.name)
 apps/crm/export.js	_mdCell(tim)
 apps/crm/export.js	_mdCell(title)
+apps/crm/export.js	_mdCell(tr)
 apps/crm/export.js	_mdCell(w.name)
 apps/crm/export.js	_mdCell(wfCrit(rel.criteria))
 apps/crm/export.js	_pick(f.picklist, 12, _mdCell)

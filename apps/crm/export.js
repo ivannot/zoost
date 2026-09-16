@@ -475,6 +475,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       + (fld ? `<span><b>Runs on field:</b> ${fld}</span>` : '')
       + (bp.layout ? `<span><b>Layout:</b> ${esc(bp.layout)}</span>` : '')
       + (bp.modified_by ? `<span><b>Last modified by:</b> ${esc(bp.modified_by)}</span>` : '')
+      // Counted from the stored detail, and «not read» said as itself: a blueprint pulled by «Pull
+      // list» alone has no file, and printing 0 there would be a claim about the process instead of
+      // about this mirror.
+      + (bp.detail
+        ? `<span><b>States:</b> ${((bp.detail.chart_data || {}).nodes || []).length}</span>`
+          + `<span><b>Transitions:</b> ${(bp.detail.connections || []).length}</span>`
+        : `<span class="none">Detail not read - press Pull list + details</span>`)
       + `</div>`
       + (bp.description ? `<div class="refs"><span>${esc(bp.description)}</span></div>` : '')
       + `</section>`;
@@ -653,7 +660,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
                  // reader has in their toolbar. It is the only thing about the two headers that
                  // differs, and it is the thing that says which export this is.
                  { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version, tile: '#2563eb' })
-    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${bps.length ? `<h2 id="blueprints">Blueprints</h2><p class="none">Only the list is read: the states a record moves through, and the transitions that update fields or call functions, are not in this mirror.</p>${bpHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
+    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${bps.length ? `<h2 id="blueprints">Blueprints</h2><p class="none">The states a record moves through and the transitions between them are read. What each transition <i>does</i> - the fields it writes, the functions it calls - is not in the reply Zoho gives for a blueprint, so it is not here either.</p>${bpHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + reportFoot(PRODUCT_NAME, PRODUCT_URL)
     + `<script>${REPORT_FILTER_JS}</script></body></html>`;
 }
@@ -751,7 +758,16 @@ async function loadExportData(op = beginWorkspaceOp()) {
   let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
   let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
-  let bps = []; try { bps = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  let bpIdx = []; try { bpIdx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  // The detail beside the row, the way a workflow carries its rule: the states a record moves through
+  // and the transitions between them live in one file per blueprint, and a report that showed only
+  // the index would be thinner than the panel beside it. Absent is a fact too - a blueprint read by
+  // «Pull list» alone has no file, and the section says so rather than printing a bare zero.
+  const bps = [];
+  for (const b of bpIdx) {
+    let detail = null; try { detail = JSON.parse(await op.read(`blueprints/${String(b.id)}.json`)); } catch (_) {}
+    bps.push({ ...b, id: String(b.id), detail });
+  }
   // connections catalogue + usage (which functions reference each), joined on connectionLinkName
   let connCat = []; try { connCat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(connCat)) connCat = [];
@@ -1098,14 +1114,19 @@ function buildExportMarkdown(d, scope) {
     md += '\n';
   }
   if (bps.length) {
-    md += '---\n\n## Blueprints\n\nThe process records walk, and the module and field each runs on. '
-        + 'Only the list is read: the states a record moves through, and the transitions that update '
-        + 'fields or call functions, are not in this mirror.\n\n';
-    md += '| Blueprint | Module | Runs on field | Layout | Status | Last modified by |\n|---|---|---|---|---|---|\n';
+    md += '---\n\n## Blueprints\n\nThe process records walk, and the module and field each runs on, '
+        + 'with the states a record moves through and the transitions between them. What each '
+        + 'transition *does* - the fields it writes, the functions it calls - is not in the reply Zoho '
+        + 'gives for a blueprint, so it is not here either.\n\n';
+    md += '| Blueprint | Module | Runs on field | Layout | Status | States | Transitions | Last modified by |\n|---|---|---|---|---|---|---|---|\n';
     bps.slice().sort(byField('name')).forEach((bp) => {
       const fld = bp.field_label && bp.field_label !== bp.field
         ? `${bp.field_label} (${bp.field})` : (bp.field_label || bp.field || '');
-      md += `| ${_mdCell(bp.name)} | ${_mdCell(bp.module || '')} | ${_mdCell(fld)} | ${_mdCell(bp.layout || '')} | ${_mdCell(bp.status || (bp.active ? 'Active' : 'Inactive'))} | ${_mdCell(bp.modified_by || '')} |\n`;
+      // «not read» rather than 0: a blueprint pulled by «Pull list» alone has no detail file, and a
+      // zero there would be a claim about the process instead of about this mirror.
+      const st = bp.detail ? String(((bp.detail.chart_data || {}).nodes || []).length) : 'not read';
+      const tr = bp.detail ? String((bp.detail.connections || []).length) : 'not read';
+      md += `| ${_mdCell(bp.name)} | ${_mdCell(bp.module || '')} | ${_mdCell(fld)} | ${_mdCell(bp.layout || '')} | ${_mdCell(bp.status || (bp.active ? 'Active' : 'Inactive'))} | ${_mdCell(st)} | ${_mdCell(tr)} | ${_mdCell(bp.modified_by || '')} |\n`;
     });
     md += '\n';
   }

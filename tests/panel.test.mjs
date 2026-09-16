@@ -5193,9 +5193,9 @@ test('the segment row is tightened only as far as it has to be', () => {
   ]);
   // A stub whose layout depends on the classes, the way the real one depends on the CSS: `need` is
   // how much width each step costs, and rows are recomputed from the width on every read.
-  const make = (width, need = { none: 400, tight: 380, tighter: 330 }) => {
+  const make = (width, need = { none: 400, tight: 380, tighter: 330, shortnames: 280 }) => {
     const cls = new Set();
-    const step = () => (cls.has('tighter') ? 'tighter' : cls.has('tight') ? 'tight' : 'none');
+    const step = () => (cls.has('shortnames') ? 'shortnames' : cls.has('tighter') ? 'tighter' : cls.has('tight') ? 'tight' : 'none');
     const kids = [0, 1, 2, 3, 4, 5].map((i) => ({ get offsetTop() { return width >= need[step()] ? 0 : (i < 3 ? 0 : 20); } }));
     return { classList: { add: (...c) => c.forEach((x) => cls.add(x)), remove: (...c) => c.forEach((x) => cls.delete(x)), contains: (c) => cls.has(c) },
              querySelectorAll: () => kids, get className() { return [...cls].join(' '); } };
@@ -5204,10 +5204,13 @@ test('the segment row is tightened only as far as it has to be', () => {
   assert.equal(run(420), '', 'id=crm a row with room to spare is being shrunk');
   assert.equal(run(390), 'tight', 'id=crm the labels shrink before the spacing has been closed');
   assert.equal(run(360), 'tight tighter', 'id=crm it stops one step short and still wraps');
-  assert.equal(run(300), 'tight tighter', 'id=crm below the floor it wraps, having tried everything');
+  // The fourth rung, added when a seventh tab arrived and Blueprints wrapped onto a line of its own:
+  // short names are tried below the type size, because a word that can be read beats one that cannot.
+  assert.equal(run(300), 'tight tighter shortnames', 'id=crm the short names are never reached, so a seventh tab wraps instead');
+  assert.equal(run(260), 'tight tighter shortnames', 'id=crm below the floor it wraps, having tried everything');
   // ...and the state is not latched: the same element, widened, must come back to as-authored.
   const b = make(420); setBar(b);
-  b.classList.add('tight', 'tighter');
+  b.classList.add('tight', 'tighter', 'shortnames');
   fitTabs();
   assert.equal(b.className, '', 'id=crm tightening never comes off, so the panel stays small for ever');
 });
@@ -5334,7 +5337,7 @@ for (const app of ['crm', 'analytics']) {
 // function from Zoho with nothing else in front of it. The overlay is gone, so every path that
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
-  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'blueprintDetailNow', 'pullConnections', 'pullActions',
+  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'downloadOneBp', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
            // `reconcileNow` is what reaches Zoho, which is what has to refuse.
@@ -22093,5 +22096,43 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     // reference-equal» while every value matches. The idiom the rest of this file already uses.
     assert.deepEqual(Array.from(r.entries, (e) => [e.id, e.module, e.layout, e.active]),
                      [['7', 'Deals', 'Standard', true], ['9', 'Contacts', '', false]]);
+  });
+}
+
+// ---------- the blueprint pane, against the shape an org actually answers with ----------
+// The detail is the one read here whose shape was settled by traffic and not by documentation: the
+// states are in `chart_data.nodes`, and `connections` holds one entry per transition carrying where
+// it comes from, where it goes and what it is called. `transitions` - the key the documentation
+// promised - does not exist in the reply, which is why the first version of this pane reported «0
+// transition(s)» on a process that has 78 of them.
+{
+  const { renderBlueprintDetail } = load(
+    [sliceFn('apps/crm/automation.js', 'renderBlueprintDetail')],
+    { escHtml: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;') });
+
+  test('crm: the blueprint pane names the states and the transitions between them', () => {
+    const html = renderBlueprintDetail({
+      chart_data: { nodes: [{ state: 'Draft' }, { state: 'In review' }, { state: 'Approved' }] },
+      connections: [
+        { from_state: { name: 'Draft' }, to_state: { name: 'In review' }, transitions: { name: 'Send for review' } },
+        { from_state: { name: 'In review' }, to_state: { name: 'Approved' }, transitions: { name: 'Approve' } },
+      ],
+    });
+    assert.match(html, /States<\/span> 3/, 'the states are not counted from chart_data.nodes');
+    assert.match(html, /Transitions<\/span> 2/, 'the transitions are not counted from connections');
+    assert.match(html, /Send for review/, 'a transition is drawn without the name it is called by');
+    assert.match(html, /Draft → In review/, 'a transition does not say where it goes from and to');
+    // The limit is stated beside the capability, because the reply carries no field update and no
+    // function anywhere in it - and silence would read as «this transition does nothing».
+    assert.match(html, /Zoho does not include in this reply/,
+                 'the pane claims the whole process while what a transition does is not read');
+  });
+
+  test('crm: a blueprint detail with no chart_data is read as none, not as a crash', () => {
+    // The tolerance the pane's comment claims, exercised rather than asserted: `state` was measured
+    // as a key and not as a type, and an org whose reply omits the drawing must still open.
+    const html = renderBlueprintDetail({ connections: [] });
+    assert.match(html, /States<\/span> 0/, 'a missing chart_data throws or renders as undefined');
+    assert.match(html, /Transitions<\/span> 0/, 'a missing connections list is not read as none');
   });
 }

@@ -55,7 +55,7 @@ const ZOHO_BTNS = ['pull', 'pullone', 'pulllist', 'funcs', 'pvreveal', 'pvfind']
 // The tabs whose list does not carry each item's detail, so a pull can read the one without the other:
 // «Pull list» says what exists in Zoho in seconds, «Pull» reads every item again. The rest are a list
 // and nothing else, and one button is all they have.
-const LIST_PULL_TABS = new Set(['functions', 'modules', 'workflows', 'actions']);
+const LIST_PULL_TABS = new Set(['functions', 'modules', 'workflows', 'blueprints', 'actions']);
 function blockZoho(on) {
   document.body.classList.toggle('zoho-blocked', on);
   ZOHO_BTNS.forEach((id) => {
@@ -928,8 +928,12 @@ function renderTabs() {
   if (viewMode && TAB[viewMode] && !vis.includes(viewMode) && !isForbidden(viewMode)) {
     vis.splice(tabOrder().filter((id) => vis.includes(id) || id === viewMode).indexOf(viewMode), 0, viewMode);
   }
+  // Both names in the markup, and CSS picks - the idiom the site header already uses for its own
+  // long and short product names. Swapping `textContent` from `fitTabs` would be the defect this
+  // panel has recorded once already on the Pull button: the next `renderTabs` writes the long label
+  // back, so the bar would revert the moment anyone touched a segment.
   bar.innerHTML = vis.map((id) =>
-    `<button class="seg${id === viewMode ? ' active' : ''}" data-tab="${escA(id)}">${escHtml(tabLabel(id))}</button>`).join('')
+    `<button class="seg${id === viewMode ? ' active' : ''}" data-tab="${escA(id)}"><span class="sfull">${escHtml(tabLabel(id))}</span><span class="sshort">${escHtml((TAB[id] && TAB[id].short) || tabLabel(id))}</span></button>`).join('')
     || '<span class="segnone">Every tab is hidden - turn one back on in Settings.</span>';
   bar.querySelectorAll('.seg').forEach((b) => (b.onclick = () => setMode(b.dataset.tab)));
   // First draw: open on the first tab the user ordered, not on a name written into the source.
@@ -955,10 +959,19 @@ function fitTabs() {
   // Two steps rather than one, and in this order: the spacing is worth less than the type size, so
   // it goes first and the labels only get smaller when closing the gaps was not enough. Measured on
   // the six shipped tabs: 400px as authored, 380 with the spacing closed, 330 at 10px.
-  bar.classList.remove('tight', 'tighter');
+  // Three steps now, not two: a seventh tab arrived and the floor moved with it - Blueprints wrapped
+  // onto a line of its own, full width, which reads as a button of a different kind rather than as a
+  // narrow panel. The short names are the rung below the type size, because a word that can be read
+  // beats a longer one that cannot. `shortnames` comes off with the others before measuring, or the
+  // bar would stay contracted after the panel is widened again: the decision must always be taken
+  // from the same state. The pixel figures above were measured on six labels and are left as they
+  // were - what a seventh costs has not been measured here, and inventing a number would be worse
+  // than saying so.
+  bar.classList.remove('tight', 'tighter', 'shortnames');
   if (!wrapped()) return;
   bar.classList.add('tight');
   if (wrapped()) bar.classList.add('tighter');
+  if (wrapped()) bar.classList.add('shortnames');
 }
 // The panel is resized by dragging its edge, which fires resize continuously - debounced for the
 // same reason the diagram window debounces its re-fit.

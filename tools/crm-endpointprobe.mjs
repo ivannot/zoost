@@ -255,7 +255,7 @@ const expected = new Map([
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
   ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['blueprints', 1], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
+  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['blueprints', 1], ['blueprint-detail', 2], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];
@@ -314,6 +314,15 @@ function apiReply(request) {
   } else if (p === '/crm/v9/settings/automation/schedules' && url.searchParams.get('per_page') === '200') { requireGet(request, url); mark('schedules'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.schedules;
   } else if (p === '/crm/v9/settings/automation/schedules' && url.searchParams.get('per_page') === '1') { requireGet(request, url); mark('schedule-primer'); onlyQuery(url, { page: 1, per_page: 1 }); body = { schedules: [], info: { more_records: false } };
   } else if (p === '/crm/v8/settings/blueprints') { requireGet(request, url); mark('blueprints'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.blueprints;
+  } else if (/^\/crm\/v8\/settings\/blueprints\/\d+$/.test(p)) {
+    // One reply per id rather than one shared body: the panel writes what came back to
+    // `blueprints/<id>.json`, so a single body would put the same process under two names and the
+    // fixture would be lying about the thing this probe exists to check. No query at all - measured
+    // on a real org, the detail call carries none, and pinning that is what would catch a change.
+    requireGet(request, url); mark('blueprint-detail'); onlyQuery(url, {});
+    const bid = p.split('/').pop();
+    body = fixture.blueprints_detail[bid];
+    if (!body) throw new Error(`no fixture detail for blueprint ${bid}`);
   } else if (/^\/crm\/v[89]\/settings\/automation\/(email_notifications|field_updates|tasks|webhooks)$/.test(p)) {
     requireGet(request, url); const kind = p.split('/').at(-1); mark(`actions:${kind}`);
     if (url.searchParams.get('page') !== '1' || url.searchParams.get('per_page') !== '200' || !url.searchParams.get('include_inner_details')) throw new Error(`${kind} query changed`);

@@ -30,8 +30,22 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
   // Same reason as `loadScheduleIndex` above: this publishes a whole list into the panel's memory
   // after a read, and what overtakes a read is a change of workspace.
   let idx = []; try { idx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  // What is already on disk, read from the folder rather than remembered: the index is a list of
+  // what Zoho has, and `downloaded` is a fact about this mirror. Same walk the workflow loader does,
+  // and for the same reason - a row that says «read» when its file is absent opens nothing.
+  const have = new Set();
+  for await (const p of walk(op.root)) {
+    if (!op.current()) return false;
+    if (p.startsWith('blueprints/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, ''));
+  }
   if (!op.current()) return false;
-  blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: 'blueprints/' + String(e.id) }));
+  // `.json` like every other per-item path, and for two reasons rather than tidiness: a detail read
+  // writes to `entry.path`, and the pruning of files Zoho no longer has filters on `.endsWith('.json')`
+  // - so an extension-less path would write files nothing recognises and nothing ever removes. The
+  // four readers of this path (the history routing, its kind, and the two AI lookups) all test the
+  // `blueprints/` prefix and none of them looks at the suffix, which is what makes this safe.
+  blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: `blueprints/${String(e.id)}.json`,
+                                    downloaded: have.has(String(e.id)), error: false }));
   return true;
 }
 async function rebuildBlueprints() {
@@ -142,44 +156,53 @@ async function openBlueprint(e) {
     + (e.api_name ? `<div class="wfrow"><span class="wk">API name</span> ${escHtml(e.api_name)}</div>` : '')
     + (e.description ? `<div class="wfrow"><span class="wk">Description</span> ${escHtml(e.description)}</div>` : '')
     + `</div>`
-    // Said here rather than left to be discovered: this pane is thin because the list is all that is
-    // read. The states a record moves through, and the transitions that update fields and call
-    // functions - the reason this area is worth having at all - are not in this mirror yet.
-    + `<div class="ftnote">Only the list of blueprints is read. The states a record moves through, and the`
-    + ` transitions that update fields or call functions, are not in this mirror.</div>`;
+    + `<div class="bpdetail"></div>`;
   // Wired in the same breath as the draw: a chip that looks clickable and does nothing is worse than
   // a plain word, because it spends the reader's attention twice. Same opener as the code pane and
   // the graph tables - one mechanism for «take me to that module», not a second one here.
   $('pvtable').querySelectorAll('.mod[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
   showPreview();
-  await blueprintDetailNow(e, mine, op);
-}
-/** The one read of Zoho behind a blueprint, kept out of `openBlueprint` deliberately.
- *
- *  The pane itself is drawn from the mirror and must draw whatever the active tab happens to be;
- *  reaching the platform is a different act, and that one refuses when the tab is another org. Put
- *  the guard on the whole opener and a mismatch would stop the blueprint being *looked at*, which is
- *  a local file. Same division every pull already makes, and a check derives the set from `toBridge`
- *  so a path added tomorrow is measured rather than remembered.
- *
- *  **An experiment, and deliberately nothing more.** Zoho documents a per-blueprint read carrying
- *  the transitions - which fields each writes, which functions each calls - and nothing here has
- *  watched it answer. So this asks, says what came back, and stores none of it. Writing the parser
- *  now would be reading a shape out of documentation for the second time today; the first time put
- *  every blueprint on screen as active, because the real answer is capitalised. */
-async function blueprintDetailNow(e, mine, op) {
-  if (mismatchRefuse()) return;
-  let r = null; try { r = await toBridge({ cmd: 'fetchBlueprint', id: e.id }); } catch (_) {}
-  if (!previewCurrent(mine, op)) return;   // another blueprint was opened while this was reading
-  const note = $('pvtable').querySelector('.ftnote'); if (!note) return;
-  if (!r?.ok) {
-    note.textContent = `Only the list is read. The detail was asked for and refused: ${bridgeError(r, 'unknown').message}`;
-    return;
+  // The detail, the way a workflow does it: fetched on open when the mirror has not got it yet, then
+  // read back from the file. The pull stores it for every blueprint; this is the path for a reader
+  // who opens one after a «Pull list», and the file is what is rendered either way - a pane that
+  // drew from the reply and not from the mirror would show what was never stored.
+  if (!e.downloaded) {
+    const ok = await downloadOneBp(e);
+    if (!previewCurrent(mine, op)) return;
+    if (viewMode === 'blueprints') renderBlueprints();
+    if (!ok) { setStatus('Could not read this blueprint - press Pull list + details to try again.', 'warn'); return; }
   }
-  const bp = r.blueprint || {};
-  const trs = Array.isArray(bp.transitions) ? bp.transitions.length : 0;
-  note.textContent = `Only the list is stored. The detail answered with ${trs} transition(s)`
-    + ` - the fields they write and the functions they call are not read into the mirror yet.`;
+  let bp = null; try { bp = JSON.parse(await op.read(e.path)); } catch (_) {}
+  if (!previewCurrent(mine, op)) return;
+  const box = $('pvtable').querySelector('.bpdetail'); if (!box) return;
+  box.innerHTML = bp ? renderBlueprintDetail(bp) : '';
+}
+/** The states a record moves through, and the transitions between them.
+ *
+ *  **Measured, on one org's own answer.** `chart_data.nodes` holds the states - 25 of them there -
+ *  and `connections` holds 78 entries, each a `from_state`, a `to_state` and the transition between
+ *  them. What a transition *does* is not in that reply at all: no field update, no function, no
+ *  webhook appears anywhere in it, so the note below says so rather than leaving the reader to
+ *  assume the silence means «none».
+ *
+ *  A node's `state` was measured as a key and not as a type, so it is read as either a name or an
+ *  object carrying one. That is a tolerance about a shape nobody here has seen, written as such
+ *  instead of a guess that renders «[object Object]» on the first org that differs. */
+function renderBlueprintDetail(bp) {
+  const nameOf = (s) => (typeof s === 'string' ? s : (s && (s.name || s.display_label || s.api_name)) || '');
+  const states = (bp.chart_data && Array.isArray(bp.chart_data.nodes) ? bp.chart_data.nodes : [])
+    .map((n) => nameOf(n.state)).filter(Boolean);
+  const conns = Array.isArray(bp.connections) ? bp.connections : [];
+  const rows = conns.map((c) => {
+    const from = nameOf(c.from_state), to = nameOf(c.to_state);
+    const t = c.transitions && (c.transitions.name || c.transitions.api_name);
+    return `<div class="wfrow"><span class="wk">${escHtml(t || 'transition')}</span> ${escHtml(from)} → ${escHtml(to)}</div>`;
+  });
+  return `<div class="wfd"><div class="wfrow"><span class="wk">States</span> ${states.length}${states.length ? ' · ' + escHtml(states.join(', ')) : ''}</div>`
+    + `<div class="wfrow"><span class="wk">Transitions</span> ${conns.length}</div></div>`
+    + (rows.length ? `<div class="wfd">${rows.join('')}</div>` : '')
+    + `<div class="ftnote">States and transitions are stored in this mirror. What a transition <i>does</i>`
+    + ` - the fields it writes, the functions it calls - Zoho does not include in this reply.</div>`;
 }
 async function refreshBlueprintsNow() {
   if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
@@ -466,10 +489,64 @@ async function downloadMissingWf(all = false) {
     return { failed: fail };   // a pull that could not read every rule must not record that it did
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
-// Org-wide blueprint list → blueprints/index.json. Written whole, like schedules: there is no
-// per-item file yet, because nothing below the list has been read from a real org.
-async function pullBlueprints() {
+/** One blueprint's detail → `blueprints/<id>.json`, the same shape `fetchBlueprint` returns.
+ *
+ *  Measured on a real org before this was written: the answer carries `chart_data.nodes` (the states)
+ *  and `connections` (each one a from-state, a to-state and the transition between them). It does
+ *  **not** carry what a transition does - no field updates, no functions - so nothing here pretends
+ *  to read those. The whole object is stored as it came, which is what the workflow detail does too:
+ *  the panel decides what to show, and a mirror that keeps less than it read cannot be re-read. */
+async function downloadOneBp(entry) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  const had = !!entry.downloaded;   // a re-read that fails leaves the file on disk, and the row says so
+  if (mismatchRefuse()) return false;
+  if (!dir) return false;
+  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
+  try {
+    const r = await toBridge({ cmd: 'fetchBlueprint', id: entry.id });
+    if (!r?.ok || !r.blueprint) throw new Error(r?.error || 'not found');
+    await op.write(entry.path, JSON.stringify(r.blueprint, null, 2));
+    entry.downloaded = true; entry.error = false; entry.errorMsg = '';
+    return true;
+  } catch (e) { entry.error = true; entry.downloaded = had; entry.errorMsg = errText(e); return false; }
+}
+/** The details: the ones not on disk, or - from a full pull - every one of them.
+ *
+ *  Every blueprint on a full pull rather than the ones whose file is missing, for the reason the
+ *  workflow area learnt the hard way: a process edited in Zoho after its first download would never
+ *  be read again, and its states would sit on screen looking current beside a list that was. */
+async function downloadMissingBp(all = false) {
+  const op = beginWorkspaceOp();
+  const pending = blueprintData.filter((e) => all || !e.downloaded);
+  if (!pending.length) { setStatus('All blueprints read.', 'ok'); return { failed: 0 }; }
+  setPullBusy(true);
+  let ok = 0, fail = 0;
+  try {
+    for (let i = 0; i < pending.length; i++) {
+      if (!op.current()) return;
+      const e = pending[i];
+      op.say(`${all ? 'Reading' : 'Downloading'} blueprint ${i + 1}/${pending.length}…${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
+      let done = await downloadOneBp(e);
+      if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOneBp(e); }
+      done ? ok++ : fail++;
+      if (viewMode === 'blueprints') renderBlueprints();
+      await sleep(120);
+    }
+    if (!op.current()) return;
+    // A blueprint already on disk whose re-read failed is not missing: its file is there and the
+    // next full pull retries it. Said plainly rather than pointing at a button this area does not
+    // have - «Complete missing» is wired for functions and workflows, and not for these.
+    const kept = pending.filter((e) => e.error && e.downloaded).length;
+    setStatus(fail ? `Read ${ok} blueprint(s)${fail - kept ? `, ${fail - kept} could not be read` : ''}${kept ? `, ${kept} kept from the last pull that read them` : ''}.`
+      : `All ${ok} blueprint(s) read.`, fail ? 'warn' : 'ok');
+    return { failed: fail };   // a pull that could not read every one must not record that it did
+  } finally { setPullBusy(false); }
+}
+// Org-wide blueprint list → blueprints/index.json, plus one file per blueprint when the pull is a
+// full one. «Pull list» stops at the index, like its three siblings.
+async function pullBlueprints(depth = {}) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+  const full = !(depth && depth.full === false);   // «Pull list» stops at the index; see pullWorkflows
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // see pullSchedules below for why, and why it is released in a finally
@@ -489,9 +566,24 @@ async function pullBlueprints() {
       return;
     }
     await op.write('blueprints/index.json', JSON.stringify(r.entries, null, 2));
+    // What Zoho no longer has goes, like every other area: a detail file left behind is a process
+    // the panel would keep opening after it was deleted in the org.
+    const liveIds = new Set((r.entries || []).map((e) => String(e.id)));
+    let prunedB = 0; const bpRmFail = [];
+    for await (const p of walk(op.root)) {
+      if (p.startsWith('blueprints/') && p.endsWith('.json') && !p.endsWith('/index.json')) {
+        const bid = p.split('/').pop().replace(/\.json$/, '');
+        if (!liveIds.has(bid)) { try { await op.remove(p); prunedB++; } catch (e) { if ((e && e.message) === WS_MOVED) return; bpRmFail.push(p); } }
+      }
+    }
     if (!(await loadBlueprintIndex(op))) return; if (viewMode === 'blueprints') renderBlueprints();
-    setStatus(`Blueprints pull complete: ${(r.entries || []).length} blueprints.`, 'ok');
-    await noteAccess('blueprints', null, op);
+    const dl = full ? await downloadMissingBp(true) : null;   // every one, so an edit made in Zoho since the last pull arrives
+    if (!full) setStatus(`Blueprints list pulled: ${(r.entries || []).length} in Zoho. The processes on disk were not read again - Pull list + details reads them.`, 'ok');
+    if (prunedB) setStatus($('stxt').textContent + ` · ${prunedB} deleted removed`, 'ok');
+    // A removal that failed is a deleted blueprint still on screen: the loader reads the disk, so the
+    // residue is what the reader sees - said, recorded, and retried by the next pull for free.
+    if (bpRmFail.length) setStatus($('stxt').textContent + ` · ${bpRmFail.length} deleted blueprint(s) could not be removed - the next pull retries`, 'warn');
+    await noteAccess('blueprints', bpRmFail.length ? { status: 0, message: `${bpRmFail.length} stale blueprint file(s) could not be removed` } : null, op, true, ...pullDepth(full, { unread: dl ? dl.failed : 0 }));   // the mirror was written; the gap is what came up short in it
   } catch (e) { await notePullFailure('blueprints', e, op); } finally { endPull(); }
 }
 async function pullSchedules() {

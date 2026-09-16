@@ -694,6 +694,34 @@ function deluge(ns, name, params, calls) {
       description: '', continuous: false,
       status: on ? 'Active' : 'Inactive', active: on, modified_by: '',
     })));
+    // One detail file per blueprint, in the shape a real org answers with: the states live in
+    // `chart_data.nodes`, and `connections` holds one entry per transition with where it comes from,
+    // where it goes and what it is called. What a transition *does* is not in that reply on a real
+    // org either - no field update, no function - so the sample does not invent one, or the panel
+    // would render from a shape Zoho never sends.
+    BLUEPRINTS.forEach(([n, mod, on], i) => {
+      // Not the picklist's words: «On hold» already lives in `LONG_PICKLIST`, and a check that
+      // refuses the same user-facing string twice is right to - but the fix is different words, not
+      // a shared constant. A module's picklist value and a blueprint's state are two concepts that
+      // happen to share an English phrase, and joining them would move one whenever the other moved.
+      const states = ['Draft', 'In review', 'Approved', 'Archived'];
+      J(`blueprints/${String(7000 + i)}.json`, {
+        id: String(7000 + i), name: n, api_name: n.replace(/ /g, '_'),
+        module: { api_name: mod, id: String(7100 + i), _precedence: 1 },
+        layout: { api_name: 'Standard__s', name: 'Standard', id: String(7200 + i) },
+        field: { api_name: 'Status', field_label: 'Status', id: String(7300 + i) },
+        continuous: false, description: '', status: on ? 'Active' : 'Inactive',
+        chart_data: { canvas_size: { width: 900, height: 400 },
+                      nodes: states.map((s, k) => ({ state: s, position_x: 120 * k, position_y: 80 })),
+                      connections: [] },
+        connections: states.slice(0, -1).map((s, k) => ({
+          id: `${7400 + i}${k}`,
+          from_state: { id: `${7500 + i}${k}`, name: s },
+          to_state: { id: `${7500 + i}${k + 1}`, name: states[k + 1] },
+          transitions: { api_name: `to_${states[k + 1].replace(/ /g, '_')}`, name: `Move to ${states[k + 1]}`, id: `${7600 + i}${k}`, precedence: k + 1 },
+        })),
+      });
+    });
 
     // ---- schedules and connections ----
     J('schedules/index.json', SCHEDULES.map(([n, f, r], i) => {
