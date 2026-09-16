@@ -165,6 +165,8 @@ async function openBlueprint(e) {
   // a plain word, because it spends the reader's attention twice. Same opener as the code pane and
   // the graph tables - one mechanism for «take me to that module», not a second one here.
   $('pvtable').querySelectorAll('.mod[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  // The function a transition calls opens like every other function chip in this panel - same
+  // helper the workflow pane uses, not a second mechanism. Wired after the detail is drawn, below.
   showPreview();
   // The detail, the way a workflow does it: fetched on open when the mirror has not got it yet, then
   // read back from the file. The pull stores it for every blueprint; this is the path for a reader
@@ -177,14 +179,21 @@ async function openBlueprint(e) {
     if (!ok) { setStatus('Could not read this blueprint - press Pull list + details to try again.', 'warn'); return; }
   }
   let bp = null; try { bp = JSON.parse(await op.read(e.path)); } catch (_) {}
+  // Beside the detail, not inside it: what each transition does comes from the internal endpoint and
+  // is kept in its own file. Absent is ordinary - a blueprint read before this existed has none - and
+  // the pane says so per transition rather than printing nothing.
+  let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${e.id}.actions.json`)); } catch (_) {}
   if (!previewCurrent(mine, op)) return;
   const box = $('pvtable').querySelector('.bpdetail'); if (!box) return;
   // **Never an empty box.** Without the file this set the pane to nothing at all - no states, no
   // transitions, no reason - so a blueprint whose detail had not been read looked identical to one
   // that has none, and the reader had nothing to act on. Reported as «I do not see it».
-  box.innerHTML = bp ? renderBlueprintDetail(bp)
+  box.innerHTML = bp ? renderBlueprintDetail(bp, acts)
     : `<div class="ftnote">The detail of this blueprint is not in the mirror. Press <b>Pull list + details</b>`
       + ` to read its states and transitions from Zoho.</div>`;
+  // After the draw, never before: the chips do not exist until the line above has run. Same helper
+  // the workflow pane uses - one mechanism for «open that function», not a second one here.
+  wireFnChips(box, (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
 }
 /** The states a record moves through, and the transitions between them.
  *
@@ -197,7 +206,7 @@ async function openBlueprint(e) {
  *  A node's `state` was measured as a key and not as a type, so it is read as either a name or an
  *  object carrying one. That is a tolerance about a shape nobody here has seen, written as such
  *  instead of a guess that renders «[object Object]» on the first org that differs. */
-function renderBlueprintDetail(bp) {
+function renderBlueprintDetail(bp, acts) {
   const nameOf = (s) => (typeof s === 'string' ? s : (s && (s.name || s.display_label || s.api_name)) || '');
   const states = (bp.chart_data && Array.isArray(bp.chart_data.nodes) ? bp.chart_data.nodes : [])
     .map((n) => nameOf(n.state)).filter(Boolean);
@@ -205,7 +214,23 @@ function renderBlueprintDetail(bp) {
   const rows = conns.map((c) => {
     const from = nameOf(c.from_state), to = nameOf(c.to_state);
     const t = c.transitions && (c.transitions.name || c.transitions.api_name);
-    return `<div class="wfrow"><span class="wk">${escHtml(t || 'transition')}</span> ${escHtml(from)} → ${escHtml(to)}</div>`;
+    // What this transition does, when it has been read. Each kind says what it is and names what it
+    // touches - the field it writes, the function it calls - because a bare count would be a number
+    // nobody can act on. Unread is said as itself: a transition whose actions were never fetched
+    // must not look like one that does nothing.
+    const a = acts && c.transitions && acts[String(c.transitions.id)];
+    const bits = [];
+    if (a) {
+      (a.field_updates || []).forEach((f) => bits.push(`writes <b>${escHtml(f.field)}</b>${f.value == null ? '' : ' = ' + escHtml(f.value)}`));
+      (a.functions || []).forEach((f) => bits.push(`calls <span class="wf-fn" data-fnid="${escA(f.id || '')}" data-fnname="${escA(f.name || '')}" title="Open the function">ƒ ${escHtml(f.name || '?')}</span>`));
+      (a.emails || []).forEach((x) => bits.push(`emails <b>${escHtml(x.name || x.template || '')}</b>`));
+      (a.tasks || []).forEach((x) => bits.push(`task <b>${escHtml(x.name || '')}</b>`));
+      (a.webhooks || []).forEach((x) => bits.push(`webhook <b>${escHtml(x.name || '')}</b>`));
+    }
+    const does = a ? (bits.length ? bits.join(' · ') : '<span class="wfoff">does nothing</span>')
+                   : '<span class="wfoff">actions not read</span>';
+    return `<div class="wfrow"><span class="wk">${escHtml(t || 'transition')}</span> ${escHtml(from)} → ${escHtml(to)}`
+      + `<div class="ftnote">${does}</div></div>`;
   });
   // What `include=transition` brought, counted rather than assumed: the documentation says a
   // transition carries an `actions` array and its own sample prints `"actions": null`, so the only
@@ -540,12 +565,46 @@ async function downloadOneBp(entry) {
  *  Every blueprint on a full pull rather than the ones whose file is missing, for the reason the
  *  workflow area learnt the hard way: a process edited in Zoho after its first download would never
  *  be read again, and its states would sit on screen looking current beside a list that was. */
+/** What every transition of one blueprint does, into `blueprints/<id>.actions.json`.
+ *
+ *  Kept beside the detail rather than inside it: the detail is Zoho's own reply to a documented call
+ *  and this is derived from an internal one, so when that endpoint changes there is a file to throw
+ *  away and the official answer is untouched.
+ *
+ *  The ids come from the detail we already hold - `connections[].transitions.id` - and the module and
+ *  layout it needs are in the same file. Nothing is asked for twice: a transition named by two
+ *  connections is read once. */
+async function downloadTransitionsFor(entry, op, onStep) {
+  // Its own guard, like every other path that reaches the platform: this runs a call per transition,
+  // hundreds of them on a real org, and the org under the panel can change while it does.
+  if (mismatchRefuse()) return { failed: 0, read: 0 };
+  let bp = null; try { bp = JSON.parse(await op.read(entry.path)); } catch (_) {}
+  if (!bp) return { failed: 0, read: 0 };
+  const mod = (bp.module && bp.module.api_name) || entry.module || '';
+  const lay = (bp.layout && bp.layout.id) || '';
+  const conns = Array.isArray(bp.connections) ? bp.connections : [];
+  const ids = [...new Set(conns.map((c) => c.transitions && c.transitions.id).filter(Boolean))].map(String);
+  // Without the module or the layout the call cannot be built, and guessing either would be asking
+  // Zoho a question we do not have. Nothing is written, and the count says none were read.
+  if (!ids.length || !mod || !lay) return { failed: 0, read: 0 };
+  const out = {}; let fail = 0;
+  for (const tid of ids) {
+    if (!op.current()) return { failed: fail, read: Object.keys(out).length };
+    if (onStep) onStep();
+    let r = null; try { r = await toBridge({ cmd: 'fetchTransition', id: tid, module: mod, layoutId: lay }); } catch (_) {}
+    if (r?.ok && r.transition) out[tid] = r.transition; else fail++;
+    await sleep(80);
+  }
+  if (!op.current()) return { failed: fail, read: Object.keys(out).length };
+  await op.write(`blueprints/${entry.id}.actions.json`, JSON.stringify(out, null, 2));
+  return { failed: fail, read: Object.keys(out).length };
+}
 async function downloadMissingBp(all = false) {
   const op = beginWorkspaceOp();
   const pending = blueprintData.filter((e) => all || !e.downloaded);
   if (!pending.length) { setStatus('All blueprints read.', 'ok'); return { failed: 0 }; }
   setPullBusy(true);
-  let ok = 0, fail = 0;
+  let ok = 0, fail = 0, tRead = 0, tFail = 0;
   try {
     for (let i = 0; i < pending.length; i++) {
       // `{failed}` on every exit, never `undefined`: the caller reads `dl.failed` into the depth it
@@ -556,6 +615,16 @@ async function downloadMissingBp(all = false) {
       let done = await downloadOneBp(e);
       if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOneBp(e); }
       done ? ok++ : fail++;
+      // Where the value is: the field updates a transition writes and the function it calls. Counted
+      // on the progress line by transition rather than by blueprint - there are hundreds of them, and
+      // a line that moved once per blueprint would sit still for minutes and read as a hung panel.
+      if (done) {
+        const tr = await downloadTransitionsFor(e, op, () => {
+          tRead++;
+          op.say(`Blueprint ${i + 1}/${pending.length} · transition ${tRead}${tFail ? ` (${tFail} failed)` : ''}…`, 'busy');
+        });
+        tFail += tr.failed;
+      }
       if (viewMode === 'blueprints') renderBlueprints();
       await sleep(120);
     }
@@ -564,9 +633,13 @@ async function downloadMissingBp(all = false) {
     // next full pull retries it. Said plainly rather than pointing at a button this area does not
     // have - «Complete missing» is wired for functions and workflows, and not for these.
     const kept = pending.filter((e) => e.error && e.downloaded).length;
-    setStatus(fail ? `Read ${ok} blueprint(s)${fail - kept ? `, ${fail - kept} could not be read` : ''}${kept ? `, ${kept} kept from the last pull that read them` : ''}.`
-      : `All ${ok} blueprint(s) read.`, fail ? 'warn' : 'ok');
-    return { failed: fail };   // a pull that could not read every one must not record that it did
+    const trSaid = tRead ? ` · ${tRead - tFail} transition(s) read${tFail ? `, ${tFail} refused` : ''}` : '';
+    setStatus(fail ? `Read ${ok} blueprint(s)${fail - kept ? `, ${fail - kept} could not be read` : ''}${kept ? `, ${kept} kept from the last pull that read them` : ''}.${trSaid}`
+      : `All ${ok} blueprint(s) read.${trSaid}`, fail || tFail ? 'warn' : 'ok');
+    // Transitions count towards the gap, not only blueprints: a run that read every blueprint and
+    // lost half their actions is not a run that read everything, and recording it as one is the
+    // defect this project has already paid for once.
+    return { failed: fail + tFail };
   } finally { setPullBusy(false); }
 }
 // Org-wide blueprint list → blueprints/index.json, plus one file per blueprint when the pull is a
@@ -599,7 +672,9 @@ async function pullBlueprints(depth = {}) {
     let prunedB = 0; const bpRmFail = [];
     for await (const p of walk(op.root)) {
       if (p.startsWith('blueprints/') && p.endsWith('.json') && !p.endsWith('/index.json')) {
-        const bid = p.split('/').pop().replace(/\.json$/, '');
+        // `<id>.actions.json` belongs to `<id>`: stripping only `.json` would leave «7000.actions»,
+        // which is in no live id, so the next pull would delete the actions it had just read.
+        const bid = p.split('/').pop().replace(/\.json$/, '').replace(/\.actions$/, '');
         if (!liveIds.has(bid)) { try { await op.remove(p); prunedB++; } catch (e) { if ((e && e.message) === WS_MOVED) return; bpRmFail.push(p); } }
       }
     }

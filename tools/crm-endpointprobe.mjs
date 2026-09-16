@@ -255,7 +255,7 @@ const expected = new Map([
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
   ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1],
-  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['blueprints', 1], ['blueprint-detail', 2], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
+  ['workflows', 3], ['workflow-detail', 2], ['schedules', 1], ['blueprints', 1], ['blueprint-detail', 2], ['transition-detail', 3], ['actions:email_notifications', 4], ['actions:field_updates', 4], ['actions:tasks', 4], ['actions:task-detail', 2], ['actions:webhooks', 4],
   ['connections:first', 1], ['constants', 1], ['deluge-i18n-base', 1], ['deluge-validate', 1], ['deluge-i18n-token', 1], ['connections:retry', 1],
 ]);
 const used = new Map(), failures = [];
@@ -329,6 +329,18 @@ function apiReply(request) {
     body = fixture.actions[kind];
   } else if (p === `/crm/v8/settings/automation/tasks/${fixture.actions.tasks.tasks[0].id}`) {
     requireGet(request, url); mark('actions:task-detail'); if (!url.searchParams.get('include_inner_details')) throw new Error('task detail omitted inner details'); body = fixture.actions.taskDetail;
+  } else if (p === `/crm/${fixture.instance}/FlowTransition.do`) {
+    // The ids vary per call, so `onlyQuery` cannot pin this one: what is pinned instead is that all
+    // four parameters are present and that the body is chosen **by the id asked for**. A fixed id
+    // here would let the panel ask for the same transition every time and still pass, which is the
+    // one failure this route exists to catch.
+    requireGet(request, url); mark('transition-detail');
+    const q = Object.fromEntries(url.searchParams.entries());
+    if (q.action !== 'getTransitionDetails' || !q.TransitionId || !q.Module || !q.LayoutId) {
+      throw new Error(`FlowTransition.do query was ${url.search}`);
+    }
+    body = fixture.transitions_detail[q.TransitionId];
+    if (!body) throw new Error(`no fixture transition for ${q.TransitionId}`);
   } else if (p === `/crm/${fixture.instance}/ConstantsInitial.do`) {
     requireGet(request, url); mark('constants'); body = { csrfToken: fixture.csrf };
   } else if (p === '/deluge/api/ui/v1/getI18n' && url.searchParams.has('baseName')) {

@@ -966,6 +966,38 @@
     const bp = list(resp, 'blueprints', 'blueprints/' + id)[0]; if (!bp) throw new Error('not found');
     return { blueprint: bp };
   }
+  /** What one transition of a blueprint actually does.
+   *
+   *  **The internal endpoint, deliberately.** The documented API answers this with `actions: null` -
+   *  measured on a real org with `include=transition`, five transitions of five - so the only place
+   *  that carries a field update or the function a transition calls is the one the CRM's own screen
+   *  uses. That is the ground this extension already stands on elsewhere, and it can change without
+   *  notice; when it does, this returns nothing rather than something invented.
+   *
+   *  **A tenth of a percent of the reply is kept.** It answers ~81KB, of which `rlMeta` and
+   *  `FieldsMeta` are the module's metadata repeated on every call - the same bytes we already hold,
+   *  per transition. What is taken is the ~1KB that is about this transition and nothing else. */
+  async function fetchTransition(id, module, layoutId) {
+    const inst = instanceName();
+    if (!inst) throw new Error('no instance');
+    const j = await api(`/crm/${inst}/FlowTransition.do?action=getTransitionDetails`
+      + `&TransitionId=${encodeURIComponent(id)}&Module=${encodeURIComponent(module)}`
+      + `&LayoutId=${encodeURIComponent(layoutId)}`);
+    const a = (j && j.Actions) || {};
+    const pick = (rows, fn) => (Array.isArray(rows) ? rows : []).map(fn);
+    return { transition: {
+      id: String(id), name: j && j.Name ? String(j.Name) : '',
+      criteria: j && j.CriteriaString ? String(j.CriteriaString) : '',
+      // Each kind keeps the id it is joined by and the name a reader recognises. The function's id is
+      // the whole point: it is what ties a transition to a function already in this mirror.
+      field_updates: pick(a.Fieldupdate, (f) => ({ field: f.fieldLabel || '', field_id: f.fieldId || null,
+                                                   value: f.fieldValue == null ? null : String(f.fieldValue) })),
+      functions: pick(a.Deluge, (f) => ({ id: f.Id || null, name: f.Name || '' })),
+      webhooks: pick(a.Webhook, (w) => ({ id: w.Id || null, name: w.Name || '', url: w.urlToNotify || '' })),
+      emails: pick(a.Alert, (e) => ({ id: e.Id || null, name: e.Name || '', template: e.emailTemplateName || '' })),
+      tasks: pick(a.Task, (t) => ({ id: t.Id || null, name: t.Name || '', due: t.dueDate || '' })),
+    } };
+  }
   // Scheduled functions - the list already carries the called function {id, name}.
   async function fetchModuleFields(apiName) {
     const fr = await api(`/crm/v2/settings/fields?module=${encodeURIComponent(apiName)}&type=all`);
@@ -1671,6 +1703,7 @@
     if (msg?.cmd === 'listSchedules') return reply(listSchedules());
     if (msg?.cmd === 'listBlueprints') return reply(listBlueprints());
     if (msg?.cmd === 'fetchBlueprint') return reply(fetchBlueprint(msg.id));
+    if (msg?.cmd === 'fetchTransition') return reply(fetchTransition(msg.id, msg.module, msg.layoutId));
     if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));
     if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source, msg.language, msg.runtime), (file) => ({ ok: true, file }));
     if (msg?.cmd === 'pullModules') return reply(pullModules());

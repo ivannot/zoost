@@ -523,6 +523,65 @@
       ]
     }
   },
+  "transitions_detail": {
+    "9900000008153": {
+      "Status": "success",
+      "Name": "Send for review",
+      "Id": "9900000008153",
+      "Module": "Leads",
+      "CriteriaString": "",
+      "Actions": {
+        "Fieldupdate": [
+          { "fieldLabel": "Lead Status", "fieldId": "990000000812", "fieldValue": "In review", "uiType": "2" }
+        ],
+        "Deluge": [
+          { "Id": "990000000101", "Name": "build_Invoice" }
+        ],
+        "Alert": [],
+        "Task": [],
+        "Webhook": [],
+        "AddTags": [],
+        "RemoveTags": [],
+        "CreateRecord": []
+      }
+    },
+    "9900000008156": {
+      "Status": "success",
+      "Name": "Approve",
+      "Id": "9900000008156",
+      "Module": "Leads",
+      "CriteriaString": "",
+      "Actions": {
+        "Fieldupdate": [],
+        "Deluge": [],
+        "Alert": [
+          { "Id": "990000000901", "Name": "Welcome note", "emailTemplateName": "Welcome" }
+        ],
+        "Task": [],
+        "Webhook": [],
+        "AddTags": [],
+        "RemoveTags": [],
+        "CreateRecord": []
+      }
+    },
+    "9900000008243": {
+      "Status": "success",
+      "Name": "Activate",
+      "Id": "9900000008243",
+      "Module": "Contacts",
+      "CriteriaString": "",
+      "Actions": {
+        "Fieldupdate": [],
+        "Deluge": [],
+        "Alert": [],
+        "Task": [],
+        "Webhook": [],
+        "AddTags": [],
+        "RemoveTags": [],
+        "CreateRecord": []
+      }
+    }
+  },
   "connections": {
     "code": "SUCCESS",
     "message": "Connections fetched",

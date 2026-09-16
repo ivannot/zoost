@@ -5337,7 +5337,7 @@ for (const app of ['crm', 'analytics']) {
 // function from Zoho with nothing else in front of it. The overlay is gone, so every path that
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
-  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'downloadOneBp', 'pullConnections', 'pullActions',
+  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'downloadOneBp', 'downloadTransitionsFor', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
            // `reconcileNow` is what reaches Zoho, which is what has to refuse.
@@ -22127,6 +22127,58 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     assert.match(html, /Zoho does not include in this reply/,
                  'the pane claims the whole process while what a transition does is not read');
   });
+
+  // ---------- what a transition does, out of the shape Zoho's own screen is given ----------
+  // The documented API answers `actions: null` - measured, five transitions of five - so this comes
+  // from the endpoint the CRM UI uses. Its reply is ~81KB of which `rlMeta` and `FieldsMeta` are the
+  // module's metadata repeated on every call: what is kept is the ~1KB about the transition itself,
+  // and the case holds that, because keeping the rest would multiply the mirror in silence.
+  {
+    const BR = 'apps/crm/content-bridge.js';
+    const g = { instanceName: () => 'si_dev', api: null };
+    const { fetchTransition } = load([sliceFn(BR, 'fetchTransition')], g);
+
+    test('crm: a transition says which field it writes and which function it calls', async () => {
+      g.api = async (p) => {
+        assert.match(p, /FlowTransition\.do\?action=getTransitionDetails/, 'the transition is asked for by another route');
+        assert.match(p, /TransitionId=77&Module=Leads&LayoutId=88/, 'the id, the module and the layout are not all sent');
+        return {
+          Name: 'Send for review', Id: '77', CriteriaString: 'Documents complete',
+          rlMeta: { huge: 'x'.repeat(200) }, FieldsMeta: { huge: 'y'.repeat(200) },
+          Actions: {
+            Fieldupdate: [{ fieldLabel: 'Lead Status', fieldId: '812', fieldValue: 'In review', uiType: '2' }],
+            Deluge: [{ Id: '101', Name: 'build_Invoice' }],
+            Alert: [], Task: [], Webhook: [], AddTags: [], RemoveTags: [], CreateRecord: [],
+          },
+        };
+      };
+      const { transition: t } = await fetchTransition('77', 'Leads', '88');
+      assert.equal(t.name, 'Send for review');
+      assert.equal(t.criteria, 'Documents complete');
+      assert.deepEqual(Array.from(t.field_updates, (f) => [f.field, f.field_id, f.value]),
+                       [['Lead Status', '812', 'In review']], 'the field a transition writes is not read');
+      assert.deepEqual(Array.from(t.functions, (f) => [f.id, f.name]), [['101', 'build_Invoice']],
+                       'the function a transition calls is not read - the id is what joins it to the mirror');
+      // The cost promise, held rather than explained: the module metadata is not carried into the file.
+      assert.ok(!JSON.stringify(t).includes('rlMeta') && !JSON.stringify(t).includes('huge'),
+                'the reply is stored whole, so every transition carries the module metadata again');
+    });
+
+    test('crm: a transition that does nothing is read as empty, not as a crash', async () => {
+      // Measured: most transitions on a real org carry no action at all, and `Actions` itself can be
+      // absent. Empty lists, not undefined, or every reader downstream needs its own guard.
+      g.api = async () => ({ Name: 'Approve', Id: '78' });
+      const { transition: t } = await fetchTransition('78', 'Leads', '88');
+      // Lengths, not the arrays themselves: these come back from the vm context, so a strict
+      // deep-equal refuses them as «same structure, not reference-equal» while every value matches.
+      // What matters here is that each is an empty list and not `undefined`, which is what is asked.
+      for (const [name, v] of [['field_updates', t.field_updates], ['functions', t.functions],
+                               ['emails', t.emails], ['tasks', t.tasks], ['webhooks', t.webhooks]]) {
+        assert.ok(Array.isArray(v) && v.length === 0, `${name} came back as ${JSON.stringify(v)}, not an empty list`);
+      }
+      assert.equal(t.criteria, '');
+    });
+  }
 
   test('crm: a blueprint detail with no chart_data is read as none, not as a crash', () => {
     // The tolerance the pane's comment claims, exercised rather than asserted: `state` was measured
