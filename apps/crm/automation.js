@@ -699,6 +699,19 @@ async function downloadTransitionsFor(entry, op, onStep) {
   const ids = [...new Set(conns.map((c) => c.transitions && c.transitions.id).filter(Boolean))].map(String);
   if (!ids.length) return { failed: 0, read: 0 };
   const out = {}; let fail = 0;
+  /** What was read before a stop, kept. Nothing read means nothing written: an empty `{}` on disk is
+   *  read back by the pane as «this transition does nothing», which is a claim about the process
+   *  where «not read» is the only true sentence - the distinction this area draws everywhere else.
+   *
+   *  A named declaration rather than an arrow, and that is not style: `asynccheck` can only enter an
+   *  async scope that is a named function, so `= async () => {}` is a scope it cannot read - a blind
+   *  spot in the very check that finds globals written after an await. Its ceiling is zero, so this
+   *  is converted rather than recorded on the migration list. */
+  async function keep() {
+    if (op.current() && Object.keys(out).length) {
+      await op.write(`blueprints/${entry.id}.actions.json`, JSON.stringify(out, null, 2));
+    }
+  }
   // One lookup per function action for the whole blueprint rather than one per transition: the same
   // function is wired into several transitions on a real org, and the answer cannot differ between
   // two of them. `null` is remembered too - a refusal must not be retried once per transition.
@@ -735,16 +748,23 @@ async function downloadTransitionsFor(entry, op, onStep) {
       // `upstreamCode`, not `code`: the first is what Zoho said, the second is Zoost's own
       // classification, which `bridgeResponseError` overwrites. Comparing against `code` here was a
       // stop that could never fire - decorative, and invisible to every test in this suite.
-      if (bridgeError(r, '').upstreamCode === 'THROTTLED_HTML') {
-        if (op.current()) await op.write(`blueprints/${entry.id}.actions.json`, JSON.stringify(out, null, 2));
-        return { failed: fail, read: Object.keys(out).length, throttled: true };
-      }
+      const up = bridgeError(r, '').upstreamCode;
+      if (up === 'THROTTLED_HTML') { await keep(); return { failed: fail, read: Object.keys(out).length, throttled: true }; }
+      // **A hidden module refuses every transition of its blueprint, so asking the rest is waste.**
+      // Measured on a real org: seven transitions of one process, seven identical refusals -
+      // `NO_PERMISSION`, «operation cannot be performed for hidden module» - while 164 transitions of
+      // the other blueprints answered. That is a fact about this reader's profile in Zoho, not a
+      // failure of the pull: counted as a failure it sends them to press Pull again, which can never
+      // succeed, and saying the wrong missing thing is worse than saying nothing.
+      if (up === 'NO_PERMISSION') { await keep(); return { failed: fail, read: Object.keys(out).length, hidden: true }; }
       fail++;
     }
     await sleep(80);
   }
   if (!op.current()) return { failed: fail, read: Object.keys(out).length };
-  await op.write(`blueprints/${entry.id}.actions.json`, JSON.stringify(out, null, 2));
+  // The same rule as the two stops above: a run where every transition refused writes no file at
+  // all, because an empty map on disk is read back as a process whose transitions do nothing.
+  if (Object.keys(out).length) await op.write(`blueprints/${entry.id}.actions.json`, JSON.stringify(out, null, 2));
   return { failed: fail, read: Object.keys(out).length };
 }
 async function downloadMissingBp(all = false) {
@@ -766,7 +786,7 @@ async function downloadMissingBp(all = false) {
     if (!op.current()) return { failed: 0, read: 0 };
     tTotal += new Set(((d && d.connections) || []).map((c) => c.transitions && c.transitions.id).filter(Boolean)).size;
   }
-  let ok = 0, fail = 0, tRead = 0, tFail = 0, throttled = false;
+  let ok = 0, fail = 0, tRead = 0, tFail = 0, throttled = false, hidden = 0;
   try {
     for (let i = 0; i < pending.length; i++) {
       // `{failed}` on every exit, never `undefined`: the caller reads `dl.failed` into the depth it
@@ -795,6 +815,15 @@ async function downloadMissingBp(all = false) {
         // is on disk, the ids not read are simply absent from it, and the next run continues from
         // there - so this stops rather than emptying the budget it has already been refused.
         if (tr.throttled) { throttled = true; break; }
+        // A blueprint whose module this profile cannot see is skipped and the run carries on - unlike
+        // throttling, which is about the whole org. Measured: 164 transitions of the other blueprints
+        // answered while seven of this one refused, so stopping would have thrown away a good pull.
+        //
+        // Counted apart from `tFail` deliberately: `tFail` is the gap a later pull is expected to
+        // close, and this one never closes by pulling - the module would have to be made visible to
+        // this reader in Zoho first. `tRead--` because the step counter is incremented before the
+        // call, so the transition that was refused had already been counted as read.
+        if (tr.hidden) { hidden++; tRead--; }
       }
       if (viewMode === 'blueprints') renderBlueprints();
       await sleep(120);
@@ -806,7 +835,12 @@ async function downloadMissingBp(all = false) {
     const kept = pending.filter((e) => e.error && e.downloaded).length;
     // «Stopped» is a different fact from «finished», and the reader has to be able to tell: the
     // mirror is incomplete on purpose, the rest is still in Zoho, and nothing here is broken.
+    // A hidden module is a fact about this reader's Zoho profile and not a failure of the pull, so it
+    // is said plainly and does not turn the line amber: nothing here is broken, and there is nothing
+    // to retry. What would be wrong is silence - the shortfall against `tTotal` is visible either way,
+    // and an unexplained shortfall is the reader assuming the mirror is unreliable.
     const trSaid = tRead ? ` · ${tRead - tFail} of ${tTotal} transition(s) read${tFail ? `, ${tFail} refused` : ''}`
+                           + (hidden ? ` · ${hidden} blueprint(s) run on a module your Zoho profile cannot see, so their transitions cannot be read` : '')
                            + (throttled ? ' · stopped: Zoho is refusing further requests for now, the rest is read by the next pull' : '') : '';
     setStatus(fail ? `Read ${ok} blueprint(s)${fail - kept ? `, ${fail - kept} could not be read` : ''}${kept ? `, ${kept} kept from the last pull that read them` : ''}.${trSaid}`
       : `All ${ok} blueprint(s) read.${trSaid}`, fail || tFail ? 'warn' : 'ok');

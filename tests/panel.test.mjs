@@ -22331,4 +22331,63 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       assert.equal(m.size, 0, 'a field update is recorded as a function call');
     });
   }
+
+  // ---------- refused for a reason no pull can fix, told apart from refused ----------
+  // Measured on a production org: seven transitions of one blueprint answered 400 with
+  // `NO_PERMISSION` - «operation cannot be performed for hidden module» - while 164 transitions of
+  // the other blueprints answered normally. Counted as ordinary failures they went into the gap a
+  // later pull is meant to close, and the reader was told to press Pull again, which can never
+  // succeed: the module would have to be made visible to them in Zoho first. Saying the wrong
+  // missing thing is worse than saying nothing.
+  {
+    const g = { mismatchRefuse: () => false, sleep: async () => {},
+                toBridge: null, bridgeError: null };
+    const { downloadTransitionsFor } = load([sliceFn('apps/crm/automation.js', 'downloadTransitionsFor')], g);
+    const entry = { id: '7000', path: 'blueprints/7000.json' };
+    const opFor = (writes) => ({
+      current: () => true,
+      read: async () => JSON.stringify({ connections: [{ transitions: { id: '77' } }, { transitions: { id: '78' } }] }),
+      write: async (p, t) => writes.push([p, t]),
+    });
+
+    test('crm: a hidden module stops that blueprint and is not counted as a failure to retry', async () => {
+      const asked = [];
+      g.toBridge = async (m) => { asked.push(m.id); return { ok: false }; };
+      g.bridgeError = () => ({ upstreamCode: 'NO_PERMISSION' });
+      const writes = [];
+      const r = await downloadTransitionsFor(entry, opFor(writes));
+      assert.equal(r.hidden, true, 'a refusal no pull can clear is reported as an ordinary failure');
+      assert.equal(r.failed, 0, 'it went into the count the reader is told to close by pulling again');
+      assert.equal(asked.length, 1, 'every other transition of the same hidden module was asked for anyway');
+      assert.equal(writes.length, 0, 'an empty actions file was written, and the pane reads that as «does nothing»');
+    });
+
+    test('crm: a run that read nothing writes no file at all', async () => {
+      // `{}` on disk is read back by the pane as a process whose transitions do nothing, which is a
+      // claim about the org made out of a failure of ours. «Not read» is the only true sentence, and
+      // it is what the absence of the file says.
+      g.toBridge = async () => { throw new Error('network'); };
+      g.bridgeError = () => ({ upstreamCode: null });
+      const writes = [];
+      const r = await downloadTransitionsFor(entry, opFor(writes));
+      assert.equal(r.read, 0);
+      assert.equal(r.failed, 2, 'an ordinary refusal stopped counting');
+      assert.equal(writes.length, 0, 'an empty map was written, so the pane will say the transitions do nothing');
+    });
+
+    test('crm: a stop keeps what it had already read', async () => {
+      // The other half: stopping must not throw away the transitions that did answer, or a blueprint
+      // half-read comes back empty and the next pull starts from nothing.
+      g.toBridge = async (m) => (m.id === '77'
+        ? { ok: true, transition: { id: '77', name: 'Send for review', actions: [] } }
+        : { ok: false });
+      g.bridgeError = () => ({ upstreamCode: 'NO_PERMISSION' });
+      const writes = [];
+      const r = await downloadTransitionsFor(entry, opFor(writes));
+      assert.equal(r.hidden, true);
+      assert.equal(r.read, 1, 'the transition that answered was lost');
+      assert.equal(writes.length, 1, 'what was read before the refusal was not written');
+      assert.ok(JSON.parse(writes[0][1])['77'], 'the file was written without the transition that answered');
+    });
+  }
 }
