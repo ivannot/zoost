@@ -88,6 +88,14 @@ async function openWorkflow(e) {
   showPreview();
   wireFnChips($('pvtable'), (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
   const _ub = $('pvtable').querySelector('.wfusage'); if (_ub) _ub.onclick = () => loadWorkflowUsage(_ub.dataset.wfid, $('pvtable').querySelector('.wfusage-out'), _ub);
+  // The module it fires on, and the actions it fires: the same two openers the rest of the panel
+  // uses, so a relation drawn here is followable from here.
+  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  $('pvtable').querySelectorAll('a.aplink[data-ap]').forEach((el) => (el.onclick = () => {
+    const open = HEALTH_OPEN[el.dataset.ap];
+    if (open) open(el.dataset.apid, el.dataset.apname);
+  }));
+  pvDiagram(`wf:${e.id}`, 'rule');
 }
 function renderWorkflowDetail(rule) {
   const esc = escHtml;
@@ -122,7 +130,12 @@ function renderWorkflowDetail(rule) {
   };
   const actionSpan = (a) => isFnAction(a)
     ? `<span class="wf-fn" data-fnid="${escA(a.id)}" data-fnname="${escA(a.name)}" title="Open the function">\u0192 ${esc(a.name)}</span>`
-    : `<span class="wfact">${esc(a.type)}: ${esc(a.name)}</span>`;
+    // What a rule fires is an object this mirror holds, and the Actions tab opens it: it was a word
+    // here while the action's own pane lists the rule that fires it. One relation, both directions.
+    // Plain when Zoho gave no id, because a link that leads nowhere is worse than a word.
+    : a && a.id
+      ? `<a class="wf-fn aplink" data-ap="action" data-apid="${escA(String(a.id))}" data-apname="${escA(a.name || '')}" title="Open this action">${esc(a.type)}: ${esc(a.name)}</a>`
+      : `<span class="wfact">${esc(a.type)}: ${esc(a.name)}</span>`;
   const bucketHtml = (bucket, label) => {
     if (!bucket) return '';
     const buckets = Array.isArray(bucket) ? bucket : [bucket];
@@ -136,7 +149,9 @@ function renderWorkflowDetail(rule) {
     return out;
   };
   let h = `<div class="wfd">`;
-  h += `<div class="wfrow"><span class="wk">Module</span> <b>${esc(mod)}</b></div>`;
+  // The module a rule fires on is a place you can go, like everywhere else in this panel: it was
+  // bold text here while the same relation is a chip in the blueprint pane and a column in Modules.
+  h += `<div class="wfrow"><span class="wk">Module</span> <span class="wf-fn" data-mod="${escA(mod)}" title="${escA(mod + ' - click to open the module')}">${esc(mod)}</span></div>`;
   const ew = rule.execute_when || {}, det = ew.details || {};
   const trigParts = [esc(ew.type || '?')];
   if (det.repeat != null) trigParts.push(`repeat: ${det.repeat ? 'yes' : 'no'}`);

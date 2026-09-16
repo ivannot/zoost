@@ -110,6 +110,7 @@ function openConnection(c) {
   $('pvtable').innerHTML = h;
   wireFnChips($('pvtable'), (a) => { setMode('functions'); openFile(a.dataset.file); });
   showPreview();
+  pvDiagram(`conn:${c.name}`, 'connection');
 }
 /** A timestamp the reader can act on. The failures endpoint answers with two forms of the same
  *  moment - `last_failed_time` already localized into the user's own format, and an ISO one beside

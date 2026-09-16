@@ -21724,6 +21724,45 @@ test('the fields a rule writes are read from its field updates, by id and then b
 // Which blueprints touch a field: the same key and the same entry shape as the rules above, because
 // the table, the layer and both reports treat the two columns alike. Two ways a process touches a
 // field and they are different facts - it runs on one, and its transitions write others.
+// What fires an action: rules *and* blueprint transitions. The map walked the rules alone, so an
+// action a transition sends read «no rule uses it» - the relation was on disk, drawn from the
+// blueprint side and from nowhere else. Reported as the example of the class.
+test('crm: an action a blueprint transition fires knows the blueprint, not only the rules', async () => {
+  const files = {
+    'workflows/index.json': JSON.stringify([{ id: 'w1', name: 'Deal won' }]),
+    'workflows/w1.json': JSON.stringify({ conditions: [{ instant_actions: { actions: [
+      { type: 'email_notifications', id: 'e1', name: 'Welcome' },
+    ] } }] }),
+    'blueprints/index.json': JSON.stringify([{ id: 'b1', name: 'Onboarding' }, { id: 'b2', name: 'List only' }]),
+    'blueprints/b1.actions.json': JSON.stringify({
+      77: { name: 'Approve', actions: [
+        { type: 'email_notifications', id: 'e1', name: 'Welcome' },
+        { type: 'tasks', id: 't9', name: 'Call back' },
+        // A function has its own two-way link already; counting it here would double it.
+        { type: 'functions', id: 'a1', function_id: '9000' },
+      ] },
+    }),
+  };
+  const op = { current: () => true,
+               read: async (p) => { if (!(p in files)) throw new Error('no such file'); return files[p]; } };
+  const { buildActionUsers } = load([sliceFn('apps/crm/automation.js', 'buildActionUsers')], {});
+  const map = await buildActionUsers(op);
+
+  // Joined into a string on purpose: these arrays come back from the vm context, where a strict
+  // deep-equal refuses them as «same structure, not reference-equal» while every value matches.
+  const mail = map.get('email_notifications:e1') || [];
+  assert.equal(mail.map((x) => `${x.kind}:${x.id}`).join('|'), 'workflow:w1|blueprint:b1',
+               'an action fired by a rule and by a transition does not name both');
+  assert.equal(mail.find((x) => x.kind === 'blueprint').transition, 'Approve',
+               'the transition is not named, so the reader cannot find it inside the process');
+  assert.equal((map.get('tasks:t9') || []).map((x) => x.kind).join('|'), 'blueprint',
+               'an action only a transition fires is still reported as used by nothing');
+  // A blueprint read by «Pull list» alone has no transitions file: nothing measured, never «it fires
+  // nothing». And a `functions` action is left out, because that relation is already two-way.
+  assert.equal([...map.keys()].some((k) => k.startsWith('functions:')), false,
+               'a function action was counted here as well, so the function shows the blueprint twice');
+});
+
 test('a blueprint is listed on the field it runs on and on the fields its transitions write', () => {
   const { blueprintFieldMap, ruleCount } = load([sliceConst('apps/crm/automation.js', 'ruleCount'),
                                                  sliceFn('apps/crm/automation.js', 'blueprintFieldMap')]);

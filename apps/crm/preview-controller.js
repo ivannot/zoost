@@ -633,11 +633,7 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
     // people open a function for. The depth travels with it, or the tooltip would name a control
     // that is on the other tab. The Modules preview keeps its own bar, because that detail has no
     // strip to move to and nothing is hiding it.
-    const slot = $('pvtabsr'); slot.innerHTML = '';
-    if (callers.length || (node.calls || []).length) {
-      slot.innerHTML = `depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Wiring" title="Wiring - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
-      slot.querySelector('#callopen').onclick = () => openCallFocus(node.namespace + '.' + node.name, parseInt(slot.querySelector('#calldepth').value, 10) || 2);
-    }
+    if (callers.length || (node.calls || []).length) pvDiagram(node.namespace + '.' + node.name, 'function');
   } catch { box.className = ''; }
 }
 // ---- keyboard: the selection follows the arrows ------------------------------------------------
@@ -742,6 +738,29 @@ function selectRow(path) {
   });
 }
 
+/** «Open the drawing on this thing», for whatever the pane is showing.
+ *
+ *  It was written twice - in the function pane and in the module pane - with the same markup and a
+ *  sentence differing only in the noun, and every other pane had none at all. That is the asymmetry
+ *  the reader reported: everything in this product is related, and only two of seven tabs offered a
+ *  way into the picture of those relations.
+ *
+ *  The wiring graph already carries a node for a workflow, a schedule, a blueprint, an action, a
+ *  connection and a module, so the control is the same everywhere and only the id changes.
+ *  `openCallFocus` refuses cleanly when that node is not in the graph - which is the honest answer
+ *  for an area nobody has pulled yet, and the reason this does not try to decide in advance. */
+function pvDiagram(nodeId, noun) {
+  const slot = $('pvtabsr');
+  if (!slot || !nodeId) return;
+  slot.innerHTML = `depth <select id="pvdepth"><option value="1">1</option><option value="2" selected>2</option>`
+    + `<option value="3">3</option><option value="4">4</option></select>`
+    + `<button id="pvdiagram" class="laylocal icon" aria-label="Wiring"`
+    + ` title="${escA('Wiring - opened on this ' + noun + ' at the depth chosen here, in its own window')}">`
+    + `<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/>`
+    + `<rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
+  slot.querySelector('#pvdiagram').onclick = () =>
+    openCallFocus(nodeId, parseInt(slot.querySelector('#pvdepth').value, 10) || 2);
+}
 function revealRow(el, box, stickySel) {
   if (!el || !box) return;
   const b = box.getBoundingClientRect();

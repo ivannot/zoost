@@ -816,6 +816,23 @@ async function loadExportData(op = beginWorkspaceOp()) {
         if (!actUsers.get(k).some((x) => String(x.id) === String(w.id))) actUsers.get(k).push({ id: w.id, name: w.name });
       } });
   }));
+  // The same join the panel makes, or the report says «no rule uses it» about an action a blueprint
+  // transition fires - a relation this mirror holds, shown on one side only. `bps` is already read
+  // above with its transitions, so this costs nothing.
+  (bps || []).forEach((b) => {
+    for (const t of Object.values((b && b.acts) || {})) {
+      for (const a of ((t && t.actions) || [])) {
+        if (!a || !a.type || a.type === 'functions') continue;
+        for (const k of [`${a.type}:${String(a.id)}`, `${a.type}:name:${String(a.name || '').toLowerCase()}`]) {
+          if (!actUsers.has(k)) actUsers.set(k, []);
+          if (!actUsers.get(k).some((x) => x.kind === 'blueprint' && String(x.id) === String(b.id))) {
+            actUsers.get(k).push({ id: String(b.id), name: b.name || String(b.id), kind: 'blueprint',
+                                   transition: (t && t.name) || '' });
+          }
+        }
+      }
+    }
+  });
   return { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers };
 }
 /** A task mapping's value, as the panel reads it: `{name}` for a person or a picklist entry, the

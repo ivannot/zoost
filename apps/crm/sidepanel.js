@@ -541,7 +541,10 @@ const noteWrite = (rel) => {
   if (rel === 'actions/index.json') { aiActCache = null; fieldTriggers = null; blueprintFields = null; return; }
   // Which fields a blueprint runs on and writes is read from these files, so a blueprint pull
   // changes the Fields table exactly as a workflows pull does.
-  if (rel.startsWith('blueprints/')) { blueprintFields = null; return; }
+  // One branch for this prefix, not two: the first `return` wins, and a second copy added later is
+  // dead the moment it is written - which is how `actionUsers` came to be left stale by a blueprint
+  // pull while a line below said it was dropped.
+  if (rel.startsWith('blueprints/')) { blueprintFields = null; actionUsers = null; return; }
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
   // the answer - and the actions pull was the only one that rebuilt it.
   if (rel.startsWith('workflows/')) { actionUsers = null; fieldTriggers = null; aiActCache = null; return; }

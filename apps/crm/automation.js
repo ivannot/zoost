@@ -137,7 +137,17 @@ function renderBlueprints() {
       el.setAttribute('aria-selected', e.path === currentPath);
       // The field the process runs on, not the layout: the layout was «Standard» on all 12 measured,
       // so it spent the row's one informative slot saying nothing. The field is what differs.
-      el.innerHTML = `<span class="st st-ok" title="In workspace - click to re-read this blueprint from Zoho">●</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      // **The dot is derived, not painted green.** It was the literal `st-ok` on every row, so a
+      // blueprint whose detail Zoho refused sat among the others looking read - while the line above
+      // the list counted it as not read. Two surfaces of one pull contradicting each other, and the
+      // one with the marks was the one that lied. The three states are the ones every other list
+      // here draws: read, never read, and refused with the reason on the row.
+      const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
+      const stMark = e.error ? '⟳' : e.downloaded ? '●' : '○';
+      const stTitle = e.error ? `Could not be read${e.errorMsg ? ' - ' + e.errorMsg : ''} - click to try again`
+        : e.downloaded ? 'In workspace - click to re-read this blueprint from Zoho'
+        : 'Not in the mirror yet - click to read it from Zoho';
+      el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stMark}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => bpDotClick(ev, e);
       el.onclick = () => openBlueprint(e);
       tree.appendChild(el);
@@ -292,6 +302,7 @@ async function openBlueprint(e) {
     const open = HEALTH_OPEN[a.dataset.ap];
     if (open) open(a.dataset.apid, a.dataset.apname);
   }));
+  pvDiagram(`bp:${e.id}`, 'blueprint');
 }
 /** The states a record moves through, the transitions between them, and what each transition does.
  *
@@ -516,6 +527,7 @@ async function openSchedule(e) {
     + `</div>`;
   showPreview();
   wireFnChips($('pvtable'), (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
+  pvDiagram(`sch:${e.id}`, 'schedule');
 }
 
 // ---------- workflows ----------
@@ -1071,10 +1083,34 @@ async function buildActionUsers(op = beginWorkspaceOp()) {
         if (!a || !a.type) return;
         for (const key of [`${a.type}:${String(a.id)}`, `${a.type}:name:${String(a.name || '').toLowerCase()}`]) {
           if (!map.has(key)) map.set(key, []);
-          if (!map.get(key).some((x) => String(x.id) === String(w.id))) map.get(key).push({ id: w.id, name: w.name });
+          if (!map.get(key).some((x) => x.kind === 'workflow' && String(x.id) === String(w.id))) {
+            map.get(key).push({ id: w.id, name: w.name, kind: 'workflow' });
+          }
         }
       });
     });
+  }
+  // **A blueprint transition fires actions too, and this map knew nothing about it.** Reported: open
+  // the action a transition sends and the pane said «no rule uses it» - a relation the mirror holds,
+  // shown from the blueprint side and from nowhere else. The join is the one the diagram and the
+  // Fields table already make, out of the same files; only this map was walking the rules alone.
+  let bpIdx = []; try { bpIdx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  for (const b of Array.isArray(bpIdx) ? bpIdx : []) {
+    if (!op.current()) return null;
+    let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${String(b.id)}.actions.json`)); } catch (_) {}
+    if (!acts) continue;   // read by «Pull list» alone: nothing measured, never «it fires nothing»
+    for (const t of Object.values(acts)) {
+      for (const a of ((t && t.actions) || [])) {
+        if (!a || !a.type || a.type === 'functions') continue;   // a function has its own two-way link
+        for (const key of [`${a.type}:${String(a.id)}`, `${a.type}:name:${String(a.name || '').toLowerCase()}`]) {
+          if (!map.has(key)) map.set(key, []);
+          if (!map.get(key).some((x) => x.kind === 'blueprint' && String(x.id) === String(b.id))) {
+            map.get(key).push({ id: String(b.id), name: b.name || String(b.id), kind: 'blueprint',
+                               transition: (t && t.name) || '' });
+          }
+        }
+      }
+    }
   }
   return op.current() ? map : null;
 }
@@ -1581,7 +1617,7 @@ function renderActions() {
       + `<span class="rest rm" title="${escA(a.module_label || a.module || 'no module')}">${escHtml(a.module || '')}</span>`
       + kindSlot
       + `<span class="rest rs" title="${escA('Pulled before this version captured everything about it - press Pull list + details to complete it')}">${actStale(a) ? '\u25d0' : ''}</span>`
-      + `<span class="rest ru${used || a.associated ? '' : ' none'}" title="${escA(used ? 'rules that fire it, read from the rules on disk' : a.associated ? 'Zoho reports it as in use; no rule on disk names it' : 'no rule uses it, as far as Zoho reports')}">${used}\u00d7</span>`;
+      + `<span class="rest ru${used || a.associated ? '' : ' none'}" title="${escA(used ? 'what fires it - rules and blueprint transitions, read from the files on disk' : a.associated ? 'Zoho reports it as in use; nothing on disk names it' : 'nothing on disk fires it, and Zoho does not report it as in use')}">${used}\u00d7</span>`;
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshActions(); };
     el.onclick = () => openAction(a);
     tree.appendChild(el);
@@ -1633,12 +1669,21 @@ function openAction(a) {
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const row = (k, v) => v == null || v === '' ? '' : `<div class="wfrow"><span class="wk">${escHtml(k)}</span> ${v}</div>`;
   const fires = actionFiredBy(a);
+  const firesWf = fires.filter((w) => w.kind !== 'blueprint');
+  const firesBp = fires.filter((w) => w.kind === 'blueprint');
   let h = '<div class="wfd">'
     + row('Kind', escHtml(actionKindLabel(a.kind)))
-    + row('Module', escHtml(a.module_label || a.module))
+    // A chip, not a word: the module an action writes to is the same relation the Fields table draws
+    // from the other side. `data-mod` carries the api name; the label is what the reader recognises.
+    + row('Module', a.module
+        ? `<span class="wf-fn" data-mod="${escA(a.module)}" title="${escA(a.module + ' - click to open the module')}">${escHtml(a.module_label || a.module)}</span>`
+        : '')
+    // «rule(s)» was the whole vocabulary here, and a blueprint transition fires actions too - so an
+    // action a process sends read as «no rule uses it». Each kind is counted in its own words.
     + row('Used by', fires.length
-        ? `<b>${fires.length}</b> rule(s)`
-        : (a.associated ? 'Zoho reports it as in use, and no pulled rule names it' : '<span style="color:#f59e0b">no rule uses it</span>'))
+        ? [firesWf.length ? `<b>${firesWf.length}</b> rule(s)` : '',
+           firesBp.length ? `<b>${firesBp.length}</b> blueprint(s)` : ''].filter(Boolean).join(' · ')
+        : (a.associated ? 'Zoho reports it as in use, and nothing pulled names it' : '<span style="color:#f59e0b">nothing on disk fires it</span>'))
     + (a.template ? row('Template', templateUrl(a)
         ? `<a class="wf-fn" data-tpl="1" title="${escA('Open this template in Zoho')}">${escHtml(a.template.name || a.template.id)} \u2197</a>`
         : escHtml(a.template.name || a.template.id)) : '')
@@ -1682,11 +1727,20 @@ function openAction(a) {
     + (a.modified_by ? row(MSG.lastModified, escHtml(a.modified_by) + (a.modified_time ? ' \u00b7 ' + escHtml(String(a.modified_time).slice(0, 16)) : '')) : '')
     + (a.locked ? row('Locked', 'yes') : '');
   if (fires.length) {
-    h += '<div class="connfns">' + fires.map((w) => `<a class="wf-fn" data-wf="${escA(String(w.id))}" title="${escA(w.name || '')}">\u2699 ${escHtml(w.name || w.id)}</a>`).join('') + '</div>';
+    // Both kinds, each opening where it lives: the rule in Workflows, the process in Blueprints, with
+    // the transition named because that is where the reader has to look once they arrive.
+    h += '<div class="connfns">' + fires.map((w) => (w.kind === 'blueprint'
+      ? `<a class="wf-fn" data-bp="${escA(String(w.id))}" title="${escA((w.name || '') + (w.transition ? ' \u00b7 ' + w.transition : ''))}">\u25a6 ${escHtml(w.name || w.id)}</a>`
+      : `<a class="wf-fn" data-wf="${escA(String(w.id))}" title="${escA(w.name || '')}">\u2699 ${escHtml(w.name || w.id)}</a>`)).join('') + '</div>';
   }
   h += '</div>';
   $('pvtable').innerHTML = h;
   $('pvtable').querySelectorAll('a[data-wf]').forEach((el) => (el.onclick = () => healthOpenWorkflow(el.dataset.wf)));
+  $('pvtable').querySelectorAll('a[data-bp]').forEach((el) => (el.onclick = () => healthOpenBlueprint(el.dataset.bp)));
+  // The module chip drawn above: without this line it looks clickable and is not, which is worse
+  // than a word - the rule the function chip and the module chip already follow everywhere else.
+  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
   $('pvtable').querySelectorAll('a[data-tpl]').forEach((el) => (el.onclick = () => openZohoAt(templateUrl(a), (a.template && a.template.name) || 'template')));
+  pvDiagram(`act:${a.kind}:${a.id}`, 'action');
   showPreview();
 }

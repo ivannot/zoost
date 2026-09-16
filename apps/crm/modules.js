@@ -564,7 +564,7 @@ function renderFieldsTable(m, found = fieldTriggers, bpFound = blueprintFields) 
     <td class="mono">${escHtml(f.api_name)}</td>
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
-    <td class="mono">${f.lookup ? '\u2192 ' + escHtml(lookupOf(f)) : ''}</td>
+    <td class="mono">${f.lookup ? '\u2192 ' + `<span class="wf-fn" data-mod="${escA(lookupOf(f))}" title="${escA(lookupOf(f) + ' - click to open the module')}">${escHtml(lookupOf(f))}</span>` : ''}</td>
     <td class="num">${trigCell(f, trig(f))}</td>
     <td class="num">${bpCell(f, bpOf(f))}</td>
   </tr>`).join('');
@@ -685,11 +685,27 @@ async function openModule(path, layoutId) {
   $('pvcallers').className = ''; $('pvcallers').textContent = '';
   showModuleUsage(m.api_name, path, mine, op);   // not awaited: it needs the graph, and the fields must not wait for it
   const gen = m.module_name || m.api_name;
+  // From disk, not from `workflowData`/`blueprintData`: those are filled only by their own tabs, and
+  // a module opened first would show nothing - the exact trap that made the module label read as an
+  // API name five times. Matched on either name Zoho gives a module: a custom one is `Iscrizioni`
+  // here and `CustomModule20` in the blueprint index.
+  const _isThis = (x) => x && (x.module === m.api_name || x.module === m.module_name);
+  let modRules = [], modBps = [];
+  try { modRules = (JSON.parse(await op.read('workflows/index.json')) || []).filter(_isThis); } catch (_) {}
+  try { modBps = (JSON.parse(await op.read('blueprints/index.json')) || []).filter(_isThis); } catch (_) {}
+  if (!previewCurrent(mine, op)) return;
   const namesBlock = `<div style="padding:8px 10px;font:11px var(--mono);border-bottom:1px solid var(--border);background:#141b29;line-height:1.7">`
     + `<div style="color:#8ea0bb">display: <span style="color:#e7edf6">${escHtml(m.plural_label || m.singular_label || m.module_name || m.api_name)}</span></div>`
     + `<div style="color:#8ea0bb">api_name: <span style="color:#82d2ff">${escHtml(m.api_name)}</span></div>`
     + `<div style="color:#8ea0bb">generated: <span style="color:#a78bfa">${escHtml(gen)}</span>${nav ? '' : ' <span style=\"color:#fbbf24\">(no records tab)</span>'}</div>`
     + `<div style="color:#8ea0bb">layouts: <span style="color:#e7edf6">${(m.layouts || []).length || (m.layouts_read === false ? 'not read' : 0)}</span>${(m.layouts || []).length ? ' <span style=\"color:#8ea0bb\">(' + (m.layouts || []).map((l) => escHtml(l.name)).join(', ') + ')</span>' : ''}</div>`
+    // What automates this module, from the module's own side. Until now it was reachable only per
+    // *field*, through the WF and BP columns - so a rule whose trigger is not a field, and every
+    // blueprint, had no path from here at all, while both name this module in their own index.
+    + (modRules.length ? `<div style="color:#8ea0bb">rules: ${modRules.map((w) =>
+        `<span class="wf-fn" data-wfx="${escA(String(w.id))}" title="${escA(w.name || '')}">${escHtml(w.name || w.id)}</span>`).join('')}</div>` : '')
+    + (modBps.length ? `<div style="color:#8ea0bb">blueprints: ${modBps.map((b) =>
+        `<span class="wf-fn" data-bpx="${escA(String(b.id))}" title="${escA(b.name || '')}">${escHtml(b.name || b.id)}</span>`).join('')}</div>` : '')
     + `</div>`;
   const lays = m.layouts || [];
   const selector = lays.length
@@ -707,7 +723,9 @@ async function openModule(path, layoutId) {
       + `<table class="ftbl"><thead><tr><th>API name</th><th>Label</th><th>Target module</th><th>Type</th></tr></thead><tbody>`
       + rls.map((r) => `<tr><td class="mono rlcopy" data-c="${escA(r.api_name)}" title="Click to copy">${escHtml(r.api_name)}</td>`
         + `<td>${escHtml(r.label || '')}</td>`
-        + `<td class="mono">${escHtml(r.module || r.connected_module || '')}${r.linking_module ? ` <span style="color:var(--muted)">via ${escHtml(r.linking_module)}</span>` : ''}</td>`
+        + `<td class="mono">${(r.module || r.connected_module)
+             ? `<span class="wf-fn" data-mod="${escA(r.module || r.connected_module)}" title="${escA((r.module || r.connected_module) + ' - click to open the module')}">${escHtml(r.module || r.connected_module)}</span>`
+             : ''}${r.linking_module ? ` <span style="color:var(--muted)">via </span><span class="wf-fn" data-mod="${escA(r.linking_module)}" title="${escA(r.linking_module + ' - click to open the module')}">${escHtml(r.linking_module)}</span>` : ''}</td>`
         + `<td>${escHtml(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`
     : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">${
@@ -748,6 +766,11 @@ async function openModule(path, layoutId) {
   $('pvdetails').appendChild($('pvcallers'));
   $('pvtabsr').innerHTML = relBar;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => copyRelatedName(c.dataset.c)));
+  // A lookup and a related list both name another module, and both were plain text: the one relation
+  // this pane is *about* was the one you could not follow. Wired here, where the table is inserted.
+  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  $('pvdetails').querySelectorAll('[data-wfx]').forEach((c) => (c.onclick = () => healthOpenWorkflow(c.dataset.wfx)));
+  $('pvdetails').querySelectorAll('[data-bpx]').forEach((c) => (c.onclick = () => healthOpenBlueprint(c.dataset.bpx)));
   const relOpen = $('pvtabsr').querySelector('#relopen');
   if (relOpen) relOpen.onclick = () => openSchemaFocus(m.api_name, parseInt(document.getElementById('reldepth').value, 10) || 2);
   const sel = document.getElementById('laysel');
