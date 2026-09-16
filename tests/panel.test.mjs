@@ -22502,8 +22502,17 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       downloadOneBp: async (e) => { calls.push('downloadOneBp:' + e.id); return true; },
       // «Read this blueprint» means the whole of it: the detail and what its transitions do. A dot
       // that fetched only the states left the pane saying the actions had never been read.
-      downloadTransitionsFor: async (e) => { calls.push('downloadTransitionsFor:' + e.id); return { failed: 0, read: 2 }; },
-      beginWorkspaceOp: () => ({ current: () => true, root: {} }),
+      downloadTransitionsFor: async (e, op, onStep) => {
+        calls.push('downloadTransitionsFor:' + e.id);
+        onStep(); onStep();
+        return { failed: 0, read: 2 };
+      },
+      beginWorkspaceOp: () => ({
+        current: () => true, root: {},
+        // The detail the denominator is counted from, and the line the reader watches.
+        read: async () => JSON.stringify({ connections: [{ transitions: { id: 't1' } }, { transitions: { id: 't2' } }] }),
+        say: (t) => { calls.push('say:' + String(t)); },
+      }),
       setStatus: (t) => { calls.push('status:' + String(t).slice(0, 12)); },
       refreshBlueprints: async () => { calls.push('refreshBlueprints'); },
       renderBlueprints: () => { calls.push('renderBlueprints'); },
@@ -22518,6 +22527,12 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       assert.ok(calls.includes('downloadOneBp:7000'), 'the row the reader clicked is not the one that was read');
       assert.ok(calls.includes('downloadTransitionsFor:7000'),
                 'only the states were read, so the pane still says the actions were never fetched');
+      // The same line a full pull writes: reading one blueprint is still a call per transition, and
+      // a panel that says nothing for twenty seconds is indistinguishable from a stuck one.
+      assert.ok(calls.some((c) => /^say:.*transition 1 of 2/.test(c)),
+                'the reader is told nothing while a call per transition runs');
+      assert.ok(calls.some((c) => /^say:.*transition 2 of 2/.test(c)),
+                'the line does not move, so it cannot be told from a hung panel');
       assert.ok(!calls.includes('refreshBlueprints'), 'one click re-read the whole area');
       // Through the pull lock, like every other path here that reaches Zoho: without it two clicks
       // overlap and the busy state never comes back.

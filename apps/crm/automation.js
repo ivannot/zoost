@@ -164,8 +164,22 @@ function renderBlueprints() {
  *  written after an await. Its ceiling is zero, so this is converted rather than recorded. */
 async function bpReadOne(e) {
   const op = beginWorkspaceOp();
+  op.say(`Reading ${e.name}…`, 'busy');
   if (!(await downloadOneBp(e))) return;
-  const tr = await downloadTransitionsFor(e, op, () => {});
+  // The same line a full pull writes, for the same reason: reading one blueprint is still a call per
+  // transition, and a panel that says nothing for twenty seconds is indistinguishable from a stuck
+  // one. The denominator comes from the detail just written, so it costs a read and no request.
+  let total = 0;
+  try {
+    const d = JSON.parse(await op.read(e.path));
+    total = new Set(((d && d.connections) || []).map((c) => c.transitions && c.transitions.id).filter(Boolean)).size;
+  } catch (_) {}
+  if (!op.current()) return;
+  let n = 0;
+  const tr = await downloadTransitionsFor(e, op, () => {
+    n++;
+    op.say(`${e.name} · transition ${n} of ${total}…`, 'busy');
+  });
   if (!op.current()) return;
   setStatus(tr.hidden ? `${e.name}: its module is hidden from your Zoho profile, so its transitions cannot be read.`
     : tr.throttled ? `${e.name}: Zoho is refusing further requests for now - the rest is read by the next pull.`
@@ -207,7 +221,11 @@ async function openBlueprint(e) {
   // `CustomModule20` there and `Iscrizioni` in the modules index, and the chip was sending the first.
   const modApi = (modHit && modHit.api) || e.module || '';
   const modTxt = e.module
-    ? `<span class="mod" data-mod="${escA(modApi)}" title="${escA(modApi + ' - click to open the module')}">${escHtml(modLabel)}</span>`
+    // `.mod` keeps the wiring and `.wf-fn` gives it the same look as the chips below it: one pane was
+    // drawing two different chip styles for the same idea - «this opens something» - which is the
+    // reader being asked to learn two vocabularies for one. Only this chip is touched; `.mod`
+    // elsewhere is unchanged.
+    ? `<span class="wf-fn" data-mod="${escA(modApi)}" title="${escA(modApi + ' - click to open the module')}">${escHtml(modLabel)}</span>`
       + (modLabel !== e.module ? ` <span class="wfoff">${escHtml(e.module)}</span>` : '')
     : '';
   $('pvtable').innerHTML = `<div class="wfd">`
@@ -224,7 +242,11 @@ async function openBlueprint(e) {
   // Wired in the same breath as the draw: a chip that looks clickable and does nothing is worse than
   // a plain word, because it spends the reader's attention twice. Same opener as the code pane and
   // the graph tables - one mechanism for «take me to that module», not a second one here.
-  $('pvtable').querySelectorAll('.mod[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  // By the attribute, not by `.mod`: this pane draws the module with the same chip as the function
+  // and the actions below it, so one look means «this opens something». `.mod` is left alone
+  // everywhere else - `#pvtable .mod` is an id-scoped rule and outweighs `.wf-fn`, so carrying both
+  // classes produced a hybrid with one rule's border and the other's fill.
+  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
   // The function a transition calls opens like every other function chip in this panel - same
   // helper the workflow pane uses, not a second mechanism. Wired after the detail is drawn, below.
   showPreview();
