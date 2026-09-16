@@ -22,6 +22,7 @@ const OVERVIEW_STATE = {
  * graph: () => void,
  * health: () => void,
  * issue: (action: string) => void,
+ * area?: (id: string) => void,
  * }} OverviewViewOptions */
 
 /** @param {any} model @param {any} onboarding @param {OverviewViewOptions} options
@@ -37,7 +38,11 @@ function renderOverviewView(model, onboarding, options, escA = options.escapeAtt
   body.innerHTML = `<div class="ovtitle">${escapeText(model.name)}</div>`
     + `<div class="ovmeta">${model.sample ? 'Sample workspace - invented data' : `Last pull: ${escapeText(when(model.lastPull))}`}</div>`
     + (onboarding.visible ? `<section class="ovstart"><h3>Getting started</h3><div class="ovsteps">${onboarding.steps.map((step) => `<div class="ovstep ${escA(step.state)}" data-step="${escA(step.id)}"><i>${step.state === 'done' ? '✓' : step.state === 'current' ? '→' : ''}</i><b>${escapeText(step.label)}</b><small>${escapeText(step.detail)}</small></div>`).join('')}</div></section>` : '')
-    + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard"><div class="ovlabel">${escapeText(area.label)}</div>`
+    // A card names an area and says how much of it is here, so it is where a reader goes to open that
+    // area - it was a read-only tile and the tab it describes was another click away, in the bar
+    // behind the overview. Clickable only where the host passes a handler: a card that looks live and
+    // answers nothing is the one thing this panel refuses everywhere else.
+    + `<div class="ovgrid">${model.areas.map((area) => `<div class="ovcard${options.area ? ' go' : ''}"${options.area ? ` role="button" tabindex="0" data-area="${escA(area.id)}" title="${escA('Open ' + area.label)}"` : ''}><div class="ovlabel">${escapeText(area.label)}</div>`
       + `<div class="ovcount">${area.count === null ? '—' : area.count}</div><div class="ovstate ${escA(area.status)}">${escapeText(OVERVIEW_STATE[area.status])}`
       + `${area.pulledAt ? ` · ${escapeText(when(area.pulledAt))}` : ''}</div></div>`).join('')}</div>`
     + (model.issues.length ? `<div class="ovissues">${model.issues.map((issue) => `<button class="ovissue" data-action="${escA(issue.action || '')}"${issue.action ? '' : ' disabled'}>${escapeText(issue.text)}${issue.action ? `<span>${escapeText(options.issueLabel(issue.action))} →</span>` : ''}</button>`).join('')}</div>` : '')
@@ -50,6 +55,16 @@ function renderOverviewView(model, onboarding, options, escA = options.escapeAtt
   button('#ovpull').onclick = options.pull;
   button('#ovgraph').onclick = options.graph;
   button('#ovhealth').onclick = options.health;
+  if (options.area) {
+    body.querySelectorAll('.ovcard[data-area]').forEach((el) => {
+      const card = /** @type {HTMLElement} */ (el);
+      const go = () => options.area(card.getAttribute('data-area') || '');
+      card.onclick = go;
+      // It carries `role="button"`, so it answers the keys a button answers - otherwise the card is
+      // reachable by Tab and does nothing there, which is the same lie one key further on.
+      card.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } };
+    });
+  }
   body.querySelectorAll('.ovissue[data-action]').forEach((node) => {
     const issue = /** @type {HTMLButtonElement} */ (node);
     issue.onclick = () => options.issue(issue.dataset.action || '');

@@ -90,7 +90,10 @@ async function openWorkflow(e) {
   const _ub = $('pvtable').querySelector('.wfusage'); if (_ub) _ub.onclick = () => loadWorkflowUsage(_ub.dataset.wfid, $('pvtable').querySelector('.wfusage-out'), _ub);
   // The module it fires on, and the actions it fires: the same two openers the rest of the panel
   // uses, so a relation drawn here is followable from here.
-  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  // The module chip is wired by the delegated listener on `#pvtable` in crm-bootstrap.js. Attaching
+  // one here as well made a single click fire `healthOpenModule` twice - two `rebuildModules()`, two
+  // opens, and with Modules hidden the same refusal written to the status line twice. Delegation is
+  // also the half that survives a re-render, which is why it is the half that stays.
   $('pvtable').querySelectorAll('a.aplink[data-ap]').forEach((el) => (el.onclick = () => {
     const open = HEALTH_OPEN[el.dataset.ap];
     if (open) open(el.dataset.apid, el.dataset.apname);
@@ -133,7 +136,11 @@ function renderWorkflowDetail(rule) {
     // What a rule fires is an object this mirror holds, and the Actions tab opens it: it was a word
     // here while the action's own pane lists the rule that fires it. One relation, both directions.
     // Plain when Zoho gave no id, because a link that leads nowhere is worse than a word.
-    : a && a.id
+    // Offered only where the reader can actually arrive. With Actions hidden in Settings, or refused
+    // by the org's role, this drew a live-looking chip that answered a click with a status line and
+    // nothing else - the «link that looks like a link and then says no» state. `health.js` asks the
+    // same question before emitting its openers; the answer is a word here too.
+    : a && a.id && tabReachable('actions', true)
       ? `<a class="wf-fn aplink" data-ap="action" data-apid="${escA(String(a.id))}" data-apname="${escA(a.name || '')}" title="Open this action">${esc(a.type)}: ${esc(a.name)}</a>`
       : `<span class="wfact">${esc(a.type)}: ${esc(a.name)}</span>`;
   const bucketHtml = (bucket, label) => {
@@ -151,7 +158,9 @@ function renderWorkflowDetail(rule) {
   let h = `<div class="wfd">`;
   // The module a rule fires on is a place you can go, like everywhere else in this panel: it was
   // bold text here while the same relation is a chip in the blueprint pane and a column in Modules.
-  h += `<div class="wfrow"><span class="wk">Module</span> <span class="wf-fn" data-mod="${escA(mod)}" title="${escA(mod + ' - click to open the module')}">${esc(mod)}</span></div>`;
+  h += `<div class="wfrow"><span class="wk">Module</span> ${tabReachable('modules', true)
+    ? `<span class="wf-fn" data-mod="${escA(mod)}" title="${escA(mod + ' - click to open the module')}">${esc(mod)}</span>`
+    : esc(mod)}</div>`;
   const ew = rule.execute_when || {}, det = ew.details || {};
   const trigParts = [esc(ew.type || '?')];
   if (det.repeat != null) trigParts.push(`repeat: ${det.repeat ? 'yes' : 'no'}`);

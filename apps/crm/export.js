@@ -310,7 +310,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(roleText(r))}${r.active ? '' : ', off'})</span>`).join('<br>');
   // The processes that touch a field, beside the rules that do: the panel grew a BP column and a
   // report without it is the lesser copy of the panel, which is the one thing a report may not be.
-  const bpTrig = blueprintFieldMap(bps || [], allActs || []);
+  // The modules, so the map is keyed the way the tables ask for it: a blueprint names a custom module
+  // `CustomModule20` and every lookup below is by `api_name`.
+  const bpTrig = blueprintFieldMap(bps || [], allActs || [], mods || []);
   const bpTd = (m, fl) => (bpTrig.get(`${m.api_name}:${fl.api_name}`) || [])
     .map((r) => `${esc(r.name)} <span class="none">(${esc(r.role)}${r.transition ? ', ' + esc(r.transition) : ''}${r.active ? '' : ', off'})</span>`).join('<br>');
   let modHtml = (fTrig && wfUnread && mods.length
@@ -876,7 +878,9 @@ function buildExportMarkdown(d, scope) {
   const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail)), allActs) : null;
   // The same join the HTML report makes, in the same place: the two reports must not be able to
   // disagree about which processes touch a field.
-  const bpTrig = blueprintFieldMap(bps || [], allActs || []);
+  // The modules, so the map is keyed the way the tables ask for it: a blueprint names a custom module
+  // `CustomModule20` and every lookup below is by `api_name`.
+  const bpTrig = blueprintFieldMap(bps || [], allActs || [], mods || []);
   const wfUnread = (wfs || []).filter((w) => !w.detail).length;
   conns = scope.connections ? (conns || []) : [];
   acts = scope.actions ? (acts || []) : [];

@@ -301,7 +301,14 @@ function pvTabsFor(kind) {
   }
   $('pvtabsr').innerHTML = '';        // the diagram control belongs to the item being left
   if (pvKind) { $('pvtab_code').textContent = PV_KINDS[pvKind].first; setPvTab('code'); }
-  else { $('pvcallers').style.display = ''; }
+  else {
+    $('pvcallers').style.display = '';
+    // The strip stopped being only about tabs: `pvDiagram` puts the wiring control in it for the
+    // kinds that have no pane to switch to, and unhides it to do so. `setPvTab` is the only thing
+    // that hides these buttons and it never runs for such a kind, so without this the tabs of the
+    // item just left would sit beside that control, each leading to a pane that is not theirs.
+    Object.values(PV_TABS).forEach((id) => { const b = $(id); if (b) b.style.display = 'none'; });
+  }
 }
 
 /** The modules this org actually has, by api_name, read once per workspace.
@@ -771,6 +778,12 @@ function pvDiagram(nodeId, noun) {
     + ` title="${escA('Wiring - opened on this ' + noun + ' at the depth chosen here, in its own window')}">`
     + `<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/>`
     + `<rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
+  // The strip holding this slot is `hidden` for every kind with no tabs of its own - which is every
+  // kind this control was added for, so it was written into a `display:none` box on all five of
+  // them and could only ever be seen on a function and a module, where the strip was already up.
+  // Reported as «the diagram is only on functions and modules». `pvTabsFor` hides it again, and
+  // empties this slot, on the next open.
+  $('pvtabs').hidden = false;
   slot.querySelector('#pvdiagram').onclick = () =>
     openCallFocus(nodeId, parseInt(slot.querySelector('#pvdepth').value, 10) || 2);
 }

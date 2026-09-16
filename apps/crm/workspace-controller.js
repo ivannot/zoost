@@ -577,6 +577,9 @@ async function renderOverview() {
     graphDisabled: $('graph').disabled, healthDisabled: $('health').disabled, graphLabel: 'Wiring',
     issueLabel: (action) => action === 'health' ? 'Review' : action === 'refresh' ? 'Grant access' : 'Repair',
     browse: closeOverview,
+    // The card's id is the tab's id - `areas` is built from TABS - so opening it is the ordinary
+    // switch, with no mapping to keep in step.
+    area: (id) => { closeOverview(); setMode(id); },
     pull: () => { closeOverview(); void pullEverything(); },
     graph: () => { closeOverview(); void openGraph(); },
     health: () => { closeOverview(); void openHealth(); },

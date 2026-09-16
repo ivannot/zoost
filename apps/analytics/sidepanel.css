@@ -461,6 +461,7 @@
   .ovtitle{font-size:16px;font-weight:650;margin-bottom:3px}.ovmeta{font-size:11px;color:var(--muted);margin-bottom:14px}
   .ovgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
   .ovcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;min-width:0}
+  .ovcard.go{cursor:pointer}.ovcard.go:hover{border-color:var(--sel)}
   .ovlabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.35px}.ovcount{font:17px var(--mono);margin:3px 0}.ovstate{font-size:10.5px;color:var(--muted)}
   .ovstate.partial,.ovstate.unavailable,.ovstate.behind{color:var(--warn)}.ovissues{margin:12px 0;padding:8px 10px;border-left:2px solid var(--warn);background:var(--surface);font-size:11px;line-height:1.5}
   .ovissue{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;padding:4px 0;width:100%;border:0;background:none;color:var(--ink);text-align:left}.ovissue + .ovissue{border-top:1px solid var(--border)}.ovissue span{color:var(--warn);white-space:nowrap}.ovissue:hover:not(:disabled){background:none;color:#fff}

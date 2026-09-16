@@ -186,7 +186,21 @@ function renderBlueprints() {
 async function bpReadOne(e) {
   const op = beginWorkspaceOp();
   op.say(`Reading ${e.name}…`, 'busy');
-  if (!(await downloadOneBp(e))) return;
+  // Say what happened. A silent return left the busy line *and* its spinner on screen for ever - a
+  // finished, failed read that is indistinguishable from one still running, which is exactly the
+  // «which exit says nothing» question this project asks of every change. Worse than before the dot
+  // existed: that path set no busy line at all. The reason is the one the download recorded on the
+  // entry, so what Zoho said is what the reader is told.
+  if (!(await downloadOneBp(e))) {
+    if (!op.current()) return;
+    // The name in « », like every other status line: the redaction net that runs before a status
+    // string reaches a bug report cannot recognise a bare name - it is words. And the guard is the
+    // early return the rest of this function uses rather than an inline one, which would have made
+    // the function «decided» for the check that holds a function to one spelling of its guard, and
+    // reported the guarded line below it.
+    setStatus(`«${e.name}» could not be read${e.errorMsg ? ' - ' + e.errorMsg : ''}.`, 'bad');
+    return;
+  }
   // The same line a full pull writes, for the same reason: reading one blueprint is still a call per
   // transition, and a panel that says nothing for twenty seconds is indistinguishable from a stuck
   // one. The denominator comes from the detail just written, so it costs a read and no request.
@@ -204,7 +218,11 @@ async function bpReadOne(e) {
   if (!op.current()) return;
   setStatus(tr.hidden ? `${e.name}: its module is hidden from your Zoho profile, so its transitions cannot be read.`
     : tr.throttled ? `${e.name}: Zoho is refusing further requests for now - the rest is read by the next pull.`
-    : `${e.name}: read, ${tr.read} transition(s).`, tr.failed ? 'warn' : 'ok');
+    // Both refusals are a warning, not a result. `downloadTransitionsFor` bails on the *first* one
+    // and so returns `failed: 0`, which meant «Zoho is refusing further requests» and «its module is
+    // hidden from your profile» were both painted green - the panel agreeing with itself that
+    // nothing was wrong while naming the thing that was.
+    : `${e.name}: read, ${tr.read} transition(s).`, (tr.failed || tr.hidden || tr.throttled) ? 'warn' : 'ok');
 }
 async function bpDotClick(ev, e) {
   ev.stopPropagation();
@@ -267,7 +285,10 @@ async function openBlueprint(e) {
   // and the actions below it, so one look means «this opens something». `.mod` is left alone
   // everywhere else - `#pvtable .mod` is an id-scoped rule and outweighs `.wf-fn`, so carrying both
   // classes produced a hybrid with one rule's border and the other's fill.
-  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  // The module chip is wired by the delegated listener on `#pvtable` in crm-bootstrap.js. Attaching
+  // one here as well made a single click fire `healthOpenModule` twice - two `rebuildModules()`, two
+  // opens, and with Modules hidden the same refusal written to the status line twice. Delegation is
+  // also the half that survives a re-render, which is why it is the half that stays.
   // The function a transition calls opens like every other function chip in this panel - same
   // helper the workflow pane uses, not a second mechanism. Wired after the detail is drawn, below.
   showPreview();
@@ -1142,8 +1163,22 @@ async function buildActionUsers(op = beginWorkspaceOp()) {
  */
 function firedBy(a, map = actionUsers) {
   if (!map) return [];
-  return map.get(`${a.kind}:${String(a.id)}`)
-      || map.get(`${a.kind}:name:${String(a.name || '').toLowerCase()}`) || [];
+  // **Both keys, merged - not one or the other.** The `||` was right only while exactly one of them
+  // could exist: a workflow's action reference matches the census by name (77 of 77 measured, none
+  // by id), so the id key was absent and the lookup fell through to the name key and found the rule.
+  // The blueprint join *creates* the id key whenever a transition's action id matches the census -
+  // so the `||` then stopped at a list holding only the blueprint, and the rule disappeared from the
+  // Actions table, from both reports and from the assistant at once. Found by executing the shipped
+  // code on a shape where a rule and a transition fire the same action: Rules went 1 -> 0.
+  const byId = map.get(`${a.kind}:${String(a.id)}`) || [];
+  const byName = map.get(`${a.kind}:name:${String(a.name || '').toLowerCase()}`) || [];
+  const seen = new Set();
+  return byId.concat(byName).filter((w) => {
+    const k = `${w.kind || 'rule'}:${w.id}:${w.transition || ''}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 function actionFiredBy(a) { return firedBy(a); }
 /** The fields that make a rule fire, read out of the rule's own trigger.
@@ -1294,21 +1329,31 @@ function fieldTriggerMap(rules, actions) {
  *
  *  The same key and the same entry shape as `fieldTriggerMap`, so the table, the layer and both
  *  reports treat the two columns alike instead of growing a second vocabulary for the same idea. */
-function blueprintFieldMap(bps, actions) {
+function blueprintFieldMap(bps, actions, modRows) {
   const map = new Map();
   const put = (key, entry) => { if (!map.has(key)) map.set(key, []); map.get(key).push(entry); };
   const byAct = new Map();
   (actions || []).forEach((a) => { if (a && a.kind === 'field_updates') byAct.set(String(a.id), a); });
+  // **The key has to be in the reader's dimension.** A blueprint's `module` comes from the blueprints
+  // reply, which spells a custom module `CustomModule20`; every consumer of this map - the fields
+  // table, both reports and `get_module` - asks with the modules index's `api_name`, `Iscrizioni`. So
+  // the «runs on» entry for a custom module matched nothing and the BP column beside a filled WF one
+  // read as «no process runs on this field», which is worse than empty. Translated once, here, because
+  // this is the single function all three surfaces go through. Without rows it is a no-op, so a caller
+  // that has no index keeps exactly today's behaviour rather than a half-translated map.
+  const modApi = new Map();
+  (modRows || []).forEach((m) => { if (m && m.module_name && m.api_name) modApi.set(m.module_name, m.api_name); });
+  const modOf = (api) => (api ? (modApi.get(api) || api) : api);
   for (const b of bps || []) {
     if (!b || !b.module) continue;
     const base = { id: String(b.id), name: b.name || String(b.id), active: b.active !== false };
-    if (b.field) put(`${b.module}:${b.field}`, { ...base, role: 'runs on', when: 'the states of this field' });
+    if (b.field) put(`${modOf(b.module)}:${b.field}`, { ...base, role: 'runs on', when: 'the states of this field' });
     for (const t of Object.values((b && b.acts) || {})) {
       for (const a of ((t && t.actions) || [])) {
         if (!a || a.type !== 'field_updates' || !a.id) continue;
         const row = byAct.get(String(a.id));
         if (!row || !row.field) continue;   // Actions not pulled: unknown, never "writes nothing"
-        put(`${row.module || b.module}:${row.field}`,
+        put(`${modOf(row.module || b.module)}:${row.field}`,
             { ...base, role: 'writes', when: row.value == null ? 'clears it' : String(row.value),
               transition: (t && t.name) || '' });
       }
@@ -1325,6 +1370,9 @@ async function buildBlueprintFields(op = beginWorkspaceOp()) {
   let idx = null; try { idx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
   if (!Array.isArray(idx)) return op.current() ? { map: new Map(), pulled: false, unread: 0, actions: false } : null;
   let acts = null; try { acts = JSON.parse(await op.read('actions/index.json')); } catch (_) {}
+  // The index that holds both spellings of a module's name: a blueprint says `CustomModule20` and
+  // every reader of this map asks by `api_name`. Absent, the map is keyed as it always was.
+  let modRows = null; try { modRows = JSON.parse(await op.read('modules/index.json')); } catch (_) {}
   if (!op.current()) return null;
   const rows = []; let unread = 0;
   for (const b of idx) {
@@ -1333,7 +1381,7 @@ async function buildBlueprintFields(op = beginWorkspaceOp()) {
     if (a) rows.push({ ...b, acts: a }); else { rows.push({ ...b, acts: null }); unread++; }
   }
   return op.current()
-    ? { map: blueprintFieldMap(rows, Array.isArray(acts) ? acts : []), pulled: true, unread,
+    ? { map: blueprintFieldMap(rows, Array.isArray(acts) ? acts : [], Array.isArray(modRows) ? modRows : []), pulled: true, unread,
         actions: Array.isArray(acts) }
     : null;
 }
@@ -1740,9 +1788,18 @@ function openAction(a) {
   if (fires.length) {
     // Both kinds, each opening where it lives: the rule in Workflows, the process in Blueprints, with
     // the transition named because that is where the reader has to look once they arrive.
-    h += '<div class="connfns">' + fires.map((w) => (w.kind === 'blueprint'
+    // Labelled, like every other line of this pane. They were one unlabelled `.connfns` block sitting
+    // after \u00abLast modified\u00bb, so a chip arrived with no antecedent and nothing said which of them was
+    // a rule and which a process - only a glyph did. Reported: \u00abthere is only the badge, and you
+    // cannot tell the last link is a blueprint - I would expect to see Blueprints: link\u00bb. `.wfacts` is
+    // this panel's own \u00ablabel, then chips\u00bb row, already used by the workflow pane for the actions a
+    // rule fires: no new selector, and the two panes now read alike.
+    const chip = (w) => (w.kind === 'blueprint'
       ? `<a class="wf-fn" data-bp="${escA(String(w.id))}" title="${escA((w.name || '') + (w.transition ? ' \u00b7 ' + w.transition : ''))}">\u25a6 ${escHtml(w.name || w.id)}</a>`
-      : `<a class="wf-fn" data-wf="${escA(String(w.id))}" title="${escA(w.name || '')}">\u2699 ${escHtml(w.name || w.id)}</a>`)).join('') + '</div>';
+      : `<a class="wf-fn" data-wf="${escA(String(w.id))}" title="${escA(w.name || '')}">\u2699 ${escHtml(w.name || w.id)}</a>`);
+    const firedRow = (list, label) => (list.length
+      ? `<div class="wfacts"><span class="wk">${label}</span>${list.map(chip).join('')}</div>` : '');
+    h += firedRow(firesWf, 'Rules') + firedRow(firesBp, 'Blueprints');
   }
   h += '</div>';
   $('pvtable').innerHTML = h;
@@ -1750,7 +1807,10 @@ function openAction(a) {
   $('pvtable').querySelectorAll('a[data-bp]').forEach((el) => (el.onclick = () => healthOpenBlueprint(el.dataset.bp)));
   // The module chip drawn above: without this line it looks clickable and is not, which is worse
   // than a word - the rule the function chip and the module chip already follow everywhere else.
-  $('pvtable').querySelectorAll('[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
+  // The module chip is wired by the delegated listener on `#pvtable` in crm-bootstrap.js. Attaching
+  // one here as well made a single click fire `healthOpenModule` twice - two `rebuildModules()`, two
+  // opens, and with Modules hidden the same refusal written to the status line twice. Delegation is
+  // also the half that survives a re-render, which is why it is the half that stays.
   $('pvtable').querySelectorAll('a[data-tpl]').forEach((el) => (el.onclick = () => openZohoAt(templateUrl(a), (a.template && a.template.name) || 'template')));
   pvDiagram(`act:${a.kind}:${a.id}`, 'action');
   showPreview();

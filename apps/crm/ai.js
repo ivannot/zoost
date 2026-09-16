@@ -370,9 +370,18 @@ async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
       + schedList.map((s) => `- ${s.name}${s.frequency ? ' [' + s.frequency + ']' : ''} · runs ${s.function_name || s.function_id || '?'}${s.status && s.status !== 'active' ? ' · ' + s.status : ''}`).join('\n') + '\n'
     : '';
   let bpList = []; try { bpList = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  // **The blueprints reply names a module in the other dimension.** Its `module.api_name` is what the
+  // modules index calls `module_name` - `CustomModule20` where the index has `api_name: "Iscrizioni"` -
+  // so printing it raw told the model «on CustomModule20», a name appearing nowhere else in its
+  // context: the Modules list above is api_name, and `get_module CustomModule20` answers «not found».
+  // The panel translates it for exactly this reason; the seed did not, so the blueprint-to-module
+  // join was unavailable to the model for every custom module.
+  const modByGen = new Map();
+  Object.values(mods).forEach((m) => { if (m && m.module_name) modByGen.set(m.module_name, m.api_name); });
+  const bpMod = (b) => (b && b.module ? (modByGen.get(b.module) || b.module) : '');
   const blueprints = (Array.isArray(bpList) && bpList.length)
     ? `\n## Blueprints (${bpList.length})\n`
-      + bpList.map((b) => `- ${b.name}${b.module ? ' on ' + b.module : ''}${b.field ? ' · field ' + (b.field_label || b.field) : ''}${b.active === false ? ' · inactive' : ''}`).join('\n')
+      + bpList.map((b) => `- ${b.name}${b.module ? ' on ' + bpMod(b) : ''}${b.field ? ' · field ' + (b.field_label || b.field) : ''}${b.active === false ? ' · inactive' : ''}`).join('\n')
       + '\nWhat each transition writes and calls is in the blueprint itself; select one to be given it.\n'
     : '';
 

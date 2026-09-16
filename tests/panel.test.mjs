@@ -339,6 +339,31 @@ test('crm: an area excluded before its first pull is not reported as an unreadab
     'a normal missing file for an excluded area raised a false repair warning');
 });
 
+test('crm: an overview card opens the area it names', () => {
+  // The cards were read-only tiles: each names an area and says how much of it is mirrored, and the
+  // tab it describes was another click away, in the bar behind the overview. Reported. Clickable only
+  // where the host passes a handler - the Analytics twin's areas are views rather than tabs, and a
+  // card that looks live and answers nothing is what this panel refuses everywhere else.
+  let html = '';
+  const body = { set innerHTML(v) { html = v; }, get innerHTML() { return html; },
+                 querySelector: () => ({}), querySelectorAll: () => [] };
+  const m = load([sliceConst('apps/crm/overview-view.js', 'OVERVIEW_STATE'),
+                  sliceFn('apps/crm/overview-view.js', 'renderOverviewView')],
+                 { String, Number, Array, Object, Date, isNaN });
+  const model = { name: 'ws', sample: false, lastPull: null, issues: [],
+                  areas: [{ id: 'blueprints', label: 'Blueprints', count: 13, status: 'ready', pulledAt: null }] };
+  const onboarding = { visible: false, steps: [], nextAction: '' };
+  const opts = { body, escapeText: String, escapeAttribute: String, issueLabel: String,
+                 graphDisabled: false, healthDisabled: false, graphLabel: 'Wiring',
+                 browse: () => {}, pull: () => {}, graph: () => {}, health: () => {}, issue: () => {} };
+  m.renderOverviewView(model, onboarding, Object.assign({}, opts, { area: () => {} }));
+  assert.match(html, /class="ovcard go"[^>]*data-area="blueprints"/,
+    'the card names an area and does not open it');
+  m.renderOverviewView(model, onboarding, opts);
+  assert.doesNotMatch(html, /data-area=/,
+    'a card is dressed as a control where the host has nothing to open');
+});
+
 test('crm: Pull all in Overview pulls every area, not only functions', async () => {
   const nodes = new Map();
   const body = {
@@ -966,20 +991,52 @@ test('crm: the helper decides from the tab the chip declares, and says which rea
   assert.match(fn, /isForbidden\(target\)/, 'both reasons read as one, and they are two different actions');
 });
 
+test('crm: the strip holding the wiring control is shown when it carries one', () => {
+  // `pvDiagram` writes into `#pvtabsr`, which lives inside `#pvtabs` - and `pvTabsFor(null)` hides
+  // that strip for every kind with no tabs of its own, which is every kind this control was added
+  // for. So it was drawn into a `display:none` box on the workflow, schedule, blueprint, action and
+  // connection panes and was visible only on a function and a module, the two that already had it.
+  // Reported as «the diagram is only on functions and modules», and read as a missing icon.
+  const slot = { innerHTML: '', querySelector: () => ({}) };
+  const tabs = { hidden: true };
+  const m = load([sliceFn('apps/crm/preview-controller.js', 'pvDiagram')],
+                 { $: (id) => (id === 'pvtabsr' ? slot : id === 'pvtabs' ? tabs : null),
+                   escA: String, parseInt, openCallFocus: () => {} });
+  m.pvDiagram('wf:1', 'rule');
+  assert.equal(tabs.hidden, false, 'the control is written into a container the panel is hiding');
+  assert.match(slot.innerHTML, /id="pvdiagram"/, 'nothing was drawn into the slot at all');
+});
+
 test('crm: a chip that carries its own opener is left alone by the helper', () => {
   // `.wf-fn` is the panel's one chip for «this opens something», and it stopped being only about
   // functions: a rule fires an action, a transition fires an action, a rule runs on a module. This
   // helper rewrote every one of them into a span when Functions was hidden or refused - before the
   // pane that drew them had wired them - so those relations were dead, and a module chip was greyed
   // out for a tab it never pointed at. Found by an audit of both ends of every relation.
-  const fn = sliceFn('apps/crm/sidepanel.js', 'wireFnChips');
-  for (const attr of ['ap', 'mod', 'bp', 'bpx', 'wfx', 'conn']) {
-    assert.match(fn, new RegExp(`d\\.${attr} != null`),
-                 `a chip carrying data-${attr} is still treated as a function chip, so its own wiring never runs`);
-  }
-  // Early, and before the tab is decided: the point is that the helper does not touch the element.
-  assert.ok(fn.indexOf('!= null) return;') < fn.indexOf("tabReachable(target, true)"),
-            'the chip is rewritten first and skipped afterwards, which is the defect this prevents');
+  // Run, not read: a regex over the source is a photograph of the belief that wrote it, and this one
+  // held four branches that no call site can reach while saying nothing about the two that matter.
+  const chip = (data, tag) => ({
+    dataset: data, tagName: tag, className: 'wf-fn', textContent: 'x', title: '',
+    onclick: null, replaced: false, gone: false,
+    classList: { add(c) { this.owner.gone = (c === 'gone') || this.owner.gone; } },
+    replaceWith() { this.replaced = true; },
+  });
+  const mine = chip({ ap: 'action', apid: '5' }, 'A');      // carries its own opener
+  const theirs = chip({ fnid: '9' }, 'A');                  // an ordinary function chip
+  [mine, theirs].forEach((el) => (el.classList.owner = el));
+  let opened = 0;
+  const m = load([sliceFn('apps/crm/preview-controller.js', 'wireFnChips')], {
+    Object, String,
+    // The tab is unreachable: this is the state in which the helper used to kill every chip it met.
+    tabReachable: () => false, isForbidden: () => false, tabLabel: (t) => t,
+    document: { createElement: () => ({ dataset: {}, classList: { add() {} } }) },
+  });
+  m.wireFnChips({ querySelectorAll: () => [mine, theirs] }, () => { opened++; });
+  assert.equal(mine.replaced, false,
+    'a chip that carries its own opener is turned into a span before the pane that drew it wires it');
+  assert.equal(mine.gone, false, 'and it is greyed out for a tab it never pointed at');
+  assert.equal(theirs.replaced, true,
+    'an ordinary function chip is left looking like a working link to a tab nobody can reach');
 });
 
 test('crm: no container may style away the inertness by id', () => {
@@ -16449,6 +16506,28 @@ test('crm: the exported report states how much of the org its graph covers', () 
 //
 // The sample workspace writes matching ids, so the fallback never fires in any fixture: this is a
 // case that could only be found by reading, and can only be held by running it on the mismatch.
+test('crm: an action a rule and a transition both fire still names the rule', () => {
+  // A rule's action reference matches the census by name (77 of 77 measured, none by id), so the id
+  // key simply did not exist for such an action and `||` fell through to the name key and found it.
+  // The blueprint join *creates* the id key whenever a transition's action id matches the census -
+  // and from that moment the `||` stopped at a list holding only the blueprint, so the rule vanished
+  // from the Actions table, from both reports and from the assistant at once. Found by an audit that
+  // executed the shipped code on this shape: Rules went 1 -> 0.
+  const ctx = { Map, Set, Object, String, Array, console, actionUsers: null };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/automation.js', 'firedBy'), ctx);
+  ctx.map = new Map([
+    ['email_notifications:5000', [{ id: 42, name: 'Order process', kind: 'blueprint', transition: 'To won' }]],
+    ['email_notifications:name:renewal notice', [{ id: 7, name: 'Renewal rule' }]],
+  ]);
+  ctx.act = { kind: 'email_notifications', id: '5000', name: 'Renewal notice' };
+  // Joined inside the realm: an array built there is not this realm's Array, and deepEqual on it
+  // fails for a reason that has nothing to do with the subject.
+  const names = vm.runInContext('firedBy(act, map).map((w) => w.name).join("|")', ctx);
+  assert.equal(names, 'Order process|Renewal rule',
+    'the rule is dropped the moment the blueprint join gives the action an id key');
+});
+
 test('crm: every surface answers «fired by» through the same lookup', () => {
   const ctx = {
     Map, Set, Object, String, Array, console,
