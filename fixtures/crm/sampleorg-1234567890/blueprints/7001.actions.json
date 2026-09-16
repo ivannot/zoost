@@ -1,0 +1,36 @@
+{
+  "76010": {
+    "id": "76010",
+    "api_name": "to_In_review",
+    "name": "Move to In review",
+    "actions": [
+      {
+        "type": "field_updates",
+        "id": "5101",
+        "name": "Clear owner",
+        "module": "Leads"
+      }
+    ]
+  },
+  "76011": {
+    "id": "76011",
+    "api_name": "to_Approved",
+    "name": "Move to Approved",
+    "actions": [
+      {
+        "type": "functions",
+        "id": "4801",
+        "name": "Notify the owner",
+        "module": "Leads",
+        "function_id": "9001",
+        "function_api_name": ""
+      }
+    ]
+  },
+  "76012": {
+    "id": "76012",
+    "api_name": "to_Archived",
+    "name": "Move to Archived",
+    "actions": []
+  }
+}

@@ -484,6 +484,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         : `<span class="none">Detail not read - press Pull list + details</span>`)
       + `</div>`
       + (bp.description ? `<div class="refs"><span>${esc(bp.description)}</span></div>` : '')
+      // What each transition does, one line each - the same three outcomes the panel draws, so a
+      // reader without the extension sees what the reader with it sees. A `functions` action names
+      // the function rather than the action, because that is the name that means something.
+      + (bp.acts ? `<div class="refs">` + Object.values(bp.acts).map((t) =>
+          `<span><b>${esc((t && t.name) || 'transition')}:</b> ${((t && t.actions) || []).length
+            ? ((t && t.actions) || []).map((a) => `${esc(a.type || 'action')} ${esc(a.function_api_name || a.name || '')}`).join(' · ')
+            : 'no action'}</span>`).join('') + `</div>` : '')
       + `</section>`;
   });
 
@@ -660,7 +667,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
                  // reader has in their toolbar. It is the only thing about the two headers that
                  // differs, and it is the thing that says which export this is.
                  { name: PRODUCT_NAME, version: chrome.runtime.getManifest().version, tile: '#2563eb' })
-    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${bps.length ? `<h2 id="blueprints">Blueprints</h2><p class="none">The states a record moves through and the transitions between them are read. What each transition <i>does</i> - the fields it writes, the functions it calls - is not in the reply Zoho gives for a blueprint, so it is not here either.</p>${bpHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
+    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || absent(scope.functions, 'functions')}<h2 id="modules">Modules</h2>${modHtml || absent(scope.modules, 'modules')}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${bps.length ? `<h2 id="blueprints">Blueprints</h2><p class="none">The states a record moves through, the transitions between them, and what each transition <i>does</i> - the field an update writes, the function it calls. Zoho answers that one transition at a time, so a blueprint read by <b>Pull list</b> alone carries the states and says so here rather than reporting that it does nothing.</p>${bpHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + reportFoot(PRODUCT_NAME, PRODUCT_URL)
     + `<script>${REPORT_FILTER_JS}</script></body></html>`;
 }
@@ -766,7 +773,11 @@ async function loadExportData(op = beginWorkspaceOp()) {
   const bps = [];
   for (const b of bpIdx) {
     let detail = null; try { detail = JSON.parse(await op.read(`blueprints/${String(b.id)}.json`)); } catch (_) {}
-    bps.push({ ...b, id: String(b.id), detail });
+    // And what each transition does, which is a second file: the blueprint's own reply carries none
+    // of it, so a mirror can hold the states and not this. Absent stays `null` rather than `{}` -
+    // the report words the two differently and an empty object would read as «nothing happens».
+    let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${String(b.id)}.actions.json`)); } catch (_) {}
+    bps.push({ ...b, id: String(b.id), detail, acts });
   }
   // connections catalogue + usage (which functions reference each), joined on connectionLinkName
   let connCat = []; try { connCat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
@@ -1115,9 +1126,10 @@ function buildExportMarkdown(d, scope) {
   }
   if (bps.length) {
     md += '---\n\n## Blueprints\n\nThe process records walk, and the module and field each runs on, '
-        + 'with the states a record moves through and the transitions between them. What each '
-        + 'transition *does* - the fields it writes, the functions it calls - is not in the reply Zoho '
-        + 'gives for a blueprint, so it is not here either.\n\n';
+        + 'with the states a record moves through, the transitions between them, and what each '
+        + 'transition *does* - the field an update writes, the function it calls. Zoho answers that '
+        + 'one transition at a time, so a blueprint read by Pull list alone carries the states and is '
+        + 'listed without them rather than as one whose transitions do nothing.\n\n';
     md += '| Blueprint | Module | Runs on field | Layout | Status | States | Transitions | Last modified by |\n|---|---|---|---|---|---|---|---|\n';
     bps.slice().sort(byField('name')).forEach((bp) => {
       const fld = bp.field_label && bp.field_label !== bp.field
@@ -1129,6 +1141,20 @@ function buildExportMarkdown(d, scope) {
       md += `| ${_mdCell(bp.name)} | ${_mdCell(bp.module || '')} | ${_mdCell(fld)} | ${_mdCell(bp.layout || '')} | ${_mdCell(bp.status || (bp.active ? 'Active' : 'Inactive'))} | ${_mdCell(st)} | ${_mdCell(tr)} | ${_mdCell(bp.modified_by || '')} |\n`;
     });
     md += '\n';
+    // Below the table rather than in it: a transition's actions are a list per row, and a ninth
+    // column holding «field_updates Set stage; functions build_Invoice» is a cell nobody can read.
+    // Only the blueprints whose actions were read appear here - the table already says which those
+    // are, and repeating «not read» in two places says it twice and answers it once.
+    bps.slice().sort(byField('name')).filter((bp) => bp.acts).forEach((bp) => {
+      md += `**${_mdCell(bp.name)}** - what each transition does\n\n`;
+      Object.values(bp.acts).forEach((t) => {
+        const what = ((t && t.actions) || []).length
+          ? ((t && t.actions) || []).map((a) => `${a.type || 'action'} ${a.function_api_name || a.name || ''}`.trim()).join('; ')
+          : 'no action';
+        md += `- ${_mdCell((t && t.name) || 'transition')}: ${_mdCell(what)}\n`;
+      });
+      md += '\n';
+    });
   }
   if (acts.length) {
     const withheld = acts.filter((a) => a.from_address).length;

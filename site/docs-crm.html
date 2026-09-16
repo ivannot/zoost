@@ -410,8 +410,8 @@ git commit -m "baseline"</code></pre>
       fires</em>, which are the ones worth seeing; and so is every module those rules and actions touch.
       The chips above the tabs group them: <b>Functions</b> by Deluge category, <b>Actions</b> by kind,
       then one chip each for <b>Workflows</b>, <b>Schedules</b>, <b>Connections</b> and <b>Modules</b>.
-      <b>Blueprints</b> have no chip here and are not in the drawing: only their list is read, so nothing
-      yet joins a blueprint to the functions its transitions call.
+      <b>Blueprints</b> have no chip here and are not in the drawing, although the panel does read what
+      their transitions write and call - joining them into this drawing is not done yet.
       Switch a group off and the drawing, the list and Relations all narrow together.</li>
     <li class="note">What is <b>not</b> in it: a function's own record access. Nothing here reads the
       Deluge to work out which modules a function touches, so a function is never joined to a module -

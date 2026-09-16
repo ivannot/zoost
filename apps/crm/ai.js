@@ -435,7 +435,7 @@ function scheduleForModel(x) {
     next: x.next || null, last: x.last || null,
   };
 }
-function blueprintForModel(x, detail) {
+function blueprintForModel(x, detail, acts) {
   return {
     name: x.name || '', api_name: x.api_name || null, module: x.module || '',
     // Both spellings of the field, for the same reason the pane shows both: on a localised org the
@@ -450,12 +450,21 @@ function blueprintForModel(x, detail) {
     // the process rather than about this mirror.
     states: detail && detail.chart_data && Array.isArray(detail.chart_data.nodes) ? detail.chart_data.nodes.length : null,
     transitions: detail && Array.isArray(detail.connections) ? detail.connections.length : null,
-    // The model is told what is missing, or it will answer about things it cannot see. What is
-    // missing is no longer the states - those are read now - but what each transition *does*: the
-    // reply Zoho gives for a blueprint carries no field update and no function anywhere in it.
-    read: detail
-      ? 'states and transitions read; what each transition does - fields written, functions called - is not in the reply Zoho gives'
-      : 'list only - the detail of this blueprint has not been read into the mirror yet',
+    // What each transition does, which is the half a question about a blueprint usually means. One
+    // entry per transition that was read - the blueprint's own reply carries none of this, it is a
+    // call per transition - and a `functions` action names the function this mirror holds rather than
+    // the action, because the two have different ids and only one of them can be looked up.
+    transition_actions: acts ? Object.entries(acts).map(([id, t]) => ({
+      transition: (t && t.name) || id,
+      actions: ((t && t.actions) || []).map((a) => ({
+        type: a.type || '', name: a.name || '', function: a.function_api_name || null,
+      })),
+    })) : null,
+    // The model is told what is missing, or it will answer about things it cannot see - and «read but
+    // carrying no action» and «never read» are different answers to the same question.
+    read: !detail ? 'list only - the detail of this blueprint has not been read into the mirror yet'
+      : acts ? 'states, transitions, and what each transition does, are all read'
+             : 'states and transitions read; what each transition does has not been read yet - Pull list + details reads it',
   };
 }
 function connectionForModel(c) {
@@ -614,7 +623,10 @@ async function aiFocus(op = beginWorkspaceOp()) {
       // index the list is built from.
       if (e) {
         let detail = null; try { detail = JSON.parse(await op.read(e.path)); } catch (_) {}
-        return block(`the blueprint «${e.name || '?'}»`, aiTrunc(JSON.stringify(blueprintForModel(e, detail), null, 2), 3000));
+        // Beside the detail, in its own file, for the same reason the pane reads it there: it is a
+        // call per transition and a blueprint can hold the states without it.
+        let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${e.id}.actions.json`)); } catch (_) {}
+        return block(`the blueprint «${e.name || '?'}»`, aiTrunc(JSON.stringify(blueprintForModel(e, detail, acts), null, 2), 6000));
       }
     }
     if (p.startsWith('connections/')) {

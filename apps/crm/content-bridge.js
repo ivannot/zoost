@@ -978,35 +978,56 @@
   }
   /** What one transition of a blueprint actually does.
    *
-   *  **The internal endpoint, deliberately.** The documented API answers this with `actions: null` -
-   *  measured on a real org with `include=transition`, five transitions of five - so the only place
-   *  that carries a field update or the function a transition calls is the one the CRM's own screen
-   *  uses. That is the ground this extension already stands on elsewhere, and it can change without
-   *  notice; when it does, this returns nothing rather than something invented.
+   *  **The documented endpoint, measured before anything was built on it.**
+   *  `GET /crm/v8/settings/blueprints/transitions/{id}` answers `{transitions: [{..., actions}]}`, and
+   *  on a real org `actions` is filled rather than null: 172 transitions over 13 blueprints, carrying
+   *  24 field updates, 8 tasks, 1 function, 1 notification and 1 webhook between them. The
+   *  documentation's own sample prints `"actions": null`, which is what a transition with no action
+   *  answers - a fact about that transition, and not about the endpoint. Reading the sample as the
+   *  answer is what sent this down the internal road for a day.
    *
-   *  **A tenth of a percent of the reply is kept.** It answers ~81KB, of which `rlMeta` and
-   *  `FieldsMeta` are the module's metadata repeated on every call - the same bytes we already hold,
-   *  per transition. What is taken is the ~1KB that is about this transition and nothing else. */
-  async function fetchTransition(id, module, layoutId) {
-    const inst = instanceName();
-    if (!inst) throw new Error('no instance');
-    const j = await api(`/crm/${inst}/FlowTransition.do?action=getTransitionDetails`
-      + `&TransitionId=${encodeURIComponent(id)}&Module=${encodeURIComponent(module)}`
-      + `&LayoutId=${encodeURIComponent(layoutId)}`);
-    const a = (j && j.Actions) || {};
-    const pick = (rows, fn) => (Array.isArray(rows) ? rows : []).map(fn);
+   *  **It replaces the internal one, which is throttled hard, and there is no fallback to it.**
+   *  `FlowTransition.do` stops answering with data after about a hundred calls in under a minute and
+   *  then refuses the org - Zoho's own screen included - for more than ten minutes. This one took 200
+   *  consecutive calls in 21.7 seconds with no refusal, and the whole of that org in about twenty.
+   *  A second road into the same answer is a road nobody exercises until it is the only one left.
+   *
+   *  An action carries **its own id**, not the id of the thing it runs: `{name, id, type, details}`.
+   *  That id joins to the automation catalogue of its kind - the one the Actions tab already pulls -
+   *  and for `functions` the function itself is one call further, which `fetchFunctionAction` makes. */
+  async function fetchTransition(id) {
+    const resp = await api(`/crm/v8/settings/blueprints/transitions/${encodeURIComponent(id)}`);
+    if (resp === NO_CONTENT) throw new Error('not found');
+    const t = list(resp, 'transitions', 'blueprints/transitions/' + id)[0];
+    if (!t) throw new Error('not found');
     return { transition: {
-      id: String(id), name: j && j.Name ? String(j.Name) : '',
-      criteria: j && j.CriteriaString ? String(j.CriteriaString) : '',
-      // Each kind keeps the id it is joined by and the name a reader recognises. The function's id is
-      // the whole point: it is what ties a transition to a function already in this mirror.
-      field_updates: pick(a.Fieldupdate, (f) => ({ field: f.fieldLabel || '', field_id: f.fieldId || null,
-                                                   value: f.fieldValue == null ? null : String(f.fieldValue) })),
-      functions: pick(a.Deluge, (f) => ({ id: f.Id || null, name: f.Name || '' })),
-      webhooks: pick(a.Webhook, (w) => ({ id: w.Id || null, name: w.Name || '', url: w.urlToNotify || '' })),
-      emails: pick(a.Alert, (e) => ({ id: e.Id || null, name: e.Name || '', template: e.emailTemplateName || '' })),
-      tasks: pick(a.Task, (t) => ({ id: t.Id || null, name: t.Name || '', due: t.dueDate || '' })),
+      id: String(t.id || id), name: t.name || '', api_name: t.api_name || '',
+      // `null` for a transition that does nothing, which is most of them. Kept as an empty list, or
+      // every reader downstream needs its own guard for the same one fact.
+      actions: (Array.isArray(t.actions) ? t.actions : []).map((a) => ({
+        type: (a && a.type) || '', id: a && a.id != null ? String(a.id) : null,
+        name: (a && a.name) || '', module: (a && a.details && a.details.module) || '',
+      })),
     } };
+  }
+  /** The function behind a transition's `functions` action.
+   *
+   *  **Measured, because the obvious reading is wrong.** The id a transition carries is the
+   *  *action's*, and it is not the function's - on the org this was measured on the two differ by
+   *  more than a suffix, and the action id matches none of the 268 functions in the catalogue. A chip
+   *  built on it would open nothing, silently. This read answers with `function: {api_name, id}`,
+   *  which is what joins a blueprint to a function already in this mirror.
+   *
+   *  One call per distinct function action, and there was exactly one in that whole org. */
+  async function fetchFunctionAction(id) {
+    const resp = await api(`/crm/v9/settings/automation/functions/${encodeURIComponent(id)}`);
+    if (resp === NO_CONTENT) throw new Error('not found');
+    const a = list(resp, 'functions', 'automation/functions/' + id)[0];
+    if (!a) throw new Error('not found');
+    const f = a.function || {};
+    return { action: { id: String(a.id || id), name: a.name || '',
+                       function_id: f.id != null ? String(f.id) : null,
+                       function_api_name: f.api_name || '' } };
   }
   // Scheduled functions - the list already carries the called function {id, name}.
   async function fetchModuleFields(apiName) {
@@ -1713,7 +1734,8 @@
     if (msg?.cmd === 'listSchedules') return reply(listSchedules());
     if (msg?.cmd === 'listBlueprints') return reply(listBlueprints());
     if (msg?.cmd === 'fetchBlueprint') return reply(fetchBlueprint(msg.id));
-    if (msg?.cmd === 'fetchTransition') return reply(fetchTransition(msg.id, msg.module, msg.layoutId));
+    if (msg?.cmd === 'fetchTransition') return reply(fetchTransition(msg.id));
+    if (msg?.cmd === 'fetchFunctionAction') return reply(fetchFunctionAction(msg.id));
     if (msg?.cmd === 'fetchModuleFields') return reply(fetchModuleFields(msg.apiName));
     if (msg?.cmd === 'fetchOne') return reply(fetchOne(msg.id, msg.category, msg.source, msg.language, msg.runtime), (file) => ({ ok: true, file }));
     if (msg?.cmd === 'pullModules') return reply(pullModules());

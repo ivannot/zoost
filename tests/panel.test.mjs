@@ -5337,7 +5337,7 @@ for (const app of ['crm', 'analytics']) {
 // function from Zoho with nothing else in front of it. The overlay is gone, so every path that
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
-  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'downloadOneBp', 'downloadTransitionsFor', 'pullConnections', 'pullActions',
+  ['crm', ['pullAll', 'pullModules', 'pullModuleList', 'pullWorkflows', 'pullSchedules', 'pullBlueprints', 'downloadOneBp', 'downloadMissingBp', 'downloadTransitionsFor', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModuleNow', 'loadWorkflowUsage', 'syncOneNow',
            // The round, not the wiring: `reconcileFunctions` is single-flight bookkeeping and
            // `reconcileNow` is what reaches Zoho, which is what has to refuse.
@@ -22108,7 +22108,8 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
 {
   const { renderBlueprintDetail } = load(
     [sliceFn('apps/crm/automation.js', 'renderBlueprintDetail')],
-    { escHtml: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;') });
+    { escHtml: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'),
+      escA: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;') });
 
   test('crm: the blueprint pane names the states and the transitions between them', () => {
     const html = renderBlueprintDetail({
@@ -22122,10 +22123,38 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     assert.match(html, /Transitions<\/span> 2/, 'the transitions are not counted from connections');
     assert.match(html, /Send for review/, 'a transition is drawn without the name it is called by');
     assert.match(html, /Draft → In review/, 'a transition does not say where it goes from and to');
-    // The limit is stated beside the capability, because the reply carries no field update and no
-    // function anywhere in it - and silence would read as «this transition does nothing».
-    assert.match(html, /Zoho does not include in this reply/,
-                 'the pane claims the whole process while what a transition does is not read');
+    // Unread is said as itself: without the actions file a transition must not be drawn as one that
+    // does nothing. Those are two different facts and they look identical on screen.
+    assert.match(html, /actions not read/,
+                 'a transition whose actions were never read is drawn as one that does nothing');
+  });
+
+  test('crm: a transition draws the field it writes and the function it calls', () => {
+    // The shape the documented endpoint answers with, stored per transition: an action carries its
+    // own id and its own name, and what it *touches* is joined - the field from the actions
+    // catalogue, the function from the id resolved when the transition was read.
+    const html = renderBlueprintDetail(
+      { chart_data: { nodes: [{ state: 'Draft' }] },
+        connections: [
+          { from_state: { name: 'Draft' }, to_state: { name: 'In review' }, transitions: { id: '77', name: 'Send for review' } },
+          { from_state: { name: 'In review' }, to_state: { name: 'Approved' }, transitions: { id: '78', name: 'Approve' } },
+        ] },
+      { 77: { id: '77', name: 'Send for review', actions: [
+                { type: 'field_updates', id: '812', name: 'Set Lead Status' },
+                { type: 'functions', id: '101', name: 'Build the invoice', function_id: '205', function_api_name: 'build_Invoice' },
+              ] },
+        78: { id: '78', name: 'Approve', actions: [] } },
+      new Map([['812', { id: '812', field: 'Lead_Status', field_label: 'Lead Status', value: 'In review' }]]));
+    assert.match(html, /writes <b>Lead Status<\/b> = In review/,
+                 'a field update is drawn by the action name rather than the field and value it writes');
+    // The id that matters: the action's opens nothing, and a chip that does nothing is worse than
+    // a plain word because it spends the reader's attention twice.
+    assert.match(html, /data-fnid="205"/,
+                 'the function chip carries the action id instead of the function id, and opens nothing');
+    assert.match(html, /With actions<\/span> 1 of 2/,
+                 'the transitions that act are counted from the blueprint reply, whose actions key is always null');
+    assert.match(html, /does nothing/,
+                 'a transition that was read and carries no action is not drawn as doing nothing');
   });
 
   // ---------- being refused for going too fast, told apart from being refused ----------
@@ -22153,55 +22182,69 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     });
   }
 
-  // ---------- what a transition does, out of the shape Zoho's own screen is given ----------
-  // The documented API answers `actions: null` - measured, five transitions of five - so this comes
-  // from the endpoint the CRM UI uses. Its reply is ~81KB of which `rlMeta` and `FieldsMeta` are the
-  // module's metadata repeated on every call: what is kept is the ~1KB about the transition itself,
-  // and the case holds that, because keeping the rest would multiply the mirror in silence.
+  // ---------- what a transition does, from the endpoint that was documented all along ----------
+  // The internal route this replaced is throttled hard - about a hundred calls in under a minute and
+  // Zoho refuses the org, its own screen included, for more than ten minutes. The documented one took
+  // 200 consecutive calls in 21.7s with no refusal. Its documentation sample prints `"actions": null`,
+  // which was read as «the endpoint does not carry them» and is not: it is what a transition with no
+  // action answers, and the cases below hold both halves of that.
   {
     const BR = 'apps/crm/content-bridge.js';
-    const g = { instanceName: () => 'si_dev', api: null };
-    const { fetchTransition } = load([sliceFn(BR, 'fetchTransition')], g);
+    const g = { api: null, NO_CONTENT: { noContent: true } };
+    const { fetchTransition, fetchFunctionAction } =
+      load([sliceFn(BR, 'list'), sliceFn(BR, 'fetchTransition'), sliceFn(BR, 'fetchFunctionAction')], g);
 
-    test('crm: a transition says which field it writes and which function it calls', async () => {
+    test('crm: a transition names each action it runs, with the id that joins it', async () => {
       g.api = async (p) => {
-        assert.match(p, /FlowTransition\.do\?action=getTransitionDetails/, 'the transition is asked for by another route');
-        assert.match(p, /TransitionId=77&Module=Leads&LayoutId=88/, 'the id, the module and the layout are not all sent');
-        return {
-          Name: 'Send for review', Id: '77', CriteriaString: 'Documents complete',
-          rlMeta: { huge: 'x'.repeat(200) }, FieldsMeta: { huge: 'y'.repeat(200) },
-          Actions: {
-            Fieldupdate: [{ fieldLabel: 'Lead Status', fieldId: '812', fieldValue: 'In review', uiType: '2' }],
-            Deluge: [{ Id: '101', Name: 'build_Invoice' }],
-            Alert: [], Task: [], Webhook: [], AddTags: [], RemoveTags: [], CreateRecord: [],
-          },
-        };
+        assert.equal(p, '/crm/v8/settings/blueprints/transitions/77',
+                     'the transition is asked for by another route, or with a query the documented call does not take');
+        return { transitions: [{
+          id: '77', api_name: 'to_In_review', name: 'Send for review', transition_type: 'manual',
+          actions: [
+            { name: 'Set Lead Status', id: '812', type: 'field_updates', details: { module: 'Leads' } },
+            { name: 'Build the invoice', id: '101', type: 'functions', details: { module: 'Leads' } },
+          ],
+        }] };
       };
-      const { transition: t } = await fetchTransition('77', 'Leads', '88');
+      const { transition: t } = await fetchTransition('77');
       assert.equal(t.name, 'Send for review');
-      assert.equal(t.criteria, 'Documents complete');
-      assert.deepEqual(Array.from(t.field_updates, (f) => [f.field, f.field_id, f.value]),
-                       [['Lead Status', '812', 'In review']], 'the field a transition writes is not read');
-      assert.deepEqual(Array.from(t.functions, (f) => [f.id, f.name]), [['101', 'build_Invoice']],
-                       'the function a transition calls is not read - the id is what joins it to the mirror');
-      // The cost promise, held rather than explained: the module metadata is not carried into the file.
-      assert.ok(!JSON.stringify(t).includes('rlMeta') && !JSON.stringify(t).includes('huge'),
-                'the reply is stored whole, so every transition carries the module metadata again');
+      assert.equal(t.api_name, 'to_In_review');
+      assert.deepEqual(Array.from(t.actions, (a) => [a.type, a.id, a.name, a.module]),
+                       [['field_updates', '812', 'Set Lead Status', 'Leads'],
+                        ['functions', '101', 'Build the invoice', 'Leads']],
+                       'an action loses its type, its id or what it is called');
     });
 
-    test('crm: a transition that does nothing is read as empty, not as a crash', async () => {
-      // Measured: most transitions on a real org carry no action at all, and `Actions` itself can be
-      // absent. Empty lists, not undefined, or every reader downstream needs its own guard.
-      g.api = async () => ({ Name: 'Approve', Id: '78' });
-      const { transition: t } = await fetchTransition('78', 'Leads', '88');
-      // Lengths, not the arrays themselves: these come back from the vm context, so a strict
-      // deep-equal refuses them as «same structure, not reference-equal» while every value matches.
-      // What matters here is that each is an empty list and not `undefined`, which is what is asked.
-      for (const [name, v] of [['field_updates', t.field_updates], ['functions', t.functions],
-                               ['emails', t.emails], ['tasks', t.tasks], ['webhooks', t.webhooks]]) {
-        assert.ok(Array.isArray(v) && v.length === 0, `${name} came back as ${JSON.stringify(v)}, not an empty list`);
-      }
-      assert.equal(t.criteria, '');
+    test('crm: a transition answering actions:null is read as empty, not as a crash', async () => {
+      // Measured: most transitions on a real org carry no action at all and Zoho answers `null` for
+      // them. An empty list, not the null, or every reader downstream needs its own guard for it.
+      g.api = async () => ({ transitions: [{ id: '78', name: 'Approve', actions: null }] });
+      const { transition: t } = await fetchTransition('78');
+      assert.ok(Array.isArray(t.actions) && t.actions.length === 0,
+                `actions came back as ${JSON.stringify(t.actions)}, not an empty list`);
+    });
+
+    test('crm: a transition reply without the documented list refuses, and never reads as no actions', async () => {
+      // The same guard the blueprint list earned: an envelope nobody here has seen must arrive as a
+      // refusal naming what was there, not as a process that quietly does nothing.
+      g.api = async () => ({ data: [] });
+      await assert.rejects(() => fetchTransition('79'), (e) => e.shape === true,
+                           'an unexpected envelope became a transition with no actions');
+    });
+
+    test('crm: the function behind an action is asked for by the action id, and answers the function id', async () => {
+      // Measured on a real org: the id a transition carries is the action's, it matches none of the
+      // functions in the catalogue, and a chip built on it opens nothing. The two must not be folded.
+      g.api = async (p) => {
+        assert.equal(p, '/crm/v9/settings/automation/functions/101',
+                     'the function action is asked for by the function id, which is not what a transition carries');
+        return { functions: [{ id: '101', name: 'Build the invoice', associated: true,
+                               function: { api_name: 'build_Invoice', id: '205' } }] };
+      };
+      const { action: a } = await fetchFunctionAction('101');
+      assert.equal(a.id, '101');
+      assert.equal(a.function_id, '205', 'the action id is handed back as the function id, and it opens nothing');
+      assert.equal(a.function_api_name, 'build_Invoice');
     });
   }
 

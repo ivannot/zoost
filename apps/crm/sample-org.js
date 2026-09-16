@@ -696,9 +696,14 @@ function deluge(ns, name, params, calls) {
     })));
     // One detail file per blueprint, in the shape a real org answers with: the states live in
     // `chart_data.nodes`, and `connections` holds one entry per transition with where it comes from,
-    // where it goes and what it is called. What a transition *does* is not in that reply on a real
-    // org either - no field update, no function - so the sample does not invent one, or the panel
-    // would render from a shape Zoho never sends.
+    // where it goes and what it is called. What a transition *does* is **not** in that reply on a
+    // real org - Zoho answers `actions: null` there and gives them one transition at a time - so it
+    // is a second file per blueprint, written here in the same loop as the detail it belongs to.
+    //
+    // Three transitions per blueprint and three outcomes, because the panel draws each of them
+    // differently and a sample that showed one of the three would prove nothing: one writes a field,
+    // one calls a function, and one carries no action at all.
+    const fieldUpdates = actions.filter((a) => a.kind === 'field_updates');
     BLUEPRINTS.forEach(([n, mod, on], i) => {
       // Not the picklist's words: «On hold» already lives in `LONG_PICKLIST`, and a check that
       // refuses the same user-facing string twice is right to - but the fix is different words, not
@@ -721,6 +726,26 @@ function deluge(ns, name, params, calls) {
           transitions: { api_name: `to_${states[k + 1].replace(/ /g, '_')}`, name: `Move to ${states[k + 1]}`, id: `${7600 + i}${k}`, precedence: k + 1 },
         })),
       });
+      // The field update is **taken from** the catalogue this generator has already written, never
+      // retyped beside it: the pane joins a transition's action to `actions/index.json` by id, so an
+      // id and a name invented here would drift from the row they are meant to find, and a sample
+      // whose join misses would only ever exercise the fallback. Retyping them also put the same
+      // user-facing string in the file twice, which is a check this repository already runs.
+      const acts = {};
+      states.slice(0, -1).forEach((s, k) => {
+        const tid = `${7600 + i}${k}`;
+        const fu = fieldUpdates[i % fieldUpdates.length];
+        acts[tid] = {
+          id: tid, api_name: `to_${states[k + 1].replace(/ /g, '_')}`, name: `Move to ${states[k + 1]}`,
+          actions: k === 0 ? [{ type: 'field_updates', id: fu.id, name: fu.name, module: fu.module }]
+            // The function's **own** id, which is what the chip opens - the action's would open
+            // nothing at all, and that is the defect this second lookup exists to avoid.
+            : k === 1 ? [{ type: 'functions', id: String(4800 + i), name: 'Notify the owner',
+                           module: mod, function_id: String(9000 + i), function_api_name: '' }]
+            : [],
+        };
+      });
+      J(`blueprints/${String(7000 + i)}.actions.json`, acts);
     });
 
     // ---- schedules and connections ----

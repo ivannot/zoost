@@ -771,6 +771,24 @@ empty, that is what a sweep is.
 What does not move: the non-negotiables above, anything touching what leaves the machine, and
 anything that could lose a user's data. Those are «safe», and safe is part of good.
 
+**Probe the call before building anything around it. This is an order, and it was earned.** One
+runnable call, nothing else: write it, run it against a real org - which usually means asking for one
+click, and that is cheap - and confirm it answers. Then confirm it still answers at the volume the
+feature actually needs. Only then write the pull, the storage, the pane, the exports and the tests.
+
+The day this was given, the opposite was done: the *shape* of one blueprint transition's reply was
+checked, that was called feasibility, and a day was spent building on it. The 101st call in a burst
+makes Zoho answer its own error page, and the refusal outlives the burst by more than ten minutes -
+blocking the user's own Zoho UI, not only this extension. Shape and feasibility are different
+questions, and only the second one decides whether a feature can exist. Building first means the
+answer to «does this work» arrives after the cost of being wrong has been paid, and it is paid by the
+user, who had said that morning that the activity had been set aside and that he suspected a reason.
+
+**And try the documented endpoint before the internal one, even when the internal one is already
+known to work.** An official per-transition endpoint was in the documentation the whole time and went
+untested all day, because the internal one had already been seen working. Preferring the road you
+have watched succeed is how the safer road stays unexamined.
+
 **Give unsolicited critical opinion.** When I share something — a design, a name, a piece of copy,
 a licence choice — say what is weak about it, what objection someone will raise, what reads badly.
 Do this alongside doing the task, not instead of it. The most valuable moments here have been the

@@ -1,0 +1,36 @@
+{
+  "76000": {
+    "id": "76000",
+    "api_name": "to_In_review",
+    "name": "Move to In review",
+    "actions": [
+      {
+        "type": "field_updates",
+        "id": "5100",
+        "name": "Set stage to Won",
+        "module": "Contacts"
+      }
+    ]
+  },
+  "76001": {
+    "id": "76001",
+    "api_name": "to_Approved",
+    "name": "Move to Approved",
+    "actions": [
+      {
+        "type": "functions",
+        "id": "4800",
+        "name": "Notify the owner",
+        "module": "Deals",
+        "function_id": "9000",
+        "function_api_name": ""
+      }
+    ]
+  },
+  "76002": {
+    "id": "76002",
+    "api_name": "to_Archived",
+    "name": "Move to Archived",
+    "actions": []
+  }
+}

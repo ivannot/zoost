@@ -179,34 +179,51 @@ async function openBlueprint(e) {
     if (!ok) { setStatus('Could not read this blueprint - press Pull list + details to try again.', 'warn'); return; }
   }
   let bp = null; try { bp = JSON.parse(await op.read(e.path)); } catch (_) {}
-  // Beside the detail, not inside it: what each transition does comes from the internal endpoint and
-  // is kept in its own file. Absent is ordinary - a blueprint read before this existed has none - and
-  // the pane says so per transition rather than printing nothing.
+  // Beside the detail, not inside it: what each transition does is a call per transition and is kept
+  // in its own file. Absent is ordinary - a blueprint read by «Pull list» alone has none - and the
+  // pane says so per transition rather than printing nothing.
   let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${e.id}.actions.json`)); } catch (_) {}
+  // The actions catalogue, when the Actions tab has been pulled. A transition names the *action* it
+  // runs; which field that action writes and to what value lives on the catalogue row, and joining
+  // them here is what turns «Set status» into «writes Status = In review». Absent is ordinary, and
+  // the pane falls back to the action's own name rather than claiming anything about the field.
+  let actIndex = null;
+  try {
+    const rows = JSON.parse(await op.read('actions/index.json'));
+    if (Array.isArray(rows)) actIndex = new Map(rows.map((r) => [String(r && r.id), r]));
+  } catch (_) {}
   if (!previewCurrent(mine, op)) return;
   const box = $('pvtable').querySelector('.bpdetail'); if (!box) return;
   // **Never an empty box.** Without the file this set the pane to nothing at all - no states, no
   // transitions, no reason - so a blueprint whose detail had not been read looked identical to one
   // that has none, and the reader had nothing to act on. Reported as «I do not see it».
-  box.innerHTML = bp ? renderBlueprintDetail(bp, acts)
+  box.innerHTML = bp ? renderBlueprintDetail(bp, acts, actIndex)
     : `<div class="ftnote">The detail of this blueprint is not in the mirror. Press <b>Pull list + details</b>`
       + ` to read its states and transitions from Zoho.</div>`;
   // After the draw, never before: the chips do not exist until the line above has run. Same helper
   // the workflow pane uses - one mechanism for «open that function», not a second one here.
   wireFnChips(box, (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
 }
-/** The states a record moves through, and the transitions between them.
+/** The states a record moves through, the transitions between them, and what each transition does.
  *
  *  **Measured, on one org's own answer.** `chart_data.nodes` holds the states - 25 of them there -
  *  and `connections` holds 78 entries, each a `from_state`, a `to_state` and the transition between
  *  them. What a transition *does* is not in that reply at all: no field update, no function, no
- *  webhook appears anywhere in it, so the note below says so rather than leaving the reader to
- *  assume the silence means «none».
+ *  webhook appears anywhere in it. It comes from one call per transition, stored beside the detail,
+ *  and a transition whose actions were never read is said as that rather than drawn as one that does
+ *  nothing - two facts that look identical on screen and are not.
+ *
+ *  **An action names itself, and the catalogue says what it touches.** A transition carries
+ *  `{type, id, name}` per action, where the id is the *action's*. For a field update the field and
+ *  the value are on the catalogue row the Actions tab already pulls, joined here by that id; for a
+ *  function the function's own id was resolved when the transition was read, because the action's
+ *  would open nothing. Both joins are optional and their absence is drawn as the action's own name -
+ *  a mirror that has not pulled Actions is an ordinary state, not a broken one.
  *
  *  A node's `state` was measured as a key and not as a type, so it is read as either a name or an
  *  object carrying one. That is a tolerance about a shape nobody here has seen, written as such
  *  instead of a guess that renders «[object Object]» on the first org that differs. */
-function renderBlueprintDetail(bp, acts) {
+function renderBlueprintDetail(bp, acts, actIndex) {
   const nameOf = (s) => (typeof s === 'string' ? s : (s && (s.name || s.display_label || s.api_name)) || '');
   const states = (bp.chart_data && Array.isArray(bp.chart_data.nodes) ? bp.chart_data.nodes : [])
     .map((n) => nameOf(n.state)).filter(Boolean);
@@ -220,29 +237,49 @@ function renderBlueprintDetail(bp, acts) {
     // must not look like one that does nothing.
     const a = acts && c.transitions && acts[String(c.transitions.id)];
     const bits = [];
-    if (a) {
-      (a.field_updates || []).forEach((f) => bits.push(`writes <b>${escHtml(f.field)}</b>${f.value == null ? '' : ' = ' + escHtml(f.value)}`));
-      (a.functions || []).forEach((f) => bits.push(`calls <span class="wf-fn" data-fnid="${escA(f.id || '')}" data-fnname="${escA(f.name || '')}" title="Open the function">ƒ ${escHtml(f.name || '?')}</span>`));
-      (a.emails || []).forEach((x) => bits.push(`emails <b>${escHtml(x.name || x.template || '')}</b>`));
-      (a.tasks || []).forEach((x) => bits.push(`task <b>${escHtml(x.name || '')}</b>`));
-      (a.webhooks || []).forEach((x) => bits.push(`webhook <b>${escHtml(x.name || '')}</b>`));
+    for (const act of (a && a.actions) || []) {
+      const row = actIndex && act && act.id ? actIndex.get(String(act.id)) : null;
+      if (!act) continue;
+      if (act.type === 'functions') {
+        // The chip opens the function, so it carries the *function's* id - the action's would open
+        // nothing. Unresolved, it stays a plain name: a chip that does nothing spends the reader's
+        // attention twice, which is the rule the module chip beside it already follows.
+        bits.push(act.function_id
+          ? `calls <span class="wf-fn" data-fnid="${escA(act.function_id)}" data-fnname="${escA(act.function_api_name || act.name || '')}" title="Open the function">ƒ ${escHtml(act.function_api_name || act.name || '?')}</span>`
+          : `calls <b>${escHtml(act.name || '?')}</b>`);
+      } else if (act.type === 'field_updates') {
+        // «Set status» is not an answer to «which field, to what value», and the answer is on the
+        // catalogue row. `null` there is «clears it» and is said as that, never as a blank.
+        bits.push(row && row.field
+          ? `writes <b>${escHtml(row.field_label || row.field)}</b>`
+            + (row.value == null ? ' <span class="wfoff">(cleared)</span>' : ' = ' + escHtml(String(row.value)))
+          : `writes <b>${escHtml(act.name || '?')}</b>`);
+      } else if (act.type === 'tasks') bits.push(`task <b>${escHtml(act.name || '')}</b>`);
+      else if (act.type === 'email_notifications') bits.push(`emails <b>${escHtml(act.name || '')}</b>`);
+      else if (act.type === 'webhooks') bits.push(`webhook <b>${escHtml(act.name || '')}</b>`);
+      // A kind nobody here has seen is named rather than dropped: five types were measured on one
+      // org, and silently skipping a sixth would draw a transition that acts as one that does not.
+      else bits.push(`${escHtml(act.type || 'action')} <b>${escHtml(act.name || '')}</b>`);
     }
     const does = a ? (bits.length ? bits.join(' · ') : '<span class="wfoff">does nothing</span>')
                    : '<span class="wfoff">actions not read</span>';
     return `<div class="wfrow"><span class="wk">${escHtml(t || 'transition')}</span> ${escHtml(from)} → ${escHtml(to)}`
       + `<div class="ftnote">${does}</div></div>`;
   });
-  // What `include=transition` brought, counted rather than assumed: the documentation says a
-  // transition carries an `actions` array and its own sample prints `"actions": null`, so the only
-  // way to know is to look at a real reply and say what was in it.
-  const withActions = conns.filter((c) => c.transitions && Array.isArray(c.transitions.actions) && c.transitions.actions.length);
-  const actKinds = [...new Set(withActions.flatMap((c) => c.transitions.actions.map((a) => a && a.type).filter(Boolean)))];
+  // Counted from what was read, not from the blueprint's own reply: `include=transition` carries an
+  // `actions` key that is `null` on every transition of every org measured, so counting it would
+  // report «0 of 78» about a process that acts on most of them.
+  const actsOf = (c) => (c.transitions && acts && acts[String(c.transitions.id)] || {}).actions || [];
+  const withActions = conns.filter((c) => actsOf(c).length);
+  const actKinds = [...new Set(withActions.flatMap((c) => actsOf(c).map((a) => a && a.type).filter(Boolean)))];
   return `<div class="wfd"><div class="wfrow"><span class="wk">States</span> ${states.length}${states.length ? ' · ' + escHtml(states.join(', ')) : ''}</div>`
     + `<div class="wfrow"><span class="wk">With actions</span> ${withActions.length} of ${conns.length}${actKinds.length ? ' · ' + escHtml(actKinds.join(', ')) : ''}</div>`
     + `<div class="wfrow"><span class="wk">Transitions</span> ${conns.length}</div></div>`
     + (rows.length ? `<div class="wfd">${rows.join('')}</div>` : '')
-    + `<div class="ftnote">States and transitions are stored in this mirror. What a transition <i>does</i>`
-    + ` - the fields it writes, the functions it calls - Zoho does not include in this reply.</div>`;
+    + `<div class="ftnote">States, transitions and what each transition does are stored in this mirror.`
+    + ` A transition marked <i>actions not read</i> was pulled before its actions were - press`
+    + ` <b>Pull list + details</b>. Which field an update writes is read from the <b>Actions</b> tab, so`
+    + ` pull that too for the field and the value rather than the action's name.</div>`;
 }
 /** The blueprint in Zoho's own editor. The module query the UI adds is optional - measured: the URL
  *  works without it - so it is not sent, and nothing here depends on a parameter we would be
@@ -567,32 +604,52 @@ async function downloadOneBp(entry) {
  *  be read again, and its states would sit on screen looking current beside a list that was. */
 /** What every transition of one blueprint does, into `blueprints/<id>.actions.json`.
  *
- *  Kept beside the detail rather than inside it: the detail is Zoho's own reply to a documented call
- *  and this is derived from an internal one, so when that endpoint changes there is a file to throw
- *  away and the official answer is untouched.
+ *  Kept beside the detail rather than inside it: the detail is one reply from Zoho and this is one
+ *  call per transition, so a blueprint whose actions were never read is a *missing file* rather than
+ *  a half-written detail, and the pane can tell the reader which of the two it is showing.
  *
- *  The ids come from the detail we already hold - `connections[].transitions.id` - and the module and
- *  layout it needs are in the same file. Nothing is asked for twice: a transition named by two
- *  connections is read once. */
+ *  The ids come from the detail we already hold - `connections[].transitions.id` - and nothing else
+ *  is needed: the documented endpoint takes the transition id alone, where the internal one it
+ *  replaced also wanted the module and the layout. Nothing is asked for twice - a transition named
+ *  by two connections is read once, and a function action is resolved once however many transitions
+ *  run it. */
 async function downloadTransitionsFor(entry, op, onStep) {
   // Its own guard, like every other path that reaches the platform: this runs a call per transition,
   // hundreds of them on a real org, and the org under the panel can change while it does.
   if (mismatchRefuse()) return { failed: 0, read: 0 };
   let bp = null; try { bp = JSON.parse(await op.read(entry.path)); } catch (_) {}
   if (!bp) return { failed: 0, read: 0 };
-  const mod = (bp.module && bp.module.api_name) || entry.module || '';
-  const lay = (bp.layout && bp.layout.id) || '';
   const conns = Array.isArray(bp.connections) ? bp.connections : [];
   const ids = [...new Set(conns.map((c) => c.transitions && c.transitions.id).filter(Boolean))].map(String);
-  // Without the module or the layout the call cannot be built, and guessing either would be asking
-  // Zoho a question we do not have. Nothing is written, and the count says none were read.
-  if (!ids.length || !mod || !lay) return { failed: 0, read: 0 };
+  if (!ids.length) return { failed: 0, read: 0 };
   const out = {}; let fail = 0;
+  // One lookup per function action for the whole blueprint rather than one per transition: the same
+  // function is wired into several transitions on a real org, and the answer cannot differ between
+  // two of them. `null` is remembered too - a refusal must not be retried once per transition.
+  const fnSeen = new Map();
   for (const tid of ids) {
     if (!op.current()) return { failed: fail, read: Object.keys(out).length };
     if (onStep) onStep();
-    let r = null; try { r = await toBridge({ cmd: 'fetchTransition', id: tid, module: mod, layoutId: lay }); } catch (_) {}
-    if (r?.ok && r.transition) { out[tid] = r.transition; }
+    let r = null; try { r = await toBridge({ cmd: 'fetchTransition', id: tid }); } catch (_) {}
+    if (r?.ok && r.transition) {
+      const t = r.transition;
+      for (const a of t.actions || []) {
+        // The id a transition carries is the *action's* and not the function's - measured, and they
+        // differ by more than a suffix - so a chip built on it would open nothing at all. One more
+        // call turns it into the function this mirror already holds.
+        if (a.type !== 'functions' || !a.id) continue;
+        if (!fnSeen.has(a.id)) {
+          let fr = null; try { fr = await toBridge({ cmd: 'fetchFunctionAction', id: a.id }); } catch (_) {}
+          fnSeen.set(a.id, fr?.ok && fr.action ? fr.action : null);
+          await sleep(80);
+        }
+        // Left absent rather than written empty: an empty api name would draw as a chip naming
+        // nothing, where absence is what the pane already words as «the function was not resolved».
+        const got = fnSeen.get(a.id);
+        if (got && got.function_id) { a.function_id = got.function_id; a.function_api_name = got.function_api_name; }
+      }
+      out[tid] = t;
+    }
     else {
       // **Stop at the first throttle, and keep what was read.** Measured twice on the same org: the
       // 101st call answers Zoho's error page and every one after it does the same, so continuing
@@ -616,6 +673,9 @@ async function downloadTransitionsFor(entry, op, onStep) {
 }
 async function downloadMissingBp(all = false) {
   const op = beginWorkspaceOp();
+  // It reaches Zoho itself now - the probe below asks the documented endpoint once - so it carries
+  // the guard its siblings carry rather than relying on whoever called it.
+  if (mismatchRefuse()) return { failed: 0, read: 0 };
   const pending = blueprintData.filter((e) => all || !e.downloaded);
   if (!pending.length) { setStatus('All blueprints read.', 'ok'); return { failed: 0 }; }
   setPullBusy(true);
@@ -644,6 +704,11 @@ async function downloadMissingBp(all = false) {
       // Where the value is: the field updates a transition writes and the function it calls. Counted
       // on the progress line by transition rather than by blueprint - there are hundreds of them, and
       // a line that moved once per blueprint would sit still for minutes and read as a hung panel.
+      // **A pull reads them, and it is the documented endpoint that made that affordable.** The
+      // internal one this replaced stopped answering with data after about a hundred calls in under
+      // a minute and then refused the org - Zoho's own screen included - for more than ten minutes,
+      // so a pull could not go near it. Measured on the documented one: 200 consecutive calls in
+      // 21.7 seconds with no refusal, and a whole org of 172 transitions in about twenty.
       if (done) {
         const tr = await downloadTransitionsFor(e, op, () => {
           tRead++;

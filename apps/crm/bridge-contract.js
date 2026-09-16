@@ -10,14 +10,14 @@
  * {cmd: "functionRuntime", id: string, language?: string, period?: string, from?: string, to?: string} |
  * {cmd: "listWorkflows"} | {cmd: "fetchWorkflow", id: string} | {cmd: "workflowUsage", id: string, from?: string, till?: string} |
  * {cmd: "listSchedules"} | {cmd: "listBlueprints"} | {cmd: "fetchBlueprint", id: string} |
- * {cmd: "fetchTransition", id: string, module: string, layoutId: string} |
+ * {cmd: "fetchTransition", id: string} | {cmd: "fetchFunctionAction", id: string} |
  * {cmd: "fetchModuleFields", apiName: string} |
  * {cmd: "fetchOne", id: string, category?: string, source?: string, language?: string, runtime?: string} |
  * {cmd: "pullModules"} | {cmd: "listModules"} | {cmd: "pullFailures"} | {cmd: "pullActions", taskDetails?: boolean} | {cmd: "pullConnections"})} BridgeCommand */
 /** @typedef {{ok: true, origin: string, org: string, instance: string}} CrmContextReply */
 /** @typedef {{ok: true, entries: object[], total: number, capped?: boolean}} CrmListReply */
 /** @typedef {{ok: true, file: object}} CrmFileReply */
-/** @typedef {{ok: true, rule?: object, blueprint?: object, transition?: object, usage?: object, fields?: object[], window?: object, logs?: object, revisions?: object}} CrmDetailReply */
+/** @typedef {{ok: true, rule?: object, blueprint?: object, transition?: object, action?: object, usage?: object, fields?: object[], window?: object, logs?: object, revisions?: object}} CrmDetailReply */
 /** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, area?: string, note?: string, diag?: unknown,
  * code?: string, detail?: unknown}} BridgeErrorReply */
 /** @typedef {CrmContextReply | CrmListReply | CrmFileReply | CrmDetailReply | BridgeErrorReply} BridgeReply */

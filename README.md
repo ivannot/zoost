@@ -110,8 +110,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   box off the drawing / save and reload the arrangement as a file / Save PDF).
 - **Automation map**: Workflows and Schedules with their triggers, criteria, instant and time-based
   actions, and the functions they invoke - plus on-demand workflow execution stats. Blueprints join
-  them with the module and the field each runs on, listed only: the states a record moves through,
-  and the transitions that update fields or call functions, are not read into the mirror. A rule with actions
+  them with the module and the field each runs on, the states a record moves through, and what each
+  transition does - the field an update writes, the function it calls. A rule with actions
   that run *after a delay* carries the count and the delay, **Has scheduled actions** filters the list
   down to those, and each rule shows its **Last run** - all three read from the rule already on disk.
 - **Reverse usage**: each function shows where it's wired across the org (blueprint, button,

@@ -1,0 +1,36 @@
+{
+  "76020": {
+    "id": "76020",
+    "api_name": "to_In_review",
+    "name": "Move to In review",
+    "actions": [
+      {
+        "type": "field_updates",
+        "id": "5102",
+        "name": "Mark as reviewed",
+        "module": "Deals"
+      }
+    ]
+  },
+  "76021": {
+    "id": "76021",
+    "api_name": "to_Approved",
+    "name": "Move to Approved",
+    "actions": [
+      {
+        "type": "functions",
+        "id": "4802",
+        "name": "Notify the owner",
+        "module": "Tickets",
+        "function_id": "9002",
+        "function_api_name": ""
+      }
+    ]
+  },
+  "76022": {
+    "id": "76022",
+    "api_name": "to_Archived",
+    "name": "Move to Archived",
+    "actions": []
+  }
+}
