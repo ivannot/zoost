@@ -433,7 +433,9 @@ async function showModuleUsage(api, path, mine, op) {
     // `openFile()` alone left the list showing modules while the detail showed a function, which is
     // the panel reading as if it had lost its place. Reported. Same two calls every other cross-tab
     // jump here makes, rather than a second way of doing it.
-    wireFnChips(box, (a) => { setMode('functions'); openFromTree(a.dataset.file); });
+    // The sibling of the same defect: a chip in the Modules pane is a link, not a click on the tree
+    // row, so the row it opens has to be revealed rather than left wherever the list happened to be.
+    wireFnChips(box, (a) => { setMode('functions'); openFile(a.dataset.file); });
   } catch (_) { box.className = ''; }
 }
 async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {

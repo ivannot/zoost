@@ -186,7 +186,8 @@ async function pullAll(depth = {}) {
 // fires a function because its own JSON says so, a schedule because its index row names it, a
 // connection because the function's captured meta lists it.
 const CTX_ID = { wf: (id) => 'wf:' + id, sch: (id) => 'sch:' + id, conn: (name) => 'conn:' + name,
-                 act: (kind, id) => 'act:' + kind + ':' + id, mod: (api) => 'mod:' + api };
+                 act: (kind, id) => 'act:' + kind + ':' + id, mod: (api) => 'mod:' + api,
+                 bp: (id) => 'bp:' + id };
 /** A node that is not a Deluge function.
  *
  *  `entity` is what kind of *thing* it is and `category` is what kind of that thing: a function is
@@ -307,6 +308,42 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
     if (n.entity !== 'functions') return;
     (n.connections || []).forEach((c) => { if (c && c.name) link(n, ensureConn(c.name, c)); });
   });
+
+  // ---- blueprints: what each transition writes and calls ---------------------------------------
+  // The drawing had no blueprint in it at all, so a process that calls a function or fires a
+  // notification was a relation this mirror holds and the picture did not show - which is the thing
+  // the picture is for. Nothing new is read from Zoho: the transitions are beside the detail, an
+  // action id joins the same catalogue a rule's action joins, and a function action carries the
+  // function's own id, resolved when the transition was read.
+  let bpIdx = []; try { bpIdx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  for (const b of (Array.isArray(bpIdx) ? bpIdx : [])) {
+    if (!b || b.id == null) continue;
+    const node = ctxNode(CTX_ID.bp(b.id), b.name || String(b.id), 'blueprints', b.module || '',
+      `blueprints/${b.id}.json`, { entity: 'blueprints', _active: b.active !== false });
+    nodes[node.id] = node;
+    // The module whose records walk this process - the same fact a rule's trigger module is.
+    { const m = modOf(b.module); if (m) link(node, m); }
+    let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${String(b.id)}.actions.json`)); } catch (_) {}
+    if (!acts) continue;   // «Pull list» alone: a node whose actions were never measured, not one with none
+    for (const t of Object.values(acts)) {
+      for (const a of ((t && t.actions) || [])) {
+        if (!a) continue;
+        if (a.type === 'functions') {
+          // By the function's own id, never the action's: the two differ, and matching on the wrong
+          // one draws no edge at all - silently, which is the worst way for a relation to go missing.
+          const fn = resolveFn({ id: a.function_id, name: a.function_api_name || a.name });
+          if (fn) link(node, fn);
+          continue;
+        }
+        const row = actIndex.get(a.type + ':' + String(a.id));
+        if (!row) continue;   // Actions not pulled: no invented node, the same rule the rules follow
+        const id = CTX_ID.act(row.kind, row.id);
+        if (!nodes[id]) nodes[id] = ctxNode(id, row.name || String(row.id), row.kind, '',
+          'actions/index.json', { entity: 'actions', _kind: row.kind });
+        link(node, nodes[id]);
+      }
+    }
+  }
 
   // ---- and the counts follow the graph that is actually drawn ---------------------------------
   // "Nothing calls this" is now a stronger statement than it was, because a workflow and a schedule

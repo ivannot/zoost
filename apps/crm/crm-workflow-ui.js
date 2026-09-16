@@ -206,7 +206,11 @@ function openFunctionFromWorkflow(id, name) {
   selectRow(ent.path);
   if (ent.mirrored === false) { setStatus(MSG.notMirrored(langLabel(ent.language)), 'warn'); return; }
   if (!ent.downloaded) { void fetchThenRedrawRow(ent); return; }
-  openFromTree(ent.path);
+  // **Not `openFromTree`.** That one means «a click started on this row», and it suppresses the
+  // reveal on purpose - scrolling after your own finger is the panel arguing with you. Arriving here
+  // is the opposite: a chip in the blueprint or workflow pane, from another tab, where the row has to
+  // be found for the reader. It opened the function and left it below the fold. Reported.
+  openFile(ent.path);
 }
 
 

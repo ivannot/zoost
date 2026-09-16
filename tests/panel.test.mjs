@@ -2308,6 +2308,17 @@ test('the call graph carries what fires the code and what the code reaches', asy
     ] }),
     'schedules/index.json': JSON.stringify([{ id: 77, name: 'Nightly', function_id: 12, function_name: 'nightly', frequency: 'daily' }]),
     'connections/index.json': JSON.stringify([{ name: 'books', label: 'Zoho Books', service: 'zohobooks' }, { name: 'unused', label: 'Legacy' }]),
+    // A blueprint is a node too, and what its transitions do is the relation the drawing was losing:
+    // 700 has both kinds of action, 701 was read by «Pull list» alone and has no actions file.
+    'blueprints/index.json': JSON.stringify([{ id: 700, name: 'Onboarding', module: 'Deals' },
+                                             { id: 701, name: 'List only', module: 'Deals' }]),
+    'blueprints/700.actions.json': JSON.stringify({
+      77: { name: 'Send for review', actions: [
+        { type: 'functions', id: 'a1', function_id: 9, function_api_name: 'createInvoice' },
+        { type: 'email_notifications', id: 'e1', name: 'Welcome' },
+      ] },
+    }),
+    'actions/index.json': JSON.stringify([{ kind: 'email_notifications', id: 'e1', name: 'Welcome', module: 'Deals' }]),
   };
   const fn = (ns, name, id, conns) => ({ id: ns + '.' + name, name, api_name: name, display_name: name,
     namespace: ns, category: 'standalone', calls: [], called_by: [], rest: false, unresolved: [],
@@ -2352,6 +2363,21 @@ test('the call graph carries what fires the code and what the code reaches', asy
   assert.equal(g.counts.nodes, Object.keys(g.nodes).length, 'the node count is of the old graph');
   assert.ok(g.nodes['conn:unused'].dead_suspect, 'a connection nothing uses is not flagged as a candidate');
   assert.ok(!g.nodes['billing.createInvoice'].dead_suspect, 'a function a workflow fires is still called an orphan');
+
+  // ---- blueprints, which the drawing did not have at all ----
+  // Reported: the picture is of what connects to what, and a process that calls a function or fires
+  // a notification was a relation held in the mirror and absent from it.
+  assert.ok(ids.includes('bp:700'), 'a blueprint is not a node, so everything its transitions do is lost here');
+  assert.ok(g.nodes['bp:700'].calls.includes('billing.createInvoice'),
+            'a blueprint does not link to the function its transition calls');
+  assert.ok(g.nodes['bp:700'].calls.includes('act:email_notifications:e1'),
+            'a blueprint does not link to the action its transition fires');
+  assert.ok(g.nodes['bp:700'].calls.includes('mod:Deals'),
+            'a blueprint does not link to the module whose records walk it');
+  // The same rule the workflows follow: never pulled is a node with nothing measured, not a node
+  // with nothing.
+  assert.equal(g.nodes['bp:701'].calls.filter((c) => c !== 'mod:Deals').length, 0,
+               'a blueprint whose actions were never read was given actions it never had');
 });
 
 test('the diagram window can change subject, and says why when it cannot', async () => {
@@ -20861,11 +20887,15 @@ test('a link to a function with no source here says which absence it is', () => 
     { id: 'd9', path: 'functions/automation/notPulled.dg', api_name: 'notPulled', display_name: 'Not pulled', language: 'deluge', mirrored: true, downloaded: false },
     { id: 'd1', path: 'functions/automation/here.dg', api_name: 'here', display_name: 'Here', language: 'deluge', mirrored: true, downloaded: true },
   ];
-  const said = [], opened = [], fetched = [];
+  const said = [], opened = [], fetched = [], clicked = [];
   const g = { console, Object, String, Array, Set,
               treeData: rows, viewMode: 'functions',
               setStatus: (t, k) => said.push([String(t), k]), setMode: () => {}, selectRow: () => {},
-              tabReachable: () => true, openFromTree: (p) => opened.push(p),
+              tabReachable: () => true,
+              // `openFile` is the door a *link* uses, and it reveals the row. `openFromTree` says a
+              // click started on the row and deliberately does not scroll - so it is stubbed apart
+              // here as a guard: anything landing in `clicked` is that defect coming back.
+              openFile: (p) => opened.push(p), openFromTree: (p) => clicked.push(p),
               fetchThenRedrawRow: (e) => { fetched.push(e.id); },
               isDeluge: (l) => !l || /^deluge/i.test(String(l)),
               langLabel: (l) => (!l || /^deluge/i.test(String(l)) ? 'Deluge' : String(l).replace(/_/g, ' ')),
@@ -20885,6 +20915,9 @@ test('a link to a function with no source here says which absence it is', () => 
                    + 'state of any workspace showing «Complete missing»');
   m.openFunctionFromWorkflow('d1', 'here');
   assert.deepEqual(opened, ['functions/automation/here.dg'], 'a function that is here stopped opening');
+  assert.deepEqual(clicked, [],
+                   'a link went through the door that means «you clicked this row», which suppresses the '
+                   + 'reveal - so the function opened below the fold and the reader could not see it');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -22361,6 +22394,36 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       // overlap and the busy state never comes back.
       assert.ok(calls.includes('runPullAction'), 'it reaches Zoho outside the pull lock');
       assert.ok(calls.includes('renderBlueprints'), 'the row keeps its old dot until something else redraws the list');
+    });
+  }
+
+  // ---------- a link is not a click ----------
+  // `openFromTree` means "a click started on this row", and it suppresses the reveal on purpose:
+  // opening the pane shortens the list, and scrolling after your own finger is the panel arguing
+  // with you. A chip in the blueprint pane is the opposite - another tab, a row the reader has never
+  // seen - and it went through the same door, so the function opened below the fold. Reported.
+  {
+    const calls = [];
+    const g = {
+      treeData: [{ id: '9000', path: 'functions/ns/a.dg', api_name: 'a', display_name: 'A',
+                   downloaded: true, mirrored: true }],
+      tabReachable: () => true,
+      setMode: (m) => calls.push('setMode:' + m),
+      selectRow: (p) => calls.push('selectRow:' + p),
+      openFile: (p) => calls.push('openFile:' + p),
+      openFromTree: (p) => calls.push('openFromTree:' + p),
+      fetchThenRedrawRow: () => calls.push('fetchThenRedrawRow'),
+      setStatus: () => {}, langLabel: () => 'Deluge', MSG: { notMirrored: () => '' },
+    };
+    const { openFunctionFromWorkflow } =
+      load([sliceFn('apps/crm/crm-workflow-ui.js', 'openFunctionFromWorkflow')], g);
+
+    test('crm: a function opened from a pane link is revealed, not left below the fold', () => {
+      openFunctionFromWorkflow('9000', 'A');
+      assert.ok(calls.includes('openFile:functions/ns/a.dg'),
+                'the link opens the row the way a click does, and a click deliberately does not scroll');
+      assert.ok(!calls.some((c) => c.startsWith('openFromTree')),
+                'openFromTree says a click started on the row - a link from another tab is the opposite');
     });
   }
 
