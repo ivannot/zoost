@@ -243,10 +243,14 @@ const PV_KINDS = {
   // banner, the names block and the layout counts, in a column that does not fit a side panel -
   // «you struggle to see the whole detail, there is no room». They carry the one string Deluge
   // actually needs, so they get their own tab rather than the bottom of somebody else's.
+  // A fourth on a module, and like `files` it is offered only where the item has one: the ladders a
+  // record climbs belong to the modules that have them - Deals and nothing else on three measured
+  // orgs - and a tab leading to an empty pane is a control that lies.
   module: { first: 'Fields', panes: { code: [['pvfields', '']], rel: [['pvrels', '']],
+                                      pipe: [['pvpipes', '']],
                                       info: [['pvdetails', ''], ['pvcallers', '']] } },
 };
-const PV_TABS = { code: 'pvtab_code', files: 'pvtab_files', rel: 'pvtab_rel', info: 'pvtab_info' };
+const PV_TABS = { code: 'pvtab_code', files: 'pvtab_files', rel: 'pvtab_rel', pipe: 'pvtab_pipe', info: 'pvtab_info' };
 function setPvTab(which) {
   // Derived from the kind's own panes rather than from a pair of ids: the strip was two buttons and a
   // boolean, so a third tab meant a third `if` in four places. What a kind has is what it declares.
@@ -254,7 +258,9 @@ function setPvTab(which) {
   // Files is the one tab whose existence depends on the *item* and not on its kind: a function is
   // one file or a project, and only the second has anything to show. Asked in one place, so the
   // strip and the fallback below cannot disagree about whether it is there.
-  const has = (tab) => !!(kinds && kinds.panes[tab] && (tab !== 'files' || $('pvfiles').dataset.available));
+  const has = (tab) => !!(kinds && kinds.panes[tab]
+    && (tab !== 'files' || $('pvfiles').dataset.available)
+    && (tab !== 'pipe' || $('pvpipes').dataset.available));
   pvTab = has(which) ? which : 'code';
   Object.entries(PV_TABS).forEach(([tab, id]) => {
     const b = $(id); if (!b) return;

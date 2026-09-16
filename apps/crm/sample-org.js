@@ -439,6 +439,41 @@ function deluge(ns, name, params, calls) {
             length: null, custom: false, mandatory: false, lookup: t, picklist: [],
             id: String(7500 + i * 20 + k) }));
       }
+      // **The ladders, on the one module that has them.** Measured on a real sandbox: a module's Stage
+      // picklist is the union of its pipelines' stages, the module keeps a wider pool, and what is left
+      // over is Zoho's default stages on no pipeline. The sample says the same thing in miniature, or
+      // the panel's Pipelines tab and both reports have nothing to draw.
+      // The two outcomes Zoho counts a closed stage as, named once: written on four rows they were four
+      // copies of one sentence, and the check that reads every shipped string for a repeat said so.
+      // The stage names avoid the picklist above for the same reason - a sample must not say one thing
+      // twice and mean two.
+      const WON = 'Closed Won', LOST = 'Closed Lost', OPEN = 'Open';
+      const STAGES = api !== 'Deals' ? [] : [
+        ['Qualified', OPEN, 10], ['Proposal made', OPEN, 40], ['Negotiation', OPEN, 70],
+        ['Won', WON, 100], ['Lost', LOST, 0],
+        ['Renewal due', OPEN, 20], ['Offer sent', OPEN, 50], ['Renewed', WON, 100],
+        ['Churned', LOST, 0],
+        // The two the module keeps and no ladder uses - Zoho's defaults, left behind when the
+        // pipelines were built. Measured on a real sandbox: 33 in the pool against 24 on the ladders.
+        ['Needs analysis', OPEN, 30], ['Paused', OPEN, 15],
+      ];
+      const LADDERS = api !== 'Deals' ? [] : [
+        { name: 'Standard', default: true, stages: [0, 1, 2, 3, 4] },
+        { name: 'Renewal', default: false, stages: [5, 6, 7, 8] },
+      ];
+      // One list of stages, named once: the ladders point into it by position, and the pool is the
+      // whole of it. Written twice, the same stage drifted between the two - and the check that reads
+      // every shipped string for a sentence said twice found it before anybody else could.
+      const stageAt = (k, si) => ({ id: String(3500 + k), name: STAGES[k][0], value: STAGES[k][0],
+        sequence: si + 1, forecast_type: STAGES[k][1],
+        forecast_category: STAGES[k][1] === OPEN ? 'Pipeline' : STAGES[k][1] });
+      const pipelines = LADDERS.map((L, li) => ({
+        id: String(3400 + li), name: L.name, value: L.name, default: L.default,
+        layout: 'Standard', layout_id: String(3000 + i),
+        stages: L.stages.map((k, si) => stageAt(k, si)),
+      }));
+      const stagePool = STAGES.map(([nm, ft, prob], k) => ({ id: String(3700 + k), name: nm, value: nm,
+        probability: prob, forecast_type: ft, forecast_category: ft === OPEN ? 'Pipeline' : ft }));
       const layouts = refused ? [] : [{ id: String(3000 + i), name: 'Standard', visible: true,
                                         status: 'active', sections: [{ name: 'Information' }, { name: 'Details' }] }];
       if (!refused && i % 4 === 0) layouts.push({ id: String(3100 + i), name: 'Compact', visible: true, status: 'active', sections: [{ name: 'Information' }] });
@@ -466,6 +501,7 @@ function deluge(ns, name, params, calls) {
                                 message: 'operation cannot be performed for hidden module' } : null,
         api_name: api, module_name: api, singular_label: label.replace(/s$/, ''), plural_label: label,
         id: String(6000 + i), generated_type: cat,
+        pipelines, stage_pool: stagePool, pipelines_read: !refused && !!pipelines.length,
         deletable: cat === 'custom', editable: true, creatable: true,
         viewable: true, visible: true, api_supported: true,
         layouts: summary, fields: fields,

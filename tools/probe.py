@@ -968,6 +968,25 @@ CRM = """
       if (!oneEach(items())) say('the rules in the layer are not one per line');
       $('fieldlistx').click(); await until(() => !$('fieldlist').classList.contains('on'), 'Close never closed the layer');
 
+      // The ladders: offered on the module that has them, absent on the one that does not, with the
+      // stages in order and the module's leftovers named. Measured shapes; see renderPipelines.
+      {
+        if ($('pvtab_pipe').style.display !== 'none') say('Accounts has no pipelines and offers the tab anyway');
+        await openModule('modules/Deals.json'); await until(() => currentPath === 'modules/Deals.json', 'Deals never opened');
+        if ($('pvtab_pipe').style.display === 'none') say('the module with pipelines does not offer the tab');
+        $('pvtab_pipe').click(); await settle();
+        const pipe = $('pvpipes');
+        if (getComputedStyle(pipe).display === 'none') say('the Pipelines tab opened nothing');
+        const heads = [...pipe.querySelectorAll('.secttl')].map((h) => h.textContent);
+        if (heads.length < 3) say('the pipelines pane draws ' + heads.length + ' section(s): ' + heads.join(' | '));
+        if (!heads.some((h) => /on no pipeline/.test(h))) say('the stages on no pipeline are not shown: ' + heads.join(' | '));
+        if (!pipe.querySelector('.pipedef')) say('no pipeline is marked as the default one');
+        const first = [...pipe.querySelectorAll('table tbody tr')].slice(0, 5).map((tr) => tr.children[0].textContent);
+        if (first.join(',') !== '1,2,3,4,5') say('the stages are not numbered in order: ' + first.join(','));
+        await openModule('modules/Accounts.json'); await until(() => currentPath === 'modules/Accounts.json', 'Accounts never reopened');
+        $('pvtab_code').click(); await settle();
+      }
+
       // A rule's field update is a second way to touch a field: the sample's merge rule writes
       // Contacts.Status, so that layer has a «Writes it» group naming what it writes.
       {

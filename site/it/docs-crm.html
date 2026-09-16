@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:3ccc4c6b2b45f7e5 -->
+<!-- translated-from: site/docs-crm.html sha256:87ef6424f3241d66 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · aggiornata il <span class="dd" data-stamp="updated">15 settembre 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · aggiornata il <span class="dd" data-stamp="updated">16 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -561,9 +561,13 @@ git commit -m "baseline"</code></pre>
   </div>
   <p>Due posti te la danno:</p>
   <ul>
-    <li><b>L'anteprima del modulo</b>, nel pannello laterale. Il suo dettaglio ha tre tab -
-      <b class="ui">Fields</b>, <b class="ui">Related lists</b> e <b class="ui">Details</b> - e le related
-      list hanno tutto il tab di mezzo per sé. Clicca un API name per copiarlo.</li>
+    <li><b>L'anteprima del modulo</b>, nel pannello laterale. Il suo dettaglio ha <b class="ui">Fields</b>,
+      <b class="ui">Related lists</b>, <b class="ui">Details</b> e, dove il modulo le ha, <b class="ui">Pipelines</b>.
+      Clicca un API name per copiarlo.</li>
+    <li><b class="ui">Pipelines</b> mostra ogni pipeline del modulo con le sue fasi in ordine, l'esito che
+      ciascuna fase rappresenta (aperta, vinta, persa), la probabilità e la categoria di previsione - e in
+      fondo le fasi che il modulo tiene ma che non stanno su nessuna pipeline, e che nessuna picklist mostra.
+      Zoho risponde con la probabilità sulla fase e non sulla coppia pipeline-fase, quindi una fase usata da due pipeline vale uguale in tutte e due - misurato su una sola org, e quello che Zoost mostra è quello che Zoho manda.</li>
     <li><b>Scheda Relations</b> nella finestra del diagramma: una riga per relazione, con il modulo di
       destinazione, il campo lookup o il modulo di collegamento che ci sta dietro e la chiamata completa. I
       filtri nascondono le related list di sistema (Notes, Attachments, Tasks…) così restano solo le tue.</li>

@@ -855,9 +855,12 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
 // «You struggle to see the whole detail, there is no room.» They have a tab now, and the strip is
 // derived from the kind's panes rather than from a pair of ids, so the fourth costs nothing.
 
-test('crm: a module has three detail tabs, and a function has two or three', () => {
+test('crm: a module has four detail tabs, and a function has two or three', () => {
   const kinds = load([sliceConst('apps/crm/sidepanel.js', 'PV_KINDS')]).PV_KINDS;
-  assert.deepEqual(Object.keys(kinds.module.panes), ['code', 'rel', 'info']);
+  // `pipe` joined them: the ladders a module's records climb, declared by the kind and offered by the
+  // *item* - like `files` on a function - because most modules have none and a tab leading to an
+  // empty pane is a control that lies.
+  assert.deepEqual(Object.keys(kinds.module.panes), ['code', 'rel', 'pipe', 'info']);
   // `files` is declared by the kind and offered by the *item*: a Deluge function is one file and
   // gets two tabs, a compiled project gets three. The condition is asserted in the case below.
   assert.deepEqual(Object.keys(kinds.function.panes), ['code', 'files', 'info']);
@@ -3363,7 +3366,7 @@ test('every element the side panel reaches for is in its own markup', () => {
   // came up saying «No workspace.» over a fixture that was right in front of it. `node --check` is
   // happy with all of that; only running it, or this, finds it.
   // Named rather than pattern-matched, so adding one is a decision - the same rule as the diagram
-  // window's list above. Five are built into innerHTML by the module detail pane and wired straight
+  // window's list above. Six are built into innerHTML by the module detail pane and wired straight
   // after; `pvfailgo` is the same shape in the failures block; and `q` is not in this document at
   // all - it is the search box of the **exported HTML report**, written into a <script> string for a
   // file that opens somewhere else entirely. `rxsavename` and `rxsaveerr` are the ▾ menu's Save
@@ -3371,7 +3374,7 @@ test('every element the side panel reaches for is in its own markup', () => {
   // `body` is not this document's at all: it is the textarea on zoost.it/report, named inside the
   // function the panel injects into that page. It belongs to the same family as `q`, which is the
   // search box of the exported HTML report.
-  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvpipes', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
   for (const app of ['crm', 'analytics']) {
     const js = appPanel(app), html = panelPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
@@ -21977,4 +21980,54 @@ test('a full pull that came up short is partial, counted, cleared by a complete 
   const label = behindLabel(detailsBehind({ listAt: 'x', detailsGap: { refused: 27, unread: 2, at: 'x' } }), (x) => x, (x) => x);
   assert.equal(label.text, '◐ 27 refused by Zoho, 2 not read', 'the notice does not count what it is about');
   assert.match(label.title, /pulling again will not change it/, 'the tooltip does not say a refusal is final');
+});
+
+// ---- pipelines: the ladders a module's records climb ----
+// Measured on a real sandbox: a module's Stage picklist is the union of its pipelines' stages (24 from
+// ladders of 9, 8 and 7), while the module's own pool is wider (33) - the nine left over are Zoho's
+// default stages, on no pipeline, and no picklist in the panel shows them. The probability comes from
+// the pool, per stage, so a stage on two ladders is worth the same on both.
+test('the pipelines pane draws each ladder in order, prices it from the pool, and names the leftovers', () => {
+  const rel = 'apps/crm/modules.js';
+  const { renderPipelines } = load([sliceFn(rel, 'renderPipelines')], { escHtml: (x) => String(x == null ? '' : x) });
+  const m = {
+    pipelines: [
+      { id: 'p1', name: 'Standard', value: 'Standard', default: true, layout: 'Standard',
+        stages: [{ name: 'Qualified', value: 'Qualified', sequence: 1, forecast_type: 'Open' },
+                 { name: 'Won', value: 'Won', sequence: 2, forecast_type: 'Closed Won' }] },
+      { id: 'p2', name: 'Renewal', value: 'Renewal', default: false, layout: 'Standard',
+        stages: [{ name: 'Qualified', value: 'Qualified', sequence: 1, forecast_type: 'Open' }] },
+    ],
+    stage_pool: [{ name: 'Qualified', value: 'Qualified', probability: 10, forecast_type: 'Open', forecast_category: 'Pipeline' },
+                 { name: 'Won', value: 'Won', probability: 100, forecast_type: 'Closed Won', forecast_category: 'Closed Won' },
+                 { name: 'On hold', value: 'On hold', probability: 15, forecast_type: 'Open', forecast_category: 'Pipeline' }],
+  };
+  const html = renderPipelines(m);
+  assert.match(html, /Standard<span class="pipedef">default<\/span>|Standard<\/span>|Standard/, 'the ladders are not named');
+  assert.ok(/pipedef/.test(html), 'the default ladder is not marked');
+  assert.ok(html.indexOf('Renewal') > html.indexOf('Standard'), 'the ladders lost their order');
+  assert.ok(/>10%</.test(html) && />100%</.test(html), 'a stage is not priced from the module pool');
+  assert.match(html, /on no pipeline/, 'the stages the module keeps and no ladder uses are not shown');
+  assert.ok(html.indexOf('On hold') > html.indexOf('on no pipeline'), 'a leftover stage is listed as if it were on a ladder');
+  assert.equal((html.match(/On hold/g) || []).length, 1, 'a stage on no pipeline is drawn twice');
+
+  // A module that has none says which of the two it is - never a blank pane.
+  assert.match(renderPipelines({}), /No pipelines/, 'a module with no ladders draws nothing at all');
+  assert.match(renderPipelines({ pipelines_read: false }), /were not read/, 'a read that did not happen reads as «no pipelines»');
+  assert.match(renderPipelines({ ...m, pipelines_kept: true }), /what the last pull that could read them saw/,
+               'ladders kept from an older pull are presented as current');
+});
+
+test('the bridge asks for pipelines only where a module has stages, and a pull that did not read them keeps them', () => {
+  const bridge = read('apps/crm/content-bridge.js');
+  assert.match(bridge, /\/crm\/v9\/settings\/pipeline\?layout_id=\$\{encodeURIComponent\(L\.id\)\}/,
+               'the pipeline call does not carry the layout, which Zoho makes mandatory');
+  assert.match(bridge, /\/crm\/v9\/settings\/stages\?module=\$\{encodeURIComponent\(m\.api_name\)\}/,
+               'the stage pool - where the probability lives - is not read');
+  assert.match(bridge, /const hasStages = fieldsOk && fields\.some\(\(f\) => \/\^\(Stage\|Pipeline\)\$\/\.test\(f\.api_name \|\| ''\)/,
+               'every module is asked for pipelines, so one module of 79 costs a request on every other');
+  const pull = sliceFn('apps/crm/modules.js', 'pullModules');
+  assert.match(pull, /if \(m\.pipelines_read !== true\) \{/, 'a pull that did not read the ladders writes over the ones on disk');
+  assert.match(pull, /m\.pipelines = old\.pipelines; m\.stage_pool = old\.stage_pool \|\| \[\]; m\.pipelines_kept = true;/,
+               'the kept ladders are not marked as kept, so the pane presents them as current');
 });

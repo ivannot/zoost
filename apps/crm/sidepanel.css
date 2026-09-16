@@ -44,6 +44,8 @@
   .ftbl th .thsort{color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;white-space:nowrap}
   .ftbl th .thsort:hover{color:var(--ink)}
   .ftnote{padding:6px 10px;color:var(--muted);font-size:11px}
+  /* The ladder a module's records climb by default - one of its pipelines carries the flag. */
+  .pipedef{font:10px var(--sans);text-transform:uppercase;letter-spacing:.3px;color:#9fc4f5;border:1px solid #3f6ea8;border-radius:5px;padding:0 5px;margin-left:6px}
   /* What a «Pull list» left as it was: the details on disk are older than the list beside them. */
   .behind{font-size:11px;color:#f59e0b;white-space:nowrap}
   .fllist{margin:0;padding:0 0 0 2.6em;font:12px var(--mono);color:#cbd5e1}

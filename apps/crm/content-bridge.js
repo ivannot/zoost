@@ -1022,7 +1022,62 @@
           } catch (_) {}
         }
       }
+      // **Pipelines: the ladders a record climbs, which the field list only hints at.** The Stage
+      // picklist a module carries is the *union* of the stages its pipelines use - measured on a
+      // sandbox where three pipelines of 9, 8 and 7 stages produced exactly the 24 values the field
+      // lists - so the field says which stages exist and nothing about which ladder they belong to,
+      // in what order, or what a stage is worth. Two reads answer that: the pipelines of a layout,
+      // and the module's whole stage pool with each stage's probability and forecast type. The pool
+      // is wider than the ladders: 33 against 24 there, the nine left over being Zoho's defaults on
+      // no pipeline at all - invisible in the panel until now.
+      //
+      // Asked only of a module that has a Stage or Pipeline picklist. Measured on three orgs, that is
+      // Deals and nothing else, so it costs one pair of requests, not one per module. A module that
+      // names those fields otherwise is missed, and says so by having no pipelines rather than by
+      // inventing them: `layout_id` is mandatory on the pipeline call, so there is nothing to guess.
+      let pipelines = [], stagePool = [];
+      // Its own line, and false: the flag that separates «Zoho answered, and there are none» from
+      // «nobody asked, or the call failed» - the distinction the prune and the panel both read.
+      let pipelinesRead = false;
+      const hasStages = fieldsOk && fields.some((f) => /^(Stage|Pipeline)$/.test(f.api_name || '')
+        && String(f.data_type || '') === 'picklist');
+      if (hasStages) {
+        try {
+          for (const L of layouts) {
+            const lp = `/crm/v9/settings/pipeline?layout_id=${encodeURIComponent(L.id)}`;
+            for (const pl of list(await api(lp), 'pipeline', lp)) {
+              pipelines.push({
+                id: String(pl.id || ''), name: pl.display_value || pl.actual_value || '',
+                value: pl.actual_value || '', default: pl.default === true,
+                layout: L.name || null, layout_id: String(L.id || ''),
+                stages: (pl.maps || []).map((st) => ({
+                  id: String(st.id || ''), name: st.display_value || st.actual_value || '',
+                  value: st.actual_value || '', sequence: st.sequence_number == null ? null : Number(st.sequence_number),
+                  forecast_type: st.forecast_type || null,
+                  forecast_category: (st.forecast_category && st.forecast_category.name) || null,
+                })),
+              });
+            }
+          }
+          const sp = `/crm/v9/settings/stages?module=${encodeURIComponent(m.api_name)}`;
+          stagePool = list(await api(sp), 'stages', sp).map((st) => ({
+            id: String(st.id || ''), name: st.display_label || st.name || '', value: st.name || '',
+            probability: st.probability == null ? null : Number(st.probability),
+            forecast_type: st.forecast_type || null,
+            forecast_category: (st.forecast_category && st.forecast_category.name) || null,
+          }));
+          pipelinesRead = true;
+        } catch (_) {
+          // Same distinction as layouts and related lists: «not read» is not «has none», and only the
+          // second is a fact the panel may write over what is already on disk.
+          pipelines = []; stagePool = [];
+        }
+      }
       out.push({
+        pipelines, stage_pool: stagePool,
+        // False for a module that was never asked as well as for one whose read failed: in both, what
+        // this pull knows about its ladders is nothing.
+        pipelines_read: pipelinesRead,
         related_lists: related,
         // Read, or merely not obtained. The panel prunes layout files against this: «none» is a fact
         // it may act on, «not read» is not.

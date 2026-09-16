@@ -30,6 +30,191 @@
   "plural_label": "Deals",
   "id": "6003",
   "generated_type": "standard",
+  "pipelines": [
+    {
+      "id": "3400",
+      "name": "Standard",
+      "value": "Standard",
+      "default": true,
+      "layout": "Standard",
+      "layout_id": "3003",
+      "stages": [
+        {
+          "id": "3500",
+          "name": "Qualified",
+          "value": "Qualified",
+          "sequence": 1,
+          "forecast_type": "Open",
+          "forecast_category": "Pipeline"
+        },
+        {
+          "id": "3501",
+          "name": "Proposal made",
+          "value": "Proposal made",
+          "sequence": 2,
+          "forecast_type": "Open",
+          "forecast_category": "Pipeline"
+        },
+        {
+          "id": "3502",
+          "name": "Negotiation",
+          "value": "Negotiation",
+          "sequence": 3,
+          "forecast_type": "Open",
+          "forecast_category": "Pipeline"
+        },
+        {
+          "id": "3503",
+          "name": "Won",
+          "value": "Won",
+          "sequence": 4,
+          "forecast_type": "Closed Won",
+          "forecast_category": "Closed Won"
+        },
+        {
+          "id": "3504",
+          "name": "Lost",
+          "value": "Lost",
+          "sequence": 5,
+          "forecast_type": "Closed Lost",
+          "forecast_category": "Closed Lost"
+        }
+      ]
+    },
+    {
+      "id": "3401",
+      "name": "Renewal",
+      "value": "Renewal",
+      "default": false,
+      "layout": "Standard",
+      "layout_id": "3003",
+      "stages": [
+        {
+          "id": "3505",
+          "name": "Renewal due",
+          "value": "Renewal due",
+          "sequence": 1,
+          "forecast_type": "Open",
+          "forecast_category": "Pipeline"
+        },
+        {
+          "id": "3506",
+          "name": "Offer sent",
+          "value": "Offer sent",
+          "sequence": 2,
+          "forecast_type": "Open",
+          "forecast_category": "Pipeline"
+        },
+        {
+          "id": "3507",
+          "name": "Renewed",
+          "value": "Renewed",
+          "sequence": 3,
+          "forecast_type": "Closed Won",
+          "forecast_category": "Closed Won"
+        },
+        {
+          "id": "3508",
+          "name": "Churned",
+          "value": "Churned",
+          "sequence": 4,
+          "forecast_type": "Closed Lost",
+          "forecast_category": "Closed Lost"
+        }
+      ]
+    }
+  ],
+  "stage_pool": [
+    {
+      "id": "3700",
+      "name": "Qualified",
+      "value": "Qualified",
+      "probability": 10,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    },
+    {
+      "id": "3701",
+      "name": "Proposal made",
+      "value": "Proposal made",
+      "probability": 40,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    },
+    {
+      "id": "3702",
+      "name": "Negotiation",
+      "value": "Negotiation",
+      "probability": 70,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    },
+    {
+      "id": "3703",
+      "name": "Won",
+      "value": "Won",
+      "probability": 100,
+      "forecast_type": "Closed Won",
+      "forecast_category": "Closed Won"
+    },
+    {
+      "id": "3704",
+      "name": "Lost",
+      "value": "Lost",
+      "probability": 0,
+      "forecast_type": "Closed Lost",
+      "forecast_category": "Closed Lost"
+    },
+    {
+      "id": "3705",
+      "name": "Renewal due",
+      "value": "Renewal due",
+      "probability": 20,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    },
+    {
+      "id": "3706",
+      "name": "Offer sent",
+      "value": "Offer sent",
+      "probability": 50,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    },
+    {
+      "id": "3707",
+      "name": "Renewed",
+      "value": "Renewed",
+      "probability": 100,
+      "forecast_type": "Closed Won",
+      "forecast_category": "Closed Won"
+    },
+    {
+      "id": "3708",
+      "name": "Churned",
+      "value": "Churned",
+      "probability": 0,
+      "forecast_type": "Closed Lost",
+      "forecast_category": "Closed Lost"
+    },
+    {
+      "id": "3709",
+      "name": "Needs analysis",
+      "value": "Needs analysis",
+      "probability": 30,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    },
+    {
+      "id": "3710",
+      "name": "Paused",
+      "value": "Paused",
+      "probability": 15,
+      "forecast_type": "Open",
+      "forecast_category": "Pipeline"
+    }
+  ],
+  "pipelines_read": true,
   "deletable": false,
   "editable": true,
   "creatable": true,

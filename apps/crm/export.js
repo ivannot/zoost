@@ -325,11 +325,33 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       }).join('') : '';
       // A section with three empty tables and no reason reads as a module with nothing in it. The
       // reader of an export cannot ask the panel, which is the whole point of the export.
+      // The ladders, beside the layouts they belong to and under the same tick: «how this module is
+      // shaped» is one decision for a reader of the report, not two. A stage's worth comes from the
+      // module's pool, which is wider than the ladders - the leftovers are listed last.
+      const pipes = !scope.layouts ? [] : (m.pipelines || []);
+      const poolOf = new Map((m.stage_pool || []).map((st) => [st.value || st.name, st]));
+      const onLadder = new Set(pipes.flatMap((p) => (p.stages || []).map((st) => st.value || st.name)));
+      const stRow = (st, i) => {
+        const w = poolOf.get(st.value || st.name) || {};
+        return `<tr><td>${st.sequence == null ? i + 1 : st.sequence}</td><td>${esc(st.name)}</td><td>${esc(st.forecast_type || '')}</td>`
+          + `<td>${w.probability == null ? '' : w.probability + '%'}</td><td>${esc(st.forecast_category || w.forecast_category || '')}</td></tr>`;
+      };
+      const stTable = (rows) => `<table class="ftbl"><thead><tr><th>#</th><th>Stage</th><th>Outcome</th><th>Prob.</th><th>Forecast</th></tr></thead><tbody>${rows}</tbody></table>`;
+      const spare = !scope.layouts ? [] : (m.stage_pool || []).filter((st) => !onLadder.has(st.value || st.name));
+      const pipeHtml = (pipes.length || spare.length)
+        ? `<div style="font-weight:700;margin:12px 0 4px;color:#2f6fe0">Pipelines (${pipes.length})</div>`
+          + pipes.map((p) => `<div style="font-weight:600;margin:8px 0 3px;font-size:12px">${esc(p.name)}${p.default ? ' <span class="none">(default)</span>' : ''}`
+            + `<span class="none"> - ${(p.stages || []).length} stage(s)${p.layout ? ' · layout ' + esc(p.layout) : ''}</span></div>`
+            + stTable((p.stages || []).map(stRow).join(''))).join('')
+          + (spare.length ? `<div style="font-weight:600;margin:8px 0 3px;font-size:12px">In the module, on no pipeline <span class="none">- ${spare.length}</span></div>`
+            + stTable(spare.map((st, i) => stRow({ ...st, sequence: null }, i)).join('')) : '')
+          + (m.pipelines_kept ? '<p class="note">This module’s pipelines were not read by the last pull; they are what the pull before it saw.</p>' : '')
+        : '';
       const mref = moduleRefusal(m.unreadable);
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
         + (mref ? `<div class="refs"><span><b>Not described by Zoho.</b> ${esc(mref.text)}</span></div>` : '')
-        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
+        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${pipeHtml}${layoutsHtml}</section>`;
     });
   }
 
@@ -939,6 +961,30 @@ function buildExportMarkdown(d, scope) {
       md += '\n';
     } else if (scope.relations && m.related_read === false) {
       md += 'Related lists: neither endpoint would answer for this module when it was pulled, so whether it has any is unknown.\n\n';
+    }
+    const mdPipes = scope.layouts ? (m.pipelines || []) : [];
+    const mdPool = new Map((m.stage_pool || []).map((st) => [st.value || st.name, st]));
+    const mdOn = new Set(mdPipes.flatMap((p) => (p.stages || []).map((st) => st.value || st.name)));
+    const mdRow = (st, i) => {
+      const w = mdPool.get(st.value || st.name) || {};
+      return `| ${st.sequence == null ? i + 1 : st.sequence} | ${_mdCell(st.name)} | ${_mdCell(st.forecast_type || '')} | `
+        + `${w.probability == null ? '' : w.probability + '%'} | ${_mdCell(st.forecast_category || w.forecast_category || '')} |\n`;
+    };
+    const mdSpare = scope.layouts ? (m.stage_pool || []).filter((st) => !mdOn.has(st.value || st.name)) : [];
+    if (mdPipes.length || mdSpare.length) {
+      md += `#### Pipelines (${mdPipes.length})\n\n`;
+      mdPipes.forEach((p) => {
+        md += `**${_mdCell(p.name)}**${p.default ? ' (default)' : ''} - ${(p.stages || []).length} stage(s)`
+          + `${p.layout ? ' · layout ' + _mdCell(p.layout) : ''}\n\n| # | Stage | Outcome | Prob. | Forecast |\n|---|---|---|---|---|\n`;
+        (p.stages || []).forEach((st, i) => { md += mdRow(st, i); });
+        md += '\n';
+      });
+      if (mdSpare.length) {
+        md += `**In the module, on no pipeline** - ${mdSpare.length}\n\n| # | Stage | Outcome | Prob. | Forecast |\n|---|---|---|---|---|\n`;
+        mdSpare.forEach((st, i) => { md += mdRow({ ...st, sequence: null }, i); });
+        md += '\n';
+      }
+      if (m.pipelines_kept) md += 'These pipelines were not read by the last pull; they are what the pull before it saw.\n\n';
     }
     (scope.layouts ? (m._layouts || []) : []).forEach((L) => {
       md += `#### Layout: ${_mdCell(L.name || String(L.id))}${L.visible === false ? ' (hidden)' : ''} - ${(L.sections || []).length} sections\n\n`;

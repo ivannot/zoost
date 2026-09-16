@@ -42,7 +42,7 @@ WHAT IT DOES
 
 - Reverse usage. Where each function is actually wired across the org - blueprint, button, schedule and so on - read from Zoho's own signal, with no expensive scans.
 
-- Module schema, fields and layouts. Every field with type, lookup target, picklist values, mandatory flag and the workflow rules it starts, the ones that check it and the ones that write it. A layout matrix shows, per field, which layouts it belongs to and where it is required - and flags fields that are on no layout at all.
+- Module schema, fields, layouts and pipelines - each pipeline's stages in order, with the outcome, probability and forecast category, plus the stages the module keeps on no pipeline. Every field with type, lookup target, picklist values, mandatory flag and the workflow rules it starts, the ones that check it and the ones that write it. A layout matrix shows, per field, which layouts it belongs to and where it is required - and flags fields that are on no layout at all.
 
 - Relations, with the names you actually need. The API name of a related list is not the api name of either module, and it is what zoho.crm.getRelatedRecords() requires. Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
 

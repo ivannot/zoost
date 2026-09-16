@@ -103,6 +103,13 @@ async function pullModules(depth = {}) {
         // through `unreadable` and `fields_read` both.
         (m.unreadable ? refused : notRead).push(m.api_name);
       }
+      // The same argument as the layouts two branches up: a read that did not happen is not a module
+      // with no pipelines, and only the second is a fact this write may act on.
+      if (m.pipelines_read !== true) {
+        let old = null; try { old = JSON.parse(await op.read(`modules/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+        if (!op.current()) return;
+        if (old && (old.pipelines || []).length) { m.pipelines = old.pipelines; m.stage_pool = old.stage_pool || []; m.pipelines_kept = true; }
+      }
       try {
         await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++;
         index.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: (m.fields || []).length, layouts: m.layouts.length, related_lists: (m.related_lists || []).length });
@@ -555,6 +562,44 @@ function renderFieldsTable(m, found = fieldTriggers) {
 }
 // Selecting a different item must start the reader at the top of the new content;
 // keeping the previous scroll offset lands you in the middle of an unrelated document.
+/** The ladders a record climbs: one table per pipeline, its stages in order, and what a stage is
+ *  worth. Measured on a sandbox: the Stage picklist a module carries is the union of its pipelines'
+ *  stages - 24 values from ladders of 9, 8 and 7 - so the field says which stages exist and nothing
+ *  about which ladder they sit on. The module's pool is wider still: 33 there, the nine left over
+ *  being Zoho's default stages on no pipeline at all, which is the group at the bottom.
+ *
+ *  Zoho answers the probability on the *stage*, not on the pipeline-and-stage pair, so a stage on two
+ *  ladders is worth the same on both. Measured on one org; said rather than assumed. */
+function renderPipelines(m) {
+  const pipes = m.pipelines || [], pool = m.stage_pool || [];
+  if (!pipes.length && !pool.length) {
+    return `<div class="empty" style="padding:12px 10px">${m.pipelines_read === false
+      ? '<b>The pipelines were not read.</b> Zoho did not answer for them when this module was pulled - press <b>Pull list + details</b> above.'
+      : '<b>No pipelines.</b> This module moves no record along stages, or Zoho does not offer them for it.'}</div>`;
+  }
+  const worth = new Map(pool.map((st) => [st.value || st.name, st]));
+  const onALadder = new Set(pipes.flatMap((p) => (p.stages || []).map((st) => st.value || st.name)));
+  const row = (st, i) => {
+    const w = worth.get(st.value || st.name) || {};
+    return `<tr><td class="num">${st.sequence == null ? i + 1 : st.sequence}</td><td>${escHtml(st.name)}</td>`
+      + `<td>${escHtml(st.forecast_type || '')}</td><td class="num">${w.probability == null ? '' : w.probability + '%'}</td>`
+      + `<td>${escHtml(st.forecast_category || w.forecast_category || '')}</td></tr>`;
+  };
+  const head = '<thead><tr><th class="num">#</th><th>Stage</th><th>Outcome</th><th class="num">Prob.</th><th>Forecast</th></tr></thead>';
+  const table = (rows) => `<table class="ftbl">${head}<tbody>${rows}</tbody></table>`;
+  let html = pipes.map((p) => `<div class="secttl">${escHtml(p.name)}${p.default ? ' <span class="pipedef">default</span>' : ''}`
+    + `<span style="color:var(--muted);font-weight:400"> - ${(p.stages || []).length} stage(s)${p.layout ? ' · layout ' + escHtml(p.layout) : ''}</span></div>`
+    + table((p.stages || []).map(row).join('')), '').join('');
+  // The stages the module keeps and no ladder uses: Zoho's defaults, left behind when the pipelines
+  // were built. They are in no picklist the panel draws, so this is the only place they are visible.
+  const spare = pool.filter((st) => !onALadder.has(st.value || st.name));
+  if (spare.length) {
+    html += `<div class="secttl">In the module, on no pipeline <span style="color:var(--muted);font-weight:400">- ${spare.length}</span></div>`
+      + table(spare.map((st, i) => row({ ...st, sequence: null }, i)).join(''));
+  }
+  return html + (m.pipelines_kept
+    ? '<div class="ftnote">This pull did not read the pipelines; these are what the last pull that could read them saw.</div>' : '');
+}
 function resetPreviewScroll() {
   const doIt = () => {
     ['pvtable', 'pvbody', 'pvcode', 'pvwrap'].forEach((id) => { const e = $(id); if (e) { e.scrollTop = 0; e.scrollLeft = 0; } });
@@ -649,7 +694,11 @@ async function openModule(path, layoutId) {
   $('pvcallershome').after($('pvcallers'));
   $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m, trig)}</div></div>`
     + `<div id="pvrels">${rlBlock}</div>`
+    + `<div id="pvpipes">${renderPipelines(m)}</div>`
     + `<div id="pvdetails">${refBanner}${namesBlock}</div>`;
+  // Offered only where the module has them, the way Files is offered only for a project: the pane is
+  // rebuilt by every open, so the flag is set beside it rather than remembered.
+  $('pvpipes').dataset.available = ((m.pipelines || []).length || (m.stage_pool || []).length) ? '1' : '';
   pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before
   // The names first, then what reads and writes it. It was the other way round - «read by» and
   // «written by» at the top and the module's own display name, api_name and generated name below the

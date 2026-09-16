@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · updated <span class="dd" data-stamp="updated">15 September 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · updated <span class="dd" data-stamp="updated">16 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -503,9 +503,13 @@ git commit -m "baseline"</code></pre>
   </div>
   <p>Two places give it to you:</p>
   <ul>
-    <li><b>The module preview</b>, in the side panel. Its detail has three tabs - <b class="ui">Fields</b>,
-      <b class="ui">Related lists</b> and <b class="ui">Details</b> - and the related lists have the middle
-      one to themselves. Click an API name to copy it.</li>
+    <li><b>The module preview</b>, in the side panel. Its detail has <b class="ui">Fields</b>, <b class="ui">Related lists</b>,
+      <b class="ui">Details</b> and, where the module has them, <b class="ui">Pipelines</b>. Click an API name to copy it.</li>
+    <li><b class="ui">Pipelines</b> shows each pipeline of the module with its stages in order, the outcome
+      each stage counts as (open, won, lost), its probability and its forecast category - and, at the bottom,
+      the stages the module keeps on no pipeline at all, which no picklist shows. Zoho answers the probability
+      on the stage rather than on the pipeline-and-stage pair, so a stage used by two pipelines is worth the same on
+      both - measured on one org, and what Zoost shows is what Zoho sends.</li>
     <li><b>Relations tab</b> in the graph window: one row per relation, with the target module, the lookup
       field or linking module behind it, and the full call. Filter chips hide the system related lists
       (Notes, Attachments, Tasks…) so only your own relations remain.</li>

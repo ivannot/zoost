@@ -105,7 +105,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   which is where it lives. And because following links is only half of it, the detail pane keeps a
   **history** like a browser's: back, forward, and the whole chain to jump into (Alt+← / Alt+→). It
   spans the tabs and is cleared only by changing workspace.
-- **Module schema & ER diagram**: browse fields (type, lookup, picklist, and the workflow rules each one starts, is checked by or is written by) and view foreign-key
+- **Module schema & ER diagram**: browse fields (type, lookup, picklist, and the workflow rules each one starts, is checked by or is written by), the pipelines a module moves its records along, and view foreign-key
   relationships as an entity-relationship diagram (pan / zoom / fit / drag a box to arrange it / take a
   box off the drawing / save and reload the arrangement as a file / Save PDF).
 - **Automation map**: Workflows and Schedules with their triggers, criteria, instant and time-based
