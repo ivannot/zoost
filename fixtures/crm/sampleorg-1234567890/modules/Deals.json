@@ -215,6 +215,7 @@
     }
   ],
   "pipelines_read": true,
+  "has_stages": true,
   "deletable": false,
   "editable": true,
   "creatable": true,

@@ -105,10 +105,20 @@ async function pullModules(depth = {}) {
       }
       // The same argument as the layouts two branches up: a read that did not happen is not a module
       // with no pipelines, and only the second is a fact this write may act on.
-      if (m.pipelines_read !== true) {
+      // Only for a module that can have them: `has_stages` is false for seventy-eight of seventy-nine,
+      // and reading each one's file to learn it has no ladders to keep is a disk read per module per
+      // pull that can change nothing. Found by review.
+      if (m.pipelines_read !== true && m.has_stages !== false) {
         let old = null; try { old = JSON.parse(await op.read(`modules/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
         if (!op.current()) return;
-        if (old && (old.pipelines || []).length) { m.pipelines = old.pipelines; m.stage_pool = old.stage_pool || []; m.pipelines_kept = true; }
+        // The pool is kept on its own: it holds the probabilities and Zoho's leftover stages, and a
+        // module can have one with no ladder configured - where the first version kept nothing at all.
+        const hadPipes = old && (old.pipelines || []).length, hadPool = old && (old.stage_pool || []).length;
+        if (hadPipes || hadPool) {
+          m.pipelines = hadPipes ? old.pipelines : [];
+          m.stage_pool = old.stage_pool || [];
+          m.pipelines_kept = true;
+        }
       }
       try {
         await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++;

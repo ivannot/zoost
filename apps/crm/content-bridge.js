@@ -1041,7 +1041,12 @@
       let pipelinesRead = false;
       const hasStages = fieldsOk && fields.some((f) => /^(Stage|Pipeline)$/.test(f.api_name || '')
         && String(f.data_type || '') === 'picklist');
-      if (hasStages) {
+      // **And only when the layouts were read.** The ladders are asked per layout, so a refused layouts
+      // call leaves the loop below with nothing to walk - and the stage pool answering on its own was
+      // enough to set the flag, which then said «Zoho answered: no pipelines» about a module nobody
+      // asked. The panel trusts that flag and wrote the empty answer over the ladders on disk. Found by
+      // review, and it is the same class as the pull depth: a verdict has to derive from every gap.
+      if (hasStages && layoutsRead) {
         try {
           for (const L of layouts) {
             const lp = `/crm/v9/settings/pipeline?layout_id=${encodeURIComponent(L.id)}`;
@@ -1075,6 +1080,9 @@
       }
       out.push({
         pipelines, stage_pool: stagePool,
+        // Whether this module can have ladders at all, so the panel knows there is nothing to keep for
+        // the seventy-eight that cannot - measured: one module in three orgs has them.
+        has_stages: hasStages,
         // False for a module that was never asked as well as for one whose read failed: in both, what
         // this pull knows about its ladders is nothing.
         pipelines_read: pipelinesRead,

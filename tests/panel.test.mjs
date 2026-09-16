@@ -22018,6 +22018,21 @@ test('the pipelines pane draws each ladder in order, prices it from the pool, an
                'ladders kept from an older pull are presented as current');
 });
 
+// Three from the review of the pipelines work, each a claim made over a gap: the ladders are asked per
+// layout, so a refused layouts call leaves nothing to walk - and the stage pool answering on its own
+// set the flag that says «Zoho answered: there are none», which the panel then wrote over the disk.
+test('a module whose layouts were refused is not reported as having no pipelines', () => {
+  const bridge = read('apps/crm/content-bridge.js');
+  assert.match(bridge, /if \(hasStages && layoutsRead\) \{/,
+               'the ladders are claimed read when the layouts they are asked per were not');
+  const keep = sliceFn('apps/crm/modules.js', 'pullModules');
+  assert.match(keep, /const hadPipes = old && \(old\.pipelines \|\| \[\]\)\.length, hadPool = old && \(old\.stage_pool \|\| \[\]\)\.length;/,
+               'a module with a stage pool and no ladder loses the pool - the probabilities and Zoho’s leftovers');
+  assert.match(keep, /m\.pipelines_read !== true && m\.has_stages !== false/,
+               'every module reads its own file to learn it has no ladders to keep - a disk read per module per pull');
+  assert.match(bridge, /has_stages: hasStages,/, 'the panel is never told which modules can have ladders');
+});
+
 test('the bridge asks for pipelines only where a module has stages, and a pull that did not read them keeps them', () => {
   const bridge = read('apps/crm/content-bridge.js');
   assert.match(bridge, /\/crm\/v9\/settings\/pipeline\?layout_id=\$\{encodeURIComponent\(L\.id\)\}/,
@@ -22027,7 +22042,8 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
   assert.match(bridge, /const hasStages = fieldsOk && fields\.some\(\(f\) => \/\^\(Stage\|Pipeline\)\$\/\.test\(f\.api_name \|\| ''\)/,
                'every module is asked for pipelines, so one module of 79 costs a request on every other');
   const pull = sliceFn('apps/crm/modules.js', 'pullModules');
-  assert.match(pull, /if \(m\.pipelines_read !== true\) \{/, 'a pull that did not read the ladders writes over the ones on disk');
-  assert.match(pull, /m\.pipelines = old\.pipelines; m\.stage_pool = old\.stage_pool \|\| \[\]; m\.pipelines_kept = true;/,
+  assert.match(pull, /if \(m\.pipelines_read !== true && m\.has_stages !== false\) \{/,
+               'a pull that did not read the ladders writes over the ones on disk');
+  assert.match(pull, /m\.pipelines_kept = true;/,
                'the kept ladders are not marked as kept, so the pane presents them as current');
 });

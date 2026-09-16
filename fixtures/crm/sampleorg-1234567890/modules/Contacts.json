@@ -55,6 +55,7 @@
   "pipelines": [],
   "stage_pool": [],
   "pipelines_read": false,
+  "has_stages": false,
   "deletable": false,
   "editable": true,
   "creatable": true,

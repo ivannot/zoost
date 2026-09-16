@@ -502,6 +502,8 @@ function deluge(ns, name, params, calls) {
         api_name: api, module_name: api, singular_label: label.replace(/s$/, ''), plural_label: label,
         id: String(6000 + i), generated_type: cat,
         pipelines, stage_pool: stagePool, pipelines_read: !refused && !!pipelines.length,
+        // The same key the bridge sends: whether this module can have ladders at all.
+        has_stages: !!pipelines.length,
         deletable: cat === 'custom', editable: true, creatable: true,
         viewable: true, visible: true, api_supported: true,
         layouts: summary, fields: fields,
