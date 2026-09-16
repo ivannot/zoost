@@ -105,6 +105,7 @@ apps/analytics/sidepanel.js	refreshWorkspaces	viewsPulledAt
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
+apps/crm/automation.js	blueprintFieldsNow	blueprintFields
 apps/crm/automation.js	fieldTriggersNow	fieldTriggers
 apps/crm/content-bridge.js	pageCsrfToken	_pageCsrf
 apps/crm/content-bridge.js	warmDeluge	_warming

@@ -423,7 +423,10 @@ function deluge(ns, name, params, calls) {
       };
     });
     Object.assign(metaIndex, projMeta);   // the projects belong to the same summary
-    J('functions/meta-index.json', { v: 8, sv: 5, files: metaIndex });
+    // In step with `SUMMARY_V` in the panel: a sample whose summary is a version behind is served as
+    // stale and every chip it feeds comes up empty - which is what the suite checks, by comparing the
+    // two numbers rather than trusting either.
+    J('functions/meta-index.json', { v: 9, sv: 5, files: metaIndex });
 
     // Forty plausible values, composed rather than invented one at a time - the same rule the
     // function names follow.

@@ -926,7 +926,10 @@ CRM = """
         if (box.clientWidth < $('preview').clientWidth - 20) say(`the fields pane is narrower than the preview (${box.clientWidth} of ${$('preview').clientWidth})`);
       }
       const heads = [...$('pvfields').querySelectorAll('thead th')].map((t) => t.textContent.trim());
-      if (!/^Workflows/.test(heads[heads.length - 1] || '')) say('the rules count has no column of its own: ' + heads.join(' | '));
+      // Two count columns now, in this order: the rules that touch a field, then the blueprints that
+      // do. Both are checked, because a column silently lost is exactly what this assertion is for.
+      if (!/^WF/.test(heads[heads.length - 2] || '')) say('the rules count has no column of its own: ' + heads.join(' | '));
+      if (!/^BP/.test(heads[heads.length - 1] || '')) say('the blueprints count has no column of its own: ' + heads.join(' | '));
       const items = () => [...$('fieldlistbody').querySelectorAll('li')];
       const oneEach = (li) => li.every((x, i) => i === 0 || x.getBoundingClientRect().top >= li[i - 1].getBoundingClientRect().bottom - 1);
 

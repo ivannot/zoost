@@ -477,7 +477,9 @@ const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN',
   // The trigger readers live in automation.js and both builders call them: the panel is one scope
   // across its scripts, and a lift that stops at one file throws where the page would not.
   .concat(['ANY_VALUE', 'ruleCount', 'COMPARED'].map((k) => sliceConst('apps/crm/automation.js', k)))
-  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText', 'ruleCheckedFields', 'comparedText']
+  .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText', 'ruleCheckedFields', 'comparedText',
+           // Which blueprints touch a field, joined by both builders exactly as the rules are.
+           'blueprintFieldMap']
     .map((k) => sliceFn('apps/crm/automation.js', k)));
 
 test('a URL inside a string is not mistaken for a line comment', () => {
@@ -7241,7 +7243,7 @@ for (const app of ['crm', 'analytics']) {
       'why=the fast path serves a reopen without the publish state - visible only after Refresh');
     // And the summary version moved with its fields, so a summary written before them is re-derived
     // once instead of being served as current without them.
-    assert.match(src, /const SUMMARY_V = 8;/,
+    assert.match(src, /const SUMMARY_V = 9;/,
       'why=an old summary without the fields is served as current, and the chips stay empty');
   });
 
@@ -21719,22 +21721,64 @@ test('the fields a rule writes are read from its field updates, by id and then b
   assert.equal([...map.keys()].some((k) => k.endsWith(':')), false, 'an action pulled before the field was recorded wrote an empty field');
 });
 
+// Which blueprints touch a field: the same key and the same entry shape as the rules above, because
+// the table, the layer and both reports treat the two columns alike. Two ways a process touches a
+// field and they are different facts - it runs on one, and its transitions write others.
+test('a blueprint is listed on the field it runs on and on the fields its transitions write', () => {
+  const { blueprintFieldMap, ruleCount } = load([sliceConst('apps/crm/automation.js', 'ruleCount'),
+                                                 sliceFn('apps/crm/automation.js', 'blueprintFieldMap')]);
+  const acts = [
+    { kind: 'field_updates', id: '11', module: 'Contacts', field: 'Stato', value: 'Ritirato' },
+    { kind: 'field_updates', id: '12', module: 'Contacts', field: 'Owner', value: null },
+    { kind: 'email_notifications', id: '13', module: 'Contacts', name: 'Welcome' },
+  ];
+  const bps = [
+    { id: '700', name: 'Onboarding', module: 'Contacts', field: 'Stato', active: true,
+      acts: { 77: { name: 'Approve', actions: [{ type: 'field_updates', id: '11' },
+                                               { type: 'field_updates', id: '12' },
+                                               { type: 'email_notifications', id: '13' },
+                                               { type: 'field_updates', id: '99' }] } } },
+    // Read by «Pull list» alone: it still runs on a field, and that is known from the index row.
+    { id: '701', name: 'List only', module: 'Contacts', field: 'Stato', active: false, acts: null },
+  ];
+  const map = blueprintFieldMap(bps, acts);
+  assert.deepEqual([...map.get('Contacts:Stato')].map((e) => [e.id, e.role]),
+                   [['700', 'runs on'], ['700', 'writes'], ['701', 'runs on']],
+                   'a blueprint is not listed for the field it runs on, or for the one its transition writes');
+  assert.equal(ruleCount(map.get('Contacts:Stato')), 2, 'one blueprint with two roles was counted twice');
+  assert.deepEqual([...map.get('Contacts:Owner')].map((e) => e.when), ['clears it'],
+                   'an update with no value read as unknown instead of «clears it»');
+  assert.equal(map.get('Contacts:Stato').find((e) => e.role === 'writes').transition, 'Approve',
+               'the transition that writes it is not named, so the reader cannot find it in the process');
+  // An action the catalogue does not hold is unknown, never «writes nothing»: id 99 is not in it, and
+  // a notification writes no field at all.
+  assert.equal([...map.keys()].sort().join(' '), 'Contacts:Owner Contacts:Stato',
+               'an action outside the catalogue, or one that writes no field, invented a row');
+});
+
 const FIELDS_TABLE = () => [sliceConst('apps/crm/automation.js', 'ruleCount')]
   .concat(['lookupOf', 'FIELD_SORTS'].map((k) => sliceConst('apps/crm/modules.js', k)))
-  .concat(['pickCell', 'trigCell', 'sortedFields', 'nextFieldSort', 'renderFieldsTable'].map((k) => sliceFn('apps/crm/modules.js', k)));
+  .concat(['pickCell', 'trigCell', 'bpCell', 'sortedFields', 'nextFieldSort', 'renderFieldsTable'].map((k) => sliceFn('apps/crm/modules.js', k)));
 
 test('the Fields table counts the rules a field fires in a column of its own, and says when it cannot know', () => {
-  const g = { escHtml: (x) => String(x), escA: (x) => String(x), emptyReason: () => '', fieldSort: { key: null, dir: 1 } };
+  // `blueprintFields` is the table's second map and its default parameter reads the global: the panel
+  // is one scope, a lifted realm is not, and without it the table throws where the page would not.
+  const g = { escHtml: (x) => String(x), escA: (x) => String(x), emptyReason: () => '',
+              fieldSort: { key: null, dir: 1 }, blueprintFields: null };
   const m = { api_name: 'Contacts', fields: [{ api_name: 'Status', data_type: 'picklist', picklist: ['A', 'B'] }, { api_name: 'Name' }] };
   const map = new Map([['Contacts:Status', [{ id: 'w1', name: 'Status moved', kind: 'change', when: '', active: false }]]]);
 
   const html = load(FIELDS_TABLE(), { ...g, fieldTriggers: { map, pulled: true, unread: 2 } }).renderFieldsTable(m);
   const heads = [...html.matchAll(/data-sort="(\w+)"/g)].map((x) => x[1]);
-  assert.deepEqual(heads, ['label', 'api', 'type', 'req', 'lookup', 'wf'], 'the headers are not the six columns the table sorts by');
+  assert.deepEqual(heads, ['label', 'api', 'type', 'req', 'lookup', 'wf', 'bp'],
+                   'the headers are not the seven columns the table sorts by - BP is the processes that touch the field');
   const rows = html.split('<tbody>')[1].split('</tr>').filter((r) => r.includes('<td'));
   assert.equal(rows.length, 2, 'a field grew a second row - its lists open in a layer now');
-  assert.ok(rows.every((r) => r.split('<td').length - 1 === 6), 'a row does not have one cell per header');
-  assert.match(rows[0], /data-list="rules" data-f="Status"[^>]*>1<\/button><\/td>\s*$/, 'the rules count is not in the last column');
+  assert.ok(rows.every((r) => r.split('<td').length - 1 === 7), 'a row does not have one cell per header');
+  assert.match(rows[0], /data-list="rules" data-f="Status"[^>]*>1<\/button><\/td>/, 'the rules count is not in its column');
+  // BP is last and empty here: no blueprint map was given, and an empty cell is what «not read»
+  // looks like in a count column - never a zero, which would be a claim about the org.
+  assert.match(rows[0], /<td class="num"><\/td>\s*$/, 'the blueprint column is missing, or it invented a count');
   assert.match(rows[0], /data-list="values" data-f="Status"[^>]*>2 values<\/button>/, 'the picklist count is gone');
   assert.ok(!rows[1].includes('data-list'), 'a field with no values and no rules was given a control');
   assert.ok(html.includes('2 workflow rule(s) are not downloaded'), 'rules it could not read are not admitted');
@@ -21748,7 +21792,9 @@ test('the Fields table sorts by a column, and a third press gives Zoho its order
   const { sortedFields, nextFieldSort } = load(FIELDS_TABLE(), { fieldSort: { key: null, dir: 1 } });
   const fields = [{ api_name: 'b', label: 'Beta' }, { api_name: 'a', label: 'alpha', mandatory: true }, { api_name: 'c', label: 'Gamma' }];
   const n = { a: 0, b: 3, c: 3 };
-  const order = (sort) => sortedFields(fields, (f) => n[f.api_name], sort).map((x) => x.f.api_name).join('');
+  // Both counts per row, because the table sorts by two numeric columns now and one number could
+  // only ever order by one of them.
+  const order = (sort) => sortedFields(fields, (f) => ({ wf: n[f.api_name], bp: 0 }), sort).map((x) => x.f.api_name).join('');
   const zoho = { key: null, dir: 1 };
   assert.equal(order(zoho), 'bac', 'unsorted is not Zoho order');
   let s = nextFieldSort('wf', zoho);
@@ -22434,9 +22480,13 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
   // the file read, which is only on disk if Modules was pulled. A dead branch and a silent fallback
   // look identical on screen: the API name.
   {
+    // The shape measured on a real org: the blueprint names the module `CustomModule20`, the modules
+    // index calls that `module_name` and puts the readable name in `api_name`, and the pull writes
+    // the file under the readable one. Matching on a single key hits neither.
     const files = {
       'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding', module: 'CustomModule20' }]),
-      'modules/CustomModule20.json': JSON.stringify({ api_name: 'CustomModule20', plural_label: 'From disk' }),
+      'modules/Iscrizioni.json': JSON.stringify({ api_name: 'Iscrizioni', module_name: 'CustomModule20',
+                                                  singular_label: 'Iscrizione', plural_label: 'Iscrizioni' }),
     };
     const mk = (moduleData) => {
       const g = {
@@ -22450,20 +22500,26 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       return { g, run: () => m.loadBlueprintIndex(g.beginWorkspaceOp()) };
     };
 
-    test('crm: the module label comes from a field the modules index actually has', async () => {
-      const { g, run } = mk([{ api_name: 'CustomModule20', plural_label: 'Allievi' }]);
+    test('crm: a module is resolved by either of the two names Zoho gives it', async () => {
+      // The blueprint says `CustomModule20`; the modules index calls that `module_name` and carries
+      // the readable name in `api_name`. Matching on `api_name` alone hits nothing, and the file read
+      // then asks for a name the pull never writes - which is what drew the internal name five times.
+      const { g, run } = mk([{ api_name: 'Iscrizioni', module_name: 'CustomModule20' }]);
       await run();
-      assert.equal(g.bpModLabel.get('CustomModule20'), 'Allievi',
-                   'the fast path reads a field nothing writes, so the list groups by the API name');
+      const hit = g.bpModLabel.get('CustomModule20');
+      assert.equal(hit && hit.label, 'Iscrizioni', 'the group header still shows the internal module name');
+      // The chip sends this to the opener. With the blueprint's own value it opened nothing at all.
+      assert.equal(hit && hit.api, 'Iscrizioni', 'the module chip points at a name no module index has');
     });
 
-    test('crm: with no label in the index it falls through to the module file, not to the API name', async () => {
-      // `module_name` equals `api_name` on a custom module, so it is not a label and must not be
-      // mistaken for one - that is the difference between "Allievi" and "CustomModule20".
-      const { g, run } = mk([{ api_name: 'CustomModule20', module_name: 'CustomModule20' }]);
+    test('crm: with no modules pulled it invents nothing and the row keeps the name Zoho gave it', async () => {
+      // Modules never pulled: there is no row to match and no file to read, so the map stays empty
+      // and the header falls back to what the blueprint itself says. That is honest - inventing a
+      // label here would be a claim about an org this mirror has not read.
+      const { g, run } = mk([]);
       await run();
-      assert.equal(g.bpModLabel.get('CustomModule20'), 'From disk',
-                   'the API name was accepted as the module label');
+      assert.equal(g.bpModLabel.get('CustomModule20'), undefined,
+                   'a label was invented for a module this workspace has never read');
     });
   }
 

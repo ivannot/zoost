@@ -487,6 +487,7 @@ function dropWorkspaceState() {
 function dropFileCaches() {
   graphCache = null; codeCache = null; modNamesCache = null;
   moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; fieldTriggers = null;
+  blueprintFields = null;
   failIndex = null; healthData = null;
 }
 /** What is on *screen* when a different workspace is opened - the other half of the above.

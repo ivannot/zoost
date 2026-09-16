@@ -56,14 +56,22 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
     // `label` - so the fast path could not fire once, and every group header depended on the file
     // read below. It is the fifth report of a module drawn by its API name; the branch was there the
     // whole time and was reading a field nobody writes.
-    const row = (moduleData || []).find((x) => x.api_name === api);
-    const rowLabel = row && (row.plural_label || row.singular_label
-                             || (row.module_name && row.module_name !== api ? row.module_name : ''));
-    if (rowLabel) { bpModLabel.set(api, rowLabel); continue; }
-    let m = null; try { m = JSON.parse(await op.read(`modules/${sanitize(api)}.json`)); } catch (_) {}
+    // **Two names, and Zoho swaps which field carries which.** Measured on a real org: in the modules
+    // index a custom module is `api_name: "Iscrizioni"` with `module_name: "CustomModule20"`, while
+    // the blueprints reply puts `CustomModule20` into a field it also calls `api_name`. Matching on
+    // one key could never hit, and the file read asked for `modules/CustomModule20.json`, which the
+    // pull never writes - it names the file by the row's `api_name`. One dimension error, reported
+    // five times, and it kept looking like a missing fallback.
+    const row = (moduleData || []).find((x) => x && (x.api_name === api || x.module_name === api));
+    const fileApi = (row && row.api_name) || api;
+    let m = null; try { m = JSON.parse(await op.read(`modules/${sanitize(fileApi)}.json`)); } catch (_) {}
     if (!op.current()) return false;
-    const lab = m && (m.plural_label || m.singular_label || m.module_name);
-    if (lab) bpModLabel.set(api, lab);
+    // The label the org uses, and failing that the readable name the index already carries - which is
+    // still better than the internal one, and is what the modules list itself shows.
+    const label = (m && (m.plural_label || m.singular_label)) || (fileApi !== api ? fileApi : '');
+    // Both halves: the word to draw, and the name every opener needs. The chip carried the blueprint's
+    // own value and so opened nothing at all, which is the same error one layer on.
+    if (label || fileApi !== api) bpModLabel.set(api, { label: label || fileApi, api: fileApi });
   }
   blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: `blueprints/${String(e.id)}.json`,
                                     downloaded: have.has(String(e.id)), error: false }));
@@ -104,7 +112,8 @@ function renderBlueprints() {
     // reader nothing, and `moduleData` already carries the label the org uses. The grouping key stays
     // the API name, which is stable, so a group left collapsed stays collapsed on the pull that fills
     // Modules in and makes the label appear.
-    const shown = bpModLabel.get(mod) || mod;
+    const shownHit = bpModLabel.get(mod);
+    const shown = (shownHit && shownHit.label) || mod;
     // The folded state is read next to the header it paints, the way the other four headers read
     // theirs. Four lines of comment had pushed it away from them, and a check that derives the pair
     // from the lines around `className = 'grp'` said so - rightly, because that adjacency is what
@@ -167,9 +176,13 @@ async function openBlueprint(e) {
   // The same resolver the list uses, filled once by `loadBlueprintIndex`. It had its own lookup here
   // and a different one there, so fixing the pane left the list showing the API name and the report
   // came back a fourth time. One map, or the two drift again.
-  const modLabel = bpModLabel.get(e.module) || e.module || '';
+  const modHit = bpModLabel.get(e.module) || null;
+  const modLabel = (modHit && modHit.label) || e.module || '';
+  // The name the opener needs, which is not the one the blueprint carries: a custom module is
+  // `CustomModule20` there and `Iscrizioni` in the modules index, and the chip was sending the first.
+  const modApi = (modHit && modHit.api) || e.module || '';
   const modTxt = e.module
-    ? `<span class="mod" data-mod="${escA(e.module)}" title="${escA(e.module + ' - click to open the module')}">${escHtml(modLabel)}</span>`
+    ? `<span class="mod" data-mod="${escA(modApi)}" title="${escA(modApi + ' - click to open the module')}">${escHtml(modLabel)}</span>`
       + (modLabel !== e.module ? ` <span class="wfoff">${escHtml(e.module)}</span>` : '')
     : '';
   $('pvtable').innerHTML = `<div class="wfd">`
@@ -1158,6 +1171,72 @@ function fieldTriggerMap(rules, actions) {
     for (const w of ruleWrittenFields(r, actions)) put(`${w.module}:${w.field}`, { ...base, role: 'writes', kind: 'write', when: w.value });
   }
   return map;
+}
+/** Which blueprints touch a field, keyed exactly as the workflow map is: `module:field`.
+ *
+ *  Two ways a process touches a field, and they are different facts to a reader. It **runs on** one -
+ *  the picklist whose values are its states, which the index row names - and its transitions **write**
+ *  others, through field update actions whose ids join the same catalogue a rule's actions join.
+ *
+ *  The same key and the same entry shape as `fieldTriggerMap`, so the table, the layer and both
+ *  reports treat the two columns alike instead of growing a second vocabulary for the same idea. */
+function blueprintFieldMap(bps, actions) {
+  const map = new Map();
+  const put = (key, entry) => { if (!map.has(key)) map.set(key, []); map.get(key).push(entry); };
+  const byAct = new Map();
+  (actions || []).forEach((a) => { if (a && a.kind === 'field_updates') byAct.set(String(a.id), a); });
+  for (const b of bps || []) {
+    if (!b || !b.module) continue;
+    const base = { id: String(b.id), name: b.name || String(b.id), active: b.active !== false };
+    if (b.field) put(`${b.module}:${b.field}`, { ...base, role: 'runs on', when: 'the states of this field' });
+    for (const t of Object.values((b && b.acts) || {})) {
+      for (const a of ((t && t.actions) || [])) {
+        if (!a || a.type !== 'field_updates' || !a.id) continue;
+        const row = byAct.get(String(a.id));
+        if (!row || !row.field) continue;   // Actions not pulled: unknown, never "writes nothing"
+        put(`${row.module || b.module}:${row.field}`,
+            { ...base, role: 'writes', when: row.value == null ? 'clears it' : String(row.value),
+              transition: (t && t.name) || '' });
+      }
+    }
+  }
+  return map;
+}
+let blueprintFields = null;
+/** The same reading as `buildFieldTriggers`, for blueprints: the index, the actions catalogue, and
+ *  one transitions file per blueprint. A blueprint in the index whose actions were never read is
+ *  counted rather than skipped - it may write any field, so the table can say how many it cannot see. */
+async function buildBlueprintFields(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
+  let idx = null; try { idx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+  if (!Array.isArray(idx)) return op.current() ? { map: new Map(), pulled: false, unread: 0, actions: false } : null;
+  let acts = null; try { acts = JSON.parse(await op.read('actions/index.json')); } catch (_) {}
+  if (!op.current()) return null;
+  const rows = []; let unread = 0;
+  for (const b of idx) {
+    if (!op.current()) return null;
+    let a = null; try { a = JSON.parse(await op.read(`blueprints/${String(b.id)}.actions.json`)); } catch (_) {}
+    if (a) rows.push({ ...b, acts: a }); else { rows.push({ ...b, acts: null }); unread++; }
+  }
+  return op.current()
+    ? { map: blueprintFieldMap(rows, Array.isArray(acts) ? acts : []), pulled: true, unread,
+        actions: Array.isArray(acts) }
+    : null;
+}
+/** Built when absent and kept only if nothing was written while it was being read - the same
+ *  single-flight mark `fieldTriggersNow` uses, and for the same defect: a pull writes one file at a
+ *  time, and a reading taken across one of those writes outlives the write that should have dropped it. */
+async function blueprintFieldsNow(op, stillMine) {
+  let t = blueprintFields && !blueprintFields.reading ? blueprintFields : null;
+  for (let tries = 0; t === null && tries < 3; tries++) {
+    const mark = { reading: true };
+    blueprintFields = mark;
+    t = await buildBlueprintFields(op);
+    if (!stillMine() || !t) { if (blueprintFields === mark) blueprintFields = null; return null; }
+    if (blueprintFields === mark) blueprintFields = t;
+    else if (tries < 2) t = null;
+  }
+  return t;
 }
 const ruleCount = (entries) => new Set((entries || []).map((e) => e.id)).size;
 /** A rule's role on a field, in the words the layer and both reports use. */

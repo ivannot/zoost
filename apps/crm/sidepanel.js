@@ -316,7 +316,13 @@ const META_INDEX = 'functions/meta-index.json';
 // `{"fresh":1,"cached":0}`. **Changing what the extractor writes means moving this line, in the
 // same commit** - the test below holds the readers to it, but only a person can know the meaning
 // changed.
-const SUMMARY_V = 8;   // 8 carries the publish state; 7 cached the directory tree of function projects
+// 9 throws away a summary this product poisoned. A derivation that has since been withdrawn merged
+// its own blueprint entries into each node's `associated_place` *before* the graph was built, and
+// `saveGraphFacts` writes that field into the summary - so the invented entries went to disk and were
+// read back on every load, drawing one relation twice under two spellings. Removing the code could
+// not clear them; only distrusting the file can. The rule it leaves: a field written into the summary
+// must be what was *read*, never what was computed on top of it.
+const SUMMARY_V = 9;   // 8 carried the publish state; 7 cached the directory tree of function projects
 const META_SV = 5;   // v5 adds what Zoho is running: the deploy time and whether a draft is pending
 /** Has Zoho's copy moved since this one was fetched?
  *
@@ -530,7 +536,12 @@ const noteWrite = (rel) => {
   // every module reading the panel is about to resolve.
   if (rel === 'modules/index.json') { modNamesCache = null; graphCache = null; aiConnCache = null; return; }
   if (rel === 'connections/index.json') { aiConnCache = null; return; }
-  if (rel === 'actions/index.json') { aiActCache = null; fieldTriggers = null; return; }
+  // The actions catalogue is what turns a field update into «which field, to what» for a rule *and*
+  // for a blueprint transition, so both maps are readings of it.
+  if (rel === 'actions/index.json') { aiActCache = null; fieldTriggers = null; blueprintFields = null; return; }
+  // Which fields a blueprint runs on and writes is read from these files, so a blueprint pull
+  // changes the Fields table exactly as a workflows pull does.
+  if (rel.startsWith('blueprints/')) { blueprintFields = null; return; }
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
   // the answer - and the actions pull was the only one that rebuilt it.
   if (rel.startsWith('workflows/')) { actionUsers = null; fieldTriggers = null; aiActCache = null; return; }

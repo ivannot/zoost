@@ -417,6 +417,10 @@ function trigCell(f, rules) {
   const n = ruleCount(rules); if (!n) return '';
   return `<button class="plbtn" data-list="rules" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Workflows" title="Workflow rules this field starts, that check it, or that write it">${n}</button>`;
 }
+function bpCell(f, bps) {
+  const n = ruleCount(bps); if (!n) return '';
+  return `<button class="plbtn" data-list="bps" data-f="${escA(f.api_name)}" aria-haspopup="dialog" aria-label="Blueprints" title="Blueprints whose states this field holds, or whose transitions write it">${n}</button>`;
+}
 const lookupOf = (f) => (typeof f.lookup === 'string' ? f.lookup
   : (f.lookup && (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module))))) || '';
 /** How the Fields table is ordered. `key: null` is Zoho's own order, the default; a header cycles
@@ -430,7 +434,13 @@ const FIELD_SORTS = {
   type: { text: 'Type', of: (f) => String(f.data_type || '') },
   req: { text: 'Req', of: (f) => (f.mandatory ? 1 : 0), numeric: true },
   lookup: { text: 'Lookup', of: (f) => lookupOf(f).toLowerCase() },
-  wf: { text: 'Workflows', of: (f, n) => n, numeric: true },
+  // «WF», not «Workflows»: the word took a column's width for a cell holding one number, and the
+  // table is read at panel width. The tooltip on the button still says it in full.
+  wf: { text: 'WF', of: (f, n) => (n && n.wf) || 0, numeric: true },
+  // The processes that touch this field: the one whose states it holds, and the ones whose
+  // transitions write it. A separate column from WF because they are separate things in Zoho and a
+  // reader asks about them separately - the count answers «which field does a process depend on».
+  bp: { text: 'BP', of: (f, n) => (n && n.bp) || 0, numeric: true },
 };
 function sortedFields(fields, countOf, sort = fieldSort) {
   const list = (fields || []).map((f, i) => ({ f, i, n: countOf(f) }));
@@ -458,6 +468,19 @@ function openFieldList(kind, api, opener) {
     const v = f.picklist || [];
     $('fieldlisth').textContent = `${name} · ${v.length} value${v.length === 1 ? '' : 's'}`;
     $('fieldlistbody').innerHTML = `<ol class="fllist">${v.map((x) => `<li>${escHtml(x)}</li>`).join('')}</ol>`;
+  } else if (kind === 'bps') {
+    // The same layer, grouped the same way: what the process does with the field is the reason the
+    // reader opened it. A blueprint row opens the blueprint, as a rule row opens the rule.
+    const bps = shown.bpOf ? shown.bpOf(f) : [], n = ruleCount(bps);
+    $('fieldlisth').textContent = `${name} · ${n} blueprint${n === 1 ? '' : 's'}`;
+    const li = (r) => `<li><button type="button" class="bare wflink" data-bpid="${escA(r.id)}" title="Open this blueprint">${escHtml(r.name)}</button>`
+      + `<span class="wfwhen">${escHtml(r.when || '')}${r.transition ? ' · ' + escHtml(r.transition) : ''}${r.active ? '' : ' · off'}</span></li>`;
+    // Not «Writes it»: that heading belongs to the workflow layer below, and one user-facing string
+    // in two places drifts apart. A transition is what writes here, and the word says so.
+    $('fieldlistbody').innerHTML = [['runs on', 'Runs on it'], ['writes', 'A transition writes it']].map(([role, title]) => {
+      const mine = bps.filter((r) => r.role === role);
+      return mine.length ? `<h4 class="flrole">${title} <span>${mine.length}</span></h4><ul class="fllist">${mine.map(li).join('')}</ul>` : '';
+    }).join('');
   } else {
     const rules = shown.trig(f), n = ruleCount(rules);
     $('fieldlisth').textContent = `${name} · ${n} workflow${n === 1 ? '' : 's'}`;
@@ -520,8 +543,9 @@ async function showChosenLayout(sel, m, mine, op) {
     // Read again rather than drawn from the cache: a workflows write since the module opened dropped
     // it, and a table drawn without it lost every mark and the note that explains their absence.
     const trig = await fieldTriggersNow(op, () => previewCurrent(mine, op));
+    const bpt = await blueprintFieldsNow(op, () => previewCurrent(mine, op));
     if (!previewCurrent(mine, op)) return;
-    body.innerHTML = renderFieldsTable(m, trig); return;
+    body.innerHTML = renderFieldsTable(m, trig, bpt); return;
   }
   body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
   let full = []; try { full = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
@@ -530,16 +554,19 @@ async function showChosenLayout(sel, m, mine, op) {
   body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found - re-pull modules.</div>';
 }
 
-function renderFieldsTable(m, found = fieldTriggers) {
+function renderFieldsTable(m, found = fieldTriggers, bpFound = blueprintFields) {
   const trig = (f) => (found && found.map.get(`${m.api_name}:${f.api_name}`)) || [];
-  fieldListShown = { m, found, trig };
-  const rows = sortedFields(m.fields, (f) => ruleCount(trig(f))).map(({ f }) => `<tr>
+  const bpOf = (f) => (bpFound && bpFound.map && bpFound.map.get(`${m.api_name}:${f.api_name}`)) || [];
+  fieldListShown = { m, found, trig, bpFound, bpOf };
+  // Both counts, because both columns sort: one number per row could only ever order by one of them.
+  const rows = sortedFields(m.fields, (f) => ({ wf: ruleCount(trig(f)), bp: ruleCount(bpOf(f)) })).map(({ f }) => `<tr>
     <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
     <td class="mono">${escHtml(f.api_name)}</td>
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
     <td class="mono">${f.lookup ? '\u2192 ' + escHtml(lookupOf(f)) : ''}</td>
     <td class="num">${trigCell(f, trig(f))}</td>
+    <td class="num">${bpCell(f, bpOf(f))}</td>
   </tr>`).join('');
   if (!rows) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
@@ -564,7 +591,7 @@ function renderFieldsTable(m, found = fieldTriggers) {
   // A header is a button: sorting is reached by Tab and Enter like every other control here.
   const th = (key) => {
     const on = fieldSort.key === key, s = FIELD_SORTS[key];
-    return `<th${key === 'wf' ? ' class="num"' : ''}${on ? ` aria-sort="${fieldSort.dir === 1 ? 'ascending' : 'descending'}"` : ''}>`
+    return `<th${key === 'wf' || key === 'bp' ? ' class="num"' : ''}${on ? ` aria-sort="${fieldSort.dir === 1 ? 'ascending' : 'descending'}"` : ''}>`
       + `<button type="button" class="bare thsort" data-sort="${escA(key)}" title="Sort by this column - again to reverse, a third time for Zoho's order">${escHtml(s.text)}${on ? (fieldSort.dir === 1 ? ' \u25b4' : ' \u25be') : ''}</button></th>`;
   };
   return `<table class="ftbl"><thead><tr>${Object.keys(FIELD_SORTS).map(th).join('')}</tr></thead><tbody>${rows}</tbody></table>`
@@ -644,6 +671,9 @@ async function openModule(path, layoutId) {
   if (!previewCurrent(mine, op)) return;
   // Which rules each field makes fire is read from every rule file, once, and dropped when one is written.
   const trig = await fieldTriggersNow(op, () => previewCurrent(mine, op));
+  // Which blueprints touch each field, read on the same terms: once, here, and dropped by a write to
+  // either source. Without it the BP column would be empty on a module opened straight from the tree.
+  const bpTrig = await blueprintFieldsNow(op, () => previewCurrent(mine, op));
   if (!previewCurrent(mine, op)) return;
   navNames({ display: m.plural_label || m.singular_label || m.module_name || m.api_name,
              gen: m.module_name || m.api_name, api: m.api_name });
@@ -702,7 +732,7 @@ async function openModule(path, layoutId) {
   // So it goes home before the write and comes back after it. The rule is general and worth the line:
   // an element that outlives a render must not be inside what the render replaces.
   $('pvcallershome').after($('pvcallers'));
-  $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m, trig)}</div></div>`
+  $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m, trig, bpTrig)}</div></div>`
     + `<div id="pvrels">${rlBlock}</div>`
     + `<div id="pvpipes">${renderPipelines(m)}</div>`
     + `<div id="pvdetails">${refBanner}${namesBlock}</div>`;

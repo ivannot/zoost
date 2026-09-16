@@ -308,6 +308,11 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const groups = { Standard: [], Custom: [] }; mods.forEach((m) => (m.generated_type === 'custom' ? groups.Custom : groups.Standard).push(m));
   const trigTd = (m, fl) => (fTrig.get(`${m.api_name}:${fl.api_name}`) || [])
     .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(roleText(r))}${r.active ? '' : ', off'})</span>`).join('<br>');
+  // The processes that touch a field, beside the rules that do: the panel grew a BP column and a
+  // report without it is the lesser copy of the panel, which is the one thing a report may not be.
+  const bpTrig = blueprintFieldMap(bps || [], allActs || []);
+  const bpTd = (m, fl) => (bpTrig.get(`${m.api_name}:${fl.api_name}`) || [])
+    .map((r) => `${esc(r.name)} <span class="none">(${esc(r.role)}${r.transition ? ', ' + esc(r.transition) : ''}${r.active ? '' : ', off'})</span>`).join('<br>');
   let modHtml = (fTrig && wfUnread && mods.length
     ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».</p>` : '')
     + (fTrig && actsMissing && mods.length ? '<p class="note">Automation actions are not in this workspace, so a rule that writes a field is not marked for it.</p>' : '');
@@ -315,7 +320,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
     list.sort(byField('api_name')).forEach((m) => {
-      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td>${fTrig ? `<td>${trigTd(m, fl)}</td>` : ''}</tr>`).join('');
+      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td>${fTrig ? `<td>${trigTd(m, fl)}</td>` : ''}${bpTrig.size ? `<td>${bpTd(m, fl)}</td>` : ''}</tr>`).join('');
       const inbound = (modRefs && modRefs[m.api_name]) || [];
       const refBy = inbound.length ? `<div class="refs"><span><b>Referenced by (${inbound.length}):</b> ${inbound.map((r) => `${modLink(r.module)} <span class="none">(${esc(r.field)})</span>`).join(', ')}</span></div>` : '';
       const laySrc = !scope.layouts ? [] : ((m._layouts && m._layouts.length) ? m._layouts : (m.layouts || []));
@@ -356,7 +361,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
         + (mref ? `<div class="refs"><span><b>Not described by Zoho.</b> ${esc(mref.text)}</span></div>` : '')
-        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${pipeHtml}${layoutsHtml}</section>`;
+        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}${bpTrig.size ? '<th>Blueprints</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${pipeHtml}${layoutsHtml}</section>`;
     });
   }
 
@@ -844,6 +849,9 @@ function buildExportMarkdown(d, scope) {
   const allActs = acts || [];   // the census whatever the chapters: a field's writers are read from it
   const actsMissing = acts == null;
   const fTrig = (wfs || []).length ? fieldTriggerMap(wfs.filter((w) => w.detail).map((w) => Object.assign({ id: w.id, name: w.name }, w.detail)), allActs) : null;
+  // The same join the HTML report makes, in the same place: the two reports must not be able to
+  // disagree about which processes touch a field.
+  const bpTrig = blueprintFieldMap(bps || [], allActs || []);
   const wfUnread = (wfs || []).filter((w) => !w.detail).length;
   conns = scope.connections ? (conns || []) : [];
   acts = scope.actions ? (acts || []) : [];
@@ -1006,10 +1014,12 @@ function buildExportMarkdown(d, scope) {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
     const mref = moduleRefusal(m.unreadable);
     if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
-    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |${fTrig ? ' Workflows |' : ''}\n|---|---|---|---|---|${fTrig ? '---|' : ''}\n`;
+    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |${fTrig ? ' Workflows |' : ''}${bpTrig.size ? ' Blueprints |' : ''}\n|---|---|---|---|---|${fTrig ? '---|' : ''}${bpTrig.size ? '---|' : ''}\n`;
     const trigMd = (f) => (fTrig.get(`${m.api_name}:${f.api_name}`) || [])
       .map((r) => `${_mdCell(r.name)} (${_mdCell(roleText(r))}${r.active ? '' : ', off'})`).join('; ');
-    (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${_pick(f.picklist, 12, _mdCell)} |${fTrig ? ' ' + trigMd(f) + ' |' : ''}\n`; });
+    const bpMd = (f) => (bpTrig.get(`${m.api_name}:${f.api_name}`) || [])
+      .map((r) => `${_mdCell(r.name)} (${_mdCell(r.role)}${r.transition ? ', ' + _mdCell(r.transition) : ''}${r.active ? '' : ', off'})`).join('; ');
+    (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${_pick(f.picklist, 12, _mdCell)} |${fTrig ? ' ' + trigMd(f) + ' |' : ''}${bpTrig.size ? ' ' + bpMd(f) + ' |' : ''}\n`; });
     md += '\n';
     if (scope.relations && (m.related_lists || []).length) {
       md += `#### Related lists (use the API name in zoho.crm.getRelatedRecords)\n\n| API name | Label | Target module | Type |\n|---|---|---|---|\n`;

@@ -69,7 +69,9 @@ $('pvtable').addEventListener('click', (e) => {
   if (h && fieldListShown) {
     const key = h.dataset.sort;
     fieldSort = nextFieldSort(key);
-    $('laybody').innerHTML = renderFieldsTable(fieldListShown.m, fieldListShown.found);
+    // Both maps, or sorting by any header redraws the table without the blueprints and the BP column
+    // empties on the first click - the table would be telling the truth once and then stopping.
+    $('laybody').innerHTML = renderFieldsTable(fieldListShown.m, fieldListShown.found, fieldListShown.bpFound);
     const again = [...$('laybody').querySelectorAll('.thsort')].find((x) => x.dataset.sort === key); if (again) again.focus();
     return;
   }
@@ -78,7 +80,12 @@ $('pvtable').addEventListener('click', (e) => {
 $('fieldlistx').onclick = closeFieldList;
 $('fieldlistbody').addEventListener('click', (e) => {
   const wl = e.target.closest('.wflink'); if (!wl) return;
-  closeFieldList(); openWorkflowById(wl.dataset.wfid);
+  closeFieldList();
+  // One class, two kinds of row: the layer lists the rules that touch a field and the blueprints
+  // that do, and each opens where it lives. Without this branch a blueprint row is a button that
+  // does nothing - the defect the module chip and the function chip have each been fixed for.
+  if (wl.dataset.bpid) healthOpenBlueprint(wl.dataset.bpid, wl.textContent || '');
+  else openWorkflowById(wl.dataset.wfid);
 });
 // Escape closes the list before anything else hears it: it is on top of everything, and the
 // panel's own Escape would otherwise close a view underneath the layer the reader is looking at.

@@ -71,6 +71,7 @@ apps/crm/export.js	_mdCell(r.module)
 apps/crm/export.js	_mdCell(r.name || r.id)
 apps/crm/export.js	_mdCell(r.name)
 apps/crm/export.js	_mdCell(r.parent)
+apps/crm/export.js	_mdCell(r.role)
 apps/crm/export.js	_mdCell(r.target)
 apps/crm/export.js	_mdCell(r.type || '')
 apps/crm/export.js	_mdCell(r.type)
@@ -110,6 +111,12 @@ apps/crm/export.js	bound.label
 apps/crm/export.js	bp.field
 apps/crm/export.js	bp.field_label
 apps/crm/export.js	bpHtml
+apps/crm/export.js	bpTd(m, fl)
+apps/crm/export.js	bpTrig.size ? ' ' + bpMd(f) + ' |' : ''
+apps/crm/export.js	bpTrig.size ? ' Blueprints |' : ''
+apps/crm/export.js	bpTrig.size ? '---|' : ''
+apps/crm/export.js	bpTrig.size ? '<th>Blueprints</th>' : ''
+apps/crm/export.js	bpTrig.size ? `<td>${bpTd(m, fl)}</td>` : ''
 apps/crm/export.js	c.sequence_number || i + 1
 apps/crm/export.js	connHtml
 apps/crm/export.js	count
@@ -232,6 +239,7 @@ apps/crm/export.js	r.child ? modLink(r.child) : ''
 apps/crm/export.js	r.count == null ? 'unknown' : r.count
 apps/crm/export.js	r.linking_module
 apps/crm/export.js	r.linking_module ? ' via ' + _mdCell(r.linking_module) : ''
+apps/crm/export.js	r.transition ? ', ' + _mdCell(r.transition) : ''
 apps/crm/export.js	r.visible === false ? ' (hidden)' : ''
 apps/crm/export.js	r.visible === false ? ' \u00b7 hidden' : ''
 apps/crm/export.js	r.visible ? '' : ' \u00b7 hidden'
