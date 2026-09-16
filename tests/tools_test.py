@@ -2156,6 +2156,26 @@ class TheNotesAreOneIndexedSet(unittest.TestCase):
                              capture_output=True, text=True, cwd=ROOT)
         self.assertIn('to spare', out.stdout, 'a passing run does not say how much room is left')
 
+    def test_every_checker_is_actually_run(self):
+        """A checker nobody runs is a rule that only looks enforced.
+
+        Derived from the folder, not from a list: the next one added inherits this without anyone
+        remembering. The three that are deliberately outside the battery are named with their reason,
+        because an exemption list that grows quietly is a checklist wearing a script's clothes.
+        """
+        run = (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
+        outside = {
+            'auditcheck.py': 'runs at release time, through release.sh --before-tag',
+            'dashcheck.py': 'needs the Store dashboard page pasted in by the author',
+            'handcheck.py': 'records his answers to the manual checks; it scans nothing',
+        }
+        for f in sorted((ROOT / 'tools').glob('*check*.py')):
+            if f.name in outside:
+                continue
+            self.assertIn(f'tools/{f.name}', run,
+                          f'tools/{f.name} is in the repository and in no run - either the battery '
+                          f'calls it or it is named in this exemption list with a reason')
+
     def test_every_file_is_named_by_the_index(self):
         for f in self.docs:
             self.assertIn(f'docs/{f.name}', self.main,
