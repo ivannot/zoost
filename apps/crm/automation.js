@@ -218,6 +218,13 @@ async function openBlueprint(e) {
   // After the draw, never before: the chips do not exist until the line above has run. Same helper
   // the workflow pane uses - one mechanism for «open that function», not a second one here.
   wireFnChips(box, (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
+  // The actions a transition fires, opened where they live. Same wiring the function pane uses for
+  // «Used in», rather than a second mechanism: `HEALTH_OPEN` already maps a kind to its opener, so a
+  // kind that gains one is reachable from here too without this line being touched.
+  box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
+    const open = HEALTH_OPEN[a.dataset.ap];
+    if (open) open(a.dataset.apid, a.dataset.apname);
+  }));
 }
 /** The states a record moves through, the transitions between them, and what each transition does.
  *
@@ -247,6 +254,17 @@ function renderBlueprintDetail(bp, acts, actIndex) {
   // a sentence that is on screen when it does not apply is one the reader learns to skip, and then
   // misses on the day it is the answer.
   let anyUnread = false, anyUnjoined = false;
+  /** An action the catalogue holds is a **link**, not a word. It is the same `.aplink` the function
+   *  pane uses under «Used in», so one mechanism opens an action from anywhere - and the reason is
+   *  the product's own: a transition that fires a notification and the notification itself are two
+   *  objects the reader should be one click apart from. Reported as «email and task carry a textual
+   *  indication but not the link to their action, which is there».
+   *
+   *  Plain when the id is in no catalogue - Actions not pulled, or an action removed since - because
+   *  a link that leads nowhere spends the reader's attention twice. */
+  const actLink = (act, text) => (actIndex && act && act.id && actIndex.get(String(act.id))
+    ? `<a class="aplink" data-ap="action" data-apid="${escA(String(act.id))}" data-apname="${escA(act.name || '')}" title="Open this action">${escHtml(text)}</a>`
+    : `<b>${escHtml(text)}</b>`);
   const rows = conns.map((c) => {
     const from = nameOf(c.from_state), to = nameOf(c.to_state);
     const t = c.transitions && (c.transitions.name || c.transitions.api_name);
@@ -271,12 +289,12 @@ function renderBlueprintDetail(bp, acts, actIndex) {
         // catalogue row. `null` there is «clears it» and is said as that, never as a blank.
         if (!(row && row.field)) anyUnjoined = true;
         bits.push(row && row.field
-          ? `writes <b>${escHtml(row.field_label || row.field)}</b>`
+          ? `writes ${actLink(act, row.field_label || row.field)}`
             + (row.value == null ? ' <span class="wfoff">(cleared)</span>' : ' = ' + escHtml(String(row.value)))
-          : `writes <b>${escHtml(act.name || '?')}</b>`);
-      } else if (act.type === 'tasks') bits.push(`task <b>${escHtml(act.name || '')}</b>`);
-      else if (act.type === 'email_notifications') bits.push(`emails <b>${escHtml(act.name || '')}</b>`);
-      else if (act.type === 'webhooks') bits.push(`webhook <b>${escHtml(act.name || '')}</b>`);
+          : `writes ${actLink(act, act.name || '?')}`);
+      } else if (act.type === 'tasks') bits.push(`task ${actLink(act, act.name || '')}`);
+      else if (act.type === 'email_notifications') bits.push(`emails ${actLink(act, act.name || '')}`);
+      else if (act.type === 'webhooks') bits.push(`webhook ${actLink(act, act.name || '')}`);
       // A kind nobody here has seen is named rather than dropped: five types were measured on one
       // org, and silently skipping a sixth would draw a transition that acts as one that does not.
       else bits.push(`${escHtml(act.type || 'action')} <b>${escHtml(act.name || '')}</b>`);

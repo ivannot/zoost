@@ -22145,8 +22145,10 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
               ] },
         78: { id: '78', name: 'Approve', actions: [] } },
       new Map([['812', { id: '812', field: 'Lead_Status', field_label: 'Lead Status', value: 'In review' }]]));
-    assert.match(html, /writes <b>Lead Status<\/b> = In review/,
-                 'a field update is drawn by the action name rather than the field and value it writes');
+    // Three facts in one line, and all three were reported missing at some point: the field, the
+    // value it is set to, and the action that writes it, which is a link because the catalogue holds it.
+    assert.match(html, /writes <a class="aplink" data-ap="action" data-apid="812"[^>]*>Lead Status<\/a> = In review/,
+                 'a field update lost the field, the value, or the link to the action that writes it');
     // The id that matters: the action's opens nothing, and a chip that does nothing is worse than
     // a plain word because it spends the reader's attention twice.
     assert.match(html, /data-fnid="205"/,
@@ -22155,6 +22157,26 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
                  'the transitions that act are counted from the blueprint reply, whose actions key is always null');
     assert.match(html, /does nothing/,
                  'a transition that was read and carries no action is not drawn as doing nothing');
+  });
+
+  test('crm: an action the catalogue holds is a link, not a word', () => {
+    // Reported: the pane named the task and the notification and linked neither, while both were in
+    // the Actions catalogue - two objects the reader should be one click apart from, in the product
+    // whose point is relating them.
+    const html = renderBlueprintDetail(
+      { connections: [{ from_state: { name: 'A' }, to_state: { name: 'B' }, transitions: { id: '77', name: 'Go' } }] },
+      { 77: { actions: [
+        { type: 'tasks', id: '5200', name: 'Call the customer back' },
+        { type: 'email_notifications', id: '5000', name: 'Order confirmation' },
+        { type: 'webhooks', id: '5300', name: 'Notify the warehouse' },
+      ] } },
+      new Map([['5200', { id: '5200' }], ['5000', { id: '5000' }]]));
+    assert.match(html, /data-ap="action" data-apid="5200"/, 'the task names its action and does not open it');
+    assert.match(html, /data-ap="action" data-apid="5000"/, 'the notification names its action and does not open it');
+    // The webhook is in no catalogue here - Actions not pulled, or removed since - so it stays a
+    // word. A link that leads nowhere spends the reader's attention twice.
+    assert.ok(!/data-apid="5300"/.test(html), 'an action the catalogue does not hold was linked anyway');
+    assert.match(html, /Notify the warehouse/, 'an unlinked action lost its name as well');
   });
 
   // ---------- being refused for going too fast, told apart from being refused ----------
