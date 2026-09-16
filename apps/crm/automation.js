@@ -202,7 +202,13 @@ function renderBlueprintDetail(bp) {
     const t = c.transitions && (c.transitions.name || c.transitions.api_name);
     return `<div class="wfrow"><span class="wk">${escHtml(t || 'transition')}</span> ${escHtml(from)} → ${escHtml(to)}</div>`;
   });
+  // What `include=transition` brought, counted rather than assumed: the documentation says a
+  // transition carries an `actions` array and its own sample prints `"actions": null`, so the only
+  // way to know is to look at a real reply and say what was in it.
+  const withActions = conns.filter((c) => c.transitions && Array.isArray(c.transitions.actions) && c.transitions.actions.length);
+  const actKinds = [...new Set(withActions.flatMap((c) => c.transitions.actions.map((a) => a && a.type).filter(Boolean)))];
   return `<div class="wfd"><div class="wfrow"><span class="wk">States</span> ${states.length}${states.length ? ' · ' + escHtml(states.join(', ')) : ''}</div>`
+    + `<div class="wfrow"><span class="wk">With actions</span> ${withActions.length} of ${conns.length}${actKinds.length ? ' · ' + escHtml(actKinds.join(', ')) : ''}</div>`
     + `<div class="wfrow"><span class="wk">Transitions</span> ${conns.length}</div></div>`
     + (rows.length ? `<div class="wfd">${rows.join('')}</div>` : '')
     + `<div class="ftnote">States and transitions are stored in this mirror. What a transition <i>does</i>`

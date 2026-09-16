@@ -319,7 +319,7 @@ function apiReply(request) {
     // `blueprints/<id>.json`, so a single body would put the same process under two names and the
     // fixture would be lying about the thing this probe exists to check. No query at all - measured
     // on a real org, the detail call carries none, and pinning that is what would catch a change.
-    requireGet(request, url); mark('blueprint-detail'); onlyQuery(url, {});
+    requireGet(request, url); mark('blueprint-detail'); onlyQuery(url, { include: 'transition' });
     const bid = p.split('/').pop();
     body = fixture.blueprints_detail[bid];
     if (!body) throw new Error(`no fixture detail for blueprint ${bid}`);

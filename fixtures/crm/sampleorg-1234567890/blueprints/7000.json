@@ -1,0 +1,105 @@
+{
+  "id": "7000",
+  "name": "Deal approval",
+  "api_name": "Deal_approval",
+  "module": {
+    "api_name": "Deals",
+    "id": "7100",
+    "_precedence": 1
+  },
+  "layout": {
+    "api_name": "Standard__s",
+    "name": "Standard",
+    "id": "7200"
+  },
+  "field": {
+    "api_name": "Status",
+    "field_label": "Status",
+    "id": "7300"
+  },
+  "continuous": false,
+  "description": "",
+  "status": "Active",
+  "chart_data": {
+    "canvas_size": {
+      "width": 900,
+      "height": 400
+    },
+    "nodes": [
+      {
+        "state": "Draft",
+        "position_x": 0,
+        "position_y": 80
+      },
+      {
+        "state": "In review",
+        "position_x": 120,
+        "position_y": 80
+      },
+      {
+        "state": "Approved",
+        "position_x": 240,
+        "position_y": 80
+      },
+      {
+        "state": "Archived",
+        "position_x": 360,
+        "position_y": 80
+      }
+    ],
+    "connections": []
+  },
+  "connections": [
+    {
+      "id": "74000",
+      "from_state": {
+        "id": "75000",
+        "name": "Draft"
+      },
+      "to_state": {
+        "id": "75001",
+        "name": "In review"
+      },
+      "transitions": {
+        "api_name": "to_In_review",
+        "name": "Move to In review",
+        "id": "76000",
+        "precedence": 1
+      }
+    },
+    {
+      "id": "74001",
+      "from_state": {
+        "id": "75001",
+        "name": "In review"
+      },
+      "to_state": {
+        "id": "75002",
+        "name": "Approved"
+      },
+      "transitions": {
+        "api_name": "to_Approved",
+        "name": "Move to Approved",
+        "id": "76001",
+        "precedence": 2
+      }
+    },
+    {
+      "id": "74002",
+      "from_state": {
+        "id": "75002",
+        "name": "Approved"
+      },
+      "to_state": {
+        "id": "75003",
+        "name": "Archived"
+      },
+      "transitions": {
+        "api_name": "to_Archived",
+        "name": "Move to Archived",
+        "id": "76002",
+        "precedence": 3
+      }
+    }
+  ]
+}

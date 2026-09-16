@@ -952,7 +952,11 @@
   // for; it is not worth building on until an org has answered. `list()` guards the envelope, so a
   // reply in another shape arrives as a refusal naming the keys that were there.
   async function fetchBlueprint(id) {
-    const resp = await api(`/crm/v8/settings/blueprints/${encodeURIComponent(id)}`);
+    // `include=transition` is documented as «include the fields on demand», and without it the reply
+    // carries the states and the connections but nothing about what a transition does. Whether it
+    // fills that in is the one thing the documentation does not show - its own sample prints
+    // `"actions": null` - so it is asked for here and what comes back is stored as it arrives.
+    const resp = await api(`/crm/v8/settings/blueprints/${encodeURIComponent(id)}?include=transition`);
     const bp = list(resp, 'blueprints', 'blueprints/' + id)[0]; if (!bp) throw new Error('not found');
     return { blueprint: bp };
   }
