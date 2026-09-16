@@ -114,7 +114,20 @@ async function openBlueprint(e) {
   // the org's own label, with the API name beside it when they differ, because that is the string
   // Deluge needs and the label is the one the reader recognises.
   const mrow = (moduleData || []).find((x) => x.api_name === e.module);
-  const modLabel = (mrow && mrow.label) || e.module || '';
+  // **From the mirror, not from where the reader has been.** `moduleData` is filled by the Modules
+  // rebuild and by nothing else, so a blueprint opened in a fresh session showed the API name - the
+  // one string the org never calls the module by. The label is not in `modules/index.json` either
+  // (measured: that file carries api_name, module_name, fields, layouts, related_lists and the
+  // generated type); it lives in the module's own file, so that is what is read, once, and only when
+  // the list is not already in memory.
+  let modLabel = (mrow && mrow.label) || '';
+  if (!modLabel && e.module) {
+    let m = null;
+    try { m = JSON.parse(await op.read(`modules/${sanitize(e.module)}.json`)); } catch (_) {}
+    if (!previewCurrent(mine, op)) return;   // another blueprint was opened while this was reading
+    modLabel = (m && (m.plural_label || m.singular_label || m.module_name)) || '';
+  }
+  modLabel = modLabel || e.module || '';
   const modTxt = e.module
     ? `<span class="mod" data-mod="${escA(e.module)}" title="${escA(e.module + ' - click to open the module')}">${escHtml(modLabel)}</span>`
       + (modLabel !== e.module ? ` <span class="wfoff">${escHtml(e.module)}</span>` : '')

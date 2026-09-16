@@ -522,7 +522,12 @@
      something outside the function that it reaches - with the colour carrying read against write.
      Read borrows the module colour the ER diagram already uses; write is warmer, because that is
      the one somebody scans for before changing a field. */
-  #pvcallers .mod{display:inline-block;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;cursor:pointer;border:1px solid}
+  /* Two panes, one definition. The chip was styled beside its first user and rendered as plain text
+     the day the blueprint pane used it - no border, no pointer - so it looked like a word and was
+     reported as «not clickable», which is what this project has already paid for with `.k`, `.card`,
+     `.note` and `b.ui`. The `.r/.w/.t` variants below stay `#pvcallers`-only on purpose: they mean
+     reads / writes / touches, and a blueprint's module carries no such claim. */
+  #pvcallers .mod,#pvtable .mod{display:inline-block;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;cursor:pointer;border:1px solid}
   #pvcallers .mod.r{background:#16261d;border-color:#3f8a63;color:#9fe0bd}
   #pvcallers .mod.w{background:#2a2016;border-color:#a8783f;color:#f0c48a}
   #pvcallers .mod.t{background:#1e1e26;border-color:#6b6b8a;color:#b9b9d4}
