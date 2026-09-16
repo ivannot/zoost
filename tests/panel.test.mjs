@@ -22427,4 +22427,44 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     });
   }
 
+  // ---------- the module's own word, from a field that exists ----------
+  // Reported five times. The resolver had a fast path reading `row.label` off `moduleData`, and a row
+  // there comes from `modules/index.json`, which carries api_name, module_name and counts - there has
+  // never been a `label`. So the branch could not fire once and every group header fell through to
+  // the file read, which is only on disk if Modules was pulled. A dead branch and a silent fallback
+  // look identical on screen: the API name.
+  {
+    const files = {
+      'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding', module: 'CustomModule20' }]),
+      'modules/CustomModule20.json': JSON.stringify({ api_name: 'CustomModule20', plural_label: 'From disk' }),
+    };
+    const mk = (moduleData) => {
+      const g = {
+        moduleData, blueprintData: [], bpModLabel: new Map(), collapsed: new Set(),
+        sanitize: (x) => String(x), viewMode: 'blueprints',
+        walk: async function* () { yield 'blueprints/7000.json'; },
+        beginWorkspaceOp: () => ({ current: () => true, root: {},
+          read: async (p) => { if (!(p in files)) throw new Error('no such file'); return files[p]; } }),
+      };
+      const m = load([sliceFn('apps/crm/automation.js', 'loadBlueprintIndex')], g);
+      return { g, run: () => m.loadBlueprintIndex(g.beginWorkspaceOp()) };
+    };
+
+    test('crm: the module label comes from a field the modules index actually has', async () => {
+      const { g, run } = mk([{ api_name: 'CustomModule20', plural_label: 'Allievi' }]);
+      await run();
+      assert.equal(g.bpModLabel.get('CustomModule20'), 'Allievi',
+                   'the fast path reads a field nothing writes, so the list groups by the API name');
+    });
+
+    test('crm: with no label in the index it falls through to the module file, not to the API name', async () => {
+      // `module_name` equals `api_name` on a custom module, so it is not a label and must not be
+      // mistaken for one - that is the difference between "Allievi" and "CustomModule20".
+      const { g, run } = mk([{ api_name: 'CustomModule20', module_name: 'CustomModule20' }]);
+      await run();
+      assert.equal(g.bpModLabel.get('CustomModule20'), 'From disk',
+                   'the API name was accepted as the module label');
+    });
+  }
+
 }

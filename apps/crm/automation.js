@@ -51,8 +51,15 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
   // it), so the read cannot happen there: it happens once here, for the distinct modules only.
   bpModLabel = new Map();
   for (const api of new Set(idx.map((e) => e && e.module).filter(Boolean))) {
+    // **The fields that exist, measured.** This asked for `row.label`, and a row here comes from
+    // `modules/index.json`, which carries `api_name`, `module_name` and counts and has never had a
+    // `label` - so the fast path could not fire once, and every group header depended on the file
+    // read below. It is the fifth report of a module drawn by its API name; the branch was there the
+    // whole time and was reading a field nobody writes.
     const row = (moduleData || []).find((x) => x.api_name === api);
-    if (row && row.label) { bpModLabel.set(api, row.label); continue; }
+    const rowLabel = row && (row.plural_label || row.singular_label
+                             || (row.module_name && row.module_name !== api ? row.module_name : ''));
+    if (rowLabel) { bpModLabel.set(api, rowLabel); continue; }
     let m = null; try { m = JSON.parse(await op.read(`modules/${sanitize(api)}.json`)); } catch (_) {}
     if (!op.current()) return false;
     const lab = m && (m.plural_label || m.singular_label || m.module_name);
