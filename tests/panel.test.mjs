@@ -22315,4 +22315,31 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     });
   }
 
+  // ---------- a dot acts on its own row ----------
+  // It called the whole-area refresh, so clicking one process re-read all twelve - and on an org
+  // where every blueprint carries its transitions that is hundreds of requests for one click.
+  // Reported. The two lists whose dot legitimately re-reads everything are Schedules and
+  // Connections, where one call *is* the catalogue and there is nothing smaller to ask for.
+  {
+    const calls = [];
+    const g = {
+      runPullAction: async (fn) => { calls.push('runPullAction'); return fn(); },
+      downloadOneBp: async (e) => { calls.push('downloadOneBp:' + e.id); return true; },
+      refreshBlueprints: async () => { calls.push('refreshBlueprints'); },
+      renderBlueprints: () => { calls.push('renderBlueprints'); },
+      viewMode: 'blueprints',
+    };
+    const { bpDotClick } = load([sliceFn('apps/crm/automation.js', 'bpDotClick')], g);
+
+    test('crm: the dot on a blueprint row re-reads that blueprint, not every one of them', async () => {
+      await bpDotClick({ stopPropagation: () => {} }, { id: '7000', path: 'blueprints/7000.json' });
+      assert.ok(calls.includes('downloadOneBp:7000'), 'the row the reader clicked is not the one that was read');
+      assert.ok(!calls.includes('refreshBlueprints'), 'one click re-read the whole area');
+      // Through the pull lock, like every other path here that reaches Zoho: without it two clicks
+      // overlap and the busy state never comes back.
+      assert.ok(calls.includes('runPullAction'), 'it reaches Zoho outside the pull lock');
+      assert.ok(calls.includes('renderBlueprints'), 'the row keeps its old dot until something else redraws the list');
+    });
+  }
+
 }

@@ -113,12 +113,27 @@ function renderBlueprints() {
       el.setAttribute('aria-selected', e.path === currentPath);
       // The field the process runs on, not the layout: the layout was «Standard» on all 12 measured,
       // so it spent the row's one informative slot saying nothing. The field is what differs.
-      el.innerHTML = `<span class="st st-ok" title="In workspace - click to refresh blueprints from Zoho">●</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
-      el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshBlueprints(); };
+      el.innerHTML = `<span class="st st-ok" title="In workspace - click to re-read this blueprint from Zoho">●</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.field_label || e.field || '')}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      el.querySelector('.st').onclick = (ev) => bpDotClick(ev, e);
       el.onclick = () => openBlueprint(e);
       tree.appendChild(el);
     });
   });
+}
+/** The dot on a row acts on **that row**, which is what every other per-item list here does.
+ *
+ *  It called `refreshBlueprints()` - the whole area - so clicking one process re-read all twelve, and
+ *  on an org where each carries its transitions that is hundreds of requests for one click. Reported.
+ *  The two lists whose dot legitimately re-reads everything are Schedules and Connections, where one
+ *  call *is* the whole catalogue and there is nothing smaller to ask for; a blueprint has its own
+ *  detail call, so there was no reason beyond the copied line.
+ *
+ *  Same shape as `wfDotClick`, deliberately: one item, through `runPullAction` so the pull lock and
+ *  the busy state behave as they do everywhere, then the list redraws to show the new dot. */
+async function bpDotClick(ev, e) {
+  ev.stopPropagation();
+  await runPullAction(() => downloadOneBp(e));
+  if (viewMode === 'blueprints') renderBlueprints();
 }
 async function openBlueprint(e) {
   // `mine` and the op together: the detail below is read after an await, and what overtakes it is
