@@ -956,7 +956,13 @@
     // carries the states and the connections but nothing about what a transition does. Whether it
     // fills that in is the one thing the documentation does not show - its own sample prints
     // `"actions": null` - so it is asked for here and what comes back is stored as it arrives.
-    const resp = await api(`/crm/v8/settings/blueprints/${encodeURIComponent(id)}?include=transition`);
+    // Asked for, then given up on: `include=transition` is documented, and whether Zoho honours it is
+    // the open question - its own sample prints `"actions": null`. A refusal must not cost the detail
+    // that was already working, so the plain call is tried once more. One retry on a known variant of
+    // the same request, which is the exception this project allows; not a loop, and not a guess.
+    let resp;
+    try { resp = await api(`/crm/v8/settings/blueprints/${encodeURIComponent(id)}?include=transition`); }
+    catch (e) { resp = await api(`/crm/v8/settings/blueprints/${encodeURIComponent(id)}`); }
     const bp = list(resp, 'blueprints', 'blueprints/' + id)[0]; if (!bp) throw new Error('not found');
     return { blueprint: bp };
   }

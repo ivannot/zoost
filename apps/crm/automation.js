@@ -179,7 +179,12 @@ async function openBlueprint(e) {
   let bp = null; try { bp = JSON.parse(await op.read(e.path)); } catch (_) {}
   if (!previewCurrent(mine, op)) return;
   const box = $('pvtable').querySelector('.bpdetail'); if (!box) return;
-  box.innerHTML = bp ? renderBlueprintDetail(bp) : '';
+  // **Never an empty box.** Without the file this set the pane to nothing at all - no states, no
+  // transitions, no reason - so a blueprint whose detail had not been read looked identical to one
+  // that has none, and the reader had nothing to act on. Reported as «I do not see it».
+  box.innerHTML = bp ? renderBlueprintDetail(bp)
+    : `<div class="ftnote">The detail of this blueprint is not in the mirror. Press <b>Pull list + details</b>`
+      + ` to read its states and transitions from Zoho.</div>`;
 }
 /** The states a record moves through, and the transitions between them.
  *
@@ -543,7 +548,9 @@ async function downloadMissingBp(all = false) {
   let ok = 0, fail = 0;
   try {
     for (let i = 0; i < pending.length; i++) {
-      if (!op.current()) return;
+      // `{failed}` on every exit, never `undefined`: the caller reads `dl.failed` into the depth it
+      // records, so bailing with nothing made an interrupted run look like one that read everything.
+      if (!op.current()) return { failed: pending.length - ok };
       const e = pending[i];
       op.say(`${all ? 'Reading' : 'Downloading'} blueprint ${i + 1}/${pending.length}…${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
       let done = await downloadOneBp(e);
@@ -552,7 +559,7 @@ async function downloadMissingBp(all = false) {
       if (viewMode === 'blueprints') renderBlueprints();
       await sleep(120);
     }
-    if (!op.current()) return;
+    if (!op.current()) return { failed: fail };
     // A blueprint already on disk whose re-read failed is not missing: its file is there and the
     // next full pull retries it. Said plainly rather than pointing at a button this area does not
     // have - «Complete missing» is wired for functions and workflows, and not for these.
