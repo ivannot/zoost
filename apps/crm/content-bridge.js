@@ -250,6 +250,16 @@
   // most a short body, and only to quote it - nothing here branches on its contents.
   async function errorDetail(res) {
     try {
+      // **A throttled reply is HTML, and silence about that is what made it look like a bad
+      // request.** Measured on two runs of the same org: the 101st call to an internal endpoint
+      // answers 400 with Zoho's own error *page* - `text/html`, no JSON anywhere - so the reader
+      // below finds nothing and the caller cannot tell «you are going too fast» from «you asked
+      // wrongly». The content type is the only honest marker here: the page's wording is Zoho's and
+      // localised, and matching on it would be the kind of guess this project refuses.
+      const ct = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
+      if (res.status === 400 && /text\/html/i.test(ct)) {
+        return { message: 'Zoho answered with an error page rather than data - too many requests in a short time.', code: 'THROTTLED_HTML' };
+      }
       const t = (await res.text()).slice(0, 400);
       const m = t.match(/"(?:errorMessage|message|error)"\s*:\s*"([^"]{1,120})"/);
       // `code` is read separately rather than added to the alternation above: it appears *first* in

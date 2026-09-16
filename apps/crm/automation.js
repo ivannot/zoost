@@ -592,7 +592,22 @@ async function downloadTransitionsFor(entry, op, onStep) {
     if (!op.current()) return { failed: fail, read: Object.keys(out).length };
     if (onStep) onStep();
     let r = null; try { r = await toBridge({ cmd: 'fetchTransition', id: tid, module: mod, layoutId: lay }); } catch (_) {}
-    if (r?.ok && r.transition) out[tid] = r.transition; else fail++;
+    if (r?.ok && r.transition) { out[tid] = r.transition; }
+    else {
+      // **Stop at the first throttle, and keep what was read.** Measured twice on the same org: the
+      // 101st call answers Zoho's error page and every one after it does the same, so continuing
+      // spends seventy requests to learn what the first one said. The rest is not lost - it is
+      // written below and the ids that are missing are simply absent, which is what lets this be
+      // picked up again rather than started over.
+      // `upstreamCode`, not `code`: the first is what Zoho said, the second is Zoost's own
+      // classification, which `bridgeResponseError` overwrites. Comparing against `code` here was a
+      // stop that could never fire - decorative, and invisible to every test in this suite.
+      if (bridgeError(r, '').upstreamCode === 'THROTTLED_HTML') {
+        if (op.current()) await op.write(`blueprints/${entry.id}.actions.json`, JSON.stringify(out, null, 2));
+        return { failed: fail, read: Object.keys(out).length, throttled: true };
+      }
+      fail++;
+    }
     await sleep(80);
   }
   if (!op.current()) return { failed: fail, read: Object.keys(out).length };
@@ -604,7 +619,18 @@ async function downloadMissingBp(all = false) {
   const pending = blueprintData.filter((e) => all || !e.downloaded);
   if (!pending.length) { setStatus('All blueprints read.', 'ok'); return { failed: 0 }; }
   setPullBusy(true);
-  let ok = 0, fail = 0, tRead = 0, tFail = 0;
+  // The denominator, counted before the first call rather than discovered as it goes: a line that
+  // says «transition 41» and keeps climbing tells the reader nothing about how long this will take,
+  // and on an org where this runs into the hundreds that is the difference between waiting and
+  // giving up. The counts are already on disk - each detail carries its own connections - so this
+  // costs a read per blueprint and no request at all.
+  let tTotal = 0;
+  for (const e of pending) {
+    let d = null; try { d = JSON.parse(await op.read(e.path)); } catch (_) {}
+    if (!op.current()) return { failed: 0, read: 0 };
+    tTotal += new Set(((d && d.connections) || []).map((c) => c.transitions && c.transitions.id).filter(Boolean)).size;
+  }
+  let ok = 0, fail = 0, tRead = 0, tFail = 0, throttled = false;
   try {
     for (let i = 0; i < pending.length; i++) {
       // `{failed}` on every exit, never `undefined`: the caller reads `dl.failed` into the depth it
@@ -621,9 +647,13 @@ async function downloadMissingBp(all = false) {
       if (done) {
         const tr = await downloadTransitionsFor(e, op, () => {
           tRead++;
-          op.say(`Blueprint ${i + 1}/${pending.length} · transition ${tRead}${tFail ? ` (${tFail} failed)` : ''}…`, 'busy');
+          op.say(`Blueprint ${i + 1}/${pending.length} · transition ${tRead} of ${tTotal}${tFail ? ` (${tFail} failed)` : ''}…`, 'busy');
         });
         tFail += tr.failed;
+        // Zoho stopped answering: the rest of this run would be seventy more refusals. What was read
+        // is on disk, the ids not read are simply absent from it, and the next run continues from
+        // there - so this stops rather than emptying the budget it has already been refused.
+        if (tr.throttled) { throttled = true; break; }
       }
       if (viewMode === 'blueprints') renderBlueprints();
       await sleep(120);
@@ -633,7 +663,10 @@ async function downloadMissingBp(all = false) {
     // next full pull retries it. Said plainly rather than pointing at a button this area does not
     // have - «Complete missing» is wired for functions and workflows, and not for these.
     const kept = pending.filter((e) => e.error && e.downloaded).length;
-    const trSaid = tRead ? ` · ${tRead - tFail} transition(s) read${tFail ? `, ${tFail} refused` : ''}` : '';
+    // «Stopped» is a different fact from «finished», and the reader has to be able to tell: the
+    // mirror is incomplete on purpose, the rest is still in Zoho, and nothing here is broken.
+    const trSaid = tRead ? ` · ${tRead - tFail} of ${tTotal} transition(s) read${tFail ? `, ${tFail} refused` : ''}`
+                           + (throttled ? ' · stopped: Zoho is refusing further requests for now, the rest is read by the next pull' : '') : '';
     setStatus(fail ? `Read ${ok} blueprint(s)${fail - kept ? `, ${fail - kept} could not be read` : ''}${kept ? `, ${kept} kept from the last pull that read them` : ''}.${trSaid}`
       : `All ${ok} blueprint(s) read.${trSaid}`, fail || tFail ? 'warn' : 'ok');
     // Transitions count towards the gap, not only blueprints: a run that read every blueprint and

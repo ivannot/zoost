@@ -22128,6 +22128,31 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
                  'the pane claims the whole process while what a transition does is not read');
   });
 
+  // ---------- being refused for going too fast, told apart from being refused ----------
+  // Measured twice on one org: the 101st call to the internal transition endpoint answers 400 with
+  // Zoho's own error *page* - `text/html`, no JSON in it - and so does every call after it. Without
+  // this branch the reader below finds no code, the caller cannot tell throttling from a bad
+  // request, and the stop that depends on it never fires. It was written and shipped dead once
+  // already, against `code` instead of `upstreamCode`, which nothing in this suite noticed.
+  {
+    const { errorDetail } = load([sliceFn('apps/crm/content-bridge.js', 'errorDetail')], {});
+    const res = (status, type, body) => ({ status, headers: { get: () => type }, text: async () => body });
+
+    test('crm: an error page answered to a burst is read as throttling, not as a bad request', async () => {
+      const d = await errorDetail(res(400, 'text/html; charset=UTF-8', '<html><body>Zoho CRM - Error</body></html>'));
+      assert.equal(d.code, 'THROTTLED_HTML', 'an HTML 400 is indistinguishable from any other refusal');
+      assert.match(d.message, /too many requests/i, 'the reader is not told why it stopped');
+    });
+
+    test('crm: an ordinary refusal still carries the code Zoho sent', async () => {
+      // The other half: the branch above must not swallow the JSON path, or every upstream code -
+      // INVALID_CSRF_TOKEN among them, which `api()` compares against - would arrive as null.
+      const d = await errorDetail(res(400, 'application/json', '{"code":"INVALID_CSRF_TOKEN","message":"bad token"}'));
+      assert.equal(d.code, 'INVALID_CSRF_TOKEN');
+      assert.equal(d.message, 'bad token');
+    });
+  }
+
   // ---------- what a transition does, out of the shape Zoho's own screen is given ----------
   // The documented API answers `actions: null` - measured, five transitions of five - so this comes
   // from the endpoint the CRM UI uses. Its reply is ~81KB of which `rlMeta` and `FieldsMeta` are the
