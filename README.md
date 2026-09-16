@@ -13,7 +13,7 @@ your browser.
 
 | | What it mirrors | |
 |---|---|---|
-| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows and what they fire, schedules, connections, and what Zoho reports as failing at runtime | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
+| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows and what they fire, schedules, blueprints, connections, and what Zoho reports as failing at runtime | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
 | **Zoost - workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) · [about](https://zoost.it/analytics) · [guide](https://zoost.it/docs-analytics) |
 
 Neither replaces Zoho's editor. You keep writing and saving where Zoho compiles and validates; these
@@ -60,11 +60,11 @@ request, and [SECURITY.md](SECURITY.md) before reporting a vulnerability.
 The pieces exist scattered across other tools; the **combination** doesn't:
 
 - **A history for everything you pulled.** Zoho CRM's own version history covers a *function*, one at a
-  time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules,
+  time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, blueprints,
   connections - arrives on your disk as plain files, so with Git it gets a history too, and one diff
   answers what changed across every kind at once rather than one function at a time. Git is optional:
   without it the mirror is still ordinary files.
-- **The whole org at once.** Functions, modules, workflows and the actions they fire, schedules, connections and their relationships,
+- **The whole org at once.** Functions, modules, workflows and the actions they fire, schedules, blueprints, connections and their relationships,
   in one navigable place and one shareable document.
 - **Not an editor, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
   server-side and versions a function, one at a time; Zoost adds comprehension, an audit, a history
@@ -89,7 +89,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   also carries **what Zoho is running**: when it was last published, and whether an edit exists
   that has not been - a source in the mirror can be code the org has never executed.
   One folder per kind - `functions/`, `modules/` (with `modules/layouts/` inside it),
-  `workflows/`, `schedules/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
+  `workflows/`, `schedules/`, `blueprints/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
 - **Auto-sync on save**: save a function in Zoho and the local file updates automatically.
 - Deletions in Zoho are pruned locally **on the next pull** (reconciled at pull time, not intercepted
   live like a save), so your repo stays a faithful mirror.
@@ -109,7 +109,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   relationships as an entity-relationship diagram (pan / zoom / fit / drag a box to arrange it / take a
   box off the drawing / save and reload the arrangement as a file / Save PDF).
 - **Automation map**: Workflows and Schedules with their triggers, criteria, instant and time-based
-  actions, and the functions they invoke - plus on-demand workflow execution stats. A rule with actions
+  actions, and the functions they invoke - plus on-demand workflow execution stats. Blueprints join
+  them with the module and the field each runs on, listed only: the states a record moves through,
+  and the transitions that update fields or call functions, are not read into the mirror. A rule with actions
   that run *after a delay* carries the count and the delay, **Has scheduled actions** filters the list
   down to those, and each rule shows its **Last run** - all three read from the rule already on disk.
 - **Reverse usage**: each function shows where it's wired across the org (blueprint, button,
@@ -144,9 +146,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 
 **Exports - human-friendly and AI-friendly**
 - **Export → HTML**: the entire workspace - functions (highlighted, cross-linked), modules,
-  workflows, the actions they fire, schedules, connections, and the health report - as one self-contained, navigable HTML file.
+  workflows, the actions they fire, schedules, blueprints, connections, and the health report - as one self-contained, navigable HTML file.
 - **Export → Markdown**: the whole org as a single `.md` - the same chapters as the HTML report,
-  including the workflows with their criteria and actions, the schedules, and the health audit -
+  including the workflows with their criteria and actions, the schedules, the blueprints, and the health audit -
   ready to drop into any external LLM. Work inside the extension *and* outside it.
 
 **AI assistant (bring your own key)**
@@ -255,7 +257,7 @@ extension message bus and the real folder-permission lifetime remain outside aut
 
 **Or press `Sample` and skip all of it.** It asks for the working folder when needed, then writes a
 workspace of invented data into it - a couple of hundred functions with real call chains, modules with lookups, workflows,
-schedules and connections - so you can open the tree, the graph, the audit and the exports before
+schedules, blueprints and connections - so you can open the tree, the graph, the audit and the exports before
 pointing Zoost at anything of your own. It needs no Zoho tab and no account, it is generated rather
 than fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other
 workspace. The same button is on the **Not on a Zoho tab** screen, which is where a fresh install

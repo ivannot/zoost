@@ -30,9 +30,9 @@ If you administer or develop on Zoho CRM you know the gaps: no external editor, 
 
 WHAT IT DOES
 
-- Judge it before you give it access to anything. "+ Sample" writes a workspace of invented data into your working folder - a couple of hundred Deluge functions with real call chains, modules with lookups, workflows, schedules and connections - so you can open the tree, the graph, the audit and the exports without a Zoho tab and without an account. It is generated, never fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other workspace.
+- Judge it before you give it access to anything. "+ Sample" writes a workspace of invented data into your working folder - a couple of hundred Deluge functions with real call chains, modules with lookups, workflows, schedules, blueprints and connections - so you can open the tree, the graph, the audit and the exports without a Zoho tab and without an account. It is generated, never fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other workspace.
 
-- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Deluge functions are plain .dg files; Java, Python and Node functions keep every file in a project folder, with a .meta.json sidecar for each function. Git is optional: without it the mirror is still ordinary files you can search and hand over. Functions and project files removed in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
+- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, blueprints, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Deluge functions are plain .dg files; Java, Python and Node functions keep every file in a project folder, with a .meta.json sidecar for each function. Git is optional: without it the mirror is still ordinary files you can search and hand over. Functions and project files removed in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
 - Search across every function at once. Full-text search over all mirrored Deluge, Java, Python and Node files, literal or regular expression - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it. Named patterns - an email address, Zoho's 18-digit record id, and any you add - are one click away and yours to manage.
 
@@ -52,7 +52,7 @@ WHAT IT DOES
 
 - Every part knows when it was last read. Because a type can be excluded from a pull, the mirror states per area when it last came from Zoho. A report section whose data is behind is unticked in the export dialog, with the date and the reason - you can include it anyway, and the report then says so. Both reports carry the per-area dates whether or not anything is behind.
 
-- Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function. Rules with actions that run after a delay carry the count and the delay, a filter shows only those, and each rule shows when it last ran.
+- Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function; blueprints with the module and the field each runs on, listed only - the states and transitions behind them are not read. Rules with actions that run after a delay carry the count and the delay, a filter shows only those, and each rule shows when it last ran.
 
 - Connections, cross-referenced. The org's connection catalogue with its connector, status and scopes - and, for each one, how many of your functions use it and exactly which. Filter to the ones no function uses, or the ones configured but not connected. Every function also lists the connections it uses, and who last changed it.
 
@@ -113,7 +113,7 @@ Zoost is an independent, unofficial developer tool. It is not affiliated with, e
 ```
 Zoost gives a Zoho CRM administrator or developer a local mirror of their org's function code and configuration, plus the tools to navigate and document it.
 
-Using the Zoho CRM session already open, it reads Deluge, Java, Python and Node function sources, module and layout metadata, related lists, workflows, schedules and the connection catalogue, then writes plain files into a folder the user selects. The mirror provides source search, a Deluge call graph, an ER diagram, related-list API names, Deluge connection and module usage, a health audit and offline exports.
+Using the Zoho CRM session already open, it reads Deluge, Java, Python and Node function sources, module and layout metadata, related lists, workflows, schedules, blueprints and the connection catalogue, then writes plain files into a folder the user selects. The mirror provides source search, a Deluge call graph, an ER diagram, related-list API names, Deluge connection and module usage, a health audit and offline exports.
 
 Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM records, and does nothing on any other website.
 ```
@@ -147,7 +147,7 @@ No browsing data, Zoho CRM data or personal information go into extension storag
 ```
 scripting injects this extension's own code, never remote code, only into the manifest's hosts.
 
-1. A bridge that calls the Zoho CRM API from the page's own origin, with the session they are already signed in with. It reads their functions, module metadata, layouts, related lists, workflows, schedules, automation actions, connection names and Zoho's report of failed runs - no separate credentials, within their Zoho permissions.
+1. A bridge that calls the Zoho CRM API from the page's own origin, with the session they already have. It reads their functions, module metadata, layouts, related lists, workflows, schedules, blueprints, automation actions, connection names and Zoho's report of failed runs - no separate credentials, within their Zoho permissions.
 
 2. A hook that notices a Deluge function being saved in the native editor, so the local file follows. It wraps the page's fetch and XMLHttpRequest to see method and URL: no bodies read, nothing altered.
 
