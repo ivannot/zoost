@@ -115,7 +115,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   that run *after a delay* carries the count and the delay, **Has scheduled actions** filters the list
   down to those, and each rule shows its **Last run** - all three read from the rule already on disk.
 - **Reverse usage**: each function shows where it's wired across the org (blueprint, button,
-  schedule, …) via Zoho's own `associated_place` signal - no expensive scans.
+  schedule, …) via Zoho's own `associated_place` signal - no expensive scans. A blueprint
+  *transition* that calls a function is not in that signal, so it is derived from the mirror instead
+  and shown beside the rest.
 - **Connections**: the org's connection catalogue cross-referenced with the functions that use it -
   per function (the connections it calls) and org-wide (usage count, unused, disconnected).
   Plus who last changed each function, and when.

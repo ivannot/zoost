@@ -162,7 +162,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
   const langNote = nm ? `<b>${nm} function(s)</b> have their project files mirrored but are outside the Deluge `
     + 'call analysis - so they make no calls here, and anything only they call appears below '
     + 'as having no caller. ' : '';
-  const coverage = mirror + langNote + `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  const coverage = mirror + langNote + `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, each function's <i>associated_place</i> (blueprint, button, \u2026), and the blueprint transitions that call a function - which that signal leaves out, so they are read from this mirror instead. <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
   // Everything read from the platform rather than computed from the mirror, fetched once: both
   // groups below need it. It sits above them because moving one of them up put a use of `fx`
   // before its declaration - a temporal dead zone that `node --check` waves through and only
@@ -442,8 +442,12 @@ function tabReachable(tab, quiet) {
   }
   return true;
 }
+// `blueprints` is ours and not Zoho's: it is the one kind in here that this mirror derives rather
+// than reads, from the transitions that call a function. Without a row it rendered as plain text -
+// the name of a blueprint the reader can see and cannot open, which is the case this map exists for.
 const AP_OPEN = { workflow_rules: 'workflow', workflow: 'workflow', schedules: 'schedule',
-                  schedule: 'schedule', actions: 'action', module: 'module', modules: 'module' };
+                  schedule: 'schedule', actions: 'action', module: 'module', modules: 'module',
+                  blueprints: 'blueprint', blueprint: 'blueprint' };
 function apLink(kind, p) {
   const opener = AP_OPEN[kind];
   const id = p && (p.id != null ? String(p.id) : '');

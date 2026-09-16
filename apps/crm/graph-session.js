@@ -89,6 +89,20 @@ async function loadGraph(op = beginWorkspaceOp()) {
     const dg = await op.read(p); let meta = {}; try { meta = JSON.parse(await op.read(p.replace(/\.dg$/, '.meta.json'))); } catch {}
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }
+  // **The usage Zoho does not report, merged before the graph is built.** `associated_place` is
+  // Zoho's signal and it names the workflow rule that fires a function; a blueprint transition that
+  // calls that same function is not in it - measured on a real org. Here rather than after
+  // `buildGraph`, because `dead_suspect` is derived from this field inside it: a function that only a
+  // blueprint calls is not an orphan, and flagging it as one is the health audit inviting somebody to
+  // delete something that runs.
+  const bpUse = await blueprintFunctionUse(op);
+  if (!op.current()) throw new Error(WS_MOVED);
+  if (bpUse.size) {
+    for (const n of nodes) {
+      const hit = bpUse.get(String(n.api_name || n.name || '').toLowerCase());
+      if (hit && hit.length) n.associated_place = [...(n.associated_place || []), ...hit];
+    }
+  }
   const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs, _modules: n._modules } : n)));
   // **How much of the org this drawing is of.** The graph is built from the `.dg` files on disk, and
   // a function that never downloaded - the ones in `failures/` - is not a node at all. So it makes

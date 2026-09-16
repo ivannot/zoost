@@ -540,6 +540,14 @@ const noteWrite = (rel) => {
   // ones. The rule this file already states: invalidation derives from the write, never from the
   // memory of whoever caused it, or the next write path added inherits nothing.
   if (rel.startsWith('failures/')) { failIndex = null; healthData = null; return; }
+  // Which blueprint calls which function is derived from these files and carried onto every function
+  // node by the graph, so a blueprint pull changes the graph exactly as a function pull does. Without
+  // this the relation appeared only after a reload, which is the class of defect this function was
+  // written to end: invalidation derives from the write, never from the memory of whoever caused it.
+  // `aiConnCache` goes with `graphCache` here as it does in every other branch that drops it: it is
+  // built by walking the graph's nodes, so it is as much a reading of the graph as the graph is of
+  // the sources. Left behind, the assistant answers from one and the panel from the other.
+  if (rel.startsWith('blueprints/')) { graphCache = null; aiConnCache = null; healthData = null; return; }
   if (!rel.startsWith('functions/')) return;
   if (rel.endsWith('.meta.json')) {
     // Keep the legacy `.dg` key for Deluge summaries, and the sidecar itself for project summaries

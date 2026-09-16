@@ -62,6 +62,70 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
                                     downloaded: have.has(String(e.id)), error: false }));
   return true;
 }
+/** Which blueprints call which function - the relation Zoho does not report.
+ *
+ *  **Measured, and it is the reason this exists.** A function's `associated_place` is Zoho's own
+ *  signal, and on a real org it named the workflow rule that fires a function and said nothing at all
+ *  about the blueprint transition calling the same function. So the pane showed «Used in
+ *  workflow_rules (1)» on a function a blueprint runs, which is the product being silent about a
+ *  relation it holds: that link exists only here, in `blueprints/<id>.actions.json`.
+ *
+ *  One reader, deliberately. The function pane, the wiring drawing, the health audit and the
+ *  assistant all take a function's usage from the same field, so merging this in once - before the
+ *  graph is built - is what makes them agree; four separate joins would be four chances to disagree.
+ *
+ *  Keyed by the function's **api name**, lowercased, because that is what a graph node carries. A
+ *  transition records the function's id as well, and an action that resolved to an id and no api name
+ *  is translated through `functions/index.json` rather than dropped.
+ *
+ *  `rows` lets a caller that has already read these files hand them over: the export reads every
+ *  blueprint anyway, and reading them a second time for one report is a cost with nothing behind it. */
+async function blueprintFunctionUse(op = beginWorkspaceOp(), rows = null) {
+  const out = new Map();
+  let src = rows;
+  if (!src) {
+    let idx = []; try { idx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
+    if (!Array.isArray(idx) || !idx.length) return out;
+    src = [];
+    for (const b of idx) {
+      if (!op.current()) return out;
+      let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${String(b.id)}.actions.json`)); } catch (_) {}
+      if (acts) src.push({ id: String(b.id), name: (b && b.name) || '', acts });
+    }
+  }
+  // Read only if an action needs it: an org whose blueprints carry no function action never opens
+  // the functions index at all.
+  let byId = null;
+  const add = (key, entry) => {
+    if (!key) return;
+    const list = out.get(key) || [];
+    // One entry per blueprint, not per transition: two transitions of one process calling the same
+    // function is one relation to a reader, and «Used in blueprints (2): Onboarding, Onboarding»
+    // names the same thing twice.
+    if (!list.some((e) => e.id === entry.id)) list.push(entry);
+    out.set(key, list);
+  };
+  for (const b of src || []) {
+    for (const t of Object.values((b && b.acts) || {})) {
+      for (const a of ((t && t.actions) || [])) {
+        if (!a || a.type !== 'functions') continue;
+        let api = String(a.function_api_name || '').toLowerCase();
+        if (!api && a.function_id) {
+          if (!byId) {
+            byId = new Map();
+            try {
+              const fi = JSON.parse(await op.read('functions/index.json'));
+              if (Array.isArray(fi)) fi.forEach((f) => { if (f && f.id != null) byId.set(String(f.id), String(f.api_name || f.name || '')); });
+            } catch (_) {}
+          }
+          api = String(byId.get(String(a.function_id)) || '').toLowerCase();
+        }
+        add(api, { _type: 'blueprints', id: String(b.id), name: (b && b.name) || '' });
+      }
+    }
+  }
+  return out;
+}
 async function rebuildBlueprints() {
   const op = beginWorkspaceOp();
   if (!dir) return;
@@ -228,6 +292,10 @@ function renderBlueprintDetail(bp, acts, actIndex) {
   const states = (bp.chart_data && Array.isArray(bp.chart_data.nodes) ? bp.chart_data.nodes : [])
     .map((n) => nameOf(n.state)).filter(Boolean);
   const conns = Array.isArray(bp.connections) ? bp.connections : [];
+  // Two facts the note at the bottom is about, collected while drawing rather than restated always:
+  // a sentence that is on screen when it does not apply is one the reader learns to skip, and then
+  // misses on the day it is the answer.
+  let anyUnread = false, anyUnjoined = false;
   const rows = conns.map((c) => {
     const from = nameOf(c.from_state), to = nameOf(c.to_state);
     const t = c.transitions && (c.transitions.name || c.transitions.api_name);
@@ -250,6 +318,7 @@ function renderBlueprintDetail(bp, acts, actIndex) {
       } else if (act.type === 'field_updates') {
         // «Set status» is not an answer to «which field, to what value», and the answer is on the
         // catalogue row. `null` there is «clears it» and is said as that, never as a blank.
+        if (!(row && row.field)) anyUnjoined = true;
         bits.push(row && row.field
           ? `writes <b>${escHtml(row.field_label || row.field)}</b>`
             + (row.value == null ? ' <span class="wfoff">(cleared)</span>' : ' = ' + escHtml(String(row.value)))
@@ -261,10 +330,14 @@ function renderBlueprintDetail(bp, acts, actIndex) {
       // org, and silently skipping a sixth would draw a transition that acts as one that does not.
       else bits.push(`${escHtml(act.type || 'action')} <b>${escHtml(act.name || '')}</b>`);
     }
-    const does = a ? (bits.length ? bits.join(' · ') : '<span class="wfoff">does nothing</span>')
-                   : '<span class="wfoff">actions not read</span>';
+    // One action per line. Joined with a separator they ran together into a sentence - «task X · calls
+    // ƒ Y · emails Z · writes W» - which is four facts read as one, and the longer the transition the
+    // worse it got. Reported from a real org, where one transition carries five.
+    if (!a) anyUnread = true;
+    const lines = a ? (bits.length ? bits : ['<span class="wfoff">does nothing</span>'])
+                    : ['<span class="wfoff">actions not read</span>'];
     return `<div class="wfrow"><span class="wk">${escHtml(t || 'transition')}</span> ${escHtml(from)} → ${escHtml(to)}`
-      + `<div class="ftnote">${does}</div></div>`;
+      + lines.map((b) => `<div class="ftnote">${b}</div>`).join('') + `</div>`;
   });
   // Counted from what was read, not from the blueprint's own reply: `include=transition` carries an
   // `actions` key that is `null` on every transition of every org measured, so counting it would
@@ -276,10 +349,13 @@ function renderBlueprintDetail(bp, acts, actIndex) {
     + `<div class="wfrow"><span class="wk">With actions</span> ${withActions.length} of ${conns.length}${actKinds.length ? ' · ' + escHtml(actKinds.join(', ')) : ''}</div>`
     + `<div class="wfrow"><span class="wk">Transitions</span> ${conns.length}</div></div>`
     + (rows.length ? `<div class="wfd">${rows.join('')}</div>` : '')
-    + `<div class="ftnote">States, transitions and what each transition does are stored in this mirror.`
-    + ` A transition marked <i>actions not read</i> was pulled before its actions were - press`
-    + ` <b>Pull list + details</b>. Which field an update writes is read from the <b>Actions</b> tab, so`
-    + ` pull that too for the field and the value rather than the action's name.</div>`;
+    // Only what applies. This used to state all of it every time - two sentences about things to pull,
+    // on a pane where both had already been pulled - and a note that is always there is one nobody
+    // reads on the day it means something.
+    + (anyUnread ? `<div class="ftnote">A transition marked <i>actions not read</i> was pulled before`
+                   + ` its actions were - press <b>Pull list + details</b>.</div>` : '')
+    + (anyUnjoined ? `<div class="ftnote">A field update is named rather than showing the field and the`
+                     + ` value it writes: that comes from the <b>Actions</b> tab, which has not been pulled.</div>` : '');
 }
 /** The blueprint in Zoho's own editor. The module query the UI adds is optional - measured: the URL
  *  works without it - so it is not sent, and nothing here depends on a parameter we would be

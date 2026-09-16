@@ -522,7 +522,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       ? `<div class="hxcov"><b>${esc(g.counts.notMirrorable)} mirrored function(s) are outside the Deluge analysis</b> - their Java, Python or Node files are in the workspace, but Zoost does not infer calls from those languages yet.</div>`
       : '')
     + (scope.functions ? '' : `<div class="hxcov"><b>Functions were not included in this export.</b> The lists below still name them, because the audit is about them - but there is nothing here to link to. Export again with Functions ticked to read them.</div>`)
-    + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
+    + `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, each function's <i>associated_place</i> (blueprint, button, \u2026), and the blueprint transitions that call a function - which that signal leaves out, so they are read from this mirror instead. <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
     + hSec(MSG.hOrphan, hOrph.length, HD_ORPHAN, hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
     + hSec(MSG.hUnresolved, hUnres.length, HD_UNRESOLVED, hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
     + hSec(MSG.hAmbiguous, hAmbig.length, HD_AMBIGUOUS, hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
@@ -779,6 +779,14 @@ async function loadExportData(op = beginWorkspaceOp()) {
     let acts = null; try { acts = JSON.parse(await op.read(`blueprints/${String(b.id)}.actions.json`)); } catch (_) {}
     bps.push({ ...b, id: String(b.id), detail, acts });
   }
+  // The same relation the panel draws, in the report: a blueprint transition that calls a function is
+  // not in Zoho's `associated_place`, so it is merged in from the files just read. Handed over rather
+  // than re-read - every blueprint has already been opened two lines up.
+  const bpUse = await blueprintFunctionUse(op, bps.map((b) => ({ id: b.id, name: b.name || '', acts: b.acts })));
+  if (bpUse.size) fns.forEach((f) => {
+    const hit = bpUse.get(String(f.api_name || f.name || '').toLowerCase());
+    if (hit && hit.length) f.associated_place = [...(f.associated_place || []), ...hit];
+  });
   // connections catalogue + usage (which functions reference each), joined on connectionLinkName
   let connCat = []; try { connCat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(connCat)) connCat = [];
@@ -1243,7 +1251,7 @@ function buildExportMarkdown(d, scope) {
     }
     if (g && g.counts && g.counts.notMirrorable) md += `> **${g.counts.notMirrorable} mirrored function(s) are outside the Deluge analysis** - their Java, Python or Node files are in the workspace, but calls from those languages are not inferred yet.\n\n`;
     if (!scope.functions) md += '> **Functions were not included in this export.** The lists below still name them, because the audit is about them.\n\n';
-    md += '> **Coverage.** Analyzed: function-to-function calls, workflows, schedules, and each function\'s *associated_place* (blueprint, button, ...). **Not** analyzed: custom client scripts, approval/assignment/scoring rules. Items are **candidates to review**, never automatic deletions.\n\n';
+    md += '> **Coverage.** Analyzed: function-to-function calls, workflows, schedules, each function\'s *associated_place* (blueprint, button, ...), and the blueprint transitions that call a function - which that signal leaves out, so they are read from this mirror instead. **Not** analyzed: custom client scripts, approval/assignment/scoring rules. Items are **candidates to review**, never automatic deletions.\n\n';
     const sec = (title, rows, desc) => {
       md += `### ${_mdCell(title)} (${rows.length})\n\n`;
       if (desc) md += `${desc}\n\n`;

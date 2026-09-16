@@ -40,7 +40,7 @@ WHAT IT DOES
 
 - Reference graph. For any function: which functions call it (the impact if you change it) and which it calls (its dependencies) - as a searchable explorer and as a visual node-link diagram. Calls to custom functions are clickable in the code preview: jump to the definition and back.
 
-- Reverse usage. Where each function is actually wired across the org - blueprint, button, schedule and so on - read from Zoho's own signal, with no expensive scans.
+- Reverse usage. Where each function is actually wired across the org - blueprint, button, schedule and so on - read from Zoho's own signal, with no expensive scans. A blueprint transition that calls a function is not in that signal, so it is derived from the mirror and shown beside the rest.
 
 - Module schema, fields, layouts and pipelines - each pipeline's stages in order, with the outcome, probability and forecast category, plus the stages the module keeps on no pipeline. Every field with type, lookup target, picklist values, mandatory flag and the workflow rules it starts, the ones that check it and the ones that write it. A layout matrix shows, per field, which layouts it belongs to and where it is required - and flags fields that are on no layout at all.
 

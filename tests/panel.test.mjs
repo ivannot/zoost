@@ -11350,7 +11350,11 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     vm.createContext(gctx);
     vm.runInContext(read('apps/crm/graph-core.js'), gctx);
 
-    const { loadGraph } = load([sliceFn('apps/crm/sidepanel.js', 'loadGraph')], {
+    // `blueprintFunctionUse` lives beside the blueprint code and `loadGraph` calls it. In the panel
+    // that is one global scope; in a lifted realm it is not, so the real function is lifted with it
+    // rather than stubbed - a stub would pass here while the shipped call was wrong.
+    const { loadGraph } = load([sliceFn('apps/crm/automation.js', 'blueprintFunctionUse'),
+                                sliceFn('apps/crm/sidepanel.js', 'loadGraph')], {
       WS_MOVED: 'moved', META_INDEX: 'functions/meta-index.json', SUMMARY_V: 5,
       distrustSummary: false, _dirtySource: new Set(), bound: null, lastCtx: null,
       fnStats: (t) => ({ lines: String(t).split('\n').length }),
@@ -20505,7 +20509,10 @@ test('the export loader keeps a function identity and its language', async () =>
               ensureGraph: async () => ({ nodes: {}, counts: {} }), loadWorkflows: async () => [],
               loadSchedules: async () => [], loadConnections: async () => [], failuresIndex: async () => null,
               loadActions: async () => [], actionUsers: new Map() };
-  const m = load([sliceConst(rel, 'isDelugeLang'), sliceFn(rel, 'loadExportData')], g);
+  // Lifted rather than stubbed, for the reason the graph case states: the panel is one global scope
+  // and a realm is not, so the shipped helper belongs in the realm or the call it makes goes untested.
+  const m = load([sliceConst(rel, 'isDelugeLang'), sliceFn('apps/crm/automation.js', 'blueprintFunctionUse'),
+                  sliceFn(rel, 'loadExportData')], g);
   const d = await m.loadExportData();
 
   const del = d.fns.find((f) => f.api_name === 'notify_Owner');
@@ -22255,4 +22262,73 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     assert.match(html, /States<\/span> 0/, 'a missing chart_data throws or renders as undefined');
     assert.match(html, /Transitions<\/span> 0/, 'a missing connections list is not read as none');
   });
+
+  // ---------- the relation Zoho does not report ----------
+  // `associated_place` is Zoho's own signal, and on a real org it named the workflow rule that fires a
+  // function while saying nothing about the blueprint transition that calls the same function - so the
+  // pane read «Used in workflow_rules (1)» about a function a blueprint runs, and the product was
+  // silent about a relation it held. That link exists only in this mirror. One reader builds it and
+  // the graph carries it onto every function node, which is what makes the pane, the drawing, the
+  // audit and the assistant agree instead of three of them staying quiet.
+  {
+    const { blueprintFunctionUse } = load([sliceFn('apps/crm/automation.js', 'blueprintFunctionUse')], {});
+    const opFor = (files) => ({
+      current: () => true,
+      read: async (p) => { if (!(p in files)) throw new Error('no such file'); return files[p]; },
+    });
+
+    test('crm: a blueprint that calls a function is found by the function api name', async () => {
+      const m = await blueprintFunctionUse(opFor({
+        'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding' }]),
+        'blueprints/7000.actions.json': JSON.stringify({
+          77: { id: '77', name: 'Send for review',
+                actions: [{ type: 'functions', id: '101', name: 'Build the invoice',
+                            function_id: '205', function_api_name: 'build_Invoice' }] },
+        }),
+      }));
+      const hit = m.get('build_invoice') || [];
+      assert.equal(hit.length, 1, 'the blueprint calling this function is not reported at all');
+      assert.equal(hit[0]._type, 'blueprints', 'the kind is not the one AP_OPEN maps to an opener, so the name cannot become a link');
+      assert.equal(hit[0].id, '7000');
+      assert.equal(hit[0].name, 'Onboarding', 'the entry names nothing, so the link would read «(unnamed)»');
+    });
+
+    test('crm: an action carrying only the function id is resolved through the index, not dropped', async () => {
+      // The path the sample takes, and the one a mirror written before the api name was stored takes:
+      // an id and no api name must still find its function, or the relation disappears in silence.
+      const m = await blueprintFunctionUse(opFor({
+        'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding' }]),
+        'blueprints/7000.actions.json': JSON.stringify({
+          77: { actions: [{ type: 'functions', id: '101', function_id: '9000' }] },
+        }),
+        'functions/index.json': JSON.stringify([{ id: '9000', api_name: 'buildInvoice' }]),
+      }));
+      assert.equal((m.get('buildinvoice') || []).length, 1,
+                   'an action with only the function id is dropped, so the blueprint link disappears');
+    });
+
+    test('crm: one entry per blueprint, however many of its transitions call the function', async () => {
+      // «Used in blueprints (2): Onboarding, Onboarding» names one relation twice, which reads as two.
+      const m = await blueprintFunctionUse(opFor({
+        'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding' }]),
+        'blueprints/7000.actions.json': JSON.stringify({
+          77: { actions: [{ type: 'functions', function_api_name: 'build_Invoice' }] },
+          78: { actions: [{ type: 'functions', function_api_name: 'build_Invoice' }] },
+        }),
+      }));
+      assert.equal((m.get('build_invoice') || []).length, 1, 'the same blueprint is listed once per transition');
+    });
+
+    test('crm: an action that is not a function contributes no usage', async () => {
+      // The other half of the filter. Without it every field update would report the blueprint as a
+      // caller of a function it never calls, which is a false relation and worse than a missing one.
+      const m = await blueprintFunctionUse(opFor({
+        'blueprints/index.json': JSON.stringify([{ id: '7000', name: 'Onboarding' }]),
+        'blueprints/7000.actions.json': JSON.stringify({
+          77: { actions: [{ type: 'field_updates', id: '812', name: 'Set Lead Status' }] },
+        }),
+      }));
+      assert.equal(m.size, 0, 'a field update is recorded as a function call');
+    });
+  }
 }
