@@ -58,6 +58,24 @@ OPENS = {
     "field->blueprint": "data-bpid",
 }
 
+# **The second surface, and the one this tool was not looking at.** The report is where a reader
+# without the extension meets the same relations, and it carries them as anchors rather than as
+# `data-` attributes. Nothing checked that half, so a blueprint's transitions named the action they
+# fire, and the Actions table named the process that fires an action, as plain words - found in a
+# real export by the author, with the panel already correct. One row per kind, the same rule as
+# above: a kind with no row is reported rather than passed over.
+REPORT = {
+    "blueprint->module": "mod-",
+    "blueprint->function": "fn-",
+    "blueprint->action": "act-",
+    "workflow->module": "mod-",
+    "schedule->function": "fn-",
+    "function->connection": "conn-",
+    "function->associated_place": "act-",
+    "field->workflow": "wf-",
+    "field->blueprint": "bp-",
+}
+
 
 def edges(crm: pathlib.Path) -> dict:
     """Every cross-object reference the delivered sample holds, counted by kind."""
@@ -117,6 +135,43 @@ def emitters() -> dict:
     return found
 
 
+def report_anchors() -> dict:
+    """Per anchor prefix, whether the report defines the target and whether anything links to it.
+
+    Both halves are needed and they fail apart: a target nobody links to is a section with an id
+    nothing reaches, and a link to a target that does not exist is a dead `#`. Two kinds had neither -
+    blueprints and actions - which is why the references to them could only ever be words.
+    """
+    src = (PANEL / "export.js").read_text(encoding="utf-8")
+    out = {}
+    for prefix in sorted(set(REPORT.values())):
+        helper = re.search(rf"const (\w+Anchor) = \([^)]*\) => '{re.escape(prefix)}'", src)
+        name = helper.group(1) if helper else None
+        # Both spellings of the same emission. The report is built partly with template literals and
+        # partly with `+` concatenation - the Actions table is a row of `'<td>' + …` - so a pattern
+        # that knew only `id="${escA(` reported the action anchor as missing while it was there. One
+        # spelling of a thing is the mistake this repository keeps recording about other people's
+        # code, met here in the check written to stop it.
+        out[prefix] = {
+            "target": bool(name and re.search(rf'id="(?:\$\{{|\' \+ )escA\({name}\(', src)),
+            # A *call site*, not merely the definition. `href="#${escA(bpAnchor(` also appears inside
+            # the one-line helper that builds such a link, so a report whose every call site had been
+            # deleted would still have matched - the check would have been measuring that the helper
+            # exists, which nobody doubted.
+            "link": bool(name and re.search(rf'href="#(?:\$\{{escA\(|\$\{{|\' \+ escA\(){name}\(', src)
+                         and len(re.findall(rf"[^a-zA-Z]{name}\(", src)) > 1),
+            "helper": name,
+        }
+    # A link may also be emitted through a small helper of its own - `modLink`, `bpLink`, `actLink`,
+    # `linkByName` - which is the shape this file prefers wherever the target has to be checked for
+    # existence first. Read those too, or the check would report the tidier half of the code.
+    for helper_name, prefix in (("modLink", "mod-"), ("bpLink", "bp-"),
+                                ("actLink", "act-"), ("linkByName", "fn-")):
+        if re.search(rf"const {helper_name} = ", src) and re.search(rf"\b{helper_name}\(", src):
+            out.setdefault(prefix, {"target": False, "link": False, "helper": None})["link"] = True
+    return out
+
+
 def main() -> int:
     crm, _ = samplecheck.delivered()
     held = edges(crm)
@@ -132,6 +187,24 @@ def main() -> int:
         if attr not in emit:
             findings.append(f"{kind}: {n} in the sample, and nothing in the panel emits {attr} - the "
                             "product holds the relation and gives the reader no way to follow it")
+
+    # The same question of the report, which is the surface a reader without the extension gets. A
+    # relation followable in the panel and spelled out as words in the export is the same defect one
+    # document further on, and it was reaching the author rather than this tool.
+    anchors = report_anchors()
+    for kind, n in sorted(held.items()):
+        prefix = REPORT.get(kind)
+        if prefix is None:
+            findings.append(f"{kind}: {n} in the sample and no row in REPORT - the export was not "
+                            "considered for this relation at all")
+            continue
+        state = anchors.get(prefix) or {}
+        if not state.get("target"):
+            findings.append(f"{kind}: {n} in the sample, and the report gives `{prefix}` no anchor - "
+                            "there is nothing in the document for a reference to point at")
+        elif not state.get("link"):
+            findings.append(f"{kind}: {n} in the sample, and nothing in the report links to `{prefix}` "
+                            "- the reference is printed as words the reader cannot follow")
 
     # A kind this tool knows about and the sample no longer contains is not a pass: it means the
     # check went quiet, which is exactly how a sweep comes to prove nothing.

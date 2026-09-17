@@ -240,6 +240,21 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   wfs.forEach((w) => wfFunctionActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fnKey(fn)] ||= []).push({ id: w.id, name: w.name }); }));
   const wfAnchor = (id) => 'wf-' + sanitize(String(id));
   const schAnchor = (id) => 'sch-' + sanitize(String(id));
+  // **Two kinds had no anchor at all**, so nothing in the report could point at them: a blueprint
+  // transition named the action it fires as plain words, the Actions table named the process that
+  // fires an action as plain words, and the BP column beside a module did the same. Reported from a
+  // real export: «the blueprint detail has references to the other entities and they are not
+  // hyperlinks». The sets are the guard this file already uses everywhere - a link is emitted only
+  // when the thing it points at is actually in this report, because a scope can leave a chapter out.
+  const bpAnchor = (id) => 'bp-' + sanitize(String(id));
+  const actAnchor = (id) => 'act-' + sanitize(String(id));
+  const bpIdSet = new Set((bps || []).map((b) => String(b.id)));
+  const actIdSet = new Set((acts || []).map((a) => String(a.id)));
+  const wfIdSet = new Set((wfs || []).map((w) => String(w.id)));
+  const actLink = (id, label) => (id != null && actIdSet.has(String(id))
+    ? `<a href="#${escA(actAnchor(id))}">${esc(label)}</a>` : esc(label == null ? '' : label));
+  const bpLink = (id, label) => (id != null && bpIdSet.has(String(id))
+    ? `<a href="#${escA(bpAnchor(id))}">${esc(label)}</a>` : esc(label == null ? '' : label));
   const scheduledBy = {};
   scheds.forEach((sc) => { const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()]; if (fn) (scheduledBy[fnKey(fn)] ||= []).push(sc); });
   const assocText = (f) => {
@@ -314,7 +329,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // `CustomModule20` and every lookup below is by `api_name`.
   const bpTrig = blueprintFieldMap(bps || [], allActs || [], mods || []);
   const bpTd = (m, fl) => (bpTrig.get(`${m.api_name}:${fl.api_name}`) || [])
-    .map((r) => `${esc(r.name)} <span class="none">(${esc(r.role)}${r.transition ? ', ' + esc(r.transition) : ''}${r.active ? '' : ', off'})</span>`).join('<br>');
+    .map((r) => `${bpLink(r.id, r.name)} <span class="none">(${esc(r.role)}${r.transition ? ', ' + esc(r.transition) : ''}${r.active ? '' : ', off'})</span>`).join('<br>');
   let modHtml = (fTrig && wfUnread && mods.length
     ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».</p>` : '')
     + (fTrig && actsMissing && mods.length ? '<p class="note">Automation actions are not in this workspace, so a rule that writes a field is not marked for it.</p>' : '');
@@ -414,7 +429,11 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   // workflows grouped by trigger module
   const wfByMod = {}; wfs.forEach((w) => (wfByMod[w.module || '(no module)'] ||= []).push(w));
   // rich workflow rendering (mirrors the panel detail)
-  const wfActionHtml = (a) => { if (isFnAction(a)) { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fnKey(fn))}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } return `<span class="wfact-x">${esc(a.type)}: ${esc(a.name)}</span>`; };
+  const wfActionHtml = (a) => { if (isFnAction(a)) { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fnKey(fn))}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } // The other half of the same relation. A rule's function action opened the function and everything
+    // else it fires - a notification, a field update, a task, a webhook - was words, while the
+    // Actions chapter listing those very rows sat below it in the same document. Found by sweeping
+    // the report after the blueprint chapter was reported as doing exactly this.
+    return `<span class="wfact-x">${esc(a.type)}: ${actLink(a.id, a.name)}</span>`; };
   let wfHtml = '';
   Object.keys(wfByMod).sort().forEach((mod) => {
     wfHtml += `<h3 class="grp">${esc(mod)} <span class="cnt">${wfByMod[mod].length}</span></h3>`;
@@ -475,7 +494,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     // one is what the reader recognises, the other is what Deluge needs.
     const fld = bp.field_label && bp.field_label !== bp.field
       ? `${esc(bp.field_label)} <code>${esc(bp.field)}</code>` : esc(bp.field_label || bp.field || '');
-    bpHtml += `<section class="item" data-name="${escA(((bp.name || '') + ' ' + (bp.module || '')).toLowerCase())}">`
+    bpHtml += `<section class="item" id="${escA(bpAnchor(bp.id))}" data-name="${escA(((bp.name || '') + ' ' + (bp.module || '')).toLowerCase())}">`
       + `<div class="ih"><b>${esc(bp.name)}</b>${bp.api_name ? ` <code>${esc(bp.api_name)}</code>` : ''}`
       + `${bp.active ? '' : `<span class="badge no">${esc(bp.status || 'Inactive')}</span>`}</div>`
       + `<div class="refs"><span><b>Module:</b> ${ml}</span>`
@@ -496,7 +515,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       // the function rather than the action, because that is the name that means something.
       + (bp.acts ? `<div class="refs">` + Object.values(bp.acts).map((t) =>
           `<span><b>${esc((t && t.name) || 'transition')}:</b> ${((t && t.actions) || []).length
-            ? ((t && t.actions) || []).map((a) => `${esc(a.type || 'action')} ${esc(a.function_api_name || a.name || '')}`).join(' · ')
+            ? ((t && t.actions) || []).map((a) => `${esc(a.type || 'action')} ${a.type === 'functions'
+                // A `functions` action names the function, so it opens the function - the action's own
+                // id would lead to a row about the wiring rather than to the code. Everything else
+                // opens the action, which is where what it sends or writes is written down.
+                ? linkByName(a.function_api_name || a.name || '')
+                : actLink(a.id, a.name || '')}`).join(' · ')
             : 'no action'}</span>`).join('') + `</div>` : '')
       + `</section>`;
   });
@@ -576,7 +600,14 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         : (a.mappings || []).length
           ? a.mappings.map((m) => esc(String(m.field || '').replace(/_/g, ' ')) + ': ' + esc(mapVal(m))).join(' \u00b7 ')
         : a.notify === true ? 'notifies' : '';
-      return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(actProv(a)) + '</td>'
+      return '<tr id="' + escA(actAnchor(a.id)) + '"><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>'
+        // The module an action belongs to is a place in this report, so it is a link here as it is
+        // everywhere else. The rest of the provenance - who changed it, whether Zoho locked it - is
+        // the same string both reports print.
+        + [(a.module && modApiSet.has(a.module)
+              ? `<a href="#${escA(modAnchor(a.module))}">${esc(a.module_label || a.module)}</a>`
+              : esc(a.module_label || a.module || '')), esc(actProvRest(a))].filter(Boolean).join(' · ')
+        + '</td>'
         // No `class="num"`: it was borrowed from the Analytics *panel*, where `.vtbl td.num`
         // right-aligns a count. This report carries EXPORT_CSS and nothing else, and EXPORT_CSS has
         // no `.num` - so the class has never done anything here. Removed rather than given a rule,
@@ -585,8 +616,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         // transition could fire anything. Two counts, and the transition named beside the process.
         + '<td>' + users.filter((w) => w.kind !== 'blueprint').length + '</td>'
         + '<td>' + users.filter((w) => w.kind === 'blueprint').length + '</td>'
-        + '<td>' + users.map((w) => esc(w.name || w.id)
-            + (w.kind === 'blueprint' ? ' <span class="none">(blueprint' + (w.transition ? ', ' + esc(w.transition) : '') + ')</span>' : '')).join(', ')
+        // Each opens where it lives: a rule in Workflows, a process in Blueprints. They were both
+        // plain words, so the one column that says «what fires this» was the one place you could not
+        // follow it from.
+        + '<td>' + users.map((w) => (w.kind === 'blueprint'
+              ? bpLink(w.id, w.name || w.id) + ' <span class="none">(blueprint' + (w.transition ? ', ' + esc(w.transition) : '') + ')</span>'
+              : (wfIdSet.has(String(w.id)) ? `<a href="#${escA(wfAnchor(w.id))}">${esc(w.name || w.id)}</a>` : esc(w.name || w.id)))).join(', ')
         + '</td><td>' + detail + '</td></tr>';
     });
   const actHtml = acts.length
@@ -849,14 +884,23 @@ async function loadExportData(op = beginWorkspaceOp()) {
 /** The module column, with what the panel also shows beside an action: who last changed it and
  *  whether Zoho has it locked. Both were on screen and in neither report - and «Modified by» is
  *  printed for a *function* in the same file, so the omission was inconsistent inside one report. */
-function actProv(a) {
-  const bits = [a.module_label || a.module || ''];
+/** Everything in an action's provenance except the module it belongs to.
+ *
+ *  Split off because the HTML report makes that module a link and the Markdown one cannot - Markdown
+ *  here is a flat document with no anchors at all. Kept as one source rather than two: `actProv` is
+ *  this plus the module, so the two reports cannot drift into saying different things about the same
+ *  action. */
+function actProvRest(a) {
+  const bits = [];
   if (a.modified_by || a.modified_time) {
     bits.push('modified' + (a.modified_by ? ' by ' + a.modified_by : '')
               + (a.modified_time ? ' ' + String(a.modified_time).slice(0, 16) : ''));
   }
   if (a.locked === true) bits.push('locked in Zoho');
   return bits.filter(Boolean).join(' \u00b7 ');
+}
+function actProv(a) {
+  return [a.module_label || a.module || '', actProvRest(a)].filter(Boolean).join(' \u00b7 ');
 }
 function mapVal(m) {
   const v = m && m.value;

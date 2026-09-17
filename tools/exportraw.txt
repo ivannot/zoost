@@ -101,9 +101,11 @@ apps/crm/export.js	a.field_type ? ' (' + a.field_type + ')' : ''
 apps/crm/export.js	a.function_api_name || a.name || ''
 apps/crm/export.js	a.name || a.id
 apps/crm/export.js	a.type
+apps/crm/export.js	a.type === 'functions' ? linkByName(a.function_api_name || a.name || '
 apps/crm/export.js	a.type || '?'
 apps/crm/export.js	a.type || 'action'
 apps/crm/export.js	actHtml
+apps/crm/export.js	actLink(a.id, a.name)
 apps/crm/export.js	actStale(a) ? 'not read by this pull' : (a.value === null || a.value =
 apps/crm/export.js	actWithheld
 apps/crm/export.js	areaAsOf(t.id)
@@ -112,6 +114,7 @@ apps/crm/export.js	bound.label
 apps/crm/export.js	bp.field
 apps/crm/export.js	bp.field_label
 apps/crm/export.js	bpHtml
+apps/crm/export.js	bpLink(r.id, r.name)
 apps/crm/export.js	bpTd(m, fl)
 apps/crm/export.js	bpTrig.size ? ' ' + bpMd(f) + ' |' : ''
 apps/crm/export.js	bpTrig.size ? ' Blueprints |' : ''
