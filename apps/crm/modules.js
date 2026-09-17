@@ -37,11 +37,16 @@ async function pullModules(depth = {}) {
     // Modules whose fields could not be read this time - kept as they were, and counted, because a
     // pull that covered less than the whole org without saying so is the mirror lying by omission.
     const notRead = [];
+    // Buttons are a separate per-module read. A module can have perfectly good fields while Zoho
+    // refuses only the custom-buttons endpoint, so a green modules pull must not imply that chapter
+    // is complete in that case.
+    const buttonsNotRead = [];
     // Refused is its own word, because it is its own thing to do next: the role, or the ⊘ dot on
     // the row. Counted in neither list, a refusal came out as a clean pull.
     const refused = [];
     for (const m of r.modules) {
       if (!op.current()) return;   // one file per module and per layout set: a loop long enough to be left
+      if (m.fields_read === true && m.buttons_read !== true) buttonsNotRead.push(m.api_name);
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
       const lf = `modules/layouts/${sanitize(m.api_name || 'unknown')}.json`;
       if (fullLayouts.length) {
@@ -174,12 +179,14 @@ async function pullModules(depth = {}) {
       + (notRead.length ? ` ${notRead.length} module(s) could not be read and were left as they were: `
         + `${notRead.slice(0, 3).join(', ')}${notRead.length > 3 ? '…' : ''}.` : '')
       + (refused.length ? ` ${refused.length} module(s) Zoho would not describe - what was captured before is kept: `
-        + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '');
+        + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '')
+      + (buttonsNotRead.length ? ` ${buttonsNotRead.length} module(s) custom buttons could not be read - the next pull retries: `
+        + `${buttonsNotRead.slice(0, 3).join(', ')}${buttonsNotRead.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
     // «Every module read» only when it was: a module Zoho would not describe, one whose fields did not come
     // and one that could not be written are each a detail not here - the third instance of a full read
     // claimed over a gap, after functions and actions. Measured: 27 of 87 and 16 of 84 modules refused.
-    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, ...pullDepth(true, { refused: refused.length, unread: notRead.length + wFail.length }));   // the mirror was written; the gap is what came up short in it
+    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op, true, ...pullDepth(true, { refused: refused.length, unread: notRead.length + wFail.length + buttonsNotRead.length }));   // the mirror was written; the gap is what came up short in it
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
 }
 

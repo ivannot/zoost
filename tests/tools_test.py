@@ -5923,7 +5923,11 @@ class EveryLedgerKeepsWhatAPersonWrote(unittest.TestCase):
 
     def test_a_comment_a_person_wrote_survives_accept(self):
         for led in self.LEDGERS:
-            keep = led.read_text(encoding='utf-8')
+            # Some ledger writers derive more than one ledger in a single --accept run (htmlcheck
+            # refreshes both attrraw.txt and exportraw.txt). Snapshot the complete ledger set so this
+            # isolation test does not leave a sibling changed when it exercises one owner.
+            snapshots = {path: path.read_bytes() for path in self.LEDGERS}
+            keep = snapshots[led].decode('utf-8')
             head = '\n'.join(keep.split('\n')[:8])
             m = re.search(r'tools/(\w+)\.py', head)
             self.assertIsNotNone(m, f'{led.name}: no owning tool named')
@@ -5943,7 +5947,8 @@ class EveryLedgerKeepsWhatAPersonWrote(unittest.TestCase):
                 r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
                 after = led.read_text(encoding='utf-8')
             finally:
-                led.write_text(keep, encoding='utf-8')
+                for path, data in snapshots.items():
+                    path.write_bytes(data)
             self.assertIn(mark, after,
                           f'{led.name}: {tool.name} --accept deleted a line a person wrote, without '
                           f'saying so. The file asks to be explained and then throws the explanation '

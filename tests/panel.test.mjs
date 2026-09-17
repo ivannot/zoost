@@ -9618,7 +9618,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       ['apps/crm/crm-pull-graph.js', 'pullAll', /pullDepth\(full, \{ refused: dl \? dl\.refused : 0, unread: dl \? dl\.failed : 0, languages: \(r\.unanswered \|\| \[\]\)\.length \}\)/],
       ['apps/crm/crm-workflow-ui.js', 'pullWorkflows', /pullDepth\(full, \{ unread: dl \? dl\.failed : 0 \}\)/],
       ['apps/crm/automation.js', 'pullActions', /pullDepth\(full, \{ kinds: missed\.length \+ capped\.length, unread: detailMissed\.length \}\)/],
-      ['apps/crm/modules.js', 'pullModules', /pullDepth\(true, \{ refused: refused\.length, unread: notRead\.length \+ wFail\.length \}\)/],
+      ['apps/crm/modules.js', 'pullModules', /pullDepth\(true, \{ refused: refused\.length, unread: notRead\.length \+ wFail\.length \+ buttonsNotRead\.length \}\)/],
     ]) assert.match(sliceFn(file, fn), re, `${fn}: a refused or unread item is still recorded as a complete details pull`);
   });
 }
@@ -19063,6 +19063,35 @@ test('a refused module is not emptied by the pull that was refused', async () =>
   const flaky = await run(null);            // a 429 or a network failure: the other half of the branch
   assert.equal(flaky.file.fields.length, 3, 'a read that failed without a refusal replaced the file');
   assert.equal(flaky.file.unreadable, undefined, 'a failure that read nothing was recorded as a refusal');
+});
+
+// Custom buttons are a second per-module read. If it fails while fields succeed, the module detail
+// remains usable but the area is not complete; a green status would make the missing button chapter
+// look authoritative and would advance the full-details timestamp over an unread result.
+test('a module whose custom buttons were not read leaves the modules pull partial', async () => {
+  const status = [];
+  const g = {
+    console, Object, Set, Map, Array, JSON, String, Number, Date, Promise, Boolean,
+    beginWorkspaceOp: () => ({ current: () => true, root: {}, say: () => {},
+      read: async () => { throw new Error('ENOENT'); }, write: async () => {}, remove: async () => {} }),
+    mismatchRefuse: () => false, requirePerm: async () => {},
+    getContext: async () => ({ org: '1', origin: 'https://crm.zoho.eu', instance: 'yourinstance' }),
+    opReadCfg: async () => ({}),
+    setStatus: (t, k) => status.push([k, t]),
+    toBridge: async () => ({ ok: true, modules: [{
+      api_name: 'Contacts', module_name: 'Contacts', generated_type: 'default', fields: [{ api_name: 'Email' }],
+      related_lists: [], layouts: [], fields_read: true, layouts_read: true, related_read: true,
+      pipelines_read: true, has_stages: false, buttons: [], buttons_read: false, unreadable: null,
+    }] }),
+    sanitize: (x) => String(x || ''), isModuleFile: () => false, isLayoutFile: () => false,
+    walk: async function* () {}, rebuildModules: async () => {}, noteAccess: async () => {},
+    notePullFailure: async () => {}, endPull: () => {}, pullActive: false, WS_MOVED: 'moved',
+    MSG: { noTab: 'no tab' }, bridgeError: (r, m) => new Error(m), envOf: () => 'x',
+  };
+  const { pullModules } = load([sliceFn('apps/crm/modules.js', 'pullModules')], g);
+  await pullModules();
+  assert.equal(status.at(-1)[0], 'warn', 'a button read gap was reported as a complete modules pull');
+  assert.match(status.at(-1)[1], /custom buttons could not be read/, 'the warning does not name the missing chapter');
 });
 
 // ---------------------------------------------------------------------------------------------
