@@ -733,6 +733,12 @@
   /* The buttons table, held to the panel's width the same way: a button's name and the function it
      runs are both free text an org can make as long as it likes, and the table was pushing the whole
      pane sideways. The whole value is on the cell's own tooltip. */
+  /* The Runs cell holds a `.wf-fn` chip - inline-block, with a border, padding and `margin:2px 0 0`
+     - beside cells holding plain text. Against the shared `vertical-align:top` the two start at the
+     same edge and sit at different heights, which is what the row looks crooked from. Centred here
+     rather than on `.ftbl td`, which fields, layouts, related lists and pipelines all use: moving a
+     shared value to fix one table changes four nobody is looking at. */
+  #pvbtns .ftbl td{vertical-align:middle}
   #pvbtns .ftbl td:nth-child(1),#pvbtns .ftbl td:nth-child(2){max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* And prose inside it keeps the visible width too, or a box grown to its content lays a sentence
      on one line and scrolls sideways because of it. */

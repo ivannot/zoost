@@ -608,6 +608,38 @@ CRM = """
           const txt = $('pvcallers').textContent || '';
           if (!/Read by|Written by|No function reads/.test(txt))
             say('the module detail does not say what code does with it: ' + txt.slice(0, 80));
+          // The Buttons pane, and the one thing about it nothing that reads source can answer: a row
+          // holds a `.wf-fn` chip - inline-block, bordered, padded, with a top margin and no bottom
+          // one - beside cells of plain text, and against the shared `vertical-align:top` the two
+          // sat at different heights. Reported from a screenshot, which is the only instrument that
+          // had seen it. Absence is the finding here too: the sample gives Contacts two buttons, so
+          // an empty pane means the tab, the pull or the join broke, not that there is nothing to
+          // measure.
+          const btab = $('pvtab_btn');
+          if (!btab) say('the module has no Buttons tab: the pane is gone or the tab was renamed');
+          else {
+            btab.click(); await settle();
+            const brow = $('pvbtns').querySelector('.ftbl tbody tr');
+            if (!brow) say('the Buttons pane is empty for a sample module that carries two buttons');
+            else {
+              const chip = brow.querySelector('.wf-fn');
+              if (!chip) say('the Runs cell holds no function chip, so the way back to the function is gone');
+              // **Against the plain text beside it, not against its own cell.** The first version of
+              // this compared the chip with the `<td>` holding it and passed in both states: the chip
+              // is the tallest thing in the row, so it sets the row height and stays centred in its
+              // own cell whatever the alignment. What the screenshot showed is the chip against
+              // «view» and «Standard» - and a cell's rect is the whole row, so the text's own box is
+              // what has to be measured. A `Range` over the cell contents is the only thing that
+              // gives it.
+              const where = brow.children[2];
+              const rg = document.createRange(); rg.selectNodeContents(where);
+              const cb = chip.getBoundingClientRect(), tb = rg.getBoundingClientRect();
+              const off = Math.abs((cb.top + cb.height / 2) - (tb.top + tb.height / 2));
+              if (off > 1.5)
+                say(`the Runs chip sits ${off.toFixed(1)}px off the text beside it in the same row, `
+                    + 'so the line reads crooked');
+            }
+          }
         }
         const back = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
         if (back) { back.click(); await settle(); }
