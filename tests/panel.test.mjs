@@ -505,7 +505,11 @@ const EXPORT_PARTS = ['HD_ORPHAN', 'HD_UNRESOLVED', 'HD_AMBIGUOUS', 'HD_BROKEN',
   .concat(['ruleTriggerFields', 'dateTriggerText', 'critWatchesOnly', 'fieldTriggerMap', 'ruleWrittenFields', 'writtenValue', 'roleText', 'ruleCheckedFields', 'comparedText',
            // Which blueprints touch a field, joined by both builders exactly as the rules are.
            'blueprintFieldMap']
-    .map((k) => sliceFn('apps/crm/automation.js', k)));
+    .map((k) => sliceFn('apps/crm/automation.js', k)))
+  // The picklist cell of the fields table, shared with the panel and called by both builders. It
+  // only became reachable here when the fixture grew a field - which is the point of the fixture
+  // growing one, and is also why nothing had needed it before.
+  .concat([sliceFn('apps/crm/modules.js', '_pick')]);
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -17121,13 +17125,25 @@ test('crm: both reports are produced with every chapter ticked and something in 
     { api_name: 'beta', display_name: 'Beta', namespace: 'ns', downloaded: true, code: null },
     { api_name: 'gamma', display_name: 'Gamma', namespace: 'ns', downloaded: false },
   ];
+  // A field, because the fields table is built from `m.fields`: without one there is no row for the
+  // Workflows column to fill, and anything asserted about that column would pass on its absence.
   const mods = [{ api_name: 'Contacts', display_name: 'Contacts',
+                  fields: [{ api_name: 'Status', label: 'Status', data_type: 'picklist' }],
                   related_lists: [{ api_name: 'Notes', module: 'Notes' }] }];
   const health = { at: '2026-08-23T10:00:00Z', usage: { success: 9, failure: 1 }, runs: [],
                    failures: [{ name: 'f', count: 1, reason: 'r' }] };
   const args = [fns, mods, { nodes: { 'ns.alpha': node }, counts: {} }, {},
+                // **Two** rules watching the same field: the Workflows column is a list, and one
+                // entry cannot show whether the entries are separated from each other.
                 [{ id: '1', name: 'W', module: 'Contacts', actions: [],
-                   detail: { conditions: [{ instant_actions: { actions: [{ type: 'functions', id: '9', name: 'Alpha' }] } }] } }],
+                   detail: { conditions: [{ instant_actions: { actions: [{ type: 'functions', id: '9', name: 'Alpha' }] } }],
+                             execute_when: { type: 'field_update', details: { trigger_module: { api_name: 'Contacts', id: '1' },
+                               criteria: { comparator: '${ANYVALUE}', field: { api_name: 'Status', id: '1' }, value: '${ANYVALUE}' },
+                               repeat: true, match_all: false } } } },
+                 { id: '2', name: 'W2', module: 'Contacts', actions: [],
+                   detail: { conditions: [], execute_when: { type: 'field_update', details: { trigger_module: { api_name: 'Contacts', id: '1' },
+                     criteria: { comparator: '${ANYVALUE}', field: { api_name: 'Status', id: '1' }, value: '${ANYVALUE}' },
+                     repeat: true, match_all: false } } } }],
                 [{ id: '1', name: 'S', function_id: '9', function_name: 'Alpha' }],
                 [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], health,
                 [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope,
@@ -17157,6 +17173,14 @@ test('crm: both reports are produced with every chapter ticked and something in 
   // opened to find out *which*. The id is the thing they can act on, and the panel has always shown
   // it; the keyword is the last resort, for a button that runs no function at all.
   assert.ok(html.includes('ƒ 4242'), 'the report drops the id of a function it does not carry');
+  // The Workflows and Blueprints columns hold a list, and it was joined with `<br>`: seven processes
+  // on one field arrived as a wall with no gap, in a cell that broke words in half. Reported from a
+  // real report. Each entry is its own block now, and the cell is marked so the stylesheet can give
+  // it room without touching the shared rule every other table uses.
+  const wfCell = (html.match(/<td class="pltd">[\s\S]*?<\/td>/) || [''])[0];
+  assert.equal((wfCell.match(/class="plent"/g) || []).length, 2,
+    'the two rules watching one field are not two separate entries in the Workflows cell');
+  assert.ok(!wfCell.includes('<br>'), 'the entries are still run together by a line break');
   // «Used in blueprint: Deal approval» sent the reader to `#mod-Contacts` - a field table - while
   // `id="bp-BP1"` sat in the same document. A thing with a page of its own goes to its own page.
   assert.ok(/Used in blueprint[^<]*<\/b>\s*<a href="#bp-BP1"/.test(html),

@@ -123,7 +123,7 @@ apps/crm/export.js	bpTrig.size ? ' ' + bpMd(f) + ' |' : ''
 apps/crm/export.js	bpTrig.size ? ' Blueprints |' : ''
 apps/crm/export.js	bpTrig.size ? '---|' : ''
 apps/crm/export.js	bpTrig.size ? '<th>Blueprints</th>' : ''
-apps/crm/export.js	bpTrig.size ? `<td>${bpTd(m, fl)}</td>` : ''
+apps/crm/export.js	bpTrig.size ? `<td class="pltd">${bpTd(m, fl)}</td>` : ''
 apps/crm/export.js	btnHtml
 apps/crm/export.js	c.sequence_number || i + 1
 apps/crm/export.js	connHtml
@@ -155,7 +155,7 @@ apps/crm/export.js	fTrig ? ' ' + trigMd(f) + ' |' : ''
 apps/crm/export.js	fTrig ? ' Workflows |' : ''
 apps/crm/export.js	fTrig ? '---|' : ''
 apps/crm/export.js	fTrig ? '<th>Workflows</th>' : ''
-apps/crm/export.js	fTrig ? `<td>${trigTd(m, fl)}</td>` : ''
+apps/crm/export.js	fTrig ? `<td class="pltd">${trigTd(m, fl)}</td>` : ''
 apps/crm/export.js	failHtml
 apps/crm/export.js	failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''
 apps/crm/export.js	fails.at || 'an unknown date'

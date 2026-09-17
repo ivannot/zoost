@@ -34,12 +34,12 @@ header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line)
    the foot already worked this way and the head did not, so the title started at the window's
    edge while the first chapter began 140px further in. Two rules that are meant to line up and
    only one of them written down is how they came apart. */
-header>.hcol{max-width:1000px;margin:0 auto;padding:0 20px}
+header>.hcol{max-width:1240px;margin:0 auto;padding:0 20px}
 header h1{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:10px}
 h1 .mark{width:24px;height:24px;flex:0 0 auto;border-radius:6px}.meta{color:var(--muted);font-size:13px;font-family:ui-monospace,monospace}
 .credit{margin-top:6px;color:#94a3b8;font-size:12px}.credit a{color:var(--accent)}
 #q{margin-top:10px;width:100%;max-width:520px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
-main{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
+main{max-width:1240px;margin:0 auto;padding:24px 20px 80px}
 h2{font-size:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:6px;margin:36px 0 10px}
 h3.grp{font:12px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:22px 0 8px}
 h3.grp .cnt{color:#9aa4b2}
@@ -88,6 +88,16 @@ table.ftbl{width:100%;border-collapse:collapse;font:12.5px ui-monospace,monospac
    report - the colour said nothing and there was no way to see what was clickable.
    The colour belongs to the anchor, not to the column. */
 .ftbl td.mono{font-family:ui-monospace,monospace}
+/* The Workflows and Blueprints columns hold a *list*, and it read as a wall: the entries were joined
+   with <br>, so seven processes on one field ran together with no gap, and the cell inherited the
+   anywhere-wrap above - which exists for long API names and here broke ordinary words in half,
+   «Specializzazion / e». Reported from a real report. Each entry is its own block with air around
+   it, words wrap where words wrap, and the column is given a floor so the six columns before it
+   cannot squeeze it to nothing. Scoped to these cells: the wrap rule above is still what keeps a
+   long identifier from pushing the card out of its own background. */
+.ftbl td.pltd{min-width:22ch;overflow-wrap:normal}
+.ftbl td.pltd .plent{display:block}
+.ftbl td.pltd .plent+.plent{margin-top:6px;padding-top:6px;border-top:1px dotted var(--line)}
 /* The card has to contain its table. A table set to the full width of the card still cannot shrink
    below its columns' minimum content, so one long API name - and a Deluge org is full of them -
    pushed the rows out past the white background, which then ended in the middle of the data.
@@ -125,7 +135,7 @@ table.ftbl{width:100%;border-collapse:collapse;font:12.5px ui-monospace,monospac
 .tochx{font-size:12px;margin:2px 0 6px}
 .empty{color:var(--muted)}
 footer{border-top:1px solid var(--line);background:#fff;padding:14px 0;color:var(--muted);font-size:12px}
-footer>.fcol{max-width:1000px;margin:0 auto;padding:0 20px}
+footer>.fcol{max-width:1240px;margin:0 auto;padding:0 20px}
 footer a{color:var(--accent)}
 
 tr.relrow.sys td{color:#9aa4b2;background:#fbfbfc}

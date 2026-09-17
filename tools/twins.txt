@@ -38,7 +38,7 @@ bridgeCommand	43c239bf9acf	43c239bf9acf	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
 bridgeResponseError	2675476e3c3f	2675476e3c3f	identical
 buildChips	8a88fe99de94	8a88fe99de94	identical
-buildExportHtml	348aff05e2ce	e1a5052dd09d	divergent
+buildExportHtml	4726d52a3549	e1a5052dd09d	divergent
 buildExportMarkdown	098b0dca7436	f5d0fbdf2c0e	divergent
 buildMirrorPlan	44136fa355b3	44136fa355b3	identical
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent

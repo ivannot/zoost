@@ -342,14 +342,14 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   };
   const groups = { Standard: [], Custom: [] }; mods.forEach((m) => (m.generated_type === 'custom' ? groups.Custom : groups.Standard).push(m));
   const trigTd = (m, fl) => (fTrig.get(`${m.api_name}:${fl.api_name}`) || [])
-    .map((r) => `<a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(roleText(r))}${r.active ? '' : ', off'})</span>`).join('<br>');
+    .map((r) => `<span class="plent"><a href="#${escA(wfAnchor(r.id))}">${esc(r.name)}</a> <span class="none">(${esc(roleText(r))}${r.active ? '' : ', off'})</span></span>`).join('');
   // The processes that touch a field, beside the rules that do: the panel grew a BP column and a
   // report without it is the lesser copy of the panel, which is the one thing a report may not be.
   // The modules, so the map is keyed the way the tables ask for it: a blueprint names a custom module
   // `CustomModule20` and every lookup below is by `api_name`.
   const bpTrig = blueprintFieldMap(bps || [], allActs || [], mods || []);
   const bpTd = (m, fl) => (bpTrig.get(`${m.api_name}:${fl.api_name}`) || [])
-    .map((r) => `${bpLink(r.id, r.name)} <span class="none">(${esc(r.role)}${r.transition ? ', ' + esc(r.transition) : ''}${r.active ? '' : ', off'})</span>`).join('<br>');
+    .map((r) => `<span class="plent">${bpLink(r.id, r.name)} <span class="none">(${esc(r.role)}${r.transition ? ', ' + esc(r.transition) : ''}${r.active ? '' : ', off'})</span></span>`).join('');
   let modHtml = (fTrig && wfUnread && mods.length
     ? `<p class="note">${wfUnread} workflow rule(s) were not downloaded, so the fields they touch are not marked under «Workflows».</p>` : '')
     + (fTrig && actsMissing && mods.length ? '<p class="note">Automation actions are not in this workspace, so a rule that writes a field is not marked for it.</p>' : '');
@@ -357,7 +357,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
     list.sort(byField('api_name')).forEach((m) => {
-      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td>${fTrig ? `<td>${trigTd(m, fl)}</td>` : ''}${bpTrig.size ? `<td>${bpTd(m, fl)}</td>` : ''}</tr>`).join('');
+      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td>${fTrig ? `<td class="pltd">${trigTd(m, fl)}</td>` : ''}${bpTrig.size ? `<td class="pltd">${bpTd(m, fl)}</td>` : ''}</tr>`).join('');
       const inbound = (modRefs && modRefs[m.api_name]) || [];
       const refBy = inbound.length ? `<div class="refs"><span><b>Referenced by (${inbound.length}):</b> ${inbound.map((r) => `${modLink(r.module)} <span class="none">(${esc(r.field)})</span>`).join(', ')}</span></div>` : '';
       const laySrc = !scope.layouts ? [] : ((m._layouts && m._layouts.length) ? m._layouts : (m.layouts || []));
