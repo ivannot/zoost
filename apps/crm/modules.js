@@ -668,9 +668,19 @@ function renderModuleButtons(m, rows) {
   // text; now that a refused read opens the pane, it has to say which of the two happened - reciting
   // both sends the reader to do the wrong thing half the time.
   if (!rows.length) {
-    return m.buttons_read === false
-      ? '<div class="empty" style="padding:12px 10px"><b>Custom buttons were not read.</b> Zoho did not answer for this module on the last pull, so whether it has any is unknown. Press Pull on Modules to ask again.</div>'
-      : '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none.</div>';
+    if (m.buttons_read !== false) {
+      return '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none.</div>';
+    }
+    // **What went wrong, in Zoho's own words where there are any.** This used to assert «Zoho did not
+    // answer», which is a guess: an HTTP refusal, a body without the list, and a module never asked
+    // because its fields had not come are three different things with three different next steps.
+    // The pull records which of them it was; a mirror written before it did says only «not read»,
+    // and that is stated as a gap rather than dressed up as a reason.
+    const why = m.buttons_error
+      ? escHtml(String(m.buttons_error))
+      : 'the last pull did not record why, so whether it has any is unknown';
+    return `<div class="empty" style="padding:12px 10px"><b>Custom buttons were not read.</b> On the `
+      + `last pull, ${why}. Press Pull on Modules to ask again.</div>`;
   }
   const fnCell = (b) => (b.function_id
     ? `<span class="wf-fn" data-fnid="${escA(b.function_id)}" data-fnname="${escA(b.function_name || '')}" title="${escA('Open ' + (b.function_name || b.function_id))}">ƒ ${escHtml(b.function_name || b.function_id)}</span>`

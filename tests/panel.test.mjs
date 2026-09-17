@@ -22081,13 +22081,20 @@ test('crm: a module whose buttons were refused says so, and one that has none sa
   const { renderModuleButtons } = load([sliceFn('apps/crm/modules.js', 'renderModuleButtons')],
     { buttonListShown: null, escA: (x) => String(x == null ? '' : x),
       escHtml: (x) => String(x == null ? '' : x), String, Object });
-  const refused = renderModuleButtons({ api_name: 'Contacts', buttons_read: false }, []);
+  // The reason the pull recorded, in Zoho's own words. «Zoho did not answer» was an assertion the
+  // panel could not make: an HTTP refusal, a body without the list, and a module never asked because
+  // its fields had not come are three different things, and only the pull knows which happened.
+  const refused = renderModuleButtons(
+    { api_name: 'Contacts', buttons_read: false, buttons_error: 'Zoho refused it: HTTP 400 - INVALID_MODULE' }, []);
+  const noReason = renderModuleButtons({ api_name: 'Contacts', buttons_read: false }, []);
   const none = renderModuleButtons({ api_name: 'Contacts', buttons_read: true }, []);
   const older = renderModuleButtons({ api_name: 'Contacts' }, []);
-  assert.match(refused, /did not answer/, 'a refused read is reported as «this module has none»');
+  assert.match(refused, /HTTP 400 - INVALID_MODULE/, 'the reason the pull recorded is not shown, so the reader is told nothing they can act on');
   assert.doesNotMatch(refused, /carries none/, 'it recites both reasons, so half the readers act on the wrong one');
+  // A mirror written before the reason was recorded: the gap is stated, not dressed up as a cause.
+  assert.match(noReason, /did not record why/, 'a refusal with no recorded reason invents one');
   assert.match(none, /carries none/, 'a module that really has no buttons is reported as a failure');
-  assert.doesNotMatch(none, /did not answer/, 'a module that answered «none» is reported as unanswered');
+  assert.doesNotMatch(none, /were not read/, 'a module that answered «none» is reported as unanswered');
   // A mirror written before the flag existed: unchanged, rather than accusing an old pull of failing.
   assert.match(older, /carries none/, 'an older mirror without the flag now reads as a refusal');
 });

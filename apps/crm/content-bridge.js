@@ -1340,9 +1340,22 @@
       // must not arrive as the same empty list, or the panel prunes what it merely failed to read.
       let buttons = [];
       let buttonsRead = false;
+      // **Why it did not answer, not only that it did not.** The flag alone made the panel assert
+      // «Zoho did not answer for this module», which is one of three different things: an HTTP
+      // refusal with Zoho's own sentence, a body that did not carry the list `list()` looks for, or
+      // a module never asked because its fields had not come. Told apart here, where the answer is,
+      // rather than guessed where it is displayed.
+      let buttonsError = null;
       if (fieldsOk) {
         try { buttons = await moduleButtons(m.api_name); buttonsRead = true; }
-        catch (_) { /* refused, or not offered for this module: kept apart from «none» by the flag */ }
+        catch (e) {
+          buttonsError = e && e.status
+            ? `Zoho refused it: HTTP ${e.status}${e.message ? ' - ' + String(e.message).slice(0, 160) : ''}`
+            : (e && e.shape ? 'Zoho answered without the list this reads, so nothing was taken from it'
+                            : `the call did not complete${e && e.message ? ': ' + String(e.message).slice(0, 160) : ''}`);
+        }
+      } else {
+        buttonsError = 'its fields could not be read, so its buttons were not asked for';
       }
       out.push({
         pipelines, stage_pool: stagePool,
@@ -1355,6 +1368,7 @@
         related_lists: related,
         buttons,
         buttons_read: buttonsRead,
+        buttons_error: buttonsError,
         // Read, or merely not obtained. The panel prunes layout files against this: «none» is a fact
         // it may act on, «not read» is not.
         layouts_read: layoutsRead,
