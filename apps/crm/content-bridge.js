@@ -1197,6 +1197,23 @@
   }
   async function pullModules() {
     const mods = list(await api('/crm/v2/settings/modules'), 'modules', 'modules');
+    // **Which modules can carry a custom button at all, asked once.** Measured on a real org: of 79
+    // modules, 26 refused the per-module buttons call, and every one of them is a subform, a picklist
+    // tracker or a system sub-module - `Attachments`, `Notes`, `Approval_Logs__s`, `Entity_Cadences__s`.
+    // They were recorded as «not read», which is true to the letter and useless to a reader: the tab
+    // appeared on a standard module and told them to pull again about something that can never
+    // arrive, while a custom module with no buttons showed no tab at all - the same fact, two
+    // different answers. Zoho's own screen does not ask those modules either: it reads this list
+    // first, and on that org it named all 8 modules that have buttons and none of the 26 that refused.
+    //
+    // One call replaces about thirty-five refusals per pull, so it is cheaper as well as truthful.
+    // When it is this call that fails, `null` means «unknown» and every module is asked exactly as
+    // before: a feature list we could not read must not become a reason to stop reading buttons.
+    let buttonCapable = null;
+    try {
+      buttonCapable = new Set(list(await api('/crm/v2.2/settings/modules?feature_name=custom_button'),
+                                   'modules', 'custom_button feature list').map((x) => x.api_name));
+    } catch (_) { /* unknown: ask them all, which is what this did before the list existed */ }
     const out = [];
     for (let i = 0; i < mods.length; i++) {
       const m = mods[i]; if (!m.api_name) continue;
@@ -1346,7 +1363,12 @@
       // a module never asked because its fields had not come. Told apart here, where the answer is,
       // rather than guessed where it is displayed.
       let buttonsError = null;
-      if (fieldsOk) {
+      // `false` is Zoho saying this kind of module has no such thing, which is an answer and not a
+      // gap; `null` is the feature list having failed, and then it is asked the old way.
+      const buttonsSupported = buttonCapable ? buttonCapable.has(m.api_name) : null;
+      if (buttonsSupported === false) {
+        buttonsRead = true;   // complete: there are none to have, so nothing is missing from the mirror
+      } else if (fieldsOk) {
         try { buttons = await moduleButtons(m.api_name); buttonsRead = true; }
         catch (e) {
           buttonsError = e && e.status
@@ -1369,6 +1391,9 @@
         buttons,
         buttons_read: buttonsRead,
         buttons_error: buttonsError,
+        // Whether this kind of module can carry one at all, so «asked, and it has none» and «there is
+        // no such thing here» stay apart on disk. `null` is the feature list not having been read.
+        buttons_supported: buttonsSupported,
         // Read, or merely not obtained. The panel prunes layout files against this: «none» is a fact
         // it may act on, «not read» is not.
         layouts_read: layoutsRead,

@@ -203,6 +203,12 @@
         }
       ]
     },
+    "buttonFeature": {
+      "modules": [
+        { "api_name": "Contacts", "module_name": "Contacts" },
+        { "api_name": "Deals", "module_name": "Deals" }
+      ]
+    },
     "buttons": {
       "custom_buttons": [
         {

@@ -263,7 +263,7 @@ const expected = new Map([
   // Per module, on the same walk: fields, layouts, related lists - and the custom buttons, once each.
   // Pinned at one for the same reason the rest are: a reader that asked twice, or stopped asking,
   // is what these counts exist to catch.
-  ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1], ['custom-buttons', 1],
+  ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1], ['custom-buttons', 1], ['button-feature', 1],
   ['workflows', 3], ['workflow-detail', 2], ['schedules', 1],
   // A pull reads every transition of every blueprint it read, and the function behind a `functions`
   // action one call further. Both counts are pinned: a reader that stopped asking, or one that asked
@@ -323,6 +323,13 @@ function apiReply(request) {
   // The custom buttons of a module, asked on the same walk as its fields and related lists - one more
   // call per module rather than a second pass over the org. Served here so the probe holds the whole
   // set of calls a pull makes: an endpoint this server does not know is a failure by design.
+  // Which modules can carry a custom button, asked once for the org. The per-module call below is
+  // made only for the modules this names - measured on a real org, 26 of 79 refused it and every one
+  // was a subform, a tracker or a system sub-module, so the pull was spending refusals to learn
+  // something this answers in one call.
+  } else if (p === '/crm/v2.2/settings/modules' && url.searchParams.has('feature_name')) {
+    requireGet(request, url); mark('button-feature'); onlyQuery(url, { feature_name: 'custom_button' });
+    body = fixture.modules.buttonFeature;
   } else if (p === '/crm/v9/settings/custom_buttons') { requireGet(request, url); mark('custom-buttons'); onlyQuery(url, { module: 'Contacts' }); body = fixture.modules.buttons;
   } else if (p === '/crm/v8/settings/automation/workflow_rules') { requireGet(request, url); mark('workflows'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.workflows.list;
   } else if (p === `/crm/v8/settings/automation/workflow_rules/${fixture.workflows.list.workflow_rules[0].id}`) { requireGet(request, url); mark('workflow-detail'); onlyQuery(url, {});
