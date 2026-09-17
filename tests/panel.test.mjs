@@ -1017,23 +1017,27 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
               classList: { add(c) { if (c === 'on') b.on = true; }, remove(c) { if (c === 'on') b.on = false; } } };
   let made = 0, revoked = 0;
   // The module-level `let` too: the helper keeps the last URL there so it can revoke it.
-  const opened = [], armed = [];
+  const opened = [];
   const m = load([sliceConst('apps/crm/sidepanel.js', '_exportUrl'),
-                  sliceConst('apps/crm/sidepanel.js', 'EXPORT_OFFER_MS'),
                   sliceFn('apps/crm/sidepanel.js', 'offerExportOpen'),
-                  sliceFn('apps/crm/sidepanel.js', 'openExportedFile')], {
-    // The timers are the subject here, so they are captured rather than run: the offer has to put
-    // itself away, and a case that waited forty-five seconds to find out would never be run.
-    setTimeout: (fn, ms) => { armed.push({ fn, ms }); return armed.length; },
-    clearTimeout: (id) => { if (id) armed[id - 1] = null; },
+                  sliceFn('apps/crm/sidepanel.js', 'openExportedFile'),
+                  // The status sink itself, because the rule is that the offer lives exactly as long
+                  // as the sentence it belongs to - run rather than read.
+                  sliceConst('apps/crm/sidepanel.js', 'setStatus')], {
+    noteStep: () => {}, showEmergency: () => {},
     String, Promise, Blob: function Blob(parts, opts) { this.parts = parts; this.type = opts && opts.type; },
     URL: { createObjectURL: () => { made++; return 'blob:x' + made; }, revokeObjectURL: () => { revoked++; } },
-    $: (id) => (id === 'expopen' ? b : null),
+    // The status sink writes to two more elements, so every other id answers with a throwaway: the
+    // subject here is the offer, not the row it sits on.
+    $: (id) => (id === 'expopen' ? b : { textContent: '', className: '' }),
     // Both, so the case can tell which one it reached for: a tab leaves this panel open beside the
     // document, which is what was reported.
     chrome: { tabs: { create: (a) => { opened.push(['tab', a]); return Promise.resolve({}); } },
               windows: { create: (a) => { opened.push(['window', a]); return Promise.resolve({}); } } },
-    setStatus: () => {},
+    // No `setStatus` stub here: the real one is lifted above, and a stub beside it shadowed it - so
+    // the case called a no-op and reported the control as never being put away. The defect was in
+    // the case, and it is the shape this file warns about elsewhere: a global that quietly answers
+    // for the thing under test.
   });
   m.offerExportOpen('export/zoost-org-2026-09-17.html', '<html></html>');
   assert.equal(b.on, true, 'the control is not offered after an export that wrote a file');
@@ -1049,13 +1053,11 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
   assert.equal(opened.length, 1, 'the control was pressed and nothing was asked to open');
   assert.equal(opened[0][0], 'window', 'it opens a tab, so the panel stays in the way of the report');
   assert.equal(opened[0][1].url, 'blob:x2', 'it opens something other than the file it just named');
-  // And it puts itself away. It belongs to the export you just ran, and it was still on screen after
-  // switching tab, offering a document from some earlier thought - reported.
-  const last = armed.filter(Boolean).pop();
-  assert.ok(last, 'the offer stands for ever - nothing was armed to take it away');
-  assert.equal(last.ms, m.EXPORT_OFFER_MS, 'it goes away on some other schedule than the one declared');
-  last.fn();
-  assert.equal(b.on, false, 'the timer fired and the control is still there');
+  // And it goes with the sentence it belongs to. It was still on screen long after the line that put
+  // it there had been replaced, offering a document from some earlier thought - reported. The next
+  // status message is what takes it away, which is the same rule the report controls beside it follow.
+  m.setStatus('Something else entirely.', 'ok');
+  assert.equal(b.on, false, 'the message that put it there is gone and the offer is still on the row');
   assert.equal(revoked, 2, 'it went away and left the file it was holding in memory');
   // The tab change is the other half of the same report, and `setMode` is far too large to lift for
   // it: this reads the call rather than driving it, and says so.

@@ -178,7 +178,7 @@ noteFolderAccessLost	2a0281fc0119	789a449da631	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 noteThrown	6c35bc6fa368	6c35bc6fa368	identical
-offerExportOpen	bb8a2d80d66f	bb8a2d80d66f	identical
+offerExportOpen	6ffdf51482e1	6ffdf51482e1	identical
 onAiengine	734a3f4ba921	7a1133599503	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
