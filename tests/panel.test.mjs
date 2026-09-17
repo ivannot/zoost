@@ -1017,12 +1017,17 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
               classList: { add(c) { if (c === 'on') b.on = true; }, remove(c) { if (c === 'on') b.on = false; } } };
   let made = 0, revoked = 0;
   // The module-level `let` too: the helper keeps the last URL there so it can revoke it.
+  const opened = [];
   const m = load([sliceConst('apps/crm/sidepanel.js', '_exportUrl'),
-                  sliceFn('apps/crm/sidepanel.js', 'offerExportOpen')], {
+                  sliceFn('apps/crm/sidepanel.js', 'offerExportOpen'),
+                  sliceFn('apps/crm/sidepanel.js', 'openExportedFile')], {
     String, Promise, Blob: function Blob(parts, opts) { this.parts = parts; this.type = opts && opts.type; },
     URL: { createObjectURL: () => { made++; return 'blob:x' + made; }, revokeObjectURL: () => { revoked++; } },
     $: (id) => (id === 'expopen' ? b : null),
-    chrome: { tabs: { create: () => Promise.resolve({}) } },
+    // Both, so the case can tell which one it reached for: a tab leaves this panel open beside the
+    // document, which is what was reported.
+    chrome: { tabs: { create: (a) => { opened.push(['tab', a]); return Promise.resolve({}); } },
+              windows: { create: (a) => { opened.push(['window', a]); return Promise.resolve({}); } } },
     setStatus: () => {},
   });
   m.offerExportOpen('export/zoost-org-2026-09-17.html', '<html></html>');
@@ -1031,6 +1036,11 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
   assert.equal(made, 1, 'nothing was built for it to open');
   m.offerExportOpen('export/zoost-org-2026-09-17.md', '# x');
   assert.equal(revoked, 1, 'the previous export stays in memory for the life of the panel');
+  // And pressing it opens a window rather than a tab: a tab keeps the panel open beside the document.
+  b.onclick();
+  assert.equal(opened.length, 1, 'the control was pressed and nothing was asked to open');
+  assert.equal(opened[0][0], 'window', 'it opens a tab, so the panel stays in the way of the report');
+  assert.equal(opened[0][1].url, 'blob:x2', 'it opens something other than the file it just named');
   m.offerExportOpen(null);
   assert.equal(b.on, false, 'the control outlives the export it belongs to');
   assert.equal(revoked, 2, 'putting it away leaks the last one');

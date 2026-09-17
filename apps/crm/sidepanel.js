@@ -192,7 +192,11 @@ function offerExportOpen(name, text) {
 /** A named declaration, not the `.then()` chain it started as: `asynccheck` reads an async *scope*
  *  only when it is one, and its ledger goes to zero. */
 async function openExportedFile(url, name) {
-  try { await chrome.tabs.create({ url }); }
+  // A window of its own, not a tab: a tab keeps this panel open beside it, which is in the way of a
+  // document you are trying to read. Reported. `type: 'normal'` rather than a popup because the
+  // report is full of internal links now - its chapters point at each other - and a popup gives the
+  // reader no way back. The same shape the diagram window already opens with.
+  try { await chrome.windows.create({ url, type: 'normal', width: 1240, height: 900 }); }
   catch (_) { setStatus(`${name} is in your workspace folder - this browser would not open it from here.`, 'warn'); }
 }
 function showEmergency(link, report = link) {
