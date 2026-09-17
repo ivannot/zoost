@@ -917,7 +917,12 @@ function setMode(mode) {
   $('pulllist').style.display = _split ? '' : 'none';
   $('pulllist').title = `Pull list - which ${_typeLabel} exist in Zoho, in a few requests rather than one per item; what is already on disk is not read again, and the bar says since when`;
   buildTypeChips();
-  $('funcs').style.display = mode === 'functions' ? '' : 'none';
+  // Every tab whose subject has a page in Zoho offers it, not only Functions - reported with the six
+  // addresses, which are Zoho's own. A tab with no destination still hides the control rather than
+  // sending the reader somewhere plausible. The label stays in the markup and only the title says
+  // which page: writing `textContent` here is the defect this file records twice already.
+  $('funcs').style.display = (mode === 'functions' || CRM_TAB_PATH[mode] != null) ? '' : 'none';
+  $('funcs').title = `Open Zoho's own ${tabLabel(mode).toLowerCase()} page`;
   // It lives in the workspace bar now, beside Export and Health, so it no longer comes and goes with
   // the tab - the diagram window can switch between the two drawings by itself, so there is always
   // something for it to open. Only *which* one it opens follows the tab.

@@ -23,6 +23,29 @@ const CRM_ACTION_PATH = {
   webhooks: 'webhooks',
 };
 
+/** Where each tab's subject lives in Zoho's own settings.
+ *
+ *  The panel offered this for functions and for nothing else, so every other tab was a list you
+ *  could read here and had to find by hand over there. Reported with the six addresses, which is
+ *  what these are - Zoho's own paths, not a guess: a tab with no row is simply not offered the
+ *  control rather than being sent somewhere plausible. `functions` keeps its own builder below
+ *  because it lands on a sub-page, `myFunctions`, that none of the others has. */
+const CRM_TAB_PATH = {
+  modules: 'modules',
+  workflows: 'workflow-rules',
+  schedules: 'schedules',
+  actions: 'alerts',
+  connections: 'connections',
+  blueprints: 'blueprint',
+};
+
+/** @param {CrmNavigationContext} context @param {string} tab */
+function crmTabUrl(context, tab) {
+  const path = CRM_TAB_PATH[String(tab)];
+  return context.base && context.instance && path
+    ? `${context.base}/crm/${context.instance}/settings/${path}` : null;
+}
+
 /** @param {CrmNavigationContext} context */
 function crmFunctionsUrl(context) {
   return context.base && context.instance

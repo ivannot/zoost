@@ -1036,6 +1036,31 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
   assert.equal(revoked, 2, 'putting it away leaks the last one');
 });
 
+test('crm: every tab that has a page in Zoho can open it', () => {
+  // The panel offered this for functions and for nothing else, so every other tab was a list you
+  // could read here and had to go and find by hand over there. Reported with the six addresses.
+  // Held on the real builder: the paths are Zoho's own and a typo in one of them is a control that
+  // lands on a 404, which is worse than no control.
+  const m = load([sliceConst('apps/crm/zoho-navigation.js', 'CRM_TAB_PATH'),
+                  sliceFn('apps/crm/zoho-navigation.js', 'crmTabUrl')], { String });
+  const ctx = { base: 'https://crmsandbox.zoho.eu', instance: 'yourinstance' };
+  const want = {
+    modules: 'https://crmsandbox.zoho.eu/crm/yourinstance/settings/modules',
+    workflows: 'https://crmsandbox.zoho.eu/crm/yourinstance/settings/workflow-rules',
+    schedules: 'https://crmsandbox.zoho.eu/crm/yourinstance/settings/schedules',
+    actions: 'https://crmsandbox.zoho.eu/crm/yourinstance/settings/alerts',
+    connections: 'https://crmsandbox.zoho.eu/crm/yourinstance/settings/connections',
+    blueprints: 'https://crmsandbox.zoho.eu/crm/yourinstance/settings/blueprint',
+  };
+  for (const [tab, url] of Object.entries(want)) {
+    assert.equal(m.crmTabUrl(ctx, tab), url, `${tab} does not open where its subject lives in Zoho`);
+  }
+  // A tab with no page of its own is not sent somewhere plausible, and neither is an unbound
+  // workspace: both answer null, which is what the caller turns into «pull this workspace once».
+  assert.equal(m.crmTabUrl(ctx, 'functions'), null, 'functions has its own builder and must not be in the map');
+  assert.equal(m.crmTabUrl({ base: null, instance: null }, 'modules'), null, 'an unbound workspace still builds a URL');
+});
+
 test('crm: a chip that carries its own opener is left alone by the helper', () => {
   // `.wf-fn` is the panel's one chip for «this opens something», and it stopped being only about
   // functions: a rule fires an action, a transition fires an action, a rule runs on a module. This

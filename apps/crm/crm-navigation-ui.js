@@ -117,7 +117,19 @@ async function openTargetZoho() {
   if (!url) { setStatus(MSG.noTarget, 'warn'); return null; }
   return goToZoho(url);
 }
-$('funcs').onclick = () => openTargetZoho();
+/** The Zoho page for the tab being looked at.
+ *
+ *  A sibling of `openTargetZoho` rather than a widening of it: that one is what the reveal flow
+ *  opens, and it means the functions page specifically - its callers read the tab id it returns.
+ *  Functions keeps its own builder because it lands on `myFunctions`; the rest come from the map in
+ *  `zoho-navigation.js`, and a tab with no row there is not offered the control at all. */
+async function openTabZoho() {
+  if (sampleRefuse()) return null;
+  const url = viewMode === 'functions' ? functionsUrl() : crmTabUrl(crmNavigationContext(), viewMode);
+  if (!url) { setStatus(MSG.noTarget, 'warn'); return null; }
+  return goToZoho(url);
+}
+$('funcs').onclick = () => openTabZoho();
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
