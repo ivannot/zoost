@@ -638,6 +638,16 @@ CRM = """
               if (off > 1.5)
                 say(`the Runs chip sits ${off.toFixed(1)}px off the text beside it in the same row, `
                     + 'so the line reads crooked');
+              // **What is deliberately not checked here: that a long chip stays inside its cell.**
+              // `#pvbtns .wf-fn` bounds its width because the cell's `text-overflow` cannot elide an
+              // inline-block, so on a real org a long function name was cut off mid-box - reported
+              // from a screenshot. Two measurements were written for it and both passed with the
+              // bound removed: the sample's names are short, and narrowing the panel to 340px does
+              // not squeeze the cell past them either. Lengthening one would mean renaming a function
+              // woven through the call graph, the connections, a rule and six committed fixture
+              // files. So the rule ships without a check rather than with one that cannot go red -
+              // a measurement that passes in both states is not evidence, and saying so here is
+              // worth more than the line it replaces.
             }
           }
         }

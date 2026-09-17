@@ -740,6 +740,13 @@
      shared value to fix one table changes four nobody is looking at. */
   #pvbtns .ftbl td{vertical-align:middle}
   #pvbtns .ftbl td:nth-child(1),#pvbtns .ftbl td:nth-child(2){max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* The cell's `text-overflow` cannot elide the chip: it applies to inline text, and the chip is an
+     inline-block, so a long function name was cut off mid-box - right border amputated, no ellipsis,
+     bleeding to the column edge. The chip has to carry its own bound. `vertical-align:middle` is on
+     it as well because `overflow:hidden` takes an inline-block's baseline from its bottom margin
+     edge, which would undo the centring one line above. Scoped here: `.wf-fn` is also the chip in
+     the callers pane, the workflow pane and the blueprint transitions, where nothing is truncated. */
+  #pvbtns .wf-fn{max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
   /* And prose inside it keeps the visible width too, or a box grown to its content lays a sentence
      on one line and scrolls sideways because of it. */
   #pvfields .ftnote,#pvfields .empty{position:sticky;left:0;width:100cqw;box-sizing:border-box}
