@@ -161,6 +161,24 @@ const refusalsIn = (cfg) => (cfg && cfg.srcRefused && typeof cfg.srcRefused === 
 // and a click can come after either. One question, one answer, whenever it is asked.
 const isDenied = (e) => !!e && e.mirrored !== false && !e.downloaded && !!e.refused;
 // One row builder, shared by the grouped and the sorted-flat rendering, so the two cannot drift.
+/** Which trailing slots this draw reserves room for.
+ *
+ *  **A slot is kept for the whole list or for none of it.** Every one of them used to be emitted on
+ *  every row, empty when it had nothing to say, and the reason is real - a slot that comes and goes
+ *  per row lets the next one slide into its place and the numbers stop lining up down the list. But
+ *  on an org of Deluge functions with nothing unpublished, `rlg` and `rpb` are empty on *every* row,
+ *  and their `min-width` floors were still holding some sixty pixels open beside a name that was
+ *  being cut short to fit. Reported: «an enormous unused space between the name and the columns on
+ *  the right; the name must use all the space it can».
+ *
+ *  Decided once per draw, from the rows about to be drawn, so the columns still line up - every row
+ *  in one list reserves exactly the same set. */
+const ROW_SLOTS = { lang: true, pub: true, rest: true };
+function setRowSlots(rows) {
+  ROW_SLOTS.lang = (rows || []).some((e) => !isDeluge(e.language));
+  ROW_SLOTS.pub = (rows || []).some((e) => publishChip(publishState(e)) !== '');
+  ROW_SLOTS.rest = (rows || []).some((e) => !!e.rest);
+}
 function fnRowEl(e) {
   const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
   el.setAttribute('aria-selected', e.path === currentPath);
@@ -182,12 +200,14 @@ function fnRowEl(e) {
   // with rows in Modules and Connections, and reusing one would change two tabs nobody looked at.
   // The family on the row, Zoho's own spelling in the tooltip: «java17» is a fact about the
   // function and belongs somewhere, but `slice(0, 4)` of it put «pyth» in a column.
-  const langSlot = `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langFamilyLabel(langFamily(e.language))) : ''}</span>`;
+  const langSlot = ROW_SLOTS.lang
+    ? `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langFamilyLabel(langFamily(e.language))) : ''}</span>` : '';
   // Whether Zoho is running this, on the row. Its own slot for the same reason every other one has
   // one: a slot that appears and disappears moves the numbers beside it down the whole list.
   const pub = publishState(e);
-  const pubSlot = `<span class="rest rpb${pub && !pub.deployed ? ' rpbd' : ''}"${pub ? ` title="${escA(publishSentence(pub))}"` : ''}>${escHtml(publishChip(pub))}</span>`;
-  const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
+  const pubSlot = ROW_SLOTS.pub
+    ? `<span class="rest rpb${pub && !pub.deployed ? ' rpbd' : ''}"${pub ? ` title="${escA(publishSentence(pub))}"` : ''}>${escHtml(publishChip(pub))}</span>` : '';
+  const restSlot = ROW_SLOTS.rest ? `<span class="rest rr">${e.rest ? 'REST' : ''}</span>` : '';
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
   // **The column shows what the list is sorted by.** Sorting by Size and printing lines made a
@@ -267,6 +287,9 @@ function renderTree() {
     sortDir: treeSortDir,
   });
   const shown = selection.rows;
+  // Before either branch appends a row: both of them draw from this same set, so the reservation is
+  // the same down the whole list however it is grouped or sorted.
+  setRowSlots(shown);
   const tree = $('tree'); tree.innerHTML = '';
   if (connectionFilter) {
     const b = document.createElement('div'); b.className = 'connbanner';

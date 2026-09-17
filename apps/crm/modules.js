@@ -560,8 +560,8 @@ function renderFieldsTable(m, found = fieldTriggers, bpFound = blueprintFields) 
   fieldListShown = { m, found, trig, bpFound, bpOf };
   // Both counts, because both columns sort: one number per row could only ever order by one of them.
   const rows = sortedFields(m.fields, (f) => ({ wf: ruleCount(trig(f)), bp: ruleCount(bpOf(f)) })).map(({ f }) => `<tr>
-    <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
-    <td class="mono">${escHtml(f.api_name)}</td>
+    <td title="${escA(f.label || f.api_name || '')}">${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
+    <td class="mono" title="${escA(f.api_name || '')}">${escHtml(f.api_name)}</td>
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
     <td class="mono">${f.lookup ? '\u2192 ' + `<span class="wf-fn" data-mod="${escA(lookupOf(f))}" title="${escA(lookupOf(f) + ' - click to open the module')}">${escHtml(lookupOf(f))}</span>` : ''}</td>

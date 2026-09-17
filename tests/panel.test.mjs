@@ -20426,6 +20426,32 @@ test('what the button counts is what pressing it asks, and only this run is repo
 // The row says it in the vocabulary the panel already has for a refusal: Modules draws ⊘ for a
 // module Zoho would not serve, so a function gets the same mark rather than a second glyph meaning
 // the same thing. Asked for in those words - «the icon already used for similar cases».
+test('crm: a trailing column no function in the list needs is not held open', () => {
+  // Every trailing slot was emitted on every row, empty when it had nothing to say, and the reason
+  // is real: a slot that comes and goes per row lets the next one slide into its place and the
+  // numbers stop lining up down the list. But on an org of Deluge functions with nothing unpublished
+  // the language and publish slots are empty on *every* row, and their `min-width` floors still held
+  // some sixty pixels open beside a name being cut short to fit. Reported with a picture: «an
+  // enormous unused space between the name and the columns on the right».
+  //
+  // The rule that keeps both: decided once per draw, from the rows about to be drawn - so within one
+  // list every row reserves exactly the same set and the columns still line up.
+  const rel = 'apps/crm/sidepanel.js';
+  const m = load([sliceConst(rel, 'ROW_SLOTS'), sliceFn(rel, 'setRowSlots'),
+                  sliceFn(rel, 'publishState'), sliceFn(rel, 'publishChip')],
+                 { Number, String, Boolean, isDeluge: (l) => String(l || '') === 'deluge' });
+  const deluge = { language: 'deluge', rest: false };
+  m.setRowSlots([deluge, { language: 'deluge', rest: false }]);
+  assert.equal(`${m.ROW_SLOTS.lang}|${m.ROW_SLOTS.pub}|${m.ROW_SLOTS.rest}`, 'false|false|false',
+    'a column every row in the list leaves empty is still holding its width open');
+  m.setRowSlots([deluge, { language: 'java17', rest: false }]);
+  assert.equal(m.ROW_SLOTS.lang, true, 'one compiled function in the list and the language column is gone');
+  m.setRowSlots([deluge, { language: 'deluge', rest: true }]);
+  assert.equal(m.ROW_SLOTS.rest, true, 'a REST function is in the list and REST has nowhere to print');
+  m.setRowSlots([deluge, { language: 'deluge', rest: false, deployed_on: '1750000000000' }]);
+  assert.equal(m.ROW_SLOTS.pub, true, 'a published function is in the list and the column was dropped');
+});
+
 test('a function whose source was refused is drawn as refused, not as an error', () => {
   const rel = 'apps/crm/sidepanel.js';
   const el = () => ({ className: '', dataset: {}, innerHTML: '', style: {},
@@ -20442,7 +20468,8 @@ test('a function whose source was refused is drawn as refused, not as an error',
                 MSG: { notHere: 'not here', hereRepull: 'y', failed: 'Failed: ', clickRetry: ' - click to retry',
                        notMirrored: () => '', srcRefused: (at) => 'Zoho refused the source' + (at ? ' asked ' + at : '') },
                 fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
-    const m = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'fnRowEl')], g);
+    // `ROW_SLOTS` too: the row builder reads it to decide which trailing slots this draw reserves.
+    const m = load([sliceConst(rel, 'isDenied'), sliceConst(rel, 'ROW_SLOTS'), sliceFn(rel, 'fnRowEl')], g);
     return m.fnRowEl(row).innerHTML;
   };
   const refused = draw(Object.assign({}, base, { refused: true, refusedAt: '2026-09-03T17:42:31.000Z', error: true,
@@ -21512,7 +21539,8 @@ test('the function row shows what the list is sorted by', () => {
                 publishState: () => null, publishChip: () => '', publishSentence: () => '',
                 MSG: { notHere: 'x', hereRepull: 'y', failed: 'z', clickRetry: '', notMirrored: () => '' },
                 fetchThenRedrawRow: () => {}, openFromTree: () => {}, setStatus: () => {} };
-    const m = load([sliceConst(rel, 'isDenied'), sliceFn(rel, 'fnRowEl')], g);
+    // `ROW_SLOTS` too: the row builder reads it to decide which trailing slots this draw reserves.
+    const m = load([sliceConst(rel, 'isDenied'), sliceConst(rel, 'ROW_SLOTS'), sliceFn(rel, 'fnRowEl')], g);
     const hit = /class="rest rfl[^"]*"[^>]*>([^<]*)</.exec(m.fnRowEl(row).innerHTML);
     assert.ok(hit, `${sort}: the row has no measured column at all`);
     return hit[1];

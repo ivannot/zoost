@@ -718,6 +718,13 @@
      the parent was exactly as wide as the panel. So the parent grows to the table, and the bar keeps
      the width of what is visible - `cqw` of #pvtable, the scrolling box - pinned to its left edge. */
   #pvfields{width:max-content;min-width:100%}
+  /* The two text columns are bounded, and the whole value is on the cell's own tooltip. A label like
+     «Stato di attivazione dell'azione successiva» beside an API name of the same length made every
+     module's fields table wider than the panel, so the box carried a horizontal scrollbar at all
+     times and reaching the last column meant scrolling away from the first. Reported. The table
+     still grows for the columns that cannot be shortened - a lookup target is a name you have to
+     read - which is why `width:max-content` above stays: it is what keeps the Layout bar still. */
+  #laybody .ftbl td:nth-child(1),#laybody .ftbl td:nth-child(2){max-width:24ch;overflow:hidden;text-overflow:ellipsis}
   /* And prose inside it keeps the visible width too, or a box grown to its content lays a sentence
      on one line and scrolls sideways because of it. */
   #pvfields .ftnote,#pvfields .empty{position:sticky;left:0;width:100cqw;box-sizing:border-box}
