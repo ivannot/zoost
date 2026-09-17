@@ -1381,6 +1381,8 @@ async function exportMarkdown() {
     const name = `export/zoost-${sanitize(whose)}-${stamp}.md`;
     await op.write(name, md);
     op.say(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
+    // After the line, not before it: `setStatus` clears the row's other controls on every write.
+    offerExportOpen(name, md);
   } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
 }
 async function exportHtml() {
@@ -1403,5 +1405,7 @@ async function exportHtml() {
     const name = `export/zoost-${sanitize(whose)}-${stamp}.html`;
     await op.write(name, html);
     op.say(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
+    // After the line, not before it: `setStatus` clears the row's other controls on every write.
+    offerExportOpen(name, html);
   } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
 }

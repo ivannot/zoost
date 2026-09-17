@@ -178,6 +178,7 @@ noteFolderAccessLost	2a0281fc0119	789a449da631	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 noteThrown	6c35bc6fa368	6c35bc6fa368	identical
+offerExportOpen	ed15740d1ede	ed15740d1ede	identical
 onAiengine	734a3f4ba921	7a1133599503	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
@@ -186,6 +187,7 @@ onSaveLay	3dbbfbe65888	cbf1c13155af	divergent
 onSaveRx	65bb681487a1	65bb681487a1	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
 onZohoDc	7fddfacebace	7fddfacebace	identical
+openExportedFile	2e632aa5f2f0	4092ec3bc472	divergent
 openExternal	a7374f14d91b	a7374f14d91b	identical
 openHealth	cdd8037b1574	41314f6b80e2	divergent
 openOverview	62403561ab54	a0362dd26a96	divergent

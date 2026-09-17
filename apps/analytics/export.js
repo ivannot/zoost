@@ -340,6 +340,7 @@ async function doExport(kind) {
     const name = `export/zoost-${sanitize((bound && (bound.name || bound.workspace)) || 'workspace')}-${stamp}.${md ? 'md' : 'html'}`;
     await op.write(name, body);
     setBusy(false, `Exported → ${name} (in your workspace folder).`); $('status').className = 'ok';
+    offerExportOpen(name, body);
   } catch (e) {
     if (!op.current()) { endBusyElsewhere(); return; }
     setBusy(false, 'Export error: ' + (e.message || e)); $('status').className = 'bad';

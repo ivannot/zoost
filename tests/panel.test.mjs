@@ -1007,6 +1007,35 @@ test('crm: the strip holding the wiring control is shown when it carries one', (
   assert.match(slot.innerHTML, /id="pvdiagram"/, 'nothing was drawn into the slot at all');
 });
 
+test('crm: the file an export just wrote can be opened, and is put away afterwards', () => {
+  // It cannot be a link in the status line - that sink writes `textContent`, and making it accept
+  // markup would put org names, folder paths and Zoho's own error text through an HTML sink for the
+  // sake of one anchor. And there is no path to point at: the filesystem API hands back a handle.
+  // So what is offered is the content, through a Blob, and the previous one is revoked - a blob URL
+  // lives as long as the document and this panel stays open for days.
+  const b = { textContent: '', title: '', onclick: null, on: false,
+              classList: { add(c) { if (c === 'on') b.on = true; }, remove(c) { if (c === 'on') b.on = false; } } };
+  let made = 0, revoked = 0;
+  // The module-level `let` too: the helper keeps the last URL there so it can revoke it.
+  const m = load([sliceConst('apps/crm/sidepanel.js', '_exportUrl'),
+                  sliceFn('apps/crm/sidepanel.js', 'offerExportOpen')], {
+    String, Promise, Blob: function Blob(parts, opts) { this.parts = parts; this.type = opts && opts.type; },
+    URL: { createObjectURL: () => { made++; return 'blob:x' + made; }, revokeObjectURL: () => { revoked++; } },
+    $: (id) => (id === 'expopen' ? b : null),
+    chrome: { tabs: { create: () => Promise.resolve({}) } },
+    setStatus: () => {},
+  });
+  m.offerExportOpen('export/zoost-org-2026-09-17.html', '<html></html>');
+  assert.equal(b.on, true, 'the control is not offered after an export that wrote a file');
+  assert.match(b.textContent, /zoost-org-2026-09-17\.html/, 'it does not name the file it opens');
+  assert.equal(made, 1, 'nothing was built for it to open');
+  m.offerExportOpen('export/zoost-org-2026-09-17.md', '# x');
+  assert.equal(revoked, 1, 'the previous export stays in memory for the life of the panel');
+  m.offerExportOpen(null);
+  assert.equal(b.on, false, 'the control outlives the export it belongs to');
+  assert.equal(revoked, 2, 'putting it away leaks the last one');
+});
+
 test('crm: a chip that carries its own opener is left alone by the helper', () => {
   // `.wf-fn` is the panel's one chip for «this opens something», and it stopped being only about
   // functions: a rule fires an action, a transition fires an action, a rule runs on a module. This

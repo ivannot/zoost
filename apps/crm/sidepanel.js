@@ -158,6 +158,43 @@ const setStatus = (t, cls = '') => { noteStep(t); $('stxt').textContent = t; $('
  *
  *  `report` defaults to `link`, so every caller that means «put them away» still does.
  */
+/** The file an export has just written, one click away.
+ *
+ *  **It cannot be a link in the status line and it cannot be a path.** `setStatus` writes
+ *  `textContent`, and making it accept markup would put org names, folder paths and Zoho's own error
+ *  text through an HTML sink for the sake of one anchor. And the File System Access API hands back a
+ *  handle, never a path, so there is no `file://` to point at: what can be opened is the *content*,
+ *  which this already has in hand at the moment it writes it.
+ *
+ *  Opened through a Blob, because the alternative is the `downloads` permission and a new permission
+ *  is not something this project adds for a convenience. Whether a side panel may open a `blob:` URL
+ *  is not something the harness here can measure - it stages the panel as an ordinary page - so the
+ *  refusal is handled rather than assumed: if the browser will not open it, the line says so and
+ *  names the file, which is exactly what the reader needed anyway.
+ *
+ *  Called with no name to put it away: it belongs to one export, and the next status line is written
+ *  by something else. */
+let _exportUrl = null;
+function offerExportOpen(name, text) {
+  const b = $('expopen');
+  if (!b) return;
+  if (_exportUrl) { try { URL.revokeObjectURL(_exportUrl); } catch (_) { /* already gone */ } _exportUrl = null; }
+  if (!name) { b.classList.remove('on'); b.textContent = ''; b.onclick = null; return; }
+  _exportUrl = URL.createObjectURL(new Blob([text], {
+    type: (name.endsWith('.md') ? 'text/markdown' : 'text/html') + ';charset=utf-8',
+  }));
+  const url = _exportUrl, shown = name.split('/').pop();
+  b.textContent = `Open ${shown} ↗`;
+  b.title = 'Open the report that was just written, in its own tab';
+  b.classList.add('on');
+  b.onclick = () => { void openExportedFile(url, name); };
+}
+/** A named declaration, not the `.then()` chain it started as: `asynccheck` reads an async *scope*
+ *  only when it is one, and its ledger goes to zero. */
+async function openExportedFile(url, name) {
+  try { await chrome.tabs.create({ url }); }
+  catch (_) { setStatus(`${name} is in your workspace folder - this browser would not open it from here.`, 'warn'); }
+}
 function showEmergency(link, report = link) {
   const on = { emerg: !!link, repopen: !!report, repdismiss: !!report };
   for (const id of Object.keys(on)) { const e = $(id); if (e) e.classList.toggle('on', on[id]); }

@@ -117,6 +117,11 @@
 
   #status{font-size:11px;color:var(--muted);padding:4px 10px;min-height:18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px}
   #status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad)} #status.busy{color:var(--ink)}
+  /* The report just written, one click away. `button.bare` already undoes the button chrome, so this
+     adds only the look of a link - the four ad-hoc copies of those declarations beside it are the
+     duplication `csscheck` cannot see, and this is not a fifth. */
+  #expopen{display:none;margin-left:8px;flex:none;color:var(--accent);font-size:11px;text-decoration:underline;cursor:pointer;white-space:nowrap}
+  #expopen.on{display:inline}
   /* The pointer to zoost.it/emergency, shown only when a read from Zoho failed in a way that is
      not a role refusal. A class and not the `hidden` attribute: `display:inline` on an id would
      quietly beat `[hidden]`, which is a trap this project has already paid for once. */
