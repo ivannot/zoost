@@ -293,6 +293,27 @@ function deluge(ns, name, params, calls) {
     const J = (p, v) => { out[p] = JSON.stringify(v, null, 2) + '\n'; };
     const say = (done, total, what) => { if (o.onProgress) o.onProgress(done, total, what); };
 
+    // ---- custom buttons, declared here because the functions are written below ----
+    //
+    // **One source, two consumers**: the buttons index further down, and the *reverse pointer* on
+    // each function's meta. A real pull writes both - Zoho names the button in the function's
+    // `associated_place` and the function in the button's `details.custom_function` - and this
+    // sample wrote only the first, which is not the shape a pull produces. It showed: the wiring
+    // graph's `function → module` edge is derived from exactly that pointer, and on the delivered
+    // sample there was nothing for it to draw, so the check could not have caught its absence.
+    const BUTTONS = [
+      ['Accounts', 'Rebuild invoice', 'Rebuild_invoice', 'standalone.buildInvoice', 'view'],
+      ['Contacts', 'Recalculate tax', 'Recalculate_tax', 'standalone.calcTax', 'view'],
+      ['Contacts', 'Escalate ticket', 'Escalate_ticket', 'standalone.escalateTicket', 'detail_view'],
+      ['Deals', 'Open pricing sheet', 'Open_pricing_sheet', null, 'view'],
+    ];
+    // The one that runs no function pushes nothing: a button can open a URL, and its absence here is
+    // the fact rather than an omission.
+    BUTTONS.forEach(([mod, name, , fn], i) => {
+      if (!fn) return;
+      (usedIn[fn] ||= []).push({ _type: 'custom_buttons', id: String(7000 + i), name, module: mod });
+    });
+
     // ---- functions ----
     // The index is what the tree lists before anything is downloaded: a bare array, and `namespace`
     // here (the meta file spells it `nameSpace`, which is Zoho's own casing and not a typo).
@@ -769,12 +790,7 @@ function deluge(ns, name, params, calls) {
     // The last carries no function on purpose: Zoho has buttons that open a URL or run a client
     // script, and a pane that showed only the ones we can resolve would be a list of «buttons we
     // understood» wearing the name of a list of buttons.
-    J('buttons/index.json', [
-      ['Accounts', 'Rebuild invoice', 'Rebuild_invoice', 'standalone.buildInvoice', 'view'],
-      ['Contacts', 'Recalculate tax', 'Recalculate_tax', 'standalone.calcTax', 'view'],
-      ['Contacts', 'Escalate ticket', 'Escalate_ticket', 'standalone.escalateTicket', 'detail_view'],
-      ['Deals', 'Open pricing sheet', 'Open_pricing_sheet', null, 'view'],
-    ].map(([mod, name, api, fn, position], i) => {
+    J('buttons/index.json', BUTTONS.map(([mod, name, api, fn, position], i) => {
       const [ns, nm] = fn ? fn.split('.') : [null, null];
       const fi = fn ? list.findIndex(([a, b]) => a === ns && b === nm) : -1;
       return { module: mod, id: String(7000 + i), api_name: api, name,

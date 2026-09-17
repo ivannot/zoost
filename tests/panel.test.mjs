@@ -2577,6 +2577,10 @@ test('the call graph carries what fires the code and what the code reaches', asy
     // reads it, or the lift is a ReferenceError three lines in - the free-variable trap again.
     sliceConst('apps/crm/sidepanel.js', 'isFnAction'),
     sliceFn('apps/crm/sidepanel.js', 'ctxNode'),
+    // The module edge is drawn by a function of its own, so it travels with its caller and with the
+    // set it reads - the same free-variable trap as `isFnAction`, one lift further down.
+    sliceConst('apps/crm/crm-pull-graph.js', 'AP_HAS_NODE'),
+    sliceFn('apps/crm/crm-pull-graph.js', 'linkFunctionsToTheirModules'),
     sliceFn('apps/crm/sidepanel.js', 'callGraphWithContext')], ctx);
 
   const g = await callGraphWithContext();
@@ -21927,6 +21931,36 @@ test('crm: a deleted compiled function takes its sources with it, not just its m
   // And a path belonging to no plan is still refused: the plan is the guard, not the walk.
   assert.deepEqual(['functions/other/live.files/index.js'].filter((p) => planned.includes(p) || planned.includes(projectRootOf(p))), [],
     'a file the plan does not name became deletable');
+});
+
+// ---- a function belongs to the module it exists for ----
+// A function reached only through a custom button, an approval or a validation rule had no edge to
+// any module: the drawing held the function and held the module and put nothing between them, so
+// «what is this for» had no answer on the picture. Measured on a real org, 20 functions gain one.
+// The kinds that are nodes in their own right are excluded deliberately - a rule and a blueprint
+// already carry the module edge, and a second line beside it states nothing the picture lacks.
+test('crm: a function wired only by a button reaches its module, and one wired by a rule does not repeat it', () => {
+  const REL = 'apps/crm/crm-pull-graph.js';
+  const { linkFunctionsToTheirModules } = load([sliceConst(REL, 'AP_HAS_NODE'), sliceFn(REL, 'linkFunctionsToTheirModules')],
+                                              { Set, Object, String });
+  const mods = { Accounts: { id: 'm1', entity: 'modules' }, Contacts: { id: 'm2', entity: 'modules' } };
+  const modOf = (name) => mods[name] || null;
+  const fn = (id, places) => ({ id, entity: 'functions', associated_place: places });
+  const nodes = {
+    byButton: fn('f1', [{ _type: 'custom_buttons', module: 'Accounts' }]),
+    byRule: fn('f2', [{ _type: 'workflow_rules', module: 'Contacts' }]),
+    byBlueprint: fn('f3', [{ _type: 'blueprint', module: 'Contacts' }]),
+    byValidation: fn('f4', [{ _type: 'crmfundamentals', module: 'Contacts' }]),
+    placeWithoutModule: fn('f5', [{ _type: 'custom_buttons' }, null]),
+    moduleNotMirrored: fn('f6', [{ _type: 'custom_buttons', module: 'NotPulled' }]),
+    notAFunction: { id: 'w1', entity: 'workflows', associated_place: [{ _type: 'custom_buttons', module: 'Accounts' }] },
+    noPlacesAtAll: { id: 'f7', entity: 'functions' },
+  };
+  const drawn = [];
+  linkFunctionsToTheirModules(nodes, modOf, (a, b) => drawn.push(`${a.id}->${b.id}`));
+  assert.deepEqual(drawn, ['f1->m1', 'f4->m2'],
+    'either the edge that only a button or a validation rule evidences was not drawn, '
+    + 'or a kind that is already a node drew a second one beside the edge it already has');
 });
 
 // **`null` is an answer.** The bridge returns `file: null` when Zoho no longer has the function -

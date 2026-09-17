@@ -205,6 +205,32 @@ function ctxNode(id, name, category, namespace, file, extra) {
     description: '', connections: [], entity: category,
   }, extra || {});
 }
+/** A function to the module it exists for.
+ *
+ *  **The relation the drawing was missing, and it is not a button.** A workflow, a blueprint and an
+ *  action each get an edge to their module; a function got none, so a function that exists *because
+ *  of* a module - the one behind a custom button, an approval, a validation rule - floated unattached
+ *  to it. Measured on a real org: 20 functions gain an edge that no other path in this drawing gives
+ *  them, 18 of them through buttons.
+ *
+ *  **A button is deliberately not a node.** It would be one box per function and no more: measured on
+ *  that org, 18 buttons against 18 distinct functions, strictly one to one, and 17 of those functions
+ *  already sit in Zoho's own `button` namespace. Asked and decided - «sarebbe ridondante».
+ *
+ *  Only for the kinds that are not nodes themselves. A rule and a blueprint already carry the module
+ *  edge, and drawing `function → module` beside `function → rule → module` would add a line that says
+ *  nothing the picture does not already say. */
+const AP_HAS_NODE = new Set(['workflow_rules', 'workflow', 'schedules', 'schedule', 'blueprint']);
+function linkFunctionsToTheirModules(nodes, modOf, link) {
+  for (const n of Object.values(nodes)) {
+    if (n.entity !== 'functions') continue;
+    for (const p of n.associated_place || []) {
+      if (!p || !p.module || AP_HAS_NODE.has(String(p._type))) continue;
+      const m = modOf(p.module);
+      if (m) link(n, m);
+    }
+  }
+}
 async function callGraphWithContext(op = beginWorkspaceOp()) {
   const g = await ensureGraph(op);
   const nodes = {};
@@ -253,6 +279,8 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
     const m = modOf(r.module);
     if (m) link(nodes[id], m);
   });
+
+  linkFunctionsToTheirModules(nodes, modOf, link);
 
   // ---- workflows: their own file says which functions each condition fires -------------------
   let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
