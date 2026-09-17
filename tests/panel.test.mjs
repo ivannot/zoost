@@ -1017,10 +1017,15 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
               classList: { add(c) { if (c === 'on') b.on = true; }, remove(c) { if (c === 'on') b.on = false; } } };
   let made = 0, revoked = 0;
   // The module-level `let` too: the helper keeps the last URL there so it can revoke it.
-  const opened = [];
+  const opened = [], armed = [];
   const m = load([sliceConst('apps/crm/sidepanel.js', '_exportUrl'),
+                  sliceConst('apps/crm/sidepanel.js', 'EXPORT_OFFER_MS'),
                   sliceFn('apps/crm/sidepanel.js', 'offerExportOpen'),
                   sliceFn('apps/crm/sidepanel.js', 'openExportedFile')], {
+    // The timers are the subject here, so they are captured rather than run: the offer has to put
+    // itself away, and a case that waited forty-five seconds to find out would never be run.
+    setTimeout: (fn, ms) => { armed.push({ fn, ms }); return armed.length; },
+    clearTimeout: (id) => { if (id) armed[id - 1] = null; },
     String, Promise, Blob: function Blob(parts, opts) { this.parts = parts; this.type = opts && opts.type; },
     URL: { createObjectURL: () => { made++; return 'blob:x' + made; }, revokeObjectURL: () => { revoked++; } },
     $: (id) => (id === 'expopen' ? b : null),
@@ -1032,7 +1037,10 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
   });
   m.offerExportOpen('export/zoost-org-2026-09-17.html', '<html></html>');
   assert.equal(b.on, true, 'the control is not offered after an export that wrote a file');
-  assert.match(b.textContent, /zoost-org-2026-09-17\.html/, 'it does not name the file it opens');
+  // The word alone, and the name on the tooltip: the status line beside it already says which file
+  // was written, and saying it twice pushed that row wide.
+  assert.equal(b.textContent, 'Open ↗', 'the control repeats the file name the status line already carries');
+  assert.match(b.title, /zoost-org-2026-09-17\.html/, 'nothing says which file it opens, not even the tooltip');
   assert.equal(made, 1, 'nothing was built for it to open');
   m.offerExportOpen('export/zoost-org-2026-09-17.md', '# x');
   assert.equal(revoked, 1, 'the previous export stays in memory for the life of the panel');
@@ -1041,9 +1049,18 @@ test('crm: the file an export just wrote can be opened, and is put away afterwar
   assert.equal(opened.length, 1, 'the control was pressed and nothing was asked to open');
   assert.equal(opened[0][0], 'window', 'it opens a tab, so the panel stays in the way of the report');
   assert.equal(opened[0][1].url, 'blob:x2', 'it opens something other than the file it just named');
-  m.offerExportOpen(null);
-  assert.equal(b.on, false, 'the control outlives the export it belongs to');
-  assert.equal(revoked, 2, 'putting it away leaks the last one');
+  // And it puts itself away. It belongs to the export you just ran, and it was still on screen after
+  // switching tab, offering a document from some earlier thought - reported.
+  const last = armed.filter(Boolean).pop();
+  assert.ok(last, 'the offer stands for ever - nothing was armed to take it away');
+  assert.equal(last.ms, m.EXPORT_OFFER_MS, 'it goes away on some other schedule than the one declared');
+  last.fn();
+  assert.equal(b.on, false, 'the timer fired and the control is still there');
+  assert.equal(revoked, 2, 'it went away and left the file it was holding in memory');
+  // The tab change is the other half of the same report, and `setMode` is far too large to lift for
+  // it: this reads the call rather than driving it, and says so.
+  assert.match(sliceFn('apps/crm/sidepanel.js', 'setMode'), /offerExportOpen\(null\)/,
+    'switching tab leaves the offer from the tab you left on screen');
 });
 
 test('crm: every tab that has a page in Zoho can open it', () => {

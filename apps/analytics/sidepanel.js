@@ -242,20 +242,30 @@ function showEmergency(on) { for (const id of ['emerg', 'repopen', 'repdismiss']
  *  word: the status line writes `textContent` and the filesystem API hands back a handle rather than
  *  a path, so what can be offered is the content through a Blob - and a browser that will not open
  *  it says so instead of leaving a control that does nothing. */
-let _exportUrl = null;
+let _exportUrl = null, _exportT = null;
+/** How long the offer stands. It belongs to the export you just ran, and a control that outlives its
+ *  moment becomes furniture - it was still sitting there after switching tab, offering a document
+ *  from some earlier thought. Reported. Long enough to read the line and reach for it, short enough
+ *  that it is gone by the time you have moved on. */
+const EXPORT_OFFER_MS = 45000;
 function offerExportOpen(name, text) {
   const b = $('expopen');
   if (!b) return;
+  if (_exportT) { clearTimeout(_exportT); _exportT = null; }
   if (_exportUrl) { try { URL.revokeObjectURL(_exportUrl); } catch (_) { /* already gone */ } _exportUrl = null; }
   if (!name) { b.classList.remove('on'); b.textContent = ''; b.onclick = null; return; }
   _exportUrl = URL.createObjectURL(new Blob([text], {
     type: (name.endsWith('.md') ? 'text/markdown' : 'text/html') + ';charset=utf-8',
   }));
   const url = _exportUrl, shown = name.split('/').pop();
-  b.textContent = `Open ${shown} ↗`;
-  b.title = 'Open the report that was just written, in its own tab';
+  // Just the word. The file's name is in the status line an inch to the left, and repeating it here
+  // pushed the row wide for nothing - reported. The name stays on the tooltip, which is where a
+  // control says what it acts on.
+  b.textContent = 'Open ↗';
+  b.title = `Open ${shown} in a window of its own`;
   b.classList.add('on');
   b.onclick = () => { void openExportedFile(url, name); };
+  _exportT = setTimeout(() => offerExportOpen(null), EXPORT_OFFER_MS);
 }
 /** A named declaration, not the `.then()` chain it started as: `asynccheck` reads an async *scope*
  *  only when it is one, and its ledger goes to zero. */

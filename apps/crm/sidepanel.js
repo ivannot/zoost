@@ -174,20 +174,30 @@ const setStatus = (t, cls = '') => { noteStep(t); $('stxt').textContent = t; $('
  *
  *  Called with no name to put it away: it belongs to one export, and the next status line is written
  *  by something else. */
-let _exportUrl = null;
+let _exportUrl = null, _exportT = null;
+/** How long the offer stands. It belongs to the export you just ran, and a control that outlives its
+ *  moment becomes furniture - it was still sitting there after switching tab, offering a document
+ *  from some earlier thought. Reported. Long enough to read the line and reach for it, short enough
+ *  that it is gone by the time you have moved on. */
+const EXPORT_OFFER_MS = 45000;
 function offerExportOpen(name, text) {
   const b = $('expopen');
   if (!b) return;
+  if (_exportT) { clearTimeout(_exportT); _exportT = null; }
   if (_exportUrl) { try { URL.revokeObjectURL(_exportUrl); } catch (_) { /* already gone */ } _exportUrl = null; }
   if (!name) { b.classList.remove('on'); b.textContent = ''; b.onclick = null; return; }
   _exportUrl = URL.createObjectURL(new Blob([text], {
     type: (name.endsWith('.md') ? 'text/markdown' : 'text/html') + ';charset=utf-8',
   }));
   const url = _exportUrl, shown = name.split('/').pop();
-  b.textContent = `Open ${shown} ↗`;
-  b.title = 'Open the report that was just written, in its own tab';
+  // Just the word. The file's name is in the status line an inch to the left, and repeating it here
+  // pushed the row wide for nothing - reported. The name stays on the tooltip, which is where a
+  // control says what it acts on.
+  b.textContent = 'Open ↗';
+  b.title = `Open ${shown} in a window of its own`;
   b.classList.add('on');
   b.onclick = () => { void openExportedFile(url, name); };
+  _exportT = setTimeout(() => offerExportOpen(null), EXPORT_OFFER_MS);
 }
 /** A named declaration, not the `.then()` chain it started as: `asynccheck` reads an async *scope*
  *  only when it is one, and its ledger goes to zero. */
@@ -925,6 +935,9 @@ function setMode(mode) {
   // addresses, which are Zoho's own. A tab with no destination still hides the control rather than
   // sending the reader somewhere plausible. The label stays in the markup and only the title says
   // which page: writing `textContent` here is the defect this file records twice already.
+  // The offer to open the last export goes with the tab you left: it belongs to one export, and it
+  // was still on screen two tabs later. Reported.
+  offerExportOpen(null);
   $('funcs').style.display = (mode === 'functions' || CRM_TAB_PATH[mode] != null) ? '' : 'none';
   $('funcs').title = `Open Zoho's own ${tabLabel(mode).toLowerCase()} page`;
   // It lives in the workspace bar now, beside Export and Health, so it no longer comes and goes with
