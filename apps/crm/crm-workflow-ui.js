@@ -95,8 +95,10 @@ async function openWorkflow(e) {
   // opens, and with Modules hidden the same refusal written to the status line twice. Delegation is
   // also the half that survives a re-render, which is why it is the half that stays.
   $('pvtable').querySelectorAll('a.aplink[data-ap]').forEach((el) => (el.onclick = () => {
+    // The module travels third where the chip carries one: a custom button opens on its module's
+    // Buttons pane, and a button id is Zoho's own - the modules index is not keyed by it.
     const open = HEALTH_OPEN[el.dataset.ap];
-    if (open) open(el.dataset.apid, el.dataset.apname);
+    if (open) open(el.dataset.apid, el.dataset.apname, el.dataset.apmod);
   }));
   pvDiagram(`wf:${e.id}`, 'rule');
 }

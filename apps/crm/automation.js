@@ -331,8 +331,10 @@ async function openBlueprint(e) {
   // «Used in», rather than a second mechanism: `HEALTH_OPEN` already maps a kind to its opener, so a
   // kind that gains one is reachable from here too without this line being touched.
   box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
+    // The module travels third where the chip carries one: a custom button opens on its module's
+    // Buttons pane, and a button id is Zoho's own - the modules index is not keyed by it.
     const open = HEALTH_OPEN[a.dataset.ap];
-    if (open) open(a.dataset.apid, a.dataset.apname);
+    if (open) open(a.dataset.apid, a.dataset.apname, a.dataset.apmod);
   }));
   pvDiagram(`bp:${e.id}`, 'blueprint');
 }

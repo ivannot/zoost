@@ -264,9 +264,20 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     const ap = f.associated_place || [];
     if (!ap.length) return '';
     const byType = {};
-    ap.forEach((p) => { const t = p._type || 'other'; if (t === 'workflow' || t === 'schedule') return; (byType[t] ||= []).push(p.name || '(unnamed)'); });
+    ap.forEach((p) => { const t = p._type || 'other'; if (t === 'workflow' || t === 'schedule') return; (byType[t] ||= []).push(p); });
     const keys = Object.keys(byType).sort();
-    return keys.map((t) => `<span><b>Used in ${esc(t)} (${byType[t].length}):</b> ${byType[t].map(esc).join(', ')}</span>`).join('');
+    // **Followable, not merely named.** This printed every entry as words, so a reader who found
+    // «used in custom_buttons: Reset MFA» had nowhere to go - the same one-way relation the panel was
+    // reported for. A button lives in its module's section, which this report has an anchor for, so
+    // that is where it goes; anything whose home this document does not hold stays plain, because a
+    // link that lands nowhere is worse than a name.
+    const one = (p) => {
+      const label = p.name || '(unnamed)';
+      return (p.module && modApiSet.has(p.module))
+        ? `<a href="#${escA(modAnchor(p.module))}" title="${escA(label + ' - in ' + p.module)}">${esc(label)}</a>`
+        : esc(label);
+    };
+    return keys.map((t) => `<span><b>Used in ${esc(t)} (${byType[t].length}):</b> ${byType[t].map(one).join(', ')}</span>`).join('');
   };
 
   const byNs = {}; fns.forEach((f) => (byNs[f.namespace || 'misc'] ||= []).push(f));

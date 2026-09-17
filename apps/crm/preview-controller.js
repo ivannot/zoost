@@ -658,8 +658,10 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
     box.querySelectorAll('.mod[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
     // «Used in …»: the rule or the schedule that fires this function, opened where it lives.
     box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
+      // The module travels as a third argument where the chip carries one: a custom button is opened
+      // on its module's pane, and a button id is Zoho's own - the modules index is not keyed by it.
       const open = HEALTH_OPEN[a.dataset.ap];
-      if (open) open(a.dataset.apid, a.dataset.apname);
+      if (open) open(a.dataset.apid, a.dataset.apname, a.dataset.apmod);
     }));
     // The same control the Modules preview carries, next to the same kind of fact: the references
     // are listed above it, this draws them. Absent when there is nothing to draw - a function

@@ -478,7 +478,24 @@ function nextFieldSort(key, sort = fieldSort) {
 }
 /** What a count in the table on screen opens - that table's module and map, not a new reading. */
 let fieldListShown = null, fieldListOpener = null, fieldListAgain = null;
+// The buttons pane's own state, beside the fields table's. Separate because the dialog above looks a
+// *field* up by api_name, and a button is not one - sharing the state would have returned early for
+// every button and drawn an empty dialog.
+let buttonListShown = null;
 function openFieldList(kind, api, opener) {
+  // The buttons pane's own dialog, before the field lookup below: a button is not a field, and that
+  // lookup would return early for every one of them.
+  if (kind === 'btnprofiles') {
+    const b = ((buttonListShown && buttonListShown.rows) || []).find((x) => String(x.id) === String(api));
+    if (!b) return;
+    const profiles = b.profiles || [];
+    $('fieldlisth').textContent = `${b.name || b.api_name || b.id} · ${profiles.length} profile${profiles.length === 1 ? '' : 's'}`;
+    $('fieldlistbody').innerHTML = `<ol class="fllist">${profiles.map((p) => `<li>${escHtml(p)}</li>`).join('')}</ol>`;
+    fieldListOpener = opener || null; fieldListAgain = { kind, api };
+    $('scrim').classList.add('on'); panelInert(true); $('fieldlist').classList.add('on');
+    $('fieldlistx').focus();
+    return;
+  }
   const shown = fieldListShown; if (!shown) return;
   const f = (shown.m.fields || []).find((x) => x.api_name === api); if (!f) return;
   const name = f.label || f.api_name;
@@ -636,6 +653,10 @@ function renderFieldsTable(m, found = fieldTriggers, bpFound = blueprintFields) 
  *  A button that calls no function is still listed: what it does is Zoho's business, and leaving it
  *  out would make this a list of «buttons we could resolve» wearing the name of a list of buttons. */
 function renderModuleButtons(m, rows) {
+  // Kept for the dialog, which is opened from a click long after this render: `fieldListShown` is
+  // the fields table's own state and is looked up by field api_name, so a button - which is not a
+  // field - needs its own or the dialog returns empty for every one of them.
+  buttonListShown = { module: m.api_name, rows };
   if (!rows.length) return '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none, or they were not read by the last pull.</div>';
   const fnCell = (b) => (b.function_id
     ? `<span class="wf-fn" data-fnid="${escA(b.function_id)}" data-fnname="${escA(b.function_name || '')}" title="${escA('Open ' + (b.function_name || b.function_id))}">ƒ ${escHtml(b.function_name || b.function_id)}</span>`
@@ -646,7 +667,12 @@ function renderModuleButtons(m, rows) {
       + `<td>${fnCell(b)}</td>`
       + `<td>${escHtml(b.position || '')}</td>`
       + `<td>${escHtml((b.layouts || []).join(', '))}</td>`
-      + `<td>${escHtml((b.profiles || []).join(', '))}</td></tr>`).join('')
+      // A count and a dialog, like a picklist's values: the profile list on a real org is three or
+      // four names of a dozen characters each, and printed in the cell it pushed the whole table
+      // past the width of the panel. Reported. The names are one click away and nothing is lost.
+      + `<td>${(b.profiles || []).length
+          ? `<button class="plbtn" data-list="btnprofiles" data-f="${escA(String(b.id))}" aria-haspopup="dialog" title="${escA('Profiles that see ' + (b.name || b.api_name || b.id))}">${(b.profiles || []).length}</button>`
+          : ''}</td></tr>`).join('')
     + '</tbody></table>';
 }
 function renderPipelines(m) {

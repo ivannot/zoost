@@ -1114,6 +1114,34 @@ test('crm: every tab that has a page in Zoho can open it', () => {
   assert.equal(m.crmTabUrl({ base: null, instance: null }, 'modules'), null, 'an unbound workspace still builds a URL');
 });
 
+test('crm: a function used by a button can get back to it', () => {
+  // The relation was followable in one direction alone: the module's Buttons pane opened the function,
+  // while the function's own «Used in custom_buttons» printed the button as words. Reported thus:
+  // «clicco sul nome di una funzione associata al bottone, vado su details e trovo il nome del
+  // bottone ma non è un link». The grid this has to satisfy is both ends on every surface.
+  // Lifted from `health.js`, which is where the maps and the builder live: `sidepanel.js` resolves
+  // across the panel's slices for *functions*, and these are consts in one file.
+  const m = load([sliceConst('apps/crm/health.js', 'AP_OPEN'),
+                  sliceConst('apps/crm/health.js', 'AP_TAB'),
+                  sliceFn('apps/crm/health.js', 'apLink')], {
+    String, Object,
+    escA: (x) => String(x == null ? '' : x), escHtml: (x) => String(x == null ? '' : x),
+    tabReachable: () => true, MSG: { openThis: 'Open ' },
+    // Every opener the map needs, so the lookup finds one and the link is emitted.
+    HEALTH_OPEN: { workflow: () => {}, schedule: () => {}, blueprint: () => {}, action: () => {},
+                   module: () => {}, button: () => {} },
+  });
+  const html = m.apLink('custom_buttons', { id: '77', name: 'Reset MFA', module: 'Contacts' });
+  assert.match(html, /data-ap="button"/, 'a button is not opened as a button');
+  assert.match(html, /data-apmod="Contacts"/,
+    'the module does not travel with it, so the opener cannot find the button at all');
+  assert.match(html, />Reset MFA</, 'the link is labelled with something other than the button');
+  // And the kinds that genuinely have no page still degrade rather than lying: an approval names its
+  // module, because that is the only place this panel can take anybody.
+  const appr = m.apLink('approvals', { id: '9', name: 'AP-Dati', module: 'Contacts' });
+  assert.doesNotMatch(appr, /data-ap="button"/, 'an approval is opened as if it were a button');
+});
+
 test('crm: every pane the detail strip declares has a tab, and every tab a pane', () => {
   // The strip is one control declared in two places - `PV_KINDS` says which panes a kind has, the
   // markup carries the buttons - and a pane added to one and not the other is either a tab that
@@ -7831,23 +7859,26 @@ test('crm: the arrows open a row the way that row opens', () => {
     assert.ok(!apLink('blueprint', { id: 1, name: '<img src=x>' }).includes('<img'));
   });
 
-  test('a custom button offers its module, since this panel has no page for a button', () => {
-    // 18 of these in a real org, and the Actions tab holds notifications, field updates, tasks and
-    // webhooks - never buttons. The link's text is the module's name, because a link says where it
-    // goes: the reader is not told they are opening the button.
+  test('a custom button opens as a button, on the module that carries it', () => {
+    // **This used to assert the opposite, and it was right at the time**: there was no page for a
+    // button anywhere in the panel, so the honest thing was to offer its module and label the link
+    // with the module's name. The module detail has a Buttons pane now, so the button opens as
+    // itself - and the module travels beside it, because a button id is Zoho's own and the modules
+    // index is not keyed by it. Reported as «trovo il nome del bottone ma non è un link».
     const out = apLink('custom_buttons', { id: '5836608', name: 'Sync licences', module: 'Contatti' });
-    assert.ok(/data-ap="module"/.test(out), out);
-    assert.ok(/data-apid="Contatti"/.test(out), out);
-    assert.ok(/>Contatti</.test(out), 'the link is labelled with where it goes');
-    assert.ok(/Sync licences/.test(out), 'the button name is still shown');
-    assert.ok(!/>Sync licences</.test(out.replace(/<span[^>]*>[^<]*<\/span>/g, '')) || true);
+    assert.ok(/data-ap="button"/.test(out), out);
+    assert.ok(/data-apmod="Contatti"/.test(out), 'the module does not travel, so the opener cannot land');
+    assert.ok(/>Sync licences</.test(out), 'the link is labelled with something other than the button');
   });
 
-  test('the module link does not carry the button name as a name to match', () => {
-    // It would have the opener look for a module called «Sync licences» - a fallback that cannot
-    // match, which is the very defect fixed one function down.
-    const out = apLink('custom_buttons', { id: '1', name: 'Sync licences', module: 'Contatti' });
-    assert.ok(!/data-apname="Sync licences"/.test(out), out);
+  test('the module fallback does not carry the item name as a name to match', () => {
+    // Still true of everything that has no page of its own - an approval, a validation rule. Sending
+    // the item's name on a *module* link would have the opener look for a module called «AP-Dati»,
+    // a fallback that cannot match. The button branch above is the exception, and deliberately so:
+    // its opener takes the name of the button and the module as separate arguments.
+    const out = apLink('approvals', { id: '1', name: 'AP-Dati', module: 'Contatti' });
+    assert.ok(/data-ap="module"/.test(out), out);
+    assert.ok(!/data-apname="AP-Dati"/.test(out), out);
   });
 
   test('with no module either, there is nothing to offer and it stays text', () => {
@@ -8013,7 +8044,12 @@ test('crm: the arrows open a row the way that row opens', () => {
   test('the link carries the name, or there is nothing to try', () => {
     const src = crmPanel();
     assert.ok(/data-apname=/.test(src), 'the name never reaches the opener');
-    assert.ok(/open\(a\.dataset\.apid, a\.dataset\.apname\)/.test(src), 'the click drops the name');
+    // The module may follow it as a third argument - a custom button is opened on the module that
+    // carries it - so the shape is «id, name, and optionally where», not «id, name» exactly. Pinning
+    // the two-argument spelling reported the third as a defect when it is the thing that makes a
+    // button openable at all.
+    assert.ok(/open\(a\.dataset\.apid, a\.dataset\.apname(?:, a\.dataset\.apmod)?\)/.test(src),
+              'the click drops the name');
   });
 }
 

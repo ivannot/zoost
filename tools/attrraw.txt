@@ -9,7 +9,7 @@
 5a66614f40884692  apps/analytics/options.js:818: data-section="${key}" is not attribute-escaped
 8a035f833293c02f  apps/crm/ai.js:1213: class="${m.role}" is not attribute-escaped
 05e0dd1261083b28  apps/crm/automation.js:160: class="${st.cls}" is not attribute-escaped
-2780b78f9b3eac45  apps/crm/automation.js:687: class="${stCls}" is not attribute-escaped
+2780b78f9b3eac45  apps/crm/automation.js:689: class="${stCls}" is not attribute-escaped
 82ac1a1f5d7593e1  apps/crm/crm-tree.js:226: class="${wide}" is not attribute-escaped
 8986f4113f4ca66c  apps/crm/crm-tree.js:226: title="${st.lines}" is not attribute-escaped
 572727687bd93f12  apps/crm/crm-tree.js:226: title="${st.codeLines}" is not attribute-escaped
@@ -23,16 +23,16 @@ e7787b430dc51724  apps/crm/crm-tree.js:227: title="${st.zoho}" is not attribute-
 1c786c377b944c97  apps/crm/export.js:187: href="${modAnchor(api)}" is not attribute-escaped
 19d72ce5b2b0915a  apps/crm/export.js:191: href="${fnAnchor(key)}" is not attribute-escaped
 d58113bae3d016bf  apps/crm/export.js:206: href="${fnAnchor(k)}" is not attribute-escaped
-88bb09f1b1fe606a  apps/crm/export.js:281: href="${wfAnchor(w.id)}" is not attribute-escaped
-7fcb4cad2f6275fe  apps/crm/export.js:282: href="${schAnchor(sc.id)}" is not attribute-escaped
-d61ee0b22eedce02  apps/crm/export.js:288: href="${connAnchor(c.name)}" is not attribute-escaped
-6b0364b29a6396e0  apps/crm/export.js:445: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
-75f1d36aa91c9102  apps/crm/export.js:455: href="${modAnchor(w.module)}" is not attribute-escaped
-6b0364b29a6396e0  apps/crm/export.js:494: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
-d4a7415c6238ee04  apps/crm/export.js:503: href="${modAnchor(m.api_name)}" is not attribute-escaped
-fcf2869833b3c20b  apps/crm/export.js:549: href="${fnAnchor(fnKey(n))}" is not attribute-escaped
-14a72bbea2ea53b6  apps/crm/export.js:551: class="${count ? (bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
-43eae51bbdfcc8ce  apps/crm/export.js:571: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
+88bb09f1b1fe606a  apps/crm/export.js:292: href="${wfAnchor(w.id)}" is not attribute-escaped
+7fcb4cad2f6275fe  apps/crm/export.js:293: href="${schAnchor(sc.id)}" is not attribute-escaped
+d61ee0b22eedce02  apps/crm/export.js:299: href="${connAnchor(c.name)}" is not attribute-escaped
+6b0364b29a6396e0  apps/crm/export.js:456: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
+75f1d36aa91c9102  apps/crm/export.js:466: href="${modAnchor(w.module)}" is not attribute-escaped
+6b0364b29a6396e0  apps/crm/export.js:505: href="${fnAnchor(fnKey(fn))}" is not attribute-escaped
+d4a7415c6238ee04  apps/crm/export.js:514: href="${modAnchor(m.api_name)}" is not attribute-escaped
+fcf2869833b3c20b  apps/crm/export.js:560: href="${fnAnchor(fnKey(n))}" is not attribute-escaped
+14a72bbea2ea53b6  apps/crm/export.js:562: class="${count ? (bad ? 'bad' : 'warn') : 'ok'}" is not attribute-escaped
+43eae51bbdfcc8ce  apps/crm/export.js:582: href="${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:428: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c18c1fd8b287c86e  apps/crm/graphview.js:436: style="${NSCOL(KINDOF(n))}" is not attribute-escaped
 c5d27cb218f749c5  apps/crm/graphview.js:1265: title="${why}" is not attribute-escaped

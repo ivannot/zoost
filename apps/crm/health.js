@@ -336,8 +336,12 @@ function renderHealthView() {
   // existed, because adding a row to a health group and adding a way to open it were two separate
   // things to remember. Reported. Now the finding names its kind and the opener is looked up.
   $('healthbody').querySelectorAll('a[data-kind]').forEach((a) => (a.onclick = () => {
+    // The name and the module travel where the row carries them, for the same reason they do from a
+    // chip: an opener keyed only by id cannot find a workflow rule Zoho keys its own way, and cannot
+    // find a custom button at all. Both are optional in every opener, so a row that has neither is
+    // unchanged by this.
     const open = HEALTH_OPEN[a.dataset.kind];
-    if (open) open(a.dataset.id); else setStatus(`Nothing to open for a ${a.dataset.kind}.`, 'warn');
+    if (open) open(a.dataset.id, a.dataset.name, a.dataset.mod); else setStatus(`Nothing to open for a ${a.dataset.kind}.`, 'warn');
   }));
 }
 function healthOpenFn(file, line) { closeHealth(); if (!tabReachable('functions')) return; if (viewMode !== 'functions') { setMode('functions'); } openFile(file, line || null); }
@@ -413,7 +417,7 @@ async function healthOpenSchedule(id, name) {
 // mapped here rather than matched loosely, and an unknown kind falls through to text.
 // Which tab each opener lands on. Deliberately a map beside AP_OPEN rather than a string inside each
 // opener: the two lists have to stay in step, and side by side a missing row is visible.
-const AP_TAB = { workflow: 'workflows', schedule: 'schedules', blueprint: 'blueprints', action: 'actions', module: 'modules' };
+const AP_TAB = { workflow: 'workflows', schedule: 'schedules', blueprint: 'blueprints', action: 'actions', module: 'modules', button: 'modules' };
 /** Whether a jump into `tab` can land. An area the Zoho role forbids has no segment and can never be
  *  pulled, so arriving there shows an empty list with no way back to it - the panel looking lost
  *  instead of saying what happened. Hiding a tab in Settings is *not* this: `renderTabs()` puts that
@@ -447,7 +451,7 @@ function tabReachable(tab, quiet) {
 // open, which is exactly the case this map exists to prevent. Zoho's spelling is the singular.
 const AP_OPEN = { workflow_rules: 'workflow', workflow: 'workflow', schedules: 'schedule',
                   schedule: 'schedule', actions: 'action', module: 'module', modules: 'module',
-                  blueprint: 'blueprint' };
+                  blueprint: 'blueprint', custom_buttons: 'button', custom_button: 'button' };
 function apLink(kind, p) {
   const opener = AP_OPEN[kind];
   const id = p && (p.id != null ? String(p.id) : '');
@@ -465,12 +469,24 @@ function apLink(kind, p) {
   //
   // A tab the org's role forbids is not offered at all: refusing after the click would be a control
   // saying «no» for a reason nothing on screen shows.
+  // **Before the general branch, not after it.** A button satisfies the condition below - it has an
+  // opener, an id and a reachable tab - so the generic `link()` answered first and this was dead
+  // code: the module never travelled, and the opener it reached cannot find a button without one.
+  // Written after it once, and it would have shipped as a link that opens nothing.
+  if (opener === 'button' && p && p.module && tabReachable('modules', true)) {
+    return `<a class="aplink" data-ap="button" data-apid="${escA(id || label)}" data-apname="${escA(name)}"`
+      + ` data-apmod="${escA(String(p.module))}" title="${escA('Open ' + label + ' on ' + p.module)}">${escHtml(label)}</a>`;
+  }
+  // Every other kind with an opener and a reachable tab: a rule opens in Workflows, a schedule in
+  // Schedules, an action in Actions, a blueprint in Blueprints. Restored here after the button branch
+  // was written *over* it rather than before it - which would have taken the link away from all five
+  // to give it to one.
   if (opener && id && HEALTH_OPEN[opener] && tabReachable(AP_TAB[opener], true)) {
     return link(opener, id, label, MSG.openThis + opener, name);
   }
-  // No page for this kind of thing - a custom button is the measured case, 18 of them in that org
-  // and nothing in this panel that shows one. Its module *is* here, so that is what is offered, and
-  // the link's text is the module's name and not the button's: a link says where it goes.
+  // No page for this kind of thing - an approval and a validation rule are the measured cases: Zoho
+  // names them here and this panel shows neither. Its module *is* here, so that is what is offered,
+  // and the link's text is the module's name and not the item's: a link says where it goes.
   const mod = (p && p.module) || '';
   if (mod && tabReachable('modules', true)) {
     return `${escHtml(label)} <span class="apin">in</span> `
@@ -478,7 +494,24 @@ function apLink(kind, p) {
   }
   return escHtml(label);
 }
+/** A custom button, opened where it lives: its module, on the Buttons pane.
+ *
+ *  **It used to have no home, and the fallback beside `apLink` still said so.** A function's «used in
+ *  custom_buttons: Reset MFA» sent the reader to the module and left them on Fields to find it - the
+ *  relation named in one direction and not followable in the other, which is the report this keeps
+ *  earning. The pane exists now, so this opens it.
+ *
+ *  The module is what `associated_place` carries beside the button, and it is what the opener is
+ *  given: a button id is Zoho's own and the modules index is not keyed by it. */
+async function healthOpenButton(id, name, module) {
+  const mod = module || '';
+  if (!mod) { setStatus(MSG.modNotHere, 'warn'); return; }
+  await healthOpenModule(mod, mod);
+  // After the pane is drawn, and only if this module actually has buttons - `setPvTab` refuses a tab
+  // whose pane is not available, which is the same guard the Pipelines tab answers to.
+  if (typeof setPvTab === 'function' && $('pvbtns') && $('pvbtns').dataset.available) setPvTab('btn');
+}
 const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule, blueprint: healthOpenBlueprint,
-                      action: healthOpenAction, module: healthOpenModule };
+                      action: healthOpenAction, module: healthOpenModule, button: healthOpenButton };
 function toggleHealth() { if ($('healthview').classList.contains('show')) closeHealth(); else openHealth(); }
 function closeHealth() { $('healthview').classList.remove('show'); $('health').classList.remove('on'); document.body.classList.remove('health-open'); }

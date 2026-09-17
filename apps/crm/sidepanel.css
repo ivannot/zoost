@@ -730,6 +730,10 @@
      still grows for the columns that cannot be shortened - a lookup target is a name you have to
      read - which is why `width:max-content` above stays: it is what keeps the Layout bar still. */
   #laybody .ftbl td:nth-child(1),#laybody .ftbl td:nth-child(2){max-width:24ch;overflow:hidden;text-overflow:ellipsis}
+  /* The buttons table, held to the panel's width the same way: a button's name and the function it
+     runs are both free text an org can make as long as it likes, and the table was pushing the whole
+     pane sideways. The whole value is on the cell's own tooltip. */
+  #pvbtns .ftbl td:nth-child(1),#pvbtns .ftbl td:nth-child(2){max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* And prose inside it keeps the visible width too, or a box grown to its content lays a sentence
      on one line and scrolls sideways because of it. */
   #pvfields .ftnote,#pvfields .empty{position:sticky;left:0;width:100cqw;box-sizing:border-box}
