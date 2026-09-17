@@ -417,6 +417,40 @@ CRM = """
     // which has no code at all. It stayed lit on both - visible in a picture published on the site.
     $('pvtab_info').click(); await settle();
     if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button is still there on Details');
+
+    // **One vocabulary for «a reference you can open».** Every rule, schedule, blueprint, action and
+    // button a function's «Used in» names carried `aplink`, a class emitted in four places and
+    // defined in none - so it rendered as bare coloured text through `#pvcallers a`, beside chips
+    // that mean exactly the same thing. Reported as disorder, from a screenshot. Nothing that reads
+    // source has an opinion about it: only the page can say what a box looks like.
+    //
+    // The function is chosen here rather than inherited from whatever the scenario left on screen,
+    // so this cannot start measuring a pane with no references in it. Absence is the finding: the
+    // sample gives `build_Invoice` a custom button, so an empty pane means the join broke.
+    {
+      // By `data-path`, not by the row's text: a row shows the *display name* - «Build invoice» -
+      // and matching the api name against it found nothing, so this said «the sample no longer
+      // carries it» while the function was on screen. The path is the key the row is built from.
+      const row = document.querySelector('#tree .f[data-path$="build_Invoice.dg"]');
+      if (!row) say('the sample no longer carries build_Invoice, so «Used in» cannot be measured here');
+      row.click(); await settle();
+      $('pvtab_info').click(); await settle();
+      const ap = $('pvcallers').querySelector('.aplink');
+      if (!ap) say('the detail pane names no «Used in» reference for a function the sample wires to a button');
+      const cs = getComputedStyle(ap);
+      if (parseFloat(cs.borderTopWidth) < 1)
+        say('a «Used in» reference is drawn as bare text while the references beside it are chips');
+      // And it wears the same clothes as the chip vocabulary, not merely some border of its own.
+      // Conditional on purpose: a function with no callers has no chip to compare against, and that
+      // is a state of the fixture rather than a defect - the assertion above is the unconditional one.
+      const chip = $('pvcallers').querySelector('.wf-fn:not(.aplink)');
+      if (chip) {
+        const cc = getComputedStyle(chip);
+        if (cs.borderTopColor !== cc.borderTopColor || cs.backgroundColor !== cc.backgroundColor)
+          say(`two kinds of reference in one pane are dressed differently: ${cs.borderTopColor} on `
+              + `${cs.backgroundColor} against ${cc.borderTopColor} on ${cc.backgroundColor}`);
+      }
+    }
     $('pvtab_code').click(); await settle();
     if (getComputedStyle($('codecopy')).display === 'none') say('the copy button did not come back with the code');
 

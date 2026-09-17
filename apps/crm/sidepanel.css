@@ -497,8 +497,17 @@
   .wfcrit{color:var(--ink);font-size:11px;margin-bottom:5px}.wfcrit i{color:var(--muted);font-style:normal}
   .wfacts{margin-top:4px}.wfacts .wk{color:var(--muted);margin-right:6px}
   .wfact{display:inline-block;background:#22304a;color:var(--muted);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px}
-  .wf-fn{display:inline-block;background:rgba(59,111,224,.18);color:#82d2ff;border:1px solid var(--sel);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px;cursor:pointer}
-  .wf-fn:hover{background:var(--sel);color:#fff}
+  /* **One vocabulary for «a reference you can open».** `.aplink` - every rule, schedule, blueprint,
+     action and button a function's «Used in» names - was emitted in four places and defined in none,
+     so it rendered as bare coloured text through `#pvcallers a` while the same kind of thing beside
+     it was a chip. Reported as disorder, and it is the `.k` / `.card` / `.note` / `b.ui` history
+     again: a class written without a definition looks deliberate until someone puts the two next to
+     each other. It shares this rule rather than getting a copy of it - a second copy is a second
+     place to drift - which is also why the two sites that carry both classes stay harmless.
+     `.mod` keeps its own rule below: its colours mean reads / writes / touches, which is a claim
+     this one does not make. */
+  .wf-fn,.aplink{display:inline-block;background:rgba(59,111,224,.18);color:#82d2ff;border:1px solid var(--sel);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px;cursor:pointer}
+  .wf-fn:hover,.aplink:hover{background:var(--sel);color:#fff}
   /* A chip whose tab is not there. Not a link: no pointer, no hover, and the muted colour every other
      unavailable thing in this panel uses. The text stays - what a module is used by is a fact about
      the module, and hiding the Functions tab does not make it untrue - it simply stops being a way in. */
@@ -659,8 +668,8 @@
      it and the label stayed blue on a blue fill - unreadable, reported with a picture. The chip is
      shared with three other views, so it is *this* container that is made to agree with it rather
      than the chip being changed under them. */
-  #pvcallers a.wf-fn{color:#82d2ff}
-  #pvcallers a.wf-fn:hover{color:#fff}
+  #pvcallers a.wf-fn,#pvcallers a.aplink{color:#82d2ff}
+  #pvcallers a.wf-fn:hover,#pvcallers a.aplink:hover{color:#fff}
   /* Copy, in the row above the code rather than floating over it - it landed on the control at the
      end of that row, which is what a button positioned into somebody else's box does sooner or
      later. A local artefact, so it wears the .lbtn colour the export buttons wear. */
