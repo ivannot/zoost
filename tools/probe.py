@@ -1499,6 +1499,38 @@ AN = """
       if (dead.length)
         say(dead.length + ' link(s) point at nothing with scope ' + JSON.stringify(sc) + ', e.g. #' + dead[0]);
     }
+    // **A jump lands the target below the band, whatever the band is doing.** Reported: clicking an
+    // internal link arrived on a row half hidden under the sticky header. The offset comes from
+    // `--stick`, which was measured at load and on resize only - so a band that grew for any other
+    // reason (zoom, text wrapping, a line added) left the jump using the old number. Reproduced by
+    // growing the band without a resize: 192px of band against a stale 151px, and the target 27px
+    // *under* it. It is re-measured on the click now, in the capture phase, before the scroll.
+    //
+    // Driven on a real report in an iframe, because nothing that reads source has an opinion about
+    // where a box lands, and the earlier attempt at this - a `ResizeObserver` - could not be proved
+    // either way here: its callbacks ride the rendering lifecycle and never fired once.
+    {
+      const fr = document.createElement('iframe');
+      fr.style.cssText = 'width:1240px;height:900px;border:0';
+      document.body.appendChild(fr);
+      const d = fr.contentDocument;
+      d.open(); d.write(await buildExportHtml(Object.fromEntries(SCOPE_KEYS.map((k) => [k, true])))); d.close();
+      await settle();
+      const w = fr.contentWindow, H = d.querySelector('header');
+      const a = [...d.querySelectorAll('a[href^="#"]')].find((x) => d.getElementById(x.getAttribute('href').slice(1)));
+      if (!H || !a) say('the report has no sticky band or no internal link, so the jump cannot be measured');
+      // Grow the band without touching the window: this is the state the reader hits by zooming.
+      H.insertAdjacentHTML('beforeend', '<div class="meta">a</div><div class="meta">b</div>');
+      void H.offsetHeight;
+      a.click();
+      const target = d.getElementById(a.getAttribute('href').slice(1));
+      const gap = Math.round(target.getBoundingClientRect().top - H.getBoundingClientRect().bottom);
+      if (gap < 0)
+        say(`a jump left its target ${-gap}px under the sticky band - the offset is measured before `
+            + 'the band is, so it is the old one');
+      fr.remove();
+      void w;
+    }
     // If a report has no internal links at all, this loop proves nothing and is the broken thing.
     if (!anchorsSeen) say('no internal links in any scope - this check is measuring nothing');
 

@@ -257,6 +257,18 @@ const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').val
   // line.
   + "function stick(){var h=document.querySelector('header');"
   + "if(h)document.documentElement.style.setProperty('--stick',h.offsetHeight+'px');}"
+  // **Measured at the moment of the jump, not only at two earlier instants.** `load` and `resize`
+  // are the two somebody thought of, and the band also grows when the page is zoomed or its text
+  // wraps - between those moments the offset a jump uses is the stale one, and the target lands
+  // *under* the band. Reported as arriving on a half-hidden row, and reproduced: a band grown from
+  // 151px to 192px without a window resize leaves `--stick` at 151 and the jump at -27px.
+  //
+  // A `ResizeObserver` was written first and withdrawn: its callbacks ride the rendering lifecycle,
+  // and in the harness that can drive this - headless, virtual time, no paint - it never fired once,
+  // so it could not be proved either way. This runs on the click, in the capture phase, before the
+  // browser scrolls; it is ordinary event handling and it can be measured red and green.
+  + "addEventListener('click',function(e){var t=e.target;"
+  + "var a=t&&t.closest?t.closest('a[href^=\"#\"]'):null;if(a)stick();},true);"
   + "addEventListener('resize',stick);stick();";
 
 // The two escapers this file needs, named for it. Each product has its own - `esc`/`escHtml` in one,
