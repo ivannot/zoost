@@ -62,7 +62,9 @@
           "connectionLinkName": "billing_api",
           "connectionName": "Billing API",
           "serviceName": "billing",
-          "scopes": ["invoices.READ"]
+          "scopes": [
+            "invoices.READ"
+          ]
         }
       ]
     },
@@ -198,6 +200,53 @@
           "type": "default",
           "visible": true,
           "id": "990000000204"
+        }
+      ]
+    },
+    "buttons": {
+      "custom_buttons": [
+        {
+          "id": "990000000701",
+          "api_name": "Rebuild_invoice",
+          "name": "Rebuild invoice",
+          "description": null,
+          "action": "custom_function",
+          "position": "view",
+          "pin": false,
+          "source": "crm",
+          "layouts": [
+            {
+              "id": "990000000203",
+              "name": "Standard",
+              "display_label": "Standard"
+            }
+          ],
+          "profiles": [
+            {
+              "id": "990000000801",
+              "name": "Administrator"
+            }
+          ],
+          "modified_by": {
+            "id": "990000000901",
+            "name": "Example Admin"
+          },
+          "modified_time": "2026-08-04T09:12:00+02:00",
+          "details": {
+            "custom_function": {
+              "id": "990000000101",
+              "name": "build_Invoice",
+              "language": "deluge",
+              "entity_params": [
+                {
+                  "name": "recordId",
+                  "value": "id",
+                  "api_name": "${!Contacts.Id}"
+                }
+              ],
+              "additional_params": null
+            }
+          }
         }
       ]
     }
@@ -426,31 +475,70 @@
   "blueprints": {
     "blueprints": [
       {
-        "layout": { "api_name": "Standard__s", "name": "Standard", "id": "990000000811" },
-        "field": { "api_name": "Lead_Status", "field_label": "Lead Status", "id": "990000000812" },
+        "layout": {
+          "api_name": "Standard__s",
+          "name": "Standard",
+          "id": "990000000811"
+        },
+        "field": {
+          "api_name": "Lead_Status",
+          "field_label": "Lead Status",
+          "id": "990000000812"
+        },
         "continuous": false,
-        "module": { "api_name": "Leads", "id": "990000000813", "precedence": 1 },
+        "module": {
+          "api_name": "Leads",
+          "id": "990000000813",
+          "precedence": 1
+        },
         "name": "Lead nurturing",
         "api_name": "Lead_nurturing",
         "description": "",
-        "modified_by": { "name": "A Maintainer", "id": "990000000814" },
-        "created_by": { "name": "A Maintainer", "id": "990000000814" },
+        "modified_by": {
+          "name": "A Maintainer",
+          "id": "990000000814"
+        },
+        "created_by": {
+          "name": "A Maintainer",
+          "id": "990000000814"
+        },
         "id": "990000000815",
         "status": "Active"
       },
       {
-        "layout": { "api_name": "Standard__s", "name": "Standard", "id": "990000000821" },
-        "field": { "api_name": "Status", "field_label": "Status", "id": "990000000822" },
+        "layout": {
+          "api_name": "Standard__s",
+          "name": "Standard",
+          "id": "990000000821"
+        },
+        "field": {
+          "api_name": "Status",
+          "field_label": "Status",
+          "id": "990000000822"
+        },
         "continuous": false,
-        "module": { "api_name": "Contacts", "id": "990000000823", "precedence": 1 },
+        "module": {
+          "api_name": "Contacts",
+          "id": "990000000823",
+          "precedence": 1
+        },
         "name": "Contact onboarding",
-        "modified_by": { "id": "null" },
-        "created_by": { "id": "null" },
+        "modified_by": {
+          "id": "null"
+        },
+        "created_by": {
+          "id": "null"
+        },
         "id": "990000000824",
         "status": "Inactive"
       }
     ],
-    "info": { "per_page": 200, "count": 2, "page": 1, "more_records": false }
+    "info": {
+      "per_page": 200,
+      "count": 2,
+      "page": 1,
+      "more_records": false
+    }
   },
   "blueprints_detail": {
     "990000000815": {
@@ -459,34 +547,83 @@
           "id": "990000000815",
           "name": "Lead nurturing",
           "api_name": "Lead_nurturing",
-          "module": { "api_name": "Leads", "id": "990000000813", "_precedence": 1 },
-          "layout": { "api_name": "Standard__s", "name": "Standard", "id": "990000000811" },
-          "field": { "api_name": "Lead_Status", "field_label": "Lead Status", "id": "990000000812" },
+          "module": {
+            "api_name": "Leads",
+            "id": "990000000813",
+            "_precedence": 1
+          },
+          "layout": {
+            "api_name": "Standard__s",
+            "name": "Standard",
+            "id": "990000000811"
+          },
+          "field": {
+            "api_name": "Lead_Status",
+            "field_label": "Lead Status",
+            "id": "990000000812"
+          },
           "continuous": false,
           "description": "",
           "status": "Active",
           "criteria": null,
           "chart_data": {
-            "canvas_size": { "width": 900, "height": 400 },
+            "canvas_size": {
+              "width": 900,
+              "height": 400
+            },
             "nodes": [
-              { "state": "Draft", "position_x": 0, "position_y": 80 },
-              { "state": "In review", "position_x": 120, "position_y": 80 },
-              { "state": "Approved", "position_x": 240, "position_y": 80 }
+              {
+                "state": "Draft",
+                "position_x": 0,
+                "position_y": 80
+              },
+              {
+                "state": "In review",
+                "position_x": 120,
+                "position_y": 80
+              },
+              {
+                "state": "Approved",
+                "position_x": 240,
+                "position_y": 80
+              }
             ],
             "connections": []
           },
           "connections": [
             {
               "id": "9900000008150",
-              "from_state": { "id": "9900000008151", "name": "Draft" },
-              "to_state": { "id": "9900000008152", "name": "In review" },
-              "transitions": { "api_name": "to_In_review", "name": "Send for review", "id": "9900000008153", "precedence": 1 }
+              "from_state": {
+                "id": "9900000008151",
+                "name": "Draft"
+              },
+              "to_state": {
+                "id": "9900000008152",
+                "name": "In review"
+              },
+              "transitions": {
+                "api_name": "to_In_review",
+                "name": "Send for review",
+                "id": "9900000008153",
+                "precedence": 1
+              }
             },
             {
               "id": "9900000008154",
-              "from_state": { "id": "9900000008152", "name": "In review" },
-              "to_state": { "id": "9900000008155", "name": "Approved" },
-              "transitions": { "api_name": "to_Approved", "name": "Approve", "id": "9900000008156", "precedence": 2 }
+              "from_state": {
+                "id": "9900000008152",
+                "name": "In review"
+              },
+              "to_state": {
+                "id": "9900000008155",
+                "name": "Approved"
+              },
+              "transitions": {
+                "api_name": "to_Approved",
+                "name": "Approve",
+                "id": "9900000008156",
+                "precedence": 2
+              }
             }
           ]
         }
@@ -497,26 +634,60 @@
         {
           "id": "990000000824",
           "name": "Contact onboarding",
-          "module": { "api_name": "Contacts", "id": "990000000823", "_precedence": 1 },
-          "layout": { "api_name": "Standard__s", "name": "Standard", "id": "990000000821" },
-          "field": { "api_name": "Status", "field_label": "Status", "id": "990000000822" },
+          "module": {
+            "api_name": "Contacts",
+            "id": "990000000823",
+            "_precedence": 1
+          },
+          "layout": {
+            "api_name": "Standard__s",
+            "name": "Standard",
+            "id": "990000000821"
+          },
+          "field": {
+            "api_name": "Status",
+            "field_label": "Status",
+            "id": "990000000822"
+          },
           "continuous": false,
           "status": "Inactive",
           "criteria": null,
           "chart_data": {
-            "canvas_size": { "width": 900, "height": 400 },
+            "canvas_size": {
+              "width": 900,
+              "height": 400
+            },
             "nodes": [
-              { "state": "New", "position_x": 0, "position_y": 80 },
-              { "state": "Active", "position_x": 120, "position_y": 80 }
+              {
+                "state": "New",
+                "position_x": 0,
+                "position_y": 80
+              },
+              {
+                "state": "Active",
+                "position_x": 120,
+                "position_y": 80
+              }
             ],
             "connections": []
           },
           "connections": [
             {
               "id": "9900000008240",
-              "from_state": { "id": "9900000008241", "name": "New" },
-              "to_state": { "id": "9900000008242", "name": "Active" },
-              "transitions": { "api_name": "to_Active", "name": "Activate", "id": "9900000008243", "precedence": 1 }
+              "from_state": {
+                "id": "9900000008241",
+                "name": "New"
+              },
+              "to_state": {
+                "id": "9900000008242",
+                "name": "Active"
+              },
+              "transitions": {
+                "api_name": "to_Active",
+                "name": "Activate",
+                "id": "9900000008243",
+                "precedence": 1
+              }
             }
           ]
         }
@@ -532,8 +703,22 @@
           "name": "Send for review",
           "transition_type": "manual",
           "actions": [
-            { "name": "Set Lead Status", "id": "990000000812", "type": "field_updates", "details": { "module": "Leads" } },
-            { "name": "Build the invoice", "id": "990000000101", "type": "functions", "details": { "module": "Leads" } }
+            {
+              "name": "Set Lead Status",
+              "id": "990000000812",
+              "type": "field_updates",
+              "details": {
+                "module": "Leads"
+              }
+            },
+            {
+              "name": "Build the invoice",
+              "id": "990000000101",
+              "type": "functions",
+              "details": {
+                "module": "Leads"
+              }
+            }
           ]
         }
       ]
@@ -546,7 +731,14 @@
           "name": "Approve",
           "transition_type": "manual",
           "actions": [
-            { "name": "Welcome note", "id": "990000000901", "type": "email_notifications", "details": { "module": "Leads" } }
+            {
+              "name": "Welcome note",
+              "id": "990000000901",
+              "type": "email_notifications",
+              "details": {
+                "module": "Leads"
+              }
+            }
           ]
         }
       ]
@@ -569,9 +761,15 @@
         {
           "id": "990000000101",
           "name": "Build the invoice",
-          "module": { "api_name": "Leads", "id": "990000000047" },
+          "module": {
+            "api_name": "Leads",
+            "id": "990000000047"
+          },
           "associated": true,
-          "function": { "api_name": "build_Invoice", "id": "990000000205" }
+          "function": {
+            "api_name": "build_Invoice",
+            "id": "990000000205"
+          }
         }
       ]
     }
@@ -590,7 +788,9 @@
         },
         "isConnected": true,
         "createdBy": "Example Admin",
-        "scopes": ["invoices.READ"],
+        "scopes": [
+          "invoices.READ"
+        ],
         "id": "990000000601"
       }
     ]

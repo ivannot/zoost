@@ -56,6 +56,9 @@ OPENS = {
     "function->associated_place": "data-ap",
     "field->workflow": "data-wfid",
     "field->blueprint": "data-bpid",
+    # A custom button runs a function, and the mirror only ever saw that from the function's side:
+    # `associated_place` said «used in a button» and the panel had no list of buttons to go back to.
+    "button->function": "data-fnid",
 }
 
 # **The second surface, and the one this tool was not looking at.** The report is where a reader
@@ -74,6 +77,7 @@ REPORT = {
     "function->associated_place": "act-",
     "field->workflow": "wf-",
     "field->blueprint": "bp-",
+    "button->function": "fn-",
 }
 
 
@@ -103,6 +107,11 @@ def edges(crm: pathlib.Path) -> dict:
         for t in acts.values():
             for a in (t or {}).get("actions") or []:
                 add("blueprint->function" if a.get("type") == "functions" else "blueprint->action")
+
+    for b in load("buttons/index.json"):
+        # Only the ones that run a function: a button that opens a URL is a button, not an edge.
+        if b.get("function_id"):
+            add("button->function")
 
     for w in load("workflows/index.json"):
         if w.get("module"):

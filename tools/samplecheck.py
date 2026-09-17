@@ -93,6 +93,7 @@ def measure() -> dict:
             "workflows": len(_load(CRM / "workflows/index.json")), "workflows.files": files(CRM / "workflows"),
             "schedules": len(_load(CRM / "schedules/index.json")), "schedules.files": files(CRM / "schedules"),
             "connections": len(_load(CRM / "connections/index.json")), "connections.files": files(CRM / "connections"),
+            "buttons": len(_load(CRM / "buttons/index.json")), "buttons.files": files(CRM / "buttons"),
             "actions": len(_load(CRM / "actions/index.json")), "actions.files": files(CRM / "actions"),
             "blueprints": len(_load(CRM / "blueprints/index.json")), "blueprints.files": files(CRM / "blueprints"),
             "failures.files": files(CRM / "failures"),
@@ -131,6 +132,7 @@ CLAIMS = [
     (r'(\d+)\s*(?:schedules|schedulazioni)\b', "crm.schedules"),
     (r'(\d+)\s*(?:connections|connessioni)\b', "crm.connections"),
     (r'(\d+)\s*(?:automation actions|azioni di automazione)', "crm.actions"),
+    (r'(\d+)\s*(?:custom buttons|pulsanti personalizzati)', "crm.buttons"),
     (r'(\d+)\s*(?:blueprints|blueprint)\b', "crm.blueprints"),
     (r'Zoost Analytics\s*-\s*(\d+)\s*fil', "analytics.total"),
     # Not `views.json`: with the tags stripped, «<td>1</td>…<code>views.json</code>» reads as «1 views»
@@ -165,6 +167,7 @@ ROW_KEYS = [
     (r'workflow', "workflows.files"),
     (r'schedul', "schedules.files"),
     (r'connection|connession', "connections.files"),
+    (r'button|pulsant', "buttons.files"),
     (r'automation action|azioni di automazione', "actions.files"),
     (r'blueprint', "blueprints.files"),
     (r'runtime', "failures.files"),

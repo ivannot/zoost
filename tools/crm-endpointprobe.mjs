@@ -165,6 +165,7 @@ const DRIVER = String.raw`
     const schedules = JSON.parse(fs.read(base + 'schedules/index.json') || 'null');
     const actions = JSON.parse(fs.read(base + 'actions/index.json') || 'null');
     const connections = JSON.parse(fs.read(base + 'connections/index.json') || 'null');
+    const buttons = JSON.parse(fs.read(base + 'buttons/index.json') || 'null');
     const cfg = JSON.parse(fs.read(base + '.zoost.json') || 'null');
     same(functions && functions.map((row) => row.id), ['990000000101', '990000000104'], 'function census');
     same(meta && { id: meta.id, language: meta.language, deployed_on: meta.deployed_on, connection: meta.connections && meta.connections[0] && meta.connections[0].name },
@@ -184,6 +185,11 @@ const DRIVER = String.raw`
     same(modules, [{ api_name: 'Contacts', module_name: 'Contacts', generated_type: 'default', fields: 1, layouts: 1, related_lists: 1 }], 'module census');
     same(module && { fields: module.fields.length, layouts: module.layouts.length, related: module.related_lists[0].api_name, fields_read: module.fields_read },
       { fields: 1, layouts: 1, related: 'Contact_Notes', fields_read: true }, 'module detail');
+    // The button, and the function it runs *by id*: the join is the whole point of the area, and a
+    // button names its function differently from the function itself often enough that matching on
+    // the name would pass here and link the wrong thing on a real org.
+    same(buttons && buttons.map((row) => ({ module: row.module, name: row.name, fn: row.function_id })),
+      [{ module: 'Contacts', name: 'Rebuild invoice', fn: '990000000101' }], 'custom buttons');
     same(workflows && workflows.map((row) => row.id), ['990000000301'], 'workflow census');
     same(workflow && workflow.id, '990000000301', 'workflow detail');
     same(schedules && schedules.map((row) => row.function_id), ['990000000101'], 'schedule function');
@@ -254,7 +260,10 @@ const expected = new Map([
   ['functions:deluge', 1], ['functions:java', 1], ['functions:java17', 1], ['functions:nodejs', 1], ['functions:nodejs_22', 1], ['functions:python_3_12', 1], ['functions:all', 1],
   ['function-pref', 1], ['function-bulk', 1], ['function-detail:deluge', 1], ['function-detail:compiled', 1],
   ['function-file-list', 1], ['function-file:src/main.js', 1], ['function-file:config.json', 1],
-  ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1],
+  // Per module, on the same walk: fields, layouts, related lists - and the custom buttons, once each.
+  // Pinned at one for the same reason the rest are: a reader that asked twice, or stopped asking,
+  // is what these counts exist to catch.
+  ['modules', 2], ['fields', 1], ['layouts', 1], ['related-lists', 1], ['custom-buttons', 1],
   ['workflows', 3], ['workflow-detail', 2], ['schedules', 1],
   // A pull reads every transition of every blueprint it read, and the function behind a `functions`
   // action one call further. Both counts are pinned: a reader that stopped asking, or one that asked
@@ -311,6 +320,10 @@ function apiReply(request) {
   } else if (p === '/crm/v2/settings/fields') { requireGet(request, url); mark('fields'); onlyQuery(url, { module: 'Contacts', type: 'all' }); body = fixture.modules.fields;
   } else if (p === '/crm/v2.2/settings/layouts') { requireGet(request, url); mark('layouts'); onlyQuery(url, { module: 'Contacts', fields: 'id,status' }); body = fixture.modules.layouts;
   } else if (p === '/crm/v2/settings/related_lists') { requireGet(request, url); mark('related-lists'); onlyQuery(url, { module: 'Contacts' }); body = fixture.modules.relatedLists;
+  // The custom buttons of a module, asked on the same walk as its fields and related lists - one more
+  // call per module rather than a second pass over the org. Served here so the probe holds the whole
+  // set of calls a pull makes: an endpoint this server does not know is a failure by design.
+  } else if (p === '/crm/v9/settings/custom_buttons') { requireGet(request, url); mark('custom-buttons'); onlyQuery(url, { module: 'Contacts' }); body = fixture.modules.buttons;
   } else if (p === '/crm/v8/settings/automation/workflow_rules') { requireGet(request, url); mark('workflows'); onlyQuery(url, { page: 1, per_page: 200 }); body = fixture.workflows.list;
   } else if (p === `/crm/v8/settings/automation/workflow_rules/${fixture.workflows.list.workflow_rules[0].id}`) { requireGet(request, url); mark('workflow-detail'); onlyQuery(url, {});
     // The second pull finds the rule edited in Zoho since the first: it has to arrive on disk.

@@ -260,11 +260,14 @@ const PV_KINDS = {
   // A fourth on a module, and like `files` it is offered only where the item has one: the ladders a
   // record climbs belong to the modules that have them - Deals and nothing else on three measured
   // orgs - and a tab leading to an empty pane is a control that lies.
+  // `btn` is the custom buttons this module carries - offered only where it has any, like `pipe`.
+  // Zoho declares a button against a module, so this is where it belongs: the function pane could
+  // already say «used in a button» and had nowhere to send anybody.
   module: { first: 'Fields', panes: { code: [['pvfields', '']], rel: [['pvrels', '']],
-                                      pipe: [['pvpipes', '']],
+                                      pipe: [['pvpipes', '']], btn: [['pvbtns', '']],
                                       info: [['pvdetails', ''], ['pvcallers', '']] } },
 };
-const PV_TABS = { code: 'pvtab_code', files: 'pvtab_files', rel: 'pvtab_rel', pipe: 'pvtab_pipe', info: 'pvtab_info' };
+const PV_TABS = { code: 'pvtab_code', files: 'pvtab_files', rel: 'pvtab_rel', pipe: 'pvtab_pipe', btn: 'pvtab_btn', info: 'pvtab_info' };
 function setPvTab(which) {
   // Derived from the kind's own panes rather than from a pair of ids: the strip was two buttons and a
   // boolean, so a third tab meant a third `if` in four places. What a kind has is what it declares.
@@ -274,7 +277,8 @@ function setPvTab(which) {
   // strip and the fallback below cannot disagree about whether it is there.
   const has = (tab) => !!(kinds && kinds.panes[tab]
     && (tab !== 'files' || $('pvfiles').dataset.available)
-    && (tab !== 'pipe' || $('pvpipes').dataset.available));
+    && (tab !== 'pipe' || $('pvpipes').dataset.available)
+    && (tab !== 'btn' || $('pvbtns').dataset.available));
   pvTab = has(which) ? which : 'code';
   Object.entries(PV_TABS).forEach(([tab, id]) => {
     const b = $(id); if (!b) return;

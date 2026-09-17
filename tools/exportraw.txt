@@ -34,8 +34,11 @@ apps/crm/export.js	_mdCell(a.name || a.id)
 apps/crm/export.js	_mdCell(actProv(a))
 apps/crm/export.js	_mdCell(actionKindLabel(a.kind))
 apps/crm/export.js	_mdCell(b.fn || '?')
+apps/crm/export.js	_mdCell(b.function_name || b.action || '')
 apps/crm/export.js	_mdCell(b.kind)
 apps/crm/export.js	_mdCell(b.name || '?')
+apps/crm/export.js	_mdCell(b.name || b.api_name || b.id)
+apps/crm/export.js	_mdCell(b.position || '')
 apps/crm/export.js	_mdCell(bp.layout || '')
 apps/crm/export.js	_mdCell(bp.modified_by || '')
 apps/crm/export.js	_mdCell(bp.module || '')
@@ -252,6 +255,7 @@ apps/crm/export.js	refs
 apps/crm/export.js	relHtml
 apps/crm/export.js	relsHtmlFor(m)
 apps/crm/export.js	rows
+apps/crm/export.js	runs
 apps/crm/export.js	s.apiCalls
 apps/crm/export.js	s.codeLines
 apps/crm/export.js	s.crm

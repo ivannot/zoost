@@ -1132,6 +1132,69 @@
       api_supported: m.api_supported !== false,
     })) };
   }
+  /** Custom buttons, per module - the other end of a relation the mirror only ever saw one side of.
+   *
+   *  **Measured before it was written.** A function's `associated_place` already names the buttons
+   *  that call it - 18 of them on the org this was built against, across 8 modules - so the panel
+   *  could say «used in a button» and offer nowhere to go. `GET /crm/v9/settings/custom_buttons?
+   *  module=<api_name>` is what Zoho's own buttons screen asks, read from a HAR of that screen: it
+   *  answers `{custom_buttons: [...]}`, each carrying `details.custom_function.{id,name,language}`
+   *  and the argument mapping, plus the layouts and profiles it appears for - none of which
+   *  `associated_place` gives. The function id matched the mirror 5 of 5, and three of those five
+   *  buttons carry a *different* name from the function they call, which is why the join is by id
+   *  and why the area is worth having at all.
+   *
+   *  **It is per module, and that is the cost.** Nothing in that screen's 46 requests returns every
+   *  module's buttons at once, so this is one call per module that supports them. The list comes
+   *  from the modules call the mirror already makes rather than a second `?feature_name=` endpoint.
+   *  A module Zoho refuses individually is skipped and counted; a refusal that is about the org
+   *  stops the run, because the next forty would be the same refusal.
+   *
+   *  **The action vocabulary is not assumed.** Every button on the module this was read from is a
+   *  `custom_function`, which is one module's evidence and not a vocabulary - so `action` is stored
+   *  as it arrives and the function block is filled only when Zoho gives one. */
+  /** One module's custom buttons - the other end of a relation the mirror only ever saw one side of.
+   *
+   *  **Measured before it was written.** A function's `associated_place` already names the buttons
+   *  that call it - 18 of them on the org this was built against, across 8 modules - so the panel
+   *  could say «used in a button» and offer nowhere to go. `GET /crm/v9/settings/custom_buttons?
+   *  module=<api_name>` is what Zoho's own buttons screen asks, read from a HAR of that screen: it
+   *  answers `{custom_buttons: [...]}`, each carrying `details.custom_function.{id,name,language}`
+   *  and the argument mapping, plus the layouts and profiles it appears for - none of which
+   *  `associated_place` gives. The function id matched the mirror 5 of 5, and three of those five
+   *  buttons carry a *different* name from the function they call, which is why the join is by id.
+   *
+   *  **Undocumented, and said so.** Zoho's v8 references carry no endpoint for custom buttons; module
+   *  metadata has a `triggers_supported` flag and nothing more. This is a `/crm/vN/settings/` REST
+   *  call answering JSON on the ordinary session - the family this bridge already uses for schedules,
+   *  revisions, automation functions, pipelines and stages - and not one of the `.do` pages whose
+   *  throttle this project has already paid for.
+   *
+   *  **The action vocabulary is not assumed.** Every button on the module this was read from is a
+   *  `custom_function`, which is one module's evidence and not a vocabulary - so `action` is stored
+   *  as it arrives and the function block is filled only when Zoho gives one. */
+  async function moduleButtons(apiName) {
+    const resp = await api(`/crm/v9/settings/custom_buttons?module=${encodeURIComponent(apiName)}`);
+    return list(resp, 'custom_buttons', 'custom_buttons').map((b) => {
+      const cf = (b.details && b.details.custom_function) || null;
+      return {
+        module: apiName, id: b.id != null ? String(b.id) : null,
+        api_name: b.api_name || null, name: b.name || b.api_name || null,
+        description: b.description || null, action: b.action || null,
+        position: b.position || null, pin: !!b.pin, source: b.source || null,
+        // The function, by id: `associated_place` gave a name, and a button's own name is often not
+        // its function's - three of the five measured carry a different one.
+        function_id: cf && cf.id != null ? String(cf.id) : null,
+        function_name: (cf && cf.name) || null,
+        function_language: (cf && cf.language) || null,
+        arguments: (cf && cf.entity_params) || null,
+        layouts: (b.layouts || []).map((l) => l.name || l.display_label).filter(Boolean),
+        profiles: (b.profiles || []).map((p) => p.name).filter(Boolean),
+        modified_by: (b.modified_by && b.modified_by.name) || null,
+        modified_time: b.modified_time || null,
+      };
+    });
+  }
   async function pullModules() {
     const mods = list(await api('/crm/v2/settings/modules'), 'modules', 'modules');
     const out = [];
@@ -1267,6 +1330,20 @@
           pipelines = []; stagePool = [];
         }
       }
+      // The module's custom buttons, on the walk this pull already makes: one more call per module
+      // rather than a second pass over the org, which is the whole reason it lives here. Asked only
+      // where the fields came, like the layouts above - a module Zoho would not describe is not one
+      // to keep asking about.
+      //
+      // `buttons_read` for the same reason `layouts_read` and `related_read` exist, and it is a rule
+      // this file has already paid for twice: «this module has none» and «this call did not answer»
+      // must not arrive as the same empty list, or the panel prunes what it merely failed to read.
+      let buttons = [];
+      let buttonsRead = false;
+      if (fieldsOk) {
+        try { buttons = await moduleButtons(m.api_name); buttonsRead = true; }
+        catch (_) { /* refused, or not offered for this module: kept apart from «none» by the flag */ }
+      }
       out.push({
         pipelines, stage_pool: stagePool,
         // Whether this module can have ladders at all, so the panel knows there is nothing to keep for
@@ -1276,6 +1353,8 @@
         // this pull knows about its ladders is nothing.
         pipelines_read: pipelinesRead,
         related_lists: related,
+        buttons,
+        buttons_read: buttonsRead,
         // Read, or merely not obtained. The panel prunes layout files against this: «none» is a fact
         // it may act on, «not read» is not.
         layouts_read: layoutsRead,

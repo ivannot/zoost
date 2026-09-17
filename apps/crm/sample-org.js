@@ -760,6 +760,34 @@ function deluge(ns, name, params, calls) {
                frequency: r, next: '2026-08-08T02:00:00+00:00',
                last: '2026-08-0' + (1 + (i % 7)) + 'T02:00:00+00:00' };
     }));
+    // ---- custom buttons ----
+    // A button belongs to a module and runs a function, and that pair is the whole reason the area
+    // exists: `associated_place` could already say «used in a button» and there was nowhere to go
+    // back to. Three of them, on three modules, so the pane is drawn, the join is exercised and one
+    // module has two - a list of one proves nothing about a list.
+    //
+    // The last carries no function on purpose: Zoho has buttons that open a URL or run a client
+    // script, and a pane that showed only the ones we can resolve would be a list of «buttons we
+    // understood» wearing the name of a list of buttons.
+    J('buttons/index.json', [
+      ['Accounts', 'Rebuild invoice', 'Rebuild_invoice', 'standalone.buildInvoice', 'view'],
+      ['Contacts', 'Recalculate tax', 'Recalculate_tax', 'standalone.calcTax', 'view'],
+      ['Contacts', 'Escalate ticket', 'Escalate_ticket', 'standalone.escalateTicket', 'detail_view'],
+      ['Deals', 'Open pricing sheet', 'Open_pricing_sheet', null, 'view'],
+    ].map(([mod, name, api, fn, position], i) => {
+      const [ns, nm] = fn ? fn.split('.') : [null, null];
+      const fi = fn ? list.findIndex(([a, b]) => a === ns && b === nm) : -1;
+      return { module: mod, id: String(7000 + i), api_name: api, name,
+               description: null, action: fn ? 'custom_function' : 'open_url',
+               position, pin: false, source: 'crm',
+               function_id: fi >= 0 ? String(9000 + fi) : null,
+               function_name: fi >= 0 ? nm : null,
+               function_language: fi >= 0 ? 'deluge' : null,
+               arguments: fi >= 0 ? [{ name: 'recordId', value: 'id', api_name: '${!' + mod + '.Id}' }] : null,
+               layouts: ['Standard'], profiles: ['Administrator', 'Standard'],
+               modified_by: AUTHOR, modified_time: '2026-08-04T09:12:00+02:00' };
+    }));
+
     // One connection configured and not connected, because that is a state the list draws and the
     // fixture had none of: every one was connected, so the badge that says so was never rendered.
     J('connections/index.json', CONNECTIONS.map(([c, lbl], i) =>

@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · updated <span class="dd" data-stamp="updated">16 September 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.51.0</span> · updated <span class="dd" data-stamp="updated">17 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -506,7 +506,11 @@ git commit -m "baseline"</code></pre>
   <p>Two places give it to you:</p>
   <ul>
     <li><b>The module preview</b>, in the side panel. Its detail has <b class="ui">Fields</b>, <b class="ui">Related lists</b>,
-      <b class="ui">Details</b> and, where the module has them, <b class="ui">Pipelines</b>. Click an API name to copy it.</li>
+      <b class="ui">Details</b> and, where the module has them, <b class="ui">Pipelines</b> and
+      <b class="ui">Buttons</b>. Click an API name to copy it.</li>
+    <li><b class="ui">Buttons</b> lists the custom buttons on the module - what each one runs, where it
+      appears, and which layouts and profiles see it. The function a button calls opens from there, which
+      is the way back from a function that is used by a button and by nothing else.</li>
     <li><b class="ui">Pipelines</b> shows each pipeline of the module with its stages in order, the outcome
       each stage counts as (open, won, lost), its probability and its forecast category - and, at the bottom,
       the stages the module keeps on no pipeline at all, which no picklist shows. Zoho answers the probability

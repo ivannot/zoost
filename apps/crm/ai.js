@@ -248,7 +248,7 @@ async function aiLoadConnections(op = beginWorkspaceOp()) {
   Object.keys(used).forEach((nm) => { if (!known.has(nm)) list.push({ name: nm, label: nm, connector: null, connected: null, missing: true, uses: used[nm].slice() }); });
   aiConnCache = list; return list;
 }
-function aiModuleText(m, trig, bpt) {
+function aiModuleText(m, trig, bpt, btns) {
   // Told before the empty table, not after: an assistant handed "Module Invoices" with no fields
   // will reason about why a module has none, and the answer is that nobody was ever allowed to look.
   const ref = moduleRefusal(m.unreadable);
@@ -280,6 +280,16 @@ function aiModuleText(m, trig, bpt) {
     rls.forEach((r) => { s += `- ${r.api_name} -> ${r.module || r.connected_module || '?'}${r.linking_module ? ' via ' + r.linking_module : ''}${r.type ? ' [' + r.type + ']' : ''}\n`; });
   } else if (m.related_read === false) {
     s += 'Related lists: not read when this module was pulled - whether it has any is unknown.\n';
+  }
+  // The custom buttons on this module, and the function each runs. Zoho declares them per module and
+  // the model had no way to know they exist: «what runs when somebody presses X» was unanswerable,
+  // and so was the other direction - a function used only by a button looked like a function nothing
+  // calls. The function is named rather than given by id, because a name is what the model can then
+  // ask about with `get_function`.
+  const mb = (btns || []).filter((b) => b && b.module === m.api_name);
+  if (mb.length) {
+    s += `Custom buttons (${mb.length}):\n`;
+    mb.forEach((b) => { s += `- ${b.name || b.api_name} -> ${b.function_name ? 'runs ' + b.function_name : (b.action || 'no function')}${b.position ? ' [' + b.position + ']' : ''}\n`; });
   }
   return s;
 }
@@ -885,7 +895,15 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.' + caveat, 60)
                        : `(no matches in ${Object.keys(nodes).length - unread} function(s))${caveat}${overMirror}`;
   }
-  if (name === 'get_module') { const mods = await loadModuleFiles(op); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m, await fieldTriggersNow(op, () => true), await blueprintFieldsNow(op, () => true)) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_module') {
+    const mods = await loadModuleFiles(op);
+    const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase());
+    if (!m) return 'Module not found: ' + input.api_name;
+    // The buttons this module carries, read here rather than cached: one small file, and a module's
+    // answer is where «what runs when somebody presses this» has to be available.
+    let btns = []; try { btns = JSON.parse(await op.read('buttons/index.json')) || []; } catch (_) { /* never pulled */ }
+    return aiModuleText(m, await fieldTriggersNow(op, () => true), await blueprintFieldsNow(op, () => true), btns);
+  }
   if (name === 'list_failures') {
     let d = null; try { d = JSON.parse(await op.read('failures/index.json')); } catch (_) {}
     if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';

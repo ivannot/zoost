@@ -136,6 +136,24 @@ async function pullModules(depth = {}) {
     if (!op.current()) return;   // you changed workspace while this was reading
     await op.write('modules/index.json', JSON.stringify(index, null, 2));
     await op.write('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
+    // **The other end of a relation the mirror only ever saw one side of.** A function's
+    // `associated_place` already named the buttons that call it - 18 of them on the org this was
+    // built against - and there was nowhere to go from the button back to the function, nor any way
+    // to see which buttons exist. They ride the modules pull because that is where Zoho declares
+    // them, one module at a time, on a walk this pull already makes.
+    //
+    // Only from the modules whose buttons were actually read: a module that refused keeps whatever
+    // the last pull wrote, which is the same rule the layout files follow two blocks down.
+    const btnRead = r.modules.filter((m) => m.buttons_read === true);
+    if (btnRead.length) {
+      let prevBtn = [];
+      try { prevBtn = JSON.parse(await op.read('buttons/index.json')) || []; } catch (_) { /* none yet */ }
+      const fresh = new Set(btnRead.map((m) => m.api_name));
+      const rows = prevBtn.filter((b) => b && !fresh.has(b.module))
+        .concat(btnRead.flatMap((m) => m.buttons || []));
+      if (!op.current()) return;
+      await op.write('buttons/index.json', JSON.stringify(rows, null, 2));
+    }
     const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
     let prunedM = 0;
     for await (const p of walk(op.root)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await op.remove(p); prunedM++; } catch (e) { if ((e && e.message) === WS_MOVED) return; rFail.push(p); } } }
@@ -607,6 +625,30 @@ function renderFieldsTable(m, found = fieldTriggers, bpFound = blueprintFields) 
  *
  *  Zoho answers the probability on the *stage*, not on the pipeline-and-stage pair, so a stage on two
  *  ladders is worth the same on both. Measured on one org; said rather than assumed. */
+/** The custom buttons on this module, and what each one calls.
+ *
+ *  **The other end of a relation the mirror only ever saw from one side.** A function's
+ *  `associated_place` already said «used in a button» and there was nowhere to go: no list of the
+ *  buttons a module carries, and no way back from a button to its function. Measured on a real org:
+ *  18 buttons across 8 modules, and three of five carry a *different* name from the function they
+ *  call - which is why the chip is keyed on the function's id and not on the button's name.
+ *
+ *  A button that calls no function is still listed: what it does is Zoho's business, and leaving it
+ *  out would make this a list of «buttons we could resolve» wearing the name of a list of buttons. */
+function renderModuleButtons(m, rows) {
+  if (!rows.length) return '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none, or they were not read by the last pull.</div>';
+  const fnCell = (b) => (b.function_id
+    ? `<span class="wf-fn" data-fnid="${escA(b.function_id)}" data-fnname="${escA(b.function_name || '')}" title="${escA('Open ' + (b.function_name || b.function_id))}">ƒ ${escHtml(b.function_name || b.function_id)}</span>`
+    : `<span style="color:var(--muted)">${escHtml(b.action || 'no function')}</span>`);
+  return `<div class="secttl">Custom buttons (${rows.length}) <span style="color:var(--muted);font-weight:400">- what the button runs, where it appears, and who sees it</span></div>`
+    + '<table class="ftbl"><thead><tr><th>Button</th><th>Runs</th><th>Where</th><th>Layouts</th><th>Profiles</th></tr></thead><tbody>'
+    + rows.map((b) => `<tr><td title="${escA(b.api_name || '')}">${escHtml(b.name || b.api_name || b.id)}</td>`
+      + `<td>${fnCell(b)}</td>`
+      + `<td>${escHtml(b.position || '')}</td>`
+      + `<td>${escHtml((b.layouts || []).join(', '))}</td>`
+      + `<td>${escHtml((b.profiles || []).join(', '))}</td></tr>`).join('')
+    + '</tbody></table>';
+}
 function renderPipelines(m) {
   const pipes = m.pipelines || [], pool = m.stage_pool || [];
   if (!pipes.length && !pool.length) {
@@ -749,14 +791,25 @@ async function openModule(path, layoutId) {
   //
   // So it goes home before the write and comes back after it. The rule is general and worth the line:
   // an element that outlives a render must not be inside what the render replaces.
+  // The module's custom buttons, out of the index the modules pull writes. Filtered here rather than
+  // kept inside each module file: one file for the org, and a module Zoho refused keeps whatever the
+  // last pull recorded for it instead of being emptied by this read.
+  let btnRows = [];
+  try {
+    btnRows = (JSON.parse(await op.read('buttons/index.json')) || [])
+      .filter((b) => b && b.module === m.api_name);
+  } catch (_) { /* never pulled, or nothing on disk: the pane says so rather than pretending none */ }
+  if (!previewCurrent(mine, op)) return;
   $('pvcallershome').after($('pvcallers'));
   $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m, trig, bpTrig)}</div></div>`
     + `<div id="pvrels">${rlBlock}</div>`
     + `<div id="pvpipes">${renderPipelines(m)}</div>`
+    + `<div id="pvbtns">${renderModuleButtons(m, btnRows)}</div>`
     + `<div id="pvdetails">${refBanner}${namesBlock}</div>`;
   // Offered only where the module has them, the way Files is offered only for a project: the pane is
   // rebuilt by every open, so the flag is set beside it rather than remembered.
   $('pvpipes').dataset.available = ((m.pipelines || []).length || (m.stage_pool || []).length) ? '1' : '';
+  $('pvbtns').dataset.available = btnRows.length ? '1' : '';
   pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before
   // The names first, then what reads and writes it. It was the other way round - «read by» and
   // «written by» at the top and the module's own display name, api_name and generated name below the
@@ -769,6 +822,10 @@ async function openModule(path, layoutId) {
   // The lookup and related-list chips are wired by the delegated listener on `#pvtable`, not here:
   // this table is rebuilt by the layout picker and by every column sort, and a handler attached once
   // per open dies on the second render - which is exactly how those chips came to be drawn and dead.
+  // The function a button runs opens like every other function chip in this panel - and it is the
+  // whole point of the pane: `associated_place` could already say «used in a button», and this is
+  // the way back. Wired here because the module pane draws its own chips and calls nothing else.
+  wireFnChips($('pvbtns'), (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
   $('pvdetails').querySelectorAll('[data-wfx]').forEach((c) => (c.onclick = () => healthOpenWorkflow(c.dataset.wfx)));
   $('pvdetails').querySelectorAll('[data-bpx]').forEach((c) => (c.onclick = () => healthOpenBlueprint(c.dataset.bpx)));
   const relOpen = $('pvtabsr').querySelector('#relopen');

@@ -127,7 +127,10 @@ function healthFacts(g, mods, wfs, scheds, fns) {
 // callers pass every slot by hand. A new parameter anywhere but the end shifts every argument after
 // it - silently, since they are all arrays and objects - so the one place it cannot break a caller
 // that has not been updated is after the last of them.
-function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope, bps = []) {
+// `btns` last and defaulted, like `bps` before it: the cases that drive this builder pass what they
+// are about and nothing more, and a positional parameter added in the middle would have rewritten
+// every one of them into saying something it does not mean.
+function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope, bps = [], btns = []) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
   // **What the org has, kept before the scope empties it.** The audit asks «does this function
   // exist», and that does not depend on which chapters the reader ticked - unticking Functions turned
@@ -373,6 +376,26 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
           + (spare.length ? `<div style="font-weight:600;margin:8px 0 3px;font-size:12px">In the module, on no pipeline <span class="none">- ${spare.length}</span></div>`
             + stTable(spare.map((st, i) => stRow({ ...st, sequence: null }, i)).join('')) : '')
           + (m.pipelines_kept ? '<p class="note">This module’s pipelines were not read by the last pull; they are what the pull before it saw.</p>' : '')
+        : '';
+      // The custom buttons on this module, and the function each one runs. The panel grew a pane for
+      // them and a report without it is the lesser copy of the panel, which is the one thing a report
+      // may not be. A button that runs no function is still listed: leaving it out would make this a
+      // list of «the buttons we could resolve» wearing the name of a list of buttons.
+      const mBtns = (btns || []).filter((b) => b && b.module === m.api_name);
+      const btnHtml = mBtns.length
+        ? `<div style="font-weight:700;margin:12px 0 4px;color:#2f6fe0">Custom buttons (${mBtns.length})</div>`
+          + '<table class="ftbl"><thead><tr><th>Button</th><th>Runs</th><th>Where</th><th>Layouts</th><th>Profiles</th></tr></thead><tbody>'
+          + mBtns.map((b) => {
+            // By id, through the map this builder already keeps: a button names its function
+            // differently from the function itself in three of the five measured on a real org, so
+            // matching on the name would link the wrong thing or nothing at all.
+            const fn = b.function_id ? fnById[String(b.function_id)] : null;
+            const runs = fn ? `<a href="#${escA(fnAnchor(fnKey(fn)))}">ƒ ${esc(fn.display_name || fn.api_name)}</a>`
+              : `<span class="none">${esc(b.function_name || b.action || '')}</span>`;
+            return `<tr><td>${esc(b.name || b.api_name || b.id)}</td><td>${runs}</td><td>${esc(b.position || '')}</td>`
+              + `<td>${esc((b.layouts || []).join(', '))}</td><td>${esc((b.profiles || []).join(', '))}</td></tr>`;
+          }).join('')
+          + '</tbody></table>'
         : '';
       const mref = moduleRefusal(m.unreadable);
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
@@ -813,6 +836,9 @@ async function loadExportData(op = beginWorkspaceOp()) {
   let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
   let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
+  // The custom buttons, for the module chapters: what the panel shows about a module belongs in the
+  // report too, and a button is the one relation a reader cannot reconstruct from anything else here.
+  let btns = []; try { btns = JSON.parse(await op.read('buttons/index.json')) || []; } catch (_) {}
   let bpIdx = []; try { bpIdx = JSON.parse(await op.read('blueprints/index.json')); } catch (_) {}
   // The detail beside the row, the way a workflow carries its rule: the states a record moves through
   // and the transitions between them live in one file per blueprint, and a report that showed only
@@ -876,7 +902,7 @@ async function loadExportData(op = beginWorkspaceOp()) {
       }
     }
   });
-  return { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers };
+  return { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers, btns };
 }
 /** A task mapping's value, as the panel reads it: `{name}` for a person or a picklist entry, the
  *  bare value otherwise. Written once because the two reports and the panel must not disagree about
@@ -912,7 +938,7 @@ function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
   // `modRefs` is which modules point *at* this one. It was read by the HTML report alone, so the
   // Markdown reader saw a module's outgoing lookups and never the incoming ones - half a relation.
-  let { mods, g, modRefs, wfs, scheds, bps, conns, fails, acts } = d;
+  let { mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, btns } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
@@ -1131,6 +1157,17 @@ function buildExportMarkdown(d, scope) {
         md += '\n';
       }
       if (m.pipelines_kept) md += 'These pipelines were not read by the last pull; they are what the pull before it saw.\n\n';
+    }
+    // The custom buttons on this module, and what each runs. No anchor to link to - this document is
+    // flat - so the function is named, which is what a reader of the Markdown can act on.
+    const mdBtns = (btns || []).filter((b) => b && b.module === m.api_name);
+    if (mdBtns.length) {
+      md += `#### Custom buttons (${mdBtns.length})\n\n| Button | Runs | Where | Layouts | Profiles |\n|---|---|---|---|---|\n`;
+      mdBtns.forEach((b) => {
+        md += `| ${_mdCell(b.name || b.api_name || b.id)} | ${_mdCell(b.function_name || b.action || '')} | ${_mdCell(b.position || '')} `
+          + `| ${_mdCell((b.layouts || []).join(', '))} | ${_mdCell((b.profiles || []).join(', '))} |\n`;
+      });
+      md += '\n';
     }
     (scope.layouts ? (m._layouts || []) : []).forEach((L) => {
       md += `#### Layout: ${_mdCell(L.name || String(L.id))}${L.visible === false ? ' (hidden)' : ''} - ${(L.sections || []).length} sections\n\n`;
@@ -1399,8 +1436,8 @@ async function exportHtml() {
   try {
     await requirePerm(op.root);
     op.say('Building HTML export\u2026', 'busy');
-    const { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers } = await loadExportData(op);
-    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope, bps);
+    const { fns, mods, g, modRefs, wfs, scheds, bps, conns, fails, acts, actUsers, btns } = await loadExportData(op);
+    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope, bps, btns);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize(whose)}-${stamp}.html`;
     await op.write(name, html);

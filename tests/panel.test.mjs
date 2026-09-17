@@ -882,12 +882,14 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
 // «You struggle to see the whole detail, there is no room.» They have a tab now, and the strip is
 // derived from the kind's panes rather than from a pair of ids, so the fourth costs nothing.
 
-test('crm: a module has four detail tabs, and a function has two or three', () => {
+test('crm: a module has five detail tabs, and a function has two or three', () => {
   const kinds = load([sliceConst('apps/crm/sidepanel.js', 'PV_KINDS')]).PV_KINDS;
   // `pipe` joined them: the ladders a module's records climb, declared by the kind and offered by the
   // *item* - like `files` on a function - because most modules have none and a tab leading to an
   // empty pane is a control that lies.
-  assert.deepEqual(Object.keys(kinds.module.panes), ['code', 'rel', 'pipe', 'info']);
+  // `btn` joined them last: the custom buttons a module carries, offered by the item like `pipe`,
+  // because a module with none must not be given a tab that leads to an empty pane.
+  assert.deepEqual(Object.keys(kinds.module.panes), ['code', 'rel', 'pipe', 'btn', 'info']);
   // `files` is declared by the kind and offered by the *item*: a Deluge function is one file and
   // gets two tabs, a compiled project gets three. The condition is asserted in the case below.
   assert.deepEqual(Object.keys(kinds.function.panes), ['code', 'files', 'info']);
@@ -1110,6 +1112,30 @@ test('crm: every tab that has a page in Zoho can open it', () => {
   // workspace: both answer null, which is what the caller turns into «pull this workspace once».
   assert.equal(m.crmTabUrl(ctx, 'functions'), null, 'functions has its own builder and must not be in the map');
   assert.equal(m.crmTabUrl({ base: null, instance: null }, 'modules'), null, 'an unbound workspace still builds a URL');
+});
+
+test('crm: every pane the detail strip declares has a tab, and every tab a pane', () => {
+  // The strip is one control declared in two places - `PV_KINDS` says which panes a kind has, the
+  // markup carries the buttons - and a pane added to one and not the other is either a tab that
+  // opens nothing or a pane nobody can reach. Derived, so the next pane added is covered without
+  // anybody remembering: `btn` was the fourth, and it is exactly the shape that goes wrong.
+  const src = crmPanel(), html = panelPage('crm');
+  const kinds = sliceConst('apps/crm/sidepanel.js', 'PV_KINDS');
+  const tabs = sliceConst('apps/crm/sidepanel.js', 'PV_TABS');
+  const paneIds = [...new Set([...kinds.matchAll(/\[\['(\w+)',/g)].map((m) => m[1]))];
+  assert.ok(paneIds.length >= 5, `only ${paneIds.length} pane(s) derived - the reading broke`);
+  for (const id of paneIds) {
+    assert.ok(html.includes(`id="${id}"`) || src.includes(`id="${id}"`),
+              `${id} is a pane of some kind and no markup carries it`);
+  }
+  const tabKeys = [...new Set([...tabs.matchAll(/(\w+): '(\w+)'/g)].map((m) => m[2]))];
+  for (const btn of tabKeys) {
+    assert.ok(html.includes(`id="${btn}"`), `${btn} is in PV_TABS and the strip has no such button`);
+  }
+  // And the one that is offered conditionally is gated, or it is a tab leading to an empty pane -
+  // which this panel refuses everywhere else.
+  assert.match(sliceFn('apps/crm/sidepanel.js', 'setPvTab'), /tab !== 'btn' \|\| \$\('pvbtns'\)\.dataset\.available/,
+               'the Buttons tab is offered on a module that has none');
 });
 
 test('crm: a chip that carries its own opener is left alone by the helper', () => {
@@ -3580,7 +3606,7 @@ test('every element the side panel reaches for is in its own markup', () => {
   // `body` is not this document's at all: it is the textarea on zoost.it/report, named inside the
   // function the panel injects into that page. It belongs to the same family as `q`, which is the
   // search box of the exported HTML report.
-  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvpipes', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvpipes', 'pvbtns', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
   for (const app of ['crm', 'analytics']) {
     const js = appPanel(app), html = panelPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
