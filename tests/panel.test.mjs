@@ -22354,6 +22354,32 @@ test('the Fields table counts the rules a field fires in a column of its own, an
   assert.ok(!load(FIELDS_TABLE(), { ...g, fieldTriggers: null }).renderFieldsTable(m).includes('ftnote'));
 });
 
+// ---- the Lookup column against an older mirror ----
+// Zoho's fields API answers `lookup: {}` for a field that has none, and the bridge normalises that
+// to a string or `null` - but a workspace pulled before it did keeps the raw object, and `{}` is
+// truthy. The cell was keyed on `f.lookup` rather than on the name it resolves to, so in such a
+// mirror every field grew an arrow and an empty chip - picklists, dates, text areas, all of them.
+// Reported from a screenshot where the whole column was unreadable. Both shapes are held here,
+// because the panel has to read the workspaces it already wrote, not only the ones it writes now.
+test('crm: the Lookup column shows a module or nothing, whichever shape the mirror holds', () => {
+  const g = { escHtml: (x) => String(x), escA: (x) => String(x), emptyReason: () => '',
+              fieldSort: { key: null, dir: 1 }, blueprintFields: null, fieldTriggers: null };
+  const m = { api_name: 'Contacts', fields: [
+    { api_name: 'Member_Role', data_type: 'picklist', lookup: {} },                 // older mirror, no lookup
+    { api_name: 'Account_Name', data_type: 'lookup', lookup: 'Accounts' },           // what the bridge writes now
+    { api_name: 'Deal_Name', data_type: 'lookup', lookup: { module: { api_name: 'Deals' } } },
+    { api_name: 'Comments', data_type: 'textarea', lookup: null },
+  ] };
+  const rows = load(FIELDS_TABLE(), g).renderFieldsTable(m)
+    .split('<tbody>')[1].split('</tr>').filter((r) => r.includes('<td'));
+  const look = (r) => (r.split('<td')[5] || '');
+  assert.ok(!look(rows[0]).includes('→'), 'a field with no lookup was given an arrow and an empty chip');
+  assert.ok(!look(rows[0]).includes('wf-fn'), 'a field with no lookup was given a chip that opens nothing');
+  assert.ok(look(rows[1]).includes('→') && look(rows[1]).includes('Accounts'), 'a real lookup lost its module');
+  assert.ok(look(rows[2]).includes('Deals'), 'a lookup stored in the raw shape is not resolved');
+  assert.ok(!look(rows[3]).includes('→'), 'a field whose lookup is null was given an arrow');
+});
+
 test('the Fields table sorts by a column, and a third press gives Zoho its order back', () => {
   const { sortedFields, nextFieldSort } = load(FIELDS_TABLE(), { fieldSort: { key: null, dir: 1 } });
   const fields = [{ api_name: 'b', label: 'Beta' }, { api_name: 'a', label: 'alpha', mandatory: true }, { api_name: 'c', label: 'Gamma' }];

@@ -606,7 +606,7 @@ function renderFieldsTable(m, found = fieldTriggers, bpFound = blueprintFields) 
     <td class="mono" title="${escA(f.api_name || '')}">${escHtml(f.api_name)}</td>
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
-    <td class="mono">${f.lookup ? '\u2192 ' + `<span class="wf-fn" data-mod="${escA(lookupOf(f))}" title="${escA(lookupOf(f) + ' - click to open the module')}">${escHtml(lookupOf(f))}</span>` : ''}</td>
+    <td class="mono">${lookupOf(f) ? '\u2192 ' + `<span class="wf-fn" data-mod="${escA(lookupOf(f))}" title="${escA(lookupOf(f) + ' - click to open the module')}">${escHtml(lookupOf(f))}</span>` : ''}</td>
     <td class="num">${trigCell(f, trig(f))}</td>
     <td class="num">${bpCell(f, bpOf(f))}</td>
   </tr>`).join('');
