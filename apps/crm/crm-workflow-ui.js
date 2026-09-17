@@ -217,9 +217,23 @@ function renderUsage(u) {
   }));
   return h + `</div>`;
 }
-function openFunctionFromWorkflow(id, name) {
+async function openFunctionFromWorkflow(id, name) {
   const nid = String(id || ''); const nm = (name || '').toLowerCase();
-  let ent = treeData.find((x) => x.id === nid) || treeData.find((x) => (x.display_name || '').toLowerCase() === nm || (x.api_name || '').toLowerCase() === nm);
+  const find = () => treeData.find((x) => x.id === nid) || treeData.find((x) => (x.display_name || '').toLowerCase() === nm || (x.api_name || '').toLowerCase() === nm);
+  let ent = find();
+  // **`treeData` is not «the mirror», it is «what the Functions tab last drew».** `rebuildTree()` is
+  // its only writer and runs only while that tab is on screen, and a change of workspace empties it -
+  // so every chip that links *to* a function from another tab (a button's, a rule's, a blueprint
+  // transition's) answered «not in workspace - pull functions first» about a function sitting in the
+  // mirror, whenever the panel had opened on Modules or the workspace had just changed. The tab order
+  // is a user preference, so which tab the panel opens on is not ours to assume.
+  //
+  // The single writer is called rather than the index re-read here: `functions/index.json` carries no
+  // `path`, no `downloaded` and no `mirrored` - `rebuildTree` derives them and reconciles against the
+  // folder - so reading it here would be a second, quietly diverging answer to «what does the tree
+  // know». Only when the tree holds nothing at all, so a function that is genuinely absent still
+  // answers at once instead of paying for a rebuild.
+  if (!ent && !treeData.length) { await rebuildTree(); ent = find(); }
   if (!ent) { setStatus(`Function "${name}" not in workspace - pull functions first.`, 'warn'); return; }
   if (!tabReachable('functions')) return;
   // **Arriving at a row is not the same as opening a file.** This asked «is it in `treeData`» and

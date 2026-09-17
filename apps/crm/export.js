@@ -273,6 +273,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     // link that lands nowhere is worse than a name.
     const one = (p) => {
       const label = p.name || '(unnamed)';
+      // **A thing with a page of its own goes to its own page.** A blueprint named here was sent to
+      // `#mod-<module>` like everything else, so the reader clicked a process and landed on a field
+      // table - while `id="bp-<id>"` sat in the same document and `bpLink` twenty lines above went
+      // unused. The module is the *fallback*, for the kinds this report gives no page of their own:
+      // a custom button lives inside its module's section and has nowhere else to go.
+      if (p._type === 'blueprint' && p.id != null && bpIdSet.has(String(p.id))) return bpLink(p.id, label);
       return (p.module && modApiSet.has(p.module))
         ? `<a href="#${escA(modAnchor(p.module))}" title="${escA(label + ' - in ' + p.module)}">${esc(label)}</a>`
         : esc(label);
@@ -402,7 +408,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
             // matching on the name would link the wrong thing or nothing at all.
             const fn = b.function_id ? fnById[String(b.function_id)] : null;
             const runs = fn ? `<a href="#${escA(fnAnchor(fnKey(fn)))}">ƒ ${esc(fn.display_name || fn.api_name)}</a>`
-              : `<span class="none">${esc(b.function_name || b.action || '')}</span>`;
+              // **The id before the keyword.** When the function is not in this report - Functions
+              // unticked, or not mirrored - this printed `b.action`, so a column headed «Runs» said
+              // `custom_function`: Zoho's vocabulary for «it runs a function», in the one place the
+              // reader wanted to know *which*. The panel shows `ƒ <id>`, which is the thing they can
+              // act on, and the keyword stays as the last resort for a button that runs no function.
+              : `<span class="none">${esc(b.function_name || (b.function_id ? 'ƒ ' + b.function_id : '') || b.action || '')}</span>`;
             return `<tr><td>${esc(b.name || b.api_name || b.id)}</td><td>${runs}</td><td>${esc(b.position || '')}</td>`
               + `<td>${esc((b.layouts || []).join(', '))}</td><td>${esc((b.profiles || []).join(', '))}</td></tr>`;
           }).join('')
@@ -412,7 +423,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
         + (mref ? `<div class="refs"><span><b>Not described by Zoho.</b> ${esc(mref.text)}</span></div>` : '')
-        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}${bpTrig.size ? '<th>Blueprints</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${pipeHtml}${layoutsHtml}</section>`;
+        + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th>${fTrig ? '<th>Workflows</th>' : ''}${bpTrig.size ? '<th>Blueprints</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${pipeHtml}${btnHtml}${layoutsHtml}</section>`;
     });
   }
 
@@ -1052,7 +1063,10 @@ function buildExportMarkdown(d, scope) {
     if (publishTextOf(n)) md += `- publish state: ${publishTextOf(n)}\n`;
     if (n.calls && n.calls.length) md += `- calls: ${n.calls.join(', ')}\n`;
     if (n.called_by && n.called_by.length) md += `- called by: ${n.called_by.join(', ')}\n`;
-    if (n.associated_place && n.associated_place.length) md += `- used in: ${n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}`).join('; ')}\n`;
+    // The module travels too. The HTML carries it as the link target and in the title; here the
+    // reader was told a function is used in a button and never which module's table holds it - and
+    // this is a flat document, where the module name is the only way to find the thing again.
+    if (n.associated_place && n.associated_place.length) md += `- used in: ${n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}${p.module ? ` (in ${p.module})` : ''}`).join('; ')}\n`;
     if (n.stats) md += `- size: ${n.stats.lines} lines (${n.stats.codeLines} code) · ${(n.stats.chars / 1024).toFixed(1)} KB\n- outbound calls: ${n.stats.apiCalls || 'none'}${n.stats.apiCalls ? ` (${n.stats.invokeurl} invokeurl, ${n.stats.crm} zoho.crm, ${n.stats.zoho} other Zoho${n.stats.sendmail ? `, ${n.stats.sendmail} sendmail` : ''})` : ''}\n`;
     if (scope.connections && n.connections && n.connections.length) md += `- connections: ${n.connections.map((c) => c.name).join(', ')}\n`;
     // What the code does to the org's modules. Read and write are kept apart here as on screen, and
@@ -1175,7 +1189,9 @@ function buildExportMarkdown(d, scope) {
     if (mdBtns.length) {
       md += `#### Custom buttons (${mdBtns.length})\n\n| Button | Runs | Where | Layouts | Profiles |\n|---|---|---|---|---|\n`;
       mdBtns.forEach((b) => {
-        md += `| ${_mdCell(b.name || b.api_name || b.id)} | ${_mdCell(b.function_name || b.action || '')} | ${_mdCell(b.position || '')} `
+        // The twin of the HTML fallback above, and for the same reason: the id is what a reader can
+        // act on, the keyword is what Zoho calls the fact that there is one.
+        md += `| ${_mdCell(b.name || b.api_name || b.id)} | ${_mdCell(b.function_name || (b.function_id ? 'ƒ ' + b.function_id : '') || b.action || '')} | ${_mdCell(b.position || '')} `
           + `| ${_mdCell((b.layouts || []).join(', '))} | ${_mdCell((b.profiles || []).join(', '))} |\n`;
       });
       md += '\n';

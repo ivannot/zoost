@@ -364,7 +364,12 @@ async function healthOpenModule(api, name) {
   const e = moduleData.find((m) => m.api_name === key)
     || moduleData.find((m) => (m.label || '') === key) || moduleData.find((m) => (m.gen || '') === key)
     || (name && moduleData.find((m) => (m.label || m.api_name || '') === name));
-  if (e) openModule(e.path); else setStatus(moduleData.length ? MSG.modNotHere : MSG.modNotPulled, 'warn');
+  // Awaited, because a caller that opens a *pane* of this module has to run after the pane exists.
+  // `openModule` is async with four awaits before it writes `#pvtable`, so starting it and returning
+  // satisfied `await healthOpenModule(...)` while the previous item was still on screen: the button
+  // opener then found no `#pvbtns`, its guard skipped, and the reader landed on Fields - the exact
+  // one-way relation this opener was written to end. A guard that skips when the thing is absent.
+  if (e) await openModule(e.path); else setStatus(moduleData.length ? MSG.modNotHere : MSG.modNotPulled, 'warn');
 }
 // By id, then by name. Zoho keys a function's «used in» entry its own way, and a rule that is
 // plainly in the mirror was being reported as absent because the two keys did not match - a true

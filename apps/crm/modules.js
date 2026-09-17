@@ -657,7 +657,14 @@ function renderModuleButtons(m, rows) {
   // the fields table's own state and is looked up by field api_name, so a button - which is not a
   // field - needs its own or the dialog returns empty for every one of them.
   buttonListShown = { module: m.api_name, rows };
-  if (!rows.length) return '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none, or they were not read by the last pull.</div>';
+  // **The** reason, not a reason. While this could only be reached with rows in hand it was dead
+  // text; now that a refused read opens the pane, it has to say which of the two happened - reciting
+  // both sends the reader to do the wrong thing half the time.
+  if (!rows.length) {
+    return m.buttons_read === false
+      ? '<div class="empty" style="padding:12px 10px"><b>Custom buttons were not read.</b> Zoho did not answer for this module on the last pull, so whether it has any is unknown. Press Pull on Modules to ask again.</div>'
+      : '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none.</div>';
+  }
   const fnCell = (b) => (b.function_id
     ? `<span class="wf-fn" data-fnid="${escA(b.function_id)}" data-fnname="${escA(b.function_name || '')}" title="${escA('Open ' + (b.function_name || b.function_id))}">ƒ ${escHtml(b.function_name || b.function_id)}</span>`
     : `<span style="color:var(--muted)">${escHtml(b.action || 'no function')}</span>`);
@@ -835,7 +842,13 @@ async function openModule(path, layoutId) {
   // Offered only where the module has them, the way Files is offered only for a project: the pane is
   // rebuilt by every open, so the flag is set beside it rather than remembered.
   $('pvpipes').dataset.available = ((m.pipelines || []).length || (m.stage_pool || []).length) ? '1' : '';
-  $('pvbtns').dataset.available = btnRows.length ? '1' : '';
+  // **«Refused» is not «none», and the pane is the only place that can say so.** This read the row
+  // count alone, so a module whose buttons Zoho declined looked exactly like one that has none: the
+  // tab was absent, the pull said «complete» in green, and the sentence written for precisely that
+  // case could never be displayed, because the pane was only ever shown when it was non-empty.
+  // `buttons_read` is false when the call was refused, true when it answered, and absent on a mirror
+  // written before it existed - which stays as it was, rather than opening a tab on old data.
+  $('pvbtns').dataset.available = (btnRows.length || m.buttons_read === false) ? '1' : '';
   pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before
   // The names first, then what reads and writes it. It was the other way round - «read by» and
   // «written by» at the top and the module's own display name, api_name and generated name below the

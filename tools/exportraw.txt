@@ -34,7 +34,7 @@ apps/crm/export.js	_mdCell(a.name || a.id)
 apps/crm/export.js	_mdCell(actProv(a))
 apps/crm/export.js	_mdCell(actionKindLabel(a.kind))
 apps/crm/export.js	_mdCell(b.fn || '?')
-apps/crm/export.js	_mdCell(b.function_name || b.action || '')
+apps/crm/export.js	_mdCell(b.function_name || (b.function_id ? 'ƒ ' + b.function_id : '')
 apps/crm/export.js	_mdCell(b.kind)
 apps/crm/export.js	_mdCell(b.name || '?')
 apps/crm/export.js	_mdCell(b.name || b.api_name || b.id)
@@ -124,6 +124,7 @@ apps/crm/export.js	bpTrig.size ? ' Blueprints |' : ''
 apps/crm/export.js	bpTrig.size ? '---|' : ''
 apps/crm/export.js	bpTrig.size ? '<th>Blueprints</th>' : ''
 apps/crm/export.js	bpTrig.size ? `<td>${bpTd(m, fl)}</td>` : ''
+apps/crm/export.js	btnHtml
 apps/crm/export.js	c.sequence_number || i + 1
 apps/crm/export.js	connHtml
 apps/crm/export.js	count
@@ -235,6 +236,8 @@ apps/crm/export.js	p._type
 apps/crm/export.js	p.default ? ' (default)' : ''
 apps/crm/export.js	p.default ? ' <span class="none">(default)</span>' : ''
 apps/crm/export.js	p.layout ? ' · layout ' + _mdCell(p.layout) : ''
+apps/crm/export.js	p.module
+apps/crm/export.js	p.module ? ` (in ${p.module})` : ''
 apps/crm/export.js	p.name ? ' ' + p.name : ''
 apps/crm/export.js	params(n)
 apps/crm/export.js	pipeHtml

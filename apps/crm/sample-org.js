@@ -286,33 +286,37 @@ function deluge(ns, name, params, calls) {
    * `opts.onProgress(done, total, what)` is called as it goes, because writing three hundred files
    * through the File System Access API takes long enough to look like a hang.
    */
+  // ---- custom buttons ----
+  //
+  // **One source, two consumers**: the buttons index, and the *reverse pointer* on each function's
+  // meta. A real pull writes both - Zoho names the button in the function's `associated_place` and
+  // the function in the button's `details.custom_function` - and this sample wrote only the first,
+  // which is not the shape a pull produces. It showed: the wiring graph's `function → module` edge
+  // is derived from exactly that pointer, so on the delivered sample there was nothing to draw.
+  //
+  // **Out here beside `usedIn`, and not inside `files()`, because `usedIn` is written once.** It sat
+  // inside, so a second `+ Sample` in the same panel session pushed the pointers again and the
+  // function's detail pane read «Used in custom_buttons (2): Rebuild invoice, Rebuild invoice» -
+  // reachable by writing a sample, changing the working folder, and writing one there too.
+  const BUTTONS = [
+    ['Accounts', 'Rebuild invoice', 'Rebuild_invoice', 'standalone.buildInvoice', 'view'],
+    ['Contacts', 'Recalculate tax', 'Recalculate_tax', 'standalone.calcTax', 'view'],
+    ['Contacts', 'Escalate ticket', 'Escalate_ticket', 'standalone.escalateTicket', 'detail_view'],
+    ['Deals', 'Open pricing sheet', 'Open_pricing_sheet', null, 'view'],
+  ];
+  // The one that runs no function pushes nothing: a button can open a URL, and its absence here is
+  // the fact rather than an omission.
+  BUTTONS.forEach(([mod, name, , fn], i) => {
+    if (!fn) return;
+    (usedIn[fn] ||= []).push({ _type: 'custom_buttons', id: String(7000 + i), name, module: mod });
+  });
+
   function files(opts) {
     const o = Object.assign({ functions: 120, edgeCases: false, onProgress: null }, opts || {});
     const list = CORE.concat(volume(Math.max(0, o.functions - CORE.length), 20260807));
     const out = {};
     const J = (p, v) => { out[p] = JSON.stringify(v, null, 2) + '\n'; };
     const say = (done, total, what) => { if (o.onProgress) o.onProgress(done, total, what); };
-
-    // ---- custom buttons, declared here because the functions are written below ----
-    //
-    // **One source, two consumers**: the buttons index further down, and the *reverse pointer* on
-    // each function's meta. A real pull writes both - Zoho names the button in the function's
-    // `associated_place` and the function in the button's `details.custom_function` - and this
-    // sample wrote only the first, which is not the shape a pull produces. It showed: the wiring
-    // graph's `function → module` edge is derived from exactly that pointer, and on the delivered
-    // sample there was nothing for it to draw, so the check could not have caught its absence.
-    const BUTTONS = [
-      ['Accounts', 'Rebuild invoice', 'Rebuild_invoice', 'standalone.buildInvoice', 'view'],
-      ['Contacts', 'Recalculate tax', 'Recalculate_tax', 'standalone.calcTax', 'view'],
-      ['Contacts', 'Escalate ticket', 'Escalate_ticket', 'standalone.escalateTicket', 'detail_view'],
-      ['Deals', 'Open pricing sheet', 'Open_pricing_sheet', null, 'view'],
-    ];
-    // The one that runs no function pushes nothing: a button can open a URL, and its absence here is
-    // the fact rather than an omission.
-    BUTTONS.forEach(([mod, name, , fn], i) => {
-      if (!fn) return;
-      (usedIn[fn] ||= []).push({ _type: 'custom_buttons', id: String(7000 + i), name, module: mod });
-    });
 
     // ---- functions ----
     // The index is what the tree lists before anything is downloaded: a bare array, and `namespace`

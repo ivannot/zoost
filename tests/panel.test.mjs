@@ -17114,6 +17114,9 @@ test('crm: both reports are produced with every chapter ticked and something in 
   // The three states `srcBlock` distinguishes, all present: read, unreadable, never downloaded.
   const fns = [
     { api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', node, downloaded: true,
+      // Named in a blueprint, which has a section of its own in this report - the reader clicking it
+      // must land on the process, not on a module's field table.
+      associated_place: [{ _type: 'blueprint', id: 'BP1', name: 'Deal approval', module: 'Contacts' }],
       code: 'info "x";', stats: { lines: 1, codeLines: 1, chars: 9, apiCalls: 0 } },
     { api_name: 'beta', display_name: 'Beta', namespace: 'ns', downloaded: true, code: null },
     { api_name: 'gamma', display_name: 'Gamma', namespace: 'ns', downloaded: false },
@@ -17127,11 +17130,37 @@ test('crm: both reports are produced with every chapter ticked and something in 
                    detail: { conditions: [{ instant_actions: { actions: [{ type: 'functions', id: '9', name: 'Alpha' }] } }] } }],
                 [{ id: '1', name: 'S', function_id: '9', function_name: 'Alpha' }],
                 [{ name: 'c', linkName: 'c', uses: [], status: 'ok' }], health,
-                [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope];
+                [{ id: '1', name: 'A', kind: 'tasks' }], new Map(), scope,
+                [{ id: 'BP1', name: 'Deal approval', module: 'Contacts', states: [], transitions: [] }],
+                // Positions 12 and 13 of the signature, and this list carried eleven - so no case
+                // here ever passed a button, and `btnHtml` sat built and never interpolated: the
+                // HTML report had no Custom buttons block at all while the panel and the Markdown
+                // both had one. `tools/deadcode.py` had been printing the dead declaration the
+                // whole time, which is what that sweep is for.
+                // It runs a function the report does not carry - Functions unticked, or not mirrored -
+                // which is the state where «Runs» used to print Zoho's word for «there is one».
+                [{ module: 'Contacts', id: '7000', name: 'Rebuild invoice', position: 'view',
+                   layouts: ['Standard'], profiles: ['Administrator'],
+                   function_id: '4242', function_name: null, action: 'custom_function' }]];
+  // Derived from the list itself, so appending another parameter cannot silently move it.
+  const SCOPE_ARG = args.indexOf(scope);
+  assert.ok(SCOPE_ARG >= 0, 'the scope is no longer one of the arguments this fixture passes');
 
   const { buildExportHtml } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportMark'), sliceFn('apps/crm/reportshell.js', 'reportHead'), sliceConst('apps/crm/reportshell.js', 'REPORT_FILTER_JS'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportHtml')], globals);
   const html = buildExportHtml(...args);
   for (const f of fns) assert.ok(html.includes(f.display_name), `${f.display_name} is not in the report`);
+  // The chapter, and the row in it: a block that renders its heading and no buttons would pass the
+  // first of these and is not what the panel shows.
+  assert.ok(html.includes('Custom buttons'), 'the HTML report carries no Custom buttons block');
+  assert.ok(html.includes('Rebuild invoice'), 'the HTML report names no button inside that block');
+  // «Runs» said `custom_function` - Zoho's word for «there is one» - in the one column the reader
+  // opened to find out *which*. The id is the thing they can act on, and the panel has always shown
+  // it; the keyword is the last resort, for a button that runs no function at all.
+  assert.ok(html.includes('ƒ 4242'), 'the report drops the id of a function it does not carry');
+  // «Used in blueprint: Deal approval» sent the reader to `#mod-Contacts` - a field table - while
+  // `id="bp-BP1"` sat in the same document. A thing with a page of its own goes to its own page.
+  assert.ok(/Used in blueprint[^<]*<\/b>\s*<a href="#bp-BP1"/.test(html),
+    'a blueprint named in «Used in» does not link to the blueprint section of this same report');
 
   // **Every internal link lands somewhere, in every scope.** A link that goes nowhere is worse than
   // plain text: the reader clicks it, stays where they are, and concludes the document is broken.
@@ -17158,7 +17187,13 @@ test('crm: both reports are produced with every chapter ticked and something in 
   let linksSeen = 0;
   for (const off of [null, ...keys]) {
     const sc = {}; for (const k of keys) sc[k] = k !== off;
-    const doc = off === null ? html : buildExportHtml(...args.slice(0, -1), sc);
+    // The scope is replaced **where it sits**, not by dropping the last argument. `slice(0, -1)` read
+    // «scope is last», which was true until two parameters were added after it - and then every
+    // variant here passed the scope object as the buttons list, so the builder threw on `.filter`
+    // and the whole sweep below measured nothing. An index that is named survives an append; one
+    // that is implied does not.
+    const withScope = (s) => { const a = args.slice(); a[SCOPE_ARG] = s; return a; };
+    const doc = off === null ? html : buildExportHtml(...withScope(sc));
     const { hrefs, dead } = anchors(doc);
     linksSeen += hrefs.length;
     assert.deepEqual(dead, [], `with ${off === null ? 'everything ticked' : off + ' unticked'}, `
@@ -17173,13 +17208,25 @@ test('crm: both reports are produced with every chapter ticked and something in 
 
   // The Markdown twin takes the same data as one object - a different shape, same fixture.
   const { buildExportMarkdown } = load([sliceFn('apps/crm/reportshell.js', 'escReport'), sliceFn('apps/crm/reportshell.js', 'reportToc'), sliceFn('apps/crm/reportshell.js', 'escReportA'), sliceFn('apps/crm/reportshell.js', 'reportFoot'), ...EXPORT_PARTS, sliceFn('apps/crm/export.js', 'buildExportMarkdown')], globals);
+  // `bps` and `btns` by the same derived index as the scope: the twin builder takes one object where
+  // the HTML takes positions, and the two lists were simply absent here - so the Markdown chapters
+  // built from them were never produced in this fixture and nothing it asserts could see them.
   const md = buildExportMarkdown({ fns, mods, g: args[2], modRefs: {}, wfs: args[4], scheds: args[5],
-                                   conns: args[6], fails: health, acts: args[8], actUsers: new Map() },
+                                   conns: args[6], fails: health, acts: args[8], actUsers: new Map(),
+                                   bps: args[SCOPE_ARG + 1], btns: args[SCOPE_ARG + 2] },
                                  scope);
   // The Markdown names a function by its qualified api name, the HTML by its label - a difference
   // between the two reports, not a defect: read off each rather than assumed the same.
   for (const f of fns) assert.ok(md.includes(f.api_name), `${f.api_name} is not in the Markdown`);
   assert.ok(md.includes('info "x"'), 'source was ticked and no source reached the Markdown');
+  // The twin of the two HTML assertions above. Anything the panel shows about an item belongs in
+  // both reports, and «the same document» is a manual check of every release.
+  assert.ok(md.includes('Custom buttons'), 'the Markdown report carries no Custom buttons block');
+  assert.ok(md.includes('ƒ 4242'), 'the Markdown drops the id of a function it does not carry');
+  // A flat document: the module name is the only way to find the table that holds the thing again,
+  // and the HTML has carried it as the link target since buttons landed.
+  assert.ok(md.includes('blueprint Deal approval (in Contacts)'),
+    'the Markdown says a function is used somewhere and not in which module to look');
 });
 
 // `buildExportHtml` writes a `<nav class="toc">` by hand and then writes the chapters by hand, each
@@ -21941,26 +21988,153 @@ test('crm: a deleted compiled function takes its sources with it, not just its m
 // already carry the module edge, and a second line beside it states nothing the picture lacks.
 test('crm: a function wired only by a button reaches its module, and one wired by a rule does not repeat it', () => {
   const REL = 'apps/crm/crm-pull-graph.js';
-  const { linkFunctionsToTheirModules } = load([sliceConst(REL, 'AP_HAS_NODE'), sliceFn(REL, 'linkFunctionsToTheirModules')],
-                                              { Set, Object, String });
-  const mods = { Accounts: { id: 'm1', entity: 'modules' }, Contacts: { id: 'm2', entity: 'modules' } };
-  const modOf = (name) => mods[name] || null;
+  const { linkFunctionsToTheirModules } = load([sliceConst(REL, 'CTX_ID'), sliceConst(REL, 'AP_HAS_NODE'),
+                                                sliceFn(REL, 'linkFunctionsToTheirModules')], { Set, Object, String });
   const fn = (id, places) => ({ id, entity: 'functions', associated_place: places });
   const nodes = {
+    'mod:Accounts': { id: 'm1', entity: 'modules', api_name: 'Accounts' },
+    'mod:Contacts': { id: 'm2', entity: 'modules', api_name: 'Contacts' },
     byButton: fn('f1', [{ _type: 'custom_buttons', module: 'Accounts' }]),
-    byRule: fn('f2', [{ _type: 'workflow_rules', module: 'Contacts' }]),
-    byBlueprint: fn('f3', [{ _type: 'blueprint', module: 'Contacts' }]),
-    byValidation: fn('f4', [{ _type: 'crmfundamentals', module: 'Contacts' }]),
-    placeWithoutModule: fn('f5', [{ _type: 'custom_buttons' }, null]),
-    moduleNotMirrored: fn('f6', [{ _type: 'custom_buttons', module: 'NotPulled' }]),
+    // The one that matters: Zoho names the module here by its *localized* label, and the first
+    // version of this resolved it through a helper that creates the node when it is missing - so
+    // this drew a second box called «Contatti» beside the real Contacts, and the case could not see
+    // it because its stub returned null, a behaviour the shipped helper does not have.
+    byLocalizedLabel: fn('f2', [{ _type: 'custom_buttons', module: 'Contatti' }]),
+    byRule: fn('f3', [{ _type: 'workflow_rules', module: 'Contacts' }]),
+    byBlueprint: fn('f4', [{ _type: 'blueprint', module: 'Contacts' }]),
+    byValidation: fn('f5', [{ _type: 'crmfundamentals', module: 'Contacts' }]),
+    placeWithoutModule: fn('f6', [{ _type: 'custom_buttons' }, null]),
     notAFunction: { id: 'w1', entity: 'workflows', associated_place: [{ _type: 'custom_buttons', module: 'Accounts' }] },
     noPlacesAtAll: { id: 'f7', entity: 'functions' },
   };
+  const before = Object.keys(nodes).length;
   const drawn = [];
-  linkFunctionsToTheirModules(nodes, modOf, (a, b) => drawn.push(`${a.id}->${b.id}`));
-  assert.deepEqual(drawn, ['f1->m1', 'f4->m2'],
+  linkFunctionsToTheirModules(nodes, (a, b) => drawn.push(`${a.id}->${b.id}`));
+  assert.deepEqual(drawn, ['f1->m1', 'f5->m2'],
     'either the edge that only a button or a validation rule evidences was not drawn, '
     + 'or a kind that is already a node drew a second one beside the edge it already has');
+  assert.equal(Object.keys(nodes).length, before,
+    'a module box was invented for a name that does not resolve - a missing edge is a gap, an invented box is a claim');
+});
+
+// ---- the generator is asked twice in one page ----
+// `+ Sample`, change the working folder, `+ Sample` again - two calls to `files()` in one panel
+// session, which is also what a write that fails part-way and is retried does. The reverse pointers
+// that say which button uses a function were pushed from inside `files()` into state declared
+// outside it, so the second workspace said «Used in custom_buttons (2): Rebuild invoice, Rebuild
+// invoice». Every check that runs the generator does it in a fresh process, which is why nothing saw
+// it: the defect needs the second call, not the second run.
+test('crm: writing the sample twice does not double what a function says it is used in', () => {
+  const ctx = { window: {}, Object, JSON, Math, String, Array, Set, Number };
+  vm.createContext(ctx);
+  vm.runInContext(read('apps/crm/sample-org.js'), ctx);
+  const usedInOf = (files) => {
+    const meta = JSON.parse(files['functions/standalone/build_Invoice.meta.json']);
+    return (meta.associated_place || []).filter((p) => p._type === 'custom_buttons').map((p) => p.name);
+  };
+  const first = usedInOf(ctx.window.SAMPLE_ORG.files({}));
+  const second = usedInOf(ctx.window.SAMPLE_ORG.files({}));
+  assert.deepEqual(first, ['Rebuild invoice'], 'the sample no longer says which button uses this function');
+  assert.deepEqual(second, first, 'the second sample written in one session doubled the button it is used in');
+});
+
+// ---- refused is not none ----
+// Zoho declines `custom_buttons` for some modules. The pane read the row count alone, so a refusal
+// and a module that genuinely has no buttons were the same picture: no tab, a green «complete», and
+// nothing anywhere saying the call had failed. The sentence written for exactly that case could
+// never appear, because the pane was only ever shown when it already had rows in it.
+//
+// **The limit, stated:** what is driven here is the sentence the reader gets. The predicate that now
+// opens the pane for a refusal (`btnRows.length || m.buttons_read === false`) lives inside
+// `openModule`, which is too large to lift, so it is not exercised - and re-writing the predicate
+// here would be a photograph of it rather than a check on it.
+test('crm: a module whose buttons were refused says so, and one that has none says that instead', () => {
+  const { renderModuleButtons } = load([sliceFn('apps/crm/modules.js', 'renderModuleButtons')],
+    { buttonListShown: null, escA: (x) => String(x == null ? '' : x),
+      escHtml: (x) => String(x == null ? '' : x), String, Object });
+  const refused = renderModuleButtons({ api_name: 'Contacts', buttons_read: false }, []);
+  const none = renderModuleButtons({ api_name: 'Contacts', buttons_read: true }, []);
+  const older = renderModuleButtons({ api_name: 'Contacts' }, []);
+  assert.match(refused, /did not answer/, 'a refused read is reported as «this module has none»');
+  assert.doesNotMatch(refused, /carries none/, 'it recites both reasons, so half the readers act on the wrong one');
+  assert.match(none, /carries none/, 'a module that really has no buttons is reported as a failure');
+  assert.doesNotMatch(none, /did not answer/, 'a module that answered «none» is reported as unanswered');
+  // A mirror written before the flag existed: unchanged, rather than accusing an old pull of failing.
+  assert.match(older, /carries none/, 'an older mirror without the flag now reads as a refusal');
+});
+
+// ---- the chip that links to a function from a tab which never drew the tree ----
+// `treeData` is what the Functions tab last drew, not what the mirror holds: `rebuildTree()` is its
+// only writer and runs only while that tab is on screen, and a change of workspace empties it. So a
+// button's ƒ chip, a rule's, a blueprint transition's - every link *into* a function from another
+// tab - answered «not in workspace - pull functions first» about a function sitting in the mirror,
+// whenever the panel had opened on Modules (the tab order is a user preference) or the workspace had
+// just changed. The single writer is called rather than the index re-read, because the index carries
+// no path, no `downloaded` and no `mirrored`: re-deriving them here would be a second answer to
+// «what does the tree know».
+test('crm: a function chip opens from a tab that has never drawn the tree', async () => {
+  const REL = 'apps/crm/crm-workflow-ui.js';
+  const row = { id: '9000', api_name: 'build_Invoice', display_name: 'Build invoice',
+                path: 'functions/standalone/build_Invoice.dg', mirrored: true, downloaded: true, language: 'deluge' };
+  const run = async (start, found, id, name) => {
+    const seen = []; let rebuilds = 0;
+    const g = { treeData: start, tabReachable: () => true, setMode: () => {},
+                setStatus: (t) => seen.push('status:' + t), selectRow: (p) => seen.push('select:' + p),
+                openFile: (p) => seen.push('open:' + p), fetchThenRedrawRow: () => seen.push('fetch'),
+                langLabel: (l) => l, MSG: { notMirrored: () => 'not mirrored' }, String, Promise };
+    g.rebuildTree = async () => { rebuilds++; g.treeData = found; };
+    const { openFunctionFromWorkflow } = load([sliceFn(REL, 'openFunctionFromWorkflow')], g);
+    await openFunctionFromWorkflow(id, name);
+    return { seen, rebuilds };
+  };
+  // The defect: the tree was never drawn in this workspace, and the function is in the mirror.
+  const cold = await run([], [row], '9000', 'Build invoice');
+  assert.deepEqual(cold.seen, ['select:functions/standalone/build_Invoice.dg', 'open:functions/standalone/build_Invoice.dg'],
+    'the chip reported a mirrored function as missing because the Functions tab had not been drawn');
+  assert.equal(cold.rebuilds, 1);
+  // By name, which is the second key the resolver tries - Zoho does not always give the chip an id.
+  assert.equal((await run([], [row], '', 'build_Invoice')).seen.length, 2, 'the fallback resolves by id only');
+  // A function that really is absent still answers at once, and pays for no rebuild.
+  const warm = await run([row], [row], '1', 'Ghost');
+  assert.match(warm.seen[0], /^status:/, 'a function that is not there no longer says so');
+  assert.equal(warm.rebuilds, 0, 'a drawn tree was rebuilt anyway, so every miss now costs a full walk');
+});
+
+// ---- the opener that has to arrive after the pane ----
+// «Used in custom_buttons: Rebuild invoice» became a link, and the link landed on Fields. The opener
+// awaited `healthOpenModule`, which started the async `openModule` and returned without waiting for
+// it, so the guard below ran while the previous item was still on screen, found no `#pvbtns`, and
+// skipped - a guard that skips when the thing is absent, over the one relation this was written to
+// make followable in both directions. Both functions are lifted, so the missing await is what fails.
+test('crm: the button opener waits for the pane it is going to open', async () => {
+  const REL = 'apps/crm/health.js';
+  const run = (module, available) => {
+    const panes = {}, seen = [];
+    const g = {
+      moduleData: [{ api_name: 'Accounts', label: 'Conti', gen: 'Accounts', path: 'modules/Accounts.json' }],
+      closeHealth: () => {}, tabReachable: () => true, setMode: () => {}, rebuildModules: async () => {},
+      MSG: { modNotHere: 'not in this mirror', modNotPulled: 'not pulled' },
+      setStatus: (t) => seen.push('status:' + t),
+      $: (id) => panes[id] || null,
+      setPvTab: (t) => seen.push('tab:' + t),
+      // What the shipped `openModule` is: async, with **four** awaits before it writes `#pvtable`.
+      // The count is the point. A first version of this stub awaited once, and the case passed with
+      // the await removed - one tick is less than the two an unawaited call costs anyway, so the
+      // pane arrived in time by luck and the net was a mirror. A stub must cost what the thing costs.
+      openModule: async () => {
+        for (let i = 0; i < 4; i++) await Promise.resolve();
+        panes.pvbtns = { dataset: { available } };
+      },
+      Promise, String,
+    };
+    const { healthOpenButton } = load([sliceFn(REL, 'healthOpenModule'), sliceFn(REL, 'healthOpenButton')], g);
+    return healthOpenButton('7000', 'Rebuild invoice', module).then(() => seen);
+  };
+  assert.deepEqual(await run('Accounts', '1'), ['tab:btn'], 'the reader was left on Fields to find the button');
+  // The module is named by its localized label in an «used in» entry, which is the second lookup.
+  assert.deepEqual(await run('Conti', '1'), ['tab:btn'], 'a module named the way Zoho names it there was not found');
+  assert.deepEqual(await run('Accounts', ''), [], 'a tab whose pane carries nothing was selected anyway');
+  assert.deepEqual(await run('', '1'), ['status:not in this mirror'], 'a button with no module still tried to open one');
 });
 
 // **`null` is an answer.** The bridge returns `file: null` when Zoho no longer has the function -

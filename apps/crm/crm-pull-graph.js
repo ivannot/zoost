@@ -221,12 +221,22 @@ function ctxNode(id, name, category, namespace, file, extra) {
  *  edge, and drawing `function → module` beside `function → rule → module` would add a line that says
  *  nothing the picture does not already say. */
 const AP_HAS_NODE = new Set(['workflow_rules', 'workflow', 'schedules', 'schedule', 'blueprint']);
-function linkFunctionsToTheirModules(nodes, modOf, link) {
+function linkFunctionsToTheirModules(nodes, link) {
   for (const n of Object.values(nodes)) {
     if (n.entity !== 'functions') continue;
     for (const p of n.associated_place || []) {
       if (!p || !p.module || AP_HAS_NODE.has(String(p._type))) continue;
-      const m = modOf(p.module);
+      // **Looked up, never minted, and this is the whole of it.** `module` in an `associated_place`
+      // entry is the *localized* label - «Contatti» where the api name is `Contacts` - measured in
+      // `docs/traps.md` at 9 of 18 button entries matching the mirror's index. `modOf` answers by
+      // creating the node when it is absent, so feeding it a label drew a *second* box carrying the
+      // same visible name as the real module, with `modules/index.json` named as its source: the
+      // rules and actions hung off one and these functions off the other, and the picture said
+      // something the org does not. The index carries no label to match against - the localized
+      // plural lives in each module's own file - so the honest answer is the one `traps.md` already
+      // states: refuse when the name does not resolve. A missing edge is a gap; an invented box is
+      // a claim.
+      const m = nodes[CTX_ID.mod(p.module)];
       if (m) link(n, m);
     }
   }
@@ -280,7 +290,7 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
     if (m) link(nodes[id], m);
   });
 
-  linkFunctionsToTheirModules(nodes, modOf, link);
+  linkFunctionsToTheirModules(nodes, link);
 
   // ---- workflows: their own file says which functions each condition fires -------------------
   let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
