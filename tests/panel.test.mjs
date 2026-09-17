@@ -1007,6 +1007,28 @@ test('crm: the strip holding the wiring control is shown when it carries one', (
   assert.match(slot.innerHTML, /id="pvdiagram"/, 'nothing was drawn into the slot at all');
 });
 
+test('crm: opening an item says the same thing on every tab', () => {
+  // Two of the six openers cleared the row and four did not, so clicking a module made «106 modules
+  // in workspace.» disappear while clicking a workflow left the equivalent line sitting there.
+  // Reported as exactly that asymmetry. Derived from the openers rather than listed: a seventh one
+  // added tomorrow is a finding here instead of another tab that behaves differently.
+  const files = ['apps/crm/preview-controller.js', 'apps/crm/modules.js', 'apps/crm/automation.js',
+                 'apps/crm/crm-workflow-ui.js', 'apps/crm/connections.js'];
+  const openers = [];
+  for (const rel of files) {
+    const src = blankNonCode(read(rel));
+    // An opener is what points the panel at an item: it sets `currentPath` to something and names it
+    // in the navigation chain. Clearing it to null is the opposite - that is closing one.
+    for (const m of src.matchAll(/^[ \t]*currentPath = (?!null)[^;]+;[ \t]*navHere\([^\n]*$/gm)) {
+      openers.push({ rel, line: src.slice(0, m.index).split('\n').length, text: m[0] });
+    }
+  }
+  assert.ok(openers.length >= 6, `only ${openers.length} opener(s) found - the derivation broke`);
+  const silent = openers.filter((o) => !/clearItemStatus\(\)/.test(o.text));
+  assert.deepEqual(silent.map((o) => `${o.rel}:${o.line}`), [],
+    'these open an item and leave the previous message on the row, so one tab reads differently from another');
+});
+
 test('crm: the file an export just wrote can be opened, and is put away afterwards', () => {
   // It cannot be a link in the status line - that sink writes `textContent`, and making it accept
   // markup would put org names, folder paths and Zoho's own error text through an HTML sink for the

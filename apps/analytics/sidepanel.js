@@ -3314,6 +3314,17 @@ async function regrantOnAnyClick(e) {
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }
 document.addEventListener('click', regrantOnAnyClick, true);
+// **Any click puts the export offer away, and the line that carried it with it.** The CRM panel's
+// rule, here for the same reason: the control exists in both products, so it must not outlive its
+// moment in one of them. Capture, so it runs before the control's own handler; everything inside
+// `#expopen` is excluded, or the offer would clear itself on the way to being pressed.
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  if (t && t.closest && t.closest('#expopen')) return;
+  if (!$('expopen').classList.contains('on')) return;
+  if ($('status').className) status('', '');
+  offerExportOpen(null);
+}, true);
 
 // resizable split - the CRM's, down to the stored height
 let dragY = false;

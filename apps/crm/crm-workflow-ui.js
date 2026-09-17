@@ -78,7 +78,7 @@ async function openWorkflow(e) {
   }
   let rule; try { rule = JSON.parse(await op.read(e.path)); } catch (err) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + err.message, 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
-  currentPath = e.path; navHere(e.name);
+  currentPath = e.path; navHere(e.name); clearItemStatus();
   selectRow(e.path);
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers

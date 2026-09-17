@@ -234,7 +234,7 @@ async function openBlueprint(e) {
   // either another blueprint being opened or the workspace changing under it. `previewCurrent`
   // answers both in one question, which is why it exists.
   const mine = ++previewLoad, op = beginWorkspaceOp();
-  currentPath = e.path; navHere(e.name);
+  currentPath = e.path; navHere(e.name); clearItemStatus();
   selectRow(e.path);
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last item's bar lingers
@@ -543,7 +543,7 @@ async function refreshSchedules() {
 }
 async function openSchedule(e) {
   previewLoad++;
-  currentPath = e.path; navHere(e.name);
+  currentPath = e.path; navHere(e.name); clearItemStatus();
   selectRow(e.path);
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
@@ -1722,7 +1722,7 @@ function mappingHtml(m) {
 const prettyTrigger = (t) => String(t || '').replace(/^\$\{!?/, '').replace(/\}$/, '') || 'the trigger';
 function openAction(a) {
   previewLoad++;
-  currentPath = a.path; navHere(a.name || a.id);
+  currentPath = a.path; navHere(a.name || a.id); clearItemStatus();
   selectRow(a.path);
   setPvName(a.name || a.id, 'actions/index.json');
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);

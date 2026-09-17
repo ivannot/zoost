@@ -43,4 +43,4 @@ c5d27cb218f749c5  apps/crm/graphview.js:1265: title="${why}" is not attribute-es
 b4e04e5a70731549  apps/crm/modules.js:343: title="${m.fieldCount}" is not attribute-escaped
 f8b01d6f38028773  apps/crm/modules.js:344: title="${m.layoutCount}" is not attribute-escaped
 44398a724542c765  apps/crm/options.js:1211: data-section="${key}" is not attribute-escaped
-0c9fff4336ecd938  apps/crm/preview-controller.js:535: class="${kind}" is not attribute-escaped
+0c9fff4336ecd938  apps/crm/preview-controller.js:549: class="${kind}" is not attribute-escaped

@@ -8,6 +8,19 @@ $('offsample').onclick = () => addSampleWorkspace();
 $('ws').onchange = onWs;
 $('wsdel').onclick = onWsdel;
 document.addEventListener('click', regrantOnAnyClick, true);
+// **Any click puts the export offer away, and the line that carried it with it.** Opening an item
+// does it through `clearItemStatus`, but a button does not - and the report was that after an export
+// «any click on an item or on any other control» should clear both. Capture, so it runs before the
+// control's own handler; everything inside `#expopen` is excluded, or the offer would clear itself
+// on the way to being pressed. Nothing else is touched: while the offer is up, the sentence on the
+// row is the export's own, because any other status write has already taken the offer away.
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  if (t && t.closest && t.closest('#expopen')) return;
+  if (!$('expopen').classList.contains('on')) return;
+  if ($('status').className) setStatus('', '');
+  offerExportOpen(null);
+}, true);
 $('opts').onclick = () => openSettings();
 $('help').href = DOCS_URL;
 // Registered here and not where it is written: `live-sync.js` is loaded four scripts earlier and

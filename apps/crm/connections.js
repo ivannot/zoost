@@ -89,7 +89,7 @@ async function refreshConnections() {
 }
 function openConnection(c) {
   previewLoad++;
-  currentPath = c.path; navHere(c.label || c.name);
+  currentPath = c.path; navHere(c.label || c.name); clearItemStatus();
   selectRow(c.path);
   setPvName(c.label || c.name, c.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers

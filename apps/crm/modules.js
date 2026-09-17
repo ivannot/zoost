@@ -665,7 +665,7 @@ async function openModule(path, layoutId) {
   const op = beginWorkspaceOp();
   if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) setStatus('File access denied - click Refresh.', 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
-  currentPath = path; navHere(); if ($('status').className) setStatus('', '');
+  currentPath = path; navHere(); clearItemStatus();
   selectRow(path);
   let m; try { m = JSON.parse(await op.read(path)); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
   if (!previewCurrent(mine, op)) return;

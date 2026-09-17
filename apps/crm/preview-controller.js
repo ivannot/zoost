@@ -5,6 +5,20 @@
  * remains the composition root that attaches controls after every script has loaded.
  */
 let currentPath = null;
+/** Opening an item clears what the row was saying, on every tab.
+ *
+ *  It was written inline in two of the six openers - Functions and Modules - and nowhere else, so
+ *  clicking a module made «106 modules in workspace.» disappear while clicking a workflow left the
+ *  equivalent line sitting there. Reported as exactly that asymmetry. One helper rather than a sixth
+ *  copy of the same clause, and the guard stays: only a line carrying a class is a message somebody
+ *  put there, and the neutral default is left alone.
+ *
+ *  It also takes the export offer with it, which is the other half of the same report: after an
+ *  export, a click on an item has to put both the line and its «Open» away. */
+function clearItemStatus() {
+  if ($('status').className) setStatus('', '');
+  offerExportOpen(null);
+}
 let previewLoad = 0;
 const previewCurrent = (mine, op) => mine === previewLoad && op.current();
 // ---------- preview ----------
@@ -160,7 +174,7 @@ async function openFile(path, line = null, byClick = false) {
   // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
   // something each caller decides - every arrival is a step, which is what made the old one useless
   // the moment the reader changed tab.
-  currentPath = path; navHere(path.split('/').pop()); if ($('status').className) setStatus('', '');
+  currentPath = path; navHere(path.split('/').pop()); clearItemStatus();
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Functions in Zoho \u2197'; $('pvfind').title = 'Open Zoho\u0027s own functions page. It no longer types this name into their search box: the newer functions interface is addressed by URL, and this product does not script somebody else\u0027s page.'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
