@@ -52,7 +52,14 @@ header>.hcol{max-width:1240px;margin:0 auto;padding:0 20px}
 header h1{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:10px}
 h1 .mark{width:24px;height:24px;flex:0 0 auto;border-radius:6px}.meta{color:var(--muted);font-size:13px;font-family:ui-monospace,monospace}
 .credit{margin-top:6px;color:#94a3b8;font-size:12px}.credit a{color:var(--accent)}
-#q{margin-top:10px;width:100%;max-width:520px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
+/* **A control is drawn where it works, and nowhere else.** This box filters the document by
+   hiding what does not match, and it is the one thing in a report that needs a script: the panel
+   opens a report as a "blob:" in the extension origin, where "script-src 'self'" forbids an inline
+   script, and a one-file report has nowhere else to put one. So there the box did nothing while its
+   own placeholder promised it would - which is worse than not offering it, and is why the landing
+   was rebuilt to need no script at all. It starts hidden and the script reveals it: no script, no
+   box, no promise. Opened from the folder, where the script runs, it is there as before. */
+#q{display:none;margin-top:10px;width:100%;max-width:520px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
 /* The scrollport spans the window so the scrollbar stays at its edge; the column is centred on
    the children instead, which keeps every chapter where it was without the builders knowing. */
 main{overflow-y:auto;padding:24px 20px 80px}
@@ -240,7 +247,7 @@ function reportHead(subject, metaLines, filterPlaceholder, made) {
     + `<div class="meta">exported ${new Date().toISOString().slice(0, 16).replace('T', ' ')} by `
     + `${escReport(made.name)} v${escReport(made.version)}</div>`
     + (filterPlaceholder
-      ? `<input id="q" placeholder="${escReportA(filterPlaceholder)}" oninput="filt()">`
+      ? `<input id="q" placeholder="${escReportA(filterPlaceholder)}">`
       : '')
     + `</div></header>`;
 }
@@ -300,6 +307,13 @@ function reportFoot(name, url) {
 // every SQL block standing - in the chapter that is the biggest and the one flagged sensitive.
 // A section is hidden with its heading now, so what stays on screen is what matched.
 const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').value.trim().toLowerCase();var els=document.querySelectorAll('main tbody tr, main li, main .item, main .hxrow, main section.qsec');for(var i=0;i<els.length;i++){var e=els[i];if(e.closest('.toc')){continue;}e.style.display=(!q||(e.textContent||'').toLowerCase().indexOf(q)>=0)?'':'none';}}"
+  // The box and its behaviour arrive together or not at all - the attribute that used to carry the
+  // handler was inline too, so a policy that blocks the script blocks it as well.
+  + "var q=document.getElementById('q');"
+  // A real value, not an empty one: `style.display=''` *removes* the inline declaration and hands the
+  // element back to the stylesheet, which is what hides it - so the box stayed hidden even where the
+  // script ran. Measured before this line was corrected: `scriptRan: true`, `boxVisible: false`.
+  + "if(q){q.style.display='inline-block';q.addEventListener('input',filt);}"
   ;
 ;
 
