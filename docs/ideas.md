@@ -49,17 +49,26 @@ id or `null`, and the `null` branch in `apps/crm/crm-context.js` is where the li
 URL is not missing, it is discarded one step earlier. Nothing new would be read, no host added, no
 re-authorisation.
 
-**Opening the other extension is a different question, and the answer is no.** `chrome.sidePanel.open()`
-acts on the calling extension only; nothing lets one extension open another's panel. What is available:
+**Opening the other extension: measured, on 18 September 2026, by loading two throwaway extensions
+in the author's own Chrome (151) and clicking the buttons himself.** A bench was needed because the
+question is entirely about *user activation*, and a simulated click is the variable under test; his
+click is the real thing. It carried its own positive control - a button that opens the bench's **own**
+side panel - because without it a failure at the cross-extension step could not be told from a bench
+that cannot open a panel at all. The control passed, so the two answers below mean what they say.
 
-- **a link to the other listing**, which needs no permission and no API at all. The ids are ours:
-  Zoost CRM `flffecjpbmjfonhoojaiemgjanbjkmpj`, Zoost Analytics `gmelnigbgklfjgceldicakkomhgplgge`.
-- **telling whether it is installed**, with `chrome.runtime.sendMessage(<id>, ...)`. That needs the
-  *receiving* extension to declare `externally_connectable.ids` - a manifest field, not a permission,
-  with no prompt for the user. Both extensions are ours, so each can name the other. If it answers it
-  is installed, and the message can say «open it from the toolbar» instead of «install it».
-- **not** `chrome.management`, which is a permission this project would have to justify for a cosmetic
-  gain. Out.
+  - **A message does reach the other extension.** With `externally_connectable.ids` naming the sender,
+    `chrome.runtime.sendMessage(<other id>, ...)` arrives and is answered. So «is the other one
+    installed?» is answerable: if it replies, it is there.
+  - **It cannot open its own side panel from that message.** Chrome refused it in as many words:
+    `sidePanel.open() may only be called in response to a user gesture`. The user's click lives in the
+    *calling* extension and does not cross the boundary. There is no API that opens another
+    extension's panel, and this is the evidence rather than the expectation.
+  - **Its page does open in an ordinary tab**, via `chrome-extension://<id>/<page>` with the receiver
+    listing it in `web_accessible_resources`. Worse than the side panel, and still one click.
+
+So the shape this can take is settled: **name the tab, then either «Zoost Analytics is installed -
+open it from the toolbar» or «install it», with a link.** Which of the two sentences is shown is a
+question the other extension answers about itself. What cannot be promised is opening it for them.
 
 **Cost:** the code is small and the permissions do not move. The one real cost is the listing: the
 published `tabs` justification opens with «tabs is used to identify the Zoho CRM tab», and recognising
