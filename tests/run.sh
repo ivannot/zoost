@@ -171,7 +171,15 @@ console.log(`  parse: ${n} shipped script(s), all of them valid classic JavaScri
 # `test(` in the files against 918 executed - so dropping an app or a fixture from one of those loops
 # reduces what runs without changing a line of source, which is exactly the shrinkage the floor is
 # named for. Consume the summary instead.
-node --test --test-reporter=spec tests/*.test.mjs | tee "$NODEOUT"
+# **How many test files run at once is a property of the machine, and the default is the core
+# count.** Node spawns one process per file up to that, each of them loading a test file that
+# can be twenty thousand lines: on a sixteen-core box this suite peaked hard enough that the
+# host supervisor killed the run eleven times in one afternoon, always inside `node --test`,
+# while the same cases at a concurrency of two finished every time. Measured rather than
+# guessed, which is why the number is here and not in a comment somewhere else. Four is a
+# compromise between that and the wall clock; `ZOOST_TEST_CONCURRENCY` raises it for anyone
+# with the memory to spare, and the case count below is what says nothing was skipped.
+node --test --test-concurrency="${ZOOST_TEST_CONCURRENCY:-4}" --test-reporter=spec tests/*.test.mjs | tee "$NODEOUT"
 # **Colour is decoration on the other side of the number, too.** With `FORCE_COLOR` set - which a
 # Claude Code update started doing for every shell it opens - node colours the summary even into a
 # pipe, and «ℹ tests 1117» arrives as `ESC[34mℹ tests 1117ESC[39m`. The pattern below is anchored on
