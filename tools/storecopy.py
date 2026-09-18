@@ -9,11 +9,13 @@ which is how a paste ends up with a stray line or half a paragraph.
     python3 tools/storecopy.py crm            # what the sections are, how long, and their limit
     python3 tools/storecopy.py crm 9          # print section 9
     python3 tools/storecopy.py crm 9 --copy   # and put it on the clipboard instead
+    python3 tools/storecopy.py all --files    # one file per box, named as the dashboard names it
 
 The numbering is the file's own (`## 9. Host permission justification`), not the dashboard's, because
 the dashboard numbers nothing and its order is not ours to guess. It also prints the character count
 against the limit written in the heading: a submission that stops at the form costs two or three days.
 """
+import datetime
 import hashlib
 import json
 import pathlib
@@ -21,7 +23,10 @@ import re
 import subprocess
 import sys
 
+import machine
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+APPS = ('crm', 'analytics')
 # The fenced body is named because a second reader depends on it: `auditcheck` reads absolute claims
 # out of `(?P<body>...)` and nothing else in these files, so the fence is the boundary between what is
 # published and what we write to ourselves. A name is additive - it is still group 4 to the code below.
@@ -32,7 +37,13 @@ SECTION = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?\n\n```\n(?P<body
 # Every numbered heading, whatever follows it. The denominator, so a section in a shape sections()
 # cannot read is a finding about the tool rather than a silence - `tests/tools_test.py` derives the
 # same set from the file by a cruder route and compares.
-HEADING = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?$', re.M)
+HEADING = re.compile(r'^## (\d+)\. ([^\n]+?)$', re.M)
+# The ceiling, wherever the heading states it. It used to be read only as ` (max N)` closing the
+# heading, which is how §2 - `## 2. Short description (manifest `description`, max 132)` - was printed
+# with no limit at all for as long as this tool has existed: the one field with five characters of
+# headroom, and the only one where a paste is refused by the form rather than by a reader. `sitecheck`
+# had it right (`max (\d+)\)` anywhere) and this file did not, which is two readings of one heading.
+CEILING = re.compile(r'max (\d+)\)')
 
 
 def clipboard() -> list:
@@ -69,8 +80,48 @@ def sections(app: str):
                 continue        # a heading with neither shape: the test derives it and reports it
             body = '\n'.join(l[2:] if l.startswith('> ') else l[1:]
                               for l in quote.group(1).strip().split('\n'))
-        out.append((int(h.group(1)), h.group(2), int(h.group(3)) if h.group(3) else None, body))
+        cap = CEILING.search(h.group(2))
+        # The ceiling is ours to state and not part of the box's name, so it leaves the name with it.
+        name = CEILING.sub(')', h.group(2)).replace(', )', ')').replace(' ()', '').rstrip()
+        out.append((int(h.group(1)), name, int(cap.group(1)) if cap else None, unwrap(body)))
     return out
+
+
+def unwrap(body: str) -> str:
+    """The text as the dashboard should receive it: no line break inside a sentence, none at the end.
+
+    The source wraps at about a hundred characters because a file nobody can read is a file nobody
+    corrects. The *field* has no such shape - it is one box, and a break in the middle of a sentence
+    arrives as a break in the middle of a sentence. Reported after a submission: «ci sono degli a
+    capo in mezzo alla frase ... l'ultimo carattere del testo non deve essere un a capo».
+
+    The rule is about the *reason* a line ended, not about line endings. A blank line is a paragraph
+    boundary; a line opening a list item, a table row, a quote or a heading starts a new one of those.
+    Every other line is the wrapping, and belongs to whatever it is continuing - which is why a
+    structure line **opens** a buffer here rather than being emitted on its own: a bullet long enough
+    to wrap would otherwise keep the break this function exists to remove, in the one shape nobody
+    would look at again. No section wraps a bullet today; the day one does, it is already handled.
+    """
+    out, buf = [], []
+
+    def flush():
+        if buf:
+            out.append(' '.join(x.strip() for x in buf))
+            buf.clear()
+
+    for line in body.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            flush()
+            out.append('')
+        elif stripped[0] in '-*|>#' or (stripped.split('.')[0].isdigit() and stripped[1:3] in ('. ', ') ')):
+            flush()
+            buf.append(line)
+        else:
+            buf.append(line)
+    flush()
+    # A trailing newline is not part of the text: it is how a file ends, and this is not a file.
+    return '\n'.join(out).rstrip('\n')
 
 
 def digests(app: str) -> dict:
@@ -122,10 +173,66 @@ def changed(app: str) -> int:
     return 0
 
 
+def box(name: str) -> str:
+    """The filename of a field, taken from the box the dashboard puts it in.
+
+    Never our section number. «Il numero progressivo e' fuorviante: voglio che le descrizioni siano
+    riferite al nome del box» - said after receiving ten files called `crm-1.txt` .. `crm-10.txt` and
+    a note explaining which number meant what, which is a translation step performed while looking at
+    a form. The heading already carries the name; the parenthetical after it is ours (`(max 1000)`,
+    `(manifest `description`)`) and is dropped.
+    """
+    return re.sub(r'[^a-z0-9]+', '-', name.split('(')[0].strip().lower()).strip('-')
+
+
+def write_files(dest: pathlib.Path, apps=APPS) -> int:
+    """One file per dashboard box, plus an index, in a folder he can open on the other machine.
+
+    This existed as a handful of shell commands typed once, which is the step this repository says
+    will be done wrong the second time. It is here so the names, the character counts and the list of
+    what actually moved are derived rather than retyped - and so the text lands in the file the way
+    the box wants it, which is what `unwrap` above is for.
+
+    Only what differs is written: the far side of that folder is watched by a sync client, and
+    rewriting twenty identical files on every run is twenty events about nothing.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    wrote, index = 0, []
+    for app in apps:
+        ver = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))['version']
+        moved = set(changed_sections(app))
+        index.append(f'\nZOOST {"CRM" if app == "crm" else "ANALYTICS"} {ver}')
+        for n, name, cap, body in sections(app):
+            f = dest / f'{app}-{box(name)}.txt'
+            # No trailing newline: the last character of the text is the last character of the text.
+            # A file conventionally ends in one, and that convention travels into the box.
+            if not f.exists() or f.read_text(encoding='utf-8') != body:
+                f.write_text(body, encoding='utf-8')
+                wrote += 1
+            size = f'{len(body)} of {cap}' if cap else f'{len(body)} chars'
+            index.append(f'  {f.name:<52} {name}  ({size})'
+                         + ('  <- CHANGED since it was last pasted' if str(n) in moved else ''))
+    readme = ('The Web Store fields, one file per box, named as the dashboard names them.\n'
+              f'Written {datetime.date.today().strftime("%-d %B %Y")} from store/<app>/store-listing.md.\n'
+              '\nEach file holds exactly what goes in the box: no line break inside a sentence, and\n'
+              'no newline at the end. Paste the whole file.\n'
+              + '\n'.join(index) + '\n')
+    (dest / 'READ-ME-FIRST.txt').write_text(readme, encoding='utf-8')
+    print(f'{dest}: {len(apps) * 10} box file(s), {wrote} written, the rest already in step')
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         sys.exit(__doc__.strip().splitlines()[0])
     app = sys.argv[1]
+    if '--files' in sys.argv:
+        rest = [a for a in sys.argv[2:] if not a.startswith('--')]
+        where = rest[0] if rest else machine.get('ZOOST_TEST_DIR')
+        if not where:
+            sys.exit('nowhere to write them: pass a folder, or set ZOOST_TEST_DIR in tools/machine.env')
+        return write_files(pathlib.Path(where) / 'store-texts',
+                           APPS if app == 'all' else (app,))
     if '--changed' in sys.argv:
         return changed(app)
     found = sections(app)

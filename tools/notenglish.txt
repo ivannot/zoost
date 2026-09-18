@@ -39,6 +39,8 @@ e93d2db5cc787f76  site/site.js: cantAsk: 'Non è stato possibile interrogare lo 
 c64a86d874d87a5b  site/site.js: storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google è programmato ogni mezz\'ora e di solito arriva ogni poche or
 fea522c04ade3dfc  tests/panel.test.mjs: // apart. Reported: «le funzioni non deluge hanno uno stato di pubblicazione che può essere bozza o
 03bc5bd90eed853d  tests/panel.test.mjs: // «Questo e' un ipertesto e tutto cio' che e' linkato deve essere navigabile.» The Reads, Writes and
+8e7c9385900ab84a  tests/tools_test.py: wrapping went straight into the Chrome Web Store boxes - «ci sono degli a capo in mezzo alla
+60880558715ce09f  tests/tools_test.py: frase ... l'ultimo carattere del testo non deve essere un a capo». Nothing was measuring it, so
 048b0386151a0f04  tests/tools_test.py: word; the Italian pages said eleven of them differently — «leggi ciò che viene spedito» against
 207ecf1079358a8c  tests/tools_test.py: «leggi quello che viene distribuito». Nothing wrong in either, and that is the point: a reader
 d0372c955dd3a4c1  tests/tools_test.py: '<p>Seconda affermazione condivisa, anche questa lunga abbastanza.</p>'
@@ -62,3 +64,5 @@ fe3c2eef462e1d35  tools/samplecheck.py: ROW = re.compile(r'<td data-label="(?:Wh
 cda47b8dc268550f  tools/sitecheck.py: Cross-language links that are deliberate — «la versione inglese di questa pagina», the switch in
 46d274eb652a77c6  tools/sitecheck.py: twice. The Italian pages said eleven of those twenty differently: «leggi ciò che viene spedito»
 86b84dc40e6fb8d0  tools/sitecheck.py: against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio manuale».
+abde465de97dc0dd  tools/storecopy.py: arrives as a break in the middle of a sentence. Reported after a submission: «ci sono degli a
+d95a549cda737936  tools/storecopy.py: capo in mezzo alla frase ... l'ultimo carattere del testo non deve essere un a capo».

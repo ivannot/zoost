@@ -132,6 +132,86 @@ class StoreCopyIsProse(unittest.TestCase):
         self.assertEqual(self._check('README.md', '```bash\ncd apps/crm && ./build.sh crm\n```\n'), [])
 
 
+class AFieldArrivesTheWayTheBoxWantsIt(unittest.TestCase):
+    """No line break inside a sentence, and no newline at the end. Reported after a submission.
+
+    The listing sources wrap at about a hundred characters so the file stays readable, and that
+    wrapping went straight into the Chrome Web Store boxes - «ci sono degli a capo in mezzo alla
+    frase ... l'ultimo carattere del testo non deve essere un a capo». Nothing was measuring it, so
+    the person pasting was the check.
+
+    The detector is proved in both directions on purpose: `test_the_detector_sees_a_wrapped_sentence`
+    feeds it the raw shape of the defect, because a sweep that cannot produce a positive is not
+    evidence - and this one runs over a file whose *current* content is clean, which is exactly where
+    a broken detector would sit unnoticed.
+    """
+
+    def setUp(self):
+        import storecopy
+        self.storecopy = storecopy
+
+    @staticmethod
+    def breaks_inside_a_sentence(body):
+        """Pairs of lines where the second continues the first - the shape of a hard-wrapped line."""
+        found, lines = [], body.split('\n')
+        for a, b in zip(lines, lines[1:]):
+            if not a.strip() or not b.strip():
+                continue
+            if a.rstrip()[-1:] not in '.:!?' and (b.lstrip()[:1].islower() or b.lstrip()[:1] in ',;'):
+                found.append((a[-40:], b[:40]))
+        return found
+
+    def test_the_detector_sees_a_wrapped_sentence(self):
+        raw = ('Zoost mirrors what you have built inside a Zoho product into plain local\n'
+               'files, then layers navigation on top of that mirror.')
+        self.assertTrue(self.breaks_inside_a_sentence(raw),
+                        'the detector must fire on the defect it exists for')
+
+    def test_no_shipped_field_breaks_a_sentence(self):
+        for app in ('crm', 'analytics'):
+            for n, name, _cap, body in self.storecopy.sections(app):
+                self.assertEqual(self.breaks_inside_a_sentence(body), [],
+                                 f'{app} section {n} ({name}) carries a break inside a sentence')
+
+    def test_no_shipped_field_ends_in_a_newline(self):
+        for app in ('crm', 'analytics'):
+            for n, _name, _cap, body in self.storecopy.sections(app):
+                self.assertTrue(body, f'{app} section {n} is empty')
+                self.assertNotEqual(body[-1], '\n', f'{app} section {n} ends in a newline')
+
+    def test_a_wrapped_bullet_is_joined_like_a_wrapped_paragraph(self):
+        # Latent rather than live: no section wraps a bullet today. The rule is about the reason a
+        # line ended, so the day one does, the break is already gone.
+        out = self.storecopy.unwrap('- a bullet the source wrapped\n  onto a second line\n- another')
+        self.assertEqual(out, '- a bullet the source wrapped onto a second line\n- another')
+
+    def test_structure_survives_the_joining(self):
+        body = ('First paragraph, wrapped\nover two lines.\n\n'
+                '| a | b |\n| c | d |\n\n- one\n- two')
+        self.assertEqual(self.storecopy.unwrap(body),
+                         'First paragraph, wrapped over two lines.\n\n'
+                         '| a | b |\n| c | d |\n\n- one\n- two')
+
+    def test_the_file_for_a_box_is_named_after_the_box(self):
+        # Never the section number: the dashboard numbers nothing, so a number is a translation step
+        # performed by whoever is looking at the form.
+        self.assertEqual(self.storecopy.box('scripting justification (max 1000)'),
+                         'scripting-justification')
+        self.assertEqual(self.storecopy.box('Short description (manifest `description`, max 132)'),
+                         'short-description')
+        self.assertEqual(self.storecopy.box('Data disclosures (dashboard checkboxes)'),
+                         'data-disclosures')
+
+    def test_the_written_files_carry_the_text_and_nothing_after_it(self):
+        d = Path(tempfile.mkdtemp())
+        self.storecopy.write_files(d / 'store-texts', ('crm',))
+        f = d / 'store-texts' / 'crm-scripting-justification.txt'
+        self.assertTrue(f.exists(), sorted(p.name for p in (d / 'store-texts').iterdir()))
+        text = f.read_text(encoding='utf-8')
+        self.assertNotEqual(text[-1], '\n', 'the last character of the file is the last of the text')
+        self.assertEqual(self.breaks_inside_a_sentence(text), [])
+
+
 class NameCheck(unittest.TestCase):
     def test_a_release_title_built_from_the_directory_name_is_reported(self):
         # GitHub published "Zoost for crm 1.9.0" because the workflow interpolated a directory name.
@@ -2471,7 +2551,10 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             # person has to exercise there for this release, derived on every sync. Nothing else, and
             # deliberately **not** tools/: a copy of handcheck.py over there would have no tags and no
             # apps/, so it would answer «nothing to run» and make an uncertified release look signed.
-            self.assertLessEqual(set(left), {'crm', 'analytics', 'store',
+            # The whitelist is the point: every name here is something a person on that machine
+            # opens. `store-texts` is the Web Store fields, one file per box, because the listing
+            # cannot be uploaded by any API and the form is on that machine and not this one.
+            self.assertLessEqual(set(left), {'crm', 'analytics', 'store', 'store-texts',
                                              'what-to-test-crm.txt', 'what-to-test-analytics.txt'},
                                  f'the mirror holds something nobody asked for: {left}')
             self.assertIn('crm', left, 'the mirror is missing an extension')

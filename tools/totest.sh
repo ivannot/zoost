@@ -198,6 +198,15 @@ for app in crm analytics; do
   python3 tools/handcheck.py "$app" --plan-file "$DEST/what-to-test-$app.txt" 2>/dev/null || true
 done
 
+# And the fourth: **the dashboard texts, one file per box**. The listing fields cannot be uploaded by
+# any API, so somebody opens the Chrome Web Store form and pastes them - on the machine with the
+# browser, which is not this one. They used to be produced by a handful of commands typed once, which
+# is the step this repository says will be done wrong the second time; `--files` derives the names
+# from the headings, the counts from the text and the "this one moved" marks from what was last
+# submitted. Only what differs is rewritten, so a run where nothing changed is silent on the far side
+# of the sync.
+python3 tools/storecopy.py all --files "$DEST" >/dev/null 2>&1 || true
+
 printf '%s\n' "$DEST/crm" "$DEST/analytics"
 if [ -n "$IMGS" ]; then
   echo "$DEST/store  ($IMGS image(s), the set to upload)"
