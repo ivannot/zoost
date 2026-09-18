@@ -1460,6 +1460,64 @@ test('analytics: a workspace it has just created is the one it selects', () => {
 // inside 4000 of DOM-bound code, and what has to hold is that they are there and that they are said
 // *before* the work, not after it.
 
+// A pull rebuilds the tab's list. The detail pane is written by the openers and by nothing else, so
+// an item left open went on showing the mirror as it was before the pull - reported from a real org,
+// where the pull brought down a kind of data that mirror had never carried and the new section
+// appeared only after selecting another module and coming back.
+//
+// Run rather than read: `redrawOpenItem` is three lines, and what has to hold is which of them fire.
+test('a redraw after a pull goes through the one map from a path to its opener', async () => {
+  // The status line is part of the subject: the openers clear it, and here it carries the result of
+  // the pull that has just finished. `navOpen` below does what a real opener does to it.
+  const el = { stxt: { textContent: 'All functions downloaded.' },
+               status: { className: 'ok' },
+               preview: { classList: { contains: () => ctx.shown } } };
+  const ctx = { shown: true, currentPath: 'modules/Deals.json', opened: [], said: [],
+                $: (id) => el[id],
+                setStatus: (text, kind) => { ctx.said.push([text, kind]); el.stxt.textContent = text; el.status.className = kind; },
+                navOpen: (p) => { ctx.opened.push(p); el.stxt.textContent = ''; el.status.className = ''; } };
+  const made = load([sliceFn('apps/crm/history-controller.js', 'redrawOpenItem')], ctx);
+
+  await made.redrawOpenItem();
+  assert.deepEqual(ctx.opened, ['modules/Deals.json'],
+                   'the item on screen was not redrawn after the mirror under it changed');
+  assert.equal(el.stxt.textContent, 'All functions downloaded.',
+               'the redraw took away the line the pull had just written');
+  assert.equal(el.status.className, 'ok', 'the redraw left the status line without its kind');
+
+  // And it writes only when it has to: a redraw that did not disturb the line has nothing to give
+  // back, and a needless setStatus is a second writer on the one element two things already share.
+  ctx.said = []; ctx.opened = [];
+  ctx.navOpen = (p) => { ctx.opened.push(p); };
+  await made.redrawOpenItem();
+  assert.deepEqual(ctx.said, [], 'the redraw rewrote a status line nothing had touched');
+
+  // Nothing open is not «redraw nothing in particular»: `navOpen(null)` would take the reader
+  // somewhere, and a closed pane must stay closed.
+  ctx.opened = []; ctx.currentPath = null;
+  await made.redrawOpenItem();
+  assert.deepEqual(ctx.opened, [], 'a pull opened an item nobody had open');
+
+  ctx.currentPath = 'modules/Deals.json'; ctx.shown = false;
+  await made.redrawOpenItem();
+  assert.deepEqual(ctx.opened, [], 'a pull reopened a pane the reader had closed');
+});
+
+// And both walks end in it. The call is inside a `try/catch` like the rebuild beside it - a pull must
+// not fail because a pane could not be redrawn - which is exactly the shape that would swallow a
+// wiring that is not there, so the wiring is derived here instead of hoped for.
+test('every CRM pull walk redraws the open item, and the panel wires it', () => {
+  for (const walk of ['pullEverything', 'pullCurrent']) {
+    const body = sliceFn('apps/crm/pull-controller.js', walk);
+    assert.ok(body.includes('options.redrawOpenItem()'),
+              `${walk} rebuilds the list and leaves the open item on the old mirror`);
+    assert.ok(body.indexOf('options.rebuildActive()') < body.indexOf('options.redrawOpenItem()'),
+              `${walk} redraws the item before the list it sits in`);
+  }
+  assert.match(crmPanel(), /^\s*redrawOpenItem,$/m,
+               'the CRM panel builds its pull controller without wiring the redraw');
+});
+
 test('the CRM names each area before it pulls it, and the position in the run', () => {
   const body = sliceFn('apps/crm/pull-controller.js', 'pullEverything');
   const say = body.indexOf('operation.say(`${options.tabLabel(area.id)}');

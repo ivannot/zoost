@@ -1090,6 +1090,7 @@ const pullController = createCrmBootstrap({
     schedules: pullSchedules, blueprints: pullBlueprints, actions: pullActions, connections: pullConnections, failures: pullFailures }),
   statusKind: () => $('status').className,
   rebuildActive,
+  redrawOpenItem,
   beginOperation: beginWorkspaceOp,
   plan: () => buildPullPlan(TABS, {
     recheck: wantsRecheck, forbidden: isForbidden, enabled: isPulled,

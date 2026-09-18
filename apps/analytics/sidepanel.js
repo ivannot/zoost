@@ -1405,6 +1405,13 @@ async function pullAll() {
       + (next.cleanupFailed ? ` · ${next.cleanupFailed} old SQL file(s) could not be removed - the next pull retries` : ''));
     $('status').className = (pullFailed.length || next.cleanupFailed) ? 'warn' : 'ok';
     render();
+    // And the pane that is open is redrawn, not left on what the mirror held before the pull.
+    // Reported on the CRM twin, where it is the same hole: the mirror gained a kind of data it had
+    // never carried, the list was rebuilt, and the detail went on showing the old one until the
+    // reader selected something else and came back. `render()` writes the list; the detail is
+    // written by `openDetail`, and nothing here was calling it. `pullOne` - three hundred lines
+    // below - has done exactly this since it was written, which is the sibling this was missing.
+    if (selectedId) await openDetail(selectedId);
     finishPullLifecycle(pullFailed.length > 0 || next.cleanupFailed > 0);
   } catch (e) {
     // Once the `writing` marker landed, the files on disk may be from two moments. Keeping the old

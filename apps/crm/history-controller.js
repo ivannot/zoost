@@ -77,6 +77,30 @@ async function navOpen(p) {
   return openFile(p);
 }
 
+/** Redraw whatever item is open, after the mirror underneath it has changed.
+ *
+ *  A pull rebuilds the tab's list; the detail pane is written by the openers and by nothing else, so
+ *  without this it keeps showing the mirror as it was before the pull. `navOpen` is the one map from
+ *  a path to the opener that owns it - seven kinds, seven shapes of argument - and reusing it is
+ *  what stops a second copy of that map drifting from this one. It costs the list rebuild `navOpen`
+ *  does on the way, which is a read of one index beside a pull that has just read the org.
+ *
+ *  `navHere` already refuses to record a step onto the item showing, so a redraw does not fill the
+ *  chain with the same name - the comment there was written for this exact case, before there was
+ *  anything doing it.
+ */
+async function redrawOpenItem() {
+  if (!currentPath || !$('preview').classList.contains('show')) return;
+  // **A redraw nobody asked for leaves the status line as it found it.** Every opener calls
+  // `clearItemStatus()`, which is right when a *person* opened the item - the line was about the
+  // thing they have just left - and wrong here: the line belongs to the pull that has just finished,
+  // and blanking «All functions downloaded.» would answer a finished operation with nothing at all.
+  const said = $('stxt').textContent;
+  const kind = $('status').className;
+  await navOpen(currentPath);
+  if (said !== $('stxt').textContent || kind !== $('status').className) setStatus(said, kind);
+}
+
 /** Go to step `i`. The position moves even when the item turns out not to be there any more - the
  *  same thing a browser does with a page that has since 404'd, and the status line says which it
  *  was. Pretending the step never existed would be worse: the chain is a record of where the reader

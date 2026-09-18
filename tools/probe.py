@@ -2265,6 +2265,34 @@ PULL_CRM = r"""
     if (document.getElementById('status').className === 'busy' || /\u2026$/.test($('stxt').textContent))
       say('the pull finished on a busy line: ' + $('stxt').textContent);
 
+    // **A pull redraws the item that is open, not only the list under it.** Reported from a real
+    // org: a module was open, the pull brought down a kind of data that mirror had never carried,
+    // and the new section showed up only after selecting another module and coming back. The list
+    // had visibly refreshed, which is what makes it worse than plain staleness - the pane the reader
+    // is looking at is the one thing that did not move.
+    //
+    // Driven through `pullCurrent()`, because `pullAll()` above is the functions *runner* and never
+    // passes through the controller that owns the end of a pull. What is observed is `previewLoad` -
+    // the panel's own count of draws started, incremented by every opener on entry - so the case
+    // asks «did an opener run again» rather than reading a pane's markup, and it holds for all seven
+    // kinds of item instead of the one this scenario happens to open.
+    const openPath = one.slice(base.length);
+    await openFile(openPath);
+    await until(() => currentPath === openPath, 'the function never opened');
+    const drawnBefore = previewLoad;
+    await pullCurrent();
+    await until(() => !pullBusy, 'the per-tab pull never finished', 20000);
+    await settle('the panel never settled after the per-tab pull');
+    if (previewLoad === drawnBefore)
+      say('the pull left the open item undrawn - the list refreshed under a pane showing the mirror as it was');
+    if (currentPath !== openPath) say('the redraw after a pull moved off the open item to ' + currentPath);
+    // And it says nothing of its own. Every opener clears the item status - right when a person
+    // opened the item, wrong for a redraw nobody asked for, because the line on screen is the
+    // pull's result. A blank line after a finished pull is the «is it still working?» this panel is
+    // not allowed to be, and it would have shipped invisibly: nothing else reads that line here.
+    if (!$('stxt').textContent.trim())
+      say('the redraw after the pull blanked the status line the pull had just written');
+
     // **And the same pull over a list Zoho stopped early.** This is the one branch that decides
     // whether the mirror may delete, and nothing had ever executed it: the stub answered «not
     // truncated» always. A truncated list must not prune, and the panel must say so rather than

@@ -25,6 +25,7 @@
  * runners: () => Record<string, (depth?: {full?: boolean}) => Promise<unknown>>,
  * statusKind: () => string,
  * rebuildActive: () => Promise<unknown>,
+ * redrawOpenItem: () => Promise<unknown>,
  * beginOperation: () => PullControllerOperation,
  * plan: () => PullControllerPlan,
  * answeredRechecks: (plan: PullControllerPlan) => string[],
@@ -141,6 +142,13 @@ function createCrmPullController(options) {
         try { await options.rebuildActive(); }
         catch (_) { options.setStatus('Pull complete.', 'ok'); }
       }
+      // **Outside that gate, and the gate is why this needed a second attempt.** The branch above
+      // runs only while the status is still `busy` - i.e. when the runner has *not* written its own
+      // ending - and the functions runner ends on «All functions downloaded.» in green. So the first
+      // version of this redraw sat where a finished functions pull never reaches, and the browser
+      // probe said so: «the pull left the open item undrawn». What decides whether the open item is
+      // stale is whether files were read, not which of the two wrote the closing line.
+      try { await options.redrawOpenItem(); } catch (_) {}
       if (lifecycle.snapshot().state === 'writing') phase('refreshing');
       finishPull(options.statusKind() === 'warn');
     } catch (error) {
@@ -175,6 +183,13 @@ function createCrmPullController(options) {
       if (lifecycle.snapshot().state === 'planning') phase('writing');
       operation.say('Rebuilding the list\u2026', 'busy');
       try { await options.rebuildActive(); } catch (_) {}
+      // The list is not the panel. `rebuildActive()` writes the tab's list and nothing else, so the
+      // item the reader has open goes on showing what the mirror held *before* the pull - and a pull
+      // is exactly when it stops being true. Reported from a real org: a module was open, the pull
+      // brought down a kind of data that mirror had never carried, and the new section appeared only
+      // after selecting another module and coming back. Worse than stale, because the detail pane is
+      // where the reader is looking and the list underneath it had visibly refreshed.
+      try { await options.redrawOpenItem(); } catch (_) {}
       if (lifecycle.snapshot().state === 'writing') phase('refreshing');
       options.renderTabs();
       const changed = options.consumePreferencesChanged();
