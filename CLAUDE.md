@@ -29,6 +29,7 @@ its file first.** A rule you did not read is a rule that gets broken and then re
 | [`docs/traps.md`](docs/traps.md) | when something does nothing and says nothing. Every entry in it failed silently once |
 | [`docs/naming.md`](docs/naming.md) | before writing anything a user or a reviewer can read: the product names, the site, the translations, and the checks that hold them |
 | [`docs/releases.md`](docs/releases.md) | when something in the chain misbehaves - Cloudflare, the Store API, the workflows, the attestations. The routine itself is below, in this file |
+| [`docs/ideas.md`](docs/ideas.md) | when something worth considering is raised and not decided - so it stops depending on somebody remembering it. Each entry carries its cost, because an idea whose price nobody has looked at cannot be compared with the work it would displace |
 
 **Before adding anything here, ask which of the two it is.** A rule that binds every change - a
 non-negotiable, a step of the definition of done, how to work with me - belongs in this file. A rule
