@@ -16146,8 +16146,14 @@ test('the report is one column from the head to the foot', () => {
   for (const app of ['crm', 'analytics']) {
     const css = read(`apps/${app}/reportshell.js`);
     const widths = {};
-    for (const sel of ['main', 'header>.hcol', 'footer>.fcol']) {
-      const m = css.match(new RegExp(sel.replace(/[.>]/g, (c) => '\\' + c) + '\\{([^}]*)\\}'));
+    // `main` is the scrollport now and spans the window so its scrollbar sits at the window's edge;
+    // the body's column moved onto its children in the same change. The property this case exists
+    // for is unchanged - head, body and foot line up - so what moved is where the number is read.
+    for (const sel of ['main>*', 'header>.hcol', 'footer>.fcol']) {
+      // Every metacharacter, not the two somebody needed that day: `main>*` escaped as `main>\*`
+      // only in `.` and `>` leaves the `*` a quantifier, so the pattern matched `main{...}` instead
+      // and the case reported that the column was missing when it had merely moved.
+      const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\>]/g, '\\$&') + '\\{([^}]*)\\}'));
       // If a rule has gone, this case is comparing fewer things than it claims to and says so.
       assert.ok(m, `${app}: no rule for \`${sel}\` in reportshell.js - either the frame changed or `
                    + 'this case is the broken one');
@@ -16165,29 +16171,37 @@ test('the report is one column from the head to the foot', () => {
 // ---------------------------------------------------------------------------------------------
 // A jump landed under the sticky header, so the reader arrived a few lines into the section.
 //
-// Both reports have a band that stays at the top of the window. Following an anchor puts its target
-// at the top of the *window*, which is behind that band - so the heading you asked for is hidden and
-// the section appears to start in the middle. Reported on both. `.item` carried a 120px
-// `scroll-margin-top` and nothing else carried any, so chapters and per-view anchors landed wrong.
+// **A jump in a report lands right without running any script of ours.** This began as the opposite
+// rule: the band was `position:sticky` over the content, so every anchor needed an offset equal to
+// the band's height - a constant in the stylesheet, a custom property the script measured at load,
+// at each click and on resize, and a correction applied after the jump. Three moving parts, and all
+// three were switched off in the one place a reader actually met it: the panel opens a report as a
+// `blob:` in the extension's own origin, where `script-src 'self'` forbids an inline script, and a
+// one-file report has nowhere else to put one. Measured on a real export served with that policy:
+// the script never ran, the offset fell back to its constant, and every title landed 78px behind
+// the band; served without the policy the same file landed correctly.
 //
-// A constant cannot be right: the two headers are different heights - one has a filter box and three
-// meta lines, the other three meta lines - and either gains a line the day somebody adds one. The
-// band measures itself at load and on resize and publishes the number as a custom property; the
-// stylesheet keeps a fallback for a reader with no script.
-test('every anchor target in a report clears the sticky header', () => {
+// So the band is a row of the page and `main` is its own scrollport: a fragment lands at the top of
+// `main`, which is below the band by construction. What is held here is that shape, because the
+// defect returns the moment any part of it is written back in terms of a script.
+test('a report lands its anchors without depending on a script', () => {
   for (const app of ['crm', 'analytics']) {
     const shell = read(`apps/${app}/reportshell.js`);
-    assert.match(shell, /\[id\]\{scroll-margin-top:calc\(var\(--stick/,
-                 `${app}: only some targets clear the band, so the rest land behind it`);
-    assert.match(shell, /--stick', *h\.offsetHeight/,
-                 `${app}: the band's height is written down instead of measured, and the two headers `
-                 + 'are not the same height');
-    assert.match(shell, /addEventListener\('resize',stick\)/,
-                 `${app}: the height is measured once, so a window narrow enough to wrap the header `
-                 + 'goes back to landing wrong');
-    // And the fallback, for a reader with scripting off: a target that clears nothing is worse than
-    // one that clears an approximation.
-    assert.match(shell, /var\(--stick, *\d+px\)/, `${app}: no fallback when the script does not run`);
+    assert.match(shell, /body\{[^}]*display:grid[^}]*grid-template-rows:auto 1fr/,
+                 `${app}: the page is not a band over a scrolling body, so the band overlays the content`);
+    assert.match(shell, /main\{overflow-y:auto/,
+                 `${app}: main is not the scrollport, so a jump lands against the window instead`);
+    assert.doesNotMatch(shell, /header\{[^}]*position:sticky/,
+                        `${app}: the band is sticky again, which puts every target behind it`);
+    assert.match(shell, /\[id\]\{scroll-margin-top:\d+px\}/,
+                 `${app}: the offset is not a plain number, so something has to compute it`);
+    assert.doesNotMatch(shell, /--stick/,
+                        `${app}: the landing depends on a measured property again - the reader whose `
+                        + 'window forbids inline script gets none of it');
+    assert.doesNotMatch(shell, /function (stick|land)\(/,
+                        `${app}: the script places the jump again instead of the stylesheet`);
+    // The one thing the script still does, and the one thing a policy can therefore take away.
+    assert.match(shell, /function filt\(/, `${app}: the live filter is gone`);
   }
 });
 

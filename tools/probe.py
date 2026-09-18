@@ -1182,17 +1182,16 @@ CRM = """
     //
     // **382 of the links in a Zoho CRM report point at a row, and a row carries no title of its own.**
     // A card names itself in its own head; a row is seven cells. Measured on a real org's report:
-    // jumping to the 254th of 369 action rows put the row 14px below the band with the column
-    // headers 19,563px above it and the chapter heading 19,680px above - so the reader arrived on
-    // cells with nothing naming them. Reported as «the links reach the paragraph, then you have to
-    // scroll up to see the title». The chapter table's head is sticky under the band now, and
-    // `land()` clears it.
+    // the row landed with its column headers 19,563px above it, so the reader arrived on cells with
+    // nothing naming them.
     //
-    // It is driven here and not in the Analytics scenario, which is where it was first written by
-    // mistake: that product puts its ids on headings, its report holds no anchored row at all, and
-    // the check sat there judging nothing while reporting a pass. The subject is the *written*
-    // report - the real builder's output, read back out of the shim - because a sticky head is
-    // layout and nothing that reads source has an opinion about it.
+    // The band is a row of the page now and `main` is the scrollport, so every offset is a plain
+    // number in the stylesheet and nothing measures anything at run time. That shape came from a
+    // reader whose window forbids inline script - the panel opens a report as a `blob:` in the
+    // extension's own origin, where `script-src 'self'` applies - and there every measured offset
+    // was simply absent. So what has to hold is arithmetic: the constant a row carries must cover
+    // the head it has to clear, and both numbers are read from the *rendered* report, because a
+    // head's height is a fact about fonts and padding rather than about the CSS text.
     {
       const written = fsx.dump().filter((x) => /export.*[.]html$/.test(x)).pop();
       if (!written) say('no HTML report was written, so the row landings cannot be judged');
@@ -1202,15 +1201,12 @@ CRM = """
       const d = fr.contentDocument;
       d.open(); d.write(fsx.read(written)); d.close();
       await settle();
-      const w = fr.contentWindow, H = d.querySelector('header');
-      if (!H) say('the written report has no sticky band');
-      // **Which landings are judged decides whether this can fail at all.** The first version took
-      // the first three row-links in document order, and in the sample those are all connection rows
-      // at depth 0, 1 and 3 of a six-row table: two of the three pass with the sticky rule deleted,
-      // because a table's first rows sit under their own head anyway. Measured by a review that
-      // deleted the rule and watched one finding appear where three landings had been judged. So the
-      // deepest anchored row of each anchored table is taken instead - the row where a head that
-      // does not follow is unmistakable - and the counts still say whether anything was judged.
+      const scrollport = d.querySelector('main');
+      if (!scrollport || getComputedStyle(scrollport).overflowY !== 'auto')
+        say('main is not the scrollport of this report, so a jump lands against the window and every '
+            + 'target goes behind the band');
+      if (getComputedStyle(d.querySelector('header')).position === 'sticky')
+        say('the band is sticky over the content again, which is what put every target behind it');
       const rowAnchors = d.querySelectorAll('tr[id]').length;
       let rowLinks = 0;
       const deepest = new Map();
@@ -1224,45 +1220,27 @@ CRM = """
         const held = deepest.get(tbl);
         if (!held || depth > held.depth) deepest.set(tbl, { ra, rt, depth });
       }
+      // The deepest anchored row of each table, because a table's first rows sit under their own
+      // head whatever the rules say - judging those is how an earlier version of this check passed
+      // with the head rule deleted.
       const judged = [...deepest.values()].sort((a, b) => b.depth - a.depth).slice(0, 3);
       let rowJumps = 0;
       for (const { ra, rt } of judged) {
-        w.scrollTo(0, 0); w.location.hash = ''; ra.click(); await settle();
-        rowJumps += 1;
-        const band = H.getBoundingClientRect().bottom;
         const tbl = rt.closest('table'), thd = tbl && tbl.querySelector('thead');
         if (!thd) { say(`${ra.getAttribute('href')} lands on a row in a table with no head`); continue; }
-        const head = thd.getBoundingClientRect();
-        if (head.bottom <= band + 1)
+        const margin = parseFloat(getComputedStyle(rt).scrollMarginTop) || 0;
+        const headH = thd.getBoundingClientRect().height;
+        if (margin < headH + 13)
+          say(`a row carries ${Math.round(margin)}px of scroll-margin against a ${Math.round(headH)}px `
+              + 'head: it lands behind its own column names, and no script is coming to fix it');
+        ra.click(); await settle();
+        rowJumps += 1;
+        const head = thd.getBoundingClientRect(), top = scrollport.getBoundingClientRect().top;
+        if (head.bottom <= top + 1)
           say(`landing on ${ra.getAttribute('href')} left the table's column names off screen `
-              + `(head bottom ${Math.round(head.bottom)} against a band ending at ${Math.round(band)})`
-              + ' - a row carries no title of its own, so its head has to come with it');
-        // A tolerance of a pixel, not zero: a landing on a table's first row touches its own head
-        // exactly, and a sub-pixel rounding there would report a finding about a correct product.
-        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, band));
+              + `(head bottom ${Math.round(head.bottom)} against a scrollport starting at ${Math.round(top)})`);
+        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, top));
         if (clear < -1) say(`landing on ${ra.getAttribute('href')} left the row ${-clear}px under what covers it`);
-      }
-      // **And the half of the fix the geometry above cannot reach.** `tr[id]` carries a constant 40px
-      // of scroll-margin, which clears any head up to 26px - and every head in both shipped reports
-      // is 24px, so `land()`'s measured correction never fires and deleting it leaves the landings
-      // above intact. Measured by a review that deleted exactly that line and saw zero findings.
-      // A head taller than the constant is the state only the measurement can satisfy, so it is
-      // *made* here rather than waited for: a second header row, then the same jump again.
-      if (judged.length) {
-        const { ra, rt } = judged[0];
-        const thd = rt.closest('table').querySelector('thead');
-        thd.insertAdjacentHTML('beforeend', '<tr><th style="height:40px">taller than the constant</th></tr>');
-        void thd.offsetHeight;
-        w.scrollTo(0, 0); w.location.hash = ''; w.location.hash = ra.getAttribute('href');
-        await settle();
-        const band = H.getBoundingClientRect().bottom, head = thd.getBoundingClientRect();
-        if (Math.round(head.height) <= 26)
-          say(`the grown head is ${Math.round(head.height)}px, which the constant covers on its own - `
-              + 'this case cannot tell whether the measured correction runs');
-        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, band));
-        if (clear < -1)
-          say(`with a ${Math.round(head.height)}px head, landing on ${ra.getAttribute('href')} left the row `
-              + `${-clear}px under it - the clearance is a constant, and nothing measures the head at the jump`);
       }
       if (!rowAnchors || !rowJumps)
         say(`no row landing was judged - ${rowAnchors} anchored row(s), ${rowLinks} link(s) at one, `
@@ -1591,23 +1569,17 @@ AN = """
       if (dead.length)
         say(dead.length + ' link(s) point at nothing with scope ' + JSON.stringify(sc) + ', e.g. #' + dead[0]);
     }
-    // **A jump lands the target below the band, whatever the band is doing.** Reported: clicking an
-    // internal link arrived on a row half hidden under the sticky header. The offset comes from
-    // `--stick`, which was measured at load and on resize only - so a band that grew for any other
-    // reason (zoom, text wrapping, a line added) left the jump using the old number. Reproduced by
-    // growing the band without a resize: 192px of band against a stale 151px, and the target 27px
-    // *under* it. It is re-measured on the click now, in the capture phase, before the scroll.
+    // **A jump lands its target inside the scrollport, which is what puts it below the band.**
+    // Reported: clicking an internal link arrived on a row half hidden under the band. The offset
+    // used to be a custom property the report measured at load, on resize and at every click, plus a
+    // correction after the jump - three moving parts, and all three absent for the reader who met
+    // the defect, because the panel opens a report as a `blob:` in the extension's own origin where
+    // an inline script is forbidden. The band is a row of the page now and `main` scrolls, so a
+    // fragment lands below the band by construction.
     //
-    // **What this step is and is not.** It renders a real report in an iframe and asserts a jump
-    // never lands its target under the band - a guard on a property that must hold, and it would
-    // catch a regression that made a landing negative for any reason. It is *not* where the fix was
-    // proved: measured here, `--stick` inside the iframe always equals the band (213 against 213),
-    // because the frame is sized after it is appended and the page re-measures - so the stale offset
-    // the defect needs never forms, and this assertion passes with the fix and without it.
-    //
-    // The fix was measured in a standalone page driven by the same Chrome: a band grown to 192px
-    // against a stale 151px lands the target 27px *under*, and the correction puts it 14px clear.
-    // That is the evidence; this is a net for the property, and saying which is which is the point.
+    // What this is and is not: it renders a real report and asserts that property. It is not where
+    // the shape was proved - that was measured on a real export served with the extension's own
+    // policy, script blocked, before and after the change.
     {
       const fr = document.createElement('iframe');
       fr.style.cssText = 'width:1240px;height:900px;border:0';
@@ -1615,77 +1587,25 @@ AN = """
       const d = fr.contentDocument;
       d.open(); d.write(await buildExportHtml(Object.fromEntries(SCOPE_KEYS.map((k) => [k, true])))); d.close();
       await settle();
-      const w = fr.contentWindow, H = d.querySelector('header');
+      const w = fr.contentWindow, scroller = d.querySelector('main');
+      if (!scroller || getComputedStyle(scroller).overflowY !== 'auto')
+        say('main is not the scrollport of this report, so every jump lands against the window');
+      if (getComputedStyle(d.querySelector('header')).position === 'sticky')
+        say('the band is sticky over the content again, which is what put every target behind it');
       const a = [...d.querySelectorAll('a[href^="#"]')].find((x) => d.getElementById(x.getAttribute('href').slice(1)));
-      if (!H || !a) say('the report has no sticky band or no internal link, so the jump cannot be measured');
-      // Grow the band without touching the window: this is the state the reader hits by zooming.
-      H.insertAdjacentHTML('beforeend', '<div class="meta">a</div><div class="meta">b</div>');
-      void H.offsetHeight;
-      a.click();
+      if (!a) say('the report has no internal link, so the jump cannot be measured');
       const target = d.getElementById(a.getAttribute('href').slice(1));
-      const gap = Math.round(target.getBoundingClientRect().top - H.getBoundingClientRect().bottom);
-      if (gap < 0)
-        say(`a jump left its target ${-gap}px under the sticky band - the offset is measured before `
-            + 'the band is, so it is the old one');
-      // **And a jump that happens without a click.** The report opens in a window of its own, and a
-      // hash can be followed with no click inside that document at all - from the address, from the
-      // history, from a link that arrives with the window. Re-measuring the band on the click cannot
-      // help there, which is why the same file behaved one way opened from the panel and another way
-      // opened from the folder.
-      //
-      // Measured in the standalone page, not here: with the correction the target lands 14px clear,
-      // without it 27px under. Here it passes either way, for the reason given above the frame - so
-      // this line guards the property and does not prove the fix.
-      w.scrollTo(0, 0);
+      a.click(); await settle();
+      const gap = Math.round(target.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
+      if (gap < -1) say(`a jump left its target ${-gap}px above the top of the scrollport`);
+      // And a jump nobody clicked: from the address, the history, or a link that arrives with the
+      // window. Nothing re-measures anything now, so it must hold identically.
+      scroller.scrollTo(0, 0);
       w.location.hash = '';
       w.location.hash = a.getAttribute('href');
       await settle();
-      const g2 = Math.round(target.getBoundingClientRect().top - H.getBoundingClientRect().bottom);
-      if (g2 < 0)
-        say(`a jump made without a click left its target ${-g2}px under the band - nothing corrects `
-            + 'the landing when no click was there to re-measure on');
-      // **And a row brings its column names with it.** 382 links in a Zoho CRM report point at a `<tr>`
-      // rather than at a card: a card carries its own title, a row carries nothing, and landing on
-      // the 254th of 369 action rows put the reader on seven cells whose headers were 19,563px above
-      // - reported as «the link reaches the paragraph, then you have to scroll up for the title».
-      // The chapter table's head is sticky under the band and the landing clears it, so what is
-      // asserted here is what the reader must end up with: the head on screen, the row below it.
-      // Driven on the real builder's output, because a sticky head is layout and nothing that reads
-      // source has an opinion about it.
-      //
-      // **The first version of this check asked whether the head was sticky before judging the
-      // landing, and that made it skip every row precisely when the rule was missing** - which is
-      // the state it exists to catch. Removing the rule from both shells left it green. So nothing
-      // here asks about the mechanism: it asks what the reader must end up with, and a run that
-      // judged no row at all is a finding carrying its own counts, because «green» over an empty
-      // loop is the failure mode this repository keeps meeting.
-      let rowAnchors = 0, rowLinks = 0, rowJumps = 0;
-      for (const anchored of d.querySelectorAll('tr[id]')) { void anchored; rowAnchors += 1; }
-      for (const ra of [...d.querySelectorAll('a[href^="#"]')]) {
-        const rt = d.getElementById(ra.getAttribute('href').slice(1));
-        if (!rt || rt.tagName !== 'TR') continue;
-        rowLinks += 1;
-        if (rowJumps >= 3) continue;
-        const tbl = rt.closest('table'), thd = tbl && tbl.querySelector('thead');
-        w.scrollTo(0, 0); w.location.hash = ''; ra.click(); await settle();
-        rowJumps += 1;
-        const bandBottom = H.getBoundingClientRect().bottom;
-        if (!thd) { say(`${ra.getAttribute('href')} lands on a row in a table with no head at all`); continue; }
-        const head = thd.getBoundingClientRect();
-        if (head.bottom <= bandBottom + 1)
-          say(`landing on ${ra.getAttribute('href')} left the table's column names off screen `
-              + `(head bottom ${Math.round(head.bottom)} against a band ending at ${Math.round(bandBottom)}) `
-              + '- a row carries no title of its own, so its head has to come with it');
-        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, bandBottom));
-        if (clear < 0) say(`landing on ${ra.getAttribute('href')} left the row ${-clear}px under what covers it`);
-      }
-      // **This product's report has no row anchors and that is not a skip to hide.** Analytics puts
-      // its ids on headings; the rows it writes carry none, so there is nothing here to land on and
-      // the assertion above has no subject. What must never happen is the *other* state - rows exist
-      // and none was judged - so that is the finding, with the counts that distinguish the two.
-      if (rowAnchors && !rowJumps)
-        say(`no row landing was judged - ${rowAnchors} row(s) carry an anchor and ${rowLinks} link(s) `
-            + 'point at one, so this check measured nothing and cannot be read as a pass');
+      const g2 = Math.round(target.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
+      if (g2 < -1) say(`a jump made without a click left its target ${-g2}px above the scrollport`);
       fr.remove();
       void w;
     }

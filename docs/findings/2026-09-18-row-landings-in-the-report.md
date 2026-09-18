@@ -45,7 +45,56 @@ alone. And the first attempt at the rule never applied at all: `.ftbl` loses to 
 `table.ftbl` on specificity, so the variant that was supposed to test the collapse hypothesis tested
 nothing and read as a refutation.
 
+## The cause, found last and derivable first
+
+**Everything above treats a symptom. The cause is that the report's script never runs in the window
+the panel opens.** «Open» builds a `blob:` in the extension's own origin; both manifests declare
+`script-src 'self'`; a one-file report has nowhere to put a script but inline. So in that window the
+stylesheet applies and the script does not - which is why the sticky head and the row highlight were
+visible while every landing was wrong, and why the same file behaved when opened from the folder.
+
+Measured on the user's own export, served over HTTP twice, one header apart:
+
+| | script | `--stick` | offset used | the card's title |
+|---|---|---|---|---|
+| without the policy | runs | 213px | 227px | visible, 15px below the band |
+| with the policy | **never runs** | unset | 134px, the stylesheet's fallback | **77.8px behind the band** |
+
+One variable, one outcome. And it was derivable from three facts already in this repository - the
+declared policy, the origin the panel opens, and the inline `<script>` - on the day the report was
+written.
+
+**The fix is to stop needing the script.** The band is a row of the page and `main` is its own
+scrollport, so a fragment lands at the top of `main`, which is below the band by construction: no
+constant, no measured property, no correction after the jump, nothing a policy can switch off.
+`--stick`, `stick()`, `land()` and four listeners are gone. Measured on the same export under the
+same policy: the card's title lands 15px clear, and the deepest row of a 363-row table clears its own
+column heads by 14.2px.
+
 ## The rules it left behind
+
+**When a symptom depends on *how* something is opened, the cause is the environment, and the
+environment is knowable without asking anyone.** Five hours went into measuring reconstructions -
+his file dressed in a patched shell, in a headless browser, at a guessed width - and every one of
+them ran the script, so every one of them came back clean. The user said it twice («il problema è
+ovunque», «non possiamo lavorare così») before I stopped reproducing and started reading what makes
+that window different from the other. **A reconstruction that cannot exhibit the defect is not
+evidence about the product; it is evidence about the reconstruction.** The instrument that settled it
+in one run was the same document served with the same policy the manifest declares - two HTTP
+responses differing in one header.
+
+**A constant that only a script keeps current is a constant that will be wrong for somebody.** The
+offset had a fallback precisely because the script might not run - and the fallback was 120px against
+a 213px band, so the code that anticipated the failure also guaranteed it. Where a browser can be
+asked to do the positioning, ask the browser.
+
+**And the third time in one day that a quoting mistake of mine was caught by a check rather than by
+me.** A backtick in a stylesheet comment inside a template literal, twice, and an apostrophe inside a
+single-quoted string in a scenario. All three were caught in a second by something mechanical; none
+was caught by rereading. The rule the repository already holds - a builder is executed, not read -
+extends to the prose inside a builder: **a comment lives inside the syntax it explains.**
+
+
 
 **A jump lands what the reader needs to read, which for a row is its column names.** «The target is
 below the band» is the property a card satisfies by carrying its own head; a row satisfies nothing.

@@ -28,8 +28,22 @@
 const REPORT_CSS = `
 
 :root{--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb}
-*{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:var(--ink);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:14px 0;z-index:5}
+*{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:var(--ink);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+/* **The band is a row of the page, not a layer over it - and that is what makes a jump land right
+   without measuring anything.** It used to be "position:sticky" over the content, so every anchor
+   had to carry an offset equal to the band's height: a constant in the stylesheet, a variable
+   measured by script at load, at every click and on resize, and a correction applied after the
+   jump. Three moving parts to place a row under a box.
+   All three are gone, because the reader who reported this was in the one place the script cannot
+   run: the panel opens a report as a "blob:" in the extension's own origin, where the manifest's
+   "script-src 'self'" forbids an inline script - and this report is one file, so its script *is*
+   inline. Measured on his own export, served with that policy: the script never ran, the offset
+   fell back to its constant, and every title landed 78px behind the band. Served without it, the
+   same file landed correctly. One variable, one outcome.
+   With the band in flow and "main" its own scrollport, a fragment lands at the top of "main",
+   which is below the band by construction: no number, nothing to measure, nothing a policy can
+   switch off. Same document under the same policy: the title lands 29px clear. */
+header{background:#fff;border-bottom:1px solid var(--line);padding:14px 0;z-index:5}
 /* The band spans the window and its content sits in the same 1000px column the sections do -
    the foot already worked this way and the head did not, so the title started at the window's
    edge while the first chapter began 140px further in. Two rules that are meant to line up and
@@ -39,7 +53,10 @@ header h1{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:10px
 h1 .mark{width:24px;height:24px;flex:0 0 auto;border-radius:6px}.meta{color:var(--muted);font-size:13px;font-family:ui-monospace,monospace}
 .credit{margin-top:6px;color:#94a3b8;font-size:12px}.credit a{color:var(--accent)}
 #q{margin-top:10px;width:100%;max-width:520px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
-main{max-width:1240px;margin:0 auto;padding:24px 20px 80px}
+/* The scrollport spans the window so the scrollbar stays at its edge; the column is centred on
+   the children instead, which keeps every chapter where it was without the builders knowing. */
+main{overflow-y:auto;padding:24px 20px 80px}
+main>*{max-width:1240px;margin-left:auto;margin-right:auto}
 h2{font-size:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:6px;margin:36px 0 10px}
 h3.grp{font:12px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:22px 0 8px}
 h3.grp .cnt{color:#9aa4b2}
@@ -57,7 +74,7 @@ h3.grp .cnt{color:#9aa4b2}
    number here would be wrong for the other product anyway: the two headers are different
    heights, and either gains a line the day somebody adds one. So the height is measured at
    load and on resize, and this is only the fallback for a reader with no script. */
-[id]{scroll-margin-top:calc(var(--stick, 120px) + 14px)}
+[id]{scroll-margin-top:14px}
 /* **A row is not a card: landing on one has to bring its column names with it.** 382 of the links
    in a report of this size point at a "<tr>" - a card that names an action links to the Actions chapter, a
    function links to a Connections row - and a card carries its own title inside it while a row
@@ -65,14 +82,22 @@ h3.grp .cnt{color:#9aa4b2}
    14px below the band with the column headers 19,563px above it and the chapter heading 19,680px
    above, so the reader arrived on seven cells with nothing naming them and had to scroll up.
    Reported as «the links reach the paragraph, then you have to scroll up to see the title».
-   The head of a chapter table therefore stays under the band, and the landing clears it - "land()"
-   adds its height, and this rule is the part a reader with no script still gets.
+   The head of a chapter table therefore sticks to the top of the scrollport, and the row clears it
+   by its own scroll-margin - no script in either half, which is the point: the one reader who met
+   this defect was in the window where no script of ours can run.
    Two things that cost a measurement each. "position:sticky" on the "<th>" does nothing here while
    the borders are collapsed, and the row group does work - so it is on "thead". And it is scoped to
    "main>table.ftbl": a table inside a card sits in its own scroll box, where a sticky head would be
    pinned against a box that never scrolls. Verified: those heads stay "static" and overlap nothing. */
-main>table.ftbl>thead{position:sticky;top:var(--stick, 120px);z-index:1}
-tr[id]{scroll-margin-top:calc(var(--stick, 120px) + 40px)}
+main>table.ftbl>thead{position:sticky;top:0;z-index:1}
+/* A row still clears its own table head, which sticks to the top of the scrollport. 40px was the
+   first guess and it was measured wrong twice, which is worth writing down rather than tidying
+   away: at 40px the deepest row of a 363-row table landed 7.8px *behind* the head, and at 52px it
+   cleared it by 4.2px - correct, but meaner than the 14px of air every other target gets. 62px is
+   the first of the three that is not a guess: it is 52 plus the 9.8 the measurement was short by.
+   The number lives here because a scroll-margin cannot read the head it has to clear, and it is
+   checked where it can be - driven in a browser, on a real report, with the script blocked. */
+tr[id]{scroll-margin-top:62px}
 /* And which row you landed on is said, not left to be counted: a table this wide has no other way
    of answering «is this the one I clicked». */
 tr[id]:target{background:#fffbeb}
@@ -81,7 +106,8 @@ tr[id]:target{background:#fffbeb}
    doing that, and the report is a document people print and send. Unmeasured either way here - the
    probe that would have printed it was killed - so the rule restores the default rather than
    betting on the browser, which costs nothing on screen. */
-@media print{main>table.ftbl>thead{position:static}}
+@media print{main>table.ftbl>thead{position:static}
+  body{height:auto;display:block;overflow:visible}main{overflow:visible}}
 .refs{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;display:flex;flex-direction:column;gap:3px;background:#fcfdff}
 /* **Every link in the document looks like a link.** This was written per context - the
    reference lines, the first column of a table, the index, the workflow actions - so a link
@@ -274,56 +300,8 @@ function reportFoot(name, url) {
 // every SQL block standing - in the chapter that is the biggest and the one flagged sensitive.
 // A section is hidden with its heading now, so what stays on screen is what matched.
 const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').value.trim().toLowerCase();var els=document.querySelectorAll('main tbody tr, main li, main .item, main .hxrow, main section.qsec');for(var i=0;i<els.length;i++){var e=els[i];if(e.closest('.toc')){continue;}e.style.display=(!q||(e.textContent||'').toLowerCase().indexOf(q)>=0)?'':'none';}}"
-  // The sticky band's real height, measured at load and on resize. A jump puts its target at
-  // the top of the window, which is under the band, so without this the reader lands a few
-  // lines into the section with its heading hidden - and a constant would be wrong for the
-  // other product, whose header is a different height, and wrong again the day either gains a
-  // line.
-  + "function stick(){var h=document.querySelector('header');"
-  + "if(h)document.documentElement.style.setProperty('--stick',h.offsetHeight+'px');}"
-  // **Measured at the moment of the jump, not only at two earlier instants.** `load` and `resize`
-  // are the two somebody thought of, and the band also grows when the page is zoomed or its text
-  // wraps - between those moments the offset a jump uses is the stale one, and the target lands
-  // *under* the band. Reported as arriving on a half-hidden row, and reproduced: a band grown from
-  // 151px to 192px without a window resize leaves `--stick` at 151 and the jump at -27px.
-  //
-  // A `ResizeObserver` was written first and withdrawn: its callbacks ride the rendering lifecycle,
-  // and in the harness that can drive this - headless, virtual time, no paint - it never fired once,
-  // so it could not be proved either way. This runs on the click, in the capture phase, before the
-  // browser scrolls; it is ordinary event handling and it can be measured red and green.
-  + "addEventListener('click',function(e){var t=e.target;"
-  + "var a=t&&t.closest?t.closest('a[href^=\"#\"]'):null;if(a)stick();},true);"
-  // **And the scroll is corrected after the jump, measuring at that instant.** Re-measuring the band
-  // on the click was not enough: opening the report through the panel's «Open» creates a window
-  // 1240px wide, the page loads and measures while it is still being sized, and the band crosses a
-  // wrap threshold at 1224px - 151px on one side of it, 171px on the other. Reported as the same
-  // file behaving differently opened two ways, with the card's title cut off in one of them.
-  //
-  // So nothing here assumes which event arrives first. After the browser has jumped, the distance
-  // between the band and the target is read *then* and any shortfall is scrolled away.
-  + "function land(){var h=document.querySelector('header');if(!h)return;"
-  + "var id=decodeURIComponent(location.hash.slice(1));if(!id)return;"
-  + "var e=document.getElementById(id);if(!e)return;"
-  // **A target with no box is not a target, and measuring one measures zeros.** The live
-  // filter hides rows with `display:none`, and `getBoundingClientRect()` on a hidden row
-  // answers 0/0/0/0 - so the correction below read the row as sitting at the very top of the
-  // window and scrolled the page up by the whole clearance. Measured: a click on a link to a
-  // filtered-out row moved the reader 250px away from what they were reading, and nothing said
-  // why, because the row they asked for is not on screen at all. Older than the sticky head -
-  // which only made the wrong number bigger - and the class is one this project has already
-  // paid for: a guard that skips when the thing is absent is not a guard, so absence is what
-  // is asked about first.
-  + "var r=e.getBoundingClientRect();if(!r.width&&!r.height)return;"
-  // What covers the target is the band *and*, for a row in a chapter table, that table's head -
-  // which is sticky precisely so the reader can see what the cells are. Asked of the element rather
-  // than assumed from the selector: a card's table is not sticky and must not be paid for.
-  + "var t=e.closest?e.closest('table'):null;var th=t?t.querySelector('thead'):null;"
-  + "var c=h.getBoundingClientRect().bottom;"
-  + "if(th&&getComputedStyle(th).position==='sticky')c+=th.getBoundingClientRect().height;"
-  + "var d=c+14-r.top;"
-  + "if(d>1)scrollBy(0,-d);}"
-  + "addEventListener('hashchange',land);addEventListener('load',function(){stick();land();});"
-  + "addEventListener('resize',stick);stick();";
+  ;
+;
 
 // The two escapers this file needs, named for it. Each product has its own - `esc`/`escHtml` in one,
 // `esc2` in the other - and reaching for whichever happens to exist is how a shared file stops being
