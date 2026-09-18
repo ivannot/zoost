@@ -1506,9 +1506,16 @@ AN = """
     // growing the band without a resize: 192px of band against a stale 151px, and the target 27px
     // *under* it. It is re-measured on the click now, in the capture phase, before the scroll.
     //
-    // Driven on a real report in an iframe, because nothing that reads source has an opinion about
-    // where a box lands, and the earlier attempt at this - a `ResizeObserver` - could not be proved
-    // either way here: its callbacks ride the rendering lifecycle and never fired once.
+    // **What this step is and is not.** It renders a real report in an iframe and asserts a jump
+    // never lands its target under the band - a guard on a property that must hold, and it would
+    // catch a regression that made a landing negative for any reason. It is *not* where the fix was
+    // proved: measured here, `--stick` inside the iframe always equals the band (213 against 213),
+    // because the frame is sized after it is appended and the page re-measures - so the stale offset
+    // the defect needs never forms, and this assertion passes with the fix and without it.
+    //
+    // The fix was measured in a standalone page driven by the same Chrome: a band grown to 192px
+    // against a stale 151px lands the target 27px *under*, and the correction puts it 14px clear.
+    // That is the evidence; this is a net for the property, and saying which is which is the point.
     {
       const fr = document.createElement('iframe');
       fr.style.cssText = 'width:1240px;height:900px;border:0';
@@ -1528,6 +1535,23 @@ AN = """
       if (gap < 0)
         say(`a jump left its target ${-gap}px under the sticky band - the offset is measured before `
             + 'the band is, so it is the old one');
+      // **And a jump that happens without a click.** The report opens in a window of its own, and a
+      // hash can be followed with no click inside that document at all - from the address, from the
+      // history, from a link that arrives with the window. Re-measuring the band on the click cannot
+      // help there, which is why the same file behaved one way opened from the panel and another way
+      // opened from the folder.
+      //
+      // Measured in the standalone page, not here: with the correction the target lands 14px clear,
+      // without it 27px under. Here it passes either way, for the reason given above the frame - so
+      // this line guards the property and does not prove the fix.
+      w.scrollTo(0, 0);
+      w.location.hash = '';
+      w.location.hash = a.getAttribute('href');
+      await settle();
+      const g2 = Math.round(target.getBoundingClientRect().top - H.getBoundingClientRect().bottom);
+      if (g2 < 0)
+        say(`a jump made without a click left its target ${-g2}px under the band - nothing corrects `
+            + 'the landing when no click was there to re-measure on');
       fr.remove();
       void w;
     }

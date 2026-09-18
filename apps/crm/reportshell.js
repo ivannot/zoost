@@ -269,6 +269,20 @@ const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').val
   // browser scrolls; it is ordinary event handling and it can be measured red and green.
   + "addEventListener('click',function(e){var t=e.target;"
   + "var a=t&&t.closest?t.closest('a[href^=\"#\"]'):null;if(a)stick();},true);"
+  // **And the scroll is corrected after the jump, measuring at that instant.** Re-measuring the band
+  // on the click was not enough: opening the report through the panel's «Open» creates a window
+  // 1240px wide, the page loads and measures while it is still being sized, and the band crosses a
+  // wrap threshold at 1224px - 151px on one side of it, 171px on the other. Reported as the same
+  // file behaving differently opened two ways, with the card's title cut off in one of them.
+  //
+  // So nothing here assumes which event arrives first. After the browser has jumped, the distance
+  // between the band and the target is read *then* and any shortfall is scrolled away.
+  + "function land(){var h=document.querySelector('header');if(!h)return;"
+  + "var id=decodeURIComponent(location.hash.slice(1));if(!id)return;"
+  + "var e=document.getElementById(id);if(!e)return;"
+  + "var d=h.getBoundingClientRect().bottom+14-e.getBoundingClientRect().top;"
+  + "if(d>1)scrollBy(0,-d);}"
+  + "addEventListener('hashchange',land);addEventListener('load',function(){stick();land();});"
   + "addEventListener('resize',stick);stick();";
 
 // The two escapers this file needs, named for it. Each product has its own - `esc`/`escHtml` in one,
