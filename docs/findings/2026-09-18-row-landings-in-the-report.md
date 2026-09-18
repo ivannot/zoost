@@ -211,16 +211,25 @@ repository has already written down and paid for again: **a guard that skips whe
 is not a guard - absence is the first thing to ask about**, and a rect is not evidence that an
 element is rendered.
 
-**The push gate photographs the tree at the wrong instant, and refused four pushes over a file that
-was already back.** `tools/hooks/pre-push` runs the battery and then refuses if the working tree
-changed - which is right, because a derived file that moved belongs in the commit going out. But
-`tests/tools_test.py` plants defects on purpose to prove its checks can fail, `tools/asyncscopes.txt`
-among them, and restores them; the hook compared the tree while one of those was in flight and
-reported «the battery left changes behind» over a file that is identical to HEAD a second later.
-Measured: after the refusal, `git status --porcelain` is empty, `git diff` on that file is empty, and
-`asynccheck` reports zero. The finding is recorded rather than fixed today - a gate is not something
-to edit while a release is waiting on it - and the shape of the fix is to compare after the suite has
-put its own plants back, not while it still has them out.
+**A test that mutates the checkout and restores in `finally` refused six pushes, and I blamed the
+gate.** `tools/hooks/pre-push` runs the battery and then refuses if the working tree changed, which
+is right: a derived file that moved belongs in the commit going out. Twice in one evening it refused
+over `tools/asyncscopes.txt`, then `tools/asyncglobals.txt`, and both times the file was identical to
+HEAD a second later - so I recorded the gate as photographing the tree at the wrong instant, and
+committed that. It was wrong, and measuring it took one read: the case that proves `--accept` keeps a
+human comment plants its mark **in the real ledger**, runs the tool with `cwd=ROOT`, and puts the
+file back in a `finally`. This machine killed twenty processes today; a `finally` does not run after
+a SIGKILL. The gate was reporting real dirt that it had not made.
+
+`tests/run.sh` refuses to work this way at the top of itself - it copies the checkout into a
+temporary directory and runs there, with a comment saying that restoring in `finally` is not
+isolation because a kill or a second process defeats it. That case now does the same: it copies, it
+plants in the copy, and it runs the tool against the copy. The rule is the one the suite already
+stated and one test had not adopted: **isolation is a copy, not a promise to tidy up.**
+
+And the meta-rule, which cost more than the defect: **a finding recorded against the wrong component
+is worse than an unrecorded one**, because it teaches the next reader to distrust the part that was
+working. The note was committed before the read that disproved it; this paragraph replaces it.
 
 **A derived ledger is accepted on a tree nobody else is writing.** `twincheck --accept` records a
 hash per twin function, and it was run while a review agent had a shipped file mutated in flight: the

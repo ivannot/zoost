@@ -5935,20 +5935,28 @@ class EveryLedgerKeepsWhatAPersonWrote(unittest.TestCase):
             self.assertTrue(tool.exists(), f'{led.name} names {tool.name}, which is not here')
 
             mark = '# PLANTED by tests/tools_test.py: a reason a person wrote.'
-            try:
+            # **In a copy, not in the checkout - a `finally` is not a restore.** This used to plant
+            # the mark in the real ledger and put it back afterwards, which is exactly what
+            # `tests/run.sh` refuses to do at the top of itself and for the reason met here: the
+            # machine killed the battery mid-case twice in one evening, the `finally` never ran, and
+            # the checkout kept `# PLANTED by tests/tools_test.py` in `tools/asyncscopes.txt` and
+            # then in `tools/asyncglobals.txt`. The push gate then refused, correctly, over dirt it
+            # had not made - and I recorded the gate as the culprit before measuring it.
+            with tempfile.TemporaryDirectory() as clone:
+                repo = pathlib.Path(clone) / 'repo'
+                shutil.copytree(ROOT, repo, symlinks=True,
+                                ignore=shutil.ignore_patterns('.git', 'node_modules', 'dist'))
+                mine = repo / 'tools' / led.name
                 lines = keep.split('\n')
                 lines.insert(1, mark)
-                led.write_text('\n'.join(lines), encoding='utf-8')
+                mine.write_text('\n'.join(lines), encoding='utf-8')
                 # `--offline` for the one that would otherwise reach the network; harmless elsewhere,
                 # since an unknown flag is refused and the assertion below then names the tool.
-                args = [sys.executable, str(tool), '--accept']
+                args = [sys.executable, str(repo / 'tools' / tool.name), '--accept']
                 if tool.name == 'auditcheck.py':
                     args.insert(2, '--offline')
-                r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
-                after = led.read_text(encoding='utf-8')
-            finally:
-                for path, data in snapshots.items():
-                    path.write_bytes(data)
+                r = subprocess.run(args, cwd=repo, capture_output=True, text=True)
+                after = mine.read_text(encoding='utf-8')
             self.assertIn(mark, after,
                           f'{led.name}: {tool.name} --accept deleted a line a person wrote, without '
                           f'saying so. The file asks to be explained and then throws the explanation '
