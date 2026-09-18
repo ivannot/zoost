@@ -64,6 +64,8 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | analytics | 1.32.0 | `analytics-v1.32.0` | `d97af5bafb43f2bc8202487e0e77c8d0537595e4` | `b166e623b7a194a592c0367e6a877286463349aba8f087e2ea2722d35bad4f92` |
 | crm | 1.51.0 | `crm-v1.51.0` | `fe2d6fa0823ffbaffadbb8223879543d263ded97` | `bc06cb4f4fb6cfc9a8583b62c9c5c64a8da7d950213e201b41d6f92bbcfd3c3f` |
 | analytics | 1.32.1 | `analytics-v1.32.1` | `fe2d6fa0823ffbaffadbb8223879543d263ded97` | `257609c9ed5201af1bf13e4caac0dee47d031d356c161d82242dc091cbd2e4c7` |
+| crm | 1.52.0 | `crm-v1.52.0` | `68ecb46c4b6f039592b7d298750941962fc45177` | `f64763accb6f3efaac27983a5afa6a5a4a89118b8e01b6401f81af8155f3cd38` |
+| analytics | 1.33.0 | `analytics-v1.33.0` | `68ecb46c4b6f039592b7d298750941962fc45177` | `1fd3ef8e3b6e45a533de559706ccb2dd1732efb14966ee46df35de834db8b3d3` |
 
 ## What this table cannot tell you, and why
 

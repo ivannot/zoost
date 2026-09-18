@@ -1,13 +1,13 @@
 {
   "_": "What is on the Store listing right now. Written by hand at submission, like the RELEASES.md row - the upload is a manual step and nothing here can observe it. `python3 tools/shots.py` prints the digest of the current set and says whether it still matches this one.",
-  "version": "1.32.1",
-  "digest": "2530d3c7ad828112",
+  "version": "1.33.0",
+  "digest": "12703d7a8e09e50c",
   "sources": {
-    "analytics-panel": "b5cd94f4d26dacb5",
-    "analytics-columns": "57538bb7b70aa73b",
-    "analytics-lineage": "1fd14fe15911f574",
-    "analytics-er": "bde6bb4e2ea709c1",
-    "analytics-health": "9ebbda81fe4c4633"
+    "analytics-panel": "e7496b74661e87c4",
+    "analytics-columns": "25e534f4a6b66b61",
+    "analytics-lineage": "0341bcb0468ff05c",
+    "analytics-er": "fe783268092bd0f8",
+    "analytics-health": "c9303a441faae887"
   },
   "files": [
     "1.png",
