@@ -69,9 +69,13 @@ subject, and that is indistinguishable from success in any output that stays sil
 **A comment inside a template literal may not contain a backtick.** Already a known class here, and
 it recurred today: the explanatory comment added to `REPORT_CSS` carried backticks around the
 identifiers it named, ended the stylesheet early, and left both shipped shells unparseable. Nothing
-that reads source saw it; the browser probe did, in seconds. `node --check` over the shipped scripts
-would have seen it too and is not in the battery - `reportshell.js` is outside the typecheck gate by
-declaration.
+that reads source saw it; the browser probe did, in seconds - which is the right answer arriving
+after the wrong one has been acted on. `node --check` over the shipped scripts would have seen it in
+one second and was in nothing: `reportshell.js` is outside the typecheck gate by declaration, because
+DOM-only surfaces are, so no tool was reading it for syntax at all. It is the first thing
+`tests/run.sh` does now - 90 shipped scripts, the list derived from the filesystem and the count
+printed, ahead of the unit tests, because a file that does not parse makes every later answer
+meaningless. Asked for in one sentence: «tutto quello che serve per aggiungere robustezza va fatto».
 
 **A proof that mutates a shipped file restores it from a trap, not from the next line of the
 script.** Two runs of the red/green proof were killed mid-way when the machine ran short of memory,

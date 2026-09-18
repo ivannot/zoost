@@ -7749,6 +7749,57 @@ class EverySurfaceNamesTheFilesItIsMadeOf(unittest.TestCase):
         gone = sorted(f for f in set(listed) if not (ROOT / f).exists())
         self.assertEqual(gone, [], 'a surface names a file that does not exist: ' + ', '.join(gone))
 
+class EveryShippedScriptParsesBeforeAnythingElseRuns(unittest.TestCase):
+    """The cheapest question in the suite, asked first: does each shipped script still parse?
+
+    Earned on 18 September 2026. An explanatory comment added to `REPORT_CSS` carried backticks
+    around the identifiers it named, which ended the template literal early and left both shipped
+    report shells unparseable. 1222 unit cases and twenty checkers said nothing - a lifted function
+    passes whether or not the file around it loads - and the browser probe caught it minutes later,
+    which is the right answer arriving after the wrong one has been acted on. `reportshell.js` is
+    outside the typecheck gate by declaration, DOM-only surfaces being outside it, so nothing was
+    reading it for syntax at all.
+
+    What is held here is the gate's *shape*, because that is the part that decays: that it exists,
+    that its subject is derived from the filesystem rather than listed, and that it runs before the
+    answers it would invalidate. The mechanism itself is proved rather than trusted - a file with
+    today's defect in it is written to a temporary directory and `node --check` must refuse it.
+    """
+
+    RUN = ROOT / 'tests' / 'run.sh'
+
+    def test_the_gate_exists_and_its_subject_is_derived(self):
+        run = self.RUN.read_text(encoding='utf-8')
+        self.assertIn('node --check', run, 'nothing in the battery reads a shipped script for syntax')
+        self.assertIn('for f in apps/*/*.js', run,
+                      'the gate names its files instead of deriving them, so a new script is not covered')
+
+    def test_it_runs_before_what_it_would_invalidate(self):
+        run = self.RUN.read_text(encoding='utf-8')
+        self.assertLess(run.index('node --check'), run.index('node --test'),
+                        'a file that does not parse makes every case after it meaningless')
+
+    def test_the_mechanism_refuses_the_defect_it_was_written_for(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = pathlib.Path(tmp) / 'shell.js'
+            bad.write_text("const CSS = `\n/* a `backtick` inside a comment */\nbody{}`;\n", encoding='utf-8')
+            refused = subprocess.run(['node', '--check', str(bad)], capture_output=True, text=True)
+            self.assertNotEqual(refused.returncode, 0,
+                                'node --check accepted a template literal ended by a comment')
+            good = pathlib.Path(tmp) / 'ok.js'
+            good.write_text("const CSS = `\n/* a plain comment */\nbody{}`;\n", encoding='utf-8')
+            passed = subprocess.run(['node', '--check', str(good)], capture_output=True, text=True)
+            self.assertEqual(passed.returncode, 0,
+                             f'node --check refused a valid file, so the gate would refuse every run: {passed.stderr}')
+
+    def test_every_shipped_script_passes_today(self):
+        scripts = sorted(ROOT.glob('apps/*/*.js'))
+        self.assertTrue(scripts, 'no shipped scripts found, so this case measures nothing')
+        for f in scripts:
+            out = subprocess.run(['node', '--check', str(f)], capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, f'{f.relative_to(ROOT)} does not parse: {out.stderr[:300]}')
+
+
 class KeyCheckFindsWhatNoKeyboardReaches(unittest.TestCase):
     """A control a mouse can use and a keyboard cannot, and the one that only looks like one.
 
