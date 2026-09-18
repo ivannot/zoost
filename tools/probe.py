@@ -1204,13 +1204,29 @@ CRM = """
       await settle();
       const w = fr.contentWindow, H = d.querySelector('header');
       if (!H) say('the written report has no sticky band');
+      // **Which landings are judged decides whether this can fail at all.** The first version took
+      // the first three row-links in document order, and in the sample those are all connection rows
+      // at depth 0, 1 and 3 of a six-row table: two of the three pass with the sticky rule deleted,
+      // because a table's first rows sit under their own head anyway. Measured by a review that
+      // deleted the rule and watched one finding appear where three landings had been judged. So the
+      // deepest anchored row of each anchored table is taken instead - the row where a head that
+      // does not follow is unmistakable - and the counts still say whether anything was judged.
       const rowAnchors = d.querySelectorAll('tr[id]').length;
-      let rowLinks = 0, rowJumps = 0;
+      let rowLinks = 0;
+      const deepest = new Map();
       for (const ra of [...d.querySelectorAll('a[href^="#"]')]) {
         const rt = d.getElementById(ra.getAttribute('href').slice(1));
         if (!rt || rt.tagName !== 'TR') continue;
         rowLinks += 1;
-        if (rowJumps >= 3) continue;
+        const tbl = rt.closest('table');
+        if (!tbl) continue;
+        const depth = [...tbl.querySelectorAll('tbody tr')].indexOf(rt);
+        const held = deepest.get(tbl);
+        if (!held || depth > held.depth) deepest.set(tbl, { ra, rt, depth });
+      }
+      const judged = [...deepest.values()].sort((a, b) => b.depth - a.depth).slice(0, 3);
+      let rowJumps = 0;
+      for (const { ra, rt } of judged) {
         w.scrollTo(0, 0); w.location.hash = ''; ra.click(); await settle();
         rowJumps += 1;
         const band = H.getBoundingClientRect().bottom;
@@ -1221,13 +1237,33 @@ CRM = """
           say(`landing on ${ra.getAttribute('href')} left the table's column names off screen `
               + `(head bottom ${Math.round(head.bottom)} against a band ending at ${Math.round(band)})`
               + ' - a row carries no title of its own, so its head has to come with it');
+        // A tolerance of a pixel, not zero: a landing on a table's first row touches its own head
+        // exactly, and a sub-pixel rounding there would report a finding about a correct product.
         const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, band));
-        if (clear < 0) say(`landing on ${ra.getAttribute('href')} left the row ${-clear}px under what covers it`);
+        if (clear < -1) say(`landing on ${ra.getAttribute('href')} left the row ${-clear}px under what covers it`);
       }
-      // **A pass here has to mean something was judged.** The sample carries automation actions and
-      // connections, both written as anchored rows, so zero of either is the check having lost its
-      // subject - which is how its first version reported green over an empty loop. The counts are
-      // in the message because they say which of the two happened.
+      // **And the half of the fix the geometry above cannot reach.** `tr[id]` carries a constant 40px
+      // of scroll-margin, which clears any head up to 26px - and every head in both shipped reports
+      // is 24px, so `land()`'s measured correction never fires and deleting it leaves the landings
+      // above intact. Measured by a review that deleted exactly that line and saw zero findings.
+      // A head taller than the constant is the state only the measurement can satisfy, so it is
+      // *made* here rather than waited for: a second header row, then the same jump again.
+      if (judged.length) {
+        const { ra, rt } = judged[0];
+        const thd = rt.closest('table').querySelector('thead');
+        thd.insertAdjacentHTML('beforeend', '<tr><th style="height:40px">taller than the constant</th></tr>');
+        void thd.offsetHeight;
+        w.scrollTo(0, 0); w.location.hash = ''; w.location.hash = ra.getAttribute('href');
+        await settle();
+        const band = H.getBoundingClientRect().bottom, head = thd.getBoundingClientRect();
+        if (Math.round(head.height) <= 26)
+          say(`the grown head is ${Math.round(head.height)}px, which the constant covers on its own - `
+              + 'this case cannot tell whether the measured correction runs');
+        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, band));
+        if (clear < -1)
+          say(`with a ${Math.round(head.height)}px head, landing on ${ra.getAttribute('href')} left the row `
+              + `${-clear}px under it - the clearance is a constant, and nothing measures the head at the jump`);
+      }
       if (!rowAnchors || !rowJumps)
         say(`no row landing was judged - ${rowAnchors} anchored row(s), ${rowLinks} link(s) at one, `
             + `${rowJumps} judged: this measured nothing and cannot be read as a pass`);

@@ -76,6 +76,12 @@ tr[id]{scroll-margin-top:calc(var(--stick, 120px) + 40px)}
 /* And which row you landed on is said, not left to be counted: a table this wide has no other way
    of answering «is this the one I clicked». */
 tr[id]:target{background:#fffbeb}
+/* **On paper a sticky head is a liability, and this stylesheet had nothing to say about paper.**
+   Chrome repeats a table's head on every printed page by itself; a positioned head can stop it
+   doing that, and the report is a document people print and send. Unmeasured either way here - the
+   probe that would have printed it was killed - so the rule restores the default rather than
+   betting on the browser, which costs nothing on screen. */
+@media print{main>table.ftbl>thead{position:static}}
 .refs{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;display:flex;flex-direction:column;gap:3px;background:#fcfdff}
 /* **Every link in the document looks like a link.** This was written per context - the
    reference lines, the first column of a table, the index, the workflow actions - so a link
@@ -298,13 +304,23 @@ const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').val
   + "function land(){var h=document.querySelector('header');if(!h)return;"
   + "var id=decodeURIComponent(location.hash.slice(1));if(!id)return;"
   + "var e=document.getElementById(id);if(!e)return;"
+  // **A target with no box is not a target, and measuring one measures zeros.** The live
+  // filter hides rows with `display:none`, and `getBoundingClientRect()` on a hidden row
+  // answers 0/0/0/0 - so the correction below read the row as sitting at the very top of the
+  // window and scrolled the page up by the whole clearance. Measured: a click on a link to a
+  // filtered-out row moved the reader 250px away from what they were reading, and nothing said
+  // why, because the row they asked for is not on screen at all. Older than the sticky head -
+  // which only made the wrong number bigger - and the class is one this project has already
+  // paid for: a guard that skips when the thing is absent is not a guard, so absence is what
+  // is asked about first.
+  + "var r=e.getBoundingClientRect();if(!r.width&&!r.height)return;"
   // What covers the target is the band *and*, for a row in a chapter table, that table's head -
   // which is sticky precisely so the reader can see what the cells are. Asked of the element rather
   // than assumed from the selector: a card's table is not sticky and must not be paid for.
   + "var t=e.closest?e.closest('table'):null;var th=t?t.querySelector('thead'):null;"
   + "var c=h.getBoundingClientRect().bottom;"
   + "if(th&&getComputedStyle(th).position==='sticky')c+=th.getBoundingClientRect().height;"
-  + "var d=c+14-e.getBoundingClientRect().top;"
+  + "var d=c+14-r.top;"
   + "if(d>1)scrollBy(0,-d);}"
   + "addEventListener('hashchange',land);addEventListener('load',function(){stick();land();});"
   + "addEventListener('resize',stick);stick();";

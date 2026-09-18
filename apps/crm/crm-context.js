@@ -18,7 +18,12 @@ async function refreshContext() {
     // reported as the overlay coming back in the middle of writing the sample and then leaving
     // again. A state that has to hold across time is a term in the condition, never an assignment.
     $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
-    ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho tab';
+    // **It says which platform, because the reader may well be on a Zoho tab.** Reported: someone
+    // opened this panel from a Zoho Analytics tab and was told «Not on a Zoho tab», which is false
+    // about where they were standing and silent about what is needed. The overlay two files away has
+    // always said «Not on a Zoho CRM tab» and the guide quotes it that way, so this line was also the
+    // odd one out inside its own product. A precondition names the thing it requires.
+    ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho CRM tab';
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
     blockZoho(true);
     return;
@@ -53,12 +58,14 @@ async function refreshContext() {
     + ` -> ${lastCtx ? 'ok' : 'NOT READY' + (_ctxErr ? ' (' + _ctxErr + ')' : '')}`
     + ` ${Date.now() - _t0}ms`);
   _ctxErr = null;
-  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; blockZoho(true); updateWsButtons(); return; }
+  // Named and actionable, the way the twin says it: «not ready» on its own tells the reader a state
+  // and no way out of it, and reloading that tab is the way out.
+  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho CRM tab (not ready - reload it)'; bnd.textContent = ''; blockZoho(true); updateWsButtons(); return; }
   // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
   // side implying a relationship - reported as «switching to the test org leaves ZOHO TAB on the
   // previous one», which it does, correctly, and read as a bug because nothing said it did not matter.
-  who.innerHTML = `<span class="rlbl remote">Zoho tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>`;
+  who.innerHTML = `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>`;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
   else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }

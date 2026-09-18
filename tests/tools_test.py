@@ -7756,48 +7756,78 @@ class EveryShippedScriptParsesBeforeAnythingElseRuns(unittest.TestCase):
     around the identifiers it named, which ended the template literal early and left both shipped
     report shells unparseable. 1222 unit cases and twenty checkers said nothing - a lifted function
     passes whether or not the file around it loads - and the browser probe caught it minutes later,
-    which is the right answer arriving after the wrong one has been acted on. `reportshell.js` is
-    outside the typecheck gate by declaration, DOM-only surfaces being outside it, so nothing was
-    reading it for syntax at all.
+    which is the right answer arriving after the wrong one has been acted on.
 
-    What is held here is the gate's *shape*, because that is the part that decays: that it exists,
-    that its subject is derived from the filesystem rather than listed, and that it runs before the
-    answers it would invalidate. The mechanism itself is proved rather than trusted - a file with
-    today's defect in it is written to a temporary directory and `node --check` must refuse it.
+    **The first version of this class read the gate instead of driving it, and that was found by
+    planting `|| true` on the gate's own line: all four cases stayed green over a tree with the
+    defect in it.** Asserting that a command appears in a script says nothing about what the command
+    does when it fails. So the gate lives between two markers in `tests/run.sh` and this runs *that
+    text*, against a copy of `apps/` with the defect planted, and requires a refusal.
+
+    The same review found the instrument wrong as well: `node --check` parses as a CommonJS module
+    and accepts a top-level `return`, an `import` and a top-level `await`, each of which stops a
+    classic script from loading. The gate parses with `vm.Script` for that reason, and the cases
+    below hold the distinction rather than the spelling.
     """
 
     RUN = ROOT / 'tests' / 'run.sh'
 
-    def test_the_gate_exists_and_its_subject_is_derived(self):
+    def gate(self) -> str:
+        """The gate's own text, taken from between its markers - never a copy of it."""
         run = self.RUN.read_text(encoding='utf-8')
-        self.assertIn('node --check', run, 'nothing in the battery reads a shipped script for syntax')
-        self.assertIn('for f in apps/*/*.js', run,
+        begin, end = run.index('# parse-gate-begin'), run.index('# parse-gate-end')
+        body = run[begin:end].splitlines()[1:]
+        self.assertTrue(body, 'the parse gate is empty between its markers')
+        return '\n'.join(body)
+
+    def test_the_gate_exists_and_its_subject_is_derived(self):
+        gate = self.gate()
+        self.assertIn('apps/*/*.js', gate,
                       'the gate names its files instead of deriving them, so a new script is not covered')
+        self.assertIn('vm.Script', gate,
+                      'the gate parses as a module, which accepts a top-level return, an import and a '
+                      'top-level await - three ways to stop a classic script loading')
 
     def test_it_runs_before_what_it_would_invalidate(self):
         run = self.RUN.read_text(encoding='utf-8')
-        self.assertLess(run.index('node --check'), run.index('node --test'),
+        self.assertLess(run.index('# parse-gate-begin'), run.index('node --test'),
                         'a file that does not parse makes every case after it meaningless')
 
-    def test_the_mechanism_refuses_the_defect_it_was_written_for(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            bad = pathlib.Path(tmp) / 'shell.js'
-            bad.write_text("const CSS = `\n/* a `backtick` inside a comment */\nbody{}`;\n", encoding='utf-8')
-            refused = subprocess.run(['node', '--check', str(bad)], capture_output=True, text=True)
-            self.assertNotEqual(refused.returncode, 0,
-                                'node --check accepted a template literal ended by a comment')
-            good = pathlib.Path(tmp) / 'ok.js'
-            good.write_text("const CSS = `\n/* a plain comment */\nbody{}`;\n", encoding='utf-8')
-            passed = subprocess.run(['node', '--check', str(good)], capture_output=True, text=True)
-            self.assertEqual(passed.returncode, 0,
-                             f'node --check refused a valid file, so the gate would refuse every run: {passed.stderr}')
+    def test_the_gate_refuses_a_tree_with_the_defect_in_it(self):
+        """Driven, not read: the gate's text is run over a copy of the apps with a defect planted.
 
-    def test_every_shipped_script_passes_today(self):
-        scripts = sorted(ROOT.glob('apps/*/*.js'))
-        self.assertTrue(scripts, 'no shipped scripts found, so this case measures nothing')
-        for f in scripts:
-            out = subprocess.run(['node', '--check', str(f)], capture_output=True, text=True)
-            self.assertEqual(out.returncode, 0, f'{f.relative_to(ROOT)} does not parse: {out.stderr[:300]}')
+        Three defects, because the class is «the file does not load», not «a backtick»: the comment
+        that ends a template literal early, a top-level `return`, and an `import` in a classic
+        script. The last two are what `node --check` accepted.
+        """
+        planted = {
+            'a backtick in a comment inside a template literal':
+                lambda t: t.replace('const REPORT_CSS = `', 'const REPORT_CSS = `\n/* a `backtick` here */', 1),
+            'a top-level return': lambda t: 'return;\n' + t,
+            'an import statement in a classic script': lambda t: 'import x from "./idb.js";\n' + t,
+        }
+        for what, plant in planted.items():
+            with tempfile.TemporaryDirectory() as tmp:
+                shutil.copytree(ROOT / 'apps', pathlib.Path(tmp) / 'apps')
+                victim = pathlib.Path(tmp) / 'apps' / 'crm' / 'reportshell.js'
+                original = victim.read_text(encoding='utf-8')
+                victim.write_text(plant(original), encoding='utf-8')
+                self.assertNotEqual(victim.read_text(encoding='utf-8'), original,
+                                    f'{what}: nothing was planted, so this proves nothing')
+                out = subprocess.run(['bash', '-c', self.gate()], cwd=tmp, capture_output=True, text=True)
+                self.assertNotEqual(out.returncode, 0,
+                                    f'the gate accepted {what}:\n{out.stdout}{out.stderr}')
+                self.assertIn('reportshell.js', out.stderr, f'{what}: the gate refused without naming the file')
+
+    def test_the_gate_accepts_the_tree_as_it_is(self):
+        """And the other half: a gate that always refuses is not strict, it is broken."""
+        out = subprocess.run(['bash', '-c', self.gate()], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, f'the gate refuses the repository as it stands:\n{out.stderr}')
+        self.assertRegex(out.stdout, r'parse: \d+ shipped script\(s\)',
+                         'the gate passed without saying how many files it read')
+        read = int(re.search(r'parse: (\d+)', out.stdout).group(1))
+        self.assertEqual(read, len(sorted(ROOT.glob('apps/*/*.js'))),
+                         'the gate read a different number of scripts than the tree holds')
 
 
 class KeyCheckFindsWhatNoKeyboardReaches(unittest.TestCase):

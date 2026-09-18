@@ -168,10 +168,21 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const connAnchor = (name) => 'conn-' + sanitize(name || '');
   const connApiSet = new Set((conns || []).map((c) => c.name));
   const _hByName = {}; Object.values(g.nodes || {}).forEach((n) => (_hByName[n.name] ||= []).push(n));
+  const fnKeySet = new Set(fns.map(fnKey));
+  // **A link only where the section exists** - the rule `hLink` states and this one broke. It
+  // resolved a call inside highlighted Deluge against the *call graph*, which holds every function
+  // in the org, while the anchors exist only for the functions this report gives a card to. Measured
+  // on a real export: 9 distinct `#fn-functions.*` targets that are in no document, 11 links at
+  // them, each one a click that lands nowhere. Every sibling emitter - `fnLink`, `linkByName`,
+  // `modLink` - already asks `fnKeySet`; this was the one that did not, and it is declared below
+  // them because it is used above them. So the set is read here, not there, and an unanchored call
+  // keeps its name as text: linking to nothing is worse than not linking.
   const codeResolve = (ns, name) => {
     const nodes = g.nodes || {};
     const t = nodes[ns + '.' + name] || ((_hByName[name] || []).length === 1 ? _hByName[name][0] : null);
-    return t ? { href: '#' + fnAnchor(fnKey(t)), label: t.display_name || t.name } : null;
+    if (!t) return null;
+    const key = fnKey(t);
+    return fnKeySet.has(key) ? { href: '#' + fnAnchor(key), label: t.display_name || t.name } : null;
   };
   // The report shows what the panel shows, colours included - a project file printed as grey text
   // here would make the export the lesser copy the panel warns about. `name` is the file inside the
@@ -189,7 +200,6 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const modAnchor = (api) => 'mod-' + sanitize(api || '');
   const modApiSet = new Set(mods.map((m) => m.api_name));
   const modLink = (api) => (api && modApiSet.has(api)) ? `<a href="#${modAnchor(api)}">${esc(api)}</a>` : esc(api || '');
-  const fnKeySet = new Set(fns.map(fnKey));
   // The label stays the api_name - it is what the reader recognises - while the link carries the pair.
   const fnLink = (key) => { const lab = (nodeByKey[key] && nodeByKey[key].api_name) || String(key || '').split('.').slice(1).join('.') || key;
     return (key && fnKeySet.has(key)) ? `<a href="#${fnAnchor(key)}">${esc(lab)}</a>` : esc(lab || '?'); };
@@ -698,7 +708,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     // number is a count of runs and not of time, and a report is read without the panel beside it.
     + ((fails.runs || []).length
         ? `<p class="note">The busiest ${esc(String(fails.runs.length))} functions over the same period, as Zoho counted them - not every function, and Zoho reports how often, not how long: a function that runs often is not automatically the expensive one.</p>`
-          + '<table><thead><tr><th>Function</th><th>Runs in 24h</th></tr></thead><tbody>'
+          + '<table class="ftbl"><thead><tr><th>Function</th><th>Runs in 24h</th></tr></thead><tbody>'
           + fails.runs.map((r) => `<tr><td>${linkByName(r.name || String(r.id || '?'))}</td>`
               + `<td>${esc(r.count == null ? 'unknown' : String(r.count))}</td></tr>`).join('')
           + '</tbody></table>'
@@ -712,13 +722,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
           + `${esc(String(fails.month.to || '').slice(0, 10) || 'now')}`
           + `${fails.month.timezone ? ' (' + esc(String(fails.month.timezone)) + ')' : ''}, as Zoho counted them - `
           + 'a top list, not every function, and frequency is not cost.</p>'
-          + '<table><thead><tr><th>Function</th><th>Runs over the window</th></tr></thead><tbody>'
+          + '<table class="ftbl"><thead><tr><th>Function</th><th>Runs over the window</th></tr></thead><tbody>'
           + fails.month.runs.map((r) => `<tr><td>${linkByName(r.name || String(r.id || '?'))}</td>`
               + `<td>${esc(r.count == null ? 'unknown' : String(r.count))}</td></tr>`).join('')
           + '</tbody></table>'
         : '')
     + (failRows.length
-        ? '<table><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
+        ? '<table class="ftbl"><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
           + failRows.map((f) => `<tr><td>${linkByName(f.name)}</td><td>${esc(f.componentType || '')}</td><td>${esc(String(f.count))}</td>`
               + `<td>${esc(f.lastFailedAt ? new Date(f.lastFailedAt).toLocaleString() : '')}</td><td>${esc(f.reason || '')}</td></tr>`).join('')
           + '</tbody></table>'
