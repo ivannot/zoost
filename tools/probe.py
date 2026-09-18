@@ -1178,6 +1178,62 @@ CRM = """
     $('expcancel').click(); await settle('Cancel never closed the dialog');
     if ($('expscope').classList.contains('on')) say('Cancel left the dialog open');
 
+    // ---- landing on a row brings its column names with it ----
+    //
+    // **382 of the links in a Zoho CRM report point at a row, and a row carries no title of its own.**
+    // A card names itself in its own head; a row is seven cells. Measured on a real org's report:
+    // jumping to the 254th of 369 action rows put the row 14px below the band with the column
+    // headers 19,563px above it and the chapter heading 19,680px above - so the reader arrived on
+    // cells with nothing naming them. Reported as «the links reach the paragraph, then you have to
+    // scroll up to see the title». The chapter table's head is sticky under the band now, and
+    // `land()` clears it.
+    //
+    // It is driven here and not in the Analytics scenario, which is where it was first written by
+    // mistake: that product puts its ids on headings, its report holds no anchored row at all, and
+    // the check sat there judging nothing while reporting a pass. The subject is the *written*
+    // report - the real builder's output, read back out of the shim - because a sticky head is
+    // layout and nothing that reads source has an opinion about it.
+    {
+      const written = fsx.dump().filter((x) => /export.*[.]html$/.test(x)).pop();
+      if (!written) say('no HTML report was written, so the row landings cannot be judged');
+      const fr = document.createElement('iframe');
+      fr.style.cssText = 'width:1240px;height:900px;border:0';
+      document.body.appendChild(fr);
+      const d = fr.contentDocument;
+      d.open(); d.write(fsx.read(written)); d.close();
+      await settle();
+      const w = fr.contentWindow, H = d.querySelector('header');
+      if (!H) say('the written report has no sticky band');
+      const rowAnchors = d.querySelectorAll('tr[id]').length;
+      let rowLinks = 0, rowJumps = 0;
+      for (const ra of [...d.querySelectorAll('a[href^="#"]')]) {
+        const rt = d.getElementById(ra.getAttribute('href').slice(1));
+        if (!rt || rt.tagName !== 'TR') continue;
+        rowLinks += 1;
+        if (rowJumps >= 3) continue;
+        w.scrollTo(0, 0); w.location.hash = ''; ra.click(); await settle();
+        rowJumps += 1;
+        const band = H.getBoundingClientRect().bottom;
+        const tbl = rt.closest('table'), thd = tbl && tbl.querySelector('thead');
+        if (!thd) { say(`${ra.getAttribute('href')} lands on a row in a table with no head`); continue; }
+        const head = thd.getBoundingClientRect();
+        if (head.bottom <= band + 1)
+          say(`landing on ${ra.getAttribute('href')} left the table's column names off screen `
+              + `(head bottom ${Math.round(head.bottom)} against a band ending at ${Math.round(band)})`
+              + ' - a row carries no title of its own, so its head has to come with it');
+        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, band));
+        if (clear < 0) say(`landing on ${ra.getAttribute('href')} left the row ${-clear}px under what covers it`);
+      }
+      // **A pass here has to mean something was judged.** The sample carries automation actions and
+      // connections, both written as anchored rows, so zero of either is the check having lost its
+      // subject - which is how its first version reported green over an empty loop. The counts are
+      // in the message because they say which of the two happened.
+      if (!rowAnchors || !rowJumps)
+        say(`no row landing was judged - ${rowAnchors} anchored row(s), ${rowLinks} link(s) at one, `
+            + `${rowJumps} judged: this measured nothing and cannot be read as a pass`);
+      fr.remove();
+    }
+
     // ---- About ----
     $('about').click(); await settle('About never opened');
     if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent)) say('About says nothing about what it is');
@@ -1552,6 +1608,48 @@ AN = """
       if (g2 < 0)
         say(`a jump made without a click left its target ${-g2}px under the band - nothing corrects `
             + 'the landing when no click was there to re-measure on');
+      // **And a row brings its column names with it.** 382 links in a Zoho CRM report point at a `<tr>`
+      // rather than at a card: a card carries its own title, a row carries nothing, and landing on
+      // the 254th of 369 action rows put the reader on seven cells whose headers were 19,563px above
+      // - reported as «the link reaches the paragraph, then you have to scroll up for the title».
+      // The chapter table's head is sticky under the band and the landing clears it, so what is
+      // asserted here is what the reader must end up with: the head on screen, the row below it.
+      // Driven on the real builder's output, because a sticky head is layout and nothing that reads
+      // source has an opinion about it.
+      //
+      // **The first version of this check asked whether the head was sticky before judging the
+      // landing, and that made it skip every row precisely when the rule was missing** - which is
+      // the state it exists to catch. Removing the rule from both shells left it green. So nothing
+      // here asks about the mechanism: it asks what the reader must end up with, and a run that
+      // judged no row at all is a finding carrying its own counts, because «green» over an empty
+      // loop is the failure mode this repository keeps meeting.
+      let rowAnchors = 0, rowLinks = 0, rowJumps = 0;
+      for (const anchored of d.querySelectorAll('tr[id]')) { void anchored; rowAnchors += 1; }
+      for (const ra of [...d.querySelectorAll('a[href^="#"]')]) {
+        const rt = d.getElementById(ra.getAttribute('href').slice(1));
+        if (!rt || rt.tagName !== 'TR') continue;
+        rowLinks += 1;
+        if (rowJumps >= 3) continue;
+        const tbl = rt.closest('table'), thd = tbl && tbl.querySelector('thead');
+        w.scrollTo(0, 0); w.location.hash = ''; ra.click(); await settle();
+        rowJumps += 1;
+        const bandBottom = H.getBoundingClientRect().bottom;
+        if (!thd) { say(`${ra.getAttribute('href')} lands on a row in a table with no head at all`); continue; }
+        const head = thd.getBoundingClientRect();
+        if (head.bottom <= bandBottom + 1)
+          say(`landing on ${ra.getAttribute('href')} left the table's column names off screen `
+              + `(head bottom ${Math.round(head.bottom)} against a band ending at ${Math.round(bandBottom)}) `
+              + '- a row carries no title of its own, so its head has to come with it');
+        const clear = Math.round(rt.getBoundingClientRect().top - Math.max(head.bottom, bandBottom));
+        if (clear < 0) say(`landing on ${ra.getAttribute('href')} left the row ${-clear}px under what covers it`);
+      }
+      // **This product's report has no row anchors and that is not a skip to hide.** Analytics puts
+      // its ids on headings; the rows it writes carry none, so there is nothing here to land on and
+      // the assertion above has no subject. What must never happen is the *other* state - rows exist
+      // and none was judged - so that is the finding, with the counts that distinguish the two.
+      if (rowAnchors && !rowJumps)
+        say(`no row landing was judged - ${rowAnchors} row(s) carry an anchor and ${rowLinks} link(s) `
+            + 'point at one, so this check measured nothing and cannot be read as a pass');
       fr.remove();
       void w;
     }

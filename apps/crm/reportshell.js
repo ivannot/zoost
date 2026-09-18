@@ -58,6 +58,24 @@ h3.grp .cnt{color:#9aa4b2}
    heights, and either gains a line the day somebody adds one. So the height is measured at
    load and on resize, and this is only the fallback for a reader with no script. */
 [id]{scroll-margin-top:calc(var(--stick, 120px) + 14px)}
+/* **A row is not a card: landing on one has to bring its column names with it.** 382 of the links
+   in a report of this size point at a "<tr>" - a card that names an action links to the Actions chapter, a
+   function links to a Connections row - and a card carries its own title inside it while a row
+   carries nothing. Measured on a real report: jumping to the 254th of 369 action rows put the row
+   14px below the band with the column headers 19,563px above it and the chapter heading 19,680px
+   above, so the reader arrived on seven cells with nothing naming them and had to scroll up.
+   Reported as «the links reach the paragraph, then you have to scroll up to see the title».
+   The head of a chapter table therefore stays under the band, and the landing clears it - "land()"
+   adds its height, and this rule is the part a reader with no script still gets.
+   Two things that cost a measurement each. "position:sticky" on the "<th>" does nothing here while
+   the borders are collapsed, and the row group does work - so it is on "thead". And it is scoped to
+   "main>table.ftbl": a table inside a card sits in its own scroll box, where a sticky head would be
+   pinned against a box that never scrolls. Verified: those heads stay "static" and overlap nothing. */
+main>table.ftbl>thead{position:sticky;top:var(--stick, 120px);z-index:1}
+tr[id]{scroll-margin-top:calc(var(--stick, 120px) + 40px)}
+/* And which row you landed on is said, not left to be counted: a table this wide has no other way
+   of answering «is this the one I clicked». */
+tr[id]:target{background:#fffbeb}
 .refs{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;display:flex;flex-direction:column;gap:3px;background:#fcfdff}
 /* **Every link in the document looks like a link.** This was written per context - the
    reference lines, the first column of a table, the index, the workflow actions - so a link
@@ -280,7 +298,13 @@ const REPORT_FILTER_JS = "function filt(){var q=document.getElementById('q').val
   + "function land(){var h=document.querySelector('header');if(!h)return;"
   + "var id=decodeURIComponent(location.hash.slice(1));if(!id)return;"
   + "var e=document.getElementById(id);if(!e)return;"
-  + "var d=h.getBoundingClientRect().bottom+14-e.getBoundingClientRect().top;"
+  // What covers the target is the band *and*, for a row in a chapter table, that table's head -
+  // which is sticky precisely so the reader can see what the cells are. Asked of the element rather
+  // than assumed from the selector: a card's table is not sticky and must not be paid for.
+  + "var t=e.closest?e.closest('table'):null;var th=t?t.querySelector('thead'):null;"
+  + "var c=h.getBoundingClientRect().bottom;"
+  + "if(th&&getComputedStyle(th).position==='sticky')c+=th.getBoundingClientRect().height;"
+  + "var d=c+14-e.getBoundingClientRect().top;"
   + "if(d>1)scrollBy(0,-d);}"
   + "addEventListener('hashchange',land);addEventListener('load',function(){stick();land();});"
   + "addEventListener('resize',stick);stick();";
