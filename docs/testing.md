@@ -172,3 +172,25 @@ noticed because a release gate is exercised once per release and there had not b
 rule is mechanical: **a check that runs rarely gets both proofs on the day it is written** — red on a
 planted defect, and green on the state it is actually meant to allow. `auditcheck --before-tag` is
 that state, and four cases hold the difference between it and `--offline`.
+
+**A long run does not live in the session's process tree, and this was measured rather than argued.**
+Six battery runs were killed in one night, which is why a release was tagged by hand with
+`--no-verify` - a gate skipped because nothing could get through it. The obvious cause was wrong: the
+kernel records no OOM, every cgroup in the chain has `memory.max` unset and **zero** `oom_kill`
+events, the machine had 19 of 30 GB free and no memory pressure at all. What settled it was watching
+the two die differently - a watcher that slept five seconds at a time was killed «because the system
+is running low on memory», while the battery it was watching, launched as a transient systemd unit
+outside that tree, ran to completion. Twice.
+
+So `tools/hooks/pre-push` launches the battery with `systemd-run --user` and waits on it, records the
+verdict in `.git/zoost-battery-<sha>` and believes that record only for the exact commit with a clean
+tree. The waiting is still inside the session and can still be killed; when it is, git aborts the
+push - the safe direction - and the run carries on to write its answer, so pushing again reads it
+instead of paying for twenty minutes of tests twice. Where there is no user systemd, another machine
+or a container, it runs inline as it always did. `tests/tools_test.py` holds all of that.
+
+The general rule is not about systemd: **when something long keeps dying, find out who is sending the
+signal before choosing a remedy.** Concurrency was lowered for these kills once already, on the
+belief that it was memory, and the belief was never checked against `memory.events` - which costs one
+`cat` and would have said no.
+

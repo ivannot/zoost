@@ -89,7 +89,7 @@ trap cleanup EXIT
 # stopped running, a rise is cases somebody added and the number is the place they record it. The
 # failure says which of the two happened, because they are not the same news.
 NODE_EXPECTED=1224
-PY_EXPECTED=438
+PY_EXPECTED=440
 # Prefer a compatible Node automatically.  A developer may have an older system Node first in PATH
 # even though the machine already has a newer nvm/Codex runtime.  Failing on the first executable
 # made the pre-push hook reject an otherwise green commit until the caller manually rebuilt PATH.

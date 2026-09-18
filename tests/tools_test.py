@@ -4756,6 +4756,41 @@ class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
                       'the hook does not refuse a commit the battery left derived changes against')
         self.assertIn('exit 1', src, 'the hook cannot refuse anything')
 
+    def test_the_battery_runs_outside_the_session_that_asked_for_it(self):
+        """Six runs killed in one night, and the release was tagged by hand with --no-verify.
+
+        Measured on 18 September rather than assumed: the kernel and every cgroup in the chain record
+        zero OOM events, `memory.max` is unset at every level, the machine had 19 of 30 GB free and
+        no memory pressure at all - and the thing that died was a watcher sleeping five seconds at a
+        time. So it is not the machine and not the process: the agent harness kills long-running
+        children of its own session. The same battery, launched as a transient unit outside that
+        tree, finished twice in a row.
+        """
+        src = self.HOOK.read_text(encoding='utf-8')
+        self.assertIn('systemd-run', src,
+                      'the battery runs as a child of the session again, where it gets killed')
+        self.assertIn('--user', src, 'a system unit would need privileges this hook does not have')
+        # And where there is no user systemd - another machine, a container - it still runs. A hook
+        # that works only here is a hook that lies there.
+        self.assertIn('else', src, 'nothing runs the battery where systemd-run is absent')
+
+    def test_a_verdict_is_recorded_per_commit_so_a_killed_wait_costs_nothing(self):
+        """The wait is inside the session and can still be killed; the run is not.
+
+        git aborts the push when this script dies, which is the safe direction - never a silent green
+        over a battery that did not finish. What must not happen is paying for the run twice, so the
+        answer is written down against the commit it belongs to.
+        """
+        src = self.HOOK.read_text(encoding='utf-8')
+        self.assertIn('zoost-battery-$SHA', src, 'the verdict is not keyed to the commit it judges')
+        self.assertIn('git rev-parse HEAD', src, 'nothing establishes which commit is being judged')
+        # A record belongs to a tree as well as to a commit: a dirty tree is not what the recorded
+        # run saw. Without this the hook would answer for files nothing had tested.
+        self.assertIn('git status --porcelain', src,
+                      'a recorded verdict would be reused against a tree the battery never saw')
+        self.assertIn('REFUSED - the battery stopped without a verdict', src,
+                      'a run that vanishes without answering must refuse the push, not pass it')
+
     def test_every_git_derived_check_is_named_in_the_hook(self):
         # Derived: whichever tool reads a commit date is one whose answer the commit itself changes,
         # and the hook's own comment must name it - so a fourth added tomorrow is not a silent

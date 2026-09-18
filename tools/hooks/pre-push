@@ -2,14 +2,31 @@
 # Refuse a push whose commit does not pass the battery.
 #
 # **Why a hook and not a habit.** Three checks in this repository derive their answer from *git*: the
-# sitemap's `lastmod`, the «updated» date on each guide, and the translation markers. All three read
-# the last-commit date of a file - so their answer changes at the moment of the commit, and a battery
-# run *before* committing cannot see what the commit will do. On 23 August the date rolled over
-# between the run and the push: the run was green, the commit moved four pages to the new day, and
-# `main` went red on a tree that had passed thirty seconds earlier.
+# sitemap's `lastmod` (sitemap.py), the «updated» date on each guide (stamp.py), and the translation
+# markers (sitecheck --retranslated). All three read the last-commit date of a file - so their answer
+# changes at the moment of the commit, and a battery run *before* committing cannot see what the
+# commit will do. On 23 August the date rolled over between the run and the push: the run was green,
+# the commit moved four pages to the new day, and `main` went red on a tree that had passed thirty
+# seconds earlier.
 #
 # That is not carelessness and no amount of care fixes it: the input did not exist yet. What fixes it
 # is running the battery on the commit, which is what this does.
+#
+# **And where that run lives decides whether it finishes.** Measured on 18 September, after six
+# killed runs in one night forced a release to be tagged by hand with `--no-verify`: the agent
+# harness supervises its own process tree and kills long-running children of the session, saying the
+# system is low on memory - while the kernel and every cgroup in the chain record *zero* OOM events,
+# `memory.max` is unset at every level, and the machine has 19 of 30 GB free. It killed a watcher
+# that slept five seconds at a time, so the heuristic is not about the process. The same battery,
+# launched as a transient systemd unit - outside that tree - ran to completion twice in a row.
+#
+# So the battery runs detached and this script waits on it. Two consequences, both deliberate:
+#
+#   - **the verdict is recorded per commit**, in .git/zoost-battery-<sha>, so if the *wait* is killed
+#     the work is not lost: push again and the recorded answer is read instead of re-running twenty
+#     minutes of tests. The record is only believed for the exact commit, with a clean tree.
+#   - **a killed wait refuses the push.** git aborts when this script dies, which is the safe
+#     direction: never a silent green over a battery that did not finish.
 #
 # Install:  git config core.hooksPath tools/hooks
 # Skip once (a genuine emergency, and say so in the push): git push --no-verify
@@ -19,13 +36,47 @@ cd "$(git rev-parse --show-toplevel)"
 # Nothing to check if nothing is going out.
 if git diff --quiet HEAD@{upstream} HEAD 2>/dev/null; then exit 0; fi
 
-echo "pre-push: running the battery on this commit…"
-if ! bash tests/run.sh > /tmp/zoost-prepush.log 2>&1; then
+SHA=$(git rev-parse HEAD)
+VERDICT=".git/zoost-battery-$SHA"
+LOG=/tmp/zoost-prepush.log
+
+# A record belongs to a commit *and* to the tree that was tested. A dirty tree is not what the
+# recorded run saw, so the record does not apply to it.
+if [ -f "$VERDICT" ] && [ -z "$(git status --porcelain)" ] && [ "$(cat "$VERDICT")" = "0" ]; then
+  echo "pre-push: the battery is already recorded green on ${SHA:0:7} - not re-running it."
+else
+  rm -f "$VERDICT"
+  if command -v systemd-run >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
+    UNIT="zoost-prepush-${SHA:0:7}"
+    systemctl --user reset-failed "$UNIT.service" >/dev/null 2>&1 || true
+    echo "pre-push: running the battery on ${SHA:0:7}, outside this session's process tree…"
+    systemd-run --user --collect --same-dir --unit="$UNIT" \
+      --setenv=PATH="$PATH" --setenv=HOME="$HOME" \
+      -- bash -c "bash tests/run.sh > $LOG 2>&1; echo \$? > $VERDICT" >/dev/null
+    # Waiting is the part that can be killed. If it is, this script dies and git refuses the push -
+    # and the run carries on to write its verdict, so pushing again costs nothing.
+    while [ ! -f "$VERDICT" ]; do
+      if ! systemctl --user is-active --quiet "$UNIT.service"; then
+        echo
+        echo "pre-push: REFUSED - the battery stopped without a verdict. Its log is in $LOG."
+        exit 1
+      fi
+      sleep 10
+    done
+  else
+    # No user systemd here - another machine, or a container. Run it inline: this is what the hook
+    # always did, and it is still right wherever nothing is killing long children.
+    echo "pre-push: running the battery on ${SHA:0:7}…"
+    set +e; bash tests/run.sh > "$LOG" 2>&1; echo $? > "$VERDICT"; set -e
+  fi
+fi
+
+if [ "$(cat "$VERDICT")" != "0" ]; then
   echo
   echo "pre-push: REFUSED - the battery is red on the commit you are pushing."
-  tail -20 /tmp/zoost-prepush.log
+  tail -20 "$LOG"
   echo
-  echo "The whole log is in /tmp/zoost-prepush.log."
+  echo "The whole log is in $LOG."
   echo "If the derived files moved (sitemap, stamps, markers), regenerate them, amend, and push again."
   exit 1
 fi
