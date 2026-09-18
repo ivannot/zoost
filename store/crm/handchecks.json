@@ -9,12 +9,12 @@
       "version": "1.51.0"
     },
     "export": {
-      "at": "2026-09-12T10:06:40+00:00",
-      "commit": "de6eee17c727936f0a24e4e3890b022b11420e78",
-      "note": "Ho fatto tutti i test da ui. Tutto verde. Pubblichiamo prima crm e poi analytics",
+      "at": "2026-09-18T13:54:44+00:00",
+      "commit": "bd1c968387972f2f856d6c141a413c69c1468071",
+      "note": "adesso sembra a posto - provato nella finestra aperta da Open, sul link \u00abAlert amministrazione ritirato\u00bb nelle Actions, dopo aver ricaricato l'estensione e rifatto l'export",
       "result": "pass",
       "title": "An export opens and reads as the panel reads",
-      "version": "1.51.0"
+      "version": "1.52.0"
     },
     "fresh-profile": {
       "at": "2026-09-12T10:58:50+00:00",
