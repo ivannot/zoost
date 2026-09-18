@@ -36,21 +36,38 @@ the screen, and it must say something rather than «we improved things».
 ## Landing on the other product's tab should offer the other product
 
 **Raised** 18 September 2026. A user opened Zoost CRM with a Zoho Analytics tab in front, and the
-panel said «Not on a Zoho tab» - which was wrong twice over: the tab *was* Zoho, and the message did
-not say which product was expected. The message now names the product («Not on a Zoho CRM tab»), and
-that is a correction, not a solution: the reader still has to work out what to do.
+panel said «Not on a Zoho tab» - wrong twice over: the tab *was* Zoho, and the message did not say
+which product was expected. The message now names the product, and that is a correction rather than a
+solution: the reader still has to work out what to do.
 
-**What it would be:** when the tab is a Zoho product this extension does not cover, say what it is and
-point at the one that does - «This is Zoho Analytics. Zoost Analytics reads it», with a link that
-opens the other extension if it is installed and its listing if it is not. Whether one extension can
-detect another is a question to answer before anything is built (`chrome.management` is a permission
-this project would not add; a link to the listing needs nothing).
+**Can it know? Yes, and it costs nothing - measured, not assumed.** Both manifests already declare the
+`tabs` permission, and in MV3 that is what grants `url` on a Tab object; host permissions are only the
+other way of getting it. The panel is already using it: `apps/crm/zoho-bridge.js:42` queries the
+active tab with **no** URL filter and then tests the host itself, so an Analytics URL is in the
+panel's hands today, on the very code path that ends in that message. `activeZohoTabId()` answers an
+id or `null`, and the `null` branch in `apps/crm/crm-context.js` is where the line is written - so the
+URL is not missing, it is discarded one step earlier. Nothing new would be read, no host added, no
+re-authorisation.
 
-**Cost:** small. The one thing to establish first is the detection, and the fallback - a link to the
-listing - is free and needs no permission, so the feature stands even if detection is refused.
+**Opening the other extension is a different question, and the answer is no.** `chrome.sidePanel.open()`
+acts on the calling extension only; nothing lets one extension open another's panel. What is available:
 
-**State:** open. This is the cheap half of the question below, and it addresses the reported friction
-on its own.
+- **a link to the other listing**, which needs no permission and no API at all. The ids are ours:
+  Zoost CRM `flffecjpbmjfonhoojaiemgjanbjkmpj`, Zoost Analytics `gmelnigbgklfjgceldicakkomhgplgge`.
+- **telling whether it is installed**, with `chrome.runtime.sendMessage(<id>, ...)`. That needs the
+  *receiving* extension to declare `externally_connectable.ids` - a manifest field, not a permission,
+  with no prompt for the user. Both extensions are ours, so each can name the other. If it answers it
+  is installed, and the message can say «open it from the toolbar» instead of «install it».
+- **not** `chrome.management`, which is a permission this project would have to justify for a cosmetic
+  gain. Out.
+
+**Cost:** the code is small and the permissions do not move. The one real cost is the listing: the
+published `tabs` justification opens with «tabs is used to identify the Zoho CRM tab», and recognising
+another Zoho product to point at it wants a clause. The paragraph's promise - «does not enumerate tabs
+unrelated to Zoho CRM» - stays true, since this is the active tab and not an enumeration. A field
+edited is a field re-pasted by hand in the dashboard, which is the price.
+
+**State:** open, answered on the feasibility, and it addresses the reported friction on its own.
 
 ---
 
