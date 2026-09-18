@@ -180,7 +180,7 @@ async function pullModules(depth = {}) {
         + `${notRead.slice(0, 3).join(', ')}${notRead.length > 3 ? '…' : ''}.` : '')
       + (refused.length ? ` ${refused.length} module(s) Zoho would not describe - what was captured before is kept: `
         + `${refused.slice(0, 3).join(', ')}${refused.length > 3 ? '…' : ''}.` : '')
-      + (buttonsNotRead.length ? ` ${buttonsNotRead.length} module(s) custom buttons could not be read - the next pull retries: `
+      + (buttonsNotRead.length ? ` ${buttonsNotRead.length} module(s) have no custom button entries available: `
         + `${buttonsNotRead.slice(0, 3).join(', ')}${buttonsNotRead.length > 3 ? '…' : ''}.` : '');
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
     // «Every module read» only when it was: a module Zoho would not describe, one whose fields did not come
@@ -671,16 +671,18 @@ function renderModuleButtons(m, rows) {
     if (m.buttons_read !== false) {
       return '<div class="empty" style="padding:12px 10px"><b>No custom buttons.</b> This module carries none.</div>';
     }
-    // **What went wrong, in Zoho's own words where there are any.** This used to assert «Zoho did not
-    // answer», which is a guess: an HTTP refusal, a body without the list, and a module never asked
-    // because its fields had not come are three different things with three different next steps.
-    // The pull records which of them it was; a mirror written before it did says only «not read»,
-    // and that is stated as a gap rather than dressed up as a reason.
+    // A capability result of false means Zoho has established that this module cannot carry buttons;
+    // it is not a failed read and must not send the user back into Pull. Older mirrors may only have
+    // the boolean, so keep the same safe copy when the capability field is absent.
+    if (m.buttons_supported === false) {
+      return '<div class="empty" style="padding:12px 10px"><b>No custom button entries are available for this module.</b> There is nothing to display in the current workspace.</div>';
+    }
+    // For a real read failure retain Zoho's structured reason, but never prescribe an endless retry
+    // from an empty detail pane. The modules status already records the incomplete area.
     const why = m.buttons_error
       ? escHtml(String(m.buttons_error))
-      : 'the last pull did not record why, so whether it has any is unknown';
-    return `<div class="empty" style="padding:12px 10px"><b>Custom buttons were not read.</b> On the `
-      + `last pull, ${why}. Press Pull on Modules to ask again.</div>`;
+      : 'the last pull did not record why';
+    return `<div class="empty" style="padding:12px 10px"><b>Custom button entries are unavailable.</b> ${why}.</div>`;
   }
   const fnCell = (b) => (b.function_id
     ? `<span class="wf-fn" data-fnid="${escA(b.function_id)}" data-fnname="${escA(b.function_name || '')}" title="${escA('Open ' + (b.function_name || b.function_id))}">ƒ ${escHtml(b.function_name || b.function_id)}</span>`

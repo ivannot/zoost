@@ -19129,7 +19129,8 @@ test('a module whose custom buttons were not read leaves the modules pull partia
   const { pullModules } = load([sliceFn('apps/crm/modules.js', 'pullModules')], g);
   await pullModules();
   assert.equal(status.at(-1)[0], 'warn', 'a button read gap was reported as a complete modules pull');
-  assert.match(status.at(-1)[1], /custom buttons could not be read/, 'the warning does not name the missing chapter');
+  assert.match(status.at(-1)[1], /have no custom button entries available/, 'the status names the empty chapter without prescribing a retry');
+  assert.doesNotMatch(status.at(-1)[1], /next pull retries|could not be read/, 'an empty chapter does not send the user into a pull loop');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -22115,7 +22116,7 @@ test('crm: writing the sample twice does not double what a function says it is u
 // opens the pane for a refusal (`btnRows.length || m.buttons_read === false`) lives inside
 // `openModule`, which is too large to lift, so it is not exercised - and re-writing the predicate
 // here would be a photograph of it rather than a check on it.
-test('crm: a module whose buttons were refused says so, and one that has none says that instead', () => {
+test('crm: a module without button entries does not invite a needless retry', () => {
   const { renderModuleButtons } = load([sliceFn('apps/crm/modules.js', 'renderModuleButtons')],
     { buttonListShown: null, escA: (x) => String(x == null ? '' : x),
       escHtml: (x) => String(x == null ? '' : x), String, Object });
@@ -22125,16 +22126,17 @@ test('crm: a module whose buttons were refused says so, and one that has none sa
   const refused = renderModuleButtons(
     { api_name: 'Contacts', buttons_read: false, buttons_error: 'Zoho refused it: HTTP 400 - INVALID_MODULE' }, []);
   const noReason = renderModuleButtons({ api_name: 'Contacts', buttons_read: false }, []);
+  const unsupported = renderModuleButtons({ api_name: 'Contacts', buttons_read: false, buttons_supported: false }, []);
   const none = renderModuleButtons({ api_name: 'Contacts', buttons_read: true }, []);
   const older = renderModuleButtons({ api_name: 'Contacts' }, []);
-  assert.match(refused, /HTTP 400 - INVALID_MODULE/, 'the reason the pull recorded is not shown, so the reader is told nothing they can act on');
-  assert.doesNotMatch(refused, /carries none/, 'it recites both reasons, so half the readers act on the wrong one');
-  // A mirror written before the reason was recorded: the gap is stated, not dressed up as a cause.
-  assert.match(noReason, /did not record why/, 'a refusal with no recorded reason invents one');
-  assert.match(none, /carries none/, 'a module that really has no buttons is reported as a failure');
-  assert.doesNotMatch(none, /were not read/, 'a module that answered «none» is reported as unanswered');
+  assert.match(refused, /HTTP 400 - INVALID_MODULE/, 'a real refusal keeps the structured reason');
+  assert.doesNotMatch(refused, /Pull on Modules|did not answer|unknown/, 'the empty state does not prescribe a retry loop');
+  assert.match(noReason, /Custom button entries are unavailable/, 'a missing reason stays neutral');
+  assert.match(unsupported, /No custom button entries are available/, 'a module that cannot carry buttons is not sent back to Pull');
+  assert.match(none, /carries none/, 'a module that answered with no buttons says so');
+  assert.doesNotMatch(none, /did not answer|were not read/, 'an answered empty list is not reported as unanswered');
   // A mirror written before the flag existed: unchanged, rather than accusing an old pull of failing.
-  assert.match(older, /carries none/, 'an older mirror without the flag now reads as a refusal');
+  assert.match(older, /carries none/, 'an older mirror without the flag safely defaults to no entries');
 });
 
 // ---- the chip that links to a function from a tab which never drew the tree ----
