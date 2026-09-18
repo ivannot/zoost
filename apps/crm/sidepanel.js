@@ -12,6 +12,18 @@
 const ZOHO_MATCHES = (chrome.runtime.getManifest().host_permissions || [])
   .filter((h) => /^https:\/\/(crm|crmsandbox|crmplus|one)\./.test(h));
 const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox|plus)?|one)\.zoho/;
+// **The other product's tab, and only where the answer is not ambiguous.** A user who clicks the
+// wrong icon lands on «Not on a Zoho CRM tab», which is true and useless: it says nothing about
+// where they are. This says it - but `one.zoho.*` and `crmplus.zoho.*` are in *both* manifests and
+// host either product, so on those the honest answer is still the plain one. Naming Analytics there
+// would be a new false sentence, which is the defect this whole change exists to remove.
+const TWIN_HOST_RE = /^https:\/\/analytics\.zoho/;
+const TWIN = {
+  name: 'Zoho Analytics',
+  product: 'Zoost Analytics',
+  id: 'gmelnigbgklfjgceldicakkomhgplgge',
+  store: 'https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge',
+};
 const envOf = (origin) => /crmsandbox\./.test(origin || '') ? 'sandbox' : 'prod';
 const CFG = '.zoost.json';
 const NS = ['standalone', 'automation', 'button', 'schedule', 'validation_rule'];
@@ -239,6 +251,11 @@ const MSG = {
   // twice, in two pulls, until a check said so.
   envMismatch: 'Environment mismatch - refusing.',
   noTab: 'No Zoho CRM tab open.',
+  // Two sentences for one situation, because the useful half is different in each case: whoever
+  // already has the other extension needs to be told where it is, not sold it. Which one is shown
+  // is the other extension's own answer - it replies to a message, or it does not.
+  twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
+  twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
   // Settings is a separate tab and nothing disables it while a pull runs - it was believed to be
@@ -861,6 +878,52 @@ const crmZohoBridge = createCrmZohoBridge({
 });
 const tabHasCrmFrame = crmZohoBridge.tabHasCrmFrame;
 const zohoTabId = crmZohoBridge.tabId;
+let twinAsked;                   // the *promise* of the answer, not the answer:
+                                 // assigned before any await, so nothing writes a global
+                                 // after one - and two calls a moment apart share one ask
+                                 // instead of racing. asynccheck named this on the day it
+                                 // was written, which is what that ledger is for.
+/** Is the active tab the *other* product's, and is that product installed?
+ *
+ *  Two questions with one answer, because the panel asks them at the same moment and the second is
+ *  worth nothing without the first. `null` means «not the twin's tab», which is every ordinary case.
+ *
+ *  **The URL is already ours.** The manifests declare `tabs`, and in MV3 that - not a host
+ *  permission - is what puts `url` on a Tab. So recognising the twin's tab costs nothing new: the
+ *  panel was already reading this URL one step earlier and throwing it away, which is why «Not on a
+ *  Zoho CRM tab» could be true and useless at the same time.
+ *
+ *  **Asked once per panel, not once per tab change.** `refreshContext` runs on every activation and
+ *  every navigation; a message per run would be traffic about a fact that does not change while the
+ *  panel is open. An extension installed mid-session is answered by the next reload, which is what
+ *  installing one does anyway.
+ */
+async function twinTab() {
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!active || !TWIN_HOST_RE.test(active.url || '')) return null;
+  return { ...TWIN, installed: await twinAnswers() };
+}
+/** Does the twin answer? Measured before this was written: a message crosses between extensions
+ *  when the receiver names the sender in `externally_connectable.ids`, and a user gesture does not -
+ *  so «it is installed» is answerable and «open it for you» is not. An extension that is not there
+ *  rejects the message, which is the same shape as one that refuses to talk: both mean «do not tell
+ *  the reader it is already installed», and that is the only decision resting on it. */
+function twinAnswers() {
+  // The *promise*, remembered here and assigned before this scope awaits anything - so no global is
+  // written after an await, which `asynccheck` named on the day this was written. Two calls a moment
+  // apart then share one ask instead of racing, which is the reason to want it anyway.
+  if (!twinAsked) twinAsked = askTwin();
+  return twinAsked;
+}
+async function askTwin() {
+  try {
+    // Not `cmd:` - that word belongs to the content bridge, and a derived case reads every
+    // command the panel sends and asks the bridge to answer it. This crosses a different
+    // boundary entirely: another extension's service worker, one message, one word back.
+    const r = await chrome.runtime.sendMessage(TWIN.id, { zoost: 'present?' });
+    return !!(r && r.product);
+  } catch (_) { return false; }   // not installed, or installed and unwilling: same answer to us
+}
 const activeZohoTabId = crmZohoBridge.activeTabId;
 const answeringFrame = crmZohoBridge.answeringFrame;
 const askFrame = crmZohoBridge.askFrame;

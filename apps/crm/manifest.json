@@ -18,6 +18,11 @@
     "scripting",
     "tabs"
   ],
+  "externally_connectable": {
+    "ids": [
+      "gmelnigbgklfjgceldicakkomhgplgge"
+    ]
+  },
   "host_permissions": [
     "https://crm.zoho.eu/*",
     "https://crm.zoho.com/*",

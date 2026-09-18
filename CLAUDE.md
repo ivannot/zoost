@@ -772,6 +772,25 @@ empty, that is what a sweep is.
 What does not move: the non-negotiables above, anything touching what leaves the machine, and
 anything that could lose a user's data. Those are «safe», and safe is part of good.
 
+**«Le cose o si fanno per intero o non si fanno.»** Said on 18 September 2026, choosing between a
+feature with its detection in it and a cheaper half that would have shipped a sentence telling a user
+to install something they already had. **This is not the opposite of the rule above, and confusing
+the two is how both get broken.** «Stop at good» is about *how much you take on* - a small scope,
+honestly chosen, is right, and a sweep that finds nothing is not a goal. «Whole» is about *what you
+ship once you have taken it on*: half a feature is not a smaller feature, it is one that speaks to the
+user and then fails them at the point it was for.
+
+The test is not size, it is whether the thing keeps its own promise. A message that says «install it»
+without knowing whether it is installed has made a claim it cannot support; a tab that draws a status
+dot which does nothing while every sibling downloads is the same failure one layer down. Both were
+real here. So: decide the scope small, then finish it - and if it cannot be finished now, do not ship
+the announcing half of it. **Either it is done, or it waits in `docs/ideas.md` with its cost.**
+
+This is the same instinct as three rules this file already states, and it is worth seeing that they
+are one rule: «declare only what we have; have everything we declare», «never ship a claim that has
+not been tested», and «when you add one of a set, walk the others and check you did everything they
+do».
+
 **Probe the call before building anything around it. This is an order, and it was earned.** One
 runnable call, nothing else: write it, run it against a real org - which usually means asking for one
 click, and that is cheap - and confirm it answers. Then confirm it still answers at the volume the

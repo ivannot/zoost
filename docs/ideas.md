@@ -76,7 +76,12 @@ another Zoho product to point at it wants a clause. The paragraph's promise - «
 unrelated to Zoho CRM» - stays true, since this is the active tab and not an enumeration. A field
 edited is a field re-pasted by hand in the dashboard, which is the price.
 
-**State:** open, answered on the feasibility, and it addresses the reported friction on its own.
+**State: done, 18 September 2026.** Both panels name the twin's tab and point at the product that
+reads it, choosing between «open it from the toolbar» and a link to its listing by whether the
+other extension answers. Ambiguous hosts - `one.zoho.*`, `crmplus.zoho.*`, which are in both
+manifests - keep the plain message, because naming a product there would be a new false sentence
+in place of the old one; a case holds that line. No permission changed: `tabs` was already
+declared and the URL was already being read and thrown away.
 
 ---
 

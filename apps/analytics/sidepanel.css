@@ -517,3 +517,4 @@
   #offoverlay.show{display:flex}
   #offoverlay .t{color:var(--ink);font-size:14px;font-weight:600}
   #offoverlay .s{color:var(--muted);font-size:12px;max-width:240px}
+  #offoverlay a#offtwin{text-decoration:none;display:inline-block}

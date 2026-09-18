@@ -18,6 +18,11 @@
     "scripting",
     "tabs"
   ],
+  "externally_connectable": {
+    "ids": [
+      "flffecjpbmjfonhoojaiemgjanbjkmpj"
+    ]
+  },
   "host_permissions": [
     "https://analytics.zoho.eu/*",
     "https://analytics.zoho.com/*",

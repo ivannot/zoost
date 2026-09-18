@@ -2,6 +2,35 @@
 // ---------- context bar + off-zoho overlay ----------
 let contextLoad = 0;
 let _ctxErr = null;
+/** What the overlay says when the tab is simply not ours - read from the markup, never copied.
+ *  A second copy of a sentence is how «Not on a Zoho tab» survived in the guides after the panel had
+ *  stopped saying it, and it is the defect this change exists to remove: one sentence, one place. */
+const OFF_TITLE = (document.querySelector('#offoverlay .t') || {}).textContent || '';
+const OFF_SUB = (document.querySelector('#offoverlay .s') || {}).textContent || '';
+/** The overlay is the same state, said larger. It exists in the markup, so nothing rewrites it
+ *  unless something does - and the state that reads «Not on a Zoho CRM tab» in the line above used
+ *  to read it here too, unchanged, whatever the tab actually was. Two surfaces, one sentence.
+ *
+ *  The Store link is the half that needs no permission and no API at all: where the twin does not
+ *  answer, the reader gets the page that installs it; where it does, the button would be selling
+ *  them what they have, so it is not drawn. Nothing here can open the other panel - Chrome refuses
+ *  it, in as many words, and that was measured rather than assumed. */
+function offerTwin(twin) {
+  const t = document.querySelector('#offoverlay .t');
+  const s = document.querySelector('#offoverlay .s');
+  const link = $('offtwin');
+  if (!t || !s || !link) return;
+  if (!twin) {
+    t.textContent = OFF_TITLE; s.textContent = OFF_SUB; link.style.display = 'none'; return;
+  }
+  t.textContent = `This is a ${twin.name} tab`;
+  s.textContent = twin.installed
+    ? `${twin.product} reads ${twin.name}. Open it from the toolbar - Chrome does not let one extension open another.`
+    : `${twin.product} reads ${twin.name}. This panel reads Zoho CRM only.`;
+  link.textContent = twin.installed ? '' : `Get ${twin.product} \u2197`;
+  link.href = twin.store;
+  link.style.display = twin.installed ? 'none' : '';
+}
 async function refreshContext() {
   const mine = ++contextLoad;
   const current = () => mine === contextLoad;
@@ -23,7 +52,17 @@ async function refreshContext() {
     // about where they were standing and silent about what is needed. The overlay two files away has
     // always said «Not on a Zoho CRM tab» and the guide quotes it that way, so this line was also the
     // odd one out inside its own product. A precondition names the thing it requires.
-    ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho CRM tab';
+    // **And when the tab belongs to the twin, say so and say what to do about it.** «Not on a Zoho
+    // CRM tab» is true there and useless: it describes what this panel wants and not where the
+    // reader is standing, which is how somebody who clicked the wrong icon is left to work it out.
+    // The URL was already being read one step earlier and thrown away; `twinTab()` keeps it.
+    const twin = await twinTab();
+    if (!current()) return;
+    ctxEl.className = 'offzoho';
+    who.innerHTML = twin
+      ? escHtml(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
+      : 'Not on a Zoho CRM tab';
+    offerTwin(twin);
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
     blockZoho(true);
     return;

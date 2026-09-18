@@ -4791,6 +4791,28 @@ class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
         self.assertIn('REFUSED - the battery stopped without a verdict', src,
                       'a run that vanishes without answering must refuse the push, not pass it')
 
+    def test_a_dirty_tree_is_refused_before_anything_is_recorded(self):
+        """A verdict is about a tree, not only about a commit.
+
+        The clean-tree guard was written on the *reuse* path alone, so the recording path would run
+        the battery over whatever the working tree happened to hold and write the answer under the
+        commit's name - a green that does not describe what was executed, which is the one thing a
+        gate may never produce. Met the same day it was written: an edit landed a minute before a
+        push, the reuse was correctly refused, and the run that replaced it was judging a tree the
+        commit did not contain.
+        """
+        src = self.HOOK.read_text(encoding='utf-8')
+        # The refusal comes before the battery is launched, or it has already spent twenty minutes
+        # on the wrong subject by the time it speaks.
+        self.assertIn('REFUSED - the working tree has changes that are not in', src,
+                      'a dirty tree is not refused, so a verdict can be recorded for an untested tree')
+        self.assertLess(src.index('the working tree has changes'), src.index('systemd-run'),
+                        'the tree is checked after the battery is started, which is too late')
+        # And the record left behind is only ever the current one: a file per commit, for ever, is
+        # the shape `dist/` had when it held 72 archives nobody wanted.
+        self.assertIn("find .git -maxdepth 1 -name 'zoost-battery-*'", src,
+                      'yesterday\'s verdicts accumulate in .git with nothing to remove them')
+
     def test_every_git_derived_check_is_named_in_the_hook(self):
         # Derived: whichever tool reads a commit date is one whose answer the commit itself changes,
         # and the hook's own comment must name it - so a fourth added tomorrow is not a silent

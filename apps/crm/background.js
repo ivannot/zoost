@@ -25,3 +25,15 @@ async function seedShortcuts() {
 }
 chrome.runtime.onInstalled.addListener(seedShortcuts);
 
+// **«I am here.»** The other product's panel asks this when it finds itself looking at a tab that
+// belongs to us, so that it can say «open it from the toolbar» instead of selling something already
+// installed. Measured before it was written: a message does cross between extensions, and a user
+// gesture does not - so answering is all that can be done, and opening the panel from here is not
+// (`sidePanel.open() may only be called in response to a user gesture`).
+//
+// `externally_connectable.ids` in the manifest names exactly one sender, so this listener cannot be
+// reached by a page or by anybody else's extension. It reads nothing and returns one word.
+chrome.runtime.onMessageExternal.addListener((msg, _sender, reply) => {
+  if (msg && msg.zoost === 'present?') { reply({ product: 'Zoost CRM' }); return true; }
+  return false;
+});

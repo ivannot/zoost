@@ -40,12 +40,30 @@ SHA=$(git rev-parse HEAD)
 VERDICT=".git/zoost-battery-$SHA"
 LOG=/tmp/zoost-prepush.log
 
-# A record belongs to a commit *and* to the tree that was tested. A dirty tree is not what the
-# recorded run saw, so the record does not apply to it.
-if [ -f "$VERDICT" ] && [ -z "$(git status --porcelain)" ] && [ "$(cat "$VERDICT")" = "0" ]; then
+# **A verdict is about a tree, not only about a commit, and this guard belongs on both paths.**
+# It was written on the reuse path alone, and the recording path then ran the battery over whatever
+# the working tree happened to hold while writing the answer under the commit's name - a green that
+# does not describe what was executed, which is the one thing a gate may never produce. Met the same
+# day it was written: an edit landed a minute before a push, the reuse was correctly refused, and the
+# run that replaced it was judging a tree the commit did not contain.
+if [ -n "$(git status --porcelain)" ]; then
+  echo
+  echo "pre-push: REFUSED - the working tree has changes that are not in ${SHA:0:7}:"
+  git status --porcelain
+  echo
+  echo "The battery would run over these and record the answer against the commit, which would be a"
+  echo "verdict about something nobody is pushing. Commit them, or stash them, and push again."
+  exit 1
+fi
+
+if [ -f "$VERDICT" ] && [ "$(cat "$VERDICT")" = "0" ]; then
   echo "pre-push: the battery is already recorded green on ${SHA:0:7} - not re-running it."
 else
   rm -f "$VERDICT"
+  # Yesterday's answers are about yesterday's commits and nothing ever removed them. Same shape as
+  # the 72 archives `dist/` had accumulated: one file per commit, for ever, in a directory nobody
+  # looks at. The current one is written below; the rest have said all they will ever say.
+  find .git -maxdepth 1 -name 'zoost-battery-*' ! -name "zoost-battery-$SHA" -delete 2>/dev/null || true
   if command -v systemd-run >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
     UNIT="zoost-prepush-${SHA:0:7}"
     systemctl --user reset-failed "$UNIT.service" >/dev/null 2>&1 || true
@@ -83,6 +101,9 @@ fi
 
 # The derived files are read from git, so they can only be checked once the commit exists - and if
 # they moved, the commit that is about to be pushed is already wrong. Say so rather than pushing it.
+# The derived files are read from git, so they can only be checked once the commit exists. The tree
+# was clean when this script started - it is checked above - so anything here was written by the
+# battery itself.
 if ! git diff --quiet; then
   echo
   echo "pre-push: REFUSED - the battery left changes behind:"

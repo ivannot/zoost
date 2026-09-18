@@ -160,13 +160,13 @@ Every request this sends Zoho CRM is a read: no create, update or delete call ex
 ## 8. tabs justification (max 1000)
 
 ```
-tabs is used to identify the Zoho CRM tab the user is currently working in, and to navigate to Zoho pages on request.
+tabs is used to identify the Zoho CRM tab the user is working in, and to navigate to Zoho pages on request.
 
 Specifically:
-- To read the URL of the active tab and determine which Zoho CRM instance, data centre and organisation it belongs to. This is the core of the environment guard: each local workspace is bound to one org, and if the active tab belongs to a different org - production versus sandbox in particular - every Zoho-bound action is disabled until they match. Without this, a sandbox pull could silently overwrite a production mirror.
-- To open or focus a Zoho CRM page when the user clicks an explicit link in the extension, such as the functions list filtered to a function, a module's records tab, or its layout settings. The extension navigates to these pages by URL; it does not drive the Zoho interface or click on the user's behalf.
+- To read the URL of the active tab and establish which Zoho CRM instance, data centre and org it belongs to. Each workspace is bound to one org, and every Zoho-bound action is disabled while the tab belongs to another - production versus sandbox in particular, where a pull could otherwise overwrite a production mirror. The same read is what lets the panel recognise a Zoho Analytics tab and name the product that reads it, instead of only refusing.
+- To open or focus a Zoho CRM page when the user clicks an explicit link in the extension - the functions list filtered to a function, a module's records tab, or its layout settings. The extension navigates to these pages by URL; it does not drive the Zoho interface or click on the user's behalf.
 
-The extension does not read browsing history, does not enumerate tabs unrelated to Zoho CRM, and takes no action on any other site.
+The extension does not read browsing history, does not enumerate tabs, and takes no action on any other site.
 ```
 
 ## 9. Host permission justification (max 1000)

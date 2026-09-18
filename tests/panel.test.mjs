@@ -1460,6 +1460,50 @@ test('analytics: a workspace it has just created is the one it selects', () => {
 // inside 4000 of DOM-bound code, and what has to hold is that they are there and that they are said
 // *before* the work, not after it.
 
+// A user who clicks the wrong icon lands on «Not on a Zoho CRM tab» - true, and useless: it says
+// what this panel wants and nothing about where the reader is standing. It names the tab now, and
+// the honesty of the whole change rests on one line: `one.zoho.*` and `crmplus.zoho.*` are in BOTH
+// manifests and host either product, so naming the twin there would be a new false sentence in place
+// of the old one. Run against the shipped patterns rather than asserted about them.
+test('each panel names the twin only where the host belongs to one product', () => {
+  for (const [app, twin, mine, ambiguous] of [
+    ['crm', 'https://analytics.zoho.eu/workspace/1', 'https://crm.zoho.eu/crm/tab', 'https://one.zoho.eu/biz/home'],
+    ['analytics', 'https://crm.zoho.eu/crm/tab', 'https://analytics.zoho.eu/workspace/1', 'https://crmplus.zoho.eu/home'],
+  ]) {
+    // Read the literal out of the source: `sliceConst` hands back the comment above a declaration
+    // too, so anchoring on `^const` stripped nothing and built a RegExp out of the prose.
+    const lit = /TWIN_HOST_RE = \/(.+?)\/;/.exec(read(`apps/${app}/sidepanel.js`));
+    assert.ok(lit, `${app}: no TWIN_HOST_RE literal to read`);
+    const re = new RegExp(lit[1]);
+    assert.ok(re.test(twin), `${app}: does not recognise the twin's own host`);
+    assert.ok(!re.test(mine), `${app}: calls its own tab the twin's`);
+    // The one that matters: a shell tab hosts either product, so the panel must keep saying the
+    // plain thing there rather than guess which one the reader meant.
+    assert.ok(!re.test(ambiguous),
+              `${app}: names the twin on ${ambiguous}, which hosts both products - a new false sentence`);
+  }
+});
+
+// Both panels answer the same question, so they answer it in the same words: a reader who has both
+// installed must not meet two voices. The sentences are built from the twin's own names, so this
+// compares what each panel would actually render.
+test('the two panels say the same thing about each other', () => {
+  const said = ['crm', 'analytics'].map((app) => {
+    const ctx = { TWIN: { name: 'X', product: 'Y' } };
+    const msg = sliceAppConst(app, 'MSG');
+    for (const key of ['twinInstalled', 'twinMissing'])
+      assert.ok(msg.includes(key), `${app}: MSG has no ${key}`);
+    return [/twinInstalled: \(t\) => `([^`]+)`/, /twinMissing: \(t\) => `([^`]+)`/]
+      .map((re) => (re.exec(msg) || [])[1]);
+  });
+  assert.deepEqual(said[0], said[1],
+                   'the two panels describe the same situation in different words');
+  assert.ok(said[0][0].includes('open it from the toolbar'),
+            'the installed case does not say where the other extension is');
+  assert.ok(!said[0][1].includes('toolbar'),
+            'the not-installed case sends the reader to a toolbar with nothing on it');
+});
+
 // A pull rebuilds the tab's list. The detail pane is written by the openers and by nothing else, so
 // an item left open went on showing the mirror as it was before the pull - reported from a real org,
 // where the pull brought down a kind of data that mirror had never carried and the new section

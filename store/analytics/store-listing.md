@@ -149,7 +149,7 @@ Nothing outside this package is injected, and no site outside the manifest's hos
 ```
 The panel needs to know which Zoho Analytics workspace the active tab is looking at, because that is what identifies the workspace being mirrored - Zoho Analytics puts the workspace id in the URL. It reads the active tab's URL to establish that, to detect when the user moves to a different workspace so it can disable actions that would otherwise mix two workspaces, and to send messages to the content script on that tab.
 
-It also uses tab access to navigate the current tab to a workspace URL the user asks for, from the "switch tab" action shown when the tab and the mirrored workspace do not match. Tabs on other sites are never read.
+It also reads the active tab's URL to recognise when that tab belongs to Zoho CRM rather than Zoho Analytics, so the panel can say which product reads it instead of only refusing - the same read of the same tab, with no action taken on it. It also uses tab access to navigate the current tab to a workspace URL the user asks for, from the "switch tab" action shown when the tab and the mirrored workspace do not match. Tabs on other sites are never read.
 ```
 
 ---

@@ -54,12 +54,23 @@ ALLOWED = {
     # file suffix -> list of (fragment, reason)
     'apps/analytics/sidepanel.js': [
         ('the CRM', 'comments comparing the two panels are how the twin rule is documented in code'),
+        # Not a comment, and that is the point: this panel *tells the reader* which product reads the
+        # tab in front of them, by name, when they have opened the wrong extension. Measured before
+        # it was built - a message crosses between the two extensions, a user gesture does not - so
+        # naming it and linking its listing is the whole of what can be offered.
+        ("TWIN = { name: 'Zoho CRM'", 'the twin this panel points at when the tab is not its own'),
     ],
     'apps/analytics/ai.js': [
         ('the CRM', 'comments comparing the two assistants are how the twin rule is documented in code'),
     ],
     'apps/crm/sidepanel.js': [
-        ('Analytics', 'comments comparing the two panels'),
+        # **Narrowed on 18 September 2026.** It read `'Analytics'`, which excused every occurrence of
+        # the word anywhere in the file - including one in a *string*, which is user-visible and is
+        # exactly what this checker exists to read. It passed by luck rather than by correctness: a
+        # blanket allowance is the «guard that skips when the thing is absent» this repository
+        # already records, one directory over.
+        ('the Analytics', 'comments comparing the two panels'),
+        ("TWIN = { name: 'Zoho Analytics'", 'the twin this panel points at when the tab is not its own'),
     ],
     'apps/analytics/content-bridge.js': [
         ('CRM', 'comments citing the CRM bridge, which is where the CSRF lesson came from'),
