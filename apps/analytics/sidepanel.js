@@ -920,8 +920,22 @@ function offerTwin(twin) {
   s.textContent = twin.installed
     ? `${twin.product} reads ${twin.name}. Open it from the toolbar - Chrome does not let one extension open another.`
     : `${twin.product} reads ${twin.name}. This panel reads Zoho Analytics only.`;
-  link.textContent = twin.installed ? '' : `Get ${twin.product} \u2197`;
-  link.href = twin.store;
+  // The text goes in the span, never on the link: `textContent` on the anchor would take the icon
+  // with it, and the icon is the thing that makes this read as «that extension» rather than as a
+  // link to somewhere. The icon is the twin's own 48px, shipped in this package because the other
+  // extension's files are not ours to reach - and would not be there at all when it is not installed,
+  // which is exactly the case this link exists for.
+  // Fetched on the first draw that shows it, never on load: a hidden <img src> is still a request,
+  // and this one only matters on the twin's tab with the twin not installed. The endpoint probe
+  // caught it - the panel is served from a synthetic Zoho origin there, so the eager request arrived
+  // as an unknown Zoho endpoint, which is a truthful description of what it was.
+  const img = link.querySelector('img');
+  if (img && !img.getAttribute('src')) img.src = img.dataset.src;
+  link.querySelector('span').textContent = twin.installed ? '' : `Get ${twin.product} \u2197`;
+  // **One source for the URL.** It was in the markup as well until the moment it gained parameters,
+  // which is when two copies of a string stop being harmless. `TWIN.store` is the bare address;
+  // the attribution is added here, once.
+  link.href = `${twin.store}?utm_source=zoost-analytics&utm_medium=extension&utm_campaign=twin-tab`;
   link.style.display = twin.installed ? 'none' : '';
 }
 async function analyticsTabId() {

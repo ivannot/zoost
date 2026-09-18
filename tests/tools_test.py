@@ -2934,13 +2934,44 @@ class EveryIconDeclaredIsThereAndEveryIconThereIsDeclared(unittest.TestCase):
         # a reviewer as something the extension uses. The SVG is deliberately exempt - it is the
         # source the rasters are rendered from and it lives beside them on purpose, because the
         # separate `brand/` folder that used to hold the geometry drifted from the shipped mark.
+        #
+        # **Declared by the manifest OR referenced by a shipped page.** The denominator was the
+        # manifest alone, which was right while the manifest was the only thing that could name an
+        # icon - and stopped being right the day a panel drew one: the twin's mark beside the link
+        # that offers the other extension. Widening the denominator is not a loosening, because the
+        # target is unchanged - a raster nobody names at all is still a finding. Narrowing it to the
+        # manifest would have forced the opposite fix, declaring an icon to Chrome that Chrome must
+        # not use.
         for app, man in self.manifests():
-            declared = {rel for _, rel in self.declared(man)}
+            named = {rel for _, rel in self.declared(man)}
+            for page in sorted((self.ROOT / 'apps' / app).glob('*.html')):
+                text = page.read_text(encoding='utf-8')
+                named |= {f'icons/{f.name}'
+                          for f in (self.ROOT / 'apps' / app / 'icons').glob('*.png')
+                          if f'icons/{f.name}' in text}
             for f in sorted((self.ROOT / 'apps' / app / 'icons').glob('*.png')):
                 rel = f'icons/{f.name}'
                 with self.subTest(app=app, icon=rel):
-                    self.assertIn(rel, declared,
-                                  f'{app}: {rel} ships and no manifest key names it')
+                    self.assertIn(rel, named,
+                                  f'{app}: {rel} ships and neither a manifest key nor a page names it')
+
+    def test_a_twin_icon_is_the_twin_s_own_icon(self):
+        """The copy in each package is the other product's mark, and nothing was keeping it so.
+
+        The panel shows the twin's icon beside the link that offers the other extension, and the
+        other extension's files are not ours to reach - so a copy ships here. A copy with no check on
+        it is a copy that is right today: re-draw one product's mark and the other package goes on
+        showing the old one, in the one place whose whole job is to be recognisable. Compared by
+        bytes, in both directions, which is the only thing that cannot drift.
+        """
+        for app, twin in (('crm', 'analytics'), ('analytics', 'crm')):
+            with self.subTest(app=app):
+                mine = self.ROOT / 'apps' / app / 'icons' / 'twin-48.png'
+                theirs = self.ROOT / 'apps' / twin / 'icons' / '48.png'
+                self.assertTrue(mine.exists(), f'{app}: the twin icon the panel draws is not shipped')
+                self.assertEqual(mine.read_bytes(), theirs.read_bytes(),
+                                 f'{app}: its copy of the {twin} mark is not that mark any more - '
+                                 f'cp apps/{twin}/icons/48.png apps/{app}/icons/twin-48.png')
 
     def test_the_renderer_knows_about_every_one_of_them(self):
         # tools/icons.html is where the PNGs come from. A size added to a manifest and not to it is a

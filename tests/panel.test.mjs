@@ -1504,6 +1504,37 @@ test('the two panels say the same thing about each other', () => {
             'the not-installed case sends the reader to a toolbar with nothing on it');
 });
 
+// The site has a case that holds every Store exit to one campaign shape; the panels are a second
+// exit and had none, so the convention would have been born unwatched. Asked for by name: the source
+// is the app doing the referring, so the two products are told apart in the Store's own reporting.
+test('each panel attributes its Store link to itself, from one source', () => {
+  for (const [app, file, source] of [
+    ['crm', 'apps/crm/crm-context.js', 'zoost-crm'],
+    ['analytics', 'apps/analytics/sidepanel.js', 'zoost-analytics'],
+  ]) {
+    const src = read(file);
+    const href = /link\.href = `\$\{twin\.store\}([^`]+)`/.exec(src);
+    assert.ok(href, `${app}: the twin link's address is not built in one place`);
+    assert.match(href[1], new RegExp(`^\\?utm_source=${source}&`),
+                 `${app}: the Store visit does not name the app that referred it`);
+    assert.match(href[1], /&utm_medium=extension&/, `${app}: no medium telling it from the website`);
+    assert.match(href[1], /&utm_campaign=twin-tab$/, `${app}: no stable campaign name`);
+  }
+  // **And the markup must not carry an address of its own.** It did, until the URL gained
+  // parameters - the moment two copies of a string stop being harmless. A second one would be
+  // silent: the panel would work, and the attribution would simply be missing from whichever copy
+  // the reader clicked first.
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/sidepanel.html`);
+    const link = /<a[^>]*id="offtwin"[^>]*>/.exec(html);
+    assert.ok(link, `${app}: no twin link in the markup`);
+    assert.doesNotMatch(link[0], /href=/,
+                        `${app}: the markup carries its own copy of the Store address`);
+    assert.match(link[0] + html.slice(html.indexOf(link[0])).slice(0, 200), /icons\/twin-48\.png/,
+                 `${app}: the link shows no icon, so it reads as a link rather than as that extension`);
+  }
+});
+
 // A pull rebuilds the tab's list. The detail pane is written by the openers and by nothing else, so
 // an item left open went on showing the mirror as it was before the pull - reported from a real org,
 // where the pull brought down a kind of data that mirror had never carried and the new section
