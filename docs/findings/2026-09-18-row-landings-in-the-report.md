@@ -211,6 +211,17 @@ repository has already written down and paid for again: **a guard that skips whe
 is not a guard - absence is the first thing to ask about**, and a rect is not evidence that an
 element is rendered.
 
+**The push gate photographs the tree at the wrong instant, and refused four pushes over a file that
+was already back.** `tools/hooks/pre-push` runs the battery and then refuses if the working tree
+changed - which is right, because a derived file that moved belongs in the commit going out. But
+`tests/tools_test.py` plants defects on purpose to prove its checks can fail, `tools/asyncscopes.txt`
+among them, and restores them; the hook compared the tree while one of those was in flight and
+reported «the battery left changes behind» over a file that is identical to HEAD a second later.
+Measured: after the refusal, `git status --porcelain` is empty, `git diff` on that file is empty, and
+`asynccheck` reports zero. The finding is recorded rather than fixed today - a gate is not something
+to edit while a release is waiting on it - and the shape of the fix is to compare after the suite has
+put its own plants back, not while it still has them out.
+
 **A derived ledger is accepted on a tree nobody else is writing.** `twincheck --accept` records a
 hash per twin function, and it was run while a review agent had a shipped file mutated in flight: the
 run read `apps/crm/options.js` mid-experiment and wrote `saveKeys` into the ledger as divergent when
