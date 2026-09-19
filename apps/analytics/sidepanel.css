@@ -519,8 +519,9 @@
   #offoverlay.show{display:flex}
   #offoverlay .offgrp{display:flex;flex-direction:column;align-items:center;gap:8px}
   #offoverlay .offrow{flex-direction:row;gap:6px;flex-wrap:wrap;justify-content:center}
-  #offoverlay .offhead{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:280px}
-  #offoverlay .offbox{border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:280px}
+  #offoverlay .offhead{display:flex;flex-direction:column;align-items:center;gap:8px;width:280px;max-width:100%}
+  #offoverlay .offbox{border:1px solid var(--line);border-radius:10px;padding:14px 16px;width:280px;max-width:100%;box-sizing:border-box}
+  #offoverlay .offrow>#gozohodc{font:12px var(--sans);border-radius:7px;padding:6px 10px}
   #offoverlay .offtwinbox{border-color:var(--twin)}
   #offoverlay .offherebox{border-color:var(--accent)}
   #offoverlay #offtwin{display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;
