@@ -1535,6 +1535,35 @@ test('each panel attributes its Store link to itself, from one source', () => {
   }
 });
 
+// The overlay is deliberately down while a sample is open, so on a sample the context bar is the
+// only thing that speaks - and it said «This is a Zoho Analytics tab» over a workspace of invented
+// data with nothing to do about it. Reported as the hardest of the lot to read. The mark carries the
+// way out there, because that line is nowrap with an ellipsis and a longer sentence is one nobody
+// finishes.
+test('the context bar offers the twin, and stops offering it on the way out', () => {
+  for (const [app, path] of [['crm', 'apps/crm/crm-context.js'],
+                             ['analytics', 'apps/analytics/sidepanel.js']]) {
+    const src = read(path);
+    assert.match(src, /function offerCtxTwin\(twin\)/, `${app}: nothing fills the context-bar mark`);
+    // The explanation goes in the title: the line it sits on cannot grow.
+    assert.match(src, /a\.title = /, `${app}: the mark says nothing when you rest on it`);
+    assert.match(src, /utm_source=zoost-/, `${app}: the context mark's link is unattributed`);
+    // **And it is switched off outside the branch that switched it on.** A mark drawn in one branch
+    // and never cleared survives the return to a proper tab - the class this repository records as
+    // «state set imperatively and never cleared», met again here.
+    assert.match(src, /offerCtxTwin\(null\)/,
+                 `${app}: the twin mark stays lit after leaving the twin's tab`);
+    const on = src.indexOf('offerCtxTwin(twin)');
+    const off = src.indexOf('offerCtxTwin(null)');
+    assert.ok(on > 0 && off > 0, `${app}: the mark is only ever set, or only ever cleared`);
+  }
+  // Both panels carry the element the function writes into, or it writes into nothing.
+  for (const app of ['crm', 'analytics']) {
+    assert.match(read(`apps/${app}/sidepanel.html`), /id="ctxtwin"/,
+                 `${app}: the context bar has no mark to fill`);
+  }
+});
+
 // A pull rebuilds the tab's list. The detail pane is written by the openers and by nothing else, so
 // an item left open went on showing the mirror as it was before the pull - reported from a real org,
 // where the pull brought down a kind of data that mirror had never carried and the new section
@@ -4513,7 +4542,12 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
     assert.ok(!/\$\('offoverlay'\)\.classList\.add\('show'\)/.test(js),
       `${app}: something still shows that overlay unconditionally`);
     // and the way in has to be on the overlay itself, which is where a new install actually lands
-    const ov = html.slice(html.indexOf('id="offoverlay"'), html.indexOf('id="offoverlay"') + 800);
+    // **The overlay, not a guess at how long it is.** This was `+ 800` characters from the id - a
+    // proxy for «inside the overlay» that was true while the overlay was a flat column, and false
+    // the moment its controls were grouped by purpose: `gozoho` moved to 1747 characters in and the
+    // case went red about markup that was correct. Measured, then replaced by the element itself.
+    const ovStart = html.indexOf('id="offoverlay"');
+    const ov = html.slice(ovStart, html.indexOf('</div>', html.indexOf('id="gozoho"', ovStart)));
     assert.ok(/id="offsample"/.test(ov), `${app}: the overlay offers no way to try Zoost without signing in`);
     assert.ok(/class="primary" id="offsample"/.test(ov), `${app}: the sample is not the primary first-run action`);
     assert.ok(/class="znav" id="gozoho"/.test(ov), `${app}: the control that opens Zoho lost its navigation colour`);

@@ -2,49 +2,66 @@
 // ---------- context bar + off-zoho overlay ----------
 let contextLoad = 0;
 let _ctxErr = null;
-/** What the overlay says when the tab is simply not ours - read from the markup, never copied.
- *  A second copy of a sentence is how «Not on a Zoho tab» survived in the guides after the panel had
- *  stopped saying it, and it is the defect this change exists to remove: one sentence, one place. */
-const OFF_TITLE = (document.querySelector('#offoverlay .t') || {}).textContent || '';
-const OFF_SUB = (document.querySelector('#offoverlay .s') || {}).textContent || '';
-/** The overlay is the same state, said larger. It exists in the markup, so nothing rewrites it
- *  unless something does - and the state that reads «Not on a Zoho CRM tab» in the line above used
- *  to read it here too, unchanged, whatever the tab actually was. Two surfaces, one sentence.
+/** The overlay's twin group: shown only on the twin's tab, and it carries the whole answer.
  *
- *  The Store link is the half that needs no permission and no API at all: where the twin does not
- *  answer, the reader gets the page that installs it; where it does, the button would be selling
- *  them what they have, so it is not drawn. Nothing here can open the other panel - Chrome refuses
- *  it, in as many words, and that was measured rather than assumed. */
+ *  Three groups with three purposes - «you are on the other product's tab», «go to Zoho CRM»,
+ *  «look at an example». They were one flat column of five equal-looking choices, reported as
+ *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
+ *
+ *  What this group may promise is bounded by what Chrome allows, which was measured rather than
+ *  assumed: a message crosses between the two extensions, a user gesture does not. So it can say
+ *  «click its icon in the toolbar» and it cannot do it for them.
+ */
+/** The same way out, on the context bar - which is the only thing that speaks while a sample is
+ *  open, because the overlay is deliberately down there. Reported as the hardest case to read:
+ *  «This is a Zoho Analytics tab» over a workspace of invented data, with nothing to do about it.
+ *
+ *  The mark carries it, not a sentence: `#ctx .who` is nowrap with an ellipsis, so a longer line is
+ *  a line nobody finishes reading. The explanation lives in the title, where a long string belongs.
+ */
+function offerCtxTwin(twin) {
+  const a = $('ctxtwin');
+  if (!a) return;
+  a.style.display = twin ? '' : 'none';
+  if (!twin) return;
+  const img = a.querySelector('img');
+  if (img && !img.getAttribute('src')) img.src = img.dataset.src;
+  a.title = `This is a Zoho Analytics tab and this panel reads Zoho CRM only. `
+    + `${twin.product} reads it - open it from your toolbar if you have it, or click to get it.`;
+  a.href = `${twin.store}?utm_source=zoost-crm&utm_medium=extension&utm_campaign=twin-tab`;
+}
 function offerTwin(twin) {
-  const t = document.querySelector('#offoverlay .t');
-  const s = document.querySelector('#offoverlay .s');
+  const grp = $('offtwingrp');
+  if (!grp) return;
+  grp.style.display = twin ? '' : 'none';
+  // The ordinary group says «not on a ... tab» and stays for everything else; on the twin's tab the
+  // answer is above it and repeating the refusal underneath would be the panel talking twice.
+  const here = $('offheregrp');
+  if (here) here.style.display = twin ? 'none' : '';
+  if (!twin) return;
+  $('offtwint').textContent = `This is a Zoho Analytics tab`;
+  $('offtwins').textContent = twin.installed
+    ? `You are on Zoho Analytics and this panel reads Zoho CRM only. `
+      + `Click the ${twin.product} icon in your toolbar - it reads this tab.`
+    /* Never «you do not have it»: nothing here can establish that. An unanswered ask is
+       also what an older copy of the twin looks like - which is every installed copy until
+       both products ship the listening half. Reported from that exact state: installed from
+       the Store and still offered for sale. */
+    : `You are on Zoho Analytics and this panel reads Zoho CRM only. `
+      + `${twin.product} reads it: open it from your toolbar if you have it, or get it from the Chrome Web Store.`;
   const link = $('offtwin');
-  if (!t || !s || !link) return;
-  if (!twin) {
-    t.textContent = OFF_TITLE; s.textContent = OFF_SUB; link.style.display = 'none'; return;
-  }
-  t.textContent = `This is a ${twin.name} tab`;
-  s.textContent = twin.installed
-    ? `${twin.product} reads ${twin.name}. Open it from the toolbar - Chrome does not let one extension open another.`
-    : `${twin.product} reads ${twin.name}. This panel reads Zoho CRM only.`;
-  // The text goes in the span, never on the link: `textContent` on the anchor would take the icon
-  // with it, and the icon is the thing that makes this read as «that extension» rather than as a
-  // link to somewhere. The icon is the twin's own 48px, shipped in this package because the other
-  // extension's files are not ours to reach - and would not be there at all when it is not installed,
-  // which is exactly the case this link exists for.
   // Fetched on the first draw that shows it, never on load: a hidden <img src> is still a request,
-  // and this one only matters on the twin's tab with the twin not installed. The endpoint probe
-  // caught it - the panel is served from a synthetic Zoho origin there, so the eager request arrived
-  // as an unknown Zoho endpoint, which is a truthful description of what it was.
+  // and the endpoint probe caught exactly that - the panel is served from a synthetic Zoho origin
+  // there, so the eager fetch arrived as an unknown Zoho endpoint.
   const img = link.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
-  link.querySelector('span').textContent = twin.installed ? '' : `Get ${twin.product} \u2197`;
-  // **One source for the URL.** It was in the markup as well until the moment it gained parameters,
-  // which is when two copies of a string stop being harmless. `TWIN.store` is the bare address;
-  // the attribution is added here, once.
+  link.querySelector('span').textContent = twin.installed
+    ? `Open ${twin.product} \u2197` : `${twin.product} on the Web Store \u2197`;
+  // **One source for the address.** It lived in the markup as an href as well, which was harmless
+  // while it was a bare URL and two things to keep in step the moment it gained parameters.
   link.href = `${twin.store}?utm_source=zoost-crm&utm_medium=extension&utm_campaign=twin-tab`;
-  link.style.display = twin.installed ? 'none' : '';
 }
+
 async function refreshContext() {
   const mine = ++contextLoad;
   const current = () => mine === contextLoad;
@@ -77,11 +94,15 @@ async function refreshContext() {
       ? escHtml(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
       : 'Not on a Zoho CRM tab';
     offerTwin(twin);
+    offerCtxTwin(twin);
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
     blockZoho(true);
     return;
   }
   $('offoverlay').classList.remove('show');
+  // Off the twin's tab the mark goes with it. It is drawn in the branch above and nothing
+  // else touches it, so without this it survives the return to a proper tab.
+  offerCtxTwin(null);
   await ensureBridge(activeId);
   if (!current()) return;
   const cfid = await crmFrameId(activeId);

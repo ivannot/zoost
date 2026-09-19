@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:5f6174c330bed0ae -->
+<!-- translated-from: site/docs-analytics.html sha256:acf868bda64c1dc5 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -54,7 +54,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.33.0</span> · aggiornata il <span class="dd" data-stamp="updated">18 settembre 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.33.0</span> · aggiornata il <span class="dd" data-stamp="updated">19 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -135,10 +135,17 @@
     <b class="ui">Sample</b> finché non hai concesso la cartella di lavoro, <b class="ui">+ Sample</b>
     quando l'hai concessa e non ne esiste ancora uno, e <b class="ui">Open sample</b> quando esiste,
     che ti riporta lì.</p>
-  <p>La stessa azione è la scelta principale sulla schermata <b>Not on a Zoho Analytics tab</b>, come
-    <b class="ui">Sample workspace</b>:
-    un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.
-    Quella schermata è dove si trova davvero chi ha appena installato Zoost.</p>
+  <p>La stessa azione è la scelta principale nel gruppo centrale della schermata
+    <b>Not on a Zoho Analytics tab</b>, come <b class="ui">Sample workspace</b>: un sample non deve niente alla
+    piattaforma, quindi si apre e si legge senza tab e senza account. Quella schermata è dove si trova
+    davvero chi ha appena installato Zoost. Quando ne esiste già uno quel pulsante diventa
+    <b class="ui">Open sample workspace</b> e lo apre; finché Chrome non ha dato al pannello l'accesso
+    alla cartella di lavoro non può saperlo, quindi non dice né l'una né l'altra cosa e legge solo
+    <b class="ui">Sample workspace</b> - il clic chiede prima l'accesso e poi fa quella giusta: l'overlay copre anche l'elenco dei workspace,
+    quindi nasconderlo lì renderebbe il sample irraggiungibile.</p>
+  <p>Quella schermata ha tre gruppi, uno scopo ciascuno: cosa fare quando la scheda è dell'altro
+    prodotto, il sample, e la coppia che porta su Zoho Analytics - l'elenco dei data centre esiste solo per il
+    pulsante che gli sta accanto. Il primo gruppo compare solo su una scheda Zoho CRM.</p>
   <p>Quando ne esiste già uno quel pulsante diventa <b class="ui">Open sample workspace</b> e lo apre.
     Finché Chrome non ha dato al pannello l'accesso alla cartella di lavoro non può saperlo, quindi non
     dice né l'una né l'altra cosa e legge solo <b class="ui">Sample workspace</b>; il clic chiede prima

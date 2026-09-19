@@ -93,6 +93,8 @@
 
   #ctx{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
   #ctx .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+  #ctx .ctxtwin{flex:none;display:inline-flex;align-items:center;line-height:0}
+  #ctx .ctxtwin img{display:block;border-radius:3px}
   #ctx.match .dot{background:var(--ok)} #ctx.mismatch .dot{background:var(--bad)}
   #ctx.unbound .dot{background:var(--muted)} #ctx.offzoho .dot{background:var(--warn)}
   #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -513,8 +515,10 @@
   #aboutbody a{color:#83d8c6}
   #aboutbody .legal{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:6px}
 
-  #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:70;text-align:center;padding:20px}
+  #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:26px;z-index:70;text-align:center;padding:20px}
   #offoverlay.show{display:flex}
+  #offoverlay .offgrp{display:flex;flex-direction:column;align-items:center;gap:8px}
+  #offoverlay .offrow{flex-direction:row;gap:6px}
   #offoverlay .t{color:var(--ink);font-size:14px;font-weight:600}
   #offoverlay .s{color:var(--muted);font-size:12px;max-width:240px}
   #offoverlay a#offtwin{text-decoration:none;display:inline-flex;align-items:center;gap:6px}

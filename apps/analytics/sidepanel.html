@@ -18,7 +18,7 @@
 </div>
 
 <div id="ctx" class="unbound">
-  <span class="dot"></span><span class="who" id="who">Not on a Zoho Analytics tab</span><span class="bound" id="bound"></span>
+  <span class="dot"></span><span class="who" id="who">Not on a Zoho Analytics tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span>
 </div>
 <div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button><button id="mmgo"></button></div></div>
 <div id="status"><i class="spin"></i><span id="statustext">Ready.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button><button id="repdismiss" title="Dismiss this - the report page stays open in its own window">✕</button><button id="expopen" class="bare"></button></div>
@@ -145,12 +145,27 @@
 </div>
 
 <div id="offoverlay">
-  <div class="t">Not on a Zoho Analytics tab</div>
-  <div class="s">This workspace talks to Zoho only from a Zoho Analytics tab. To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.</div>
-  <button class="primary" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">Sample workspace</button>
-  <select id="gozohodc" class="znav" aria-label="Which data centre to open" title="Which data centre to open. It starts on the one this workspace or this tab is on, or on the default in Settings - after signing out, which org you want next is yours to say"></select>
-  <button class="znav" id="gozoho">Go to Zoho Analytics ↗</button>
-      <a class="znav" id="offtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="16" height="16"><span></span></a>
+  <!-- Three groups, three purposes, and the reader must be able to tell which is which. They were
+       one flat column and read as five equal choices - reported exactly so: «tutti ammassati e non
+       hanno una logica». The wrapper is what carries the grouping; every control is still reached
+       by id, which is the only way anything here touches them. -->
+  <div class="offgrp" id="offtwingrp" style="display:none">
+    <div class="t" id="offtwint"></div>
+    <div class="s" id="offtwins"></div>
+    <a class="znav" id="offtwin" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="16" height="16"><span></span></a>
+  </div>
+  <div class="offgrp" id="offheregrp">
+    <div class="t">Not on a Zoho Analytics tab</div>
+    <div class="s">This workspace talks to Zoho only from a Zoho Analytics tab. To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.</div>
+  </div>
+  <div class="offgrp">
+    <button class="primary" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">Sample workspace</button>
+  </div>
+  <!-- The select exists only for the button beside it, so they are one thing on screen. -->
+  <div class="offgrp offrow">
+    <select id="gozohodc" class="znav" aria-label="Which data centre to open" title="Which data centre to open. It starts on the one this workspace or this tab is on, or on the default in Settings - after signing out, which org you want next is yours to say"></select>
+    <button class="znav" id="gozoho">Go to Zoho Analytics ↗</button>
+  </div>
 </div>
 <div id="rxmenu" class="rxmenu"></div>
 
