@@ -5,7 +5,7 @@
   [hidden]{display:none!important}
   :root{
     --bg:#0d121c; --tree:#0f1622; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
-    --border:#26303f; --line:#1e2735; --sel:#3b82f6;--accent:#3b82f6; --sel-soft:#16263f;
+    --border:#26303f; --line:#1e2735; --sel:#3b82f6;--accent:#3b82f6; --twin:#dc2d7a; --sel-soft:#16263f;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --rest:#a78bfa;
     --hist:#67e8f9; --hist-line:#2b7c8c; --hist-fill:rgba(34,211,238,.14);   /* the history: a colour used for nothing else */
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
@@ -718,10 +718,15 @@
   #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:26px;z-index:70;text-align:center;padding:20px}
   #offoverlay.show{display:flex}
   #offoverlay .offgrp{display:flex;flex-direction:column;align-items:center;gap:8px}
-  #offoverlay .offrow{flex-direction:row;gap:6px}
-  #offoverlay .t{color:var(--ink);font-size:14px;font-weight:600} #offoverlay .s{color:var(--muted);font-size:12px;max-width:240px}
-  #offoverlay a#offtwin{text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-  #offoverlay a#offtwin img{display:block;border-radius:3px}
+  #offoverlay .offrow{flex-direction:row;gap:6px;flex-wrap:wrap;justify-content:center}
+  #offoverlay .offhead{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:280px}
+  #offoverlay .offbox{border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:280px}
+  #offoverlay .offtwinbox{border-color:var(--twin)}
+  #offoverlay .offherebox{border-color:var(--accent)}
+  #offoverlay #offtwin{display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;
+    padding:6px 10px;border-radius:8px;border:1px solid var(--twin);color:var(--twin);font:inherit}
+  #offoverlay #offtwin:hover{background:var(--twin);color:#fff}
+  #offoverlay #offtwin img{display:block;border-radius:3px}
   /* The strip's right-hand slot. A control that acts on the item belongs beside the tabs, not
      inside one of them - see the comment on #pvtabs. */
   /* One component, not three things next to the tabs. Loose on the strip, the word «depth», the

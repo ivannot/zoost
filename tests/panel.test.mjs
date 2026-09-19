@@ -4542,12 +4542,25 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
     assert.ok(!/\$\('offoverlay'\)\.classList\.add\('show'\)/.test(js),
       `${app}: something still shows that overlay unconditionally`);
     // and the way in has to be on the overlay itself, which is where a new install actually lands
-    // **The overlay, not a guess at how long it is.** This was `+ 800` characters from the id - a
-    // proxy for «inside the overlay» that was true while the overlay was a flat column, and false
-    // the moment its controls were grouped by purpose: `gozoho` moved to 1747 characters in and the
-    // case went red about markup that was correct. Measured, then replaced by the element itself.
+    // **The overlay, balanced - not a landmark inside it.** This was `+ 800` characters from the
+    // id, then «up to the close after `gozoho`». Both were proxies for «inside the overlay», and
+    // both went false the moment the groups were reordered: the first when `gozoho` moved past 800
+    // characters, the second when the sample moved below `gozoho`. A proxy that encodes today's
+    // order is a case that fails on tomorrow's layout and says nothing about the product. Count the
+    // tags instead, which is what «inside this element» actually means.
     const ovStart = html.indexOf('id="offoverlay"');
-    const ov = html.slice(ovStart, html.indexOf('</div>', html.indexOf('id="gozoho"', ovStart)));
+    const ov = (() => {
+      let depth = 0, i = html.lastIndexOf('<div', ovStart);
+      for (let at = i; at < html.length; at += 1) {
+        if (html.startsWith('<div', at)) depth += 1;
+        else if (html.startsWith('</div>', at)) {
+          depth -= 1;
+          if (depth === 0) return html.slice(i, at + 6);
+        }
+      }
+      return '';
+    })();
+    assert.ok(ov.includes('id="offoverlay"'), `${app}: the overlay could not be read out of the markup`);
     assert.ok(/id="offsample"/.test(ov), `${app}: the overlay offers no way to try Zoost without signing in`);
     assert.ok(/class="primary" id="offsample"/.test(ov), `${app}: the sample is not the primary first-run action`);
     assert.ok(/class="znav" id="gozoho"/.test(ov), `${app}: the control that opens Zoho lost its navigation colour`);

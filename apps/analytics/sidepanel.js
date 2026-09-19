@@ -920,32 +920,31 @@ function offerCtxTwin(twin) {
   const img = a.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
   a.title = `This is a Zoho CRM tab and this panel reads Zoho Analytics only. `
-    + `${twin.product} reads it - open it from your toolbar if you have it, or click to get it.`;
+    + `${twin.product} reads it - open it from your toolbar if you have it, or get it from the Chrome Web Store.`;
   a.href = `${twin.store}?utm_source=zoost-analytics&utm_medium=extension&utm_campaign=twin-tab`;
 }
 function offerTwin(twin) {
   const grp = $('offtwingrp');
   if (!grp) return;
   grp.style.display = twin ? '' : 'none';
-  // The ordinary group says «not on a ... tab» and stays for everything else; on the twin's tab the
-  // answer is above it and repeating the refusal underneath would be the panel talking twice.
-  const here = $('offheregrp');
-  if (here) here.style.display = twin ? 'none' : '';
+  // **The lead says what is on the screen, and only that.** With the twin's box drawn there are
+  // three ways out; without it there are two, and a sentence promising a box that is not there is
+  // the same defect this whole screen was built to remove, one layer up.
+  $('offtitle').textContent = twin ? `This is a Zoho CRM tab` : `Not on a Zoho Analytics tab`;
+  $('offlead').textContent = twin
+    ? 'Three ways on: open the other Zoost, go to Zoho Analytics, or work in a sample workspace.'
+    : 'Two ways on: go to Zoho Analytics, or work in a sample workspace.';
   if (!twin) return;
-  $('offtwint').textContent = `This is a Zoho CRM tab`;
-  $('offtwins').textContent = twin.installed
-    ? `You are on Zoho CRM and this panel reads Zoho Analytics only. `
-      + `Click the ${twin.product} icon in your toolbar - it reads this tab.`
-    /* Never «you do not have it»: nothing here can establish that. An unanswered ask is
-       also what an older copy of the twin looks like - which is every installed copy until
-       both products ship the listening half. Reported from that exact state: installed from
-       the Store and still offered for sale. */
-    : `You are on Zoho CRM and this panel reads Zoho Analytics only. `
-      + `${twin.product} reads it: open it from your toolbar if you have it, or get it from the Chrome Web Store.`;
+  $('offtwins').textContent = `You are on Zoho CRM and this panel reads Zoho Analytics only. `
+    + (twin.installed
+      ? `Click the ${twin.product} icon in your toolbar - it reads this tab.`
+      /* Never «you do not have it»: nothing here can establish that. An unanswered ask is also what
+         an older copy of the twin looks like - which is every installed copy until both products
+         ship the listening half. */
+      : `${twin.product} reads it: open it from your toolbar if you have it, or get it below.`);
   const link = $('offtwin');
   // Fetched on the first draw that shows it, never on load: a hidden <img src> is still a request,
-  // and the endpoint probe caught exactly that - the panel is served from a synthetic Zoho origin
-  // there, so the eager fetch arrived as an unknown Zoho endpoint.
+  // and the endpoint probe caught exactly that.
   const img = link.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
   link.querySelector('span').textContent = twin.installed
@@ -954,6 +953,7 @@ function offerTwin(twin) {
   // while it was a bare URL and two things to keep in step the moment it gained parameters.
   link.href = `${twin.store}?utm_source=zoost-analytics&utm_medium=extension&utm_campaign=twin-tab`;
 }
+
 
 async function analyticsTabId() {
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });

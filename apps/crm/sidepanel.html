@@ -170,26 +170,29 @@
       <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about this function, a workflow, an impact… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend">Send</button></div>
     </div>
     <div id="offoverlay">
-        <!-- Three groups, three purposes, and the reader must be able to tell which is which. They were
-             one flat column and read as five equal choices - reported exactly so: «tutti ammassati e non
-             hanno una logica». The wrapper is what carries the grouping; every control is still reached
-             by id, which is the only way anything here touches them. -->
-        <div class="offgrp" id="offtwingrp" style="display:none">
-          <div class="t" id="offtwint"></div>
+        <!-- Three groups, three purposes, each bordered in the colour of the product it is about: the
+             twin's group in the twin's accent, «go to Zoho» in this product's own. The mirroring is a
+             fact of the two stylesheets rather than something to remember - `--twin` in each is the
+             other's `--accent`. Reported flat and then still too flat: «gli elementi vanno separati
+             ancora meglio, metterei dei bordi esterni». -->
+        <div class="offhead">
+          <div class="t" id="offtitle">Not on a Zoho CRM tab</div>
+          <div class="s" id="offlead"></div>
+        </div>
+        <div class="offgrp offbox offtwinbox" id="offtwingrp" style="display:none">
           <div class="s" id="offtwins"></div>
-          <a class="znav" id="offtwin" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="16" height="16"><span></span></a>
-        </div>
-        <div class="offgrp" id="offheregrp">
-          <div class="t">Not on a Zoho CRM tab</div>
-          <div class="s">This workspace talks to Zoho only from a Zoho CRM tab. To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.</div>
-        </div>
-        <div class="offgrp">
-          <button class="primary" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">Sample workspace</button>
+          <a id="offtwin" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="16" height="16"><span></span></a>
         </div>
         <!-- The select exists only for the button beside it, so they are one thing on screen. -->
-        <div class="offgrp offrow">
+        <div class="offgrp offbox offherebox offrow">
           <select id="gozohodc" class="znav" aria-label="Which data centre to open" title="Which data centre to open. It starts on the one this workspace or this tab is on, or on the default in Settings - after signing out, which org you want next is yours to say"></select>
           <button class="znav" id="gozoho">Go to Zoho CRM ↗</button>
+        </div>
+        <!-- Last, and outside the two bordered groups: it is what you do when neither of them applies,
+             and it owes the platform nothing. Still the primary - it is where a new install lands. -->
+        <div class="offgrp">
+          <div class="s">This workspace talks to Zoho only from a Zoho CRM tab. To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.</div>
+          <button class="primary" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">Sample workspace</button>
         </div>
       </div>
   </div>

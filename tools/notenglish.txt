@@ -5,11 +5,11 @@
 # has to recognise «tutti e due» to hold that page to the truth, so the words are the subject and
 # not prose. Added 23 August 2026, with the widening that reads a sentence whose subject is not a
 # product name.
-d3bfc1d56cc3475b  apps/analytics/sidepanel.html: one flat column and read as five equal choices - reported exactly so: «tutti ammassati e non
+e68cf37e34200425  apps/analytics/sidepanel.html: ancora meglio, metterei dei bordi esterni». -->
 c2723b6f14fec5c7  apps/analytics/sidepanel.js: *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
 69f39e2a5bd6503a  apps/crm/crm-context.js: *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
 567d0f389af213ab  apps/crm/sidepanel.html: three, unusable for a project with a `node_modules` in it - «se ci sono tanti file il
-2d8aaf7da33644ab  apps/crm/sidepanel.html: one flat column and read as five equal choices - reported exactly so: «tutti ammassati e non
+7c0df4eed01d4b41  apps/crm/sidepanel.html: ancora meglio, metterei dei bordi esterni». -->
 986d885e376ec51c  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: un controllo. ne basta 1», and then: «scolpiscilo sulla pietra».
 dabb3e4c5df62479  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: questi prodotti siano davvero gemelli. non perchè l'hai scritto in un file che continui a ignorare.»
 27d5c2e0bc3029bd  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: **What broke.** «i link degli export portano alla sezione corretta ma qualche riga più in basso.»

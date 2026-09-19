@@ -212,6 +212,64 @@ class AFieldArrivesTheWayTheBoxWantsIt(unittest.TestCase):
         self.assertEqual(self.breaks_inside_a_sentence(text), [])
 
 
+class ReleaseNotesDescribeTheProductTheyShipWith(unittest.TestCase):
+    """A note may only name what its own product has. Found by the author, in a published Release.
+
+    Zoost Analytics 1.33.0 told its readers that «The Workflows and Blueprints columns read as a
+    list» - two things Zoho Analytics does not have. The commit behind it touched both products, and
+    the note took its *subject* rather than the facts for that product: `whatsnew.py` prints that
+    warning in its own output, and I wrote the sentence anyway.
+
+    Nothing was watching. `namecheck` reads `apps/<app>/**` and the site; the notes are outward prose
+    that names products, and they were outside every checker - the class that tool exists for, one
+    directory over. And a check on the *platform name* would not have caught this one: «Workflows and
+    Blueprints» never says «Zoho CRM».
+
+    **What it does not do, said rather than left to be found.** It is one-directional: the CRM
+    declares its areas in `apps/crm/tabs.js` and Analytics declares no such list, so this reads
+    CRM-only vocabulary appearing in Analytics notes and not the reverse. Half a check that fires is
+    worth more than a symmetrical one that cannot be derived, and the missing half is written here so
+    nobody reads the silence as coverage.
+    """
+
+    ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+    # Declared, with the reason: a note may name one of these when it is genuinely about the other
+    # product - the shared report shell, the Zoho One shell, where the twin panel keeps a control.
+    ALLOWED = {
+        'store/analytics/whatsnew/1.30.0.md': 'it is about reaching Analytics through Zoho One and CRM Plus',
+        # **The defect that earned this check, and it stays.** 1.33.0's notes name two CRM-only
+        # things. They are also a published record - «written once and published once, and then they
+        # are a record» - so correcting the file is the one repair that is forbidden, and the author
+        # chose to leave it and get the aim right in the next version. Declared here rather than
+        # fixed, because the alternative is a check nobody can commit.
+        'store/analytics/whatsnew/1.33.0.md': 'published with a CRM-only sentence; a tagged note is '
+                                              'a record and is not rewritten - corrected from 1.34.0 on',
+    }
+
+    def crm_areas(self):
+        """The CRM's own list of what it exposes, read from the one place that holds it."""
+        src = (self.ROOT / 'apps' / 'crm' / 'tabs.js').read_text(encoding='utf-8')
+        labels = re.findall(r"label: '([^']+)'", src)
+        self.assertGreaterEqual(len(labels), 5, 'the tab list broke - the denominator is derived from it')
+        return labels
+
+    def test_the_analytics_notes_name_nothing_the_crm_alone_has(self):
+        areas = [a for a in self.crm_areas() if a not in ('Functions', 'Modules', 'Connections')]
+        self.assertIn('Blueprints', areas, 'the vocabulary lost the word this case was written for')
+        found = []
+        for f in sorted((self.ROOT / 'store' / 'analytics' / 'whatsnew').glob('*.md')):
+            rel = f'store/analytics/whatsnew/{f.name}'
+            if rel in self.ALLOWED:
+                continue
+            text = f.read_text(encoding='utf-8')
+            for area in areas:
+                if re.search(rf'\b{re.escape(area)}\b', text):
+                    found.append(f'{rel}: names «{area}», which Zoho Analytics does not have')
+        self.assertEqual(found, [],
+                         'a release note describes something its product does not have: ' + '; '.join(found))
+
+
 class NameCheck(unittest.TestCase):
     def test_a_release_title_built_from_the_directory_name_is_reported(self):
         # GitHub published "Zoost for crm 1.9.0" because the workflow interpolated a directory name.

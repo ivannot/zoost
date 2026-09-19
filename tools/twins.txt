@@ -179,9 +179,9 @@ noteFolderAccessLost	2a0281fc0119	789a449da631	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 noteThrown	6c35bc6fa368	6c35bc6fa368	identical
-offerCtxTwin	040a0a66ac43	5a6b09fe60e7	divergent
+offerCtxTwin	4e680c61bfcc	034c4c4b614c	divergent
 offerExportOpen	6ffdf51482e1	6ffdf51482e1	identical
-offerTwin	b72562a05684	94b4c0524b77	divergent
+offerTwin	2448d429d07f	f661817bbcfa	divergent
 onAiengine	734a3f4ba921	7a1133599503	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical

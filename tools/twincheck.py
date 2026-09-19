@@ -165,6 +165,12 @@ EXPECTED = {
     ('.zbtn:hover:not(:disabled)', 'border-color'): 'ditto',
     ('.aimsg.user .aitext', 'color'): 'a light tint of each product accent',
     (':root', '--accent'): 'the accent is the product colour: blue in CRM, teal in Analytics',
+    # Divergent by construction, and the one entry here where equality would be the defect:
+    # each panel borders the twin's group in the twin's colour, so `--twin` in one file is
+    # `--accent` in the other. That is what makes the mirroring a property of the two
+    # stylesheets rather than something anybody has to remember when a colour changes.
+    (':root', '--twin'): "the other product's accent, so a group bordered in it says which "
+                         'product it is about - the CRM carries the Analytics pink and Analytics the CRM blue',
     ('#healthbody', 'flex'): 'the Analytics health view is a flex column and its body must fill it',
     ('#healthbody', 'color'): 'base typography, which the CRM inherits from elsewhere',
     ('#healthbody', 'font-size'): 'ditto',

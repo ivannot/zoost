@@ -656,6 +656,19 @@ They live at **`store/<app>/whatsnew/<version>.md`**, `release.sh` refuses to ta
 workflow puts it at the top of the Release body and fails if it is missing, and `tools_test.py` holds
 every ledger row at or after the version each app adopted the convention.
 
+**And once a version is tagged, its notes are a record: they are never rewritten.** What
+`store/<app>/whatsnew/<version>.md` says must stay what it said when that tag published it - new work
+belongs in the *next* version's file. A case holds it, and the case exists because `1.47.0`'s notes
+had already been rewritten after its tag, describing the following version's work under the published
+one's number.
+
+It was written there and nowhere else, which is why it was broken again two versions later: a note
+for Analytics 1.33.0 named a CRM-only feature, the author found it, and the obvious repair - correct
+the file - is the forbidden one. **The rule is here now because a rule that lives only in a test is
+found by going red, which is after the decision has been made.** When a published note is wrong, the
+choices are to correct the *Release body* (what readers actually read), to say it in the next
+version's notes, or to leave it - and which of the three is his call, not a tidy-up.
+
 **The Release body has two readers, so it is composed for them.** The notes from
 `store/<app>/whatsnew/<version>.md` come first - more people want to know what changed than want
 to check a hash - then a rule, then `## Provenance` with the commit, the SHA-256 and the two
