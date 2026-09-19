@@ -726,7 +726,9 @@
   #offoverlay .offtwinbox{border-color:var(--twin)}
   #offoverlay .offherebox{border-color:var(--accent)}
   #offoverlay #offtwin{display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;
-    padding:6px 10px;border-radius:8px;border:1px solid var(--twin);color:var(--twin);font:inherit}
+    padding:6px 10px;border-radius:8px;border:1px solid var(--twin);color:var(--twin);
+    font:12px var(--sans);max-width:100%;box-sizing:border-box}
+  #offoverlay #offtwin span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #offoverlay #offtwin:hover{background:var(--twin);color:#fff}
   #offoverlay #offtwin img{display:block;border-radius:3px}
   /* The strip's right-hand slot. A control that acts on the item belongs beside the tabs, not
