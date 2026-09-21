@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:f81b7c109f07590b -->
+<!-- translated-from: site/privacy.html sha256:3fa72d02a8d88e99 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -49,7 +49,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">18 settembre 2026</span></p>
+  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">21 settembre 2026</span></p>
 
   <p class="note" data-it-only><b>La versione inglese è quella che fa fede.</b> Questa è una
     traduzione fedele, offerta perché il documento sia leggibile da chi deve approvarne l'uso in
@@ -310,7 +310,9 @@
       punti sugli host qui sotto.</li>
     <li><code>tabs</code> - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics,
       appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato
-      per sbaglio contro una sandbox.</li>
+      per sbaglio contro una sandbox. La stessa lettura della stessa scheda è ciò che permette a un
+      pannello di riconoscere che la scheda appartiene all'<em>altro</em> prodotto Zoho e di dire quale
+      estensione la legge, invece di limitarsi a rifiutare.</li>
     <li>Accesso agli host dei domini Zoho che ogni estensione legge. Il workbench per Zoho CRM elenca
       <code>crm.zoho.*</code> e <code>crmsandbox.zoho.*</code>, con le loro controparti
       <code>crm.zohocloud.ca</code> e <code>crmsandbox.zohocloud.ca</code>. Elenca anche le due
@@ -338,6 +340,14 @@
       in una finestra sua e scrive il testo dentro la pagina, così lo leggi per intero prima che parta
       qualsiasi cosa. Da questo sito non viene letto niente: le estensioni non lo interrogano mai, e le uniche richieste
       sono le pagine che il tuo browser apre quando premi quel pulsante o uno dei link in <b>About</b>.</li>
+    <li><b>Un messaggio all'altra estensione Zoost, e nient'altro.</b> Ogni manifest nomina l'id
+      pubblicato dell'altra in <code>externally_connectable</code>, così quando apri un pannello su una
+      scheda che legge l'altro prodotto esso può chiedere se quell'altra estensione è installata e dire
+      «aprila dalla barra degli strumenti» invece di offrirti di scaricare ciò che hai già. La domanda è
+      una parola e la risposta è il nome del prodotto; niente che riguardi te, la tua org o i tuoi file
+      sta nell'una o nell'altra. Viaggia fra due estensioni dentro il tuo browser e <b>non lascia la tua
+      macchina</b>. Solo la gemella può usare quel canale: il campo nomina un solo id, quindi nessun
+      sito e nessun'altra estensione può raggiungerlo.</li>
   </ul>
   <p>Zoost non chiede nessun accesso alla cronologia di navigazione, ai segnalibri, ai download, alle
     password salvate o a qualsiasi sito diverso da quelli elencati sopra.</p>

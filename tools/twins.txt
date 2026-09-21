@@ -179,9 +179,9 @@ noteFolderAccessLost	2a0281fc0119	789a449da631	divergent
 noteSampleWs	2275caada8e5	2275caada8e5	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 noteThrown	6c35bc6fa368	6c35bc6fa368	identical
-offerCtxTwin	4e680c61bfcc	034c4c4b614c	divergent
+offerCtxTwin	fdd8cfd206b9	df8b615d37d4	divergent
 offerExportOpen	6ffdf51482e1	6ffdf51482e1	identical
-offerTwin	2448d429d07f	f661817bbcfa	divergent
+offerTwin	26b27c058719	a134555968d6	divergent
 onAiengine	734a3f4ba921	7a1133599503	divergent
 onErArrLoad	de811d13f0e2	de811d13f0e2	identical
 onErArrSave	e4f29bcb65da	e4f29bcb65da	identical
@@ -215,7 +215,7 @@ pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
-pullAll	44136fa355b3	2919b82caf18	divergent
+pullAll	44136fa355b3	1d67081cbf83	divergent
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
 rebase	6611b6610c49	6611b6610c49	identical
@@ -223,7 +223,7 @@ redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 redrawOpenViews	cf2e0a34bf88	5a6c69136e78	divergent
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	183ef320d887	5e3f22893121	divergent
+refreshContext	74c1b11c39c8	9fd9780b5bfa	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
@@ -284,7 +284,7 @@ toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	49d5973236dd	5726eb4df5a7	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical
 tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
-twinAnswers	8b275d524428	8b275d524428	identical
+twinAnswers	546b8266a758	546b8266a758	identical
 twinTab	4304893c0469	4304893c0469	identical
 updateDepthUI	77a910d07585	77a910d07585	identical
 updateNav	1df907325749	65c4b176f754	divergent

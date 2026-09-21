@@ -1460,6 +1460,88 @@ test('analytics: a workspace it has just created is the one it selects', () => {
 // inside 4000 of DOM-bound code, and what has to hold is that they are there and that they are said
 // *before* the work, not after it.
 
+test('the twin offer never sells what the reader already has', () => {
+  for (const [app, file] of [['crm', 'apps/crm/crm-context.js'],
+                             ['analytics', 'apps/analytics/sidepanel.js']]) {
+    const src = read(file);
+    // The overlay's link: hidden where the twin answered. It was a button reading «Open …» pointing
+    // at the Store, beside a sentence telling the reader to click its toolbar icon instead - two
+    // instructions, neither of which opens anything.
+    assert.match(src, /link\.style\.display = twin\.installed \? 'none' : '';/,
+                 `${app}: the overlay still offers the Store to somebody who has the twin`);
+    // The context mark: it asked the twin, so it uses the answer. It is the only surface that speaks
+    // while a sample is open, which is where the reader can least work it out for themselves.
+    const at = src.indexOf('function offerCtxTwin');
+    const mark = src.slice(at, src.indexOf('\n}', at));
+    assert.match(mark, /twin\.installed/, `${app}: the context mark throws away the answer it asked for`);
+    assert.match(mark, /removeAttribute\('href'\)/,
+                 `${app}: the context mark still links to the Store for somebody who has the twin`);
+  }
+});
+
+test('a sample workspace is never labelled as a live binding', () => {
+  // Its .zoost.json carries an invented org and workspace, and the off-platform branch is the only
+  // thing that speaks while a sample is open - so it read «prod «sampleorg» org 1234567890» the
+  // moment the reader left a Zoho tab: invented data dressed as production.
+  for (const [app, file] of [['crm', 'apps/crm/crm-context.js'],
+                             ['analytics', 'apps/analytics/sidepanel.js']]) {
+    const src = read(file);
+    assert.match(src, /const SAMPLE_CHIP = /, `${app}: the sample chip is not declared once`);
+    assert.match(src, /isSample\(\) \? SAMPLE_CHIP/,
+                 `${app}: the workspace label does not ask whether this is a sample`);
+    assert.equal((src.match(/color:var\(--muted\)">sample - generated/g) || []).length, 1,
+                 `${app}: the sample chip's markup exists more than once again`);
+  }
+});
+
+test('the redraw after a pull puts the reader back, and keeps what the opener said', () => {
+  const src = read('apps/crm/history-controller.js');
+  const at = src.indexOf('async function redrawOpenItem');
+  const fn = src.slice(at, src.indexOf('\n}', src.indexOf("if (!$('status').className", at)) + 2);
+  assert.ok(fn.length > 200, 'the redraw could not be read out of the file');
+  // Not navOpen: that is a step the reader asked for, and it rebuilds the list, scrolls it, and
+  // re-expands a group they had collapsed. Five reported defects came out of that one substitution.
+  assert.doesNotMatch(fn, /navOpen\(/, 'the redraw is a jump again, with everything a jump moves');
+  // What a jump moves is put back.
+  assert.match(fn, /scrollTop/, 'the pane and the list are left wherever the opener put them');
+  assert.match(fn, /wasFolded/, 'a group the reader had collapsed is left open by the redraw');
+  // The line is put back without setStatus, which would record a step nobody took and hide the very
+  // button that offers to report a failed pull. The rule is written in crm-tree.js.
+  const restore = fn.slice(fn.indexOf("if (!$('status').className"));
+  assert.ok(restore.length > 0, 'nothing restores the status line at all');
+  assert.doesNotMatch(restore, /setStatus\(/,
+                      'the redraw puts the line back through setStatus, which takes the report button with it');
+  // And only when the opener had nothing of its own to say: a read that failed, a permission that
+  // lapsed, an item the pull pruned.
+  assert.match(fn, /if \(!\$\('status'\)\.className && bar\.cls\)/,
+               'the redraw paints the pull summary over a real message from the opener');
+});
+
+test('the twin answer expires, and the host pattern refuses a look-alike', () => {
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    // Held for the life of the panel it made the commonest path wrong: follow our own link, install
+    // the twin, come back - and be told it is still not installed until the panel is closed.
+    assert.match(src, /TWIN_ASK_TTL/, `${app}: the twin answer is held for the life of the panel`);
+    assert.match(src, /now - twinAskedAt > TWIN_ASK_TTL/, `${app}: nothing expires the answer`);
+    // That the assignment precedes any await in its scope is asynccheck's question, and it is in
+    // the battery; asking it here by substring found the word in this case's own comment.
+  }
+  // A hostile host that merely starts like the twin's must not be named as the twin: the patterns
+  // were unbounded prefixes, so `analytics.zohoxx.example` read as Zoho Analytics.
+  for (const [app, hostile, real] of [
+    ['crm', 'https://analytics.zohoxx.example/x', 'https://analytics.zohocloud.ca/x'],
+    ['analytics', 'https://crm.zoho.com.evil.example/x', 'https://crm.zohocloud.ca/x'],
+  ]) {
+    const lit = /TWIN_HOST_RE = \/(.+?)\/;/.exec(read(`apps/${app}/sidepanel.js`));
+    assert.ok(lit, `${app}: no TWIN_HOST_RE literal to read`);
+    const re = new RegExp(lit[1]);
+    assert.ok(!re.test(hostile), `${app}: ${hostile} is read as the twin's own tab`);
+    // And the Canadian data centre still is the twin's tab - the bound must not cost a real host.
+    assert.ok(re.test(real), `${app}: ${real} is no longer recognised as the twin's tab`);
+  }
+});
+
 // A user who clicks the wrong icon lands on «Not on a Zoho CRM tab» - true, and useless: it says
 // what this panel wants and nothing about where the reader is standing. It names the tab now, and
 // the honesty of the whole change rests on one line: `one.zoho.*` and `crmplus.zoho.*` are in BOTH
@@ -1562,49 +1644,6 @@ test('the context bar offers the twin, and stops offering it on the way out', ()
     assert.match(read(`apps/${app}/sidepanel.html`), /id="ctxtwin"/,
                  `${app}: the context bar has no mark to fill`);
   }
-});
-
-// A pull rebuilds the tab's list. The detail pane is written by the openers and by nothing else, so
-// an item left open went on showing the mirror as it was before the pull - reported from a real org,
-// where the pull brought down a kind of data that mirror had never carried and the new section
-// appeared only after selecting another module and coming back.
-//
-// Run rather than read: `redrawOpenItem` is three lines, and what has to hold is which of them fire.
-test('a redraw after a pull goes through the one map from a path to its opener', async () => {
-  // The status line is part of the subject: the openers clear it, and here it carries the result of
-  // the pull that has just finished. `navOpen` below does what a real opener does to it.
-  const el = { stxt: { textContent: 'All functions downloaded.' },
-               status: { className: 'ok' },
-               preview: { classList: { contains: () => ctx.shown } } };
-  const ctx = { shown: true, currentPath: 'modules/Deals.json', opened: [], said: [],
-                $: (id) => el[id],
-                setStatus: (text, kind) => { ctx.said.push([text, kind]); el.stxt.textContent = text; el.status.className = kind; },
-                navOpen: (p) => { ctx.opened.push(p); el.stxt.textContent = ''; el.status.className = ''; } };
-  const made = load([sliceFn('apps/crm/history-controller.js', 'redrawOpenItem')], ctx);
-
-  await made.redrawOpenItem();
-  assert.deepEqual(ctx.opened, ['modules/Deals.json'],
-                   'the item on screen was not redrawn after the mirror under it changed');
-  assert.equal(el.stxt.textContent, 'All functions downloaded.',
-               'the redraw took away the line the pull had just written');
-  assert.equal(el.status.className, 'ok', 'the redraw left the status line without its kind');
-
-  // And it writes only when it has to: a redraw that did not disturb the line has nothing to give
-  // back, and a needless setStatus is a second writer on the one element two things already share.
-  ctx.said = []; ctx.opened = [];
-  ctx.navOpen = (p) => { ctx.opened.push(p); };
-  await made.redrawOpenItem();
-  assert.deepEqual(ctx.said, [], 'the redraw rewrote a status line nothing had touched');
-
-  // Nothing open is not «redraw nothing in particular»: `navOpen(null)` would take the reader
-  // somewhere, and a closed pane must stay closed.
-  ctx.opened = []; ctx.currentPath = null;
-  await made.redrawOpenItem();
-  assert.deepEqual(ctx.opened, [], 'a pull opened an item nobody had open');
-
-  ctx.currentPath = 'modules/Deals.json'; ctx.shown = false;
-  await made.redrawOpenItem();
-  assert.deepEqual(ctx.opened, [], 'a pull reopened a pane the reader had closed');
 });
 
 // And both walks end in it. The call is inside a `try/catch` like the rebuild beside it - a pull must

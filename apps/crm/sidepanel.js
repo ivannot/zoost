@@ -17,7 +17,7 @@ const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox|plus)?|one)\.zoho/;
 // where they are. This says it - but `one.zoho.*` and `crmplus.zoho.*` are in *both* manifests and
 // host either product, so on those the honest answer is still the plain one. Naming Analytics there
 // would be a new false sentence, which is the defect this whole change exists to remove.
-const TWIN_HOST_RE = /^https:\/\/analytics\.zoho/;
+const TWIN_HOST_RE = /^https:\/\/analytics\.zoho(cloud)?\.[a-z]{2,6}(\.[a-z]{2,3})?\//;
 const TWIN = {
   name: 'Zoho Analytics',
   product: 'Zoost Analytics',
@@ -878,6 +878,8 @@ const crmZohoBridge = createCrmZohoBridge({
 });
 const tabHasCrmFrame = crmZohoBridge.tabHasCrmFrame;
 const zohoTabId = crmZohoBridge.tabId;
+const TWIN_ASK_TTL = 30000;      // how long an answer about another extension is worth
+let twinAskedAt = 0;
 let twinAsked;                   // the *promise* of the answer, not the answer:
                                  // assigned before any await, so nothing writes a global
                                  // after one - and two calls a moment apart share one ask
@@ -895,8 +897,9 @@ let twinAsked;                   // the *promise* of the answer, not the answer:
  *
  *  **Asked once per panel, not once per tab change.** `refreshContext` runs on every activation and
  *  every navigation; a message per run would be traffic about a fact that does not change while the
- *  panel is open. An extension installed mid-session is answered by the next reload, which is what
- *  installing one does anyway.
+ *  panel is open, for thirty seconds at a time - installing an extension does not reload another
+ *  extension's side panel, and this document survives every tab switch, so a memo held for the
+ *  session told whoever followed our own link that the twin was still missing.
  */
 async function twinTab() {
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -912,7 +915,13 @@ function twinAnswers() {
   // The *promise*, remembered here and assigned before this scope awaits anything - so no global is
   // written after an await, which `asynccheck` named on the day this was written. Two calls a moment
   // apart then share one ask instead of racing, which is the reason to want it anyway.
-  if (!twinAsked) twinAsked = askTwin();
+  // **It expires.** Held for the life of the panel it made the commonest path wrong: the
+  // reader follows our own link, installs the twin, comes back to the tab - and is told it is
+  // still not installed until they close the panel. Re-asked at most every thirty seconds,
+  // and only while the twin's own tab is in front, which is where the question is asked at
+  // all. Assigned before this scope awaits anything, so no global is written after an await.
+  const now = Date.now();
+  if (!twinAsked || now - twinAskedAt > TWIN_ASK_TTL) { twinAskedAt = now; twinAsked = askTwin(); }
   return twinAsked;
 }
 async function askTwin() {

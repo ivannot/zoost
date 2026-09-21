@@ -1,6 +1,9 @@
 // CRM context bar and Zoho-tab guard.
 // ---------- context bar + off-zoho overlay ----------
 let contextLoad = 0;
+// What a sample's workspace half says, in one place: the on-platform branch and the
+// off-platform one both need it, and a third copy is how the two came apart.
+const SAMPLE_CHIP = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>';
 let _ctxErr = null;
 /** The overlay's twin group: shown only on the twin's tab, and it carries the whole answer.
  *
@@ -26,9 +29,15 @@ function offerCtxTwin(twin) {
   if (!twin) return;
   const img = a.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
+  // It uses the answer it asked for. This said «or get it from the Chrome Web Store» and linked
+  // there whatever the twin had replied - on the one surface that speaks while a sample is open,
+  // which is where the reader is least able to work it out for themselves.
   a.title = `This is a Zoho Analytics tab and this panel reads Zoho CRM only. `
-    + `${twin.product} reads it - open it from your toolbar if you have it, or get it from the Chrome Web Store.`;
-  a.href = `${twin.store}?utm_source=zoost-crm&utm_medium=extension&utm_campaign=twin-tab`;
+    + (twin.installed
+      ? `${twin.product} reads it - click its icon in your toolbar.`
+      : `${twin.product} reads it - click to get it from the Chrome Web Store.`);
+  if (twin.installed) a.removeAttribute('href');
+  else a.href = `${twin.store}?utm_source=zoost-crm&utm_medium=extension&utm_campaign=twin-tab`;
 }
 function offerTwin(twin) {
   const grp = $('offtwingrp');
@@ -54,8 +63,12 @@ function offerTwin(twin) {
   // and the endpoint probe caught exactly that.
   const img = link.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
-  link.querySelector('span').textContent = twin.installed
-    ? `Open ${twin.product} \u2197` : `${twin.product} on the Web Store \u2197`;
+  // **No link where the twin answered.** Nothing can open another extension's panel - measured -
+  // so a button reading «Open Zoost Analytics» could only ever go to the Store, next to a sentence
+  // telling the reader to click its toolbar icon: two instructions, neither of which opens anything.
+  // The explanation above says what to do; the link is for the case where there is nothing to open.
+  link.style.display = twin.installed ? 'none' : '';
+  link.querySelector('span').textContent = `${twin.product} on the Web Store \u2197`;
   // **One source for the address.** It lived in the markup as an href as well, which was harmless
   // while it was a bare URL and two things to keep in step the moment it gained parameters.
   link.href = `${twin.store}?utm_source=zoost-crm&utm_medium=extension&utm_campaign=twin-tab`;
@@ -95,7 +108,12 @@ async function refreshContext() {
       : 'Not on a Zoho CRM tab';
     offerTwin(twin);
     offerCtxTwin(twin);
-    bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
+    // **A sample is never presented as a live binding.** Its `.zoho.json` carries an invented org
+    // and instance, so this line read «prod «sampleorg» org 1234567890» the moment the reader left a
+    // Zoho tab - invented data dressed as production, with the overlay deliberately down and nothing
+    // on screen to correct it. The on-platform branch has always said what it is.
+    bnd.innerHTML = isSample() ? SAMPLE_CHIP
+      : (bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '');
     blockZoho(true);
     return;
   }
@@ -142,7 +160,7 @@ async function refreshContext() {
   who.innerHTML = `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>`;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
-  else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }
+  else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = SAMPLE_CHIP; }
   else { ctxEl.className = 'mismatch'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>≠ ${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✗`; }
   // The discrepancy is stated in both cases, and the sample is one of them. Suppressing the bar for
   // it was wrong: reading invented data while looking at a real org is exactly what this bar is for,

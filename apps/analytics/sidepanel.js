@@ -52,7 +52,7 @@ const APP_HOST_RE = /^https:\/\/analytics\.zoho/;
 // The twin, on the same terms as the CRM panel: only hosts that belong to one product. `one.zoho.*`
 // and `crmplus.zoho.*` are in both manifests and host either, so there the plain message stands -
 // naming the other product on an ambiguous tab would be a new false sentence.
-const TWIN_HOST_RE = /^https:\/\/crm(sandbox)?\.zoho/;
+const TWIN_HOST_RE = /^https:\/\/crm(sandbox)?\.zoho(cloud)?\.[a-z]{2,6}(\.[a-z]{2,3})?\//;
 const TWIN = {
   name: 'Zoho CRM',
   product: 'Zoost CRM',
@@ -60,6 +60,8 @@ const TWIN = {
   store: 'https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj',
 };
 
+// What a sample's workspace half says, in one place: it had two readers and is gaining a third.
+const SAMPLE_CHIP = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>';
 const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
 const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "foreign" content
@@ -849,6 +851,8 @@ async function delWorkspace() {
 }
 
 // ---------- tab / bridge ----------
+const TWIN_ASK_TTL = 30000;      // how long an answer about another extension is worth
+let twinAskedAt = 0;
 let twinAsked;                   // the *promise* of the answer, not the answer:
                                  // assigned before any await, so nothing writes a global
                                  // after one - and two calls a moment apart share one ask
@@ -866,8 +870,9 @@ let twinAsked;                   // the *promise* of the answer, not the answer:
  *
  *  **Asked once per panel, not once per tab change.** `refreshContext` runs on every activation and
  *  every navigation; a message per run would be traffic about a fact that does not change while the
- *  panel is open. An extension installed mid-session is answered by the next reload, which is what
- *  installing one does anyway.
+ *  panel is open, for thirty seconds at a time - installing an extension does not reload another
+ *  extension's side panel, and this document survives every tab switch, so a memo held for the
+ *  session told whoever followed our own link that the twin was still missing.
  */
 async function twinTab() {
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -883,7 +888,13 @@ function twinAnswers() {
   // The *promise*, remembered here and assigned before this scope awaits anything - so no global is
   // written after an await, which `asynccheck` named on the day this was written. Two calls a moment
   // apart then share one ask instead of racing, which is the reason to want it anyway.
-  if (!twinAsked) twinAsked = askTwin();
+  // **It expires.** Held for the life of the panel it made the commonest path wrong: the
+  // reader follows our own link, installs the twin, comes back to the tab - and is told it is
+  // still not installed until they close the panel. Re-asked at most every thirty seconds,
+  // and only while the twin's own tab is in front, which is where the question is asked at
+  // all. Assigned before this scope awaits anything, so no global is written after an await.
+  const now = Date.now();
+  if (!twinAsked || now - twinAskedAt > TWIN_ASK_TTL) { twinAskedAt = now; twinAsked = askTwin(); }
   return twinAsked;
 }
 async function askTwin() {
@@ -919,9 +930,13 @@ function offerCtxTwin(twin) {
   if (!twin) return;
   const img = a.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
+  // It uses the answer it asked for, on the one surface that speaks while a sample is open.
   a.title = `This is a Zoho CRM tab and this panel reads Zoho Analytics only. `
-    + `${twin.product} reads it - open it from your toolbar if you have it, or get it from the Chrome Web Store.`;
-  a.href = `${twin.store}?utm_source=zoost-analytics&utm_medium=extension&utm_campaign=twin-tab`;
+    + (twin.installed
+      ? `${twin.product} reads it - click its icon in your toolbar.`
+      : `${twin.product} reads it - click to get it from the Chrome Web Store.`);
+  if (twin.installed) a.removeAttribute('href');
+  else a.href = `${twin.store}?utm_source=zoost-analytics&utm_medium=extension&utm_campaign=twin-tab`;
 }
 function offerTwin(twin) {
   const grp = $('offtwingrp');
@@ -947,8 +962,12 @@ function offerTwin(twin) {
   // and the endpoint probe caught exactly that.
   const img = link.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
-  link.querySelector('span').textContent = twin.installed
-    ? `Open ${twin.product} \u2197` : `${twin.product} on the Web Store \u2197`;
+  // **No link where the twin answered.** Nothing can open another extension's panel - measured -
+  // so a button reading «Open Zoost CRM» could only ever go to the Store, beside a sentence telling
+  // the reader to click its toolbar icon. The explanation says what to do; the link is for the case
+  // where there is nothing to open.
+  link.style.display = twin.installed ? 'none' : '';
+  link.querySelector('span').textContent = `${twin.product} on the Web Store \u2197`;
   // **One source for the address.** It lived in the markup as an href as well, which was harmless
   // while it was a bare URL and two things to keep in step the moment it gained parameters.
   link.href = `${twin.store}?utm_source=zoost-analytics&utm_medium=extension&utm_campaign=twin-tab`;
@@ -1120,9 +1139,13 @@ async function refreshContext() {
   const el = $('ctx'), who = $('who'), bnd = $('bound');
   const id = await analyticsTabId();
   if (!current()) return;
-  const localLbl = bound
+  // A sample is a workspace whose honest label is «generated, never pulled»: its `.zoost.json`
+  // carries an invented workspace id, so every reader of this - including the off-platform branch,
+  // which is the only surface that speaks while a sample is open - would otherwise dress invented
+  // data as a live binding.
+  const localLbl = isSample() ? SAMPLE_CHIP : (bound
     ? `<span class="rlbl local">Workspace</span>«${esc(bound.name || bound.workspace)}» ${esc(bound.workspace)}`
-    : '<span class="rlbl local">Workspace</span><span>not bound yet</span>';
+    : '<span class="rlbl local">Workspace</span><span>not bound yet</span>');
 
   if (id == null) {                                  // the ACTIVE tab is not Analytics
     ctx = null;
@@ -1187,7 +1210,7 @@ async function refreshContext() {
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
     // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never
     // will. It says what it is instead.
-    else if (isSample()) { el.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }
+    else if (isSample()) { el.className = 'unbound'; bnd.innerHTML = SAMPLE_CHIP; }
     else { el.className = 'mismatch'; bnd.innerHTML = localLbl + ' ✗'; }
   }
 
@@ -1536,14 +1559,24 @@ async function pullAll() {
       + (pullFailed.length ? ` · ${pullFailed.length} could not be read` : '')
       + (next.cleanupFailed ? ` · ${next.cleanupFailed} old SQL file(s) could not be removed - the next pull retries` : ''));
     $('status').className = (pullFailed.length || next.cleanupFailed) ? 'warn' : 'ok';
-    render();
-    // And the pane that is open is redrawn, not left on what the mirror held before the pull.
-    // Reported on the CRM twin, where it is the same hole: the mirror gained a kind of data it had
-    // never carried, the list was rebuilt, and the detail went on showing the old one until the
-    // reader selected something else and came back. `render()` writes the list; the detail is
-    // written by `openDetail`, and nothing here was calling it. `pullOne` - three hundred lines
-    // below - has done exactly this since it was written, which is the sibling this was missing.
-    if (selectedId) await openDetail(selectedId);
+    // **The pane that is open is redrawn, and the id is guarded first.** `openDetail` returns
+    // silently for an id this workspace no longer has, and its own comment says what that leaves:
+    // «no row lit, the previous item still in the pane, nothing said», with `selectedId` still
+    // feeding the assistant's focus. It called that a trap rather than a live defect because every
+    // caller guarded the id - and this was the first caller that did not. `navTo` shows the answer:
+    // reopen it if it is there, say so if the pull pruned it.
+    //
+    // Wrapped, because a throw in here would report a pull that had already written its mirror and
+    // shown its summary as «Pull failed», and would skip `finishPullLifecycle` altogether.
+    if (selectedId && viewById().get(selectedId)) {
+      try { await openDetail(selectedId); } catch (_) { render(); }
+    } else {
+      // Asked before written: this is after the mirror was applied, and a workspace that moved
+      // under the pull must not have its selection cleared by the pull it interrupted.
+      if (!op.current()) return endBusyElsewhere();
+      if (selectedId) { selectedId = null; navClear(); $('detail').classList.remove('show'); $('resizer').classList.remove('show'); }
+      render();
+    }
     finishPullLifecycle(pullFailed.length > 0 || next.cleanupFailed > 0);
   } catch (e) {
     // Once the `writing` marker landed, the files on disk may be from two moments. Keeping the old
@@ -2429,7 +2462,7 @@ async function openDetail(id) {
   // means "reload from disk / re-grant folder access" in the CRM panel and must keep meaning only
   // that here - a symbol that fetches from Zoho in one app and reads the disk in the other is worse
   // than no symbol.
-  $('dpull').disabled = busy || !guardOk();
+  $('dpull').disabled = busy || pullBusy || !guardOk();
   $('dpull').title = guardOk()
     ? 'Pull - this view only, its SQL and its lineage; «Pull all» does every view'
     : 'The active tab is a different workspace, so nothing can be pulled';

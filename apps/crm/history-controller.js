@@ -79,27 +79,96 @@ async function navOpen(p) {
 
 /** Redraw whatever item is open, after the mirror underneath it has changed.
  *
- *  A pull rebuilds the tab's list; the detail pane is written by the openers and by nothing else, so
- *  without this it keeps showing the mirror as it was before the pull. `navOpen` is the one map from
- *  a path to the opener that owns it - seven kinds, seven shapes of argument - and reusing it is
- *  what stops a second copy of that map drifting from this one. It costs the list rebuild `navOpen`
- *  does on the way, which is a read of one index beside a pull that has just read the org.
+ *  **A redraw is not a jump, and the first version of this confused the two.** It called `navOpen`,
+ *  on the argument that it is the one map from a path to its opener and a second copy would drift.
+ *  That was right about the duplication and wrong about the meaning: `navOpen` is a step the reader
+ *  asked for, so it switches tab, rebuilds the list, scrolls it, re-expands a group they had
+ *  collapsed, and says «that is no longer here». A pull asked for none of it. Five reported defects
+ *  came out of that one substitution, and the two redraws this panel already had - `resyncModuleNow`
+ *  and the live-sync writer - call the opener directly for exactly this reason.
  *
- *  `navHere` already refuses to record a step onto the item showing, so a redraw does not fill the
- *  chain with the same name - the comment there was written for this exact case, before there was
- *  anything doing it.
+ *  So: the opener for this kind, and around it everything the opener moves is put back, because
+ *  opening is a jump and this is not one.
  */
 async function redrawOpenItem() {
-  if (!currentPath || !$('preview').classList.contains('show')) return;
-  // **A redraw nobody asked for leaves the status line as it found it.** Every opener calls
-  // `clearItemStatus()`, which is right when a *person* opened the item - the line was about the
-  // thing they have just left - and wrong here: the line belongs to the pull that has just finished,
-  // and blanking «All functions downloaded.» would answer a finished operation with nothing at all.
-  const said = $('stxt').textContent;
-  const kind = $('status').className;
-  await navOpen(currentPath);
-  if (said !== $('stxt').textContent || kind !== $('status').className) setStatus(said, kind);
+  const path = currentPath;
+  if (!path || !$('preview').classList.contains('show')) return;
+  // Two different questions are asked again after the opener returns, because two different things
+  // can have moved: the workspace under the panel, and the item the reader is looking at.
+  const op = beginWorkspaceOp();
+
+  // What the reader was looking at. The openers reset the pane to the top (twice - once now and
+  // once after layout), reveal the row in the list, and open the namespace group if it was closed.
+  const scrolls = [$('preview'), ...$('preview').querySelectorAll('*')]
+    .filter((el) => el.scrollTop || el.scrollLeft)
+    .map((el) => [el, el.scrollTop, el.scrollLeft]);
+  const treeTop = $('tree') ? $('tree').scrollTop : 0;
+  // **Only the one key an opener can take away.** `syncTreeTo` deletes the open function's namespace
+  // from `collapsed` - «opened, because you asked to look at what is inside it» - which is right for
+  // a click and wrong for a pull. Restored by name rather than by replacing the set: `collapsed` is
+  // shared by every list in this panel and a case holds that nothing keys it without a prefix, the
+  // functions tree's bare `ns` excepted.
+  const fnRow = currentPath.startsWith('functions/') ? functionRowForPath(currentPath) : null;
+  const ns = fnRow && fnRow.namespace;
+  const wasFolded = !!(ns && collapsed.has(ns));
+
+  // The status bar, captured whole: the line, its class, and the four controls a message can turn
+  // on. Every opener begins with `clearItemStatus()`, which is right when a person opened something
+  // - the line was about what they left - and wrong here. `setStatus` is deliberately not used to
+  // put it back: it records a step in the problem report nobody took, and it hides the very button
+  // that offers to report a failed pull. That trap is on record twice in this repository.
+  const bar = { text: $('stxt').textContent, cls: $('status').className,
+                shown: ['emerg', 'repopen', 'repdismiss', 'expopen']
+                  .map((id) => [$(id), $(id) && $(id).style.display]) };
+
+  const find = (arr) => (arr || []).find((x) => x.path === path);
+  const kind = navKind(path);
+  let row = null;
+  if (path.startsWith('workflows/')) row = find(workflowData);
+  else if (path.startsWith('schedules/')) row = find(scheduleData);
+  else if (path.startsWith('blueprints/')) row = find(blueprintData);
+  else if (path.startsWith('connections/')) row = find(connectionData);
+  else if (path.startsWith('actions/')) row = find(actionData);
+  else if (path.startsWith('modules/')) row = { path };
+  else row = functionRowForPath(path);
+
+  // **Gone means gone, and the pane says so by closing.** A pull that pruned the open item used to
+  // leave its fields on screen under a green «complete»; the live-sync writer already closes the
+  // pane for a function Zoho deleted, and this is the same event arriving by another road.
+  if (!row || (kind === 'function' && (!row.downloaded || row.mirrored === false))) {
+    previewLoad++; currentPath = null; updateNav();
+    $('preview').classList.remove('show'); $('resizer').classList.remove('show');
+    return;
+  }
+
+  if (path.startsWith('workflows/')) await openWorkflow(row);
+  else if (path.startsWith('schedules/')) await openSchedule(row);
+  else if (path.startsWith('blueprints/')) await openBlueprint(row);
+  else if (path.startsWith('connections/')) await openConnection(row);
+  else if (path.startsWith('actions/')) await openAction(row);
+  else if (path.startsWith('modules/')) await openModule(path);
+  else await openFile(path);
+
+  // Put the reader back. The collapsed set first, because restoring it needs the tree redrawn.
+  // Only if this is still the same workspace and the reader is still on the same item: an opener
+  // awaits, and by the time it returns a click, a jump or a change of folder may have moved them,
+  // where putting *this* item's scroll and fold back would be the panel undoing what they just did.
+  if (!op.current() || currentPath !== path) return;
+  if (wasFolded && !collapsed.has(ns)) { collapsed.add(ns); renderTree(); }
+  if ($('tree')) $('tree').scrollTop = treeTop;
+  const putBack = () => { for (const [el, top, left] of scrolls) { el.scrollTop = top; el.scrollLeft = left; } };
+  putBack();
+  requestAnimationFrame(putBack);   // the openers reset it again after layout, so this answers twice too
+
+  // And the line, only if the opener had nothing of its own to say. A read that failed, a folder
+  // whose permission lapsed, an item Zoho has refused - those are what the reader needs, and the
+  // pull's summary is what they would have been buried under.
+  if (!$('status').className && bar.cls) {
+    $('stxt').textContent = bar.text; $('status').className = bar.cls;
+    for (const [el, display] of bar.shown) if (el) el.style.display = display;
+  }
 }
+
 
 /** Go to step `i`. The position moves even when the item turns out not to be there any more - the
  *  same thing a browser does with a page that has since 404'd, and the status line says which it
