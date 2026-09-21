@@ -884,7 +884,7 @@ def stamp_file(app: str) -> pathlib.Path:
 
 
 def publish_store_set(rendered: dict) -> None:
-    """Copy the published subset to dist/store/<app>_<n>.png, in the declared order.
+    """Copy the published subset to dist/store/<app>/images/<n>.png, in the declared order.
 
     The numbering is the whole point: the Store has five slots and no names, so a file called
     `crm-er.png` tells whoever is uploading nothing about which slot it belongs in. It also makes
@@ -896,10 +896,13 @@ def publish_store_set(rendered: dict) -> None:
     for app, keys in STORE.items():
         if not all(k in rendered for k in keys):
             continue
-        # A folder per product, and the files called nothing but their slot number. Uploading means
-        # opening one folder and taking what is in it in order; a shared folder of `crm_3.png` and
-        # `analytics_3.png` is a folder you can pick the wrong five from.
-        dest = ROOT / "dist" / "store" / app
+        # A folder per product, an `images` folder inside it, and the files called nothing but
+        # their slot number. Uploading means opening one folder and taking what is in it in order; a
+        # shared folder of `crm_3.png` and `analytics_3.png` is one you can pick the wrong five from.
+        # **The shape is fixed and it is his**, asked for on 21 September 2026 after three handovers
+        # invented three layouts: `store/<app>/images` for these and `store/<app>/texts` for the
+        # dashboard fields, which `storecopy.py` writes into the same tree so one sync carries both.
+        dest = ROOT / "dist" / "store" / app / "images"
         dest.mkdir(parents=True, exist_ok=True)
         for stale in dest.glob("*.png"):
             stale.unlink()
@@ -954,10 +957,10 @@ def against_listing(app: str, keys) -> str:
     on disk and printed on **both** paths, because it does not depend on having just rendered them.
     """
     import hashlib
-    folder = ROOT / "dist" / "store" / app
+    folder = ROOT / "dist" / "store" / app / "images"
     files = [folder / f"{n}.png" for n in range(1, len(keys) + 1)]
     if not all(p.exists() for p in files):
-        return f"  {app}: dist/store/{app}/ is not there - nothing to compare against the listing"
+        return f"  {app}: dist/store/{app}/images/ is not there - nothing to compare against the listing"
     h = hashlib.sha256()
     for p_ in files:
         h.update(p_.read_bytes())
@@ -990,7 +993,7 @@ def against_listing(app: str, keys) -> str:
     else:
         state = ("CHANGED since " + was.get("version", "the last upload")
                  + " - upload all five again, in this order")
-    return f"  {app}: dist/store/{app}/1..{len(keys)}.png  [{digest}] {state}"
+    return f"  {app}: dist/store/{app}/images/1..{len(keys)}.png  [{digest}] {state}"
 
 
 def say(*a, **k):

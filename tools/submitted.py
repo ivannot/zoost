@@ -73,7 +73,7 @@ def shots_ledger(app: str, version: str) -> str:
         # exactly that and written it down; this tool, one directory over, was doing the thing that
         # docstring forbids.
         'sources': shots_sources(app),
-        'files': [f.name for f in pngs], 'folder': f'dist/store/{app}/',
+        'files': [f.name for f in pngs], 'folder': f'dist/store/{app}/images/',
     }, indent=2) + '\n', encoding='utf-8')
     return f'  screenshots: {len(pngs)} file(s), digest {digest}, recorded for {version}'
 

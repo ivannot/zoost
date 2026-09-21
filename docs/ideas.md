@@ -125,3 +125,40 @@ solves for a fraction of the price. If it is ever taken up, the reason will be o
 release chain - and the day to do it is before there is a third product, not after.
 
 **State:** open question. Not scheduled, and not recommended on today's evidence.
+
+---
+
+## The call graph screenshot is not the same picture twice
+
+**Raised** 21 September 2026, measured rather than suspected, while checking whether a change to
+`shots.py` had moved any pixels. `tools/pngsame.py` between the five CRM images that were uploaded
+for 1.53.0 and a fresh render of the same tree:
+
+    crm/1..4.png    same picture
+    crm/5.png       38,147 of 1,024,000 pixels differ (3.7%), worst channel difference 240/255
+
+Slot 5 is the call graph. The other nine shots across both products are identical or differ by
+1/255 on a few dozen pixels, which is encoder-level noise; this one moves structure. Nothing in the
+shipped tree changed between the two renders - the last commit touching `apps/` was three commits
+earlier - so the graph is being captured in two different states.
+
+**It is not the layout.** [`docs/diagrams.md`](diagrams.md) states, with six renders behind it, that
+`settle()` runs a fixed 300 iterations with no random and that the starting ring is a hash of each
+id. That claim is about the *layout*; this is about the *capture*, and `shots.py` says in its own
+comment that «the shot happens on a time budget». The likely reading is that the picture is taken
+while the graph is still settling, which no amount of determinism downstream can fix.
+
+**Why it matters, and why it is small:** the images on the listing are valid pictures either way, so
+no user sees anything wrong. What it costs is the one question this tool exists to answer - «did the
+screenshots change?» - on one slot out of ten, for ever. That is the failure the source-digest
+criterion was introduced to remove, arriving by another road.
+
+**Cost:** small if the cause is the capture - wait for the layout to report itself settled instead of
+for a duration, which is the same «record the event, do not sample the clock» rule this repository
+has already paid for twice. Unknown if the layout is in fact not deterministic under the panel's own
+conditions, which would be a finding about the product and not about the shot. **The first step is an
+instrument, not an edit**: render slot 5 three times and compare, which costs about a minute and
+decides which of the two it is.
+
+**State:** open, not scheduled. Nothing on the listing is wrong, so this waits behind anything a
+user can see.

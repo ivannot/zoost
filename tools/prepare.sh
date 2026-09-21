@@ -28,6 +28,12 @@ python3 tools/sitecheck.py --retranslated
 step 'sitemap — lastmod comes from git, so it is rebuilt after the files are final'
 python3 tools/sitemap.py
 
+# The dashboard fields, one file per box, into dist/store/<app>/texts - beside the images that go on
+# the same listing. Here because a submission needs them and nothing else writes them, and because
+# «hand me the finished text ready to paste» must not depend on my remembering a command at step 6.
+step 'the Web Store fields — one file per box, named as the dashboard names them'
+python3 tools/storecopy.py all --files
+
 step 'the battery'
 bash tests/run.sh
 

@@ -37,7 +37,24 @@ exports, the search and the assistant: useful, none of them what the product *is
 | 4 | the ER diagram | the ER diagram |
 | 5 | the call graph | the health audit |
 
-`python3 tools/shots.py` writes them to `dist/store/<app>/` and prints a digest of each set. It
+**The shape of the handover folder is fixed, and it is his** - asked for after three releases in
+which the layout was invented afresh each time and he had to be told where to look. (No date here on
+purpose: `sitecheck` refuses a typed one anywhere under `store/`, because this is text that gets
+pasted into a listing, where a hand-written date goes stale without anything noticing. The dates for
+this one are in `tools/shots.py`, `tools/storecopy.py` and `docs/ideas.md`.) `store/` holds one folder per product, and each of those holds exactly two:
+
+    store/<app>/images/   1.png .. 5.png     - written by tools/shots.py
+    store/<app>/texts/    <box>.txt          - written by tools/storecopy.py, one file per
+                                               dashboard box, named as the dashboard names it
+
+No number in a text's name and no product prefix: the box name *is* the name, and the product is
+the folder it sits in. It is written under `dist/store/` here, which is the one thing `dist/` keeps
+between runs, so a single rsync in `tools/totest.sh` carries the pictures and the fields together
+and `tools/synctest.sh` - which already watches `dist/store` - puts them on the machine with the
+dashboard open without being asked. `READ-ME-FIRST.txt` sits at the root of it and names every box
+with its character count against its ceiling.
+
+`python3 tools/shots.py` writes the images and prints a digest of each set. It
 **renders only what has moved**: the set is compared against the digest of what it was drawn from
 last time - the app's shipped files, its fixture, the click script and the renderers - and an app
 whose sources have not changed keeps the images already on disk. A run that changes nothing takes

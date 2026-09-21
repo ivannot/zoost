@@ -137,7 +137,7 @@ SHOTS_NOTE=""
 if [ "$SHOTS_VER" != "$VERSION" ]; then
   SHOTS_NOTE="
     !   the screenshots on the listing are of $SHOTS_VER and this release is $VERSION:
-        python3 tools/shots.py    then upload dist/store/$APP/1..5.png beside the package"
+        python3 tools/shots.py    then upload dist/store/$APP/images/1..5.png beside the package"
 fi
 
 cat <<EOF
@@ -153,7 +153,7 @@ cat <<EOF
     2.  wait for two workflows: 'release' builds it twice, signs a provenance statement and
         publishes the Release - and 'store upload' then puts that archive on the item as a
         **draft**, by itself. Nobody downloads or uploads anything by hand.
-    3.  open the dashboard: check the draft is there, upload dist/store/$APP/1..5.png if the
+    3.  open the dashboard: check the draft is there, upload dist/store/$APP/images/1..5.png if the
         interface moved, paste anything the listing needs, then press Submit for review
     4.  paste the RELEASES.md row from the Release body, commit, push$SHOTS_NOTE
 

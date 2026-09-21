@@ -169,19 +169,34 @@ fi
 # The same reasoning the whole-folder guard was written from - «the last rendered set is the one that
 # was uploaded, and an empty folder would say nothing to upload about a listing that has images on
 # it» - one level down, where the products are actually distinct.
+#
+# **And one level down again, for the same reason, now that a product's folder holds two kinds.**
+# The fixed shape is `store/<app>/images` and `store/<app>/texts` - his, asked for on 21 September
+# 2026. `shots.py` writes the first only when all five of a product's shots came back and
+# `storecopy.py` writes the second on every run, so a `--delete` at the product level would carry
+# the fields across and take the listing's five images with them. Each kind is synced on its own,
+# and only when the source for it exists.
 IMGS=''
 if [ -d dist/store ]; then
   mkdir -p "$DEST/store" 2>/dev/null || true
   for app_dir in dist/store/*/; do
     [ -d "$app_dir" ] || continue
     app_name=$(basename "$app_dir")
-    if [ "$COPIED" != '(everything)' ] && out=$(rsync $RSYNC_FLAGS "$app_dir" "$DEST/store/$app_name/" 2>/dev/null); then
-      COPIED="$COPIED$out"
-    else
-      rm -rf "$DEST/store/$app_name"
-      cp -R "$app_dir" "$DEST/store/$app_name"
-    fi
+    for kind in images texts; do
+      [ -d "$app_dir$kind" ] || continue
+      mkdir -p "$DEST/store/$app_name" 2>/dev/null || true
+      if [ "$COPIED" != '(everything)' ] \
+         && out=$(rsync $RSYNC_FLAGS "$app_dir$kind/" "$DEST/store/$app_name/$kind/" 2>/dev/null); then
+        COPIED="$COPIED$out"
+      else
+        rm -rf "$DEST/store/$app_name/$kind"
+        cp -R "$app_dir$kind" "$DEST/store/$app_name/$kind"
+      fi
+    done
   done
+  # The index names every box and says which ones moved, so it travels with them rather than being
+  # something to ask for.
+  [ -f dist/store/READ-ME-FIRST.txt ] && cp dist/store/READ-ME-FIRST.txt "$DEST/store/" 2>/dev/null
   IMGS=$(find "$DEST/store" -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
 fi
 

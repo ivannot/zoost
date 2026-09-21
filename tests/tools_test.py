@@ -204,9 +204,15 @@ class AFieldArrivesTheWayTheBoxWantsIt(unittest.TestCase):
 
     def test_the_written_files_carry_the_text_and_nothing_after_it(self):
         d = Path(tempfile.mkdtemp())
-        self.storecopy.write_files(d / 'store-texts', ('crm',))
-        f = d / 'store-texts' / 'crm-scripting-justification.txt'
-        self.assertTrue(f.exists(), sorted(p.name for p in (d / 'store-texts').iterdir()))
+        self.storecopy.write_files(d / 'store', ('crm',))
+        # The shape is his and it is fixed: store/<app>/texts/<box>.txt, no number and no product
+        # prefix, because the product is the folder it sits in. Asserted rather than described: the
+        # complaint that earned it was that every handover had invented a different layout.
+        f = d / 'store' / 'crm' / 'texts' / 'scripting-justification.txt'
+        self.assertTrue(f.exists(),
+                        sorted(q.as_posix() for q in (d / 'store').rglob('*') if q.is_file()))
+        self.assertTrue((d / 'store' / 'READ-ME-FIRST.txt').exists(),
+                        'the index that says which box each file is does not travel with them')
         text = f.read_text(encoding='utf-8')
         self.assertNotEqual(text[-1], '\n', 'the last character of the file is the last of the text')
         self.assertEqual(self.breaks_inside_a_sentence(text), [])
@@ -1791,7 +1797,7 @@ class TheStoreScreenshotsAreOrderedAndNumbered(unittest.TestCase):
             # and taking what is in it, in order.
             self.assertEqual(rec['files'],
                              [f'{n}.png' for n in range(1, len(self.shots.STORE[app]) + 1)])
-            self.assertEqual(rec['folder'], f'dist/store/{app}/')
+            self.assertEqual(rec['folder'], f'dist/store/{app}/images/')
 
     def test_a_failed_viewport_probe_reports_the_driver_error(self):
         # `check=True` used to replace capture.mjs' useful stderr with a bare CalledProcessError.
@@ -1889,11 +1895,15 @@ class ImagesAreRenderedOnlyWhenSomethingMoved(unittest.TestCase):
         # The folder is opened and its contents uploaded in order; a stamp file among them is a file
         # somebody has to know to skip.
         stamp = self.shots.stamp_file('crm')
-        folder = ROOT / 'dist' / 'store' / 'crm'
+        folder = ROOT / 'dist' / 'store' / 'crm' / 'images'
         self.assertNotEqual(stamp.parent, folder, 'the stamp sits among the images')
         if folder.exists():
             self.assertEqual(sorted(p.name for p in folder.iterdir()),
                              [f'{n}.png' for n in range(1, len(self.shots.STORE['crm']) + 1)])
+            # And the product's folder holds the two kinds and nothing else - the fixed shape, so
+            # that «open store/crm/images and upload what is in it» needs no further explanation.
+            self.assertLessEqual({q.name for q in folder.parent.iterdir()}, {'images', 'texts'},
+                                 'the product folder holds something that is neither')
 
 
 class TheCardIsOneOfTheImages(unittest.TestCase):
@@ -2431,8 +2441,8 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             # And the images, which the first version of the fallback left to an rsync that was never
             # going to run: they would have gone missing without a word on exactly the destination
             # this path exists for.
-            if (ROOT / 'dist' / 'store').is_dir():
-                self.assertTrue(sorted((dest / 'store').glob('*/*.png')),
+            if sorted((ROOT / 'dist' / 'store').glob('*/images/*.png')):
+                self.assertTrue(sorted((dest / 'store').glob('*/images/*.png')),
                                 'the images to upload did not reach the mirror without rsync')
 
     def test_the_destructive_fallback_says_so(self):
@@ -2549,15 +2559,19 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
                                  text=True, cwd=ROOT, env=env)
             self.assertEqual(out.returncode, 0, out.stderr)
-            rendered = sorted((ROOT / 'dist' / 'store').glob('*/*.png')) if (ROOT / 'dist' / 'store').is_dir() else []
+            rendered = sorted((ROOT / 'dist' / 'store').glob('*/images/*.png'))
             if rendered:
-                self.assertEqual(sorted(p.name for p in (dest / 'store').glob('*/*.png')),
+                self.assertEqual(sorted(p.name for p in (dest / 'store').glob('*/images/*.png')),
                                  sorted(p.name for p in rendered),
                                  'the images to upload did not travel with the extensions')
                 self.assertIn('the set to upload', out.stdout, 'it copied them without saying so')
             else:
-                self.assertFalse((dest / 'store').exists(),
-                                 'it made an empty folder that reads as "nothing to upload"')
+                # `store/` itself is no longer the answer: the dashboard fields live in
+                # `store/<app>/texts` and are written on every run, so the folder exists whether or
+                # not anything was rendered. What must not exist is an images folder with nothing in
+                # it, which is what reads as «nothing to upload» about a listing that has five.
+                self.assertFalse(sorted((dest / 'store').glob('*/images/*')),
+                                 'it made an empty images folder that reads as "nothing to upload"')
                 self.assertIn('nothing rendered yet', out.stdout,
                               'asked directly, it said nothing about the images at all')
 
@@ -2610,9 +2624,10 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             # deliberately **not** tools/: a copy of handcheck.py over there would have no tags and no
             # apps/, so it would answer «nothing to run» and make an uncertified release look signed.
             # The whitelist is the point: every name here is something a person on that machine
-            # opens. `store-texts` is the Web Store fields, one file per box, because the listing
-            # cannot be uploaded by any API and the form is on that machine and not this one.
-            self.assertLessEqual(set(left), {'crm', 'analytics', 'store', 'store-texts',
+            # opens. `store` holds a folder per product, each with `images` and `texts` - the five
+            # screenshots and the Web Store fields, one file per box - because the listing cannot be
+            # uploaded by any API and the form is on that machine and not this one.
+            self.assertLessEqual(set(left), {'crm', 'analytics', 'store',
                                              'what-to-test-crm.txt', 'what-to-test-analytics.txt'},
                                  f'the mirror holds something nobody asked for: {left}')
             self.assertIn('crm', left, 'the mirror is missing an extension')
@@ -5121,10 +5136,10 @@ class ShotsSaysTheSameThingOnBothPaths(unittest.TestCase):
         spec.loader.exec_module(mod)
         with tempfile.TemporaryDirectory() as t:
             d = pathlib.Path(t)
-            (d / 'dist' / 'store' / 'crm').mkdir(parents=True)
+            (d / 'dist' / 'store' / 'crm' / 'images').mkdir(parents=True)
             for n in (1, 2):
                 # Deliberately different bytes on every call, because the bytes must not decide.
-                (d / 'dist' / 'store' / 'crm' / f'{n}.png').write_bytes(os.urandom(32))
+                (d / 'dist' / 'store' / 'crm' / 'images' / f'{n}.png').write_bytes(os.urandom(32))
             if stamp_now is not None:
                 (d / 'dist' / 'store' / '.stamps').mkdir(parents=True)
                 (d / 'dist' / 'store' / '.stamps' / 'crm.json').write_text(
@@ -5242,6 +5257,12 @@ class OneProductRenderedDoesNotDeleteTheOther(unittest.TestCase):
                                 f'the whole screenshot folder is synced in one --delete call: {c}')
             self.assertIn('$DEST/store/$', c,
                           f'the destination does not name a product, so --delete reaches both: {c}')
+            # **And the kind, one level down.** A product's folder now holds `images` and `texts`,
+            # written by two different tools on two different occasions: `shots.py` only when all
+            # five of its shots came back, `storecopy.py` on every run. A --delete at the product
+            # level would carry the fields across and take the listing's five images with them.
+            self.assertRegex(c, r'\$DEST/store/\$\w+/\$\w+/',
+                             f'--delete is applied to a whole product, not to one kind: {c}')
 
 
 class TheSyncStampMeansTheCopyHappened(unittest.TestCase):

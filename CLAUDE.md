@@ -566,8 +566,9 @@ one per version ever built here - eleven megabytes of the single file the routin
 never be uploaded, any one of which could be dragged into the dashboard by mistake. `release.sh`
 removes the pair it built once the two hashes match (and keeps them when they do not, which is
 when you need to look at them), and `tests/run.sh` removes what its packaging check produced. The
-proof is the hash; the file is a means. `dist/` holds one thing between runs now:
-`store/<app>/1..5.png`, the set to upload. `tools/shots.py` and `tools/siteimg.py` clear their
+proof is the hash; the file is a means. `dist/` holds one thing between runs now: `store/`, in the
+fixed shape `store/<app>/images/1..5.png` and `store/<app>/texts/<box>.txt` - the set to upload and
+the dashboard fields beside it, see [`store/assets.md`](store/assets.md). `tools/shots.py` and `tools/siteimg.py` clear their
 1280x800 working renders after publishing - a folder of PNGs that look like something to upload
 and are not is the same hazard one directory over. A run for a single named shot keeps its file,
 because that is what it was asked for.
@@ -876,8 +877,8 @@ file with no ordering is a repository that goes wrong, and the machine doing the
 pays for it.
 
 What the other machine needs is not the repository - it is `apps/<app>/`, which is what Chrome reads
-when you load an unpacked extension, and `dist/store/<app>/1..5.png`, which is what the dashboard
-asks for. `bash tools/totest.sh` writes exactly those into that folder as `crm/`, `analytics/` and
+when you load an unpacked extension, and `dist/store/<app>/`, which is what the dashboard asks for -
+`images/` and `texts/`, the shape fixed in `store/assets.md`. `bash tools/totest.sh` writes exactly those into that folder as `crm/`, `analytics/` and
 `store/`, one direction, `--delete`, and the other machine loads the extension from there. Testing
 what is still on the working tree is the whole reason a `git pull` on the other side would not do.
 The images are copied only when they exist: a run that rendered none leaves the last set alone,
@@ -1121,8 +1122,8 @@ What that request means, in order. Do all of it without being asked:
 6. **Hand over the link to the Release asset, plus the hash, plus what to paste** into the Store
    dashboard. Never a path into `dist/`.
 6b. **Re-upload the screenshots if they changed.** `python3 tools/shots.py` writes
-   `dist/store/<app>/1.png` .. `5.png` - a folder per product, the file named by its slot and nothing
-   else, so uploading is opening one folder and taking what is in it - in the order the Store shows them - the interface first,
+   `dist/store/<app>/images/1.png` .. `5.png` - a folder per product, the file named by its slot and
+   nothing else, so uploading is opening one folder and taking what is in it - in the order the Store shows them - the interface first,
    then the rest of the interface, then the diagrams - and prints the digest of the set against
    `store/<app>/screenshots.json`, which records what is on the listing. **The folder to open is on
    the mirror, not here**: `tools/totest.sh` carries them across as `store/<app>/`, because the

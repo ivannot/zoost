@@ -23,8 +23,6 @@ import re
 import subprocess
 import sys
 
-import machine
-
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 APPS = ('crm', 'analytics')
 # The fenced body is named because a second reader depends on it: `auditcheck` reads absolute claims
@@ -186,7 +184,14 @@ def box(name: str) -> str:
 
 
 def write_files(dest: pathlib.Path, apps=APPS) -> int:
-    """One file per dashboard box, plus an index, in a folder he can open on the other machine.
+    """One file per dashboard box, under `<dest>/<app>/texts/`, plus an index at the root.
+
+    **The shape is fixed and it is his**, asked for on 21 September 2026 after three handovers had
+    invented three layouts: `store/` holds a folder per product, each holding `images/` (written by
+    `shots.py`) and `texts/` (written here), and a text is named after its box with no number and no
+    product prefix - the product is the folder it is in. It is written into `dist/store/` so that the
+    one rsync in `tools/totest.sh` carries the pictures and the fields together, and so `synctest.sh`
+    - which already watches `dist/store` - puts them on the other machine without being asked.
 
     This existed as a handful of shell commands typed once, which is the step this repository says
     will be done wrong the second time. It is here so the names, the character counts and the list of
@@ -202,15 +207,17 @@ def write_files(dest: pathlib.Path, apps=APPS) -> int:
         ver = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))['version']
         moved = set(changed_sections(app))
         index.append(f'\nZOOST {"CRM" if app == "crm" else "ANALYTICS"} {ver}')
+        texts = dest / app / 'texts'
+        texts.mkdir(parents=True, exist_ok=True)
         for n, name, cap, body in sections(app):
-            f = dest / f'{app}-{box(name)}.txt'
+            f = texts / f'{box(name)}.txt'
             # No trailing newline: the last character of the text is the last character of the text.
             # A file conventionally ends in one, and that convention travels into the box.
             if not f.exists() or f.read_text(encoding='utf-8') != body:
                 f.write_text(body, encoding='utf-8')
                 wrote += 1
             size = f'{len(body)} of {cap}' if cap else f'{len(body)} chars'
-            index.append(f'  {f.name:<52} {name}  ({size})'
+            index.append(f'  {app}/texts/{f.name:<44} {name}  ({size})'
                          + ('  <- CHANGED since it was last pasted' if str(n) in moved else ''))
     readme = ('The Web Store fields, one file per box, named as the dashboard names them.\n'
               f'Written {datetime.date.today().strftime("%-d %B %Y")} from store/<app>/store-listing.md.\n'
@@ -228,10 +235,11 @@ def main() -> int:
     app = sys.argv[1]
     if '--files' in sys.argv:
         rest = [a for a in sys.argv[2:] if not a.startswith('--')]
-        where = rest[0] if rest else machine.get('ZOOST_TEST_DIR')
-        if not where:
-            sys.exit('nowhere to write them: pass a folder, or set ZOOST_TEST_DIR in tools/machine.env')
-        return write_files(pathlib.Path(where) / 'store-texts',
+        # `dist/` by default, not the mirror: that is where the deliverables for a submission live,
+        # it is what `totest.sh` and `synctest.sh` already carry across, and it means this tool has
+        # no opinion about which machine has the dashboard open.
+        where = rest[0] if rest else str(ROOT / 'dist')
+        return write_files(pathlib.Path(where) / 'store',
                            APPS if app == 'all' else (app,))
     if '--changed' in sys.argv:
         return changed(app)
