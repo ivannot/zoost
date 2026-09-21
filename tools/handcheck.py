@@ -248,18 +248,21 @@ CHECKS = [
     },
     {
         'id': 'twin-tab',
-        'title': "The other product's tab, and an offer that knows what you have",
-        'do': ['Install BOTH products from the Web Store - an unpacked copy takes its id from the '
-               'folder path, so the two cannot recognise each other and this check cannot be run '
-               'on them at all.',
-               'Open a tab of the other product and open this panel.',
-               'Then disable the other extension and open the panel on that tab again.'],
-        'pass': ('It names the tab it is looking at and the product that reads it. With the other one '
-                 'answering, it says to open that one from your toolbar and offers no link to buy what '
-                 'you already have. With it disabled, the Web Store link is there. On one.zoho.* or '
-                 'crmplus.zoho.*, which host either product, it keeps the plain «Not on a Zoho tab» '
-                 'message and names no product. Nothing here is derivable: the ids are the published '
-                 'ones, and the answer comes from another extension.'),
+        'title': "The other product's tab is named, and what the panel offers there",
+        'do': ['Open a tab of the OTHER product - Zoho Analytics if you are in the CRM panel, and the '
+               'other way round - and open this panel on it.',
+               'Then do the same on a Zoho One or CRM Plus tab, which can host either product.'],
+        'pass': ('It names the tab you are on and the product that reads it. The sentence points at '
+                 'that product\'s toolbar icon first and offers the Web Store as a link - never as a '
+                 'claim that you do not have it - and the link lands on the right listing. On '
+                 'one.zoho.* and crmplus.zoho.* it keeps the plain «Not on a Zoho X tab» and names no '
+                 'product, because either one could be meant there.\n'
+                 '     NOT observable yet, and deliberately not asked for: the twin actually '
+                 'answering, and the link disappearing because it did. The half that listens ships for '
+                 'the first time in CRM 1.53.0 / Analytics 1.34.0, so until BOTH are published every '
+                 'installed copy is silent - and an unpacked copy can never be recognised at all, '
+                 'because its id comes from its folder path. Confirm that half on the release after '
+                 'both of these are live.'),
         'covers': ['apps/*/sidepanel.js', 'apps/*/background.js', 'apps/crm/crm-context.js',
                    'apps/*/sidepanel.html', 'apps/*/sidepanel.css', 'apps/*/manifest.json',
                    'apps/*/icons/twin-48.png'],
