@@ -246,6 +246,24 @@ CHECKS = [
         'covers': ['apps/*/idb.js', 'apps/*/sidepanel.js', 'apps/*/options.js', 'apps/*/options.html',
                    'apps/crm/tabs.js'],
     },
+    {
+        'id': 'twin-tab',
+        'title': "The other product's tab, and an offer that knows what you have",
+        'do': ['Install BOTH products from the Web Store - an unpacked copy takes its id from the '
+               'folder path, so the two cannot recognise each other and this check cannot be run '
+               'on them at all.',
+               'Open a tab of the other product and open this panel.',
+               'Then disable the other extension and open the panel on that tab again.'],
+        'pass': ('It names the tab it is looking at and the product that reads it. With the other one '
+                 'answering, it says to open that one from your toolbar and offers no link to buy what '
+                 'you already have. With it disabled, the Web Store link is there. On one.zoho.* or '
+                 'crmplus.zoho.*, which host either product, it keeps the plain «Not on a Zoho tab» '
+                 'message and names no product. Nothing here is derivable: the ids are the published '
+                 'ones, and the answer comes from another extension.'),
+        'covers': ['apps/*/sidepanel.js', 'apps/*/background.js', 'apps/crm/crm-context.js',
+                   'apps/*/sidepanel.html', 'apps/*/sidepanel.css', 'apps/*/manifest.json',
+                   'apps/*/icons/twin-48.png'],
+    },
 ]
 
 

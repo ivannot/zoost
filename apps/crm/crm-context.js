@@ -35,7 +35,11 @@ function offerCtxTwin(twin) {
   a.title = `This is a Zoho Analytics tab and this panel reads Zoho CRM only. `
     + (twin.installed
       ? `${twin.product} reads it - click its icon in your toolbar.`
-      : `${twin.product} reads it - click to get it from the Chrome Web Store.`);
+      /* **«No answer» is not «not installed», and this surface used to say it was.** The
+         overlay next door already words it honestly; this one sent a reader who has the twin
+         to go and buy it - and until both products ship the listening half, every installed
+         copy is silent. Two surfaces, one aligned, one not: the twin defect again. */
+      : `${twin.product} reads it - open it from your toolbar, or click for the Web Store.`);
   if (twin.installed) a.removeAttribute('href');
   else a.href = `${twin.store}?utm_source=zoost-crm&utm_medium=extension&utm_campaign=twin-tab`;
 }

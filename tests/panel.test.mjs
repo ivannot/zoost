@@ -1476,6 +1476,15 @@ test('the twin offer never sells what the reader already has', () => {
     assert.match(mark, /twin\.installed/, `${app}: the context mark throws away the answer it asked for`);
     assert.match(mark, /removeAttribute\('href'\)/,
                  `${app}: the context mark still links to the Store for somebody who has the twin`);
+    // **And silence is not absence, which this branch used to conclude.** An unanswered ask is also
+    // what an installed-but-older twin looks like - which is every installed copy until both products
+    // ship the listening half - so the reader who had it was sent to go and buy it, on the one surface
+    // that speaks while a sample is open. The overlay was already worded that way and this was not:
+    // two surfaces, one aligned, one not. The link stays; what changes is that the sentence offers
+    // the toolbar first and does not claim to know.
+    const unanswered = mark.slice(mark.search(/:\s*`\$\{twin\.product\}/));
+    assert.match(unanswered, /toolbar/,
+                 `${app}: the context mark concludes the twin is absent from a silence it cannot read`);
   }
 });
 
