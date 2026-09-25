@@ -28,18 +28,32 @@ import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, read, load, blankNonCode, handlerOf } from './slice.mjs';
 import vm from 'node:vm';
 
-/** A shipped page as the browser receives it: its markup and the stylesheet it links.
+/** A shipped page as the browser receives it: its markup and every stylesheet it links.
  *
  *  They were one file until the `<style>` blocks were lifted out, and a dozen cases here read a page
  *  to assert on a rule inside it. The subject did not change - what a page draws is still what a page
  *  draws - so the read follows the rule to where it now lives instead of the cases being weakened to
- *  stop looking. A sweep for a control that was removed wants both halves too: a rule left behind for
- *  an id nothing renders is exactly the leftover it is hunting.
+ *  stop looking. Every sheet the page links, read off the page itself, so a sheet added tomorrow is
+ *  in the subject without anybody remembering.
+ *
+ *  **And `graphview` is no longer a page.** The diagram opened in a browser window of its own while
+ *  Zoost was a side panel that could not show one; it is a view of the panel now, so its markup is
+ *  in `workbench.html` and its rules are in a `graphview.css` scoped to `#graphview`. The cases
+ *  below are about the diagram and not about which file holds it, so the name still resolves - and
+ *  the scope prefix comes off, because `#graphview .ermk.fold{...}` and `.ermk.fold{...}` are the
+ *  same rule asked for from two places. Two dozen cases would otherwise have gone red for a move
+ *  that changed no behaviour and no pixel, which was measured rather than hoped: the rendered
+ *  diagram is byte-identical before and after.
  */
-const sheetsOf = (app, name) => (read(`apps/${app}/${name}.html`).match(/<link[^>]+href="([^"]+\.css)"/g) || [])
+const PAGE_FILE = { graphview: 'workbench' };
+const sheetsOf = (app, file) => (read(`apps/${app}/${file}.html`).match(/<link[^>]+href="([^"]+\.css)"/g) || [])
   .map((tag) => tag.match(/href="([^"]+)"/)[1]);
-const page = (app, name) => [read(`apps/${app}/${name}.html`)]
-  .concat(sheetsOf(app, name).map((href) => read(`apps/${app}/${href}`))).join('\n');
+const page = (app, name) => {
+  const file = PAGE_FILE[name] || name;
+  const text = [read(`apps/${app}/${file}.html`)]
+    .concat(sheetsOf(app, file).map((href) => read(`apps/${app}/${href}`))).join('\n');
+  return name === 'graphview' ? text.split('#graphview ').join('') : text;
+};
 
 /** A named function out of the graph window, wherever it now lives.
  *
@@ -816,7 +830,9 @@ for (const app of ['crm', 'analytics']) {
       N: Object.fromEntries(ids.map((i) => [i, { id: i, api_name: i, name: i }])),
       label: (n) => n.api_name,
     });
-    vm.runInContext([sliceConst(`apps/${app}/graphview.js`, 'MSG'),
+    // `GMSG`, not `MSG`: the diagram lives in the panel's document now, and a classic script that
+    // redeclares a const kills itself outright - so the graph's own message table took its own name.
+    vm.runInContext([sliceConst(`apps/${app}/graphview.js`, 'GMSG'),
       sliceConst(`apps/${app}/graphview.js`, 'TIP_MAX'),
       gfn(app, 'erTipIds'),
       gfn(app, 'erTipText')].join('\n\n'), ctx);
@@ -1119,7 +1135,7 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/arrWrongWorkspace/.test(fn), 'a foreign workspace is reported as "nothing matched"');
     assert.ok(fn.indexOf('elsewhere') < fn.indexOf('matchArrangement'),
       'the workspace is decided after the ids, so the symptom is reported before the cause');
-    assert.ok(/erHint\(elsewhere \? MSG\.arrWrongWorkspace\(fileWs, hereWs\) : MSG\.arrNothingMatched, true\)/.test(fn),
+    assert.ok(/erHint\(elsewhere \? GMSG\.arrWrongWorkspace\(fileWs, hereWs\) : GMSG\.arrNothingMatched, true\)/.test(fn),
       'a refusal is shown in the same grey as a running commentary');
     // and the line itself has a state a reader notices
     assert.ok(/h\.classList\.toggle\('warn', !!warn\)/.test(js), 'erHint cannot mark a message as one to notice');
@@ -1405,7 +1421,15 @@ for (const app of ['crm', 'analytics']) {
     // captured `if` - so a corrected site read as a defect and the check could never go green.
     // `(?<!let )` : the declaration `let erLaidOut = false, erAll = false, ...` is not a relayout,
     // and counting it as one meant the check could not be satisfied at all.
+    // **A teardown is not a relayout.** `resetGraphState()` puts every declaration in this file back
+    // to its initial value, `erLaidOut` among them, because the diagram is a view that opens more
+    // than once and there is no page reload to do it any more. Nothing is being laid out there - the
+    // repaint belongs to `applyGraph`, which runs straight after - so counting it here would make the
+    // check impossible to satisfy and teach whoever met it to weaken the check instead.
+    const reset = src.indexOf('function resetGraphState()');
+    const resetEnd = reset < 0 ? -1 : src.indexOf('\n}', reset);
     for (const m of src.matchAll(/(?<!let )erLaidOut = false;?/g)) {
+      if (reset >= 0 && m.index > reset && m.index < resetEnd) continue;
       relayouts++;
       // To the end of the enclosing function, not a fixed window: the call is often five comment
       // lines below the flag, and the scanner blanks a comment to spaces of the same length, so any
@@ -1455,7 +1479,7 @@ for (const app of ['crm', 'analytics']) {
       Set, Map, Object, Array, String, console,
       APP: 'zoostworkbenchforzoho' + app,
       DATA: { kind: 'schema', workspace: { instance: 'x', org: '1' } },
-      MSG: load([sliceConst(`apps/${app}/graphview.js`, 'MSG')]).MSG,
+      GMSG: load([sliceConst(`apps/${app}/graphview.js`, 'GMSG')]).GMSG,
       erHint: (m, bad) => said.push([String(m), !!bad]),
       ekey: (a, b) => `${a} ${b}`,
       erIds: [], edgesA: [], N: {}, erPos: {}, erHeld: {}, erCut: new Map(),

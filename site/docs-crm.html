@@ -348,6 +348,7 @@ git commit -m "baseline"</code></pre>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> (in Functions mode) opens how the org is wired - what fires what; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
+  <p class="note"><b>It opens inside Zoost, not in a window of its own.</b> The diagram used to be a second browser window, because a side panel capped at a few hundred pixels cannot show one. Zoost is a window you size yourself now, so the diagram fills it and <b class="ui">✕ Close diagram</b>, top right, gives you the panel back. Nothing is lost by closing it: the drawing is rebuilt from the mirror the next time you ask for it.</p>
   <p class="note"><b>Which modules a function touches, and which functions touch a module.</b> Open a
     function and its <b class="ui">Details</b> pane lists the modules its code <b>reads</b> and the ones
     it <b>writes</b> - read out of the calls themselves, so <code>zoho.crm.getRecordById("Contacts", id)</code>

@@ -78,6 +78,9 @@ EXPECTED_ABSENT = {
 # Labels written differently in prose than on the button — the same thing, said in a sentence rather
 # than quoted. Each maps to what the site actually calls it.
 ALIAS = {
+    # The way out of the diagram. Its tooltip says where it takes you - «and go back to Zoost» - and
+    # the guide names the control the reader actually sees, which is the words on the button.
+    'Close the diagram and go back to Zoost': 'close diagram',
     '+ Workspace': 'workspace',
     'Pull all': 'pull all',
     'Name: display': 'name: display',
@@ -106,7 +109,7 @@ def surfaces(app: str):
     by a variable cannot be seen by any amount of regex, and this check does not claim to.
     """
     out = []
-    for name in ('workbench.html', 'options.html', 'graphview.html'):
+    for name in ('workbench.html', 'options.html'):
         p = ROOT / f'apps/{app}/{name}'
         if p.exists():
             out.append((f'apps/{app}/{name}', p.read_text(encoding='utf-8')))

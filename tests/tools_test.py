@@ -6687,8 +6687,10 @@ class WhatTheProductSaysIsRead(unittest.TestCase):
         return mod
 
     def scripts_with_a_table(self):
+        # `GMSG` too: the diagram's table took its own name when the diagram joined the panel's
+        # document, and a derivation that knew one name would have quietly stopped covering it.
         return sorted(p for p in (ROOT / 'apps').glob('*/*.js')
-                      if re.search(r'^const MSG = \{$', p.read_text(encoding='utf-8'), re.M))
+                      if re.search(r'^const G?MSG = \{$', p.read_text(encoding='utf-8'), re.M))
 
     def test_every_string_table_is_read(self):
         mod = self.subject()
@@ -6714,8 +6716,12 @@ class WhatTheProductSaysIsRead(unittest.TestCase):
         f = ROOT / 'apps' / 'crm' / 'graphview.js'
         keep = f.read_text(encoding='utf-8')
         try:
-            f.write_text(keep.replace('const MSG = {',
-                                      "const MSG = {\n  planted: 'Every box in this diagram is always drawn.',", 1),
+            # Planted in the table under the name it actually has: the diagram's is `GMSG` since it
+            # joined the panel's document. A plant that misses the table proves nothing, and it
+            # proves it quietly - a green run over a check that never ran is what this case exists
+            # to stop happening to the tool it is testing.
+            f.write_text(keep.replace('const GMSG = {',
+                                      "const GMSG = {\n  planted: 'Every box in this diagram is always drawn.',", 1),
                          encoding='utf-8')
             out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'auditcheck.py'), '--offline'],
                                  cwd=ROOT, capture_output=True, text=True)
@@ -6849,8 +6855,10 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
         # difference(s)» over two unopened pages reads exactly like «0» over three opened ones.
         out = self.run_it().stdout
         read = [int(m) for m in re.findall(r': (\d+) shared id\(s\) compared', out)]
-        self.assertGreaterEqual(len(read), 2, f'only {len(read)} page(s) report a work unit:\n{out}')
-        self.assertGreater(sum(read), 50, 'the pages are opened and almost nothing in them is read')
+        # One page, not two: the diagram stopped being a page of its own and its markup is in
+        # `workbench.html`, which is compared by the section above rather than counted here.
+        self.assertGreaterEqual(len(read), 1, f'only {len(read)} page(s) report a work unit:\n{out}')
+        self.assertGreater(sum(read), 40, 'the pages are opened and almost nothing in them is read')
 
     def test_the_linked_panel_stylesheets_are_part_of_the_comparison(self):
         for app in ('crm', 'analytics'):
@@ -6860,8 +6868,10 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
                           f'{app}: the panel stylesheet is linked but twincheck reads no rules')
 
     def test_a_drift_on_one_of_those_pages_is_a_finding(self):
-        # Run it, on the real file: the plant that went through every checker before this.
-        page = ROOT / 'apps' / 'analytics' / 'graphview.html'
+        # Run it, on the real file: the plant that went through every checker before this. The page
+        # is `workbench.html` now - the diagram's markup moved into it when the diagram became a view
+        # - and `#v-er` is still the element the plant lands on, so the case asks the same question.
+        page = ROOT / 'apps' / 'analytics' / 'workbench.html'
         keep = page.read_text(encoding='utf-8')
         try:
             page.write_text(keep.replace('<div class="view" id="v-er">',
@@ -6870,7 +6880,7 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
             out = self.run_it()
         finally:
             page.write_text(keep, encoding='utf-8')
-        self.assertNotEqual(out.returncode, 0, f'a drift on graphview.html passes:\n{out.stdout[-500:]}')
+        self.assertNotEqual(out.returncode, 0, f'a drift on the diagram passes:\n{out.stdout[-500:]}')
         self.assertIn('v-er', out.stdout, out.stdout[-500:])
 
 class TheSiteNamesEveryAssistantTool(unittest.TestCase):
@@ -7870,7 +7880,9 @@ class EveryIdInAShippedPageIsUnique(unittest.TestCase):
 
     def test_no_shipped_page_names_an_element_twice(self):
         pages = sorted((ROOT / 'apps').rglob('*.html'))
-        self.assertGreaterEqual(len(pages), 6, 'the pages are no longer being found')
+        # Four: two panels and two settings pages. It was six while the diagram was a page of its
+        # own; its markup is inside `workbench.html` now and is read there.
+        self.assertGreaterEqual(len(pages), 4, 'the pages are no longer being found')
         findings = []
         for page in pages:
             ids = re.findall(r'\sid="([^"]+)"', page.read_text(encoding='utf-8'))

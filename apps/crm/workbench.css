@@ -595,9 +595,14 @@
   #resizer.show{display:block}
   #resizer::after{content:'';position:absolute;left:50%;top:2.5px;width:34px;height:3px;border-radius:2px;background:#3a4a63;transform:translateX(-50%)}
   /* preview (high contrast vs tree) */
-  /* The same on the other axis, and for the same reason: a tall pane remembered from a tall
-     window turned the whole panel into a scrolling page in a short one. */
-  #preview{position:relative;display:none;flex-direction:column;flex:0 1 auto;min-height:120px;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+  /* **`flex:none`, and the size is held honest by the clamp instead.** Letting the pane shrink
+     looked like the way to stop a remembered width putting its own header off the edge, and
+     in a column it breaks the drag outright: raising the height overflows the box, the flex
+     algorithm takes the excess back out of the pane, and the divider moves nothing. Reported
+     exactly that way - the vertical bar worked and the horizontal one did not. What actually
+     prevents the off-screen pane is `clampSplit()`, which holds the stored number inside the
+     window on restore and on resize; this rule only has to stay out of its way. */
+  #preview{position:relative;display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
   #preview.show{display:flex}
   /* The row must not change height as the buttons come and go: with «Records»/«Layouts» or
      «Open in Zoho» it measured 36px and with none of them 29, so selecting a connection after a
@@ -828,14 +833,16 @@
     #resizer::after{left:2.5px;top:50%;width:3px;height:34px;transform:translateY(-50%)}
     #tree{flex:1 1 auto;min-width:280px}
     #resizer{width:8px;height:auto;flex:none;cursor:col-resize;border-top:0;border-bottom:0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
-  /* **It may shrink.** `flex:none` with an explicit size is a box that keeps its width however
-     little room there is - so a split dragged wide in a wide window, and then met again in a
-     narrow one, put its own header off the right-hand edge: the close mark and both «Open in
-     Zoho» buttons sat outside the window with `overflow-x:hidden` and no scrollbar to reach them,
-     and nothing in the panel closed the pane. `min-width` cannot help a box that never shrinks.
-     Reachable the day the window became the reader's to resize. The floor is the same 340px the
-     drag clamps to, so shrinking stops where dragging stops. */
-    #preview{height:auto !important;width:var(--splitw,52%);min-width:340px;flex:0 1 auto;box-shadow:-10px 0 24px rgba(0,0,0,.45)}
+  /* **The size is remembered in pixels, so it has to be met against the window that is here.** A
+     split dragged wide in a wide window and reopened in a narrow one put its own header off the
+     right-hand edge: the close mark and both «Open in Zoho» buttons outside the window, with
+     `overflow-x:hidden` and no scrollbar to reach them, and nothing in the panel that closed the
+     pane. Reachable the day the window became the reader's to resize.
+     Letting the pane shrink was the first answer and it was wrong: in a column, raising the height
+     overflows the box and the flex algorithm takes the excess straight back out of the pane, so the
+     horizontal divider moved nothing at all - reported within the hour. `clampSplit()` is the
+     answer, on restore and on resize, and this rule stays out of its way. */
+    #preview{height:auto !important;width:var(--splitw,52%);min-width:340px;box-shadow:-10px 0 24px rgba(0,0,0,.45)}
   }
 
   /* ------------------------------------------------------------------ *

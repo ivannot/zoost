@@ -50,7 +50,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Pull" in the detail pane: re-reads that one view from Zoho Analytics.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho Analytics.
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
-- "ER diagram": opens it in its own window - tables as boxes, the links between them as
+- "ER diagram": opens it inside this window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
   "Fit" frames the whole drawing in the window, and a window resize does it on its own - unless
   the reader has panned or zoomed, in which case the view they chose is kept and "Fit" hands it

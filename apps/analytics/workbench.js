@@ -154,20 +154,38 @@ function isZohoUrl(u) {
   return /^https?:\/\/(?:[^./?#]+\.)*(?:zoho\.com|zoho\.eu|zoho\.in|zoho\.com\.au|zoho\.jp|zohocloud\.ca|zoho\.sa|zoho\.uk|zoho\.ae)(?::\d+)?(?:[/?#]|$)/i.test(String(u || ''));
 }
 
-function openExternal(url) {
+/** An outward link opens a **tab in an ordinary browser window**.
+ *
+ *  **It opened a popup, and that stopped being right when Zoost became one.** A stripped window with
+ *  no tab strip and no address bar was a reasonable place to put Help beside a side panel; from a
+ *  popup of our own it is a second stripped window the reader has to close, and `target="_blank"`
+ *  would have given them one anyway - Chrome opens a popup's child as another popup. Reported about
+ *  Help, Sponsor and Ko-fi, which is every link in the footer.
+ *
+ *  It asks for a **normal** window to put the tab in, because `tabs.create` with no window lands in
+ *  the current one and the current one is Zoost's. A reader with no ordinary window open at all gets
+ *  one made - the only case where a window is still the right answer.
+ *
+ *  Already open is still focused rather than opened twice, which is what it always did.
+ */
+async function openExternal(url) {
   try {
-    chrome.tabs.query({ url }, (found) => {
-      const t = found && found[0];
-      // Best-effort and said so: focusing or opening a window is a courtesy, the outer catch
-      // already falls back, and a rejection here costs the reader nothing. Declared with a
-      // `.catch()` because an unhandled rejection is an omission and a written one is a
-      // decision - the `try` around this could never have caught it, being a callback.
-      if (t) { void chrome.windows.update(t.windowId, { focused: true }).catch(() => {});
-        void chrome.tabs.update(t.id, { active: true }).catch(() => {}); return; }
-      void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
-    });
+    const found = await chrome.tabs.query({ url });
+    const t = found && found[0];
+    if (t) {
+      await chrome.tabs.update(t.id, { active: true });
+      try { await chrome.windows.update(t.windowId, { focused: true }); } catch (_) { /* a courtesy */ }
+      return;
+    }
+    const wins = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    const where = wins.find((w) => w.focused) || wins[0];
+    if (!where) { await chrome.windows.create({ url, type: 'normal', focused: true }); return; }
+    await chrome.tabs.create({ url, active: true, windowId: where.id });
+    try { await chrome.windows.update(where.id, { focused: true }); } catch (_) { /* the tab is made either way */ }
   } catch (_) {
-    void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
+    // Last resort, and a window rather than nothing: the reader pressed a link and something has to
+    // happen. Declared rather than left as an unhandled rejection.
+    void chrome.windows.create({ url, type: 'normal', focused: true }).catch(() => {});
   }
 }
 document.addEventListener('click', (e) => {
@@ -1721,7 +1739,7 @@ function updateButtons() {
   $('exportmd').title = !$('exportmd').disabled ? 'Export this workspace as context for an AI tool'
     : `Cannot export: ${busy ? BUSY : UNREAD}`;
   $('graph').disabled = busy || !Object.keys(schema).length;
-  $('graph').title = !$('graph').disabled ? 'Open the ER diagram in its own window'
+  $('graph').title = !$('graph').disabled ? 'Open the ER diagram, here in Zoost'
     : `Cannot draw: ${busy ? BUSY : 'no table structure has been read yet - press Pull all'}`;
   $('health').disabled = busy || !loaded;
   $('health').title = !$('health').disabled ? 'What nothing depends on, and what is unused'
@@ -2836,7 +2854,7 @@ async function openDetail(id) {
     : !inDiagram
       ? 'ER diagram - this view is not in the ER model Zoho Analytics returns, so the diagram does not contain it'
       : relationsOf(srcId).length
-        ? 'ER diagram - opened on this table, in its own window'
+        ? 'ER diagram - opened on this table, here in Zoost'
         : 'ER diagram - opened on this table; it takes part in no relation, so it is drawn on its own';
   $('dgraph').onclick = () => openSchemaGraph(srcId, 2);
   // Absent on a sample: there is no Zoho Analytics view behind invented data, and a button that
@@ -3099,22 +3117,16 @@ function buildSchemaGraph() {
 // And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
 // setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
 // structure resting on disk until the next diagram replaces it.
-/** Hand a graph to its own window: one key per window, not one slot for all of them - see the CRM
- *  twin for the race this closes. The identity is stamped by buildSchemaGraph() itself, which is
- *  synchronous and runs at the entry - so unlike the CRM there is no second photograph to take;
- *  what the op guards here is the two awaits between the build and the window. Returns false when
- *  the workspace moved before the window opened. */
+/** Hand a graph to the diagram view - see the CRM twin's note.
+ *
+ *  The token, the session slot and the second window have all gone: the diagram is a view of this
+ *  panel, so it is handed the graph as a value. What the op guards is unchanged - the workspace may
+ *  have moved while the graph was being built, and a drawing of one org must never appear under the
+ *  name of the next. Returns false when it did.
+ */
 async function publishGraph(g, op) {
-  const token = crypto.randomUUID();
-  const key = 'graphData:' + token;
   if (op && !op.current()) return false;
-  await chrome.storage.session.set({ [key]: graphForWindow(g) });
-  if (op && !op.current()) { try { await chrome.storage.session.remove(key); } catch (_) {} return false; }
-  // A window that cannot open leaves nobody to consume the key, so it goes at once - otherwise the
-  // payload sat in session storage until the browser closed, which is longer than the privacy page
-  // is allowed to promise.
-  try { await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 }); }
-  catch (e) { try { await chrome.storage.session.remove(key); } catch (_) {} throw e; }
+  await openGraphView(graphForWindow(g));
   return true;
 }
 function graphForWindow(g) {
@@ -3865,14 +3877,14 @@ const wideSplit = () => window.matchMedia('(min-width: 720px)').matches;
 // stylesheet lets the pane shrink now, which stops the overflow; this keeps the *stored* number
 // honest, so the next drag starts from where the reader can see it. Both axes, because the
 // vertical one had the same defect: a 500px pane in a 313px viewport made the whole panel scroll.
-const SPLIT_LIST_MIN = 280, SPLIT_detail_MIN = 340, SPLIT_BAR = 8;
-const SPLIT_LIST_MIN_H = 80, SPLIT_detail_MIN_H = 120;
+const SPLIT_LIST_MIN = 280, SPLIT_PANE_MIN = 340, SPLIT_BAR = 8;
+const SPLIT_LIST_MIN_H = 80, SPLIT_PANE_MIN_H = 120;
 /** The room the pane may take, on whichever axis is splitting. `null` when there is not enough of
  *  it for both minimums - the stylesheet decides that case and a number here would fight it. */
 function splitRoom(r) {
   if (!r.width || !r.height) return null;              // not laid out yet
   const room = wideSplit() ? r.width - SPLIT_LIST_MIN - SPLIT_BAR : r.height - SPLIT_LIST_MIN_H;
-  const floor = wideSplit() ? SPLIT_detail_MIN : SPLIT_detail_MIN_H;
+  const floor = wideSplit() ? SPLIT_PANE_MIN : SPLIT_PANE_MIN_H;
   return room < floor ? null : room;
 }
 function clampSplit() {
@@ -3881,13 +3893,13 @@ function clampSplit() {
   if (wideSplit()) {
     const cur = parseFloat(el.style.getPropertyValue('--splitw'));
     if (!isFinite(cur)) return;                        // never dragged: the stylesheet's share holds
-    const w = Math.max(SPLIT_detail_MIN, Math.min(room, cur));
+    const w = Math.max(SPLIT_PANE_MIN, Math.min(room, cur));
     if (w !== cur) el.style.setProperty('--splitw', w + 'px');
     return;
   }
   const cur = parseFloat(el.style.height);
   if (!isFinite(cur)) return;
-  const h = Math.max(SPLIT_detail_MIN_H, Math.min(room, cur));
+  const h = Math.max(SPLIT_PANE_MIN_H, Math.min(room, cur));
   if (h !== cur) el.style.height = h + 'px';
 }
 let dragY = false;
@@ -4181,3 +4193,34 @@ async function sayWhereTheReportWent() {
   }
   status('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
 }
+
+/** **A floor under the window's size.** Chrome has no `minWidth` on a window it creates, so the
+ *  reader can drag a popup down to a sliver - reported with a picture of Zoost about 190px wide,
+ *  where the toolbar has become a column of stacked buttons and the panel is of no use to anybody.
+ *  The browser will not stop it, so the document does: it is the only party that can see how small
+ *  it has got.
+ *
+ *  The numbers are the layout's own. Below the 720px breakpoint the list and the detail stack, and
+ *  the narrow layout was drawn for the 400px side panel this product used to be - so 420 is the
+ *  width at which every control in the toolbar is still reachable, and 420 in height keeps the
+ *  chrome, the find row and a few rows of list on screen together.
+ *
+ *  Corrected after the drag rather than during it: `windows.update` inside a live resize fights the
+ *  pointer, and the reader feels the window stick. This waits for the gesture to stop.
+ */
+const WIN_MIN_W = 420, WIN_MIN_H = 420;
+let _sizeFloorT = null;
+function holdTheSizeFloor() {
+  clearTimeout(_sizeFloorT);
+  _sizeFloorT = setTimeout(() => { void applySizeFloor(); }, 180);
+}
+async function applySizeFloor() {
+  const w = window.outerWidth, h = window.outerHeight;
+  if (w >= WIN_MIN_W && h >= WIN_MIN_H) return;
+  try {
+    const self = await chrome.windows.getCurrent();
+    // Only the axis that is short, so correcting one does not undo the reader's choice on the other.
+    await chrome.windows.update(self.id, { width: Math.max(w, WIN_MIN_W), height: Math.max(h, WIN_MIN_H) });
+  } catch (_) { /* a window that will not resize is still a window */ }
+}
+window.addEventListener('resize', holdTheSizeFloor);

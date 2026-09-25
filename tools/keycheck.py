@@ -55,7 +55,7 @@ LEDGER_REL = 'tools/keyreach.txt'
 LEDGER = ROOT / LEDGER_REL
 
 APPS = ('crm', 'analytics')
-PAGES = ('workbench.html', 'graphview.html', 'options.html')
+PAGES = ('workbench.html', 'options.html')
 
 # What the browser makes focusable without being asked. `<a>` is here only when it carries an href:
 # an anchor without one is a span wearing a different name, and both panels have two of those.

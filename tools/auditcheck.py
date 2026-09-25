@@ -482,7 +482,12 @@ def sentences(path: Path) -> list:
         # A value that is a function - `hRankedOver(ranked, all)` and its like - is skipped: its
         # sentence is assembled at run time out of numbers, and the parts of it that are fixed say
         # nothing on their own.
-        m = re.search(r'^const MSG = \{$(.*?)^\};$', s, re.S | re.M)
+        # **`GMSG` as well as `MSG`.** The diagram carries its own table of forty-odd sentences,
+        # and it was renamed the day the diagram moved into the panel's document - two `const MSG`
+        # in one document is a script that kills itself. A pattern that knew only the old name would
+        # have dropped the larger half of what this tool reads, silently and with the count on
+        # screen still looking healthy: the blind-spot shape this repository has now met four times.
+        m = re.search(r'^const G?MSG = \{$(.*?)^\};$', s, re.S | re.M)
         if not m:
             return []
         # Each value is its own unit and is returned here rather than joined into a stream.

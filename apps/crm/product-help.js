@@ -56,7 +56,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   clock and the count, and the tooltip says how long the delay is. The workflow's own panel shows
   "Last run", the same words the Schedules tab uses for the same fact.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
-- "Wiring" (in Functions mode) / "ER diagram" (in Modules): opens a diagram in its own window - how
+- "Wiring" (in Functions mode) / "ER diagram" (in Modules): opens a diagram inside this window - how
   the org is wired, or how the modules relate. Wiring is not only functions, which is why it is not
   called that: a workflow or a schedule that fires a function is a node of its own, so is every
   connection a function uses, so is every automation action - email notifications, field updates,

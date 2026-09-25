@@ -9,7 +9,7 @@ None of them were hard to see. All of them were invisible to the checks that exi
 reasons worth stating because they are the actual lesson:
 
   1. `twincheck.py` compares exactly two files per app — workbench.html and workbench.js — out of
-     the twelve each one ships. graphview.html and options.html were never looked at by anything.
+     the twelve each one ships. options.html was never looked at by anything.
      The list of files was written by hand, which is the "checklist wearing a script's clothes"
      failure that CLAUDE.md warns about, sitting inside the tool meant to prevent it.
 

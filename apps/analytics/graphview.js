@@ -1,20 +1,15 @@
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
-const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in manifest.json only
-const PRODUCT_URL = 'https://zoost.it';
-const PRODUCT_AUTHOR = 'Ivan Notaristefano';
 /* graphview.js - Explorer + boxed call/schema diagram. The graph arrives via chrome.storage.session
    (per browser session, like the unlocked key); the reader's own settings stay in .local. */
-let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-// esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
+let DATA = null, N = {}, ids = [], sel = null, hist = [], gvNameMode = 'display';
+const gesc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+// gesc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
 // the value - that is what cut a snippet in half right after the opening bracket.
-const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // What this window says in more than one place. `showList` is one control's aria-label and its
 // title - the same words twice on the same element by design, which is exactly the pair that goes
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
-const MSG = {
+const GMSG = {
   // Loading an arrangement onto a diagram the mirror has moved on. Three numbers rather than a
   // verdict: the reader is the one who knows whether it is worth arranging again.
   arrLoaded: (kept, fresh, stale) => `${kept} where you put ${kept === 1 ? 'it' : 'them'}`
@@ -90,7 +85,7 @@ const MSG = {
 };
 // Tolerant of a missing node: the callers pass N[id] and an id can outlive its node when a graph
 // is filtered. Returning '' lets them fall back to the id rather than printing "undefined".
-const label = (n) => (!n ? '' : nameMode === 'internal'
+const label = (n) => (!n ? '' : gvNameMode === 'internal'
   ? (n.api_name || n.name)
   : ((DATA && DATA.kind === 'schema') ? (n.display_name || n.api_name || n.name) : n.name));
 // The one dimension the list and the chips share. In functions mode the chips select a function's
@@ -130,22 +125,17 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 // `tools/asynccheck.py` matches a declaration at the start of a line, so a *named* function
 // wearing a paren is as invisible as an anonymous one - and the whole startup of this page runs
 // inside it, awaits included.
-async function init() {
+async function applyGraph(data) {
   // One key per window: the token rides the URL, so two diagrams open together cannot consume each
   // other's payload. Consumed on read - a window owns its graph from here on, and a stale slot must
   // not outlive it. Without a token (the render harness opens the page bare) the plain key answers.
-  const token = new URLSearchParams(location.search).get('graph');
-  const key = token ? 'graphData:' + token : 'graphData';
-  const store = await chrome.storage.session.get(key);
-  DATA = store[key];
-  if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
-  if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
+  DATA = data;
+  if (!DATA) { $('gvmain').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   // The numbers are written by `graphStat()`, which replaces the whole line and runs during this
   // init a few lines below. Poking the spans here wrote them once and never again - the pattern the
   // comment above `graphStat` records about this same element. Same on the CRM side.
   const _schema = DATA.kind === 'schema';
-  document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }
   if (_schema) {
     $('ertab').style.display = ''; $('reltab').style.display = ''; buildRelChips();
@@ -162,7 +152,7 @@ async function init() {
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
   $('s-ws').innerHTML = wsLine(DATA.workspace);
-  buildChips(); render(); initPositions(); graphStat(); updateScopeUI();
+  buildChips(); renderGraph(); initPositions(); graphStat(); updateScopeUI();
   // The focus is honoured only if the diagram has that node. `schema` is built from the nodes of
   // the ER model Zoho Analytics returns, and a view it does not carry is not in here - asking to
   // centre on one used to compute the neighbourhood of an id that does not exist and draw the empty
@@ -176,7 +166,6 @@ async function init() {
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
 }
-init();
 
 // ---------------- Explorer ----------------
 // What the window is drawing, in two questions.
@@ -330,8 +319,8 @@ function pass(n, q) {
 // The chips choose what the window is looking at, so all four views follow them. The search box
 // narrows the *list* only: hiding the diagram down to one node as you type would be a different
 // feature wearing the same control.
-function render() {
-  const q = $('q').value.trim().toLowerCase(); const listEl = $('list'); listEl.innerHTML = '';
+function renderGraph() {
+  const q = $('q').value.trim().toLowerCase(); const listEl = $('gvlist'); listEl.innerHTML = '';
   // An empty list has three reasons and they are not the same advice. Nothing here is ever silent
   // about which one it is - the rule this project applies to every empty state.
   if (!ids.filter((i) => pass(N[i], q)).length) {
@@ -347,13 +336,13 @@ function render() {
     .sort((a, b) => (b.called_by.length - a.called_by.length) || a.name.localeCompare(b.name))
     .forEach((n) => {
       const d = document.createElement('div'); d.className = 'item'; d.setAttribute('aria-selected', n.id === sel);
-      d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.called_by.length}◂</span>`;
+      d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${gesc(label(n))}</span><span class="ns">${gesc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.called_by.length}◂</span>`;
       d.onclick = () => select(n.id); listEl.appendChild(d);
     });
 }
 function refRow(id) {
   const n = N[id]; const d = document.createElement('div'); d.className = 'ref';
-  d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(n.namespace + "." + label(n))}</span><span class="deg">${n.called_by.length}◂</span>`;
+  d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${gesc(n.namespace + "." + label(n))}</span><span class="deg">${n.called_by.length}◂</span>`;
   d.onclick = () => select(id); return d;
 }
 let layFilter = null;   // null = all fields, otherwise the index of a layout in n.layouts
@@ -373,13 +362,13 @@ function layoutZoneHtml(n) {
     ? `<div class="laychips"><span class="laychip" data-lay="all" aria-pressed="${layFilter === null}">All fields \u00b7 ${all.length}</span>`
       + lays.map((l, i) => {
           const cnt = all.filter((f) => Array.isArray(f._lay) && f._lay.includes(i)).length;
-          return `<span class="laychip" data-lay="${escA(i)}" aria-pressed="${layFilter === i}" title="${escA(l.name || String(l.id))}${l.visible === false ? ' (hidden)' : ''}">${esc(l.name || String(l.id))}${l.visible === false ? ' \u00b7 hidden' : ''} \u00b7 ${cnt}</span>`;
+          return `<span class="laychip" data-lay="${escA(i)}" aria-pressed="${layFilter === i}" title="${escA(l.name || String(l.id))}${l.visible === false ? ' (hidden)' : ''}">${gesc(l.name || String(l.id))}${l.visible === false ? ' \u00b7 hidden' : ''} \u00b7 ${cnt}</span>`;
         }).join('')
       + `</div>`
     : '';
 
   const lhead = detail
-    ? lays.map((l, i) => `<th class="lcol${l.visible === false ? ' hid' : ''}" title="${escA(l.name || String(l.id))}${l.visible === false ? ' (hidden layout)' : ''}">${esc(layShort(l.name || l.id))}</th>`).join('')
+    ? lays.map((l, i) => `<th class="lcol${l.visible === false ? ' hid' : ''}" title="${escA(l.name || String(l.id))}${l.visible === false ? ' (hidden layout)' : ''}">${gesc(layShort(l.name || l.id))}</th>`).join('')
     : '';
 
   const rows = rowsSrc.map((f) => {
@@ -391,16 +380,16 @@ function layoutZoneHtml(n) {
       return `<td class="lcol"><span class="d${req ? ' req' : ''}" title="${escA(l.name || String(l.id))}${req ? ' - required here' : ''}"></span></td>`;
     }).join('') : '';
     return `<tr class="${orphan ? 'nolay' : ''}">
-    <td>${esc(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}${orphan ? '<span class="nolaytag">no layout</span>' : ''}</td>
-    <td class="mono">${esc(f.api_name)}</td>
-    <td>${esc(f.data_type || '')}${f.length ? ` (${f.length})` : ''}</td>
+    <td>${gesc(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}${orphan ? '<span class="nolaytag">no layout</span>' : ''}</td>
+    <td class="mono">${gesc(f.api_name)}</td>
+    <td>${gesc(f.data_type || '')}${f.length ? ` (${f.length})` : ''}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
-    <td class="mono">${f.lookup ? '\u2192 ' + esc(label(N[f.lookup]) || f.lookup) : ''}</td>${cells}
+    <td class="mono">${f.lookup ? '\u2192 ' + gesc(label(N[f.lookup]) || f.lookup) : ''}</td>${cells}
   </tr>`;
   }).join('');
 
   const head = detail && layFilter !== null
-    ? `Fields in \u00ab${esc(lays[layFilter].name || lays[layFilter].id)}\u00bb \u00b7 ${rowsSrc.length} of ${all.length}`
+    ? `Fields in \u00ab${gesc(lays[layFilter].name || lays[layFilter].id)}\u00bb \u00b7 ${rowsSrc.length} of ${all.length}`
     : `Fields \u00b7 ${all.length}${detail ? ` \u00b7 ${lays.length} layout(s)` : ''}`;
 
   const legend = detail
@@ -427,10 +416,10 @@ function joinsHtml(n) {
   }
   const rows = js.map((r) => `<tr>
     <td>${r.direction === 'out' ? '\u2192' : '\u2190'}</td>
-    <td class="mono"><b>${esc(r.otherName)}</b></td>
-    <td class="mono">${esc(r.column || '')}</td>
-    <td class="mono">${esc(r.otherColumn || '')}</td>
-    <td class="mono" style="color:#64748b">${esc(r.relation || '')}</td>
+    <td class="mono"><b>${gesc(r.otherName)}</b></td>
+    <td class="mono">${gesc(r.column || '')}</td>
+    <td class="mono">${gesc(r.otherColumn || '')}</td>
+    <td class="mono" style="color:#64748b">${gesc(r.relation || '')}</td>
   </tr>`).join('');
   return `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Relations \u00b7 ${js.length} <span style="font-weight:400;color:#94a3b8">- \u2192 this table points out, \u2190 something points here</span></div>`
     + `<div style="display:block;padding:0;max-height:260px;overflow:auto;background:#fff"><table class="ftbl"><thead><tr><th></th><th>Other table</th><th>This column</th><th>Their column</th><th>Join</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
@@ -439,46 +428,46 @@ function fieldsTableHtml(n) {
   const tbl = `<div id="layzone">${layoutZoneHtml(n)}</div>` + joinsHtml(n);
   const rd = n.reads || [];
   const who = rd.length
-    ? `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Read by ${rd.length} view(s) - from Zoho Analytics\' own lineage</div><div style="padding:8px 10px;font:11.5px var(--mono);color:#33415a;line-height:1.7">${rd.map((t) => esc(t)).join('<br>')}</div></div>`
+    ? `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Read by ${rd.length} view(s) - from Zoho Analytics\' own lineage</div><div style="padding:8px 10px;font:11.5px var(--mono);color:#33415a;line-height:1.7">${rd.map((t) => gesc(t)).join('<br>')}</div></div>`
     : '<div class="none" style="margin-top:12px">Nothing in this workspace reads from it. A shared link, a scheduled export or an API consumer would be invisible here - a candidate, not a verdict.</div>';
   return tbl + who;
 }
 function select(id, nopush) {
   if (sel && !nopush) hist.push(sel);
   if (sel !== id) layFilter = null;   // layout filter is per-module
-  sel = id; const n = N[id]; render();
+  sel = id; const n = N[id]; renderGraph();
   const schema = DATA.kind === 'schema';
-  const crumb = hist.length ? `<a id="back">\u25c2 back</a>  \u00b7  ${hist.slice(-4).map((h) => `<a data-id="${escA(h)}">${esc(label(N[h]))}</a>`).join(' \u2039 ')}` : '';
+  const crumb = hist.length ? `<a id="back">\u25c2 back</a>  \u00b7  ${hist.slice(-4).map((h) => `<a data-id="${escA(h)}">${gesc(label(N[h]))}</a>`).join(' \u2039 ')}` : '';
   let assoc = '';
   if (!schema && Array.isArray(n.associated_place) && n.associated_place.length) {
-    assoc = '<div class="assoc">Bound to: ' + n.associated_place.map((a) => `<b>${esc(a._type || '')}</b> ${esc(a.name || '')} <span>(${esc(a.module || '')})</span>`).join(' \u00b7 ') + '</div>';
+    assoc = '<div class="assoc">Bound to: ' + n.associated_place.map((a) => `<b>${gesc(a._type || '')}</b> ${gesc(a.name || '')} <span>(${gesc(a.module || '')})</span>`).join(' \u00b7 ') + '</div>';
   }
   const sig = schema
-    ? `${(n.fields || []).length} columns \u00b7 ${(n.joins || []).length} relations \u00b7 ${esc(n.category || 'table')}`
+    ? `${(n.fields || []).length} columns \u00b7 ${(n.joins || []).length} relations \u00b7 ${gesc(n.category || 'table')}`
     : `${n.return_type || 'void'} ${n.namespace}.${n.name}(` + (n.params || []).map((p) => `${p.type} ${p.name}`).join(', ') + ')';
   const upHead = schema ? `Referenced by (${n.called_by.length}) <span class="hint">- tables pointing here</span>` : `Called by (${n.called_by.length}) <span class="hint">- breaks if you change it</span>`;
   const downHead = schema ? `References (${n.calls.length}) <span class="hint">- tables it points at</span>` : `Calls (${n.calls.length}) <span class="hint">- its dependencies</span>`;
   const badges = schema
-    ? `<span class="badge">${esc(n.namespace)}</span>${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
-    : `<span class="badge">${esc(n.namespace)} \u00b7 ${esc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
+    ? `<span class="badge">${gesc(n.namespace)}</span>${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
+    : `<span class="badge">${gesc(n.namespace)} \u00b7 ${gesc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
   const extra = schema ? fieldsTableHtml(n) : '';   // no source in this window - see graphlogic.js
-  const layInfo = (schema && (n.layouts || []).length) ? `<div class="assoc" style="margin-top:2px">Layouts (${n.layouts.length}): ${n.layouts.map((l) => esc(l.name || String(l.id)) + (l.visible === false ? ' (hidden)' : '')).join(' \u00b7 ')}</div>` : '';
-  $('main').innerHTML = `
+  const layInfo = (schema && (n.layouts || []).length) ? `<div class="assoc" style="margin-top:2px">Layouts (${n.layouts.length}): ${n.layouts.map((l) => gesc(l.name || String(l.id)) + (l.visible === false ? ' (hidden)' : '')).join(' \u00b7 ')}</div>` : '';
+  $('gvmain').innerHTML = `
     <div class="crumbs">${crumb}</div>
-    <div class="title"><h2>${esc(label(n))}</h2>${badges}</div>
-    <div class="sub">${esc(n.display_name)}</div>
-    ${n.description ? `<p class="desc">${esc(n.description)}</p>` : ''}
-    <div class="sig">${esc(sig)}</div>
+    <div class="title"><h2>${gesc(label(n))}</h2>${badges}</div>
+    <div class="sub">${gesc(n.display_name)}</div>
+    ${n.description ? `<p class="desc">${gesc(n.description)}</p>` : ''}
+    <div class="sig">${gesc(sig)}</div>
     ${layInfo}
     <div class="cols">
       <div class="col up"><h3>${upHead}</h3><div class="refs" id="up"></div></div>
       <div class="col down"><h3>${downHead}</h3><div class="refs" id="down"></div></div>
     </div>
     ${(!schema && (n.unresolved.length || n.ambiguous.length)) ? `<div class="warn">
-      ${n.unresolved.length ? `<h4>Unresolved references</h4>${n.unresolved.map((r) => `<code>${esc(r)}</code>`).join('  ')}` : ''}
-      ${n.ambiguous.length ? `<h4 style="margin-top:6px">Ambiguous</h4>${n.ambiguous.map((r) => `<code>${esc(r)}</code>`).join('  ')}` : ''}</div>` : ''}
+      ${n.unresolved.length ? `<h4>Unresolved references</h4>${n.unresolved.map((r) => `<code>${gesc(r)}</code>`).join('  ')}` : ''}
+      ${n.ambiguous.length ? `<h4 style="margin-top:6px">Ambiguous</h4>${n.ambiguous.map((r) => `<code>${gesc(r)}</code>`).join('  ')}` : ''}</div>` : ''}
     ${assoc}
-    <div class="file">${esc(n.file || '')}</div>
+    <div class="file">${gesc(n.file || '')}</div>
     ${extra}`;
   const up = $('up'), down = $('down');
   n.called_by.length ? n.called_by.forEach((i) => up.appendChild(refRow(i))) : (up.innerHTML = `<div class="none">no ${schema ? 'incoming lookup' : 'internal caller'}</div>`);
@@ -486,14 +475,14 @@ function select(id, nopush) {
   const back = $('back'); if (back) back.onclick = () => { const p = hist.pop(); if (p) select(p, true); };
   document.querySelectorAll('.crumbs a[data-id]').forEach((a) => (a.onclick = () => select(a.dataset.id)));
   if (schema) wireLayoutZone(n);
-  $('main').scrollTop = 0;
+  $('gvmain').scrollTop = 0;
   // Focus mode: the Explorer selection IS the context. Set it here so that switching to the
   // diagram afterwards already shows this table (it used to update only via ER).
   if (id !== curFocus) setFocus(id);
 }
-$('q').addEventListener('input', () => { render(); updateQx(); });
+$('q').addEventListener('input', () => { renderGraph(); updateQx(); });
 function updateQx() { const x = $('qx'); if (x) x.classList.toggle('on', !!$('q').value); }
-$('qx').onclick = () => { $('q').value = ''; render(); updateQx(); $('q').focus(); };
+$('qx').onclick = () => { $('q').value = ''; renderGraph(); updateQx(); $('q').focus(); };
 // `/` focuses the search; Escape dismisses the picked relation card. Both live in one listener
 // because they answer the same event, and the panel next door has just had to undo the opposite
 // shape - several handlers on one key, none of them knowing the order, so which one wins depends on
@@ -590,11 +579,11 @@ function relRender() {
   $('relwrap').innerHTML = `<table class="rtbl"><thead><tr>
       <th>From table</th><th>Column</th><th>To table</th><th>Column</th><th>Join (click to copy)</th>
     </tr></thead><tbody>${rows.map((r) => `<tr class="${r.system ? 'sys' : ''}">
-      <td><span class="mod" data-mod="${escA(r.from)}">${esc(r.fromName)}</span></td>
-      <td class="rlab" style="font:11px var(--mono)">${esc(r.col || '')}</td>
-      <td><span class="mod" data-mod="${escA(r.to)}">${esc(r.toName)}</span></td>
-      <td class="rlab" style="font:11px var(--mono)">${esc(r.toCol || '')}</td>
-      <td><span class="snip" data-copy="${escA(r.join || '')}" title="Click to copy">${esc(r.join || '')}</span></td>
+      <td><span class="mod" data-mod="${escA(r.from)}">${gesc(r.fromName)}</span></td>
+      <td class="rlab" style="font:11px var(--mono)">${gesc(r.col || '')}</td>
+      <td><span class="mod" data-mod="${escA(r.to)}">${gesc(r.toName)}</span></td>
+      <td class="rlab" style="font:11px var(--mono)">${gesc(r.toCol || '')}</td>
+      <td><span class="snip" data-copy="${escA(r.join || '')}" title="Click to copy">${gesc(r.join || '')}</span></td>
     </tr>`).join('')}</tbody></table>`;
   $('relwrap').querySelectorAll('[data-copy]').forEach((el) => (el.onclick = () => {
     copyAndFlash(el, el.dataset.copy);
@@ -604,7 +593,10 @@ function relRender() {
     document.querySelector('.tab[data-v="explorer"]').click(); select(id);
   }));
 }
+/** Wired once per document, not once per diagram - see the twin's note. */
+let _graphWired = false;
 function buildRelChips() {
+  if (_graphWired) return;    // see `_graphWired`
   const box = $('relchips'); if (!box) return;
   [['all', 'all'], ['user', 'yours'], ['sys', 'system tables']].forEach(([k, l]) => {
     const c = document.createElement('span'); c.className = 'chip'; c.textContent = l;
@@ -642,8 +634,8 @@ function wireAsideFold() {
     // discloses a region, it does not toggle a mode.
     btn.textContent = off ? '\u25b8' : '\u25c2';
     btn.setAttribute('aria-expanded', String(!off));
-    btn.setAttribute('aria-label', off ? MSG.showList : 'Hide the list');
-    btn.title = off ? MSG.showList : 'Drag to resize the list, click to hide it';
+    btn.setAttribute('aria-label', off ? GMSG.showList : 'Hide the list');
+    btn.title = off ? GMSG.showList : 'Drag to resize the list, click to hide it';
   }
 
   // The same edge resizes and folds, which is what a divider does everywhere else. They are told
@@ -901,7 +893,7 @@ function orphanNote() {
 // a scope widened elsewhere turns out to be more than it can draw.
 function tooWideToDraw(wide) {
   const filtered = wide < nodesA.length;
-  $('statline').innerHTML = `<b>${wide} tables</b>${filtered ? ` of ${nodesA.length}` : ''} - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(label(N[curFocus]) || curFocus)}</b>; switch a kind off above, or widen with depth instead.`;
+  $('statline').innerHTML = `<b>${wide} tables</b>${filtered ? ` of ${nodesA.length}` : ''} - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${gesc(label(N[curFocus]) || curFocus)}</b>; switch a kind off above, or widen with depth instead.`;
 }
 function setScope(all) {
   if (!curFocus) return;
@@ -937,7 +929,7 @@ function noFocusHere(id) {
   // not stop it being markup, and «no hostile string keeps a tag open» is a rule this project asserts
   // elsewhere. Found by an outside audit inside a function a test already inspected - the test read
   // the *path* and never the property.
-  const name = esc(String(DATA.focusName || id));
+  const name = gesc(String(DATA.focusName || id));
   line.innerHTML = `<b>Nothing to focus on.</b> ${name} is not in this diagram - `
     + `the ER model Zoho Analytics returns does not carry it, so it has no columns and no relations here. Showing everything instead.`;
 }
@@ -1136,9 +1128,9 @@ function erPickCard() {
   if (!js.length) { card.classList.remove('on'); return; }
   const snip = js.map((r) => r.relation).filter(Boolean).join('  AND  ');
   $('erpickbody').innerHTML =
-    `<div class="pk1">${esc(label(N[a]))} \u2192 ${esc(label(N[b]))}</div>`
-    + `<div class="pk2">${js.map((r) => `<b>${esc(r.column)}</b> \u2192 <b>${esc(r.otherColumn)}</b>`).join(' \u00b7 ')}</div>`
-    + (snip ? `<div class="pksnip" id="erpicksnip" title="Click to copy">${esc(snip)}</div>` : '');
+    `<div class="pk1">${gesc(label(N[a]))} \u2192 ${gesc(label(N[b]))}</div>`
+    + `<div class="pk2">${js.map((r) => `<b>${gesc(r.column)}</b> \u2192 <b>${gesc(r.otherColumn)}</b>`).join(' \u00b7 ')}</div>`
+    + (snip ? `<div class="pksnip" id="erpicksnip" title="Click to copy">${gesc(snip)}</div>` : '');
   // Cutting the arc hides what hangs off it. The count is worked out before the cut, so the control
   // says what it will take away instead of the reader finding out - and when it would take away
   // nothing, it says why rather than being a button that does nothing.
@@ -1149,9 +1141,9 @@ function erPickCard() {
   const cutK = ekey(a, b), isCut = erCut.has(cutK);
   const gone = erHiddenSet();
   $('erpickbody').insertAdjacentHTML('beforeend', '<div class="pkcut">' + (isCut
-    ? `<button type="button" id="erpickcut">${esc(MSG.cutUndo(erWouldShow(cutK)))}</button>`
-    : `<button type="button" id="erpickcut">${esc(MSG.cutDo(label(N[b]), erWouldGo(a, b, gone).size))}</button>`
-      + `<button type="button" id="erpickcut2">${esc(MSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
+    ? `<button type="button" id="erpickcut">${gesc(GMSG.cutUndo(erWouldShow(cutK)))}</button>`
+    : `<button type="button" id="erpickcut">${gesc(GMSG.cutDo(label(N[b]), erWouldGo(a, b, gone).size))}</button>`
+      + `<button type="button" id="erpickcut2">${gesc(GMSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
   card.classList.add('on');
   const cb = $('erpickcut');
   // The same panel the mark on the arc opens, from the same helper: two descriptions of one click, ten
@@ -1564,11 +1556,11 @@ function erRender() {
     erPaint(div, n);        // after cssText, which would wipe the inline --kind it sets
     const rows = s.rows.slice(0, s.shown).map((fld) => {
       const lk = fld.lookup ? ' lk' : ''; const req = fld.mandatory ? '<span class="pk">*</span>' : '';
-      const t = fld.lookup ? ('\u2192 ' + esc(label(N[fld.lookup]) || fld.lookup)) : esc(fld.data_type || '');
-      return `<div class="errow${lk}"><span class="fn">${esc(fld.api_name)}${req}</span><span class="ft">${t}</span></div>`;
+      const t = fld.lookup ? ('\u2192 ' + gesc(label(N[fld.lookup]) || fld.lookup)) : gesc(fld.data_type || '');
+      return `<div class="errow${lk}"><span class="fn">${gesc(fld.api_name)}${req}</span><span class="ft">${t}</span></div>`;
     }).join('');
     const more = s.more ? `<div class="ermore">+${s.rows.length - s.shown} more\u2026</div>` : '';
-    div.innerHTML = `<div class="erhdr"><span>${esc(n.display_name || n.api_name)}</span><small>${esc(n.api_name)}</small></div>${rows}${more}`;
+    div.innerHTML = `<div class="erhdr"><span>${gesc(n.display_name || n.api_name)}</span><small>${gesc(n.api_name)}</small></div>${rows}${more}`;
     div.onclick = () => { if (erDragged) return; const wasFocus = curFocus; select(id); if (!wasFocus) erRender(); };
     // The id on the element, because dragging starts from a mousedown on the box and the handler has
     // the element, not the loop. Without it the drag reads undefined and never begins - which is how
@@ -1716,7 +1708,7 @@ function erRender() {
     // only read. What *is* on screen is outlined at the same moment, which the list cannot do and the
     // outline cannot do for the rest: two halves of the same answer.
     const asked = () => ({ set: folded ? erWouldShowSet(ek) : erWouldGo(stay, away, erHiddenSet()), first: away, back: folded });
-    el.setAttribute('aria-label', folded ? MSG.cutUndo(erWouldShow(ek)) : MSG.cutDo(label(N[away]), 1));
+    el.setAttribute('aria-label', folded ? GMSG.cutUndo(erWouldShow(ek)) : GMSG.cutDo(label(N[away]), 1));
     el.addEventListener('mouseenter', () => {
       const { set, first, back } = asked();
       el.setAttribute('aria-label', erTipText(set, first, back));
@@ -1865,7 +1857,7 @@ function erCountRefresh() {
   if (badge) badge.textContent = n ? String(n) : '';
   const over = !drawable(n), tight = crowded(n);
   tab.classList.toggle('over', over || tight);
-  tab.title = over ? MSG.tabOver(n) : tight ? MSG.tabCrowded(n) : MSG.tabCount(n);
+  tab.title = over ? GMSG.tabOver(n) : tight ? GMSG.tabCrowded(n) : GMSG.tabCount(n);
 }
 // Nothing is drawn, said where the reader is standing. The tab stays enabled and this is why: above
 // the limit a click lands here and explains itself, where a disabled tab would be a dead control that
@@ -1880,7 +1872,7 @@ function erCountRefresh() {
 // disagreeing with each other.
 function erNotDrawn(n) {
   const box = $('ernone');
-  if (box) { box.querySelector('p').innerHTML = MSG.tooMany(n); box.classList.add('on'); }
+  if (box) { box.querySelector('p').innerHTML = GMSG.tooMany(n); box.classList.add('on'); }
   $('ervp').classList.add('off');
   $('ertools').classList.add('off');
   const h = document.querySelector('#v-er .hint2');
@@ -1916,7 +1908,7 @@ function erShow() {
   erRender(); erFit(); erUpdateControlVis();
   // Said rather than warned about: a filter change keeps what was arranged and places the rest, so
   // the line reports what happened instead of asking permission for it.
-  if (erLastKept) erHint(MSG.kept(erLastKept, erIds.length - erLastKept));
+  if (erLastKept) erHint(GMSG.kept(erLastKept, erIds.length - erLastKept));
 }
 // ---- arranging by hand ----
 // A box can be dragged. The auto layout is a starting point, not a verdict: past eighty boxes it
@@ -2044,7 +2036,7 @@ document.addEventListener('mouseup', () => {
       erPinOnly = null;   // touched by hand: it is their arrangement again, not the file's
       erRender();                                   // the arcs follow the new position, once
       const k = erCovers(id);
-      erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
+      erHint(label(N[id]) + ' ' + (k ? GMSG.dropCovers(k) : GMSG.dropClear));
     }
     setTimeout(() => (erDragged = false), 0);
     return;
@@ -2121,6 +2113,7 @@ function erParamsToUI() {
 }
 // erApplyParams lives in graphlogic.js: identical in both windows and touching no element.
 function erInitControls() {
+  if (_graphWired) return;    // see `_graphWired`
   ER_CTL.forEach(([sl, lb, k]) => {
     const e = $(sl); if (!e) return;
     e.addEventListener('input', () => {
@@ -2301,7 +2294,7 @@ async function onErArrSave() {
     const h = await window.showSaveFilePicker({ suggestedName: erArrName(), types: ARR_TYPES });
     const w = await h.createWritable();
     await w.write(text); await w.close();
-    erHint(MSG.arrSaved(Object.keys(st.positions).length));
+    erHint(GMSG.arrSaved(Object.keys(st.positions).length));
   } catch (e) {
     // A picker the reader closed is not a failure, and saying so would be noise on a deliberate act.
     if (e && e.name === 'AbortError') return;
@@ -2321,10 +2314,122 @@ async function onErArrLoad() {
     erHint(friendlyArrError(e)); return;
   }
   const read = parseArrangement(text, drawMax);
-  if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs, true); return; }
+  if (!read.ok) { erHint(GMSG.arrBadFile[read.reason] || GMSG.arrBadFile.notOurs, true); return; }
   erApplyArrangement(read.file);
 }
 $('erArrLoad').onclick = onErArrLoad;
 // The graph is the truth, the file is an intention applied to it, and every disagreement resolves in
 // favour of the graph with the loss named. Refusals first, because a file from another kind of
 // diagram does not degrade - it means nothing.
+
+/** Put every piece of this file's state back where a fresh page would have it.
+ *
+ *  **Because there is no fresh page any more.** Switching the diagram between Wiring and Schema used
+ *  to `location.reload()`, and the note above `switchGraphKind` says exactly why: the layout, the ego
+ *  set, the focus, the chips and the canvas are all computed from the graph being replaced, and
+ *  re-deriving them one at a time is the half-migrated state this project keeps getting bitten by.
+ *  The diagram is a view of the panel now, so a reload would take the whole panel with it - and the
+ *  reason the reload existed did not go away with it.
+ *
+ *  So the reset is **derived from the declarations, not written from memory**: every module-level
+ *  `let` in this file, back to the value it is declared with. A case in `tests/graphview.test.mjs`
+ *  reads those declarations and fails when one of them is missing here, which is the only way this
+ *  stays true of a file somebody adds a variable to next month.
+ *
+ *  The timers are cleared rather than dropped: a reload destroyed the document and every pending
+ *  callback with it, and assigning `null` over a live handle leaves it to fire into the next graph.
+ */
+function resetGraphState() {
+  for (const t of [_tipT, _tm, _erFitT, _erT]) { try { clearTimeout(t); } catch (_) {} }
+  DATA = null;
+  N = {};
+  ids = [];
+  sel = null;
+  hist = [];
+  gvNameMode = 'display';
+  _hues = null;
+  _huesKey = null;
+  hiddenKinds = new Set();
+  onlyConds = new Set();
+  layFilter = null;
+  RELS = [];
+  relFilter = 'all';
+  relQ = '';
+  curView = 'explorer';
+  nodesA = [];
+  edgesA = [];
+  posX = {};
+  posY = {};
+  vx = {};
+  vy = {};
+  laidOutKey = '';
+  egoDepth = 2;
+  egoSet = null;
+  egoLevel = {};
+  curFocus = null;
+  maxEgoDepth = 6;
+  scopeAll = false;
+  drawMax = DRAW_MAX_NODES;
+  erLaidOut = false;
+  erAll = false;
+  erScale = 1;
+  erTx = 0;
+  erTy = 0;
+  erIds = [];
+  erEmph = 'modules';
+  erMaxX = 0;
+  erMaxY = 0;
+  erMinX = 0;
+  erMinY = 0;
+  erP = Object.assign({}, ER_PRESET.modules);
+  erSelEdge = null;
+  erCut = new Map();
+  _tipT = null;
+  _tm = null;
+  erPrintFull = false;
+  erFlag = () => {};
+  erUserMoved = false;
+  erArranged = false;
+  erLastKept = 0;
+  erHeld = {};
+  erRaised = new Map();
+  erRaiseN = 0;
+  erBoxDrag = null;
+  erDown = false;
+  erDragged = false;
+  erSx = 0;
+  erSy = 0;
+  erT0x = 0;
+  erT0y = 0;
+  _erFitT = null;
+  _erT = null;
+  _erStyle = null;
+  _prevDocTitle = null;
+  erPinOnly = null;
+}
+
+/** Open the diagram on this graph, as a view of the panel.
+ *
+ *  The only way in. It used to be a URL: the panel wrote the payload into `chrome.storage.session`
+ *  under a token, opened a second browser window at `graphview.html?graph=<token>`, and the page
+ *  consumed the key on load. That whole path existed because the two were different documents; they
+ *  are one now, so the graph is handed over as a value and the storage slot, the token and the
+ *  window have all gone with it - three things that could get out of step, replaced by an argument.
+ */
+async function openGraphView(data) {
+  resetGraphState();
+  const view = document.getElementById('graphview');
+  if (view) view.classList.add('show');
+  await applyGraph(data);
+  _graphWired = true;          // everything wiring-shaped has now run exactly once
+}
+/** Close it, and leave nothing of this graph behind - the reader may open another. */
+function closeGraphView() {
+  const view = document.getElementById('graphview');
+  if (view) view.classList.remove('show');
+  resetGraphState();
+}
+{
+  const x = document.getElementById('graphx');
+  if (x) x.onclick = () => closeGraphView();
+}

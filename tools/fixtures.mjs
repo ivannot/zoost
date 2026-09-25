@@ -25,7 +25,7 @@
  * declared.
  *
  * It also builds the graphData payloads the diagram window consumes, because tools/shots.py feeds
- * them straight to graphview.html. They are derived from the same file tree, so they cannot describe
+ * them straight to the diagram view. They are derived from the same file tree, so they cannot describe
  * a workspace the files do not.
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';

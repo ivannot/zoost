@@ -7,9 +7,6 @@
 // ---------- save-sync ----------
 
 /** Build the graph the diagram window asked for and hand it back through the message port. */
-async function sendGraphWhenBuilt(kind, token, sendResponse) {
-  sendResponse(await buildGraphFor(kind, token));
-}
 
 /** What the panel does with a message from the content bridge or the diagram window.
  *
@@ -37,24 +34,24 @@ function onPanelMessage(msg, _sender, sendResponse) {
   // and it stays that way - so the graph is built here and left in storage for it to reload from.
   // Through a declaration: `.then(sendResponse)` is a scope nothing can read, and what it carries
   // is a whole graph built after an await.
-  if (msg?.type === 'graphSwitch') { void sendGraphWhenBuilt(msg.kind, msg.token, sendResponse); return true; }
 }
-async function buildGraphFor(kind, token) {
+async function buildGraphFor(kind) {
   const op = beginWorkspaceOp(), ws = graphIdentity();
   try {
-    if (!dir) throw new Error('no working folder is open in the panel');
-    // ensurePerm only *asks* when the permission has lapsed, and asking needs a user gesture the
-    // panel does not have here. If it has lapsed the switch stops and says so, rather than throwing
-    // a DOMException whose message names neither the folder nor the remedy.
-    if (!(await hasPerm(dir))) throw new Error('the working folder needs re-granting - click once in the panel');
+    if (!dir) throw new Error('no working folder is open in the Zoost window');
+    // ensurePerm only *asks* when the permission has lapsed, and asking needs a user gesture this
+    // path does not have. If it has lapsed the switch stops and says so, rather than throwing a
+    // DOMException whose message names neither the folder nor the remedy.
+    if (!(await hasPerm(dir))) throw new Error('the working folder needs re-granting - click once in the window');
     const g = kind === 'schema' ? await buildSchemaGraph(undefined, undefined, op) : await callGraphWithContext(op);
     if (!g.counts.nodes) throw new Error(kind === 'schema' ? 'no modules pulled yet' : 'no functions pulled yet');
     if (!op.current()) throw new Error(WS_MOVED);
     g.workspace = ws;
-    // The window's own key: it sent its token with the ask, and reloads the same URL afterwards.
-    await chrome.storage.session.set({ ['graphData:' + token]: graphForWindow(g) });
     op.say(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
-    return { ok: true };
+    // **The graph itself, not a key naming it.** It travelled through `chrome.storage.session` while
+    // the diagram was a window of its own and the two documents could only exchange values that way.
+    // One document now, so the caller gets the thing.
+    return { ok: true, graph: g };
   } catch (e) { return { ok: false, error: e.message || String(e) }; }
 }
 /** A function deleted in Zoho, removed from the mirror while you watch.

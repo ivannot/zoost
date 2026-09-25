@@ -804,7 +804,7 @@ function pvDiagram(nodeId, noun) {
   slot.innerHTML = `depth <select id="pvdepth"><option value="1">1</option><option value="2" selected>2</option>`
     + `<option value="3">3</option><option value="4">4</option></select>`
     + `<button id="pvdiagram" class="laylocal icon" aria-label="Wiring"`
-    + ` title="${escA('Wiring - opened on this ' + noun + ' at the depth chosen here, in its own window')}">`
+    + ` title="${escA('Wiring - opened on this ' + noun + ' at the depth chosen here, here in Zoost')}">`
     + `<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/>`
     + `<rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
   // The strip holding this slot is `hidden` for every kind with no tabs of its own - which is every

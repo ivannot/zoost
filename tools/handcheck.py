@@ -153,7 +153,7 @@ CHECKS = [
         # The window's markup as well as its script: the toolbar, the tabs and the chip row live in
         # `graphview.html`, and a change there is exactly what this check would notice. It was not
         # covered, so a release could be cut with the diagram's chrome altered and nobody asked.
-        'covers': ['apps/*/graphview.js', 'apps/*/graphview.html', 'apps/*/graphlogic.js',
+        'covers': ['apps/*/graphview.js', 'apps/*/graphlogic.js',
                    'apps/crm/graph-core.js'],
     },
     {

@@ -8,7 +8,16 @@
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
-  :root{
+  #graphview{
+    /* **Fixed, not absolute.** The diagram is the whole window while it is open, which is the
+       point of it no longer being a window of its own: put beside `#aiview` it inherited that
+       view's containing box, which deliberately starts below the workspace and tools rows, so
+       the drawing sat in the lower two thirds with the panel's chrome above it. Reported with
+       a picture of exactly that.
+       And the semicolon at the end of this line is load-bearing: without it `--bg` below was
+       swallowed into a malformed declaration and dropped, so `background:var(--bg)` resolved
+       to the *panel's* dark token and half the diagram came out black. Reported too. */
+    display:none; position:fixed; inset:0; z-index:9; font-family:var(--sans); color:var(--ink); background:var(--bg); flex-direction:column; overflow:hidden;
     --bg:#eef1f6; --surface:#fff; --ink:#182130; --muted:#647085; --border:#d7deea; --line:#e7ecf4;
     --sel:#2f6fed; --sel-soft:#e7effd; --up:#b0531f; --up-soft:#fbecdf; --down:#1f7a5c; --down-soft:#e0f2ea;
     --rest:#6b4fbb; --warn:#c2410c;
@@ -37,52 +46,61 @@
   --n-email_notifications:#d946ef; --n-field_updates:#14b8a6; --n-tasks:#84cc16; --n-webhooks:#f97316;
   --n-modules:#94a3b8;
   }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  /* **The diagram is a view of this window, not a window of its own.** It opened in a second
+     browser window while Zoost was a side panel capped at two thirds of its host - a diagram cannot
+     be read in 400px, so it had to go somewhere else. Zoost is a window the reader sizes, so the
+     second window stopped being room and became one more thing to find, raise and close. It is the
+     fourth of the family `#overviewview`, `#healthview` and `#aiview` already form.
+     **Its own palette, on the container.** The diagram is light and the panel is dark; custom
+     properties cascade, so re-declaring the tokens on `#graphview` dresses the whole subtree
+     without a single rule of the panel's having to change. */
+  /* (the shell is declared with the tokens above - one rule, one place) */
+  #graphview.show{display:flex}
   /* Two rows: the title line, then the view tabs under it, left-aligned. They used to sit top
      right, opposite the title, which put the thing you switch with furthest from where the
      eye starts and left a stripe of nothing between them. */
-  header{padding:11px 20px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:11px}
-  header .hrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
-  header h1{font-size:15px;margin:0}
-  header .stat{font-size:12px;color:var(--muted)} header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
-  .tabs{display:flex;gap:4px;flex-wrap:wrap}
+  #graphview header{padding:11px 150px 12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:11px}
+  #graphview header .hrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+  #graphview header h1{font-size:15px;margin:0}
+  #graphview header .stat{font-size:12px;color:var(--muted)} #graphview header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
+  #graphview .tabs{display:flex;gap:4px;flex-wrap:wrap}
   /* The focus is the window's context, so it wears the same shape as the chips: a labelled box
      with its own question. The name chip takes the amber the diagram already uses for the focused
      box and the picked arc - an existing meaning rather than a sixth colour.
      `Everything` keeps the focus rather than dropping it: the name stays on screen and one click
      picks it up again, which is what the diagram's «Scope» button used to do from inside a single
      view. `✕` is the one that forgets it, and it is absent when there is nothing to forget. */
-  .focusg .chip.off{opacity:.45;cursor:default}
-  .fdepth{display:inline-flex;align-items:center;gap:4px;font:11px var(--sans);color:var(--muted);padding-left:2px}
-  .fdepth button{border:none;background:#eef1f6;border-radius:5px;width:19px;height:19px;cursor:pointer;font-weight:700;color:var(--ink)}
-  .fdepth button:disabled{opacity:.35;cursor:default}
-  .fdepth b{min-width:11px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
-  .fdepth #erdMax{color:#94a3b8}
-  .tabrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  @media print{ .tabrow .focusg{display:none} }
+  #graphview .focusg .chip.off{opacity:.45;cursor:default}
+  #graphview .fdepth{display:inline-flex;align-items:center;gap:4px;font:11px var(--sans);color:var(--muted);padding-left:2px}
+  #graphview .fdepth button{border:none;background:#eef1f6;border-radius:5px;width:19px;height:19px;cursor:pointer;font-weight:700;color:var(--ink)}
+  #graphview .fdepth button:disabled{opacity:.35;cursor:default}
+  #graphview .fdepth b{min-width:11px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
+  #graphview .fdepth #erdMax{color:#94a3b8}
+  #graphview .tabrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  @media print{ #graphview .tabrow .focusg{display:none} }
   /* What the window is looking at, as against which view of it - so it sits on the title row and
      not among the view tabs, which are a different question about the same thing. */
-  .subj{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none}
-  .subj span{font:12px var(--sans);padding:5px 12px;cursor:pointer;color:var(--muted);background:#fff}
-  .subj span+span{border-left:1px solid var(--border)}
-  .subj span[aria-selected=true]{background:var(--sel-soft);color:var(--sel);font-weight:600;cursor:default}
-  .subj span:not([aria-selected=true]):hover{background:#f3f6fb;color:var(--ink)}
-  @media print{ .subj{display:none} }
-  .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
-  .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  #graphview .subj{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none}
+  #graphview .subj span{font:12px var(--sans);padding:5px 12px;cursor:pointer;color:var(--muted);background:#fff}
+  #graphview .subj span+span{border-left:1px solid var(--border)}
+  #graphview .subj span[aria-selected=true]{background:var(--sel-soft);color:var(--sel);font-weight:600;cursor:default}
+  #graphview .subj span:not([aria-selected=true]):hover{background:#f3f6fb;color:var(--ink)}
+  @media print{ #graphview .subj{display:none} }
+  #graphview .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
+  #graphview .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
   /* Nothing to project from the selected module. Temporarily unavailable, so disabled rather
      than hidden - pick another module and it comes back, and a tab strip that changes length
      as you move down a list is worse than a greyed tab that explains itself in its tooltip. */
-  .tab.off{opacity:.4;cursor:default}
-  .wrap{flex:1;min-height:0;position:relative}
-  .view{position:absolute;inset:0;display:none} .view.on{display:flex}
+  #graphview .tab.off{opacity:.4;cursor:default}
+  #graphview .wrap{flex:1;min-height:0;position:relative}
+  #graphview .view{position:absolute;inset:0;display:none} #graphview .view.on{display:flex}
   /* explorer */
   /* Width lives in a custom property, not in an inline style: dragging the divider sets the
      property, and `body.no-aside` still wins on specificity when the column is folded. An
      inline width would have beaten the fold rule and broken it the first time anyone dragged. */
-  aside{width:var(--aside-w,340px);flex:none;background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
-  body.aside-drag aside{transition:none}
+  #graphview aside{width:var(--aside-w,340px);flex:none;background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
+  #graphview body.aside-drag aside{transition:none}
   /* The list can be folded away so a wide reference pane gets the whole window. Width to 0
      rather than display:none, so the transition has something to animate and nothing has to
      be re-created when it comes back; `visibility` stops the contents being tabbed to while
@@ -91,7 +109,7 @@
      min-content size, which floors `width:0` at whatever the search box needs. The rule was
      applying - `visibility` from the same declaration took effect - and the panel simply did
      not move, which is the kind of nothing that is hard to diagnose by looking. */
-  body.no-aside #v-explorer aside{width:0;min-width:0;overflow:hidden;visibility:hidden}
+  #graphview body.no-aside #v-explorer aside{width:0;min-width:0;overflow:hidden;visibility:hidden}
   /* The fold control is a tab on the column itself, not a button in the header: it sits where the
      thing it folds is, and it stays put when the column goes, which a control inside the
      column could not. Living inside #v-explorer is also why it cannot appear in the three
@@ -99,208 +117,212 @@
   /* Full height on purpose: a target you cannot miss costs nothing here, and a small pill floating
      on the divider would be a smaller target for no gain. --surface rather than --bg, so the
      strip stays visible against the grey detail pane once the white list beside it has gone. */
-  #asidebtn{flex:none;width:17px;border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);
+  #graphview #asidebtn{flex:none;width:17px;border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);
             background:var(--surface);color:var(--muted);cursor:col-resize;font:13px var(--sans);padding:0;
             display:flex;align-items:center;justify-content:center;transition:background .12s ease;touch-action:none}
-  body.no-aside #asidebtn{cursor:pointer}
-  #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
-  #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
-  @media print{ #asidebtn{display:none} }
-  .search{padding:12px;position:relative}
-  .search input{width:100%;padding:9px 30px 9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
+  #graphview body.no-aside #asidebtn{cursor:pointer}
+  #graphview #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
+  #graphview #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
+  @media print{ #graphview #asidebtn{display:none} }
+  #graphview .search{padding:12px;position:relative}
+  #graphview .search input{width:100%;padding:9px 30px 9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
   /* Absent while the box is empty: with nothing typed there is nothing to clear. */
-  .search .qx{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:13px var(--sans);line-height:1;
+  #graphview .search .qx{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:13px var(--sans);line-height:1;
               color:var(--muted);cursor:pointer;padding:3px 5px;border-radius:6px;display:none;
               background:none;border:0}   /* it is a real button now: without these it takes Chrome's grey bevelled box */
-  .search .qx.on{display:block} .search .qx:hover{background:var(--sel-soft);color:var(--sel)}
-  .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  #graphview .search .qx.on{display:block} #graphview .search .qx:hover{background:var(--sel-soft);color:var(--sel)}
+  #graphview .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
   /* Window-wide, so it lives in the header and not inside the Explorer column. It was in the
      column, which exists in one of the four views - so the filter that chooses what the diagram
      draws was invisible from the diagram, and reported as missing. */
-  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0;align-items:center}
-  @media print{ .chips{display:none} }
-  .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
-  .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  #graphview .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0;align-items:center}
+  @media print{ #graphview .chips{display:none} }
+  #graphview .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
+  #graphview .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
   /* One box per dimension, with its name on it. Square corners and a shared border say «these belong
      together» far better than a gap did - reported twice: first that nine identical pills read as one
      list of nine kinds, then that the level of each dimension had to be visible rather than inferred.
      A dimension with a single kind in it is its own chip: a label plus one chip saying the same word
      twice is a box drawn for symmetry's sake. */
-  .dim{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;padding:3px 6px}
-  .dimt{font:10px var(--sans);text-transform:uppercase;letter-spacing:.4px;color:#8b98ab;padding:0 3px}
-  .dim .chip{border-radius:5px}
-  .chip.solo{border-radius:5px;border-width:1px;padding:4px 10px}
+  #graphview .dim{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;padding:3px 6px}
+  #graphview .dimt{font:10px var(--sans);text-transform:uppercase;letter-spacing:.4px;color:#8b98ab;padding:0 3px}
+  #graphview .dim .chip{border-radius:5px}
+  #graphview .chip.solo{border-radius:5px;border-width:1px;padding:4px 10px}
   /* The conditions are the other question - «narrow to nodes that are also...» - and they start off,
      which is the honest state when none is chosen. No hue: they are facts about a node, not kinds. */
-  .dim.only{border-style:dashed}
+  #graphview .dim.only{border-style:dashed}
   /* It read as a stray character: no border, no shape, and nothing under the cursor said it could
      be pressed. It is a chip like its neighbours now, with the word beside the mark - reported as
      «you have to find it by trial». */
-  .chipx{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;
+  #graphview .chipx{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;
          background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;
          margin-left:6px}
-  .chipx:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-soft)}
+  #graphview .chipx:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-soft)}
   /* A chip carries the colour of what it selects: pressed fills, released outlines. Without this the
      dots in the list were a code with no key anywhere on the screen. */
-  .chip[data-hue]{border-color:var(--hue);color:var(--hue)}
-  .chip[data-hue][aria-pressed=true]{background:var(--hue);border-color:var(--hue);color:#fff}
-  .chip .cdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--hue);margin-right:5px;vertical-align:1px}
-  .chip[aria-pressed=true] .cdot{background:#fff}
-  .list{overflow:auto;flex:1;border-top:1px solid var(--line)}
-  .item{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:8px}
-  .item:hover{background:var(--sel-soft)} .item[aria-selected=true]{background:var(--sel-soft);box-shadow:inset 3px 0 0 var(--sel)}
-  .item .nm{font:12.5px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ns{font:10px var(--mono);color:var(--muted)} .deg{font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
-  .dot{width:7px;height:7px;border-radius:50%;flex:none}
-  main{flex:1;overflow:auto;padding:22px 26px;min-width:0}
-  .empty{color:var(--muted);font-size:14px;margin-top:40px;text-align:center}
+  #graphview .chip[data-hue]{border-color:var(--hue);color:var(--hue)}
+  #graphview .chip[data-hue][aria-pressed=true]{background:var(--hue);border-color:var(--hue);color:#fff}
+  #graphview .chip .cdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--hue);margin-right:5px;vertical-align:1px}
+  #graphview .chip[aria-pressed=true] .cdot{background:#fff}
+  #graphview .list{overflow:auto;flex:1;border-top:1px solid var(--line)}
+  #graphview .item{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:8px}
+  #graphview .item:hover{background:var(--sel-soft)} #graphview .item[aria-selected=true]{background:var(--sel-soft);box-shadow:inset 3px 0 0 var(--sel)}
+  #graphview .item .nm{font:12.5px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #graphview .ns{font:10px var(--mono);color:var(--muted)} #graphview .deg{font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+  #graphview .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  #graphview main{flex:1;overflow:auto;padding:22px 26px;min-width:0}
+  #graphview .empty{color:var(--muted);font-size:14px;margin-top:40px;text-align:center}
   /* The list's own empty state sits at the top of a column, not in the middle of a pane. */
-  .list .empty{margin-top:0;text-align:left;font-size:12.5px;line-height:1.6}
-  .list .empty b{color:var(--ink);display:block}
-  .list .empty span{border:1px solid var(--border);border-radius:999px;padding:1px 7px;font-size:11px}
-  .crumbs{font:12px var(--mono);color:var(--muted);margin-bottom:14px;min-height:16px}
-  .crumbs a{color:var(--sel);cursor:pointer} .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .title h2{margin:0;font:20px var(--mono)}
-  .badge{font:10.5px var(--sans);padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#eef2f8;color:#3a4760}
-  .b-rest{background:#efeaFB;color:var(--rest);border-color:#ddd2f5}
-  .sub{color:var(--muted);font-size:13px;margin:6px 0 2px}
-  .desc{font-size:13px;color:#3a4760;margin:8px 0 0;max-width:70ch}
-  .sig{font:12px var(--mono);color:#3a4760;background:#f6f8fb;border:1px solid var(--line);padding:8px 10px;border-radius:8px;margin:14px 0;white-space:pre-wrap}
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
-  .col h3{font-size:12px;letter-spacing:.3px;text-transform:uppercase;margin:0 0 8px}
-  .col.up h3{color:var(--up)} .col.down h3{color:var(--down)} .col .hint{font-size:11px;color:var(--muted);font-weight:400;text-transform:none}
-  .refs{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .ref{padding:8px 11px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px;align-items:center}
+  #graphview .list .empty{margin-top:0;text-align:left;font-size:12.5px;line-height:1.6}
+  /* Only the first, for the reason the panel learnt: `display:block` on every `b` turned one
+     sentence into four fragments that read as four statements. The diagram's list empty state
+     is the same shape and was the last copy of the old rule. */
+  #graphview .list .empty > b:first-child{color:var(--ink);display:block}
+  #graphview .list .empty b{color:var(--ink)}
+  #graphview .list .empty span{border:1px solid var(--border);border-radius:999px;padding:1px 7px;font-size:11px}
+  #graphview .crumbs{font:12px var(--mono);color:var(--muted);margin-bottom:14px;min-height:16px}
+  #graphview .crumbs a{color:var(--sel);cursor:pointer} #graphview .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  #graphview .title h2{margin:0;font:20px var(--mono)}
+  #graphview .badge{font:10.5px var(--sans);padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#eef2f8;color:#3a4760}
+  #graphview .b-rest{background:#efeaFB;color:var(--rest);border-color:#ddd2f5}
+  #graphview .sub{color:var(--muted);font-size:13px;margin:6px 0 2px}
+  #graphview .desc{font-size:13px;color:#3a4760;margin:8px 0 0;max-width:70ch}
+  #graphview .sig{font:12px var(--mono);color:#3a4760;background:#f6f8fb;border:1px solid var(--line);padding:8px 10px;border-radius:8px;margin:14px 0;white-space:pre-wrap}
+  #graphview .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  #graphview .col h3{font-size:12px;letter-spacing:.3px;text-transform:uppercase;margin:0 0 8px}
+  #graphview .col.up h3{color:var(--up)} #graphview .col.down h3{color:var(--down)} #graphview .col .hint{font-size:11px;color:var(--muted);font-weight:400;text-transform:none}
+  #graphview .refs{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  #graphview .ref{padding:8px 11px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px;align-items:center}
   /* A module Zoho refused to describe. It stays in the list because it exists in the org -
      dropping it would quietly shrink the count - but it cannot be focused and its emptiness is
      not a measurement, so it reads as unavailable rather than as a module with no relations. */
-  .ref.unread,.item.unread{opacity:.55}
-  .ref.unread .deg,.item.unread .deg{color:#94a3b8}
-  .ref:last-child{border-bottom:0} .up .ref:hover{background:var(--up-soft)} .down .ref:hover{background:var(--down-soft)}
-  .ref .nm{font:12px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .none{padding:10px 11px;color:var(--muted);font-size:12.5px}
-  .warn{margin-top:16px;border:1px solid #f4c9a3;background:#fdf3ea;border-radius:10px;padding:10px 12px}
-  .warn h4{margin:0 0 4px;font-size:12px;color:var(--warn)} .warn code{font:12px var(--mono)}
-  .assoc{margin-top:12px;font:11.5px var(--mono);color:var(--muted)} .assoc b{color:#3a4760}
-  .file{margin-top:14px;font:11.5px var(--mono);color:var(--muted)}
+  #graphview .ref.unread, #graphview .item.unread{opacity:.55}
+  #graphview .ref.unread .deg, #graphview .item.unread .deg{color:#94a3b8}
+  #graphview .ref:last-child{border-bottom:0} #graphview .up .ref:hover{background:var(--up-soft)} #graphview .down .ref:hover{background:var(--down-soft)}
+  #graphview .ref .nm{font:12px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #graphview .none{padding:10px 11px;color:var(--muted);font-size:12.5px}
+  #graphview .warn{margin-top:16px;border:1px solid #f4c9a3;background:#fdf3ea;border-radius:10px;padding:10px 12px}
+  #graphview .warn h4{margin:0 0 4px;font-size:12px;color:var(--warn)} #graphview .warn code{font:12px var(--mono)}
+  #graphview .assoc{margin-top:12px;font:11.5px var(--mono);color:var(--muted)} #graphview .assoc b{color:#3a4760}
+  #graphview .file{margin-top:14px;font:11.5px var(--mono);color:var(--muted)}
   /* Shown while the force layout runs. It has to be *painted* before the work starts, which is
      what the double requestAnimationFrame in runHeavy() is for - the layout blocks the main
      thread, so anything drawn in the same task never reaches the screen. */
-  .busy{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  #graphview .busy{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
         background:rgba(255,255,255,.86);color:var(--muted);font:13px var(--sans);z-index:7}
-  .busy.on{display:flex}
-  .busy i{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--sel);border-radius:50%;animation:spin .7s linear infinite}
+  #graphview .busy.on{display:flex}
+  #graphview .busy i{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--sel);border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @media (prefers-reduced-motion:reduce){ .busy i{animation-duration:2.4s} }
-  @media print{ .busy{display:none !important} }
-  .hint2{position:absolute;bottom:10px;left:12px;font:11px var(--sans);color:var(--muted)}
-  .hint2.warn{color:#92400e;background:#fef3c7;border:1px solid #e8b563;border-radius:6px;
+  @media (prefers-reduced-motion:reduce){ #graphview .busy i{animation-duration:2.4s} }
+  @media print{ #graphview .busy{display:none !important} }
+  #graphview .hint2{position:absolute;bottom:10px;left:12px;font:11px var(--sans);color:var(--muted)}
+  #graphview .hint2.warn{color:#92400e;background:#fef3c7;border:1px solid #e8b563;border-radius:6px;
               padding:3px 9px;font-weight:600;box-shadow:0 2px 8px rgba(20,30,50,.14)}
-  #s-ws{color:var(--muted)} #s-ws b{color:var(--ink)}
-  .srcwrap{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .srchead{background:#f6f8fb;border-bottom:1px solid var(--line);padding:6px 10px;font:11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
-  .ftbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
-  .ftbl td{padding:4px 8px;border-bottom:1px solid var(--line);color:#33415a;white-space:nowrap}
-  .ftbl td.mono{color:#2563eb} .ftbl tr:hover{background:#eef3fb}
-  .ftbl th.lcol,.ftbl td.lcol{text-align:center;padding:4px 5px;border-left:1px solid var(--line)}
-  .ftbl th.lcol{max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;font-size:10px;letter-spacing:0}
-  .ftbl th.lcol.hid{color:#b9c2cf;font-style:italic}
-  .ftbl td.lcol .d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8}
-  .ftbl td.lcol .d.req{background:#d97706;box-shadow:0 0 0 2px rgba(217,119,6,.18)}
-  .ftbl tr.nolay td{background:#fffaf0}
-  .ftbl .nolaytag{color:#d97706;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;margin-left:5px}
-  .laylegend{padding:6px 10px;font:10.5px var(--sans);color:var(--muted);background:#f6f8fb;border-top:1px solid var(--line)}
-  .laylegend .d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;vertical-align:middle}
-  .laylegend .d.req{background:#d97706}
-  .laychips{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#f6f8fb;border-bottom:1px solid var(--line)}
-  .laychip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer;white-space:nowrap}
-  .laychip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
-  #v-er{overflow:hidden;background:#eef1f6}
+  #graphview #s-ws{color:var(--muted)} #graphview #s-ws b{color:var(--ink)}
+  #graphview .srcwrap{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  #graphview .srchead{background:#f6f8fb;border-bottom:1px solid var(--line);padding:6px 10px;font:11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+  #graphview .ftbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+  #graphview .ftbl td{padding:4px 8px;border-bottom:1px solid var(--line);color:#33415a;white-space:nowrap}
+  #graphview .ftbl td.mono{color:#2563eb} #graphview .ftbl tr:hover{background:#eef3fb}
+  #graphview .ftbl th.lcol, #graphview .ftbl td.lcol{text-align:center;padding:4px 5px;border-left:1px solid var(--line)}
+  #graphview .ftbl th.lcol{max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;font-size:10px;letter-spacing:0}
+  #graphview .ftbl th.lcol.hid{color:#b9c2cf;font-style:italic}
+  #graphview .ftbl td.lcol .d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8}
+  #graphview .ftbl td.lcol .d.req{background:#d97706;box-shadow:0 0 0 2px rgba(217,119,6,.18)}
+  #graphview .ftbl tr.nolay td{background:#fffaf0}
+  #graphview .ftbl .nolaytag{color:#d97706;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;margin-left:5px}
+  #graphview .laylegend{padding:6px 10px;font:10.5px var(--sans);color:var(--muted);background:#f6f8fb;border-top:1px solid var(--line)}
+  #graphview .laylegend .d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;vertical-align:middle}
+  #graphview .laylegend .d.req{background:#d97706}
+  #graphview .laychips{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#f6f8fb;border-bottom:1px solid var(--line)}
+  #graphview .laychip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer;white-space:nowrap}
+  #graphview .laychip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  #graphview #v-er{overflow:hidden;background:#eef1f6}
   /* relations view */
-  #v-rel{flex-direction:column;background:#fff;overflow:hidden}
-  #relbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
-  #relq{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font:12.5px var(--sans);outline:none}
-  #relq:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
-  #relcount{font:11.5px var(--sans);color:var(--muted);white-space:nowrap}
-  #relwrap{flex:1;overflow:auto;min-height:0}
-  .rtbl{width:100%;border-collapse:collapse;font:12px var(--sans)}
-  .rtbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px;z-index:1}
-  .rtbl td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-  .rtbl tr:hover{background:#f7faff}
-  .rtbl .rname{font:13px var(--mono);font-weight:700;color:#b45309;cursor:pointer;white-space:nowrap}
-  .rtbl .rname:hover{text-decoration:underline}
-  .rtbl .mod{font:11.5px var(--mono);color:#64748b;cursor:pointer}
-  .rtbl .mod:hover{color:var(--sel);text-decoration:underline}
-  .rtbl .rlab{color:#475569}
-  .rtbl .rtype{font:10.5px var(--sans);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
-  .rtbl .snip{font:11px var(--mono);color:#334155;background:#f6f8fb;border:1px solid var(--line);border-radius:6px;padding:4px 7px;cursor:pointer;display:inline-block;white-space:nowrap}
-  .rtbl .snip:hover{border-color:var(--sel);background:#eef3fb}
-  .rtbl tr.sys td{background:#fcfcfd;color:#94a3b8}
-  .rtbl tr.sys .rname{color:#94a3b8;font-weight:600}
-  #relhint{padding:9px 14px;font:11px var(--sans);color:var(--muted);border-top:1px solid var(--line);background:var(--surface)}
+  #graphview #v-rel{flex-direction:column;background:#fff;overflow:hidden}
+  #graphview #relbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+  #graphview #relq{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font:12.5px var(--sans);outline:none}
+  #graphview #relq:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  #graphview #relcount{font:11.5px var(--sans);color:var(--muted);white-space:nowrap}
+  #graphview #relwrap{flex:1;overflow:auto;min-height:0}
+  #graphview .rtbl{width:100%;border-collapse:collapse;font:12px var(--sans)}
+  #graphview .rtbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px;z-index:1}
+  #graphview .rtbl td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  #graphview .rtbl tr:hover{background:#f7faff}
+  #graphview .rtbl .rname{font:13px var(--mono);font-weight:700;color:#b45309;cursor:pointer;white-space:nowrap}
+  #graphview .rtbl .rname:hover{text-decoration:underline}
+  #graphview .rtbl .mod{font:11.5px var(--mono);color:#64748b;cursor:pointer}
+  #graphview .rtbl .mod:hover{color:var(--sel);text-decoration:underline}
+  #graphview .rtbl .rlab{color:#475569}
+  #graphview .rtbl .rtype{font:10.5px var(--sans);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
+  #graphview .rtbl .snip{font:11px var(--mono);color:#334155;background:#f6f8fb;border:1px solid var(--line);border-radius:6px;padding:4px 7px;cursor:pointer;display:inline-block;white-space:nowrap}
+  #graphview .rtbl .snip:hover{border-color:var(--sel);background:#eef3fb}
+  #graphview .rtbl tr.sys td{background:#fcfcfd;color:#94a3b8}
+  #graphview .rtbl tr.sys .rname{color:#94a3b8;font-weight:600}
+  #graphview #relhint{padding:9px 14px;font:11px var(--sans);color:var(--muted);border-top:1px solid var(--line);background:var(--surface)}
   /* The count of boxes the diagram would draw, on the tab that draws them, and amber once it is past
      what can be drawn without boxes covering each other. A colour and a number, not a verdict: the
      tab still works and says why when it cannot draw. */
-  .tab .tc{margin-left:7px;font:11px var(--sans);font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
-  .tab .tc:empty{display:none}
-  .tab.over .tc{color:#b45309}
-  #ervp.off,#ertools.off,.hint2.off{display:none}
+  #graphview .tab .tc{margin-left:7px;font:11px var(--sans);font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+  #graphview .tab .tc:empty{display:none}
+  #graphview .tab.over .tc{color:#b45309}
+  #graphview #ervp.off, #graphview #ertools.off, #graphview .hint2.off{display:none}
   /* The diagram's own empty state. Only the first <b> is the heading - `.empty b{display:block}` once
      hit every one of them and turned a sentence into four statements. */
-  #ernone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:0 12%;z-index:8}
-  #ernone.on{display:flex}
-  #ernone p{max-width:52ch;margin:0;font:13px/1.65 var(--sans);color:var(--muted);text-align:center}
-  #ernone p b:first-child{display:block;margin-bottom:8px;font-size:14px;color:var(--ink)}
-  #ertools{position:absolute;top:10px;left:10px;z-index:6;display:flex;gap:6px;flex-wrap:wrap}
-  #ertools button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--muted)}
-  #ertools button:hover{border-color:var(--sel);color:var(--ink)}
-  #ertools button.on{background:var(--ink);border-color:var(--ink);color:#fff}
-  #ertools button.on{background:#92400e;border-color:#92400e;color:#fff}
-  #ertools button:disabled{opacity:.4;cursor:default}
-  #erlay{position:absolute;top:48px;left:10px;z-index:7;display:none;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:10px 12px;width:262px}
-  #erlay.on{display:block}
+  #graphview #ernone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:0 12%;z-index:8}
+  #graphview #ernone.on{display:flex}
+  #graphview #ernone p{max-width:52ch;margin:0;font:13px/1.65 var(--sans);color:var(--muted);text-align:center}
+  #graphview #ernone p b:first-child{display:block;margin-bottom:8px;font-size:14px;color:var(--ink)}
+  #graphview #ertools{position:absolute;top:10px;left:10px;z-index:6;display:flex;gap:6px;flex-wrap:wrap}
+  #graphview #ertools button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--muted)}
+  #graphview #ertools button:hover{border-color:var(--sel);color:var(--ink)}
+  #graphview #ertools button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  #graphview #ertools button.on{background:#92400e;border-color:#92400e;color:#fff}
+  #graphview #ertools button:disabled{opacity:.4;cursor:default}
+  #graphview #erlay{position:absolute;top:48px;left:10px;z-index:7;display:none;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:10px 12px;width:262px}
+  #graphview #erlay.on{display:block}
   /* The toolbar had eight controls in a row and was becoming a wall - reported. What a reader does
      *to a file* is one idea and it groups, where Emphasis, Fields, Re-layout and Fit each say
      something about the state of the drawing and have to stay legible without opening anything.
      Same panel mechanics as Layout, so there is one popup in this window and not two kinds. */
-  #erfile{position:absolute;top:48px;left:10px;z-index:8;display:none;background:#fff;
+  #graphview #erfile{position:absolute;top:48px;left:10px;z-index:8;display:none;background:#fff;
           border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:5px}
-  #erfile.on{display:block}
-  #erfile .mrow{display:block;width:100%;min-width:190px;text-align:left;border:0;background:none;
+  #graphview #erfile.on{display:block}
+  #graphview #erfile .mrow{display:block;width:100%;min-width:190px;text-align:left;border:0;background:none;
                 font:12px var(--sans);color:var(--ink);padding:7px 10px;border-radius:6px;cursor:pointer}
-  #erfile .mrow:hover{background:#f3f0fd;color:#5b21b6}
-  #erfile .msep{height:1px;background:var(--line);margin:4px 6px}
-  @media print{ #erfile{display:none !important} }
-  #erlay .lrow{display:flex;align-items:center;gap:8px;margin:6px 0}
-  #erlay label{font:11.5px var(--sans);color:var(--muted);flex:0 0 88px}
-  #erlay input[type=range]{flex:1;min-width:0;accent-color:#d97706}
-  #erlay input[type=checkbox]{accent-color:#d97706}
-  #erlay .lval{font:11px var(--mono);color:#92400e;flex:0 0 34px;text-align:right}
-  #erlay .lhead{font:10.5px var(--sans);color:#94a3b8;margin:0 0 6px;line-height:1.4}
-  #erlay .lrow.off{display:none}
-  #erlay .lfoot{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)}
-  #erlay .lfoot button{width:100%;font:11.5px var(--sans)}
-  @media print{ #erlay{display:none !important} }
-  #erdepth button{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;font-size:15px}   /* centre the −/+ glyph in its box */
-  #erdepth button:disabled{opacity:.35;cursor:default}
+  #graphview #erfile .mrow:hover{background:#f3f0fd;color:#5b21b6}
+  #graphview #erfile .msep{height:1px;background:var(--line);margin:4px 6px}
+  @media print{ #graphview #erfile{display:none !important} }
+  #graphview #erlay .lrow{display:flex;align-items:center;gap:8px;margin:6px 0}
+  #graphview #erlay label{font:11.5px var(--sans);color:var(--muted);flex:0 0 88px}
+  #graphview #erlay input[type=range]{flex:1;min-width:0;accent-color:#d97706}
+  #graphview #erlay input[type=checkbox]{accent-color:#d97706}
+  #graphview #erlay .lval{font:11px var(--mono);color:#92400e;flex:0 0 34px;text-align:right}
+  #graphview #erlay .lhead{font:10.5px var(--sans);color:#94a3b8;margin:0 0 6px;line-height:1.4}
+  #graphview #erlay .lrow.off{display:none}
+  #graphview #erlay .lfoot{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+  #graphview #erlay .lfoot button{width:100%;font:11.5px var(--sans)}
+  @media print{ #graphview #erlay{display:none !important} }
+  #graphview #erdepth button{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;font-size:15px}   /* centre the −/+ glyph in its box */
+  #graphview #erdepth button:disabled{opacity:.35;cursor:default}
   /* Arranging by hand. The arcs are hidden for the duration of a drag - their paths come from the
      positions, so following a box live means recomputing every path that touches it inside a 16ms
      frame. Hidden and then correct beats present and stuttering. */
-  #ersvg.dragging{display:none}
-  .erbox{cursor:grab}
-  .erbox.dragging{cursor:grabbing;z-index:9999;box-shadow:0 8px 24px rgba(20,30,50,.28)}
-  #erpick .pkcut{margin-top:8px}
-  #erpick .pkcut button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--ink)}
-  #erpick .pkcut button:hover{border-color:var(--sel)}
-  #ervp{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
-  #ersvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+  #graphview #ersvg.dragging{display:none}
+  #graphview .erbox{cursor:grab}
+  #graphview .erbox.dragging{cursor:grabbing;z-index:9999;box-shadow:0 8px 24px rgba(20,30,50,.28)}
+  #graphview #erpick .pkcut{margin-top:8px}
+  #graphview #erpick .pkcut button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--ink)}
+  #graphview #erpick .pkcut button:hover{border-color:var(--sel)}
+  #graphview #ervp{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+  #graphview #ersvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
   /* Folding a branch, on the branch. The circle sits where the arc meets the box that stays: `-` while
      what hangs off it is drawn, `+` and the count once it is folded away. Above the boxes, because the
      meeting point is the box's own edge - the layer beats a box raised by a drag (10 + n) and the one
      under the pointer (9999), and it goes with the arcs for the duration of a drag for the same reason
      they do: its anchor is derived from positions that are moving. */
-  #ermarks{position:absolute;top:0;left:0;z-index:99999}
-  #ermarks.dragging{display:none}
+  #graphview #ermarks{position:absolute;top:0;left:0;z-index:99999}
+  #graphview #ermarks.dragging{display:none}
   /* The width comes from the drawing: `markAt` sets --d from the gap between two landing points on
      that side, so a rim carrying thirteen arcs gets thirteen marks that touch nothing. */
   /* Two channels, because the mark answers two questions and the glyph only answers one of them. The
@@ -309,22 +331,22 @@
      way to know what the `+` is holding, since that box is not on the drawing. The glyph takes black
      or white from its own fill, so it stays readable on every hue a box can wear, and the hairline
      outside the ring keeps a light one visible against the canvas. */
-  .ermk{position:absolute;transform:translate(-50%,-50%) scale(var(--mkz,1));display:flex;align-items:center;justify-content:center;
+  #graphview .ermk{position:absolute;transform:translate(-50%,-50%) scale(var(--mkz,1));display:flex;align-items:center;justify-content:center;
         width:var(--d,16px);height:var(--d,16px);border-radius:50%;border:2px solid #cdc2f2;
         background:var(--mkfill,#fff);color:var(--mkink,#7c3aed);
         font:700 calc(var(--d,16px) * 0.62)/1 var(--sans);cursor:pointer;
         box-shadow:0 0 0 1px rgba(15,23,42,.32),0 1px 3px rgba(20,30,50,.16);padding:0}
-  .ermk.out{border-color:#f8fafc}
-  .ermk.in{border-color:#0f172a}
-  .ermk:hover{z-index:1;box-shadow:0 0 0 2px rgba(124,58,237,.6),0 2px 7px rgba(20,30,50,.26)}
+  #graphview .ermk.out{border-color:#f8fafc}
+  #graphview .ermk.in{border-color:#0f172a}
+  #graphview .ermk:hover{z-index:1;box-shadow:0 0 0 2px rgba(124,58,237,.6),0 2px 7px rgba(20,30,50,.26)}
   /* On paper a `-` is a control nobody can press, and a `+` is the only thing saying boxes are missing
      from the page - which the reader of a PDF needs more than the reader at the window does. */
-  @media print{ .ermk.fold{display:none} .ermk.back{cursor:default} }
-  .erbox{position:absolute;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 10px rgba(20,30,50,.10);font:11px var(--mono);overflow:hidden;cursor:pointer}
-  .erbox.sel{outline:2px solid var(--sel);outline-offset:1px}
-  .erbox.focus{border-color:#fbbf24 !important;box-shadow:0 0 0 3px rgba(251,191,36,.4),0 6px 20px rgba(0,0,0,.15) !important}
-  .erbox .erhdr{padding:6px 9px;font-weight:700;color:#fff;font-family:var(--sans);font-size:12px;display:flex;justify-content:space-between;gap:8px;align-items:center}
-  .erbox .erhdr small{opacity:.85;font-weight:500;font-size:10px}
+  @media print{ #graphview .ermk.fold{display:none} #graphview .ermk.back{cursor:default} }
+  #graphview .erbox{position:absolute;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 10px rgba(20,30,50,.10);font:11px var(--mono);overflow:hidden;cursor:pointer}
+  #graphview .erbox.sel{outline:2px solid var(--sel);outline-offset:1px}
+  #graphview .erbox.focus{border-color:#fbbf24 !important;box-shadow:0 0 0 3px rgba(251,191,36,.4),0 6px 20px rgba(0,0,0,.15) !important}
+  #graphview .erbox .erhdr{padding:6px 9px;font-weight:700;color:#fff;font-family:var(--sans);font-size:12px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  #graphview .erbox .erhdr small{opacity:.85;font-weight:500;font-size:10px}
   /* The two schema colours are declared once: the box header wears them, and so does the badge the
      tooltip puts a name in - a second hex for the same thing is a second answer waiting to drift. */
   /* One rule for every box, in both products. The schema branch used to add `custom` or `standard` -
@@ -337,68 +359,85 @@
      up. Each box is a badge in the colour it wears on the diagram, so the list and the drawing are one
      key. It never takes the pointer: `pointer-events:none`, or it would stand between the reader and
      the control the tooltip is about. */
-  #ertip{position:absolute;z-index:9;display:none;max-width:340px;background:#fff;border:1px solid var(--line);
+  #graphview #ertip{position:absolute;z-index:9;display:none;max-width:340px;background:#fff;border:1px solid var(--line);
          border-radius:10px;box-shadow:0 8px 26px rgba(20,30,50,.18);padding:9px 11px;font:12px var(--sans);pointer-events:none}
-  #ertip.on{display:block}
-  #ertip .tt1{color:var(--muted);margin-bottom:7px}
-  #ertip .tt1 b{color:var(--ink)}
-  #ertip .ttl{display:flex;flex-direction:column;gap:3px}
-  #ertip .tb{border-radius:6px;padding:2px 7px;color:#fff;font:600 11px var(--mono);word-break:break-word}
+  #graphview #ertip.on{display:block}
+  #graphview #ertip .tt1{color:var(--muted);margin-bottom:7px}
+  #graphview #ertip .tt1 b{color:var(--ink)}
+  #graphview #ertip .ttl{display:flex;flex-direction:column;gap:3px}
+  #graphview #ertip .tb{border-radius:6px;padding:2px 7px;color:#fff;font:600 11px var(--mono);word-break:break-word}
 
-  #ertip .tb.hued{background:var(--kind)}
-  #ertip .ttm{margin-top:6px;color:var(--muted)}
-  @media print{ #ertip{display:none !important} }
+  #graphview #ertip .tb.hued{background:var(--kind)}
+  #graphview #ertip .ttm{margin-top:6px;color:var(--muted)}
+  @media print{ #graphview #ertip{display:none !important} }
   /* On a call graph the header takes the node's own hue, so a workflow, a schedule and a
      connection are told apart at a glance and read the same colour as their dot in the list and
      their chip in the row above it. One fact, one colour, three places - the rule the filter
      chips already follow. */
-  .erbox.hued .erhdr{background:var(--kind)}
+  #graphview .erbox.hued .erhdr{background:var(--kind)}
   /* relation-first mode: the module is context, not content */
-  .erbox.dim{background:#fbfcfd;border-color:#d7dee7;box-shadow:none}
-  .erbox.dim .erhdr{background:#eef2f7 !important;color:#5b6b80;font-weight:600;font-size:11px;padding:5px 8px}
-  .erbox.dim .erhdr small{color:#93a2b5;opacity:1}
-  .erbox.dim.focus{border-color:#f0b95c !important;box-shadow:0 0 0 2px rgba(217,119,6,.30) !important}
+  #graphview .erbox.dim{background:#fbfcfd;border-color:#d7dee7;box-shadow:none}
+  #graphview .erbox.dim .erhdr{background:#eef2f7 !important;color:#5b6b80;font-weight:600;font-size:11px;padding:5px 8px}
+  #graphview .erbox.dim .erhdr small{color:#93a2b5;opacity:1}
+  #graphview .erbox.dim.focus{border-color:#f0b95c !important;box-shadow:0 0 0 2px rgba(217,119,6,.30) !important}
   /* in relation mode the labels are the subject: they go above the boxes */
-  #v-er.relemph #ersvg{z-index:3}
-  #v-er.relemph .erbox{z-index:1}
+  #graphview #v-er.relemph #ersvg{z-index:3}
+  #graphview #v-er.relemph .erbox{z-index:1}
   /* What the control under the pointer would take off the drawing. Amber, dashed and faded: the same
      colour the picked arc and its card already use, and a dash because it is a state that lasts as
      long as the pointer does. */
-  .erbox.willgo{outline:3px dashed #d97706;outline-offset:2px;opacity:.5}
+  #graphview .erbox.willgo{outline:3px dashed #d97706;outline-offset:2px;opacity:.5}
   /* edge selection: bring one relation and its two ends to the front, push the rest back */
-  .erbox.faded{opacity:.16}
-  .erbox.epick{border-color:#d97706 !important;box-shadow:0 0 0 3px rgba(217,119,6,.32),0 6px 18px rgba(0,0,0,.12) !important}
-  #ersvg .erhit{pointer-events:stroke;cursor:pointer}
-  #ersvg .erlabel{pointer-events:auto;cursor:pointer}
-  #ersvg .erlink{pointer-events:none}
-  #erpick{position:absolute;left:10px;bottom:36px;z-index:8;display:none;background:#fff;border:1px solid #e8b563;border-radius:10px;box-shadow:0 8px 26px rgba(20,30,50,.16);padding:11px 13px;max-width:460px;font:12px var(--sans)}
-  #erpick.on{display:block}
-  #erpick .pk1{font:700 14px var(--mono);color:#92400e;margin-bottom:3px;word-break:break-all}
-  #erpick .pk2{color:var(--muted);margin-bottom:7px}
-  #erpick .pk2 b{color:#33415a;font-family:var(--mono);font-weight:600}
-  #erpick .pksnip{font:11.5px var(--mono);background:#fffbeb;border:1px solid #f0d9a8;border-radius:7px;padding:6px 8px;cursor:pointer;word-break:break-all;color:#7c4a10}
-  #erpick .pksnip:hover{border-color:#d97706;background:#fef3c7}
+  #graphview .erbox.faded{opacity:.16}
+  #graphview .erbox.epick{border-color:#d97706 !important;box-shadow:0 0 0 3px rgba(217,119,6,.32),0 6px 18px rgba(0,0,0,.12) !important}
+  #graphview #ersvg .erhit{pointer-events:stroke;cursor:pointer}
+  #graphview #ersvg .erlabel{pointer-events:auto;cursor:pointer}
+  #graphview #ersvg .erlink{pointer-events:none}
+  #graphview #erpick{position:absolute;left:10px;bottom:36px;z-index:8;display:none;background:#fff;border:1px solid #e8b563;border-radius:10px;box-shadow:0 8px 26px rgba(20,30,50,.16);padding:11px 13px;max-width:460px;font:12px var(--sans)}
+  #graphview #erpick.on{display:block}
+  #graphview #erpick .pk1{font:700 14px var(--mono);color:#92400e;margin-bottom:3px;word-break:break-all}
+  #graphview #erpick .pk2{color:var(--muted);margin-bottom:7px}
+  #graphview #erpick .pk2 b{color:#33415a;font-family:var(--mono);font-weight:600}
+  #graphview #erpick .pksnip{font:11.5px var(--mono);background:#fffbeb;border:1px solid #f0d9a8;border-radius:7px;padding:6px 8px;cursor:pointer;word-break:break-all;color:#7c4a10}
+  #graphview #erpick .pksnip:hover{border-color:#d97706;background:#fef3c7}
   /* `background`, `border`, `padding` and `font-family` are here because this became a real button:
      as a span it inherited them and declared none. The commit that converted it claimed this class
      dressed itself, which was true of .chip and .chipx and false of this one and .qx - so both took
      Chrome's grey bevelled box, 2.4x wider than the glyph. `font-size` alone does not carry the
      family, which a button does not inherit. */
-  #erpick .pkx{position:absolute;top:6px;right:9px;color:#b9c2cf;cursor:pointer;font-size:14px;line-height:1;
+  #graphview #erpick .pkx{position:absolute;top:6px;right:9px;color:#b9c2cf;cursor:pointer;font-size:14px;line-height:1;
                background:none;border:0;padding:0;font-family:inherit}
-  #erpick .pkalt{margin-top:6px;font:11px var(--mono);color:#94a3b8}
-  @media print{ #erpick{display:none !important} }
-  .erbox .errow{display:flex;gap:8px;padding:2px 9px;border-top:1px solid #eef1f6}
-  .erbox .errow .fn{color:#33415a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .erbox .errow .ft{color:#94a3b8;white-space:nowrap}
-  .erbox .errow.lk{background:#f6f2fe} .erbox .errow.lk .fn{color:#7c3aed;font-weight:600}
-  .erbox .errow .pk{color:#d97706;font-weight:700;margin-left:2px}
-  .erbox .ermore{padding:3px 9px;color:#94a3b8;border-top:1px solid #eef1f6;font-style:italic}
-  @media print{ #v-er.on{position:static;overflow:visible} #ervp{transform:none !important} #ertools,.hint2{display:none !important} }
+  #graphview #erpick .pkalt{margin-top:6px;font:11px var(--mono);color:#94a3b8}
+  @media print{ #graphview #erpick{display:none !important} }
+  #graphview .erbox .errow{display:flex;gap:8px;padding:2px 9px;border-top:1px solid #eef1f6}
+  #graphview .erbox .errow .fn{color:#33415a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #graphview .erbox .errow .ft{color:#94a3b8;white-space:nowrap}
+  #graphview .erbox .errow.lk{background:#f6f2fe} #graphview .erbox .errow.lk .fn{color:#7c3aed;font-weight:600}
+  #graphview .erbox .errow .pk{color:#d97706;font-weight:700;margin-left:2px}
+  #graphview .erbox .ermore{padding:3px 9px;color:#94a3b8;border-top:1px solid #eef1f6;font-style:italic}
+  @media print{ #graphview #v-er.on{position:static;overflow:visible} #graphview #ervp{transform:none !important} #graphview #ertools, #graphview .hint2{display:none !important} }
   @media print{
-    header .tabs, #v-explorer, .hint2{display:none !important}
-    header{border:0} body{height:auto;overflow:visible}
-    .wrap{position:static} .view{position:static}
+    #graphview header .tabs, #graphview #v-explorer, #graphview .hint2{display:none !important}
+    /* `position:static` too: the view is `fixed` so that it covers the window, and a fixed box
+       prints its first page and stops. Printing wants it back in the flow. */
+    #graphview header{border:0} #graphview{position:static;height:auto;overflow:visible}
+    #graphview .wrap{position:static} #graphview .view{position:static}
   }
-  #credit{position:fixed;bottom:6px;left:10px;font:10px system-ui,-apple-system,sans-serif;color:#9aa4b2;z-index:3;pointer-events:none}
-  #credit a{color:#9aa4b2;text-decoration:none}
-  @media print{ #credit{color:#556;position:fixed;bottom:6px;left:10px} }
+  #graphview #credit{position:fixed;bottom:6px;left:10px;font:10px system-ui,-apple-system,sans-serif;color:#9aa4b2;z-index:3;pointer-events:none}
+  #graphview #credit a{color:#9aa4b2;text-decoration:none}
+  @media print{ #graphview #credit{color:#556;position:fixed;bottom:6px;left:10px} }
+
+  /* The way out of the diagram. It sat in a window with a title bar and a close box of its own; a
+     view has neither, so the control is the one thing the move had to *add* rather than carry over.
+     On the title row, where the reader's eye already is, and the same mark the other three views
+     use. */
+  /* **The way out of the diagram, and it has to be found without looking for it.** It began as a
+     bare mark in the corner and was reported as too faint: a view that fills the window is a place
+     the reader is *in*, and the only way back cannot be quieter than the chips beside it. So it is
+     a control with a word on it, in the product's own accent, at the end of the title row. */
+  #graphview .gvx{position:absolute;top:10px;right:12px;z-index:10;
+    display:inline-flex;align-items:center;gap:6px;
+    font:12px var(--sans);font-weight:600;line-height:1;padding:7px 12px;border-radius:8px;
+    background:var(--sel);border:1px solid var(--sel);color:#fff;cursor:pointer;white-space:nowrap}
+  #graphview .gvx:hover{filter:brightness(1.12)}
+  #graphview .gvx:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

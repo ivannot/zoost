@@ -368,7 +368,7 @@ function erTipIds(set, first) {
 
 function erTipText(set, first, back) {
   const { shown, more } = erTipIds(set, first);
-  return (back ? MSG.backTip : MSG.cutTip)(shown.map((id) => (N[id] ? label(N[id]) : id)), more);
+  return (back ? GMSG.backTip : GMSG.cutTip)(shown.map((id) => (N[id] ? label(N[id]) : id)), more);
 }
 
 // A short wait, because a pointer crossing a rim of twenty marks on its way somewhere else has not
@@ -448,7 +448,7 @@ function erToggleCut(a, b, away) {
   // was, because there is no frame to wait for.
   const say = () => {
     statRefresh();
-    if (after !== before) erHint(after < before ? MSG.folded(before - after) : MSG.unfolded(after - before));
+    if (after !== before) erHint(after < before ? GMSG.folded(before - after) : GMSG.unfolded(after - before));
   };
   const back = erVisibleIds().some((id) => !erIds.includes(id));
   if (back) { erLaidOut = false; erShowMaybeHeavy(say); return; }
@@ -793,14 +793,14 @@ function erArrState() {
   erCut.forEach((away, k) => { const [a, b] = k.split('\u0000'); folds.push([a, b, away]); });
   return {
     app: APP, kind: (DATA && DATA.kind) || '', workspace: erArrWorkspace(),
-    focus: curFocus || '', depth: egoDepth, emphasis: erEmph, names: nameMode,
+    focus: curFocus || '', depth: egoDepth, emphasis: erEmph, names: gvNameMode,
     // **What is on the drawing, not what was laid out.** `erIds` is the set the layout last placed;
     // a fold taken after that layout leaves it behind, so saving straight after folding recorded
     // 22 arcs over a drawing with 12 - measured. The load compares against this number, so the
     // two sides have to mean the same thing or one of them warns about nothing.
     //
     // **And which arcs, not only how many.** The count was written to catch the insidious case the
-    // note on `MSG.arrArcs` describes - every box still matches and the relations do not - and it
+    // note on `GMSG.arrArcs` describes - every box still matches and the relations do not - and it
     // misses exactly half of it: one relation gone and one added is the same number, so the load
     // reported a clean restore over a picture that had changed shape. The pairs are additive, an
     // older file simply has none, and the count stays for those.
@@ -818,9 +818,9 @@ function erArrName() {
 
 function erApplyArrangement(file) {
   // Two different refusals, two sentences. They shared one, and it named only the second.
-  if (file.app && file.app !== APP) { erHint(MSG.arrOtherProduct, true); return; }
+  if (file.app && file.app !== APP) { erHint(GMSG.arrOtherProduct, true); return; }
   if (file.kind && file.kind !== ((DATA && DATA.kind) || '')) {
-    erHint(MSG.arrWrongKind(file.kind), true); return;
+    erHint(GMSG.arrWrongKind(file.kind), true); return;
   }
   // The workspace before the ids, because it is the reason and they are only the symptom. Where a
   // diagram is keyed by names rather than by ids the same file is a gift - arrange against one org,
@@ -831,7 +831,7 @@ function erApplyArrangement(file) {
   const elsewhere = !!(file.workspace && file.workspace !== erArrWorkspace());
   const m = matchArrangement(file, erIds);
   if (!m.matched.length) {
-    erHint(elsewhere ? MSG.arrWrongWorkspace(fileWs, hereWs) : MSG.arrNothingMatched, true); return;
+    erHint(elsewhere ? GMSG.arrWrongWorkspace(fileWs, hereWs) : GMSG.arrNothingMatched, true); return;
   }
   // Positions first: every box the file knows goes back where it was, whether or not it was chosen
   // by hand. What the flag decides is only who may be nudged aside to make room for a newcomer.
@@ -875,12 +875,12 @@ function erApplyArrangement(file) {
     const gone = wasKeys ? [...wasKeys].filter((k) => !nowKeys.has(k)).length : 0;
     const added = wasKeys ? [...nowKeys].filter((k) => !wasKeys.has(k)).length : 0;
     const arcNote = wasKeys
-      ? (gone || added ? MSG.arrArcsSwapped(gone, added) : '')
-      : (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : '');
+      ? (gone || added ? GMSG.arrArcsSwapped(gone, added) : '')
+      : (file.arcs && arcs !== file.arcs ? GMSG.arrArcs(arcs - file.arcs) : '');
     const lost = m.stale.length || foldsLost || elsewhere || !!arcNote;
-    erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
-      + (elsewhere ? MSG.arrOtherWorkspace(fileWs) : '')
-      + (foldsLost ? MSG.arrFolds(foldsLost) : '')
+    erHint(GMSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
+      + (elsewhere ? GMSG.arrOtherWorkspace(fileWs) : '')
+      + (foldsLost ? GMSG.arrFolds(foldsLost) : '')
       + arcNote, !!lost);
   });
 }

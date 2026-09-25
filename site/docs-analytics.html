@@ -254,8 +254,9 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     itself draws, with the join written exactly as Zoho writes it.</p>
 
   <h2 id="diagram">7. The ER diagram</h2>
-  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> opens the whole workspace in its own window; the same button in a
-    table's detail pane opens the same window focused on that table, at depth 2.</p>
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> opens the whole workspace inside Zoost; the same button in a
+    table's detail pane opens the same diagram focused on that table, at depth 2.</p>
+  <p class="note"><b>It opens inside Zoost, not in a window of its own.</b> The diagram used to be a second browser window, because a side panel capped at a few hundred pixels cannot show one. Zoost is a window you size yourself now, so the diagram fills it and <b class="ui">✕ Close diagram</b>, top right, gives you the panel back. Nothing is lost by closing it: the drawing is rebuilt from the mirror the next time you ask for it.</p>
   <ul>
     <li>Tables as boxes, relations as arrows, the join written on the arc.</li>
     <li>Click a box to focus it, and the diagram is laid out around it - unless you have arranged it yourself, where what you placed keeps its place. The <b class="ui">Focus</b> group beside the tabs is where that

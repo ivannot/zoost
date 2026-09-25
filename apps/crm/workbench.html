@@ -6,6 +6,7 @@
 <title>Zoost - workbench for Zoho CRM</title>
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="workbench.css">
+<link rel="stylesheet" href="graphview.css">
 </head>
 <body>
   <div class="wsbar">
@@ -60,7 +61,7 @@
         <button id="export" class="lbtn" disabled aria-label="Export HTML" title="Self-contained HTML report of this workspace">HTML</button>
         <button id="exportmd" class="lbtn" disabled aria-label="Export Markdown" title="Markdown export - context for an external AI tool">MD</button>
       </span>
-      <button id="graph" class="lbtn icon" aria-label="Wiring" title="Wiring - what fires what across the org, in its own window" disabled><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
+      <button id="graph" class="lbtn icon" aria-label="Wiring" title="Wiring - what fires what across the org, here in Zoost" disabled><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
       <button id="health" class="pbtn glyph" disabled title="Health - workspace audit, shown in this panel" aria-label="Health">♥</button>
       <button id="askai" class="abtn" disabled title="Ask AI about this org">AI</button>
       <button id="navtab" class="navseg" style="display:none" title="History - everywhere you have been, most recent first" aria-label="History" aria-pressed="false"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg></button>
@@ -179,6 +180,82 @@
       <div id="ailockrow" class="ailockrow" hidden><span class="ailocktxt">The API key is protected by a passphrase. It is needed once per browser session.</span><input id="ailockpass" type="password" placeholder="Passphrase" autocomplete="off"><button id="ailockgo" class="abtn">Unlock</button><span id="ailockmsg" class="ailockmsg" hidden></span></div>
       <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about this function, a workflow, an impact… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend">Send</button></div>
     </div>
+    <!-- The diagram, a view of this window. It was a second browser window until the
+         panel became one; see the note on `#graphview` in graphview.css. -->
+    <div id="graphview">
+  <header>
+    <div class="hrow">
+      <h1 id="gtitle">Zoost</h1>
+      <div class="subj" id="subj" role="tablist" aria-label="What this window is drawing"><span data-k="calls" role="tab">Wiring</span><span data-k="schema" role="tab">Schema</span></div>
+      <span class="stat" id="statline"><b>0</b> functions · <b>0</b> calls · <b>0</b> no-caller · <b>0</b> unresolved</span>
+      <span class="stat" id="s-ws"></span><button type="button" class="gvx" id="graphx" title="Close the diagram and go back to Zoost" aria-label="Close the diagram and go back to Zoost">✕ Close diagram</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter what is shown"></div>
+    <div class="tabrow">
+      <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none"><span id="ertabname">Wiring</span><b class="tc" id="ertabn"></b></span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+      <!-- The focus is the whole window's context - all three views project it - so it is
+           chrome, beside the tabs, and not a button inside one of the views. Its own group,
+           the same shape the chips use, because it answers its own question. -->
+      <span id="focusg" class="dim focusg">
+        <span class="dimt">Focus</span>
+        <button type="button" class="chip" id="focusnode"></button>
+        <button type="button" class="chip" id="focusall">Everything</button>
+        <span class="fdepth" id="erdepth" style="display:none">depth<button id="erdMinus" aria-label="One hop less">−</button><b id="erdVal">2</b><span id="erdMax">/ 6</span><button id="erdPlus" aria-label="One hop more">+</button></span>
+        <button type="button" class="chipx" id="focusx" aria-label="Clear the focus" title="Clear the focus">✕</button>
+      </span>
+    </div>
+  </header>
+  <div class="wrap">
+    <div class="view on" id="v-explorer">
+      <aside>
+        <div class="search"><input id="q" placeholder="Search function…  (/ to focus)" autocomplete="off"><button type="button" class="qx" id="qx" aria-label="Clear the search" title="Clear the search">✕</button></div>
+        <div class="list" id="gvlist"></div>
+      </aside>
+      <button id="asidebtn" aria-expanded="true" aria-label="Hide the list"
+              title="Drag to resize the list, click to hide it">◂</button>
+      <main id="gvmain"><div class="empty">Select a function.<br>Left = who calls it (impact if you change it). Right = what it calls.</div></main>
+    </div>
+    <div class="view" id="v-rel">
+      <div id="relbar">
+        <input id="relq" placeholder="Search relation, module, label…" autocomplete="off">
+        <span class="chips" id="relchips" style="padding:0"></span>
+        <span id="relcount"></span>
+      </div>
+      <div id="relwrap"></div>
+      <div id="relhint">Click a relation name or a snippet to copy it · click a module to open it in the Explorer</div>
+    </div>
+    <div class="view" id="v-er">
+      <div id="ertools">
+        <button id="erFileBtn" title="Save the picture, or the arrangement you made of it">File ▾</button>
+        <button id="erLayBtn" title="Layout controls: spacing, spread, label size">Layout <svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.6"/><circle cx="8" cy="8" r="1.7"/><path d="M8 1.5v1.9M8 12.6v1.9M14.5 8h-1.9M3.4 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7 3.4 3.4"/></svg></button>
+        <button id="erEmph" title="Relation-first rendering: modules shrink to labels, relation API names take the foreground">Emphasis: modules</button>
+        <button id="erAll">Fields: key</button>
+        <button id="gvnametoggle" title="Node labels: the display label or the internal api_name">Name: display</button>
+        <button id="erRelay" title="Throw away the arrangement and lay the diagram out again">Re-layout</button><button id="erFit2">Fit</button>
+      </div>
+      <div id="erfile">
+        <button class="mrow" id="erPdf">Save PDF</button>
+        <div class="msep"></div>
+        <button class="mrow" id="erArrSave" title="Write this arrangement to a file you can open again, keep beside the mirror, or hand to somebody else">Save arrangement…</button>
+        <button class="mrow" id="erArrLoad" title="Put a saved arrangement back on this diagram. The diagram as it is now wins every disagreement, and what is lost is counted">Load arrangement…</button>
+      </div>
+      <div id="erlay">
+        <div class="lhead" id="erlayHead"></div>
+        <div class="lrow" id="rowMargin"><label for="pMargin">Box spacing</label><input type="range" id="pMargin" min="10" max="320" step="5"><span class="lval" id="vMargin"></span></div>
+        <div class="lrow" id="rowSpread"><label for="pSpread">Spread</label><input type="range" id="pSpread" min="10" max="160" step="2"><span class="lval" id="vSpread"></span></div>
+        <div class="lrow" id="rowGap"><label for="pGap">Label gap</label><input type="range" id="pGap" min="0" max="48" step="2"><span class="lval" id="vGap"></span></div>
+        <div class="lrow" id="rowFs"><label for="pFs">Label size</label><input type="range" id="pFs" min="8" max="22" step="1"><span class="lval" id="vFs"></span></div>
+        <div class="lrow" id="rowSub"><label for="pSub">Show lookup field</label><input type="checkbox" id="pSub"><span class="lval"></span></div>
+        <div class="lrow lfoot"><button id="erlayReset">Reset to preset</button></div>
+      </div>
+      <div id="ertip"></div><div id="erpick"><button type="button" class="pkx" id="erpickx" aria-label="Close" title="Close">✕</button><div id="erpickbody"></div></div>
+      <div id="ernone"><p></p></div>
+      <div id="ervp"><svg id="ersvg"><defs><marker id="erarrow" viewBox="0 0 7 6" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c3aed"/></marker><marker id="erarrowsel" viewBox="0 0 8 6" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#d97706"/></marker></defs></svg><div id="erboxes"></div><div id="ermarks"></div></div>
+      <div class="hint2">scroll to zoom · drag to pan · click a table to inspect</div>
+    </div>
+  </div>
+  <div id="credit"></div>
+    </div>
     <div id="offoverlay">
         <!-- Three groups, three purposes, each bordered in the colour of the product it is about: the
              twin's group in the twin's accent, «go to Zoho» in this product's own. The mirroring is a
@@ -274,6 +351,8 @@
   <script src="crm-workflow-ui.js"></script>
   <!-- after workbench.js, alone among the slices: its ACTION_SORTS reads MSG at load time. -->
   <script src="automation.js"></script>
+  <script src="graphlogic.js"></script>
+  <script src="graphview.js"></script>
   <script src="crm-bootstrap.js"></script>
 </body>
 </html>

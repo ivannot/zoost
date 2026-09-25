@@ -461,20 +461,38 @@ function isZohoUrl(u) {
   return /^https?:\/\/(?:[^./?#]+\.)*(?:zoho\.com|zoho\.eu|zoho\.in|zoho\.com\.au|zoho\.jp|zohocloud\.ca|zoho\.sa|zoho\.uk|zoho\.ae)(?::\d+)?(?:[/?#]|$)/i.test(String(u || ''));
 }
 
-function openExternal(url) {
+/** An outward link opens a **tab in an ordinary browser window**.
+ *
+ *  **It opened a popup, and that stopped being right when Zoost became one.** A stripped window with
+ *  no tab strip and no address bar was a reasonable place to put Help beside a side panel; from a
+ *  popup of our own it is a second stripped window the reader has to close, and `target="_blank"`
+ *  would have given them one anyway - Chrome opens a popup's child as another popup. Reported about
+ *  Help, Sponsor and Ko-fi, which is every link in the footer.
+ *
+ *  It asks for a **normal** window to put the tab in, because `tabs.create` with no window lands in
+ *  the current one and the current one is Zoost's. A reader with no ordinary window open at all gets
+ *  one made - the only case where a window is still the right answer.
+ *
+ *  Already open is still focused rather than opened twice, which is what it always did.
+ */
+async function openExternal(url) {
   try {
-    chrome.tabs.query({ url }, (found) => {
-      const t = found && found[0];
-      // Best-effort and said so: focusing or opening a window is a courtesy, the outer catch
-      // already falls back, and a rejection here costs the reader nothing. Declared with a
-      // `.catch()` because an unhandled rejection is an omission and a written one is a
-      // decision - the `try` around this could never have caught it, being a callback.
-      if (t) { void chrome.windows.update(t.windowId, { focused: true }).catch(() => {});
-        void chrome.tabs.update(t.id, { active: true }).catch(() => {}); return; }
-      void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
-    });
+    const found = await chrome.tabs.query({ url });
+    const t = found && found[0];
+    if (t) {
+      await chrome.tabs.update(t.id, { active: true });
+      try { await chrome.windows.update(t.windowId, { focused: true }); } catch (_) { /* a courtesy */ }
+      return;
+    }
+    const wins = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    const where = wins.find((w) => w.focused) || wins[0];
+    if (!where) { await chrome.windows.create({ url, type: 'normal', focused: true }); return; }
+    await chrome.tabs.create({ url, active: true, windowId: where.id });
+    try { await chrome.windows.update(where.id, { focused: true }); } catch (_) { /* the tab is made either way */ }
   } catch (_) {
-    void chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }).catch(() => {});
+    // Last resort, and a window rather than nothing: the reader pressed a link and something has to
+    // happen. Declared rather than left as an unhandled rejection.
+    void chrome.windows.create({ url, type: 'normal', focused: true }).catch(() => {});
   }
 }
 document.addEventListener('click', (e) => {
@@ -1066,8 +1084,8 @@ function setMode(mode) {
   // says «functions» about a picture of six kinds of thing is the label lying about its subject.
   $('graph').setAttribute('aria-label', mode === 'modules' ? 'ER diagram' : 'Wiring');
   $('graph').title = mode === 'modules'
-    ? 'ER diagram - modules and the relations between them, in its own window'
-    : 'Wiring - what fires what across the org: functions, workflows, schedules, actions, connections and the modules they touch, in its own window';
+    ? 'ER diagram - modules and the relations between them, here in Zoost'
+    : 'Wiring - what fires what across the org: functions, workflows, schedules, actions, connections and the modules they touch, here in Zoost';
   $('nameToggle').textContent = MSG.namePrefix + (mode === 'functions' ? nameMode : moduleNameMode);
   // Changing tab closes the pane and keeps the chain: the whole point of a history that spans the
   // tabs is that a workflow reached from a function is one step away from it, not a fresh start.

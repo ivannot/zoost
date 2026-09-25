@@ -104,6 +104,13 @@ EQUIV = {
 # Elements that exist in one product because the other has no such concept. Each owes a reason.
 PRODUCT_ONLY = {
     'crm': {
+        # ---- the diagram's, visible here since it stopped being a page of its own and joined
+        # `workbench.html`. The CRM diagram draws two subjects and Analytics draws one.
+        'subj': 'the control that switches the CRM diagram between Wiring and Schema; the Analytics '
+                'diagram has one subject and nothing to switch',
+        'ertabname': 'ditto - the tab is named for whichever subject is showing',
+        'gvnametoggle': "the CRM diagram switches node labels between the display name and the "
+                        'api_name; an Analytics table is named once',
         'fieldlist': 'the layer listing one field\'s picklist values or the workflow rules watching it - '
                      'Analytics tables have no picklists and it has no workflows',
         'fieldlisth': 'ditto', 'fieldlistbody': 'ditto', 'fieldlistx': 'ditto',
@@ -149,6 +156,26 @@ PRODUCT_PREFIX = {
 
 # Declarations that differ on purpose.
 EXPECTED = {
+    # ---- the two diagrams' node palettes and their print blocks. This tool flattens `@media`, so a
+    # rule that only exists inside `@media print` shows up here as a divergence; both of these are
+    # that shape and neither is new.
+    ('#graphview', '--n-automation'): 'one hue per kind of thing each product draws - the CRM has '
+                                      'functions, workflows, schedules and connections, Analytics '
+                                      'has tables, queries and reports',
+    ('#graphview', '--n-button'): 'ditto', ('#graphview', '--n-connections'): 'ditto',
+    ('#graphview', '--n-custom'): 'ditto', ('#graphview', '--n-email_notifications'): 'ditto',
+    ('#graphview', '--n-field_updates'): 'ditto', ('#graphview', '--n-modules'): 'ditto',
+    ('#graphview', '--n-query'): 'ditto', ('#graphview', '--n-schedule'): 'ditto',
+    ('#graphview', '--n-schedules'): 'ditto', ('#graphview', '--n-standalone'): 'ditto',
+    ('#graphview', '--n-standard'): 'ditto', ('#graphview', '--n-table'): 'ditto',
+    ('#graphview', '--n-tasks'): 'ditto', ('#graphview', '--n-validation_rule'): 'ditto',
+    ('#graphview', '--n-webhooks'): 'ditto', ('#graphview', '--n-workflows'): 'ditto',
+    ('#graphview', 'height'): 'the CRM print block puts the whole view back in the flow; the '
+                              'Analytics one does it to the ER view inside it',
+    ('#graphview', 'overflow'): 'ditto',
+    ('#graphview .view', 'position'): 'ditto - printing flattens the CRM\'s stacked views',
+    ('#graphview .wrap', 'position'): 'ditto',
+    ('#graphview header', 'border'): "the CRM drops the header's rule when printing; Analytics keeps it",
     ('.znav', 'background'): 'znav is the accent\'s light sibling, so it follows the product colour',
     ('.znav', 'border'): 'ditto',
     ('.znav', 'color'): 'ditto',
@@ -178,6 +205,44 @@ EXPECTED = {
     ('#healthbody', 'line-height'): 'ditto',
 }
 EXPECTED_SOLO = {
+    # ---- the two diagrams, which became visible here the day the diagram stopped being a page of
+    # its own and joined `workbench.html`. They were compared as `graphview.html` against
+    # `graphview.html` before, and none of them is new: the CRM draws functions, modules, workflows
+    # and schedules, and Analytics draws tables, queries and reports. Declared one by one rather
+    # than by a `#graphview` blanket, because a blanket would excuse the next real drift too.
+    '#graphview .subj': 'the CRM diagram draws two subjects - Wiring and Schema - and this is the '
+                        'control that switches between them; Analytics has one subject and no switch',
+    '#graphview .subj span': 'ditto',
+    '#graphview .subj span+span': 'ditto',
+    '#graphview .subj span:not([aria-selected=true]):hover': 'ditto',
+    '#graphview .subj span[aria-selected=true]': 'ditto',
+    '#graphview header .tabs': 'ditto - the tab row is laid out around the subject switch',
+    '#graphview #v-explorer': 'ditto',
+    '#graphview .tab.off': 'a tab the CRM diagram turns off when its subject has nothing for it',
+    '#graphview .item.unread': 'the CRM marks a function whose source the mirror has not read; '
+                               'an Analytics table has no source to be unread',
+    '#graphview .item.unread .deg': 'ditto',
+    '#graphview .ref.unread': 'ditto, on a reference rather than on a row',
+    '#graphview .ref.unread .deg': 'ditto',
+    '#graphview .rtbl .rname': "the CRM diagram's related-lists table, which Analytics has no "
+                               'equivalent of - its arcs are lookups, described in the arc card',
+    '#graphview .rtbl .rname:hover': 'ditto',
+    '#graphview .rtbl .rtype': 'ditto',
+    '#graphview .rtbl tr.sys .rname': 'ditto',
+    '#graphview .list .empty': "the CRM diagram's list draws its own empty state; the Analytics one "
+                               'leaves the message to the status line',
+    '#graphview .list .empty > b:first-child': 'ditto',
+    '#graphview .list .empty b': 'ditto',
+    '#graphview .list .empty span': 'ditto',
+    '#graphview #erpick .pkalt': 'the CRM arc card offers the other end of a call; an Analytics arc '
+                                 'is a lookup and has only one',
+    '#graphview .ftbl': 'the Analytics diagram lists a table\'s columns; the CRM inherits `.ftbl` '
+                        'from base.css and styles nothing further',
+    # ---- and four of the CRM panel's own, which have never been on the Analytics side
+    '.chips': 'the CRM panel has a chip row of its own above the list; Analytics has none',
+    '.hrow': 'the CRM panel header row, which Analytics lays out differently',
+    '.hrow .hcontent': 'ditto',
+    '.hrow .meta': 'ditto',
     '#healthview .hhr': 'the row holding the CRM health view own Pull, which Analytics has no reason '
                         'for - nothing in its health view is read from the platform',
     '.bar': 'the CRM has a per-mode button row; Analytics has no modes',

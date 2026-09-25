@@ -385,11 +385,17 @@ def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, he
         said = json.loads(out.stdout or "{}")
     except ValueError:
         said = {}
-    if said.get("title", "").startswith("SHOT ERROR"):
-        raise SystemExit(f"{page.name}: {said['title']}")
+    # **What the page logged comes first, because it is the cause and the title is the symptom.**
+    # A scenario that cannot find a function writes `SHOT ERROR: … is not defined`, which is true and
+    # says nothing about *why* - while the console already holds the script error that made it so. The
+    # other order cost an hour: every run reported the symptom and the reason was one line away.
     if said.get("errors"):
         raise SystemExit(f"{page.name}: the page logged {len(said['errors'])} error(s): "
-                         + " | ".join(said["errors"])[:400])
+                         + " | ".join(said["errors"])[:600]
+                         + (f" | and the scenario said: {said['title']}"
+                            if said.get("title", "").startswith("SHOT ERROR") else ""))
+    if said.get("title", "").startswith("SHOT ERROR"):
+        raise SystemExit(f"{page.name}: {said['title']}")
     return dest
 
 
@@ -439,32 +445,55 @@ def fixtures_for(_key: str) -> pathlib.Path:
     return delivered()
 
 
+WS_FOR_GRAPH = {"crm": "crm/sampleorg-1234567890", "analytics": "analytics/sample-workspace"}
+
+
 def render(shot):
+    """A diagram, drawn inside the panel that now holds it.
+
+    **It used to open `graphview.html` on its own.** That page existed because the diagram was a
+    second browser window; it is a view of the panel now, so the only way to photograph one is to
+    boot the panel and open the view - which means the same file-system shim the panel shots use,
+    because the panel will not start without a folder. What is fed to the view is the same fixture
+    payload as before: the drawing is handed over as a value, so the harness hands it over the same
+    way the product does.
+    """
     key, app, fixture, script = shot
     src = ROOT / "apps" / app
     data = json.loads((fixtures_for(key) / fixture).read_text(encoding="utf-8"))
+    base = fixtures_for(key) / WS_FOR_GRAPH[app]
+    files = files_under(base, WS_FOR_GRAPH[app])
     with tempfile.TemporaryDirectory() as tmp:
         stage = pathlib.Path(tmp)
         for f in src.iterdir():
             if f.is_file():
                 shutil.copy2(f, stage / f.name)
-        (stage / "data.js").write_text(
-            STUB.format(name=json.dumps(NAME[app]), data=json.dumps(data), script=script,
-                        hosts=hosts_of(app)),
+        shutil.copy2(ROOT / "tools" / "fsshim.js", stage / "fsshim.js")
+        taburl, ctx = PANEL_CTX[app]
+        # The view is opened first and the scenario runs after it, so every `select()` and every tab
+        # click in the table above still means what it meant when this was a page of its own.
+        # Its own async scope: the stub runs the scenario inside a plain `try`, so an `await` at
+        # that level is a syntax error and the whole shot dies with a message about nothing.
+        opened = ("(async () => { try {"
+                  + " if (typeof openGraphView !== 'function') throw new Error("
+                  + "'the panel did not load the diagram: openGraphView=' + typeof openGraphView"
+                  + " + ' applyGraph=' + typeof applyGraph + ' view=' + !!document.getElementById('graphview'));"
+                  + " await openGraphView(" + json.dumps(data) + ");"
+                  + " await new Promise((r) => setTimeout(r, 400));"
+                  + script
+                  + " } catch (e) { document.title = 'SHOT ERROR: ' + e.message; } })();")
+        (stage / "shot.js").write_text(
+            PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=opened,
+                              hosts=hosts_of(app),
+                              taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
-        page = stage / "graphview.html"
+        page = stage / "workbench.html"
         html = page.read_text(encoding="utf-8")
-        # The stub goes in front of the *first* script the page loads, whichever that is. It used to
-        # name one per product - `highlight.js` for the CRM, `graphview.js` for Analytics - which was
-        # true of the day it was written and stopped being true the day the CRM graph window stopped
-        # loading a highlighter it had nothing left to highlight. The assertion did its job and
-        # refused to render rather than producing a picture of a window with no data; a harness that
-        # derives the anchor cannot be wrong about it in the first place.
-        m = re.search(r'<script src="[^"]+"></script>', html)
-        assert m, key + ": the page loads no script at all"
-        first = m.group(0)
-        page.write_text(html.replace(first, '<script src="data.js"></script>\n  ' + first, 1),
-                        encoding="utf-8")
+        first = '<script src="idb.js"></script>'
+        assert first in html, key + ": the panel does not load idb.js where this expects"
+        page.write_text(html.replace(
+            first, first + '\n  <script src="fsshim.js"></script>\n  <script src="shot.js"></script>', 1),
+            encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         capture(page, dest, 60000)

@@ -36,14 +36,14 @@ const wideSplit = () => window.matchMedia('(min-width: 720px)').matches;
 // stylesheet lets the pane shrink now, which stops the overflow; this keeps the *stored* number
 // honest, so the next drag starts from where the reader can see it. Both axes, because the
 // vertical one had the same defect: a 500px pane in a 313px viewport made the whole panel scroll.
-const SPLIT_LIST_MIN = 280, SPLIT_preview_MIN = 340, SPLIT_BAR = 8;
-const SPLIT_LIST_MIN_H = 80, SPLIT_preview_MIN_H = 120;
+const SPLIT_LIST_MIN = 280, SPLIT_PANE_MIN = 340, SPLIT_BAR = 8;
+const SPLIT_LIST_MIN_H = 80, SPLIT_PANE_MIN_H = 120;
 /** The room the pane may take, on whichever axis is splitting. `null` when there is not enough of
  *  it for both minimums - the stylesheet decides that case and a number here would fight it. */
 function splitRoom(r) {
   if (!r.width || !r.height) return null;              // not laid out yet
   const room = wideSplit() ? r.width - SPLIT_LIST_MIN - SPLIT_BAR : r.height - SPLIT_LIST_MIN_H;
-  const floor = wideSplit() ? SPLIT_preview_MIN : SPLIT_preview_MIN_H;
+  const floor = wideSplit() ? SPLIT_PANE_MIN : SPLIT_PANE_MIN_H;
   return room < floor ? null : room;
 }
 function clampSplit() {
@@ -52,13 +52,13 @@ function clampSplit() {
   if (wideSplit()) {
     const cur = parseFloat(el.style.getPropertyValue('--splitw'));
     if (!isFinite(cur)) return;                        // never dragged: the stylesheet's share holds
-    const w = Math.max(SPLIT_preview_MIN, Math.min(room, cur));
+    const w = Math.max(SPLIT_PANE_MIN, Math.min(room, cur));
     if (w !== cur) el.style.setProperty('--splitw', w + 'px');
     return;
   }
   const cur = parseFloat(el.style.height);
   if (!isFinite(cur)) return;
-  const h = Math.max(SPLIT_preview_MIN_H, Math.min(room, cur));
+  const h = Math.max(SPLIT_PANE_MIN_H, Math.min(room, cur));
   if (h !== cur) el.style.height = h + 'px';
 }
 let dragY = false;

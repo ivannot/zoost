@@ -1,20 +1,15 @@
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
-const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in manifest.json only
-const PRODUCT_URL = 'https://zoost.it';
-const PRODUCT_AUTHOR = 'Ivan Notaristefano';
 /* graphview.js - Explorer + boxed call/schema diagram. The graph arrives via chrome.storage.session
    (per browser session, like the unlocked key); the reader's own settings stay in .local. */
-let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
-const $ = (id) => document.getElementById(id);
+let DATA = null, N = {}, ids = [], sel = null, hist = [], gvNameMode = 'display';
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
 // the value - that is what cut the getRelatedRecords snippet right after the opening bracket.
-const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // What this window says in more than one place. `showList` is one control's aria-label and its
 // title - the same words twice on the same element by design, which is exactly the pair that goes
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
-const MSG = {
+const GMSG = {
   // Loading an arrangement onto a diagram the mirror has moved on. Three numbers rather than a
   // verdict: the reader is the one who knows whether it is worth arranging again.
   arrLoaded: (kept, fresh, stale) => `${kept} where you put ${kept === 1 ? 'it' : 'them'}`
@@ -93,7 +88,7 @@ const MSG = {
   showList: 'Show the list',
   emphasis: 'Emphasis: ',
 };
-const label = (n) => (nameMode === 'internal'
+const label = (n) => (gvNameMode === 'internal'
   ? (n.api_name || n.name)
   : ((DATA && DATA.kind === 'schema') ? (n.display_name || n.api_name || n.name) : n.name));
 // The one dimension the list and the chips share. In functions mode the chips select a function's
@@ -176,16 +171,12 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 // `tools/asynccheck.py` matches a declaration at the start of a line, so a *named* function
 // wearing a paren is as invisible as an anonymous one - and the whole startup of this page runs
 // inside it, awaits included.
-async function init() {
+async function applyGraph(data) {
   // One key per window: the token rides the URL, so two diagrams open together cannot consume each
   // other's payload. Consumed on read - a window owns its graph from here on, and a stale slot must
   // not outlive it. Without a token (the render harness opens the page bare) the plain key answers.
-  const token = new URLSearchParams(location.search).get('graph');
-  const key = token ? 'graphData:' + token : 'graphData';
-  const store = await chrome.storage.session.get(key);
-  DATA = store[key];
-  if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
-  if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
+  DATA = data;
+  if (!DATA) { $('gvmain').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   // The four numbers are written by `graphStat()`, which replaces the whole line and runs twice
   // during this init, a few lines below. Poking the spans here wrote them once and never again -
@@ -193,7 +184,6 @@ async function init() {
   // sentence saying what «nothing calls them» was measured over lives in that one place, so a
   // second writer would have printed the number without it.
   const _schema = DATA.kind === 'schema';
-  document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }
   // The boxed diagram is the same drawing in both cases, so it is the same tab - under the name the
   // project already gives each one: "ER diagram" for modules and tables, "Wiring" for the rest.
@@ -246,7 +236,6 @@ async function init() {
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
 }
-init();
 
 // ---------------- Explorer ----------------
 // What the window is drawing, in two questions.
@@ -411,7 +400,7 @@ function pass(n, q) {
 // narrows the *list* only: hiding the diagram down to one node as you type would be a different
 // feature wearing the same control.
 function render() {
-  const q = $('q').value.trim().toLowerCase(); const listEl = $('list'); listEl.innerHTML = '';
+  const q = $('q').value.trim().toLowerCase(); const listEl = $('gvlist'); listEl.innerHTML = '';
   // An empty list has three reasons and they are not the same advice. Nothing here is ever silent
   // about which one it is - the rule this project applies to every empty state.
   const shownIds = ids.filter((i) => pass(N[i], q));
@@ -554,7 +543,7 @@ function select(id, nopush) {
     : `<span class="badge">${esc(n.namespace)} \u00b7 ${esc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
   const extra = schema ? fieldsTableHtml(n) : '';   // no source in this window - see graphlogic.js
   const layInfo = (schema && (n.layouts || []).length) ? `<div class="assoc" style="margin-top:2px">Layouts (${n.layouts.length}): ${n.layouts.map((l) => esc(l.name || String(l.id)) + (l.visible === false ? ' (hidden)' : '')).join(' \u00b7 ')}</div>` : '';
-  $('main').innerHTML = `
+  $('gvmain').innerHTML = `
     <div class="crumbs">${crumb}</div>
     <div class="title"><h2>${esc(label(n))}</h2>${badges}</div>
     <div class="sub">${esc(n.display_name)}</div>
@@ -578,7 +567,7 @@ function select(id, nopush) {
   const back = $('back'); if (back) back.onclick = () => { const p = hist.pop(); if (p) select(p, true); };
   document.querySelectorAll('.crumbs a[data-id]').forEach((a) => (a.onclick = () => select(a.dataset.id)));
   if (schema) wireLayoutZone(n);
-  $('main').scrollTop = 0;
+  $('gvmain').scrollTop = 0;
   // Focus mode: the Explorer selection IS the context. Set it here so that switching to the boxed
   // diagram afterwards already shows this item. It was gated on `schema`, so on a call
   // graph selecting a function left the diagram centred on whatever it opened with - the same
@@ -767,7 +756,17 @@ function relRender() {
     document.querySelector('.tab[data-v="explorer"]').click(); select(id);
   }));
 }
+/** Wired once per document, not once per diagram.
+ *
+ *  These three attach `addEventListener`, and the file they live in used to be a page that loaded
+ *  afresh for every diagram. It is a view of the panel now, opened and closed as often as the reader
+ *  likes, so wiring on each open would stack a second handler on every slider, every chip and every
+ *  pointer gesture - the kind of defect that shows up as «it jumped twice» three weeks later.
+ *  Values still follow each graph: `erParamsToUI()` runs per open, from `applyGraph`.
+ */
+let _graphWired = false;
 function buildRelChips() {
+  if (_graphWired) return;    // see `_graphWired`
   const box = $('relchips'); if (!box) return;
   const calls = DATA.kind !== 'schema';
   if (calls) {
@@ -798,32 +797,35 @@ function buildRelChips() {
 // file access at all, by design, and inventing one for a convenience would be a permission nobody
 // asked for.
 //
-// It reloads rather than swapping the data in place. Every global in this file - the layout, the
-// ego set, the focus, the chips, the canvas - was computed from the graph that is being replaced,
-// and re-deriving them one by one is exactly the kind of half-migrated state this project keeps
-// getting bitten by. A reload costs one frame and cannot leave a stale half behind.
-// Named, and at the file's own top level: it awaits the panel and then writes into the page it
-// started on. A declaration nested inside another is a local, which is neither what this is nor
-// what `tools/asynccheck.py` reads.
+// **It rebuilds and redraws rather than patching what is on screen.** Every global in this file -
+// the layout, the ego set, the focus, the chips, the canvas - is computed from the graph being
+// replaced, and re-deriving them one by one is exactly the half-migrated state this project keeps
+// getting bitten by. That used to be bought with `location.reload()`; the diagram is a view of the
+// panel now, so a reload would take the panel with it, and `resetGraphState()` buys the same thing -
+// derived from the declarations rather than remembered, which is the half a reload never had.
+// Named, and at the file's own top level: it awaits a build and then writes into the view it started
+// in. A declaration nested inside another is a local, which is neither what this is nor what
+// `tools/asynccheck.py` reads.
 async function switchGraphKind(e, here) {
     const el = e.target.closest('span[data-k]');
     if (!el || el.dataset.k === here) return;
     const was = $('statline').innerHTML;
-    $('statline').innerHTML = '<b>Building\u2026</b> asking the panel for the other graph';
+    $('statline').innerHTML = '<b>Building\u2026</b> reading the mirror for the other graph';
     try {
-      const r = await chrome.runtime.sendMessage({ type: 'graphSwitch', kind: el.dataset.k, token: new URLSearchParams(location.search).get('graph') });
+      const r = await buildGraphFor(el.dataset.k);
       if (!r || !r.ok) throw new Error((r && r.error) || 'no answer');
-      location.reload();
+      await openGraphView(graphForWindow(r.graph));
     } catch (err) {
-      // Precise, because there is exactly one thing that makes this fail: the Zoost window is the
-      // only holder of the folder handle, and it has to be open and granted for the graph to be built.
+      // Precise, because there is exactly one thing that makes this fail: the graph is built from
+      // the working folder, and that has to be open and granted.
       $('statline').innerHTML = was;
       alert('Could not switch: ' + (err.message || err)
-        + '\n\nThe Zoost window builds the graph - it holds the working folder, this window does not.'
-        + '\nOpen Zoost from the toolbar, make sure the folder is granted, then try again.');
+        + '\n\nThe Zoost window builds the graph from the working folder it holds.'
+        + '\nMake sure a workspace is open and the folder is granted, then try again.');
     }
 }
 function wireSubject() {
+  if (_graphWired) return;    // see `_graphWired`
   const box = document.getElementById('subj');
   if (!box) return;
   const here = DATA.kind === 'schema' ? 'schema' : 'calls';
@@ -858,8 +860,8 @@ function wireAsideFold() {
     // discloses a region, it does not toggle a mode.
     btn.textContent = off ? '\u25b8' : '\u25c2';
     btn.setAttribute('aria-expanded', String(!off));
-    btn.setAttribute('aria-label', off ? MSG.showList : 'Hide the list');
-    btn.title = off ? MSG.showList : 'Drag to resize the list, click to hide it';
+    btn.setAttribute('aria-label', off ? GMSG.showList : 'Hide the list');
+    btn.title = off ? GMSG.showList : 'Drag to resize the list, click to hide it';
     // The canvas is sized from its box, so it has to be told the box changed.
   }
 
@@ -1365,14 +1367,14 @@ function setFocus(id) {
   // calling it unconditionally is not a cost, because below the ceiling it is one frame.
   if (curView === 'er') erShowMaybeHeavy(); else if (curView === 'rel') relRender();
 }
-// `nameMode` decides what a node is called - the display label or the internal api_name - and it
+// `gvNameMode` decides what a node is called - the display label or the internal api_name - and it
 // feeds label(), which the list and the boxes both use. Its button lived in the toolbar of the
 // Visual view (a canvas force graph, removed - docs/diagrams.md keeps the story) and came out with
 // it; it belongs with the other diagram controls, since that is what it changes.
-$('nameToggle').onclick = () => {
-  nameMode = nameMode === 'display' ? 'internal' : 'display';
-  $('nameToggle').textContent = 'Name: ' + nameMode;
-  $('nameToggle').classList.toggle('on', nameMode === 'internal');
+$('gvnametoggle').onclick = () => {
+  gvNameMode = gvNameMode === 'display' ? 'internal' : 'display';
+  $('gvnametoggle').textContent = 'Name: ' + gvNameMode;
+  $('gvnametoggle').classList.toggle('on', gvNameMode === 'internal');
   render(); if (sel) select(sel, true);
   if (curView === 'er') erResize(); else if (curView === 'rel') relRender();
 };
@@ -1562,9 +1564,9 @@ function erPickCard() {
   const cutK = ekey(a, b), isCut = erCut.has(cutK);
   const gone = erHiddenSet();
   $('erpickbody').insertAdjacentHTML('beforeend', '<div class="pkcut">' + (isCut
-    ? `<button type="button" id="erpickcut">${esc(MSG.cutUndo(erWouldShow(cutK)))}</button>`
-    : `<button type="button" id="erpickcut">${esc(MSG.cutDo(label(N[b]), erWouldGo(a, b, gone).size))}</button>`
-      + `<button type="button" id="erpickcut2">${esc(MSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
+    ? `<button type="button" id="erpickcut">${esc(GMSG.cutUndo(erWouldShow(cutK)))}</button>`
+    : `<button type="button" id="erpickcut">${esc(GMSG.cutDo(label(N[b]), erWouldGo(a, b, gone).size))}</button>`
+      + `<button type="button" id="erpickcut2">${esc(GMSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
   card.classList.add('on');
   const cb = $('erpickcut');
   // The same panel the mark on the arc opens, from the same helper: two descriptions of one click, ten
@@ -2145,7 +2147,7 @@ function erRender() {
     // only read. What *is* on screen is outlined at the same moment, which the list cannot do and the
     // outline cannot do for the rest: two halves of the same answer.
     const asked = () => ({ set: folded ? erWouldShowSet(ek) : erWouldGo(stay, away, erHiddenSet()), first: away, back: folded });
-    el.setAttribute('aria-label', folded ? MSG.cutUndo(erWouldShow(ek)) : MSG.cutDo(label(N[away]), 1));
+    el.setAttribute('aria-label', folded ? GMSG.cutUndo(erWouldShow(ek)) : GMSG.cutDo(label(N[away]), 1));
     el.addEventListener('mouseenter', () => {
       const { set, first, back } = asked();
       el.setAttribute('aria-label', erTipText(set, first, back));
@@ -2294,7 +2296,7 @@ function erCountRefresh() {
   if (badge) badge.textContent = n ? String(n) : '';
   const over = !drawable(n), tight = crowded(n);
   tab.classList.toggle('over', over || tight);
-  tab.title = over ? MSG.tabOver(n) : tight ? MSG.tabCrowded(n) : MSG.tabCount(n);
+  tab.title = over ? GMSG.tabOver(n) : tight ? GMSG.tabCrowded(n) : GMSG.tabCount(n);
 }
 // Nothing is drawn, said where the reader is standing. The tab stays enabled and this is why: above
 // the limit a click lands here and explains itself, where a disabled tab would be a dead control that
@@ -2309,7 +2311,7 @@ function erCountRefresh() {
 // disagreeing with each other.
 function erNotDrawn(n) {
   const box = $('ernone');
-  if (box) { box.querySelector('p').innerHTML = MSG.tooMany(n); box.classList.add('on'); }
+  if (box) { box.querySelector('p').innerHTML = GMSG.tooMany(n); box.classList.add('on'); }
   $('ervp').classList.add('off');
   $('ertools').classList.add('off');
   const h = document.querySelector('#v-er .hint2');
@@ -2347,7 +2349,7 @@ function erShow() {
   if (h) h.textContent = `scroll or double-click to zoom \u00b7 drag to pan or to arrange \u00b7 click a ${NOUN().box} to inspect`;
   // Said rather than warned about: a filter change keeps what was arranged and places the rest, so
   // the line reports what happened instead of asking permission for it.
-  if (erLastKept) erHint(MSG.kept(erLastKept, erIds.length - erLastKept));
+  if (erLastKept) erHint(GMSG.kept(erLastKept, erIds.length - erLastKept));
 }
 // ---- arranging by hand ----
 // A box can be dragged. The auto layout is a starting point, not a verdict: past eighty boxes it
@@ -2475,7 +2477,7 @@ document.addEventListener('mouseup', () => {
       erPinOnly = null;   // touched by hand: it is their arrangement again, not the file's
       erRender();                                   // the arcs follow the new position, once
       const k = erCovers(id);
-      erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
+      erHint(label(N[id]) + ' ' + (k ? GMSG.dropCovers(k) : GMSG.dropClear));
     }
     setTimeout(() => (erDragged = false), 0);
     return;
@@ -2537,7 +2539,7 @@ function erUpdateControlVis() {
   // "Fields: key / all" chooses which of a module's fields are worth a row. A call box has no such
   // choice - every call it makes is one - so the control has nothing to do and is absent.
   const fa = $('erAll'); if (fa) fa.style.display = _schema ? '' : 'none';
-  const em = $('erEmph'); if (em) em.textContent = MSG.emphasis + erEmphLabel();
+  const em = $('erEmph'); if (em) em.textContent = GMSG.emphasis + erEmphLabel();
   set('rowMargin', true);
   set('rowSpread', !conc);
   set('rowGap', rel);
@@ -2554,6 +2556,7 @@ function erParamsToUI() {
 }
 // erApplyParams lives in graphlogic.js: identical in both windows and touching no element.
 function erInitControls() {
+  if (_graphWired) return;    // see `_graphWired`
   ER_CTL.forEach(([sl, lb, k]) => {
     const e = $(sl); if (!e) return;
     e.addEventListener('input', () => {
@@ -2623,7 +2626,7 @@ const erEmphLabel = () => (erEmph === 'relations' ? (DATA.kind === 'schema' ? 'r
                                                  : (DATA.kind === 'schema' ? 'modules' : 'calls'));
 $('erEmph').onclick = () => {
   erEmph = erEmph === 'relations' ? 'modules' : 'relations';
-  $('erEmph').textContent = MSG.emphasis + erEmphLabel();
+  $('erEmph').textContent = GMSG.emphasis + erEmphLabel();
   $('erEmph').classList.toggle('on', erEmph === 'relations');
   $('erAll').disabled = erEmph === 'relations';
   erP = Object.assign({}, ER_PRESET[erEmph === 'relations' ? 'relations' : erBoxPreset()]);   // each mode has its own sensible starting point
@@ -2735,7 +2738,7 @@ async function onErArrSave() {
     const h = await window.showSaveFilePicker({ suggestedName: erArrName(), types: ARR_TYPES });
     const w = await h.createWritable();
     await w.write(text); await w.close();
-    erHint(MSG.arrSaved(Object.keys(st.positions).length));
+    erHint(GMSG.arrSaved(Object.keys(st.positions).length));
   } catch (e) {
     // A picker the reader closed is not a failure, and saying so would be noise on a deliberate act.
     if (e && e.name === 'AbortError') return;
@@ -2755,10 +2758,122 @@ async function onErArrLoad() {
     erHint(friendlyArrError(e)); return;
   }
   const read = parseArrangement(text, drawMax);
-  if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs, true); return; }
+  if (!read.ok) { erHint(GMSG.arrBadFile[read.reason] || GMSG.arrBadFile.notOurs, true); return; }
   erApplyArrangement(read.file);
 }
 $('erArrLoad').onclick = onErArrLoad;
 // The graph is the truth, the file is an intention applied to it, and every disagreement resolves in
 // favour of the graph with the loss named. Refusals first, because a file from another kind of
 // diagram does not degrade - it means nothing.
+
+/** Put every piece of this file's state back where a fresh page would have it.
+ *
+ *  **Because there is no fresh page any more.** Switching the diagram between Wiring and Schema used
+ *  to `location.reload()`, and the note above `switchGraphKind` says exactly why: the layout, the ego
+ *  set, the focus, the chips and the canvas are all computed from the graph being replaced, and
+ *  re-deriving them one at a time is the half-migrated state this project keeps getting bitten by.
+ *  The diagram is a view of the panel now, so a reload would take the whole panel with it - and the
+ *  reason the reload existed did not go away with it.
+ *
+ *  So the reset is **derived from the declarations, not written from memory**: every module-level
+ *  `let` in this file, back to the value it is declared with. A case in `tests/graphview.test.mjs`
+ *  reads those declarations and fails when one of them is missing here, which is the only way this
+ *  stays true of a file somebody adds a variable to next month.
+ *
+ *  The timers are cleared rather than dropped: a reload destroyed the document and every pending
+ *  callback with it, and assigning `null` over a live handle leaves it to fire into the next graph.
+ */
+function resetGraphState() {
+  for (const t of [_tipT, _tm, _erFitT, _erT]) { try { clearTimeout(t); } catch (_) {} }
+  DATA = null;
+  N = {};
+  ids = [];
+  sel = null;
+  hist = [];
+  gvNameMode = 'display';
+  _hues = null;
+  _huesKey = null;
+  hiddenKinds = new Set();
+  onlyConds = new Set();
+  layFilter = null;
+  RELS = [];
+  relFilter = 'user';
+  relQ = '';
+  curView = 'explorer';
+  nodesA = [];
+  edgesA = [];
+  posX = {};
+  posY = {};
+  vx = {};
+  vy = {};
+  laidOutKey = '';
+  egoDepth = 2;
+  egoSet = null;
+  egoLevel = {};
+  curFocus = null;
+  maxEgoDepth = 6;
+  scopeAll = false;
+  drawMax = DRAW_MAX_NODES;
+  erLaidOut = false;
+  erAll = false;
+  erScale = 1;
+  erTx = 0;
+  erTy = 0;
+  erIds = [];
+  erEmph = 'modules';
+  erMaxX = 0;
+  erMaxY = 0;
+  erMinX = 0;
+  erMinY = 0;
+  erP = Object.assign({}, ER_PRESET.modules);
+  erSelEdge = null;
+  erCut = new Map();
+  _tipT = null;
+  _tm = null;
+  erPrintFull = false;
+  erFlag = () => {};
+  erUserMoved = false;
+  erArranged = false;
+  erLastKept = 0;
+  erHeld = {};
+  erRaised = new Map();
+  erRaiseN = 0;
+  erBoxDrag = null;
+  erDown = false;
+  erDragged = false;
+  erSx = 0;
+  erSy = 0;
+  erT0x = 0;
+  erT0y = 0;
+  _erFitT = null;
+  _erT = null;
+  _erStyle = null;
+  _prevDocTitle = null;
+  erPinOnly = null;
+}
+
+/** Open the diagram on this graph, as a view of the panel.
+ *
+ *  The only way in. It used to be a URL: the panel wrote the payload into `chrome.storage.session`
+ *  under a token, opened a second browser window at `graphview.html?graph=<token>`, and the page
+ *  consumed the key on load. That whole path existed because the two were different documents; they
+ *  are one now, so the graph is handed over as a value and the storage slot, the token and the
+ *  window have all gone with it - three things that could get out of step, replaced by an argument.
+ */
+async function openGraphView(data) {
+  resetGraphState();
+  const view = document.getElementById('graphview');
+  if (view) view.classList.add('show');
+  await applyGraph(data);
+  _graphWired = true;          // everything wiring-shaped has now run exactly once
+}
+/** Close it, and leave nothing of this graph behind - the reader may open another. */
+function closeGraphView() {
+  const view = document.getElementById('graphview');
+  if (view) view.classList.remove('show');
+  resetGraphState();
+}
+{
+  const x = document.getElementById('graphx');
+  if (x) x.onclick = () => closeGraphView();
+}

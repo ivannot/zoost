@@ -32,6 +32,17 @@ const sheetsOf = (app, page) => (read(`apps/${app}/${page}.html`).match(/<link[^
 const pageAndSheets = (app, page) => [read(`apps/${app}/${page}.html`)]
   .concat(sheetsOf(app, page).map((href) => read(`apps/${app}/${href}`))).join('\n');
 const panelPage = (app) => pageAndSheets(app, 'workbench');
+/** The diagram, as the browser receives it.
+ *
+ *  **It was `graphview.html` and there is no such page any more.** The diagram opened in a browser
+ *  window of its own while Zoost was a side panel that could not show one; it is a view of the panel
+ *  now, so its markup is in `workbench.html` and its rules are in a `graphview.css` scoped to
+ *  `#graphview`. Fourteen cases here read the old file by name; they are about the diagram and not
+ *  about which file holds it, so the reading moved and the questions did not. The scope prefix comes
+ *  off for the same reason - `#graphview .erbox{…}` and `.erbox{…}` are one rule asked for from two
+ *  places, and no pixel moved in the change: the rendered diagram is byte-identical before and after.
+ */
+const diagramPage = (app) => pageAndSheets(app, 'workbench').split('#graphview ').join('');
 const aiFile = (app) => `apps/${app}/ai.js`;
 const filesystemFile = (app) => `apps/${app}/filesystem-adapter.js`;
 
@@ -1733,29 +1744,34 @@ test('the detail pane\'s Zoho controls are derived on every pass, not once when 
     `«Pull» in the detail pane is still assigned directly in ${assigns} place(s), outside the one that derives it`);
 });
 
-test('every MSG key a page reads is one that page declares', () => {
+test('every message key a page reads is one that page declares', () => {
   // I wrote `MSG.noTab` into the Analytics panel's refusal path and the key did not exist there -
   // `undefined` on screen, in the sentence that tells a reader why a pull was refused. It was
   // caught by looking, which is the method this repository says does not scale.
   //
-  // **Asked per page, not per product**, because that is what makes the answer true: the graph
-  // window ships its own MSG table, so a product-wide comparison reports every graph key as missing
-  // from the panel and is ignored within a week. The page's own `<script src>` list is the subject.
+  // **Two tables, asked separately.** The diagram ships its own, and it is called `GMSG` since the
+  // diagram became a view of the panel: two `const MSG` in one document is a script that kills
+  // itself. So the check reads each table against the keys spelled with *its* name - and the
+  // boundary matters, because `GMSG.arrLoaded` contains `MSG.arrLoaded`, which is how a diagram key
+  // came to be reported as missing from the panel the moment the two shared a page.
   for (const app of ['crm', 'analytics']) {
-    for (const [page, table] of [['workbench', 'workbench'], ['graphview', 'graphview']]) {
-      const html = read(`apps/${app}/${page}.html`);
+    for (const [table, file] of [['MSG', 'workbench'], ['GMSG', 'graphview']]) {
+      const html = read(`apps/${app}/workbench.html`);
       const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
-      const own = scripts.includes(`${table}.js`) ? read(`apps/${app}/${table}.js`) : null;
-      if (!own) continue;
-      const declared = new Set([...own.matchAll(/^ {2}([A-Za-z_]\w*):/gm)].map((m) => m[1]));
+      if (!scripts.includes(`${file}.js`)) continue;
+      const own = read(`apps/${app}/${file}.js`);
+      const block = own.slice(own.indexOf(`const ${table} = {`));
+      const declared = new Set([...block.matchAll(/^ {2}([A-Za-z_]\w*):/gm)].map((m) => m[1]));
       const missing = new Set();
       for (const name of scripts) {
         let src;
         try { src = read(`apps/${app}/${name}`); } catch (_) { continue; }
-        for (const m of src.matchAll(/MSG\.([A-Za-z_]\w*)/g)) if (!declared.has(m[1])) missing.add(m[1]);
+        for (const m of src.matchAll(new RegExp(`(?<![\\w$])${table}\\.([A-Za-z_]\\w*)`, 'g'))) {
+          if (!declared.has(m[1])) missing.add(m[1]);
+        }
       }
       assert.deepEqual([...missing], [],
-        `${app}/${page}: these are read as MSG.<key> and the page declares none of them - a sentence `
+        `${app}/${table}: these are read as ${table}.<key> and nothing declares them - a sentence `
         + `that reaches the reader as «undefined»: ${[...missing].join(', ')}`);
     }
   }
@@ -2903,7 +2919,7 @@ test('the Visual view is gone, and nothing it alone used survives', () => {
   // It was a second, weaker drawing of what the boxed diagram already shows, so it went. What must
   // not go with it is the layout machinery the boxed free branch shares - settle, the position
   // arrays, forceFeasible - which is the whole risk in deleting a view rather than a file.
-  const js = gsrc('crm'), html = read('apps/crm/graphview.html');
+  const js = gsrc('crm'), html = diagramPage('crm');
   for (const dead of ['v-visual', 'vistools', 'visScope', 'visReset', 'fitBtn', 'focusBtn', 'labelBtn',
                       'pdfBtn', 'vistoobig', 'id="cv"', 'id="tip"']) {
     assert.ok(!html.includes(dead), `the markup still carries ${dead}`);
@@ -2963,7 +2979,7 @@ test('the filter is reachable from every view, and reaches every view', () => {
   // Reported as «why is there no filter for the connections». There was - the chips - and it lived
   // inside the Explorer column, which exists in one of the four views. So from the diagram, the
   // control that decides what the diagram draws was off screen.
-  const html = read('apps/crm/graphview.html');
+  const html = diagramPage('crm');
   const header = html.slice(html.indexOf('<header>'), html.indexOf('</header>'));
   assert.ok(header.includes('id="chips"'), 'the filter is not in the window chrome');
   const aside = html.slice(html.indexOf('<aside>'), html.indexOf('</aside>'));
@@ -3069,52 +3085,52 @@ test('the call graph carries what fires the code and what the code reaches', asy
                'a blueprint whose actions were never read was given actions it never had');
 });
 
-test('the diagram window can change subject, and says why when it cannot', async () => {
-  // The window carries a context in and could not change its mind without going back to the panel.
-  // It has no file access of its own - deliberately, and it stays that way - so the switch asks the
-  // panel, which is the only thing holding the folder.
-  const sent = [];
+test('the diagram can change subject, and says why when it cannot', async () => {
+  // The diagram carries one graph in and has no file access of its own - deliberately, and it stays
+  // that way - so changing subject means asking the side that holds the working folder. That used
+  // to be a message to the panel in another window and a `location.reload()` afterwards; the
+  // diagram is a view of the panel now, so it calls the builder directly and redraws. What has not
+  // changed is why the redraw is total: every global in that file is computed from the graph being
+  // replaced, and re-deriving them one by one is the half-migrated state this project keeps getting
+  // bitten by. `resetGraphState()` is what buys that now, and this case is what holds it.
   const stat = { innerHTML: '' };
   const seg = ['calls', 'schema'].map((k) => ({ dataset: { k }, sel: null,
     setAttribute(_a, v) { this.sel = v; }, closest() { return this; } }));
-  let reloaded = false, alerted = '';
+  let alerted = '', asked = [], opened = [];
   const box = { children: seg, onclick: null };
   const ctx = {
     document: { getElementById: (id) => (id === 'subj' ? box : null) },
     $: () => stat,
     DATA: { kind: 'calls' },
-    chrome: { runtime: { sendMessage: async (m) => { sent.push(m); return { ok: false, error: 'no working folder is open in the panel' }; } } },
-    location: { reload: () => { reloaded = true; }, search: '?graph=t1' },
-    URLSearchParams,
+    // False, because this case *is* the first wiring: the flag exists so the real product wires
+    // these handlers once however often the diagram is opened, and a context that starts it true
+    // would have `wireSubject` return before doing anything and the case pass over nothing.
+    _graphWired: false,
+    graphForWindow: (g) => g,
+    buildGraphFor: async (kind) => { asked.push(kind); return { ok: false, error: 'no working folder is open in the Zoost window' }; },
+    openGraphView: async (g) => { opened.push(g); },
     alert: (m) => { alerted = m; },
   };
-  // Two declarations now, not one: the click handler is named and lives at the file's top level,
-  // because `tools/asynccheck.py` reads declarations and an inline `async (e) => {…}` is a scope it
-  // cannot enter. The case drives the same path either way - it wires, then clicks.
   const { wireSubject } = load([gfn('crm', 'switchGraphKind'), gfn('crm', 'wireSubject')], ctx);
   wireSubject();
   assert.equal(seg.map((x) => x.sel).join(' '), 'true false', 'the segment does not mark what is on screen');
 
   await box.onclick({ target: seg[0] });          // the one already showing
-  assert.equal(sent.length, 0, 'clicking the current subject asked the panel to rebuild it');
+  assert.equal(asked.length, 0, 'clicking the current subject asked for it to be rebuilt');
 
   await box.onclick({ target: seg[1] });
-  assert.equal(sent.length, 1, 'the other subject did not ask for anything');
-  assert.equal(sent[0].kind, 'schema');
-  assert.equal(sent[0].token, 't1', 'the switch does not say which window is asking');
-  assert.equal(reloaded, false, 'it reloaded on a failed switch');
-  assert.match(alerted, /no working folder is open in the panel/, 'the panel\'s own reason was swallowed');
+  assert.deepEqual(asked, ['schema'], 'the other subject did not ask for anything');
+  assert.equal(opened.length, 0, 'a failed build still redrew the diagram');
+  assert.match(alerted, /no working folder is open in the Zoost window/, 'the builder\'s own reason was swallowed');
   assert.match(alerted, /Zoost window/, 'the message does not name where the folder lives');
   assert.equal(stat.innerHTML, '', 'the status line was left saying it was building');
 
-  // ...and a switch that works reloads, which is the whole mechanism: every global here was derived
-  // from the graph being replaced, and re-deriving them one by one is the half-migrated state this
-  // project keeps getting bitten by. Removing the reload passed until this was asserted.
-  ctx.chrome.runtime.sendMessage = async () => ({ ok: true });
-  const ok = load([gfn('crm', 'wireSubject')], ctx);
+  // ...and a switch that works redraws, which is the whole mechanism.
+  ctx.buildGraphFor = async (kind) => { asked.push(kind); return { ok: true, graph: { nodes: {}, kind } }; };
+  const ok = load([gfn('crm', 'switchGraphKind'), gfn('crm', 'wireSubject')], ctx);
   ok.wireSubject();
   await box.onclick({ target: seg[1] });
-  assert.equal(reloaded, true, 'a successful switch left the old graph on screen');
+  assert.equal(opened.length, 1, 'a successful switch left the old graph on screen');
 });
 
 test('the panel refuses to build a graph it cannot read, without asking for a gesture it has not got', async () => {
@@ -3125,9 +3141,9 @@ test('the panel refuses to build a graph it cannot read, without asking for a ge
     dir: {}, hasPerm: async () => true,
     callGraphWithContext: async () => ({ counts: { nodes: 3 } }),
     buildSchemaGraph: async () => ({ counts: { nodes: 5 } }),
-    // `session`, because the graph payload is a hand-off to a window rather than a setting and
-    // moved there when it stopped carrying the Deluge source with it.
-    chrome: { storage: { local: { set: async () => {} }, session: { set: async () => {} } } },
+    // No storage at all any more: the diagram is a view of this panel, so the builder returns the
+    // graph and the caller hands it over. The slot it used to park it in is gone with the window.
+    chrome: { storage: { local: { set: async () => {} } } },
     setStatus: () => {}, bound: null, lastCtx: null,
     WS_MOVED: 'moved',
     beginWorkspaceOp: () => ({ current: () => true, root: {}, say: () => {} }),
@@ -3136,7 +3152,10 @@ test('the panel refuses to build a graph it cannot read, without asking for a ge
 
   let ctx = mk({});
   let { buildGraphFor } = load([sliceFn('apps/crm/workbench.js', 'buildGraphFor'), sliceFn('apps/crm/workbench.js', 'graphForWindow')], ctx);
-  assert.deepEqual({ ...(await buildGraphFor('schema')) }, { ok: true });
+  // It hands the graph back rather than parking it: the shape, not only the verdict.
+  const built = await buildGraphFor('schema');
+  assert.equal(built.ok, true, 'a graph it could read is reported as a failure');
+  assert.equal(built.graph.counts.nodes, 5, 'the builder answers `ok` without the graph it built');
 
   ctx = mk({ dir: null });
   ({ buildGraphFor } = load([sliceFn('apps/crm/workbench.js', 'buildGraphFor'), sliceFn('apps/crm/workbench.js', 'graphForWindow')], ctx));
@@ -3320,9 +3339,11 @@ test('one click folds the list, and one click brings it back', () => {
     const { wireAsideFold } = load([gcon(app, 'MIN'),
                                     gcon(app, 'KEEP'),
                                     gcon(app, 'DRAG'),
-                                    // setFolded writes the control's own label, which lives in MSG
-                                    // because it is the aria-label and the title of one element.
-                                    gcon(app, 'MSG'),
+                                    // setFolded writes the control's own label, which lives in the
+                                    // diagram's message table because it is the aria-label and the
+                                    // title of one element. `GMSG`, since the diagram moved into the
+                                    // panel's document and `MSG` there is the panel's own.
+                                    gcon(app, 'GMSG'),
                                     gfn(app, 'asideWidth'),
                                     gfn(app, 'wireAsideFold')], ctx);
     wireAsideFold();
@@ -3388,7 +3409,7 @@ test('the list folds to zero on both sides, min-width included', () => {
     // It is a mark, so the name has to live where a screen reader can reach it. **Two files now**:
     // this case read one because the page carried its stylesheet inside its markup, and it does
     // not any more - the rules live in `graphview.css` and the button in the page.
-    const btn = read(`apps/${app}/graphview.html`).match(/<button id="asidebtn"[\s\S]*?>/);
+    const btn = diagramPage(app).match(/<button id="asidebtn"[\s\S]*?>/);
     assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
     assert.match(gsrc(app), /classList\.toggle\('no-aside'/, `${app}: nothing toggles it`);
 
@@ -3397,7 +3418,7 @@ test('the list folds to zero on both sides, min-width included', () => {
     // the wrong argument ("a control that comes and goes" is the rule about a navigation shape, not
     // about a control whose target is off screen), then behind a check in the view switch, and the
     // markup now makes both unnecessary.
-    const page = read(`apps/${app}/graphview.html`);
+    const page = diagramPage(app);
     const view = page.slice(page.indexOf('id="v-explorer"'), page.indexOf('id="v-visual"'));
     assert.ok(view.includes('id="asidebtn"'), `${app}: the fold control is not inside the view it folds`);
   }
@@ -3571,7 +3592,11 @@ test('only the first b in an empty state is a heading', () => {
   // and one sentence arrived as four fragments. Reported as the message being misleading, which it
   // was — not by its words but by its shape.
   for (const app of ['crm', 'analytics']) {
-    const css = panelPage(app);
+    // **Rules, not the notes about them.** The diagram's sheet explains why it does *not* use
+    // `.empty b{display:block}` - and quoting the forbidden rule in the sentence that forbids it was
+    // read as the rule itself the day the diagram joined this page. A check about CSS reads CSS; the
+    // same trap has now caught three checks in this file, each time through prose.
+    const css = panelPage(app).replace(/\/\*[\s\S]*?\*\//g, '');
     assert.match(css, /\.empty > b:first-child\{[^}]*display:block/, `${app}: the heading rule is gone`);
     assert.ok(!/\.empty b\{[^}]*display:block/.test(css), `${app}: every b in an empty state is a block again`);
   }
@@ -4045,7 +4070,7 @@ test('the functions drawing has one name, and the code does not write the old on
   assert.ok(!/\$\('ertab'\)\.textContent/.test(js),
     'the tab label is written over the whole tab, which takes the count with it');
   // and nowhere a control is named may the old name survive - a third name is worse than either
-  for (const f of ['apps/crm/graphview.html', 'apps/crm/workbench.html', 'apps/crm/workbench.js',
+  for (const f of ['apps/crm/workbench.html', 'apps/crm/workbench.js',
                    'apps/crm/product-help.js', 'apps/crm/graphview.js']) {
     const named = read(f).split('\n')
       .filter((l) => !/^\s*(\/\/|\*)/.test(l))
@@ -4067,7 +4092,7 @@ test('every element the diagram window reaches for is in its own markup', () => 
   // two ends and what each of them says is how many boxes that end would take away.
   const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpickcut2', 'erpicksnip', 'layzone', 'up']);
   for (const app of ['crm', 'analytics']) {
-    const js = gsrc(app), html = read(`apps/${app}/graphview.html`);
+    const js = gsrc(app), html = diagramPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const used = new Set([...code.matchAll(/\$\('([^']+)'\)/g), ...code.matchAll(/getElementById\('([^']+)'\)/g)]
@@ -4092,7 +4117,12 @@ test('every element the side panel reaches for is in its own markup', () => {
   // `body` is not this document's at all: it is the textarea on zoost.it/report, named inside the
   // function the panel injects into that page. It belongs to the same family as `q`, which is the
   // search box of the exported HTML report.
-  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvpipes', 'pvbtns', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
+  // **And the diagram's own runtime ids, because the diagram is one of this page's scripts now.**
+  // They are listed in the case above with their reasons; naming them again here rather than
+  // importing that set is deliberate - two checks that quietly share one list stop being two checks
+  // the day somebody edits it for one of them.
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvdetails', 'pvpipes', 'pvbtns', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body',
+                           'back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpickcut2', 'erpicksnip', 'layzone', 'up']);
   for (const app of ['crm', 'analytics']) {
     const js = appPanel(app), html = panelPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
@@ -4110,7 +4140,7 @@ test('every element the side panel reaches for is in its own markup', () => {
 test('the Visual view is gone from Analytics too, and the shared machinery is not', () => {
   // It went from the CRM when it turned out to be a weaker drawing of what the boxed diagram already
   // shows. Leaving it on one side made the twins two different products in the window they share.
-  const js = gsrc('analytics'), html = read('apps/analytics/graphview.html');
+  const js = gsrc('analytics'), html = diagramPage('analytics');
   for (const dead of ['v-visual', 'vistools', 'visScope', 'visReset', 'fitBtn', 'focusBtn', 'labelBtn',
                       'id="cv"', 'id="tip"', 'data-v="visual"']) {
     assert.ok(!html.includes(dead), `the markup still carries ${dead}`);
@@ -4197,8 +4227,8 @@ test('the two diagram limits are the measurements, and neither is doing the othe
     // The count, and the three things it can say about itself.
     assert.ok(/tabCount:/.test(js) && /tabCrowded:/.test(js) && /tabOver:/.test(js),
       `${app}: the tab cannot say which of the three states it is in`);
-    assert.ok(read(`apps/${app}/graphview.html`).includes('id="ertabn"'), `${app}: the tab has nowhere to show a count`);
-    assert.ok(read(`apps/${app}/graphview.html`).includes('id="ernone"'), `${app}: the view has nowhere to say why it drew nothing`);
+    assert.ok(diagramPage(app).includes('id="ertabn"'), `${app}: the tab has nowhere to show a count`);
+    assert.ok(diagramPage(app).includes('id="ernone"'), `${app}: the view has nowhere to say why it drew nothing`);
     // On both functions that write the header numbers, not on statRefresh which dispatches to them:
     // setFocus calls egoStat() directly, so selecting in the Explorer left the count stale. Reported.
     for (const fn of ['egoStat', 'graphStat']) {
@@ -4230,7 +4260,7 @@ test('the focus is chrome, and the diagram no longer owns the control for it', (
   // group beside the tabs now, the same shape the chips use, and it carries the depth with it:
   // leaving that behind would have recreated the same problem one control over.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/graphview.html`), js = gsrc(app);
+    const html = diagramPage(app), js = gsrc(app);
     assert.ok(!html.includes('id="erScope"'), `${app}: the diagram still owns the scope button`);
     assert.ok(!html.includes('id="erReset"'), `${app}: the diagram still owns the reset button`);
     const head = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
@@ -4270,7 +4300,7 @@ test('the focus chip wears the focused item\'s own colour, not a colour of its o
   // wired to that dimension - the mistake this window has already made once, with the dot that was
   // coloured by namespace while the chips filtered on category.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/graphview.html`), js = gsrc(app);
+    const html = diagramPage(app), js = gsrc(app);
     const chip = html.slice(html.indexOf('id="focusnode"') - 40, html.indexOf('id="focusnode"') + 60);
     assert.ok(!/--hue:#/.test(chip), `${app}: the focus chip still carries an authored colour`);
     assert.ok(!/data-hue="focus"/.test(chip), `${app}: the focus chip claims a kind called «focus»`);
@@ -4415,7 +4445,7 @@ test('the arrowhead is the same size on screen at any zoom', () => {
   // measured on the sample org, 20.6px across on a focused view and **3.3px** on the whole org.
   // Direction is half of what an edge says, so a three-pixel triangle is not there in any sense.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/graphview.html`), js = gsrc(app);
+    const html = diagramPage(app), js = gsrc(app);
     assert.ok(/id="erarrow"[^>]*markerUnits="userSpaceOnUse"/.test(html),
       `${app}: the marker still scales with each link's stroke width, and one marker cannot be four sizes`);
     assert.ok(/id="erarrow"[^>]*viewBox="0 0 7 6"/.test(html),
@@ -6970,22 +7000,31 @@ test('the binding a command carries is read before anything awaits', () => {
     assert.equal(g.nodes['a.b'].source_code, 'x');
   });
 
-  test('nothing writes a graph to storage.local, and the window reads session', () => {
+  test('the drawing is handed to the diagram, and never parked where it could rest', () => {
+    // **The Deluge source must not leave the panel's own memory**, and `privacy.html` says so. The
+    // graph used to travel through `chrome.storage.session` because the diagram was a window of its
+    // own and two documents can only exchange values that way: one key per window, a token in the
+    // URL, and `graphForWindow()` stripping the source on the way in. The diagram is a view of the
+    // panel now, so it is handed the graph as an argument - which removes the slot, the token and
+    // every way either could outlive what it described.
+    //
+    // What did **not** change is the stripping, and that is what this case is really about: the
+    // payload the diagram receives must still go through `graphForWindow`, or a reader who asked
+    // the assistant about a function would have its source in the drawing.
     for (const app of ['crm', 'analytics']) {
       const panel = panelBody(app);
       const win = read(`apps/${app}/graphview.js`);
-      assert.ok(!/storage\.local\.set\(\{\s*graphData/.test(panel),
-                `${app}: a graph is still written to storage.local, where it stays on disk`);
-      // One key per window since the token change; every write still goes through graphForWindow.
-      const writes = panel.match(/storage\.session\.set\(\{ \[[^\]]*\]: [^}]*\}\)/g) || [];
-      assert.ok(writes.length, `${app}: no graph is handed to the window at all`);
-      writes.forEach((w) => assert.ok(/graphForWindow\(/.test(w),
-        `${app}: a payload skips graphForWindow, so it may carry the source: ${w}`));
-      assert.ok(!/storage\.session\.set\(\{ graphData:/.test(panel),
-                `${app}: a writer still uses the shared slot, so two windows can consume each other's graph`);
-      assert.ok(/storage\.session\.get\(key\)/.test(win), `${app}: the window does not read its own key`);
-      assert.ok(/'graphData:' \+ token/.test(win), `${app}: the window ignores the token in its URL`);
-      assert.ok(!/source_code/.test(win), `${app}: the window reads source_code, so stripping it breaks it`);
+      assert.ok(!/storage\.(local|session)\.set\(\{\s*\[?\s*'?graphData/.test(panel),
+                `${app}: a graph is written to storage again - it has nowhere to rest any more`);
+      // The calls, not the declaration: `async function openGraphView(data)` matches the same
+      // shape and would report the definition of the thing as a misuse of it.
+      const hands = panel.match(/(?<!function )openGraphView\([^)]*\)/g) || [];
+      assert.ok(hands.length, `${app}: no graph is handed to the diagram at all`);
+      hands.forEach((h) => assert.ok(/graphForWindow\(/.test(h),
+        `${app}: a payload skips graphForWindow, so it may carry the source: ${h}`));
+      assert.ok(!/storage\.session\.get\(/.test(win),
+                `${app}: the diagram still fetches a graph instead of being given one`);
+      assert.ok(!/source_code/.test(win), `${app}: the diagram reads source_code, so stripping it breaks it`);
     }
   });
 }
@@ -9248,7 +9287,10 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // summary already describes. Reported after `modulesUnknown` changed meaning and the version did
     // not: fresh parse said 1, the cached path still said 0. So every reader compares against the
     // constant, and no reader may carry a number of its own.
-    const readers = code.match(/\.v === [\w.]+/g) || [];
+    // **Asked of the summary, not of everything spelled `.v`.** The corpus grew when the diagram
+    // moved into the panel, and it brought `x.dataset.v === v` with it - a tab's data attribute,
+    // which has nothing to do with a stored reading and which no `SUMMARY_V` will ever appear in.
+    const readers = code.match(/(?<!dataset)\.v === [\w.]+/g) || [];
     assert.ok(readers.length >= 2, 'nobody checks the summary version');
     for (const r of readers) {
       assert.ok(/SUMMARY_V/.test(r), `a reader compares the version against a literal: ${r}`);
@@ -11200,7 +11242,12 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
 for (const app of ['crm', 'analytics']) {
   test(`${app}: the name in «nothing to focus on» is escaped`, () => {
     const fn = sliceFn(`apps/${app}/graphview.js`, 'noFocusHere');
-    assert.ok(/const name = esc\(String\(DATA\.focusName \|\| id\)\);/.test(fn),
+    // **Either escaper, because the two products name theirs differently and both escape.** When
+    // the diagram moved into the panel's document, Analytics' `esc` met the panel's own - a classic
+    // script that redeclares a const kills itself, so the diagram's took its own name; the CRM's
+    // panel never declared one, so nothing had to move. What this case is about is that the name
+    // goes through an escaper at all, which is what an outside audit found it not doing.
+    assert.ok(/const name = g?esc\(String\(DATA\.focusName \|\| id\)\);/.test(fn),
               'a name from the org reaches innerHTML raw');
     assert.ok(/\$\{name\}/.test(fn), 'and it no longer says which one it could not find');
   });
@@ -12036,24 +12083,30 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
   assert.deepEqual(bad, [], `these call chains change workspace identity halfway through:\n  ${bad.join('\n  ')}`);
 });
 
-// A window that cannot open leaves nobody to consume its key: the payload sat in session storage
-// until the browser closed, which is longer than the privacy page promises. And the pruner: old
-// .sql files of deleted or renamed queries accumulated with no map left to even call them residue.
+// **A drawing of one workspace must never appear under the name of the next.** This used to be a
+// case about an orphaned session key - a window that failed to open left its payload in storage
+// until the browser closed, longer than the privacy page promises. There is no key and no window
+// any more: the diagram is a view and the graph is handed to it as a value, so that whole class
+// went with the mechanism. What survives is the reason the guard was there in the first place, and
+// it is the one this holds: the workspace can move while the graph is being built, and a drawing
+// that arrives late must be dropped rather than shown. And the pruner: old .sql files of deleted or
+// renamed queries accumulated with no map left to even call them residue.
 {
   for (const app of ['crm', 'analytics']) {
-    test(`${app}: a graph key does not outlive a window that never opened`, async () => {
-      const ops = [];
-      const ctx = { crypto: { randomUUID: () => 'tok' }, bound: null, lastCtx: null,
-        graphForWindow: (g) => g, Error, Object,
-        chrome: { storage: { session: { set: async (o) => ops.push('set:' + Object.keys(o)[0]),
-                                        remove: async (k) => ops.push('remove:' + k) } },
-                  windows: { create: async () => { throw new Error('no window for you'); } },
-                  runtime: { getURL: (u) => u } } };
+    test(`${app}: a graph built for a workspace that has been left is not drawn`, async () => {
+      const drawn = [];
+      const ctx = { bound: null, lastCtx: null, graphForWindow: (g) => g, Error, Object,
+                    openGraphView: async (g) => { drawn.push(g); } };
       vm.createContext(ctx);
-      vm.runInContext(sliceFn(`apps/${app}/workbench.js`, 'publishGraph'), ctx);
-      await assert.rejects(() => vm.runInContext('publishGraph', ctx)({ nodes: {} }, null, {}));
-      assert.deepEqual([...ops], ['set:graphData:tok', 'remove:graphData:tok'],
-                       `the payload stays in session storage with nobody to consume it: ${ops}`);
+      vm.runInContext(sliceFn(`apps/${app}/${app === 'crm' ? 'graph-session' : 'workbench'}.js`, 'publishGraph'), ctx);
+      const publish = vm.runInContext('publishGraph', ctx);
+      const moved = { current: () => false };
+      assert.equal(await publish({ nodes: {} }, moved, {}), false,
+                   `${app}: it reports success over a workspace that is no longer open`);
+      assert.deepEqual(drawn, [], `${app}: a drawing of a workspace the reader has left reached the screen`);
+      const here = { current: () => true };
+      assert.equal(await publish({ nodes: {} }, here, {}), true, `${app}: nothing is drawn even when the workspace held`);
+      assert.equal(drawn.length, 1, `${app}: the graph did not reach the diagram`);
     });
   }
 
@@ -14645,7 +14698,9 @@ test('the diagram sliders mean the same thing in Settings and in the window', ()
   };
   for (const app of readdirSync(join(ROOT, 'apps'))) {
     const a = ranges(`apps/${app}/options.html`);
-    const b = ranges(`apps/${app}/graphview.html`);
+    // The diagram's sliders live in the panel's markup now; the settings page still has its own
+    // copy, and the point of this case is that the two declare the same range.
+    const b = ranges(`apps/${app}/workbench.html`);
     const shared = Object.keys(a).filter((k) => k in b);
     assert.ok(shared.length >= 4,
       `id=${app}: only ${shared.length} slider(s) declared on both sides - the derivation broke, ` +
@@ -14996,7 +15051,7 @@ test('a box brought back after a relayout reaches the drawing', () => {
                 erLaidOut: true, Set, Map, Object, Array, String, console,
                 ekey: (a, b) => `${a}\u0000${b}`,
                 erRender: () => {}, statRefresh: () => {}, erHint: (t) => hints.push(String(t)),
-                MSG: { folded: (n) => `folded ${n}`, unfolded: (n) => `unfolded ${n}` } };
+                GMSG: { folded: (n) => `folded ${n}`, unfolded: (n) => `unfolded ${n}` } };
   // The layout as the window actually does it: `erShow` runs `erLayout` **only** when the flag is
   // down - `if (!erLaidOut) { erLayout(); erLaidOut = true; }` - so a caller that asks for a draw
   // without clearing it gets nothing new. A stub that places the boxes unconditionally answers for
@@ -15282,13 +15337,13 @@ test('an arc on the call graph is described as a call, not as a related list', (
   const ctx = { Set, Map, Object, Array, Number, String, Math, console,
                 N: { fn1: { id: 'fn1', name: 'sendInvoice', calls: ['fn2'], called_by: [] },
                      fn2: { id: 'fn2', name: 'formatTotal', calls: [], called_by: ['fn1', 'fn3'] } },
-                DATA: { kind: 'calls' }, nameMode: 'api',
+                DATA: { kind: 'calls' }, gvNameMode: 'api',
                 erSelEdge: 'fn1\u0000fn2', erCut: new Map(),
                 $: (id) => els[id] || null, esc: (x) => String(x), ekey: (a, b) => `${a}\u0000${b}`,
                 erHiddenSet: () => new Set(), erWouldGo: () => new Set(), erWouldShow: () => 0,
                 erWouldShowSet: () => new Set(), erToggleCut: () => {}, erTipText: () => '',
                 erTipOn: () => {}, erTipHide: () => {}, erFlag: () => {}, copyAndFlash: () => {},
-                MSG: { cutDo: (n) => `Hide ${n}`, cutUndo: () => 'Show' } };
+                GMSG: { cutDo: (n) => `Hide ${n}`, cutUndo: () => 'Show' } };
     const m = load([sliceConst(G, 'label'), sliceFn(G, 'erPickCard')], ctx);
   m.erPickCard();
   const said = body.innerHTML;
@@ -15335,14 +15390,14 @@ test('an arc on the call graph is described as a call, not as a related list', (
                'on the schema the arc is a related list, reachable on the module it points at');
 
   // And the word for an arc comes from the subject, not from the file it was written in.
-  const noun = load([sliceConst(G, 'NOUN'), sliceConst(G, 'MSG')],
+  const noun = load([sliceConst(G, 'NOUN'), sliceConst(G, 'GMSG')],
                     { DATA: ctx.DATA, Math, String, Object });
   ctx.DATA.kind = 'schema';
-  assert.match(noun.MSG.arrArcs(2), /lookups/,
-               `on the schema an arc is a lookup, and the report said «${noun.MSG.arrArcs(2)}»`);
+  assert.match(noun.GMSG.arrArcs(2), /lookups/,
+               `on the schema an arc is a lookup, and the report said «${noun.GMSG.arrArcs(2)}»`);
   ctx.DATA.kind = 'calls';
-  assert.match(noun.MSG.arrArcs(2), /links/,
-               `on the call graph the report still says «${noun.MSG.arrArcs(2)}» - a graph of functions has no relations`);
+  assert.match(noun.GMSG.arrArcs(2), /links/,
+               `on the call graph the report still says «${noun.GMSG.arrArcs(2)}» - a graph of functions has no relations`);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -15369,7 +15424,7 @@ test('an arrangement reports the drawing it produced, not the one it replaced', 
     const ctx = {
       Set, Map, Object, Array, Number, String, console, JSON,
       APP: 'zoostapp', DATA: { kind: 'schema', workspace: { instance: 'ws', org: '1' } },
-      curFocus: null, egoDepth: 1, erEmph: 'relations', nameMode: 'api',
+      curFocus: null, egoDepth: 1, erEmph: 'relations', gvNameMode: 'api',
       erIds: ['a', 'b', 'c'], erPos: { a: { x: 0, y: 0 }, b: { x: 0, y: 0 }, c: { x: 0, y: 0 } },
       erHeld: {}, erArranged: false, erPinOnly: null, erRaised: new Map(), erRaiseN: 0, erCut: new Map(),
       erLaidOut: true, edgesA: [['a', 'b'], ['b', 'c']],
@@ -15385,7 +15440,7 @@ test('an arrangement reports the drawing it produced, not the one it replaced', 
       erHint: (t, bad) => hints.push([String(t), !!bad]),
       erArrWorkspace: () => 'ws/1',
       matchArrangement: () => ({ matched: ['a', 'b', 'c'], fresh: [], stale: [], pinned: [] }),
-      MSG: { arrLoaded: (m) => `loaded ${m}`, arrOtherWorkspace: () => ' elsewhere', arrFolds: (n) => ` folds ${n}`,
+      GMSG: { arrLoaded: (m) => `loaded ${m}`, arrOtherWorkspace: () => ' elsewhere', arrFolds: (n) => ` folds ${n}`,
              arrArcs: (d) => ` count-delta ${d}`, arrArcsSwapped: (g, a2) => ` gone ${g} added ${a2}`,
              arrOtherProduct: 'other product', arrWrongKind: () => 'other kind', arrNothingMatched: 'nothing',
              arrWrongWorkspace: () => 'other workspace' },
@@ -15446,7 +15501,7 @@ test('an arrangement reports the drawing it produced, not the one it replaced', 
     // count beside it - what is on the drawing, never what was last laid out.
     const sctx = { Set, Map, Object, Array, Date, String,
                    APP: 'zoostapp', DATA: { kind: 'schema', workspace: { instance: 'ws', org: '1' } },
-                   curFocus: '', egoDepth: 1, erEmph: 'relations', nameMode: 'api',
+                   curFocus: '', egoDepth: 1, erEmph: 'relations', gvNameMode: 'api',
                    erIds: ['a', 'b'], erPos: { a: { x: 1, y: 2 }, b: { x: 3, y: 4 } },
                    erCut: new Map(), erRaised: new Map(),
                    erVisibleIds: () => ['a', 'b'],
@@ -15495,7 +15550,7 @@ test('the status line and the diagram badge report the same drawing', () => {
                   NOUN: () => ({ n: 'modules', n1: 'module', e: 'relations', e1: 'relation', dead: 'in no relation' }),
                   countedAs: () => 'modules', mirrorNote: () => '', orphanNote: () => '',
                   drawable: () => true, crowded: () => false,
-                  MSG: { tabOver: (n) => `over ${n}`, tabCrowded: (n) => `tight ${n}`, tabCount: (n) => `count ${n}` } };
+                  GMSG: { tabOver: (n) => `over ${n}`, tabCrowded: (n) => `tight ${n}`, tabCount: (n) => `count ${n}` } };
     const m = load([sliceConst(G, 'KINDOF'), sliceConst(G, 'CONDITION_KEYS'), sliceConst(G, 'erCandidate'),
                     sliceFn(G, 'passKind'), sliceFn(L, 'erHiddenSet'), sliceFn(L, 'statCounts'),
                     sliceFn(G, 'erFieldsFor'), sliceFn(L, 'linkedUnderFilter'), sliceFn(G, 'erVisibleIds'),
@@ -21949,7 +22004,7 @@ test('a fold reports what left the drawing, not what left the graph', () => {
                 erRender: () => {}, statRefresh: () => {},
                 erShowMaybeHeavy: (after) => { ctx.erIds = ctx.erVisibleIds(); ctx.erLaidOut = true; if (after) after(); },
                 erHint: (t) => hints.push(String(t)),
-                MSG: { folded: (n) => 'folded ' + n, unfolded: (n) => 'unfolded ' + n } };
+                GMSG: { folded: (n) => 'folded ' + n, unfolded: (n) => 'unfolded ' + n } };
   const m = load([sliceFn(rel, 'erToggleCut')], ctx);
 
   m.erToggleCut('B', 'C', 'C');

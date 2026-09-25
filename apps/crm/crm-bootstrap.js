@@ -438,3 +438,34 @@ async function sayWhereTheReportWent() {
   }
   setStatus('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
 }
+
+/** **A floor under the window's size.** Chrome has no `minWidth` on a window it creates, so the
+ *  reader can drag a popup down to a sliver - reported with a picture of Zoost about 190px wide,
+ *  where the toolbar has become a column of stacked buttons and the panel is of no use to anybody.
+ *  The browser will not stop it, so the document does: it is the only party that can see how small
+ *  it has got.
+ *
+ *  The numbers are the layout's own. Below the 720px breakpoint the list and the detail stack, and
+ *  the narrow layout was drawn for the 400px side panel this product used to be - so 420 is the
+ *  width at which every control in the toolbar is still reachable, and 420 in height keeps the
+ *  chrome, the find row and a few rows of list on screen together.
+ *
+ *  Corrected after the drag rather than during it: `windows.update` inside a live resize fights the
+ *  pointer, and the reader feels the window stick. This waits for the gesture to stop.
+ */
+const WIN_MIN_W = 420, WIN_MIN_H = 420;
+let _sizeFloorT = null;
+function holdTheSizeFloor() {
+  clearTimeout(_sizeFloorT);
+  _sizeFloorT = setTimeout(() => { void applySizeFloor(); }, 180);
+}
+async function applySizeFloor() {
+  const w = window.outerWidth, h = window.outerHeight;
+  if (w >= WIN_MIN_W && h >= WIN_MIN_H) return;
+  try {
+    const self = await chrome.windows.getCurrent();
+    // Only the axis that is short, so correcting one does not undo the reader's choice on the other.
+    await chrome.windows.update(self.id, { width: Math.max(w, WIN_MIN_W), height: Math.max(h, WIN_MIN_H) });
+  } catch (_) { /* a window that will not resize is still a window */ }
+}
+window.addEventListener('resize', holdTheSizeFloor);

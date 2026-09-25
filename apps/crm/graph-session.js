@@ -4,23 +4,19 @@
  *  never do. Reproduced by an outside scan. */
 const graphIdentity = () => ({ instance: bound?.instance || lastCtx?.instance || null,
                                org: bound?.org || lastCtx?.org || null, label: bound?.label || null });
-/** Hand a graph to its own window: one key per window, not one slot for all of them.
- *  Two windows - a call graph and an ER - shared `graphData`, so two opens close together could each
- *  consume the other's payload. The token rides the URL; the window consumes exactly its own key.
- *  Checked against the op before the write and again before the window, and the key is removed
- *  rather than left if the workspace moved between the two. Returns false when it did. */
+/** Hand a graph to the diagram view.
+ *
+ *  **It used to hand it to a window.** The payload went into `chrome.storage.session` under a
+ *  freshly minted token, the token rode the URL of a second browser window, and the page consumed
+ *  the key on load - one slot per window, because two windows sharing `graphData` could each eat the
+ *  other's payload. The diagram is a view of this panel now, so it is handed the graph directly:
+ *  no slot, no token, no window, and none of the three can be out of step with the other two.
+ *  Checked against the op before it draws, the way it was checked before the write.
+ */
 async function publishGraph(g, op, ws) {
   g.workspace = ws;
-  const token = crypto.randomUUID();
-  const key = 'graphData:' + token;
   if (op && !op.current()) return false;
-  await chrome.storage.session.set({ [key]: graphForWindow(g) });
-  if (op && !op.current()) { try { await chrome.storage.session.remove(key); } catch (_) {} return false; }
-  // A window that cannot open leaves nobody to consume the key, so it goes at once - otherwise the
-  // payload sat in session storage until the browser closed, which is longer than the privacy page
-  // is allowed to promise.
-  try { await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 }); }
-  catch (e) { try { await chrome.storage.session.remove(key); } catch (_) {} throw e; }
+  await openGraphView(graphForWindow(g));
   return true;
 }
 function graphForWindow(g) {
