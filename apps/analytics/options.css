@@ -3,13 +3,11 @@
      container's width - a black disc the size of the card, which is what shipped and what the author
      photographed. The class-defined-beside-its-first-user trap, in the one direction `csscheck`
      cannot see, because nothing is duplicated: it is simply absent. */
-  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
 
   /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
-  [hidden]{display:none!important}
   /* The CRM options page, with --sel teal instead of blue. Same shell, same section grammar, same
      wording where the meaning is the same - see CLAUDE.md on why the two must stay twins. */
   :root{
@@ -43,7 +41,6 @@
   button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
     border-radius:8px;padding:8px 14px;cursor:pointer}
   button:hover{border-color:var(--sel)}
-  button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
   button.primary:hover{background:#c4256b}
   /* A Save that has something to save says so in two ways, because a state carried by colour alone
      is one some readers never receive. `.primary` is added by `paintDirty()`, not by the markup:

@@ -3,13 +3,11 @@
      container's width - a black disc the size of the card, which is what shipped and what the author
      photographed. The class-defined-beside-its-first-user trap, in the one direction `csscheck`
      cannot see, because nothing is duplicated: it is simply absent. */
-  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
 
   /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
-  [hidden]{display:none!important}
   :root{
     --bg:#eef1f6; --surface:#fff; --ink:#182130; --muted:#647085; --border:#d7deea; --line:#e7ecf4;
     --sel:#2f6fed; --sel-soft:#e7effd; --up:#b0531f; --up-soft:#fbecdf; --down:#1f7a5c; --down-soft:#e0f2ea;
@@ -201,7 +199,6 @@
   #s-ws{color:var(--muted)} #s-ws b{color:var(--ink)}
   .srcwrap{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .srchead{background:#f6f8fb;border-bottom:1px solid var(--line);padding:6px 10px;font:11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
-  .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
   .ftbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
   .ftbl td{padding:4px 8px;border-bottom:1px solid var(--line);color:#33415a;white-space:nowrap}
   .ftbl td.mono{color:#2563eb} .ftbl tr:hover{background:#eef3fb}

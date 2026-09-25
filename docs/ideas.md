@@ -160,8 +160,12 @@ conditions, which would be a finding about the product and not about the shot. *
 instrument, not an edit**: render slot 5 three times and compare, which costs about a minute and
 decides which of the two it is.
 
-**State:** open, not scheduled. Nothing on the listing is wrong, so this waits behind anything a
-user can see.
+**State: no longer optional - it gates the CSS consolidation.** Merging a divergent selector is a
+decision per declaration with a screenshot on either side of it, and a before-and-after on
+`graphview.css` cannot be read while two renders of the same tree already differ by 3.7% of their
+pixels. The identical selectors were lifted without it (they need no comparison); the divergent ones
+wait for this. Nothing on the listing is wrong, so this is not urgent for a reader - it is a
+prerequisite for a piece of work, which is a different kind of priority.
 
 ---
 

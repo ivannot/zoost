@@ -2,7 +2,6 @@
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
-  [hidden]{display:none!important}
   :root{
     --bg:#0d121c; --tree:#0f1622; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#3b82f6;--accent:#3b82f6; --twin:#dc2d7a; --sel-soft:#16263f;
@@ -38,7 +37,6 @@
   .segnone{flex:1;color:var(--muted);font-size:11px;padding:6px 3px;text-align:center}
   .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}
   #pvtable{display:none;flex:1;overflow:auto;container-type:inline-size}
-  .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
   .ftbl th{position:sticky;top:0;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
   .ftbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top;white-space:nowrap}
   .ftbl td.mono{color:#82d2ff} .ftbl tr:hover{background:#16263f}
@@ -409,7 +407,6 @@
      currentColor, so each inherits its button's role colour instead of introducing a new one.
      A mark replaces the *visible* word only: the name lives in aria-label and title, which is
      where a name has to be anyway for anyone not looking at pixels. */
-  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
   /* Only the horizontal padding is tightened. Zeroing it top and bottom made the marked buttons
      visibly shorter than the words beside them, which is the sort of thing you notice without
      being able to name it. */

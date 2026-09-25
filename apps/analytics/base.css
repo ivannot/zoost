@@ -1,0 +1,14 @@
+/* The vocabulary all three of this product's pages share, in one place.
+ *
+ * **Only what is written identically everywhere lives here.** `tools/cssdupes.txt` separates a
+ * selector *repeated* - the same declarations twice - from one that is *divergent*, where the same
+ * class means two things depending on the page you landed on. The first can be lifted with nothing
+ * to decide; the second cannot, and merging it is what moved 5-20% of the pixels on six site pages
+ * the last time this was done in bulk.
+ *
+ * It is loaded first, before each page's own sheet, so a page that ever needs to override one of
+ * these can - and the ledger will say so, which is the point.
+ */
+  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
+  [hidden]{display:none!important}
+  button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}

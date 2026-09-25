@@ -28,6 +28,16 @@ import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, read, load, blankNonCode, handlerOf } from './slice.mjs';
 import vm from 'node:vm';
 
+/** A shipped page as the browser receives it: its markup and the stylesheet it links.
+ *
+ *  They were one file until the `<style>` blocks were lifted out, and a dozen cases here read a page
+ *  to assert on a rule inside it. The subject did not change - what a page draws is still what a page
+ *  draws - so the read follows the rule to where it now lives instead of the cases being weakened to
+ *  stop looking. A sweep for a control that was removed wants both halves too: a rule left behind for
+ *  an id nothing renders is exactly the leftover it is hunting.
+ */
+const page = (app, name) => read(`apps/${app}/${name}.html`) + '\n' + read(`apps/${app}/${name}.css`);
+
 /** A named function out of the graph window, wherever it now lives.
  *
  * Everything both products compute identically and that touches no DOM moved into graphlogic.js, so
@@ -345,7 +355,7 @@ for (const app of ['crm', 'analytics']) {
     const js = ['graphview.js', 'options.js']
       .map((f) => read(`apps/${app}/${f}`)).join('\n')
       .split('\n').filter((l) => !l.trimStart().startsWith('//')).join('\n');
-    const html = ['graphview.html', 'options.html'].map((f) => read(`apps/${app}/${f}`)).join('\n');
+    const html = ['graphview', 'options'].map((f) => page(app, f)).join('\n');
     assert.ok(!/erP\.ring\b/.test(js), 'erP.ring is still read');
     assert.ok(!/\bring:\s*\d/.test(js), 'a preset still declares a ring value');
     assert.ok(!/'ring'/.test(js), "'ring' is still named in a control or relayout table");
@@ -479,7 +489,7 @@ for (const app of ['crm', 'analytics']) {
   });
 
   test(`${app}: the drag is wired where a rename would break it`, () => {
-    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    const js = read(`apps/${app}/graphview.js`), html = page(app, 'graphview');
     // The handler has the element and not the loop variable, so the id has to be on the element. It
     // was not, the first time, and the drag read undefined and never began.
     assert.ok(/div\.dataset\.id = id;/.test(js), 'the boxes do not carry their id, so a drag cannot start');
@@ -533,7 +543,7 @@ for (const app of ['crm', 'analytics']) {
     const cap = (s) => (s.match(/Math\.min\((\d+(?:\.\d+)?), erScale/) || [])[1];
     assert.equal(cap(h), cap(wheel), 'the two ways of zooming stop at different scales');
     // and the hint line has to name it, or it is a gesture nobody discovers
-    const hint = js + read(`apps/${app}/graphview.html`);
+    const hint = js + page(app, 'graphview');
     assert.ok(/double-click to zoom/.test(hint), 'the hint line does not name the gesture');
   });
 }
@@ -581,7 +591,7 @@ for (const app of ['crm', 'analytics']) {
     // Without it, dropping a box onto a cluster can put it *under* boxes it was moved to sit beside -
     // and the reader has just said which one matters. The order is kept rather than a flag, so the last
     // thing moved is the thing on top, and Re-layout clears it with the rest of the arrangement.
-    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    const js = read(`apps/${app}/graphview.js`), html = page(app, 'graphview');
     assert.ok(/erRaised\.set\(id, \+\+erRaiseN\)/.test(js), 'a drop does not raise the box it moved');
     assert.ok(/erRaised\.get\(id\)/.test(js) && /style\.zIndex/.test(js),
       'the render does not apply the order, so it is lost on the next redraw');
@@ -746,7 +756,7 @@ for (const app of ['crm', 'analytics']) {
     // meets a box - each placed on the end that stays; the layer above the boxes, because the meeting
     // point is the box's own edge; and a width taken from the distance between two landing points on
     // that side, because the reported case was thirteen arcs on one rim with 20px circles on them.
-    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    const js = read(`apps/${app}/graphview.js`), html = page(app, 'graphview');
     assert.ok(/<div id="ermarks"><\/div>/.test(html), 'id=ermarks is not in the markup');
     assert.ok(/#ermarks\{[^}]*z-index:99999/.test(html), 'the marks are not above the boxes');
     assert.ok(/#ermarks\.dragging\{display:none\}/.test(html), 'the marks stay behind while a box is dragged');
@@ -833,7 +843,7 @@ for (const app of ['crm', 'analytics']) {
     // Both files: what draws the outline stayed with the drawing, what decides to ask for it moved
     // into graphlogic.js, and this test is about the two agreeing.
     const js = read(`apps/${app}/graphview.js`) + read(`apps/${app}/graphlogic.js`);
-    const html = read(`apps/${app}/graphview.html`);
+    const html = page(app, 'graphview');
     assert.ok(/\.erbox\.willgo\{[^}]*dashed/.test(html), 'nothing marks the boxes a control would take');
     assert.ok(/erFlag = \(set\) => \{/.test(js) && /boxEl\.set\(id, div\)/.test(js),
       'the outline is not built from the boxes the render just drew');
@@ -1081,7 +1091,7 @@ for (const app of ['crm', 'analytics']) {
 // never appears, so the wiring is asserted as well as the shape.
 for (const app of ['crm', 'analytics']) {
   test(`${app}: the file actions live in one menu, not loose in the toolbar`, () => {
-    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    const html = page(app, 'graphview'), js = read(`apps/${app}/graphview.js`);
     const tools = html.slice(html.indexOf('<div id="ertools">'), html.indexOf('</div>', html.indexOf('<div id="ertools">')));
     assert.ok(/id="erFileBtn"/.test(tools), 'there is no File menu');
     for (const id of ['erPdf', 'erArrSave', 'erArrLoad']) {
@@ -1110,7 +1120,7 @@ for (const app of ['crm', 'analytics']) {
       'a refusal is shown in the same grey as a running commentary');
     // and the line itself has a state a reader notices
     assert.ok(/h\.classList\.toggle\('warn', !!warn\)/.test(js), 'erHint cannot mark a message as one to notice');
-    assert.ok(/\.hint2\.warn\{/.test(read(`apps/${app}/graphview.html`)), 'the noticeable state is not drawn');
+    assert.ok(/\.hint2\.warn\{/.test(page(app, 'graphview')), 'the noticeable state is not drawn');
   });
 }
 
