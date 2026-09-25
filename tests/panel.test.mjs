@@ -1683,6 +1683,25 @@ test('each panel attributes its Store link to itself, from one source', () => {
 // data with nothing to do about it. Reported as the hardest of the lot to read. The mark carries the
 // way out there, because that line is nowrap with an ellipsis and a longer sentence is one nobody
 // finishes.
+test('a mismatch says so and closes nothing that is already on disk', () => {
+  // The bar has promised «what is already mirrored stays readable» for as long as it has existed,
+  // and the CRM closed the open detail pane on every pass while mismatched - reported as a pane
+  // vanishing while resizing, because the five-second poll re-derives the state and took it away
+  // again. A message and a behaviour disagreeing is the class this repository refuses ahead of any
+  // other, and the twin never did it.
+  //
+  // The argument the closing rested on - «browsing would mean reading org A's mirror while looking
+  // at org B» - died when the panel was told to read its mirror with no Zoho tab at all, which is
+  // the same reading with nothing to compare against.
+  for (const [app, path] of [['crm', 'apps/crm/crm-context.js'],
+                             ['analytics', 'apps/analytics/sidepanel.js']]) {
+    const src = read(path);
+    assert.match(src, /stays readable/, `${app}: the mismatch bar stopped promising anything`);
+    assert.ok(!/if \(mm\)[^\n]*classList\.remove\('show'\)/.test(src),
+      `${app}: a mismatch closes a pane the bar has just promised stays readable`);
+  }
+});
+
 test('with two Zoho tabs open and neither in front, the one this workspace belongs to is chosen', async () => {
   // Reported from the ordinary arrangement: production and a sandbox both open, then a step onto a
   // third tab that is not Zoho at all. «The first tab the query returns» is a coin toss, and half

@@ -205,17 +205,25 @@ async function refreshContext() {
   // it was wrong: reading invented data while looking at a real org is exactly what this bar is for,
   // and one muted line in the workspace half is too quiet to carry it. Reported.
   //
-  // What differs is the **blocking**, and only that. A real mismatch can be resolved - one of the
-  // two is wrong - and browsing until it is would mean reading org A's mirror while looking at org
-  // B. A sample is never going to match anything, everything Zoho-bound is already refused for it,
-  // and blocking it would make it unusable the whole time a Zoho tab is open - which is always.
-  // So: say it, do not stop it.
+  // What differs is the **blocking**, and only that. A sample is never going to match anything,
+  // everything Zoho-bound is already refused for it, and blocking it would make it unusable the
+  // whole time a Zoho tab is open - which is always. So: say it, do not stop it.
+  //
+  // **And a real mismatch no longer closes what is open either.** It used to, on the argument that
+  // «browsing until it is resolved would mean reading org A's mirror while looking at org B» - and
+  // that argument died the day this panel was told to work with no Zoho tab at all, because that is
+  // the same reading with no tab to compare against. The bar's own sentence has been saying so the
+  // whole time: «what is already mirrored stays readable». The code was contradicting the message
+  // it draws one line above, which is the class this repository refuses ahead of any other.
+  //
+  // Reported from the panel: a detail pane that vanished while resizing on a mismatched tab - the
+  // five-second poll re-deriving the state and closing it, which looks like the layout losing your
+  // place rather than like a rule being applied. The Analytics twin never did this.
   const sampleMm = !!(bound && lastCtx && isSample());
   const mm = !!(bound && lastCtx && !guardOk() && !isSample());
   const mmbar = $('mmbar');
   mmbar.classList.toggle('show', mm || sampleMm);
   mmbar.classList.toggle('soft', sampleMm);
-  if (mm) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); }
   if (mm || sampleMm) {
   // **The sample is a state the user chose, and it was being announced like an accident.** Three
   // sentences on one screen said the same fact - the status line's «not related to the sample», the
