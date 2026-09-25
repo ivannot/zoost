@@ -16,7 +16,7 @@
     <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
   </div>
   <div id="ctx" class="unbound">
-    <span class="dot"></span><span class="who" id="who">Not on a Zoho CRM tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span>
+    <span class="dot"></span><span class="who" id="who">Not on a Zoho CRM tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span><button type="button" id="chromefold" class="foldbtn bare" aria-expanded="true" aria-label="Fold the workspace and tools rows away" title="Fold the workspace and tools rows away - the list gets the room"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg></button>
   </div>
   <div id="scrim" class="scrim"></div>
   <div id="expscope" class="dlg">
@@ -103,6 +103,7 @@
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button><button id="repdismiss" title="Dismiss this - the report page stays open in its own window">✕</button><button id="expopen" class="bare"></button></div>
 
   <div id="main">
+  <div id="split">
     <!-- tabindex so the list can hold the focus: without it the keyboard cannot address the
        thing the whole panel is about, and arrows only scroll. -->
   <div id="tree" tabindex="0"></div>
@@ -158,6 +159,7 @@
       <div id="pvbody"><pre id="pvgutter"></pre><pre id="pvcode"></pre></div>
       <div id="pvtable"></div>
     </div>
+  </div>
   </div>
     <!-- Health lives at the #belowbar level (sibling of #aiview), so it covers the mode tabs too - like the AI panel. -->
     <div id="healthview"><div class="hh"><span>Workspace health</span><span class="hhr"><span id="healthmsg"></span><button id="healthpull" class="zbtn icon" aria-label="Pull runtime" title="Pull runtime - re-read what Zoho reports about how this org runs: what is failing, and how often each function ran. Everything else in this view is computed from the local mirror and needs no call."><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><button type="button" class="hx bare" id="healthx" title="Close" aria-label="Close">✕</button></span></div><div id="healthbody"></div></div>

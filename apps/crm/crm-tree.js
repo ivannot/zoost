@@ -166,17 +166,19 @@ const isDenied = (e) => !!e && e.mirrored !== false && !e.downloaded && !!e.refu
  *  **A slot is kept for the whole list or for none of it.** Every one of them used to be emitted on
  *  every row, empty when it had nothing to say, and the reason is real - a slot that comes and goes
  *  per row lets the next one slide into its place and the numbers stop lining up down the list. But
- *  on an org of Deluge functions with nothing unpublished, `rlg` and `rpb` are empty on *every* row,
- *  and their `min-width` floors were still holding some sixty pixels open beside a name that was
- *  being cut short to fit. Reported: «an enormous unused space between the name and the columns on
+ *  on an org of Deluge functions with nothing unpublished, `rlg` - which carried the language and
+ *  the publish word in two slots then, and carries both in one now - is empty on *every* row, and
+ *  its `min-width` floor was still holding pixels open beside a name that was being cut short to fit. Reported: «an enormous unused space between the name and the columns on
  *  the right; the name must use all the space it can».
  *
  *  Decided once per draw, from the rows about to be drawn, so the columns still line up - every row
  *  in one list reserves exactly the same set. */
-const ROW_SLOTS = { lang: true, pub: true, rest: true };
+const ROW_SLOTS = { lang: true, rest: true };
 function setRowSlots(rows) {
-  ROW_SLOTS.lang = (rows || []).some((e) => !isDeluge(e.language));
-  ROW_SLOTS.pub = (rows || []).some((e) => publishChip(publishState(e)) !== '');
+  // One slot for the two facts it now carries, so it is reserved when *either* has something to
+  // say: an org of Deluge functions with nothing unpublished still reserves nothing, which is what
+  // this function is for.
+  ROW_SLOTS.lang = (rows || []).some((e) => !isDeluge(e.language) || publishChip(publishState(e)) !== '');
   ROW_SLOTS.rest = (rows || []).some((e) => !!e.rest);
 }
 function fnRowEl(e) {
@@ -200,13 +202,30 @@ function fnRowEl(e) {
   // with rows in Modules and Connections, and reusing one would change two tabs nobody looked at.
   // The family on the row, Zoho's own spelling in the tooltip: «java17» is a fact about the
   // function and belongs somewhere, but `slice(0, 4)` of it put «pyth» in a column.
-  const langSlot = ROW_SLOTS.lang
-    ? `<span class="rest rlg" title="${escA(langLabel(e.language))}">${!isDeluge(e.language) ? escHtml(langFamilyLabel(langFamily(e.language))) : ''}</span>` : '';
-  // Whether Zoho is running this, on the row. Its own slot for the same reason every other one has
-  // one: a slot that appears and disappears moves the numbers beside it down the whole list.
+  // **One column for two facts, because the width is worth more than the second one.** The language
+  // and whether Zoho is running it were two reserved slots holding, between them, one short word per
+  // row - and a reserved column costs its `min-width` on every row whether or not it has anything to
+  // say. They are one cell now: the language, coloured by what Zoho is running.
+  //
+  // **Three states and two colours, so the colour is not asked to carry more than it can.** Amber
+  // means something is not published - never published at all, or published with changes waiting,
+  // which keeps its trailing `+` - and green means live and in step. The distinction the colour
+  // cannot make, the `+` still makes.
+  //
+  // And the word is not lost: colour alone is not something every reader can use, so the tooltip
+  // carries Zoho's own spelling of the language *and* the publish sentence, which is where the
+  // exact date already lived. What was on the row is still on the row; what was a second column is
+  // a hover.
   const pub = publishState(e);
-  const pubSlot = ROW_SLOTS.pub
-    ? `<span class="rest rpb${pub && !pub.deployed ? ' rpbd' : ''}"${pub ? ` title="${escA(publishSentence(pub))}"` : ''}>${escHtml(publishChip(pub))}</span>` : '';
+  const langWord = !isDeluge(e.language) ? langFamilyLabel(langFamily(e.language)) : '';
+  // A function with a publish state and no language is not a shape this org has shown, and it is
+  // one line to survive it rather than a row that silently says nothing: the word takes the cell.
+  const shown = langWord ? langWord + (pub && pub.deployed && pub.draft ? ' +' : '') : publishChip(pub);
+  const pubCls = !pub ? '' : (!pub.deployed || pub.draft) ? ' rlgd' : ' rlgl';
+  const langTitle = [langWord || isDeluge(e.language) ? langLabel(e.language) : '', publishSentence(pub)]
+    .filter(Boolean).join(' \u00b7 ');
+  const langSlot = ROW_SLOTS.lang
+    ? `<span class="rest rlg${escA(pubCls)}"${langTitle ? ` title="${escA(langTitle)}"` : ''}>${escHtml(shown)}</span>` : '';
   const restSlot = ROW_SLOTS.rest ? `<span class="rest rr">${e.rest ? 'REST' : ''}</span>` : '';
   const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
@@ -226,7 +245,7 @@ function fnRowEl(e) {
   const wide = treeSort === 'modified' ? ' rfw' : '';
   const lineSlot = `<span class="rest rfl${wide}"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${escHtml(sortShown)}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
-  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${pubSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
+  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${langSlot}${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   // Both go through a declaration, because a `.then(cb)` is a scope the race checker cannot enter -
   // and this callback redraws a row after an await, which is the exact shape it exists to look at.
   el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); if (unmirrored) setStatus(MSG.notMirrored(langLabel(e.language)), 'warn'); else if (isDenied(e)) setStatus(MSG.srcRefused(e.refusedAt), 'warn'); else void fetchThenRedrawRow(e); };

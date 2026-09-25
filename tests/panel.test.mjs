@@ -20956,14 +20956,18 @@ test('crm: a trailing column no function in the list needs is not held open', ()
                  { Number, String, Boolean, isDeluge: (l) => String(l || '') === 'deluge' });
   const deluge = { language: 'deluge', rest: false };
   m.setRowSlots([deluge, { language: 'deluge', rest: false }]);
-  assert.equal(`${m.ROW_SLOTS.lang}|${m.ROW_SLOTS.pub}|${m.ROW_SLOTS.rest}`, 'false|false|false',
+  assert.equal(`${m.ROW_SLOTS.lang}|${m.ROW_SLOTS.rest}`, 'false|false',
     'a column every row in the list leaves empty is still holding its width open');
   m.setRowSlots([deluge, { language: 'java17', rest: false }]);
   assert.equal(m.ROW_SLOTS.lang, true, 'one compiled function in the list and the language column is gone');
   m.setRowSlots([deluge, { language: 'deluge', rest: true }]);
   assert.equal(m.ROW_SLOTS.rest, true, 'a REST function is in the list and REST has nowhere to print');
+  // **The language and the publish word are one column now**, so the slot is reserved when *either*
+  // has something to say. This row is the case that makes the difference visible: a Deluge function
+  // has no language to print and this one is published, so a check that asked only about the
+  // language would drop the column and take the publish word with it.
   m.setRowSlots([deluge, { language: 'deluge', rest: false, deployed_on: '1750000000000' }]);
-  assert.equal(m.ROW_SLOTS.pub, true, 'a published function is in the list and the column was dropped');
+  assert.equal(m.ROW_SLOTS.lang, true, 'a published function is in the list and the column was dropped');
 });
 
 test('a function whose source was refused is drawn as refused, not as an error', () => {

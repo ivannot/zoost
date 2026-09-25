@@ -29,6 +29,7 @@ aiToolEvent	7529360de91f	60bfbfc26800	divergent
 aiTrunc	764f499b06b9	d0f094951075	divergent
 aiUnlock	6e29500b5ee0	6a9f73479d87	divergent
 appRoot	7ce174166cab	7ce174166cab	identical
+applyChromeFold	305336322b8a	305336322b8a	identical
 applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
 askScope	d27f77a79c58	5a0012715e71	divergent
@@ -242,6 +243,7 @@ reportHead	1ef12bbe09e0	1ef12bbe09e0	identical
 reportMark	267dd72f6fe1	267dd72f6fe1	identical
 reportToc	bffb45a529c6	bffb45a529c6	identical
 resetView	6dc964329195	e122c2b6b701	divergent
+restoreChromeFold	95867d4b4832	95867d4b4832	identical
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 runWorkspaceEntry	21263fa94191	21263fa94191	identical

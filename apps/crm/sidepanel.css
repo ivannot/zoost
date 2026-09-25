@@ -148,6 +148,10 @@
   @keyframes sp{to{transform:rotate(360deg)}}
   /* main split */
   #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+  /* The two panels and the bar between them. The twin needs this as its own box, because there
+     `#main` holds the search and the filter rows too - so the rule that turns them is written
+     once, for one name, and cannot come apart. */
+  #split{flex:1;display:flex;flex-direction:column;min-height:0}
   #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
   #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
   #overview.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
@@ -288,7 +292,10 @@
   .f .rest.rr{min-width:26px;text-align:right}
   /* Whether Zoho is running this function. Amber for a draft, because «written and never published»
      is the state somebody is looking for when they wonder why an edit changed nothing. */
-  .f .rest.rpb{min-width:34px;text-align:right;color:var(--ok)}
+  /* The language cell wears what Zoho is running: amber while anything is unpublished, green when
+     it is live and in step. The base colour stays for a row that has no publish state to report. */
+  .f .rest.rlg.rlgd{color:#f59e0b}
+  .f .rest.rlg.rlgl{color:var(--ok)}
   #pvcallers .publine{margin:0 0 6px;font-weight:600;color:var(--ok)}
   /* The runtime box: a live reading, so it is visually quieter than the mirror around it. */
   #pvcallers .rtwrap{margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
@@ -300,7 +307,6 @@
   #pvcallers .rtdate{background:var(--tree);color:var(--ink);border:1px solid var(--line);
     border-radius:6px;padding:2px 6px;font:11px var(--mono);margin-left:6px}
   #pvcallers .publine.pubdraft{color:#f59e0b}
-  .f .rest.rpb.rpbd{color:#f59e0b}
   .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
   .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
   /* A date needs more room than a count; only the «last modified» sort asks for it. */
@@ -795,3 +801,56 @@
      not move when a neighbouring row grows an arrow. */
   .laychev.none{cursor:default;pointer-events:none}
   .fsub{padding-left:26px;opacity:.9} .fsub .laysub{color:#a78bfa;margin-right:4px}
+
+  /* ------------------------------------------------------------------ *
+   * PoC: the split turns into two columns when there is room for it.
+   *
+   * Measured before it was written: Chrome caps a side panel at two thirds of the window
+   * (`kMaxContentsHeightSidePanelFraction = 2.f / 3.f`), so on a 1920-wide window this panel can
+   * already be 1280px - and this stylesheet had no media query at all, so every pixel above the
+   * ~400 it was authored for went into stretching one column. The pane opening used to take the
+   * list from 376px to 68px, which is the same complaint arriving as a defect.
+   *
+   * `height:auto !important` is not decoration: the drag writes an inline height, and an inline
+   * style outranks anything here. In this mode the same drag writes `--splitw` instead.
+   * ------------------------------------------------------------------ */
+  @media (min-width: 720px){
+    #split{flex-direction:row}
+    /* The grip says «drag me», so it has to lie along the edge it drags. Horizontal across a
+       vertical divider it is a dash nobody can explain, which is how it was reported. */
+    #resizer::after{left:2.5px;top:50%;width:3px;height:34px;transform:translateY(-50%)}
+    #tree{flex:1 1 auto;min-width:280px}
+    #resizer{width:8px;height:auto;flex:none;cursor:col-resize;border-top:0;border-bottom:0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+    #preview{height:auto !important;width:var(--splitw,52%);min-width:340px;box-shadow:-10px 0 24px rgba(0,0,0,.45)}
+  }
+
+  /* ------------------------------------------------------------------ *
+   * The chrome folds away, because on a short screen it is the content that pays for it.
+   *
+   * Reported with a picture of the top of the panel: vertical room is precious and that block could
+   * not adapt and could not go. Measured on the 1280x800 render: it ran to about 330 of the 800
+   * pixels, and the list began at the half-way line.
+   *
+   * **What folds is what is used occasionally**: the working folder, the workspace picker and its
+   * buttons, and the tools row. What never folds is what is used continuously - the tabs, the
+   * per-type actions, the search, the filters - and, above all, the two rows that *state* something:
+   * `#ctx`, which says which workspace this panel is bound to, and `#mmbar`, which says when the tab
+   * and the workspace disagree. A safety statement is not a layout preference, so neither is here.
+   *
+   * The mark rather than a text triangle, at the panel's own stroke: «l'icona e' quasi invisibile»,
+   * and a control nobody can see is a feature nobody has.
+   * ------------------------------------------------------------------ */
+  /* **Pinned, because a toggle that moves when you press it is a toggle you have to find again.**
+     It used to ride in `#ctx`, and folding removes the rows *above* that bar - so the control
+     travelled up by exactly the height it had just reclaimed, and back down on the next press.
+     Reported. The top right corner of the panel is the one place that does not move whatever
+     happens below it, and the z-index keeps it under every overlay, the scrim and the dialogs, so
+     it can never sit on top of something that is asking a question. */
+  .foldbtn{position:fixed;top:5px;right:7px;z-index:5;flex:none;display:flex;align-items:center;color:#8ea0bb;padding:2px 6px;border-radius:6px;cursor:pointer}
+  .foldbtn:hover{color:var(--ink);background:#1b2536}
+  .foldbtn .mk{width:16px;height:16px;stroke-width:2}
+  body.chromefolded .foldbtn .mk{transform:rotate(180deg)}
+  body.chromefolded .wsbar,body.chromefolded .genbar{display:none}
+  /* Folded, the bar that states the binding becomes the top row and would run under the control.
+     Unfolded it does not, which is why the reserve is on the folded state and not always. */
+  body.chromefolded #ctx{padding-right:34px}

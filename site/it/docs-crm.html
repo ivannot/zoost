@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:ab269cf5e2a5c4da -->
+<!-- translated-from: site/docs-crm.html sha256:005ffb711322bddc -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.53.0</span> · aggiornata il <span class="dd" data-stamp="updated">21 settembre 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.53.0</span> · aggiornata il <span class="dd" data-stamp="updated">25 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -250,7 +250,17 @@ git commit -m "baseline"</code></pre>
   <h2 id="read">5. Leggere la tua org</h2>
   <p>I segmenti di modalità cambiano cosa elenca l'albero: <b class="ui">Functions</b>,
     <b class="ui">Modules</b>, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>,
-    <b class="ui">Actions</b>, <b class="ui">Connections</b>. Seleziona un elemento e sotto si apre l'anteprima.</p>
+    <b class="ui">Actions</b>, <b class="ui">Connections</b>. Seleziona un elemento e l'anteprima si apre
+    - <b>sotto l'elenco, oppure accanto quando il pannello è abbastanza largo</b>. Chrome lascia
+    trascinare un side panel fino a due terzi della finestra: dagli quello spazio ed elenco e anteprima
+    stanno affiancati, che è dove una funzione lunga smette di essere letta da una feritoia. Trascina la
+    barra fra i due per ridimensionare: le due misure vengono ricordate separatamente, perché quanto
+    vuoi alto il codice in un pannello stretto non è quanto lo vuoi largo in uno ampio.</p>
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, in <b>alto a destra del pannello</b>, ripiega la cartella di lavoro, il selettore di
+    workspace e la barra degli strumenti quando preferisci dare lo spazio all'elenco, e li riporta.
+    La tua scelta viene ricordata; su uno schermo basso parte ripiegato, perché è lì che lo spazio vale
+    di più. Le due righe che <em>dichiarano</em> qualcosa - su quale org è la scheda, e l'avviso quando
+    scheda e workspace non coincidono - non si ripiegano mai: quelle non sono decorazione.</p>
   <p>Due comandi di quella riga sfuggono facilmente. <b class="ui">Name: display</b> alterna fra il nome che
     ti mostra Zoho CRM e l'API name che usa il codice - la stessa funzione, detta in due modi; il secondo ti serve quando scrivi Deluge. <b class="ui">Functions page ↗</b> apre l'elenco delle funzioni di Zoho
     CRM in una scheda e lo filtra su quello che avevi selezionato, per quando vuoi modificare invece che
@@ -301,7 +311,7 @@ git commit -m "baseline"</code></pre>
       Zoho contabilizza - come pesarlo lo decidi tu, non io. Non viene chiesto niente in più a
       Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.</li>
     <li><b class="ui">Runtime in Zoho ↻</b>, nei <b class="ui">Details</b> di una funzione, chiede a Zoho cosa ha fatto ultimamente quella funzione. Le esecuzioni arrivano nella finestra che scegli accanto al bottone - <b>Last 24 hours</b>, <b>Today</b>, <b>Yesterday</b>, <b>Last 30 days</b>, oppure <b>Dates…</b> per un intervallo qualsiasi fra due giorni, scelti da un calendario che non ti propone una fine prima dell'inizio né un giorno fuori dai trenta che Zoho conserva - e la tabella, intestata con la finestra o con le date stesse, dice per ognuna quando è partita, da cosa, se è andata a buon fine e quanti millisecondi è durata. Sotto c'è la storia delle revisioni, che Zoho restituisce intera e non per periodo, con la nota che Zoho scrive per ognuna. Viene letto nel momento in cui premi ed è <b>fuori dal mirror</b>: non viene salvato, non entra nei report, ed è una richiesta per funzione - per questo è un bottone e non qualcosa che un pull fa per trecento funzioni. Una funzione compilata non ha storia delle revisioni e il riquadro lo dice, invece di mostrare una tabella vuota.</li>
-    <li><b class="ui">Live</b> / <b class="ui">Draft</b> sulla riga di una funzione compilata dice cosa sta girando davvero in Zoho. Le funzioni Java, Python e Node si scrivono, si salvano e poi si <em>pubblicano</em>, quindi il sorgente nel mirror può essere codice che l'org non ha mai eseguito - e niente, sul disco, distingue le due. <b>Draft</b> vuol dire mai pubblicata, <b>Draft +</b> pubblicata con una modifica successiva che non è live, e il dettaglio scrive per esteso la data di pubblicazione. Una funzione Deluge non ha questo stato e la colonna resta vuota. Lo stato compare anche in tutti e due i report.</li>
+    <li><b class="ui">Live</b> / <b class="ui">Draft</b> sulla riga di una funzione compilata dice cosa sta girando davvero in Zoho, ed è portato dal <b>colore del nome del linguaggio</b> invece che da una colonna a sé: la lista ha una cella dove ne aveva due, perché su un pannello stretto una colonna riservata costa la sua larghezza su ogni riga, che abbia qualcosa da dire o no. <b>Ambra</b> vuol dire che c'è qualcosa di non pubblicato, <b>verde</b> che è live e allineata. Le funzioni Java, Python e Node si scrivono, si salvano e poi si <em>pubblicano</em>, quindi il sorgente nel mirror può essere codice che l'org non ha mai eseguito - e niente, sul disco, distingue le due. Ambra senza segno vuol dire mai pubblicata; ambra con un <b>+</b> finale vuol dire pubblicata con una modifica successiva che non è live. Passando sopra il nome trovi la parola, la grafia esatta del linguaggio secondo Zoho e la data di pubblicazione, e il dettaglio la scrive per esteso. Una funzione Deluge non ha questo stato, e dove non c'è un linguaggio da colorare viene mostrata la parola stessa. Lo stato compare anche in tutti e due i report.</li>
     <li><b class="ui">Language</b> restringe l'elenco alle funzioni scritte in un linguaggio - Deluge, Java, Python o Node. Compare solo se l'org ne ha più di uno: un workspace tutto Deluge non vede nessun controllo invece di un menu con una voce sola. I linguaggi offerti sono quelli che l'org usa davvero, quindi uno che Zoho aggiunge domani compare qui da solo. Restringe insieme a <b class="ui">Type</b>, non al suo posto, e la casella di ricerca cerca in quello che i due lasciano passare.</li>
     <li><b class="ui">Sort</b> riordina l'elenco per <b>Name (grouped)</b> - il default - oppure per <b>righe</b>, <b>chiamate API</b>, <b>linguaggio</b> o <b>ultima modifica</b>; il pulsante <b class="ui">↑/↓</b> accanto inverte la direzione. Scegliere un
       ordinamento imposta la direzione che quasi certamente vuoi - A→Z per i nomi, dal più grande per i

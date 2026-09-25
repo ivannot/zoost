@@ -180,10 +180,55 @@ buildTypeChips();
 // writes into the layout after an await.
 async function restorePreviewHeight() {
   let r;
-  try { r = await chrome.storage.local.get('previewH'); } catch (_) { return; }
+  try { r = await chrome.storage.local.get(['previewH', 'previewW']); } catch (_) { return; }
   if (r?.previewH) $('preview').style.height = r.previewH;
+  // The width is only read in the two-column mode, where the stylesheet overrides the height
+  // anyway - so both can be restored without either having to know which mode is showing.
+  if (r?.previewW) $('preview').style.setProperty('--splitw', r.previewW);
 }
 void restorePreviewHeight();
+
+/** The chrome's fold: the reader's choice if they have made one, otherwise the screen's answer.
+ *
+ *  **Stored beats measured, and the measurement only ever decides the first time.** A default that
+ *  re-asserted itself would undo a choice every time the panel is resized, which is the shape of
+ *  defect this panel has already met - a state that has to hold across time is a term in the
+ *  condition, never something re-imposed by a later event.
+ *
+ *  The unset default is folded on a short panel, because the reader it was asked for is the one on
+ *  a laptop who will never find the control: 720px is where the list stops being the majority of
+ *  what is on screen, measured on the render rather than chosen.
+ */
+async function restoreChromeFold() {
+  let r = null;
+  try { r = await chrome.storage.local.get('chromeFolded'); } catch (_) { /* a default is not worth a sentence */ }
+  const folded = r && typeof r.chromeFolded === 'boolean' ? r.chromeFolded : window.innerHeight < 720;
+  applyChromeFold(folded);
+}
+const FOLD_SHOW = 'Show the workspace and tools rows again';
+const FOLD_HIDE = 'Fold the workspace and tools rows away';
+function applyChromeFold(folded) {
+  document.body.classList.toggle('chromefolded', folded);
+  const b = $('chromefold');
+  if (!b) return;
+  // The mark turns with the state - `body.chromefolded` rotates it in the stylesheet - so there is
+  // no glyph to keep in step here. What this must still say is the part a mark cannot: the label a
+  // screen reader gets, and the sentence on hover.
+  b.setAttribute('aria-expanded', folded ? 'false' : 'true');
+  // The name follows the state too: a label reading «fold» on a control that unfolds is worse than
+  // none, because a screen reader says it with confidence. One sentence, one name - the tooltip is
+  // the same words plus what the reader gets out of it.
+  b.setAttribute('aria-label', folded ? FOLD_SHOW : FOLD_HIDE);
+  b.title = folded ? FOLD_SHOW : `${FOLD_HIDE} - the list gets the room`;
+}
+$('chromefold').onclick = () => {
+  const folded = !document.body.classList.contains('chromefolded');
+  applyChromeFold(folded);
+  // Best-effort by declaration, like the split's size beside it: a refusal costs the reader one
+  // click next session and nothing else.
+  void chrome.storage.local.set({ chromeFolded: folded }).catch(() => {});
+};
+void restoreChromeFold();
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_t, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 loadWorkspaces();

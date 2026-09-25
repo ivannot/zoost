@@ -18,7 +18,7 @@
 </div>
 
 <div id="ctx" class="unbound">
-  <span class="dot"></span><span class="who" id="who">Not on a Zoho Analytics tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span>
+  <span class="dot"></span><span class="who" id="who">Not on a Zoho Analytics tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span><button type="button" id="chromefold" class="foldbtn bare" aria-expanded="true" aria-label="Fold the workspace and tools rows away" title="Fold the workspace and tools rows away - the list gets the room"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg></button>
 </div>
 <div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button><button id="mmgo"></button></div></div>
 <div id="status"><i class="spin"></i><span id="statustext">Ready.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button><button id="repdismiss" title="Dismiss this - the report page stays open in its own window">✕</button><button id="expopen" class="bare"></button></div>
@@ -81,6 +81,15 @@
        is the one on screen at startup, so fixing the other one changed nothing. -->
   <!-- tabindex so the list can hold the focus: without it the keyboard cannot address the
        thing the whole panel is about, and arrows only scroll. -->
+  <!-- **The two panels and the bar between them, and nothing else.** `#main` here holds the search
+       and the filter rows as well - the CRM keeps those above it - so turning `#main` into a row
+       laid the filters out as a column beside the list and left half the panel unexplained.
+       Reported, and it was mine: I checked that the four views standing over the list are out of
+       flow and concluded «same as the twin» without enumerating the rest of what is in here.
+       This wrapper is what the CRM's `#main` already is, and the two now correspond. The views
+       stay inside it and keep anchoring to `#main`, which is the positioned ancestor: they cover
+       everything, as they did. -->
+  <div id="split">
   <div id="list" tabindex="0"></div>
 
   <div id="aiview">
@@ -108,6 +117,7 @@
       <button id="codecopy" class="lbtn icon" style="display:none" title="Copy this code to the clipboard" aria-label="Copy code"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg></button>
     </div>
     <div class="dbody" id="dbody"></div>
+  </div>
   </div>
 </div>
 

@@ -118,6 +118,37 @@ six labels do not fit at any size worth reading and it wraps, which is the hones
 deciding from the untightened state is what stops it latching, and what lets it come back when the
 panel is widened again.
 
+**And the panel now uses the width it is given, which the paragraph above does not cover.** That one is
+about the *tab row* - its labels are a user-configurable set, so no breakpoint can know what they need -
+and it was read once as «this panel does not do media queries», which was true and is no longer.
+
+The ceiling is Chrome's and it is a **proportion, not a number**: `kMaxContentsHeightSidePanelFraction
+= 2.f / 3.f` in `browser_view_tabbed_layout_impl.cc` caps a side panel at two thirds of the window's
+client area, and `kSidePanelDefaultContentWidth = 360` is the floor. Measured against a user's own
+screenshots at 65.5% and 66%, which is what closed the question. So on a 1920-wide window this panel
+can be 1280px, and it was drawn for ~400: everything above that went into stretching one column.
+
+What that earns, in both products, word for word:
+
+- **`#split` holds the list, the bar and the detail, and nothing else.** Above `720px` it becomes a row.
+  It exists as its own box because the Analytics `#main` also holds the search and the filter rows -
+  the CRM keeps those above it - and turning `#main` there laid the filters out as a column beside the
+  list. One name on both sides is what stops the two rules from agreeing by luck.
+- **The drag asks `matchMedia`, it does not remember.** Above the breakpoint it moves a vertical edge
+  and writes `--splitw`; below it moves a horizontal one and writes an inline height. The two sizes are
+  stored apart (`previewW`/`previewH`, `detailW`/`detailH`): one would undo the other on every resize.
+  `height:auto !important` in the wide block is not decoration - the inline height outranks the sheet.
+- **The chrome folds.** `body.chromefolded` hides the working folder, the workspace picker and the tools
+  row; the choice is stored in `chromeFolded` and, only when nothing is stored, defaults to folded under
+  720px of height. **Stored beats measured, and the measurement decides only the first time** - a default
+  that re-asserted itself would undo the reader's choice on every resize.
+- **What may never fold**: `#ctx`, which says which org the panel is bound to, and `#mmbar`, which says
+  when the tab and the workspace disagree. A safety statement is not a layout preference.
+- **The control is `position:fixed` in the top right corner**, under every overlay, and that is load-
+  bearing: it lived in `#ctx` first, and folding removes the rows *above* that bar - so the control
+  travelled up by exactly the height it had reclaimed and back down on the next press. Reported as
+  «si sposta in base al click».
+
 **The CRM's tabs come from one registry, and what a role cannot reach is measured, not assumed.**
 `TABS` in `sidepanel.js` is the single list; the segment row is built from it, so adding a type does
 not mean remembering it in the markup, in five `.active` toggles, in five click handlers and in two

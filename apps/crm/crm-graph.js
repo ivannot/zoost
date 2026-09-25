@@ -23,16 +23,40 @@
 $('pvx').onclick = () => { previewLoad++; $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; updateNav(); };
 
 // resizable split
+// **Which way it splits is asked of the page, never remembered.** The same bar divides the list
+// from the detail either way; above the breakpoint the two are columns and the drag moves a
+// vertical edge, below it they are stacked and it moves a horizontal one. Asking `matchMedia`
+// rather than keeping a flag is the rule this panel already lives by: a state that has to hold
+// across time is a term in the condition, not an assignment somebody has to keep in step.
+const wideSplit = () => window.matchMedia('(min-width: 720px)').matches;
 let dragY = false;
 $('resizer').addEventListener('mousedown', () => { dragY = true; document.body.style.userSelect = 'none'; });
 window.addEventListener('mousemove', (e) => {
-  if (!dragY) return; const r = $('main').getBoundingClientRect();
+  if (!dragY) return; const r = $('split').getBoundingClientRect();
+  if (wideSplit()) {
+    // The list keeps 280px whatever happens, which is the minimum the tree rows were drawn for.
+    const w = Math.max(340, Math.min(r.width - 280, r.right - e.clientX));
+    $('preview').style.setProperty('--splitw', w + 'px');
+    return;
+  }
   let h = Math.max(120, Math.min(r.height - 80, r.bottom - e.clientY)); $('preview').style.height = h + 'px';
 });
 // The height is cosmetic and its write is best-effort **by declaration**: a refusal costs the
 // reader a drag next session and nothing else, so it is not worth a sentence - but an unhandled
 // rejection is not a decision, it is an omission, so the intent is written where it happens.
-window.addEventListener('mouseup', () => { if (dragY) { dragY = false; document.body.style.userSelect = ''; void chrome.storage.local.set({ previewH: $('preview').style.height }).catch(() => {}); } });
+window.addEventListener('mouseup', () => {
+  if (!dragY) return;
+  dragY = false; document.body.style.userSelect = '';
+  // Two sizes, remembered separately, because they are two different readers' preferences: how
+  // tall you want the code in a narrow panel says nothing about how wide you want it in a broad
+  // one, and one value overwriting the other would undo a drag every time the panel is resized.
+  // **Written as literals on purpose.** Handing `set()` a variable is tidier and it hid both keys
+  // from the check that holds every stored key against what the privacy page tells the reader -
+  // `chromeFolded` was caught and these two were not, which is a blind spot in a checker created
+  // by the shape of the code it reads. Two lines is a cheap price for being visible.
+  if (wideSplit()) void chrome.storage.local.set({ previewW: $('preview').style.getPropertyValue('--splitw') }).catch(() => {});
+  else void chrome.storage.local.set({ previewH: $('preview').style.height }).catch(() => {});
+});
 
 /** Put each function's id in the newer interface on its index row, keeping what is already known.
  *

@@ -259,6 +259,9 @@
   .sortdir:hover{border-color:var(--sel)}
 
   #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+  /* The two panels and their bar. `#main` also holds the search and the filter rows, so the
+     thing that becomes a row has to be this and not that - see the note in the markup. */
+  #split{flex:1;display:flex;flex-direction:column;min-height:0}
 
   .vtbl{width:100%;border-collapse:collapse;font:11.5px var(--sans)}
   .vtbl th{position:sticky;top:0;z-index:2;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:9.5px;letter-spacing:.3px}
@@ -533,3 +536,54 @@
   #offoverlay #offtwin span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #offoverlay #offtwin:hover{background:var(--twin);color:#fff}
   #offoverlay #offtwin img{display:block;border-radius:3px}
+
+  /* ------------------------------------------------------------------ *
+   * PoC: the split turns into two columns when there is room for it.
+   *
+   * Word for word the CRM twin's block, with this product's two ids - `#list` and `#detail` where
+   * it has `#tree` and `#preview`. The four views that stand over the list (`#navview`, `#aiview`,
+   * `#healthview`, `#overviewview`) are `position:absolute`, so turning the row does not reach them.
+   *
+   * `height:auto !important` is not decoration: the drag writes an inline height, and an inline
+   * style outranks anything here. In this mode the same drag writes `--splitw` instead.
+   * ------------------------------------------------------------------ */
+  @media (min-width: 720px){
+    #split{flex-direction:row}
+    /* The grip says «drag me», so it has to lie along the edge it drags. Horizontal across a
+       vertical divider it is a dash nobody can explain, which is how it was reported. */
+    #resizer::after{left:2.5px;top:50%;width:3px;height:34px;transform:translateY(-50%)}
+    #list{flex:1 1 auto;min-width:280px}
+    #resizer{width:8px;height:auto;flex:none;cursor:col-resize;border-top:0;border-bottom:0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+    #detail{height:auto !important;width:var(--splitw,52%);min-width:340px;box-shadow:-10px 0 24px rgba(0,0,0,.45)}
+  }
+
+  /* ------------------------------------------------------------------ *
+   * The chrome folds away, because on a short screen it is the content that pays for it.
+   *
+   * Reported with a picture of the top of the panel: vertical room is precious and that block could
+   * not adapt and could not go. Measured on the 1280x800 render: it ran to about 330 of the 800
+   * pixels, and the list began at the half-way line.
+   *
+   * **What folds is what is used occasionally**: the working folder, the workspace picker and its
+   * buttons, and the tools row. What never folds is what is used continuously - the tabs, the
+   * per-type actions, the search, the filters - and, above all, the two rows that *state* something:
+   * `#ctx`, which says which workspace this panel is bound to, and `#mmbar`, which says when the tab
+   * and the workspace disagree. A safety statement is not a layout preference, so neither is here.
+   *
+   * The mark rather than a text triangle, at the panel's own stroke: «l'icona e' quasi invisibile»,
+   * and a control nobody can see is a feature nobody has.
+   * ------------------------------------------------------------------ */
+  /* **Pinned, because a toggle that moves when you press it is a toggle you have to find again.**
+     It used to ride in `#ctx`, and folding removes the rows *above* that bar - so the control
+     travelled up by exactly the height it had just reclaimed, and back down on the next press.
+     Reported. The top right corner of the panel is the one place that does not move whatever
+     happens below it, and the z-index keeps it under every overlay, the scrim and the dialogs, so
+     it can never sit on top of something that is asking a question. */
+  .foldbtn{position:fixed;top:5px;right:7px;z-index:5;flex:none;display:flex;align-items:center;color:#8ea0bb;padding:2px 6px;border-radius:6px;cursor:pointer}
+  .foldbtn:hover{color:var(--ink);background:#1b2536}
+  .foldbtn .mk{width:16px;height:16px;stroke-width:2}
+  body.chromefolded .foldbtn .mk{transform:rotate(180deg)}
+  body.chromefolded .wsbar,body.chromefolded .genbar{display:none}
+  /* Folded, the bar that states the binding becomes the top row and would run under the control.
+     Unfolded it does not, which is why the reserve is on the folded state and not always. */
+  body.chromefolded #ctx{padding-right:34px}

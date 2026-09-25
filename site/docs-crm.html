@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.53.0</span> · updated <span class="dd" data-stamp="updated">21 September 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.53.0</span> · updated <span class="dd" data-stamp="updated">25 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -236,7 +236,16 @@ git commit -m "baseline"</code></pre>
   <p>The mode segments switch what the tree lists: <b class="ui">Functions</b>, <b class="ui">Modules</b>,
     <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Actions</b>,
     <b class="ui">Connections</b>. Select an item and
-    the preview opens below.</p>
+    the preview opens - <b>below the list, or beside it when the panel is wide enough</b>. Chrome lets
+    you drag a side panel out to two thirds of the window; give it that room and the list and the
+    preview sit side by side, which is where a long function stops being read through a slot. Drag the
+    bar between them to resize, and the two sizes are remembered apart: how tall you want the code in a
+    narrow panel is not how wide you want it in a broad one.</p>
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, at the <b>top right of the panel</b>, does what it says: the working folder,
+    the workspace picker and the tools row go, the list gets the room, and pressing it again brings them
+    back. Your choice is remembered; on a short screen it starts folded, because that is where the room is
+    worth most. The two rows that <em>state</em> something - which org the tab is on, and the warning when
+    the tab and the workspace disagree - never fold: those are not decoration.</p>
   <p>Two controls in that row are easy to miss. <b class="ui">Name: display</b> toggles between the name
     Zoho CRM shows you and the API name the code uses - the same function, told two ways, and you need
     the second when writing Deluge. <b class="ui">Functions page ↗</b> opens Zoho CRM's own function list
@@ -281,7 +290,7 @@ git commit -m "baseline"</code></pre>
       not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not mine.
       Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
     <li><b class="ui">Runtime in Zoho ↻</b>, in a function's <b class="ui">Details</b>, asks Zoho what that one function did lately. The executions come over the window you pick beside the button - <b>Last 24 hours</b>, <b>Today</b>, <b>Yesterday</b>, <b>Last 30 days</b>, or <b>Dates…</b> for any span between two days, picked from a calendar that will not offer an end before the start, nor a day outside the thirty Zoho keeps - and the table, headed by the window or by the dates themselves, shows when each ran, from what, whether it worked and how many milliseconds it took. Below it is the revision history, which Zoho answers whole rather than by period, with Zoho's own note for each. It is read at the moment you press it and is <b>not part of the mirror</b>: it is not stored, it is not in the reports, and it is one request per function, which is why it is a button rather than something a pull does for three hundred functions. A compiled function has no revision history and the box says so rather than showing an empty table.</li>
-    <li><b class="ui">Live</b> / <b class="ui">Draft</b> on a compiled function's row is what Zoho is actually running. Java, Python and Node functions are written, saved and then <em>published</em>, so the source in the mirror can be code the org has never run - and nothing on disk tells the two apart. <b>Draft</b> means never published, <b>Draft +</b> means published with a later edit that is not live, and the detail spells out the publication date. A Deluge function has no such state and the column stays empty for it. Both reports carry it too.</li>
+    <li><b class="ui">Live</b> / <b class="ui">Draft</b> on a compiled function's row is what Zoho is actually running, and it is carried by the <b>colour of the language name</b> rather than by a column of its own: the list has one cell where it had two, because on a narrow panel a reserved column costs its width on every row whether or not it has anything in it. <b>Amber</b> means something is not published, <b>green</b> means live and in step. Java, Python and Node functions are written, saved and then <em>published</em>, so the source in the mirror can be code the org has never run - and nothing on disk tells the two apart. Amber with no mark means never published; amber with a trailing <b>+</b> means published with a later edit that is not live. Hovering the name gives you the word, Zoho's own spelling of the language and the publication date, and the detail spells it out. A Deluge function has no such state, and where there is no language to colour the word itself is shown. Both reports carry it too.</li>
     <li><b class="ui">Language</b> narrows the list to functions written in one language - Deluge, Java, Python or Node. It appears only when the org has more than one: a workspace that is all Deluge gets no control rather than a menu with one entry in it. The languages offered are the ones this org actually uses, so one Zoho adds later turns up here on its own. It narrows alongside <b class="ui">Type</b> rather than instead of it, and the search box searches what the two of them leave.</li>
     <li><b class="ui">Sort</b> reorders the list by <b>Name (grouped)</b> - the default - or by <b>lines</b>, <b>API calls</b>, <b>language</b> or <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
       sets the direction you almost certainly want - A→Z for names, biggest first for numbers - and you can

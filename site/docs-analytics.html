@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.34.0</span> · updated <span class="dd" data-stamp="updated">21 September 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.34.0</span> · updated <span class="dd" data-stamp="updated">25 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -239,7 +239,8 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </figure>
 
   <h2 id="structure">6. Structure and foreign keys</h2>
-  <p>Click any row to open the detail pane. Drag the bar above it to resize; the height is remembered.</p>
+  <p>Click any row to open the detail pane. <b>Where it opens depends on how much room the panel has.</b> Give it enough width - Chrome lets you drag a side panel out to two thirds of the window - and the list and the detail sit <b>side by side</b>; narrower, the detail opens underneath as before. Drag the bar between them to resize, and the two sizes are remembered apart: how tall you want the detail in a narrow panel is not how wide you want it in a broad one.</p>
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, at the <b>top right of the panel</b>, does what it says: the working folder, the workspace picker and the tools row go, the list gets the room, and pressing it again brings them back. Your choice is remembered; on a short screen it starts folded. The two rows that <em>state</em> something - which workspace the tab is on, and the warning when the tab and the workspace disagree - never fold.</p>
   <p><b class="ui">Columns</b> shows every column with its Zoho data type. Tables and query tables carry
     their own; a report or a pivot carries none, so Zoost follows what it is built on and shows
     <em>that</em> structure - saying whose it is, rather than passing it off as the report's.</p>

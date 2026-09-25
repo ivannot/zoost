@@ -3503,20 +3503,67 @@ document.addEventListener('click', (e) => {
 }, true);
 
 // resizable split - the CRM's, down to the stored height
+// **Which way it splits is asked of the page, never remembered.** Word for word the twin's rule:
+// above the breakpoint the list and the detail are columns and this bar moves a vertical edge,
+// below it they are stacked and it moves a horizontal one.
+const wideSplit = () => window.matchMedia('(min-width: 720px)').matches;
 let dragY = false;
 $('resizer').addEventListener('mousedown', () => { dragY = true; document.body.style.userSelect = 'none'; });
 window.addEventListener('mousemove', (e) => {
   if (!dragY) return;
-  const r = $('main').getBoundingClientRect();
+  const r = $('split').getBoundingClientRect();
+  if (wideSplit()) {
+    const w = Math.max(340, Math.min(r.width - 280, r.right - e.clientX));
+    $('detail').style.setProperty('--splitw', w + 'px');
+    return;
+  }
   const h = Math.max(120, Math.min(r.height - 80, r.bottom - e.clientY));
   $('detail').style.height = h + 'px';
 });
 window.addEventListener('mouseup', () => {
   if (!dragY) return;
   dragY = false; document.body.style.userSelect = '';
-  // Cosmetic, and best-effort by declaration - see the CRM twin's note on the same write.
-  void chrome.storage.local.set({ detailH: $('detail').style.height }).catch(() => {});
+  // Cosmetic, and best-effort by declaration - see the CRM twin's note on the same write. Two
+  // sizes, kept apart: how tall you want the detail in a narrow panel says nothing about how wide
+  // you want it in a broad one, and one would undo the other on every resize.
+  // Literals, for the reason written in the twin: a variable here hides the key from the check
+  // that holds every stored key against what the privacy page tells the reader.
+  if (wideSplit()) void chrome.storage.local.set({ detailW: $('detail').style.getPropertyValue('--splitw') }).catch(() => {});
+  else void chrome.storage.local.set({ detailH: $('detail').style.height }).catch(() => {});
 });
+
+/** The chrome's fold: the reader's choice if they have made one, otherwise the screen's answer.
+ *
+ *  Word for word the CRM twin's, and for the same reason: **stored beats measured, and the
+ *  measurement only ever decides the first time.** A default that re-asserted itself would undo a
+ *  choice every time the panel is resized - a state that has to hold across time is a term in the
+ *  condition, never something a later event re-imposes.
+ */
+async function restoreChromeFold() {
+  let r = null;
+  try { r = await chrome.storage.local.get('chromeFolded'); } catch (_) { /* a default is not worth a sentence */ }
+  const folded = r && typeof r.chromeFolded === 'boolean' ? r.chromeFolded : window.innerHeight < 720;
+  applyChromeFold(folded);
+}
+const FOLD_SHOW = 'Show the workspace and tools rows again';
+const FOLD_HIDE = 'Fold the workspace and tools rows away';
+function applyChromeFold(folded) {
+  document.body.classList.toggle('chromefolded', folded);
+  const b = $('chromefold');
+  if (!b) return;
+  b.setAttribute('aria-expanded', folded ? 'false' : 'true');
+  // The name follows the state too: a label reading «fold» on a control that unfolds is worse than
+  // none, because a screen reader says it with confidence. One sentence, one name - the tooltip is
+  // the same words plus what the reader gets out of it.
+  b.setAttribute('aria-label', folded ? FOLD_SHOW : FOLD_HIDE);
+  b.title = folded ? FOLD_SHOW : `${FOLD_HIDE} - the list gets the room`;
+}
+$('chromefold').onclick = () => {
+  const folded = !document.body.classList.contains('chromefolded');
+  applyChromeFold(folded);
+  void chrome.storage.local.set({ chromeFolded: folded }).catch(() => {});
+};
+void restoreChromeFold();
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
@@ -3528,7 +3575,13 @@ window.addEventListener('focus', () => refreshContext());
  * four reads, each writing into the panel. A declaration, called on the next line.
  */
 async function boot() {
-  try { const r = await chrome.storage.local.get('detailH'); if (r && r.detailH) $('detail').style.height = r.detailH; } catch (_) {}
+  try {
+    const r = await chrome.storage.local.get(['detailH', 'detailW']);
+    if (r && r.detailH) $('detail').style.height = r.detailH;
+    // Only read in the two-column mode, where the stylesheet overrides the height anyway - so both
+    // are restored without either having to know which mode is showing.
+    if (r && r.detailW) $('detail').style.setProperty('--splitw', r.detailW);
+  } catch (_) {}
   await loadScope(); await loadZohoDc(); await restoreRoot(); await refreshContext();
 }
 void boot();
