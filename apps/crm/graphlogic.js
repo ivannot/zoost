@@ -74,7 +74,11 @@ function hueFor(k) {
 }
 
 function applyFilter() {
-  render();
+  // `renderGraph`: the Analytics diagram renamed its renderer when it joined the panel's
+  // document, where `render` already belonged to the panel's own list. This file is the twin of
+  // the CRM's, which kept the name - so the rename had to reach here and did not, and a category
+  // chip re-drew the panel's table instead of the diagram's list.
+  renderGraph();
   statRefresh();
   if (curView === 'rel') relRender();
   // Not just a repaint: erLayout re-runs the force settle for the set that is left, so the diagram

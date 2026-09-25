@@ -7,7 +7,11 @@
  */
 async function handOver() {
   try {
-    await chrome.runtime.sendMessage({ zoost: 'open', view: 'settings' });
+    // **The answer is read, not assumed.** It was awaited and thrown away, so a worker that could
+    // not open the window still got this tab closed over it and the sentence written for exactly
+    // that case was unreachable. `{ok:false}` is the worker saying so in as many words.
+    const r = await chrome.runtime.sendMessage({ zoost: 'open', view: 'settings' });
+    if (r && r.ok === false) throw new Error(r.error || 'the window would not open');
     window.close();
     // Still here a moment later means the close was refused, which is a thing Chrome does and not
     // an error: say what happened instead of leaving «Opening…» on screen for ever.

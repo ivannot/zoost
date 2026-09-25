@@ -523,9 +523,15 @@ let layLoadFailed = 'never';
 let scopeLoadFailed = 'never';
 function scopeFormToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('cfgsc_' + k); if (e) e.checked = !!scope[k]; });
-  $('sc_code').disabled = !scope.functions;
-  $('sc_layouts').disabled = !scope.modules;
-  $('sc_relations').disabled = !scope.modules;
+  // **`cfgsc_`, because these are this form's boxes.** They were `sc_`, which is the *export
+  // dialog's* set - the rename reached the loop above and not the three written out by hand, so
+  // this form disabled three controls in the panel and left its own dependent boxes enabled. A
+  // reader who unticked Functions could then tick «Deluge source code» and watch it bounce off
+  // with no explanation: exactly the silent refusal `export-scope.js` records as already fixed
+  // once, reintroduced in the twin.
+  $('cfgsc_code').disabled = !scope.functions;
+  $('cfgsc_layouts').disabled = !scope.modules;
+  $('cfgsc_relations').disabled = !scope.modules;
 }
 function scopeFormFromUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('cfgsc_' + k); if (e) scope[k] = !!e.checked; });
@@ -1431,8 +1437,13 @@ $('ai_passchange').onclick = () => { aiPassChanging = true; syncLockRow(); focus
  */
 async function openSettingsView(where) {
   const view = document.getElementById('settingsview');
+  // **Already open means already painted.** Asking again used to re-run `init()`, which reads every
+  // section back out of storage and then rebases the dirty marks - so a reader who had typed an API
+  // key and not saved it lost it, and lost the indicator that would have said so, to one click on
+  // Chrome's «Options» entry. Opening what is open is a request to *look* at it, never to reload it.
+  const already = !!(view && view.classList.contains('show'));
   if (view) view.classList.add('show');
-  await init();
+  if (!already) await init();
   if (where) {
     const sec = document.getElementById(String(where).replace(/^#/, ''));
     if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });

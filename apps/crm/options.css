@@ -14,8 +14,15 @@
      the `options_page` its own menu points at, which opens this window on this view.
      Its own palette on the container, the way the diagram does it: custom properties cascade, so
      re-declaring the tokens here dresses the whole subtree without a rule of the panel's moving. */
+  /* **82: above the empty-state overlay and the footer, below the scrim and the dialogs.**
+     It was 9, which is the band the panel's own views use - and those sit inside the panel's
+     layout, while this covers the whole window. `#offoverlay` is 70 and `#pfoot` is 80, so a
+     reader with no workspace open pressed Settings and the form painted underneath the very
+     overlay telling them to pick a folder: the control was dead for exactly the person who
+     needed it. Below `.scrim` (85) and `.dlg` (90) on purpose, so a dialog opened from in
+     here still appears over it. */
   #settingsview{
-    display:none; position:fixed; inset:0; z-index:9; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
+    display:none; position:fixed; inset:0; z-index:82; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#3b82f6; --sel-soft:#16263f;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
@@ -68,7 +75,9 @@
   #settingsview .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
   #settingsview .prov h3 button{margin-left:auto;font-size:11px;padding:2px 8px;text-transform:none;letter-spacing:0}
   #settingsview .prov.on{border-color:#3f6ea8;background:rgba(47,111,237,.06)}
-  #settingsview .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
+  /* `color` is here because the panel's own `.ck` carries one and this form's did not, so every
+     checkbox label computed to the panel's grey instead of the ink. Measured in a browser. */
+  #settingsview .ck{color:var(--ink);display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
   #settingsview .ck.ind{padding-left:22px}
   #settingsview .ck input{margin-top:3px;accent-color:var(--sel)}
   #settingsview .ck em{font-style:normal;color:#f0a44a}

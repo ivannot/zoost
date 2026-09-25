@@ -477,7 +477,14 @@ function isZohoUrl(u) {
  */
 async function openExternal(url) {
   try {
-    const found = await chrome.tabs.query({ url });
+    // **A match pattern needs a path, and a bare host is a link we ship.** `tabs.query({url})` takes
+    // a *pattern*, and `https://zoost.it` has no `/` after the host - so Chrome refuses to parse it,
+    // the throw lands in the last-resort catch below, and the About dialog's own link opened a whole
+    // browser window: the one outcome this function exists to prevent. Normalised, and the lookup
+    // is allowed to fail on its own without taking the rest of the function with it - «is it
+    // already open» is a courtesy, and not knowing the answer is not a reason to open a window.
+    let found = [];
+    try { found = await chrome.tabs.query({ url: new URL(url).href }); } catch (_) { found = []; }
     const t = found && found[0];
     if (t) {
       await chrome.tabs.update(t.id, { active: true });

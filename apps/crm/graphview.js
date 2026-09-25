@@ -176,6 +176,11 @@ async function applyGraph(data) {
   // other's payload. Consumed on read - a window owns its graph from here on, and a stale slot must
   // not outlive it. Without a token (the render harness opens the page bare) the plain key answers.
   DATA = data;
+  // Back to the Explorer before anything draws. `resetGraphState()` puts `curView` there and only
+  // `showView()` moves the `.on` classes, so without this the diagram reopened on the previous
+  // graph's ER canvas - boxes and all - with nothing redrawing because the state said Explorer.
+  // After `DATA` and not before it: switching view redraws, and a redraw reads the graph.
+  showView('explorer');
   if (!DATA) { $('gvmain').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   // The four numbers are written by `graphStat()`, which replaces the whole line and runs twice
@@ -224,7 +229,7 @@ async function applyGraph(data) {
   // The box searches whatever this window is drawing, and it stopped being only functions the day
   // workflows, schedules and connections became nodes.
   $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
-  buildChips(); render(); initPositions(); wireSubject(); graphStat(); updateScopeUI();
+  buildChips(); renderGraph(); initPositions(); wireSubject(); graphStat(); updateScopeUI();
   // Guarded here since this window was written; what it did not do is say anything when the guard
   // fired, so an unanswerable request looked exactly like an ordinary whole-graph view.
   if (DATA.focus && !N[DATA.focus]) noFocusHere(DATA.focus);
@@ -399,7 +404,7 @@ function pass(n, q) {
 // The chips choose what the window is looking at, so all four views follow them. The search box
 // narrows the *list* only: hiding the diagram down to one node as you type would be a different
 // feature wearing the same control.
-function render() {
+function renderGraph() {
   const q = $('q').value.trim().toLowerCase(); const listEl = $('gvlist'); listEl.innerHTML = '';
   // An empty list has three reasons and they are not the same advice. Nothing here is ever silent
   // about which one it is - the rule this project applies to every empty state.
@@ -521,7 +526,7 @@ function fieldsTableHtml(n) {
 function select(id, nopush) {
   if (sel && !nopush) hist.push(sel);
   if (sel !== id) layFilter = null;   // layout filter is per-module
-  sel = id; const n = N[id]; render(); updateProjectableTabs();
+  sel = id; const n = N[id]; renderGraph(); updateProjectableTabs();
   const schema = DATA.kind === 'schema';
   const crumb = hist.length ? `<a id="back">\u25c2 back</a>  \u00b7  ${hist.slice(-4).map((h) => `<a data-id="${escA(h)}">${esc(label(N[h]))}</a>`).join(' \u2039 ')}` : '';
   let assoc = '';
@@ -576,9 +581,9 @@ function select(id, nopush) {
   if (id !== curFocus) setFocus(id);
 
 }
-$('q').addEventListener('input', () => { render(); updateQx(); });
+$('q').addEventListener('input', () => { renderGraph(); updateQx(); });
 function updateQx() { const x = $('qx'); if (x) x.classList.toggle('on', !!$('q').value); }
-$('qx').onclick = () => { $('q').value = ''; render(); updateQx(); $('q').focus(); };
+$('qx').onclick = () => { $('q').value = ''; renderGraph(); updateQx(); $('q').focus(); };
 // `/` focuses the search; Escape dismisses the picked relation card. Both live in one listener
 // because they answer the same event, and the panel next door has just had to undo the opposite
 // shape - several handlers on one key, none of them knowing the order, so which one wins depends on
@@ -610,7 +615,12 @@ document.addEventListener('keydown', (e) => {
       return;
     }
   }
-  if (erSelEdge) { e.preventDefault(); erClearPick(); }
+  if (erSelEdge) { e.preventDefault(); erClearPick(); return; }
+  // Nothing of the diagram's own left to close, so Escape leaves the diagram - the last step, never
+  // the first. The panel's `escapeCloses()` declines while this view is open precisely so that this
+  // order is the one the reader gets.
+  const view = document.getElementById('graphview');
+  if (view && view.classList.contains('show')) { e.preventDefault(); closeGraphView(); }
 });
 
 // ---------------- Relations (relation-first catalogue) ----------------
@@ -766,7 +776,6 @@ function relRender() {
  */
 let _graphWired = false;
 function buildRelChips() {
-  if (_graphWired) return;    // see `_graphWired`
   const box = $('relchips'); if (!box) return;
   const calls = DATA.kind !== 'schema';
   if (calls) {
@@ -786,7 +795,10 @@ function buildRelChips() {
     c.onclick = () => { relFilter = k; [...box.children].forEach((x) => x.setAttribute('aria-pressed', x === c)); relRender(); };
     box.appendChild(c);
   });
-  $('relq').addEventListener('input', () => { relQ = $('relq').value.trim(); relRender(); });
+  // The one listener in here, and the only thing that must not be attached twice. Everything
+  // above it describes *this* graph - the facets, the placeholder, the hint - and guarding the
+  // whole function left the Relations tab describing the previous subject.
+  if (!_graphWired) $('relq').addEventListener('input', () => { relQ = $('relq').value.trim(); relRender(); });
 }
 
 // ---------------- Which of the two drawings is on screen ----------------
@@ -825,7 +837,12 @@ async function switchGraphKind(e, here) {
     }
 }
 function wireSubject() {
-  if (_graphWired) return;    // see `_graphWired`
+  // **No guard here, and there never should have been one.** It attaches no listener - the marks
+  // are `setAttribute` and the handler is an `onclick` assignment, both idempotent - while `here`
+  // is the *current* graph's kind. Skipped on the second open, the strip kept the first graph's
+  // answer: `switchGraphKind` then returned early on the very tab the reader was asking for, and
+  // the diagram could not be switched back. The listeners the guard was aimed at are in
+  // `wireAsideFold`, the function below this one.
   const box = document.getElementById('subj');
   if (!box) return;
   const here = DATA.kind === 'schema' ? 'schema' : 'calls';
@@ -882,7 +899,10 @@ function wireAsideFold() {
     if (!down.moved && Math.abs(dx) < DRAG) return;
     down.moved = true;
     document.documentElement.style.setProperty('--aside-w',
-      asideWidth(down.w + dx, document.querySelector('.wrap').getBoundingClientRect().width) + 'px');
+      // `#graphview .wrap`: there are two `.wrap` elements in this document since the settings
+      // joined it, and theirs comes first - measured at 0 while that view is display:none, which
+      // removes the upper bound and lets the list be dragged over the detail pane.
+      asideWidth(down.w + dx, document.querySelector('#graphview .wrap').getBoundingClientRect().width) + 'px');
   });
   btn.addEventListener('pointerup', (e) => {
     const wasDrag = down && down.moved;
@@ -1373,9 +1393,8 @@ function setFocus(id) {
 // it; it belongs with the other diagram controls, since that is what it changes.
 $('gvnametoggle').onclick = () => {
   gvNameMode = gvNameMode === 'display' ? 'internal' : 'display';
-  $('gvnametoggle').textContent = 'Name: ' + gvNameMode;
-  $('gvnametoggle').classList.toggle('on', gvNameMode === 'internal');
-  render(); if (sel) select(sel, true);
+  paintNameLabel();
+  renderGraph(); if (sel) select(sel, true);
   if (curView === 'er') erResize(); else if (curView === 'rel') relRender();
 };
 
@@ -2626,7 +2645,7 @@ const erEmphLabel = () => (erEmph === 'relations' ? (DATA.kind === 'schema' ? 'r
                                                  : (DATA.kind === 'schema' ? 'modules' : 'calls'));
 $('erEmph').onclick = () => {
   erEmph = erEmph === 'relations' ? 'modules' : 'relations';
-  $('erEmph').textContent = GMSG.emphasis + erEmphLabel();
+  paintEmphLabel();
   $('erEmph').classList.toggle('on', erEmph === 'relations');
   $('erAll').disabled = erEmph === 'relations';
   erP = Object.assign({}, ER_PRESET[erEmph === 'relations' ? 'relations' : erBoxPreset()]);   // each mode has its own sensible starting point
@@ -2640,7 +2659,7 @@ $('v-er').addEventListener('click', (e) => {
   if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erfile') || t.closest('#erpick') || t.closest('.erbox'))) return;
   erClearPick();
 });
-$('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erResize(); };
+$('erAll').onclick = () => { erAll = !erAll; paintFieldsLabel(); erResize(); };
 $('erRelay').onclick = () => { erHeld = {}; erRaised = new Map(); erRaiseN = 0; erArranged = false; erLaidOut = false; erShowMaybeHeavy(); };
 $('erFit2').onclick = () => erFit();
 $('erPdf').onclick = () => window.print();
@@ -2693,10 +2712,19 @@ let _prevDocTitle = null;
 // keep the room they were leaving for circles nobody can see. Redrawn full length for the print and
 // redrawn again after it, which is cheap next to what printing itself costs.
 window.addEventListener('beforeprint', () => {
+  // **Only while the diagram is on screen.** This was registered at load and had no guard, so
+  // printing anything else in this window called `pdfTitle()`, whose first line reads
+  // `DATA.workspace` - and `DATA` is null whenever the diagram is closed. An uncaught TypeError in
+  // the console, and the setback below it never ran. Its sibling handler has always had this test.
+  if (curView !== 'er' || !DATA) return;
+  document.body.classList.add('printing-diagram');   // the sheet is the drawing, not the panel
   _prevDocTitle = document.title; document.title = pdfTitle();
   erPrintFull = true; erSizeArrows();
 });
 window.addEventListener('afterprint', () => {
+  // Unconditional, unlike its `beforeprint` twin: a print that was set up is undone whatever the
+  // state has become in between, and a class left on `body` would blank the panel on the next one.
+  document.body.classList.remove('printing-diagram');
   if (_prevDocTitle != null) { document.title = _prevDocTitle; _prevDocTitle = null; }
   erPrintFull = false; erSizeArrows();
 });
@@ -2852,6 +2880,31 @@ function resetGraphState() {
   erPinOnly = null;
 }
 
+/** Put every label and every field in the diagram's chrome back in step with the state.
+ *
+ *  **Because the state is reset on each open and the DOM is not.** `resetGraphState()` derives what
+ *  it resets from the declarations; the toolbar's words are written by the click handlers that
+ *  change them, and the two search boxes hold whatever was typed - so a reopened diagram read
+ *  «Emphasis: relations» over `erEmph === 'modules'`, «Name: internal» over a display-name drawing,
+ *  and filtered itself by the previous session's search text without showing it in the box.
+ */
+/** One writer per label, because two are two copies of a sentence that can drift - and a check in
+ *  the suite says so. Each is called from the control that changes the state and from the resync
+ *  that runs when a diagram is opened over a previous one. */
+function paintNameLabel() {
+  const nt = $('gvnametoggle');
+  if (!nt) return;
+  nt.textContent = 'Name: ' + gvNameMode;
+  nt.classList.toggle('on', gvNameMode === 'internal');
+}
+function paintFieldsLabel() { const al = $('erAll'); if (al) al.textContent = 'Fields: ' + (erAll ? 'all' : 'key'); }
+function paintEmphLabel() { const em = $('erEmph'); if (em) em.textContent = GMSG.emphasis + erEmphLabel(); }
+function syncGraphChrome() {
+  erParamsToUI();
+  paintEmphLabel(); paintFieldsLabel(); paintNameLabel();
+  for (const id of ['q', 'relq']) { const f = $(id); if (f) f.value = ''; }
+}
+
 /** Open the diagram on this graph, as a view of the panel.
  *
  *  The only way in. It used to be a URL: the panel wrote the payload into `chrome.storage.session`
@@ -2865,6 +2918,7 @@ async function openGraphView(data) {
   const view = document.getElementById('graphview');
   if (view) view.classList.add('show');
   await applyGraph(data);
+  syncGraphChrome();
   _graphWired = true;          // everything wiring-shaped has now run exactly once
 }
 /** Close it, and leave nothing of this graph behind - the reader may open another. */

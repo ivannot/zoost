@@ -170,7 +170,14 @@ function isZohoUrl(u) {
  */
 async function openExternal(url) {
   try {
-    const found = await chrome.tabs.query({ url });
+    // **A match pattern needs a path, and a bare host is a link we ship.** `tabs.query({url})` takes
+    // a *pattern*, and `https://zoost.it` has no `/` after the host - so Chrome refuses to parse it,
+    // the throw lands in the last-resort catch below, and the About dialog's own link opened a whole
+    // browser window: the one outcome this function exists to prevent. Normalised, and the lookup
+    // is allowed to fail on its own without taking the rest of the function with it - «is it
+    // already open» is a courtesy, and not knowing the answer is not a reason to open a window.
+    let found = [];
+    try { found = await chrome.tabs.query({ url: new URL(url).href }); } catch (_) { found = []; }
     const t = found && found[0];
     if (t) {
       await chrome.tabs.update(t.id, { active: true });
@@ -3600,6 +3607,19 @@ $('codecopy').onclick = () => copyCode((document.querySelector('pre.sql') || {})
  *  pass with the listener deleted when it was written loosely.
  */
 function escapeCloses() {
+  // **The two full-window views come first, because they paint over everything below.** They were
+  // not in this list at all: with the assistant open and the settings opened from its gear, Escape
+  // reached `#aiview` and closed the assistant *underneath* the settings - the conversation gone,
+  // and the keypress reading as «Escape did nothing». The order here is read from the stylesheet,
+  // and at 82 these two are above every entry below them.
+  // The settings own the window while they are open, and they have no Escape of their own.
+  if ($('settingsview') && $('settingsview').classList.contains('show')) { closeSettingsView(); return true; }
+  // **The diagram owns Escape while it is open, and this must not reach past it.** Its own handler
+  // closes the Layout or File menu first, then the arc it has picked, and closes the view only when
+  // there is nothing left - which is the order a reader expects. Closing the view from here
+  // destroyed an arrangement of eighty hand-placed boxes to dismiss a menu; declining lets the
+  // diagram decide, and declining also stops this closing a panel view *underneath* the diagram.
+  if ($('graphview') && $('graphview').classList.contains('show')) return false;
   if ($('expscope').classList.contains('on')) { closeScope(false); return true; }
   if ($('aboutdlg').classList.contains('on')) { closeAbout(); return true; }
   if ($('aiview').classList.contains('show')) { closeAI(); return true; }
@@ -3844,7 +3864,14 @@ async function showDetailTab(b) {
 async function regrantOnAnyClick(e) {
   if (!root || rootGranted) return;
   const t = e.target;
-  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
+  // **And the two full-window views.** This re-grants the stored folder from any click, which is
+  // right in the panel and wrong inside the settings: that form has its own «Choose folder…», and
+  // a capture-phase `requestPermission()` both raises a prompt nobody asked for and spends the user
+  // activation the picker in the bubble phase then needs - so the reader's click on «Choose folder…»
+  // ends in a toast quoting a DOMException. The diagram is here for the simpler reason: a click on
+  // a box in a drawing is not a request to re-grant anything.
+  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview')
+                    || t.closest('#offoverlay') || t.closest('#settingsview') || t.closest('#graphview'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }
 document.addEventListener('click', regrantOnAnyClick, true);
@@ -3855,6 +3882,11 @@ document.addEventListener('click', regrantOnAnyClick, true);
 document.addEventListener('click', (e) => {
   const t = e.target;
   if (t && t.closest && t.closest('#expopen')) return;
+  // **And not from inside a full-window view**, which is where its sibling handler two files away
+  // already draws the line. «Any click puts the offer away» is about clicks in the panel; a click
+  // on a box in a diagram or a field in the settings is not the reader turning away from the file
+  // they just exported, and the offer is not even on screen to be turned away from.
+  if (t && t.closest && (t.closest('#graphview') || t.closest('#settingsview'))) return;
   if (!$('expopen').classList.contains('on')) return;
   if ($('status').className) status('', '');
   offerExportOpen(null);
@@ -3993,9 +4025,12 @@ $('chromefold').onclick = () => {
  */
 /** The right-hand half of the screen, which is where this window starts life. */
 function halfTheScreen() {
-  const half = Math.round(screen.availWidth / 2);
-  return { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
-           width: half, height: Math.round(screen.availHeight) };
+  // Never narrower than the floor below, or the first run places a window that `applySizeFloor`
+  // snaps wider 180ms later - a jump on the very first open, ending past the screen edge.
+  const half = Math.max(WIN_MIN_W, Math.round(screen.availWidth / 2));
+  return { left: Math.round(screen.availLeft + Math.min(half, Math.max(0, screen.availWidth - half))),
+           top: Math.round(screen.availTop),
+           width: half, height: Math.max(WIN_MIN_H, Math.round(screen.availHeight)) };
 }
 /** Is enough of this window on a screen to grab hold of? A window is dragged by its top edge, so
  *  the test is about that edge and not about area: 120x40 of it inside the work area is a title bar

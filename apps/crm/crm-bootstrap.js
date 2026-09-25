@@ -17,6 +17,11 @@ document.addEventListener('click', regrantOnAnyClick, true);
 document.addEventListener('click', (e) => {
   const t = e.target;
   if (t && t.closest && t.closest('#expopen')) return;
+  // **And not from inside a full-window view**, which is where its sibling handler two files away
+  // already draws the line. «Any click puts the offer away» is about clicks in the panel; a click
+  // on a box in a diagram or a field in the settings is not the reader turning away from the file
+  // they just exported, and the offer is not even on screen to be turned away from.
+  if (t && t.closest && (t.closest('#graphview') || t.closest('#settingsview'))) return;
   if (!$('expopen').classList.contains('on')) return;
   if ($('status').className) setStatus('', '');
   offerExportOpen(null);
@@ -260,9 +265,12 @@ $('chromefold').onclick = () => {
  */
 /** The right-hand half of the screen, which is where this window starts life. */
 function halfTheScreen() {
-  const half = Math.round(screen.availWidth / 2);
-  return { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
-           width: half, height: Math.round(screen.availHeight) };
+  // Never narrower than the floor below, or the first run places a window that `applySizeFloor`
+  // snaps wider 180ms later - a jump on the very first open, ending past the screen edge.
+  const half = Math.max(WIN_MIN_W, Math.round(screen.availWidth / 2));
+  return { left: Math.round(screen.availLeft + Math.min(half, Math.max(0, screen.availWidth - half))),
+           top: Math.round(screen.availTop),
+           width: half, height: Math.max(WIN_MIN_H, Math.round(screen.availHeight)) };
 }
 /** Is enough of this window on a screen to grab hold of? A window is dragged by its top edge, so
  *  the test is about that edge and not about area: 120x40 of it inside the work area is a title bar

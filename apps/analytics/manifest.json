@@ -93,5 +93,14 @@
       "run_at": "document_start",
       "world": "ISOLATED"
     }
-  ]
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+A",
+        "mac": "MacCtrl+Shift+A"
+      },
+      "description": "Open Zoost - workbench for Zoho Analytics"
+    }
+  }
 }

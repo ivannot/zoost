@@ -24,8 +24,20 @@ let opening = null;
  *  reflex of somebody who thinks the first did nothing. The loser of the race joins the winner
  *  instead of starting again, so the icon still answers every click. */
 function openWindow() {
-  if (!opening) opening = raiseOrOpen().then(clearOpenFailure, reportOpenFailure).finally(() => { opening = null; });
+  // **It resolves to whether a window had to be built, and it rejects when none could be.**
+  // `reportOpenFailure` used to swallow the error, so every caller was told the window had opened -
+  // including the hand-over from Chrome's Options entry, which then closed its own tab over a window
+  // that was not there and left the sentence written for that case unreachable.
+  if (!opening) opening = openOnce().finally(() => { opening = null; });
   return opening;
+}
+/** Named declarations, not arrows in a `.then()`: `tools/asynccheck.py` reads declarations, and a
+ *  scope it cannot enter is a scope nobody is checking for a global written after an await. */
+async function openOnce() {
+  let built;
+  try { built = await raiseOrOpen(); } catch (e) { await reportOpenFailure(e); throw e; }
+  await clearOpenFailure();
+  return built;
 }
 async function raiseOrOpen() {
   const win = await existingWindow();
@@ -51,12 +63,19 @@ async function raiseOrOpen() {
   // Written down because the wrong reason was more confident than the right one, and the only
   // thing that separated them was asking the browser instead of the search results.
   const bounds = await rememberedBounds();
-  const plain = { url: 'workbench.html', type: 'popup', focused: true, width: 1200, height: 900 };
+  const bare = { url: 'workbench.html', type: 'popup', focused: true };
+  const plain = { ...bare, width: 1200, height: 900 };
   // A maximised window is re-created maximised and not at the rectangle maximising gave it: Chrome
   // refuses `state` together with a rectangle, and the two are alternatives rather than a pair.
+  //
+  // **Which is why this branch spreads `bare` and not `plain`.** It spread `plain`, so it handed
+  // Chrome `state:'maximized'` *and* the 1200x900 default in the same call - the exact pair the
+  // sentence above forbids - and `windows.create` rejected every single time. The fallback then
+  // opened a plain window and deleted the remembered place as collateral, so maximising once and
+  // closing was enough to lose it. Invisible because the icon still opened something.
   const placed = !bounds ? plain
-    : bounds.state === 'maximized' ? { ...plain, state: 'maximized' }
-      : { ...plain, left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
+    : bounds.state === 'maximized' ? { ...bare, state: 'maximized' }
+      : { ...bare, left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
   let made;
   try {
     made = await chrome.windows.create(placed);
@@ -69,6 +88,7 @@ async function raiseOrOpen() {
     made = await chrome.windows.create(plain);
   }
   try { await chrome.storage.session.set({ zoostWindowId: made.id }); } catch (_) {}
+  return true;                   // built, so whoever asked may leave it a note
 }
 /** Our window, or `null` - and `null` only when the browser says the id names nothing. */
 async function existingWindow() {
@@ -89,7 +109,10 @@ async function rememberedBounds() {
 async function clearOpenFailure() {
   try {
     await chrome.action.setBadgeText({ text: '' });
-    await chrome.action.setTitle({ title: '' });
+    // **Back to the manifest's title, not to nothing.** `setTitle({title: ''})` does not restore
+    // `default_title`, it replaces it - so the first successful click of a profile's life took the
+    // product's name off the toolbar tooltip and never gave it back.
+    await chrome.action.setTitle({ title: chrome.runtime.getManifest().action?.default_title || chrome.runtime.getManifest().name });
   } catch (_) {}
 }
 /** Both halves of «it did nothing»: the badge is what a reader sees, the log is what they can send.
@@ -125,11 +148,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
  *  is a global nobody is checking. */
 async function answerOpenAsk(msg, sendResponse) {
   try {
-    if (msg.view) await chrome.storage.session.set({ zoostPendingView: msg.view });
-    await openWindow();
+    // **The note is only for a window that does not exist yet.** It used to be written on every
+    // ask: a window already open hears the message instead, so nothing ever consumed the note and
+    // it sat in session storage until the *next* plain click on the toolbar icon, which then opened
+    // straight into Settings for no reason the reader could see. One wrong open per visit to
+    // Chrome's Options entry, which is exactly the shape that reads as «random».
+    const built = await openWindow();
     if (msg.view) {
-      try { await chrome.runtime.sendMessage({ zoost: 'view', view: msg.view }); }
-      catch (_) { /* nobody listening yet; the note in session storage covers that path */ }
+      if (built) await chrome.storage.session.set({ zoostPendingView: msg.view });
+      else { try { await chrome.runtime.sendMessage({ zoost: 'view', view: msg.view }); } catch (_) { /* it went while we asked; the next open has no note and that is right */ } }
     }
     sendResponse({ ok: true });
   } catch (e) { sendResponse({ ok: false, error: e && e.message ? e.message : String(e) }); }
@@ -162,8 +189,14 @@ async function rememberBounds(win) {
 chrome.windows.onRemoved.addListener((id) => { void forgetWindow(id); });
 async function forgetWindow(id) {
   try {
+    // Read, then read again: this runs for *every* window the browser closes, and between the two
+    // steps `raiseOrOpen` may have stored a brand new id. Erasing that one leaves the live window
+    // unowned, and the next click makes a second Zoost on the same mirror folder. The class is the
+    // one CLAUDE.md enumerates - global state written after an await - and the guard is the re-read.
     const { zoostWindowId } = await chrome.storage.session.get('zoostWindowId');
-    if (id === zoostWindowId) await chrome.storage.session.remove('zoostWindowId');
+    if (id !== zoostWindowId) return;
+    const { zoostWindowId: still } = await chrome.storage.session.get('zoostWindowId');
+    if (id === still) await chrome.storage.session.remove('zoostWindowId');
   } catch (_) {}
 }
 

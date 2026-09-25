@@ -871,7 +871,14 @@ function noteFolderAccessLost() {
 async function regrantOnAnyClick(e) {
   if (!root || rootGranted) return;
   const t = e.target;
-  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
+  // **And the two full-window views.** This re-grants the stored folder from any click, which is
+  // right in the panel and wrong inside the settings: that form has its own «Choose folder…», and
+  // a capture-phase `requestPermission()` both raises a prompt nobody asked for and spends the user
+  // activation the picker in the bubble phase then needs - so the reader's click on «Choose folder…»
+  // ends in a toast quoting a DOMException. The diagram is here for the simpler reason: a click on
+  // a box in a drawing is not a request to re-grant anything.
+  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview')
+                    || t.closest('#offoverlay') || t.closest('#settingsview') || t.closest('#graphview'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
 }
 /** What the workspace list shows, and what it must never stop showing.

@@ -1039,8 +1039,13 @@ $('ai_passchange').onclick = () => { aiPassChanging = true; syncLockRow(); focus
  */
 async function openSettingsView(where) {
   const view = document.getElementById('settingsview');
+  // **Already open means already painted.** Asking again used to re-run `init()`, which reads every
+  // section back out of storage and then rebases the dirty marks - so a reader who had typed an API
+  // key and not saved it lost it, and lost the indicator that would have said so, to one click on
+  // Chrome's «Options» entry. Opening what is open is a request to *look* at it, never to reload it.
+  const already = !!(view && view.classList.contains('show'));
   if (view) view.classList.add('show');
-  await init();
+  if (!already) await init();
   if (where) {
     const sec = document.getElementById(String(where).replace(/^#/, ''));
     if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });

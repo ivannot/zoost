@@ -8,6 +8,13 @@
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
+  /* **82: above the empty-state overlay and the footer, below the scrim and the dialogs.**
+     It was 9, which is the band the panel's own views use - and those sit inside the panel's
+     layout, while this covers the whole window. `#offoverlay` is 70 and `#pfoot` is 80, so a
+     reader with no workspace open pressed Settings and the form painted underneath the very
+     overlay telling them to pick a folder: the control was dead for exactly the person who
+     needed it. Below `.scrim` (85) and `.dlg` (90) on purpose, so a dialog opened from in
+     here still appears over it. */
   #graphview{
     /* **Fixed, not absolute.** The diagram is the whole window while it is open, which is the
        point of it no longer being a window of its own: put beside `#aiview` it inherited that
@@ -17,7 +24,7 @@
        And the semicolon at the end of this line is load-bearing: without it `--bg` below was
        swallowed into a malformed declaration and dropped, so `background:var(--bg)` resolved
        to the *panel's* dark token and half the diagram came out black. Reported too. */
-    display:none; position:fixed; inset:0; z-index:9; font-family:var(--sans); color:var(--ink); background:var(--bg); flex-direction:column; overflow:hidden;
+    display:none; position:fixed; inset:0; z-index:82; font-family:var(--sans); color:var(--ink); background:var(--bg); flex-direction:column; overflow:hidden;
     --bg:#eef1f6; --surface:#fff; --ink:#182130; --muted:#647085; --border:#d7deea; --line:#e7ecf4;
     --sel:#2f6fed; --sel-soft:#e7effd; --up:#b0531f; --up-soft:#fbecdf; --down:#1f7a5c; --down-soft:#e0f2ea;
     --rest:#6b4fbb; --warn:#c2410c;
@@ -73,7 +80,11 @@
      property, and `body.no-aside` still wins on specificity when the column is folded. An
      inline width would have beaten the fold rule and broken it the first time anyone dragged. */
   #graphview aside{width:var(--aside-w,340px);flex:none;background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
-  #graphview body.aside-drag aside{transition:none}
+  /* **The state class is on `body`, so `body` cannot be the descendant.** The scoping pass that
+     moved this sheet under `#graphview` prefixed these three along with everything else, and a
+     `#graphview body…` selector matches nothing at all - so folding the list flipped the arrow,
+     changed the tooltip and moved no column. The container goes on the right of the state. */
+  body.aside-drag #graphview aside{transition:none}
   /* The list can be folded away so a wide reference pane gets the whole window. Width to 0
      rather than display:none, so the transition has something to animate and nothing has to
      be re-created when it comes back; `visibility` stops the contents being tabbed to while
@@ -82,7 +93,7 @@
      min-content size, which floors `width:0` at whatever the search box needs. The rule was
      applying - `visibility` from the same declaration took effect - and the panel simply did
      not move, which is the kind of nothing that is hard to diagnose by looking. */
-  #graphview body.no-aside #v-explorer aside{width:0;min-width:0;overflow:hidden;visibility:hidden}
+  body.no-aside #graphview #v-explorer aside{width:0;min-width:0;overflow:hidden;visibility:hidden}
   /* The fold control is a tab on the column itself, not a button in the header: it sits where the
      thing it folds is, and it stays put when the column goes, which a control inside the
      column could not. Living inside #v-explorer is also why it cannot appear in the three
@@ -93,7 +104,7 @@
   #graphview #asidebtn{flex:none;width:17px;border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);
             background:var(--surface);color:var(--muted);cursor:col-resize;font:13px var(--sans);padding:0;
             display:flex;align-items:center;justify-content:center;transition:background .12s ease;touch-action:none}
-  #graphview body.no-aside #asidebtn{cursor:pointer}
+  body.no-aside #graphview #asidebtn{cursor:pointer}
   #graphview #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
   #graphview #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
   @media print{ #graphview #asidebtn{display:none} }
@@ -144,7 +155,7 @@
   #graphview .ns{font:10px var(--mono);color:var(--muted)} #graphview .deg{font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
   #graphview .dot{width:7px;height:7px;border-radius:50%;flex:none}
   #graphview main{flex:1;overflow:auto;padding:22px 26px;min-width:0}
-  #graphview .empty{color:var(--muted);font-size:14px;margin-top:40px;text-align:center}
+  #graphview .empty{padding:0;color:var(--muted);font-size:14px;margin-top:40px;text-align:center}
   #graphview .crumbs{font:12px var(--mono);color:var(--muted);margin-bottom:14px;min-height:16px}
   #graphview .crumbs a{color:var(--sel);cursor:pointer} #graphview .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   #graphview .title h2{margin:0;font:20px var(--mono)}
@@ -393,3 +404,23 @@
     background:var(--sel);border:1px solid var(--sel);color:#fff;cursor:pointer;white-space:nowrap}
   #graphview .gvx:hover{filter:brightness(1.12)}
   #graphview .gvx:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  /* **The panel is not part of the drawing.** The diagram had a document to itself and its print
+     rules only had to hide its own chrome; it shares the panel's document now, and the print block
+     puts `#graphview` back into the flow - so the workspace bar, the context line, the tools row,
+     the tree, the preview and the footer all landed on the sheet with it. Hidden by name, because
+     a blanket `body > *` would take the diagram with it. */
+  @media print{
+    body.printing-diagram > *:not(#graphview){display:none !important}
+  }
+
+  /* **What the panel's own sheet now supplies, taken back.** `workbench.css` is not scoped - it
+     cannot be, it dresses the panel - so every bare or shared selector in it reaches inside these
+     views the day they joined its document. Each of these was measured in a browser, not reasoned:
+     `.hrow` is the health view's row class and it wrapped the diagram's title row in a rounded box
+     and turned the stat line monospace; `.empty` added the panel's 22px inset to «Select a
+     function.»; and the panel's `*{scrollbar-color}` put a dark thumb on a light surface. Declared
+     here rather than by narrowing the panel's rules, because the panel's rules are right for the
+     panel - and a view that states its own look cannot be surprised by a rule added over there. */
+  #graphview .hrow{padding:0;border:0;border-radius:0;margin:0;font:inherit;color:inherit;background:none}
+  #graphview, #graphview *{scrollbar-color:#b9c4d6 transparent}

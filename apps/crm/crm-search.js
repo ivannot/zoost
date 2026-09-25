@@ -110,6 +110,19 @@ $('pvfwd').onclick = () => navTo(navHistory.snapshot().position + 1);
  *  pass with the listener deleted when it was written loosely.
  */
 function escapeCloses() {
+  // **The two full-window views come first, because they paint over everything below.** They were
+  // not in this list at all: with the assistant open and the settings opened from its gear, Escape
+  // reached `#aiview` and closed the assistant *underneath* the settings - the conversation gone,
+  // and the keypress reading as «Escape did nothing». The order here is read from the stylesheet,
+  // and at 82 these two are above every entry below them.
+  // The settings own the window while they are open, and they have no Escape of their own.
+  if ($('settingsview') && $('settingsview').classList.contains('show')) { closeSettingsView(); return true; }
+  // **The diagram owns Escape while it is open, and this must not reach past it.** Its own handler
+  // closes the Layout or File menu first, then the arc it has picked, and closes the view only when
+  // there is nothing left - which is the order a reader expects. Closing the view from here
+  // destroyed an arrangement of eighty hand-placed boxes to dismiss a menu; declining lets the
+  // diagram decide, and declining also stops this closing a panel view *underneath* the diagram.
+  if ($('graphview') && $('graphview').classList.contains('show')) return false;
   if ($('expscope').classList.contains('on')) { closeScope(false); return true; }
   if ($('aboutdlg').classList.contains('on')) { closeAbout(); return true; }
   if ($('aiview').classList.contains('show')) { closeAI(); return true; }

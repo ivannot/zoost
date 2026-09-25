@@ -2938,7 +2938,10 @@ test('the filter can be emptied as well as filled, and says so when it is', () =
   assert.match(sync, /chipnone[\s\S]*?hiddenKinds\.size < allKinds\(\)\.length/, 'None is offered when everything is already off');
 
   // and an empty list names which of the three reasons it is
-  const r = src.slice(src.indexOf('function render('), src.indexOf('\n}', src.indexOf('function render(')));
+  // `renderGraph(`: the diagram's renderer took that name so the two products' `graphlogic.js`
+  // could stay one file in two byte-identical copies - Analytics had to rename it to avoid the
+  // panel's own `render`, and leaving the CRM on the old name split the shared logic.
+  const r = src.slice(src.indexOf('function renderGraph('), src.indexOf('\n}', src.indexOf('function renderGraph(')));
   for (const why of [/Everything is switched off/, /Nothing matches the filter/, /Nothing matches that search/]) {
     assert.match(r, why, `an empty list is silent about one of its reasons: ${why}`);
   }
@@ -3019,7 +3022,9 @@ test('the filter is reachable from every view, and reaches every view', () => {
   assert.match(rp, /passKind\(N\[r\.from\]\)/, 'the catalogue ignores the filter');
   // Three views, since Visual is gone: the list, the catalogue and the boxed diagram.
   const af = src.slice(src.indexOf('function applyFilter('), src.indexOf('\n}', src.indexOf('function applyFilter(')));
-  for (const v of [/render\(\)/, /relRender\(\)/, /erShowMaybeHeavy\(\)/]) {
+  // `renderGraph()` - the Explorer's own, renamed so the shared `graphlogic.js` is one file in two
+  // copies. `relRender` and `erShowMaybeHeavy` are unchanged.
+  for (const v of [/renderGraph\(\)/, /relRender\(\)/, /erShowMaybeHeavy\(\)/]) {
     assert.match(af, v, `a view is not redrawn when the filter changes: ${v}`);
   }
   assert.ok(!/id="legend"/.test(html), 'a second colour key is back inside the canvas');
@@ -3431,7 +3436,10 @@ test('the list folds to zero on both sides, min-width included', () => {
   // there is no way to see it except by measuring - which is why it is asserted rather than trusted.
   for (const app of ['crm', 'analytics']) {
     const css = read(`apps/${app}/graphview.css`);   // the block moved to its own file
-    const m = css.match(/body\.no-aside #v-explorer aside\{([^}]*)\}/);
+    // `body.no-aside #graphview #v-explorer aside` since the diagram joined the panel's document:
+    // the state class is on `body`, so the container goes to the *right* of it. Written the other
+    // way round by the scoping pass, the selector matched nothing and folding moved no column.
+    const m = css.match(/body\.no-aside #graphview #v-explorer aside\{([^}]*)\}/);
     assert.ok(m, `${app}: the list cannot be folded away`);
     assert.match(m[1], /(^|;)width:0(;|$)/, `${app}: the folded list has no width rule`);
     assert.match(m[1], /min-width:0/, `${app}: width:0 is floored by min-width:auto and nothing happens`);
