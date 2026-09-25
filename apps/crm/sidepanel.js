@@ -254,6 +254,10 @@ const MSG = {
   // Two sentences for one situation, because the useful half is different in each case: whoever
   // already has the other extension needs to be told where it is, not sold it. Which one is shown
   // is the other extension's own answer - it replies to a message, or it does not.
+  // **What is off, rather than where you are standing.** With a mirror open the panel works; what
+  // a missing Zoho tab costs is the half that talks to Zoho, and saying that is more use than
+  // naming the tab the reader happens to have in front of them.
+  noZohoTab: 'No Zoho CRM tab open - the mirror reads, Zoho actions are off',
   twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   folder: 'Folder access needs re-granting - click ↻ Refresh.',

@@ -247,6 +247,30 @@ CHECKS = [
                    'apps/crm/tabs.js'],
     },
     {
+        'id': 'tab-not-in-front',
+        'title': 'A Zoho tab that is open but not the one you are looking at',
+        'do': ['Open a Zoho tab for the org this workspace is bound to, then move to another tab - '
+               'a Zoho tab for a different org, or anything at all - and leave the first one open.',
+               'In the panel, read the context bar, then press Pull all.',
+               'Then close every Zoho tab and look at the panel again.'],
+        'pass': ('With the tab merely behind, the lists draw from disk as they always did and Pull all '
+                 'runs to its own closing line - the one that names what it read, not «interrupted» '
+                 'and not «could not». The context bar names the org it resolved and marks it «not in '
+                 'front», so you can see it is not the tab on screen. With no Zoho tab at all the panel still opens, reads, '
+                 'searches, draws and exports - only the Zoho-bound buttons are off, and the bar says '
+                 'so rather than covering the panel.\n'
+                 '     This is the one thing nothing here can measure: `tools/probe.py` stubs the bridge, '
+                 'so it exercises the code path and never a real background tab. What is being asked is '
+                 'whether **Chrome** answers from a tab it has throttled or discarded. A pull that fails '
+                 'for that reason must fail with a sentence, never in silence - if it does, say so.\n'
+                 '     One known rough edge, by design: with two Zoho tabs of different orgs open and '
+                 'neither in front, the panel resolves the first it is given. If that is the wrong org it '
+                 'refuses and says which one it read - focus the right tab and it resolves. It fails '
+                 'safe; it is not silent.'),
+        'covers': ['apps/*/sidepanel.js', 'apps/crm/crm-context.js', 'apps/crm/zoho-bridge.js',
+                   'apps/*/content-bridge.js', 'apps/crm/pull-controller.js', 'apps/*/pull-usecase.js'],
+    },
+    {
         'id': 'twin-tab',
         'title': "The other product's tab is named, and what the panel offers there",
         'do': ['Open a tab of the OTHER product - Zoho Analytics if you are in the CRM panel, and the '

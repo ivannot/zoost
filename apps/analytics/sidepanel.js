@@ -49,6 +49,12 @@ const HOST_RE = new RegExp('^(' + (chrome.runtime.getManifest().host_permissions
 // The Analytics application's own origin, which is where the bridge lives and the only thing this
 // panel ever speaks to. `HOST_RE` says «this tab is Zoho»; this says «this document is the app».
 const APP_HOST_RE = /^https:\/\/analytics\.zoho/;
+// The same list as a set of match patterns, for the one query that looks past the tab in front.
+// **A filtered query, never an enumeration**: Chrome answers with the tabs that match and nothing
+// else, which is what keeps «the extension does not enumerate tabs» true on the listing. The twin
+// has done it this way since it was written.
+const ZOHO_MATCHES = (chrome.runtime.getManifest().host_permissions || [])
+  .filter((h) => /^https:\/\/(analytics|one|crmplus)\./.test(h));
 // The twin, on the same terms as the CRM panel: only hosts that belong to one product. `one.zoho.*`
 // and `crmplus.zoho.*` are in both manifests and host either, so there the plain message stands -
 // naming the other product on an ambiguous tab would be a new false sentence.
@@ -103,6 +109,8 @@ const MSG = {
   staleBridge: 'No answer from the Zoho Analytics page.',
   // Word for word the CRM's pair, and deliberately so: the two panels answer the same question and
   // a reader who has both must not meet two voices. See the note in that panel for why there are two.
+  // What is off, rather than where you are standing - see the twin's note on the same line.
+  noZohoTab: 'No Zoho Analytics tab open - the mirror reads, Zoho actions are off',
   twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
@@ -982,6 +990,22 @@ async function analyticsTabId() {
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
   return a && HOST_RE.test(a.url || '') ? a.id : null;
 }
+/** Any Zoho Analytics tab, in any window, for when the one in front is not one.
+ *
+ *  The twin has always had this fallback and this panel never did, so «which tab will a command
+ *  reach» had two different answers in two products that answer the same question. It is the same
+ *  filtered query - Chrome returns the matching tabs and nothing else, so nothing here enumerates
+ *  what the reader has open.
+ *
+ *  **What makes reaching a tab that is not in front safe is not this function.** It is the page at
+ *  the other end: every command carries the workspace the panel expects and `expectedMatches` in the
+ *  content bridge refuses one that is not its own. This only decides *which* page gets asked.
+ */
+async function anyAnalyticsTabId() {
+  const tabs = await chrome.tabs.query({ url: ZOHO_MATCHES });
+  const hit = tabs.find((t) => HOST_RE.test(t.url || ''));
+  return hit ? hit.id : null;
+}
 /** Which of a tab's frames is the Analytics application, decided by asking them.
  *
  * A plain Analytics tab has one document and it is the app. A suite shell has several, and more than
@@ -1141,7 +1165,13 @@ async function refreshContext() {
   const mine = ++contextLoad;
   const current = () => mine === contextLoad;
   const el = $('ctx'), who = $('who'), bnd = $('bound');
-  const id = await analyticsTabId();
+  // **The tab this panel will talk to, which is not necessarily the one in front of you.** See the
+  // twin's note: the guard asks about the tab a command will reach, and what makes that safe is the
+  // page at the far end refusing a command whose expected workspace is not its own. Nothing here
+  // weakens that, and nothing here may.
+  const activeId = await analyticsTabId();
+  if (!current()) return;
+  const id = activeId || await anyAnalyticsTabId();
   if (!current()) return;
   // A sample is a workspace whose honest label is «generated, never pulled»: its `.zoost.json`
   // carries an invented workspace id, so every reader of this - including the off-platform branch,
@@ -1164,15 +1194,21 @@ async function refreshContext() {
     // which really does have `setInterval(refreshContext, 5000)`. This panel has no interval at all
     // and never has had one - so a reader reasoning from that sentence would conclude that anything
     // stale here fixes itself within five seconds, and it does not.
-    $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
+    // **The overlay is for having nothing to read, not for standing in the wrong place.** A mirror
+    // is local files, and the sample exception already carried the whole argument: a workspace on
+    // disk owes Zoho nothing, so a Zoho tab is not a precondition for reading it. What is left for
+    // the overlay is the case it was written for - a panel with nothing in it.
+    $('offoverlay').classList.toggle('show', !dir && !sampleBusy);
     $('mmbar').classList.remove('show');
     // The twin's tab, named - see the note in the CRM panel, which met this first.
     const twin = await twinTab();
     if (!current()) return;
     el.className = 'offzoho';
+    // With a workspace open the panel is *working*, so the line says what is off rather than where
+    // the reader is standing. Without one, the old sentence is still the right one.
     who.innerHTML = twin
       ? esc(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
-      : 'Not on a Zoho Analytics tab';
+      : (dir ? MSG.noZohoTab : 'Not on a Zoho Analytics tab');
     offerTwin(twin);
     offerCtxTwin(twin);
     bnd.innerHTML = localLbl;
@@ -1209,7 +1245,12 @@ async function refreshContext() {
   else {
     // True and irrelevant on a sample: the tab really is on that workspace, and this folder has
     // nothing to do with it. Two halves side by side otherwise imply a relationship there is not.
-    who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> · not related to the sample</span>' : ''}`;
+    // **And it says when the tab it is reading is not the one you are looking at.** The price of
+    // the widening, paid here rather than skipped: the protection against mixing two workspaces
+    // used to rest on the one being read being in front of the reader. It rests on the match now,
+    // checked by the page itself, so the panel has to say which one it resolved.
+    const behind = !activeId ? '<span class="rlbl remote">not in front</span>' : '';
+    who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> · not related to the sample</span>' : ''}${behind}`;
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
     // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never

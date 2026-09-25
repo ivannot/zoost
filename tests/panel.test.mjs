@@ -4637,8 +4637,12 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
   for (const app of ['crm', 'analytics']) {
     const js = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     const html = panelPage(app);
-    assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !isSample\(\)/.test(js),
-      `${app}: the off-Zoho overlay still covers a sample workspace, which owes Zoho nothing`);
+    // **And the rule got wider than the sample.** The argument written above - a sample owes Zoho
+    // nothing, so a Zoho tab is not a precondition for reading it - was true of *every* pulled
+    // mirror the whole time: those are local files too. The condition is «is there a workspace
+    // open», and a sample is one of them, so this case keeps its subject and gained the rest.
+    assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !dir/.test(js),
+      `${app}: the off-Zoho overlay still covers a workspace that is open and readable from disk`);
     assert.ok(!/\$\('offoverlay'\)\.classList\.add\('show'\)/.test(js),
       `${app}: something still shows that overlay unconditionally`);
     // and the way in has to be on the overlay itself, which is where a new install actually lands
@@ -4947,7 +4951,7 @@ test('the panel does not claim what it has not looked at, and a poll does not un
     ]);
     assert.equal(sampleWorkspaceView(null, false, false).overlayLabel, 'Sample workspace',
       `${app}: the button still says «+ Sample workspace» when it cannot tell`);
-    assert.ok(/toggle\('show', !isSample\(\) && !sampleBusy\)/.test(js),
+    assert.ok(/toggle\('show', !dir && !sampleBusy\)/.test(js),
       `${app}: the overlay is derived without knowing a sample is being written, so the poll brings it back`);
   }
 });

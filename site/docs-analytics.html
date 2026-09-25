@@ -544,9 +544,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k" data-label="Symptom">Everything is disabled</td>
         <td data-label="Cause and fix">The tab and the folder are different workspaces. The amber bar offers both ways out: take the
           tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
-      <tr><td class="k" data-label="Symptom">"Not on a Zoho Analytics tab"</td>
-        <td data-label="Cause and fix">The panel acts on the active tab. Switch to the Zoho Analytics tab, or use the button on the
-          overlay. If that tab is Zoho CRM, the panel says so and points at Zoost CRM, which reads it -
+      <tr><td class="k" data-label="Symptom">"No Zoho Analytics tab open - the mirror reads, Zoho actions are off"</td>
+        <td data-label="Cause and fix"><b>The panel still works.</b> A mirror is local files, so reading it, searching it, drawing it
+          and exporting it need no tab at all - what is off is the half that talks to Zoho, and the line says which half.
+          Open a Zoho Analytics tab and the buttons come back; <b>it does not have to be the tab you are looking at</b>, and when
+          it is not, the context bar marks the workspace it resolved as <b>not in front</b> so you can see which one it is reading.
+          If the tab you are on belongs to Zoho CRM, the panel says so and points at Zoost CRM, which reads it -
           Chrome does not let one extension open another, so you open it from the toolbar.</td></tr>
       <tr><td class="k" data-label="Symptom">"No workspace open"</td>
         <td data-label="Cause and fix">You are on Zoho Analytics but not inside a workspace. Open one - the URL must contain

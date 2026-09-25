@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:04e945b5fe7f5926 -->
+<!-- translated-from: site/docs-analytics.html sha256:f6c6334a40edc2cd -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -603,9 +603,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td data-label="Causa e rimedio">La scheda e la cartella sono due workspace diversi. La barra ambra offre entrambe le vie
           d'uscita: porta la scheda sul workspace rispecchiato, o sposta il pannello su quello in cui è la
           scheda.</td></tr>
-      <tr><td class="k" data-label="Sintomo">«Not on a Zoho Analytics tab»</td>
-        <td data-label="Causa e rimedio">Il pannello agisce sulla scheda attiva. Passa alla scheda di Zoho Analytics, o usa il pulsante
-          sull'overlay. Se quella scheda e Zoho CRM, il pannello lo dice e indica Zoost CRM, che la legge -
+      <tr><td class="k" data-label="Sintomo">«No Zoho Analytics tab open - the mirror reads, Zoho actions are off»</td>
+        <td data-label="Causa e rimedio"><b>Il pannello funziona lo stesso.</b> Un mirror sono file locali: leggerlo, cercarci dentro,
+          disegnarlo ed esportarlo non chiede nessuna scheda - quello che è spento è la metà che parla con Zoho, e la riga dice quale.
+          Apri una scheda di Zoho Analytics e i pulsanti tornano; <b>non deve essere la scheda che hai davanti</b>, e quando non lo è
+          la barra di contesto segna il workspace che ha risolto come <b>not in front</b>, così vedi quale sta leggendo.
+          Se la scheda su cui sei è di Zoho CRM, il pannello lo dice e indica Zoost CRM, che la legge -
           Chrome non permette a un'estensione di aprirne un'altra, quindi la apri tu dalla barra.</td></tr>
       <tr><td class="k" data-label="Sintomo">«No workspace open»</td>
         <td data-label="Causa e rimedio">Sei su Zoho Analytics ma non dentro un workspace. Aprine uno - l'URL deve contenere

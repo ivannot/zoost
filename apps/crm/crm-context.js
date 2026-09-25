@@ -83,18 +83,38 @@ async function refreshContext() {
   const mine = ++contextLoad;
   const current = () => mine === contextLoad;
   const ctxEl = $('ctx'), who = $('who'), bnd = $('bound');
+  // **The tab this panel will talk to, which is not necessarily the one in front of you.**
+  // `zohoTabId()` is the resolution every Zoho command already goes through - the active tab when it
+  // is Zoho, otherwise any Zoho tab in any window - and the guard now asks about *that* tab, because
+  // that is the one a command will reach. Asking the active tab instead was a convention and never
+  // a guarantee: **the guarantee is at the far end**, where the page refuses a command whose expected
+  // org is not its own (`expectedMatches` in the content bridge, which is «the only party in the
+  // exchange that cannot be out of date about which org it is»). Nothing here weakens that, and
+  // nothing here may.
+  //
+  // Reported, and the argument is his: the panel was denying a local mirror to somebody standing in
+  // the wrong place. A pull is read-only towards Zoho; what has to be protected is the *mirror*, and
+  // what protects it is the match - not which window has the focus.
   const activeId = await activeZohoTabId();
   if (!current()) return;
-  if (!activeId) {                         // the ACTIVE tab is not Zoho
+  const zohoId = activeId || await zohoTabId();
+  if (!current()) return;
+  if (!zohoId) {                           // no Zoho CRM tab anywhere, not just not in front
     lastCtx = null; $('mmbar').classList.remove('show'); updateWsButtons();
-    // Not over a sample. A sample has nothing to say to Zoho, so a Zoho tab is not a precondition
-    // for reading it - and covering the panel there would mean the one workspace anybody can open
-    // without an account is the one you cannot open without one. Reported.
+    // **The overlay is for having nothing to read, not for standing in the wrong place.** A mirror
+    // is local files: browsing it, searching it, drawing it, exporting it and asking the assistant
+    // about it need no tab at all, and covering it because no Zoho tab is open denied the product to
+    // somebody who had done nothing wrong. The sample exception already made this argument - «a
+    // sample has nothing to say to Zoho, so a Zoho tab is not a precondition for reading it» - and it
+    // was true of every pulled mirror the whole time.
+    //
+    // What is left for the overlay is the case it was written for: a panel with nothing in it, where
+    // the three ways on - the other product, Zoho itself, a sample - are the whole content.
     // `sampleBusy` belongs here and not only at the click. This panel re-derives its whole state on
     // a five-second poll, so anything set imperatively on top of that is undone by the next tick -
     // reported as the overlay coming back in the middle of writing the sample and then leaving
     // again. A state that has to hold across time is a term in the condition, never an assignment.
-    $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
+    $('offoverlay').classList.toggle('show', !dir && !sampleBusy);
     // **It says which platform, because the reader may well be on a Zoho tab.** Reported: someone
     // opened this panel from a Zoho Analytics tab and was told «Not on a Zoho tab», which is false
     // about where they were standing and silent about what is needed. The overlay two files away has
@@ -107,9 +127,12 @@ async function refreshContext() {
     const twin = await twinTab();
     if (!current()) return;
     ctxEl.className = 'offzoho';
+    // With a workspace open the panel is *working*, so the line says what is off rather than where
+    // the reader is standing: everything local reads, and everything Zoho-bound is disabled until a
+    // tab exists. Without one, the old sentence is still the right one - there is nothing else to say.
     who.innerHTML = twin
       ? escHtml(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
-      : 'Not on a Zoho CRM tab';
+      : (dir ? MSG.noZohoTab : 'Not on a Zoho CRM tab');
     offerTwin(twin);
     offerCtxTwin(twin);
     // **A sample is never presented as a live binding.** Its `.zoho.json` carries an invented org
@@ -125,9 +148,9 @@ async function refreshContext() {
   // Off the twin's tab the mark goes with it. It is drawn in the branch above and nothing
   // else touches it, so without this it survives the return to a proper tab.
   offerCtxTwin(null);
-  await ensureBridge(activeId);
+  await ensureBridge(zohoId);
   if (!current()) return;
-  const cfid = await crmFrameId(activeId);
+  const cfid = await crmFrameId(zohoId);
   if (!current()) return;
   const _t0 = Date.now();
   // A Zoho One tab with no CRM frame in it has nothing to read, and asking would mean naming a frame
@@ -136,7 +159,7 @@ async function refreshContext() {
   // here would leave the previous tab's identity showing. Which is the silent exit this repository
   // refuses, one line from being written by the fix for a different one.
   try {
-    const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, cfid === null ? {} : { frameId: cfid });
+    const r = await chrome.tabs.sendMessage(zohoId, { cmd: 'context' }, cfid === null ? {} : { frameId: cfid });
     if (!current()) return;
     validateBridgeReply({ cmd: 'context' }, r);
     lastCtx = bridgeContext(r);
@@ -150,7 +173,7 @@ async function refreshContext() {
   // arrives at*, and until now the only record of arriving at it was the words on screen - which say
   // that it happened and nothing about why. Whoever reads this next has the tab, the frames that
   // were there, the frame we asked, and what the answer was.
-  console.info(`[zoost] ctx tab=${activeId} frames=[${crmZohoBridge.seenFrames()}] asked=${cfid === null ? 'any' : cfid}`
+  console.info(`[zoost] ctx tab=${zohoId}${activeId ? '' : ' (not in front)'} frames=[${crmZohoBridge.seenFrames()}] asked=${cfid === null ? 'any' : cfid}`
     + ` -> ${lastCtx ? 'ok' : 'NOT READY' + (_ctxErr ? ' (' + _ctxErr + ')' : '')}`
     + ` ${Date.now() - _t0}ms`);
   _ctxErr = null;
@@ -161,7 +184,13 @@ async function refreshContext() {
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
   // side implying a relationship - reported as «switching to the test org leaves ZOHO TAB on the
   // previous one», which it does, correctly, and read as a bug because nothing said it did not matter.
-  who.innerHTML = `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>`;
+  // **And it says when the tab it is reading is not the one you are looking at.** This is the price
+  // of the widening and it is paid here rather than skipped: the protection against pulling one org
+  // into another workspace's mirror used to rest on the org being in front of the reader's eyes.
+  // It rests on the match now - checked by the page itself - so the panel has to *say* which org it
+  // has resolved, every time, or the reader has no way to notice that it is not the one on screen.
+  const behind = !activeId ? '<span class="rlbl remote">not in front</span>' : '';
+  who.innerHTML = `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>${behind}`;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
   else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = SAMPLE_CHIP; }
