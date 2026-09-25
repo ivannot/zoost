@@ -36,7 +36,7 @@ has to be named here or the suite says so.
 Each app carries its **own `manifest.json` and its own version number** — they do not move in step.
 `./build.sh crm` and `./build.sh analytics` package them separately.
 
-Each side panel is deliberately assembled from small classic scripts and a linked
+Each workbench page is deliberately assembled from small classic scripts and a linked
 `workbench.css`. This preserves the no-build, inspectable distribution while keeping AI, exports,
 Health, problem-report redaction, pure state and panel orchestration at separate maintenance
 boundaries.

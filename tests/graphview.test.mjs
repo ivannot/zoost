@@ -36,7 +36,10 @@ import vm from 'node:vm';
  *  stop looking. A sweep for a control that was removed wants both halves too: a rule left behind for
  *  an id nothing renders is exactly the leftover it is hunting.
  */
-const page = (app, name) => read(`apps/${app}/${name}.html`) + '\n' + read(`apps/${app}/${name}.css`);
+const sheetsOf = (app, name) => (read(`apps/${app}/${name}.html`).match(/<link[^>]+href="([^"]+\.css)"/g) || [])
+  .map((tag) => tag.match(/href="([^"]+)"/)[1]);
+const page = (app, name) => [read(`apps/${app}/${name}.html`)]
+  .concat(sheetsOf(app, name).map((href) => read(`apps/${app}/${href}`))).join('\n');
 
 /** A named function out of the graph window, wherever it now lives.
  *

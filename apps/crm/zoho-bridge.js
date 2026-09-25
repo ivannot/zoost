@@ -11,7 +11,6 @@
 /** @typedef {{
  * chromeApi: any,
  * zohoMatches: string[],
- * zohoHost: RegExp,
  * bound: () => CrmBoundWorkspace,
  * guardOk: () => boolean,
  * mismatchMessage: string,
@@ -30,13 +29,6 @@ function createCrmZohoBridge(options) {
   let seenFrames = '(not enumerated)';
   const crmOrigin = /^https:\/\/crm(sandbox)?\.zoho/;
   const log = options.log || (() => {});
-
-  async function tabHasCrmFrame(tabId) {
-    try {
-      const reply = await options.chromeApi.tabs.sendMessage(tabId, { cmd: 'context' });
-      return !!(reply && reply.ok && reply.origin);
-    } catch (_) { return false; }
-  }
 
   /** Which org a candidate tab is on, or `null` when it will not say.
    *
@@ -58,10 +50,47 @@ function createCrmZohoBridge(options) {
     } catch (_) { return null; }                   // it will not answer even after a repair
   }
 
+  /** Which Zoho tab a command goes to.
+   *
+   *  **There is no «tab in front» to prefer any more.** This began with `{active: true,
+   *  currentWindow: true}` and a frame probe on top of it, and both were right while Zoost was a
+   *  panel inside the browser window: the active tab of that window was the page the reader was
+   *  looking at. Zoost is its own window now, so `currentWindow` is *Zoost's* window and its active
+   *  tab is `workbench.html` - the shortcut could not match a Zoho host, and every resolution fell
+   *  through to the candidate walk below having first messaged our own page for nothing. Removed
+   *  rather than re-aimed: «the window the reader is looking at» is not a thing Chrome will tell an
+   *  extension, and the candidate walk answers the question that is actually being asked - which of
+   *  the open Zoho tabs belongs to this workspace.
+   */
+  /** The last answer, for a second or two. See `tabId`. */
+  let resolved = { id: null, at: 0, org: null };
+  const RESOLVE_TTL = 2000;
+  function forgetTab() { resolved = { id: null, at: 0, org: null }; }
+
   async function tabId() {
-    const [active] = await options.chromeApi.tabs.query({ active: true, currentWindow: true });
-    if (active && options.zohoHost.test(active.url || '')) return active.id;
-    if (active && (await tabHasCrmFrame(active.id))) return active.id;
+    // **A pull is one command per item, and this runs on every one of them.** With a second Zoho
+    // tab open - production and a sandbox, which is the ordinary arrangement - the walk below asks
+    // every candidate for its context and revives our script in any that has gone quiet, so an org
+    // of five thousand functions paid five thousand fan-outs for an answer that had not changed
+    // since the first. Held for two seconds: shorter than the context poll, long enough that a
+    // burst of commands resolves once. The memo is dropped the moment a send fails, so a tab that
+    // closed underneath it costs one error and not a run of them - and it decides *which* page is
+    // asked, never what that page will agree to do: the expectation still travels with every
+    // command and the page still refuses one that is not its own.
+    // The answer belongs to the workspace it was resolved for - the twin's note says why.
+    const orgOf = () => { const b = options.bound(); return b ? String(b.org) : null; };
+    const want = orgOf();
+    const now = Date.now();
+    if (resolved.id !== null && resolved.org === want && now - resolved.at < RESOLVE_TTL) {
+      return resolved.id;
+    }
+    const id = await resolve();
+    if (want !== orgOf()) return id;              // it moved while we asked
+    resolved = { id, at: Date.now(), org: want };
+    return id;
+  }
+
+  async function resolve() {
     const tabs = await options.chromeApi.tabs.query({ url: options.zohoMatches });
     if (tabs.length < 2) return tabs[0]?.id ?? null;
     // **More than one candidate, so ask which one this workspace belongs to.**
@@ -90,13 +119,6 @@ function createCrmZohoBridge(options) {
       && (!bound.base || a.ctx.origin === bound.base)
       && (!bound.instance || !a.ctx.instance || a.ctx.instance === bound.instance));
     return match ? match.id : (asked.find((a) => a) || {}).id ?? tabs[0].id;
-  }
-
-  async function activeTabId() {
-    const [active] = await options.chromeApi.tabs.query({ active: true, currentWindow: true });
-    if (!active) return null;
-    if (options.zohoHost.test(active.url || '')) return active.id;
-    return (await tabHasCrmFrame(active.id)) ? active.id : null;
   }
 
   async function askFrame(tabId, frameId) {
@@ -194,7 +216,13 @@ function createCrmZohoBridge(options) {
     const expected = message && message.cmd !== 'context' && bound
       ? { org: bound.org, origin: bound.base, instance: bound.instance } : null;
     const command = options.command(message, expected);
-    const reply = await options.chromeApi.tabs.sendMessage(id, command, target);
+    let reply;
+    try {
+      reply = await options.chromeApi.tabs.sendMessage(id, command, target);
+    } catch (e) {
+      forgetTab();                 // the tab it named is not answering: resolve again next time
+      throw e;
+    }
     return options.validateReply ? options.validateReply(command, reply) : reply;
   }
 
@@ -216,7 +244,7 @@ function createCrmZohoBridge(options) {
   }
 
   return {
-    tabHasCrmFrame, tabId, activeTabId, askFrame, answeringFrame, frameId, ensure, send,
+    tabId, askFrame, answeringFrame, frameId, ensure, send,
     getContext, waitTabComplete, seenFrames: () => seenFrames,
   };
 }

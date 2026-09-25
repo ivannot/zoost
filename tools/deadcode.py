@@ -92,11 +92,31 @@ def sweep(app: str) -> list:
                 out.append(f"{app}/{p.name}: MSG.{key} - written, never said")
 
     # 3. rules for classes that appear nowhere at all, and ids nothing reaches for
+    #
+    # **The rules used to be inside the page and this read them there.** Every shipped page linked
+    # its own `<style>` block until the sheets were lifted into `.css` files beside them, at which
+    # point `"</style>" not in html` was true of all six and this whole step swept **zero** pages -
+    # both halves of it, the styled-never-applied sweep and the id sweep, gone in one edit with the
+    # headline still printing a count of scripts. Exactly the failure this repository has written
+    # down twice: a number on screen that measures something else, and a checker whose own coverage
+    # nobody measures. The sheets are followed now, the way `csscheck` and `twincheck` already
+    # follow them, and the count below says how many rule sources were actually read.
     for page in sorted(d.glob("*.html")):
         html = read(page)
-        if "</style>" not in html:
+        css = ""
+        if "</style>" in html:
+            css, html = html.split("</style>", 1)
+        for href in re.findall(r'<link[^>]+href="([^"]+\.css)"', html):
+            sheet = d / href
+            if sheet.exists():
+                css += "\n" + read(sheet)
+        if not css:
             continue
-        css, rest = html.split("</style>", 1)
+        # Comments are prose about the rules, not rules: `.dhead .dx{...}` quoted in a note about
+        # specificity was reported as styled-and-never-applied, which is the tool reading its own
+        # documentation as code.
+        css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+        rest = html
         hay = rest + code
         for cls in sorted(set(re.findall(r'\.([a-zA-Z][\w-]*)(?=[\s,:{.\[>+~])', css))):
             if not re.search(r'(?<![\w-])' + re.escape(cls) + r'(?![\w-])', hay):
@@ -108,7 +128,11 @@ def sweep(app: str) -> list:
             #   `$('sc_' + area)`    a name composed at run time from a prefix
             #   `'#ai'`              a fragment, handed to the settings page as a URL
             prefix = i.rsplit("_", 1)[0] + "_" if "_" in i else None
-            reached = (f"'{i}'" in code or f'"{i}"' in code or f"#{i}" in html
+            # The sheet counts as a place an id is reached from: `#pvhead{...}` styles it, and
+            # while the rules lived inside the page `html` carried them. It does not any more, so
+            # without this every id that is styled and not scripted became a finding - the shape of
+            # false positive that teaches a reader to skim the list.
+            reached = (f"'{i}'" in code or f'"{i}"' in code or f"#{i}" in html or f"#{i}" in css
                        or f'for="{i}"' in html or f'href="#{i}"' in html
                        or f"url(#{i})" in html or f"url(#{i})" in code
                        or f"'#{i}'" in code or f'"#{i}"' in code
@@ -120,7 +144,13 @@ def sweep(app: str) -> list:
 
 def main() -> int:
     findings = sweep("crm") + sweep("analytics")
-    print(f"deadcode: {len(list((ROOT / 'apps').rglob('*.js')))} shipped scripts swept")
+    pages = list((ROOT / "apps").rglob("*.html"))
+    sheets = list((ROOT / "apps").rglob("*.css"))
+    # **What was inspected, not what exists.** The sheets line is the one that would have said this
+    # tool had gone blind: the pages kept their count while the rules inside them moved to files the
+    # sweep did not open, and a headline about scripts cannot report that.
+    print(f"deadcode: {len(list((ROOT / 'apps').rglob('*.js')))} shipped scripts, "
+          f"{len(pages)} page(s) and {len(sheets)} stylesheet(s) swept")
     for f in findings:
         print("  " + f)
     print()

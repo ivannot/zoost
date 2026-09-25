@@ -64,8 +64,10 @@ ALLOWED = {
         # files, and a fragment declared against the file that does not hold it covers nothing at
         # all - which is how two rounds of this looked like halving the findings while they were
         # only moving them from one side to the other.
-        ('`This is a Zoho CRM tab', 'it names the tab the reader is actually standing on'),
-        ('`You are on Zoho CRM and this panel reads', 'and says which product reads that tab'),
+        # **«standing on» became «has open» the day the panel became a window.** `currentWindow` is
+        # Zoost's own window now, so what the tab in front is cannot be asked; what is open can.
+        ('`A Zoho CRM tab is open', 'it names a tab the reader has open that this product cannot read'),
+        ('`You have Zoho CRM open and this reads', 'and says which product reads that tab'),
     ],
     'apps/analytics/ai.js': [
         ('the CRM', 'comments comparing the two assistants are how the twin rule is documented in code'),
@@ -79,15 +81,15 @@ ALLOWED = {
         ('the Analytics', 'comments comparing the two panels'),
         ("TWIN = { name: 'Zoho Analytics'", 'the twin this panel points at when the tab is not its own'),
         # Ditto, the other way round - and the same narrowness for the same reason.
-        ('`This is a Zoho Analytics tab', 'it names the tab the reader is actually standing on'),
-        ('`You are on Zoho Analytics and this panel reads', 'and says which product reads that tab'),
+        ('`A Zoho Analytics tab is open', 'it names a tab the reader has open that this product cannot read'),
+        ('`You have Zoho Analytics open and this reads', 'and says which product reads that tab'),
     ],
     'apps/crm/crm-context.js': [
         # The sentences the reader is shown on the twin's tab, and the title on the context-bar mark.
         # Deliberate, and the whole point of the feature. Narrow fragments rather than the bare
         # platform name: a blanket allowance would excuse every future occurrence in this file.
-        ('`This is a Zoho Analytics tab', 'it names the tab the reader is actually standing on'),
-        ('`You are on Zoho Analytics and this panel reads', 'and says which product reads that tab'),
+        ('`A Zoho Analytics tab is open', 'it names a tab the reader has open that this product cannot read'),
+        ('`You have Zoho Analytics open and this reads', 'and says which product reads that tab'),
     ],
     'apps/analytics/content-bridge.js': [
         ('CRM', 'comments citing the CRM bridge, which is where the CSRF lesson came from'),

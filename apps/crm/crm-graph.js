@@ -29,22 +29,65 @@ $('pvx').onclick = () => { previewLoad++; $('preview').classList.remove('show');
 // rather than keeping a flag is the rule this panel already lives by: a state that has to hold
 // across time is a term in the condition, not an assignment somebody has to keep in step.
 const wideSplit = () => window.matchMedia('(min-width: 720px)').matches;
+// **What was dragged in one window has to fit in the next one.** The sizes are remembered as
+// pixels, and until now they were handed back raw: a pane dragged to 700px in a 1200px window and
+// met again in a 900px one drew itself from 288 to 988, with its own header - the close mark and
+// both «Open in Zoho» buttons - past the right-hand edge of a body that hides its overflow. The
+// stylesheet lets the pane shrink now, which stops the overflow; this keeps the *stored* number
+// honest, so the next drag starts from where the reader can see it. Both axes, because the
+// vertical one had the same defect: a 500px pane in a 313px viewport made the whole panel scroll.
+const SPLIT_LIST_MIN = 280, SPLIT_preview_MIN = 340, SPLIT_BAR = 8;
+const SPLIT_LIST_MIN_H = 80, SPLIT_preview_MIN_H = 120;
+/** The room the pane may take, on whichever axis is splitting. `null` when there is not enough of
+ *  it for both minimums - the stylesheet decides that case and a number here would fight it. */
+function splitRoom(r) {
+  if (!r.width || !r.height) return null;              // not laid out yet
+  const room = wideSplit() ? r.width - SPLIT_LIST_MIN - SPLIT_BAR : r.height - SPLIT_LIST_MIN_H;
+  const floor = wideSplit() ? SPLIT_preview_MIN : SPLIT_preview_MIN_H;
+  return room < floor ? null : room;
+}
+function clampSplit() {
+  const el = $('preview'), room = splitRoom($('split').getBoundingClientRect());
+  if (room == null) return;
+  if (wideSplit()) {
+    const cur = parseFloat(el.style.getPropertyValue('--splitw'));
+    if (!isFinite(cur)) return;                        // never dragged: the stylesheet's share holds
+    const w = Math.max(SPLIT_preview_MIN, Math.min(room, cur));
+    if (w !== cur) el.style.setProperty('--splitw', w + 'px');
+    return;
+  }
+  const cur = parseFloat(el.style.height);
+  if (!isFinite(cur)) return;
+  const h = Math.max(SPLIT_preview_MIN_H, Math.min(room, cur));
+  if (h !== cur) el.style.height = h + 'px';
+}
 let dragY = false;
 $('resizer').addEventListener('mousedown', () => { dragY = true; document.body.style.userSelect = 'none'; });
 window.addEventListener('mousemove', (e) => {
-  if (!dragY) return; const r = $('split').getBoundingClientRect();
+  if (!dragY) return;
+  // **The button is gone, so the drag is over.** There is no `mouseup` when the release happens
+  // outside the window, and the clamp above stops the divider well short of the edge while the
+  // cursor keeps travelling - so letting go out there left the drag live: the pane then resized
+  // itself under a cursor with no button held, and text stayed unselectable, until the reader
+  // clicked again, which also pressed whatever was under them. `buttons` is the browser's own
+  // answer to «is anything held», asked at the only moment it matters.
+  if (!e.buttons) { endSplitDrag(); return; } const r = $('split').getBoundingClientRect();
   if (wideSplit()) {
-    // The list keeps 280px whatever happens, which is the minimum the tree rows were drawn for.
-    const w = Math.max(340, Math.min(r.width - 280, r.right - e.clientX));
+    // The list keeps 280px whatever happens, which is the minimum the tree rows were drawn for -
+    // and the divider itself is 8 of the pixels being shared out, which this forgot: dragging fully
+    // left overflowed by exactly that, clipping a third of the close mark.
+    const w = Math.max(SPLIT_PANE_MIN, Math.min(r.width - SPLIT_LIST_MIN - SPLIT_BAR, r.right - e.clientX));
     $('preview').style.setProperty('--splitw', w + 'px');
     return;
   }
-  let h = Math.max(120, Math.min(r.height - 80, r.bottom - e.clientY)); $('preview').style.height = h + 'px';
+  const h = Math.max(SPLIT_PANE_MIN_H, Math.min(r.height - SPLIT_LIST_MIN_H, r.bottom - e.clientY));
+  $('preview').style.height = h + 'px';
 });
 // The height is cosmetic and its write is best-effort **by declaration**: a refusal costs the
 // reader a drag next session and nothing else, so it is not worth a sentence - but an unhandled
 // rejection is not a decision, it is an omission, so the intent is written where it happens.
-window.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => { endSplitDrag(); });
+function endSplitDrag() {
   if (!dragY) return;
   dragY = false; document.body.style.userSelect = '';
   // Two sizes, remembered separately, because they are two different readers' preferences: how
@@ -56,7 +99,7 @@ window.addEventListener('mouseup', () => {
   // by the shape of the code it reads. Two lines is a cheap price for being visible.
   if (wideSplit()) void chrome.storage.local.set({ previewW: $('preview').style.getPropertyValue('--splitw') }).catch(() => {});
   else void chrome.storage.local.set({ previewH: $('preview').style.height }).catch(() => {});
-});
+}
 
 /** Put each function's id in the newer interface on its index row, keeping what is already known.
  *

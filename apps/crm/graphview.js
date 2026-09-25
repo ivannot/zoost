@@ -185,7 +185,7 @@ async function init() {
   const store = await chrome.storage.session.get(key);
   DATA = store[key];
   if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
-  if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
+  if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   // The four numbers are written by `graphStat()`, which replaces the whole line and runs twice
   // during this init, a few lines below. Poking the spans here wrote them once and never again -
@@ -815,12 +815,12 @@ async function switchGraphKind(e, here) {
       if (!r || !r.ok) throw new Error((r && r.error) || 'no answer');
       location.reload();
     } catch (err) {
-      // Precise, because there is exactly one thing that makes this fail: the panel is the only
-      // holder of the folder handle, and it has to be open and granted for the graph to be built.
+      // Precise, because there is exactly one thing that makes this fail: the Zoost window is the
+      // only holder of the folder handle, and it has to be open and granted for the graph to be built.
       $('statline').innerHTML = was;
       alert('Could not switch: ' + (err.message || err)
-        + '\n\nThe Zoost side panel builds the graph - it holds the working folder, this window does not.'
-        + '\nOpen the panel in a Zoho CRM tab, make sure the folder is granted, then try again.');
+        + '\n\nThe Zoost window builds the graph - it holds the working folder, this window does not.'
+        + '\nOpen Zoost from the toolbar, make sure the folder is granted, then try again.');
     }
 }
 function wireSubject() {

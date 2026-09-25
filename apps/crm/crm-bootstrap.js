@@ -185,6 +185,7 @@ async function restorePreviewHeight() {
   // The width is only read in the two-column mode, where the stylesheet overrides the height
   // anyway - so both can be restored without either having to know which mode is showing.
   if (r?.previewW) $('preview').style.setProperty('--splitw', r.previewW);
+  clampSplit();                    // a size from another window is a size this one may not have
 }
 void restorePreviewHeight();
 
@@ -207,8 +208,24 @@ async function restoreChromeFold() {
 }
 const FOLD_SHOW = 'Show the workspace and tools rows again';
 const FOLD_HIDE = 'Fold the workspace and tools rows away';
+/** **The fold is for a panel that is working, and it stays open on one that is not.**
+ *
+ *  Folded, the chrome takes `#wsroot`, the workspace picker, `+ Workspace`, `+ Sample`, `Pull all`
+ *  and every tool with it - measured, all of them zero-sized. And `emptyReason()` names exactly
+ *  those: «Press Sample … or use + Workspace», «press + … or press + Sample», «Press Pull all». A
+ *  reader on a short screen gets the fold by default, with no working folder yet, and is told to
+ *  press three buttons that are not on the screen - the guide's own «wrong missing thing», which is
+ *  the one empty-state failure this project treats as worse than silence, arriving on the very
+ *  first run. So the choice is remembered and honoured, and it is *applied* only once there is a
+ *  workspace open: the fold buys room for a list, and with no list there is nothing to buy it for.
+ */
+let chromeFoldWanted = false;
+function syncChromeFold() {
+  document.body.classList.toggle('chromefolded', chromeFoldWanted && !!dir);
+}
 function applyChromeFold(folded) {
-  document.body.classList.toggle('chromefolded', folded);
+  chromeFoldWanted = folded;
+  syncChromeFold();
   const b = $('chromefold');
   if (!b) return;
   // The mark turns with the state - `body.chromefolded` rotates it in the stylesheet - so there is
@@ -222,13 +239,12 @@ function applyChromeFold(folded) {
   b.title = folded ? FOLD_SHOW : `${FOLD_HIDE} - the list gets the room`;
 }
 $('chromefold').onclick = () => {
-  const folded = !document.body.classList.contains('chromefolded');
+  const folded = !chromeFoldWanted;
   applyChromeFold(folded);
   // Best-effort by declaration, like the split's size beside it: a refusal costs the reader one
   // click next session and nothing else.
   void chrome.storage.local.set({ chromeFolded: folded }).catch(() => {});
 };
-void restoreChromeFold();
 
 /** On a first run the window places itself, instead of landing wherever Chrome decides.
  *
@@ -242,19 +258,57 @@ void restoreChromeFold();
  *  moves or resizes it, that is where it belongs, and a default that re-asserted itself would undo
  *  a choice on every open. The same rule as the folded chrome, one surface up.
  */
-async function placeWindowOnFirstRun() {
+/** The right-hand half of the screen, which is where this window starts life. */
+function halfTheScreen() {
+  const half = Math.round(screen.availWidth / 2);
+  return { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
+           width: half, height: Math.round(screen.availHeight) };
+}
+/** Is enough of this window on a screen to grab hold of? A window is dragged by its top edge, so
+ *  the test is about that edge and not about area: 120x40 of it inside the work area is a title bar
+ *  somebody can reach. */
+function withinReach() {
+  const l = window.screenX, t = window.screenY, r = l + window.outerWidth, b = t + window.outerHeight;
+  const al = screen.availLeft, at = screen.availTop;
+  const ar = al + screen.availWidth, ab = at + screen.availHeight;
+  return Math.min(r, ar) - Math.max(l, al) >= 120 && Math.min(b, ab) - Math.max(t, at) >= 40;
+}
+/** Place it on the first run, and bring it back if where it was left is no longer anywhere.
+ *
+ *  **The remembered place is handed straight back to `windows.create`, and a place can stop
+ *  existing.** Work with Zoost on a second monitor, undock, click the icon: the window is created
+ *  off the side of the only screen there is. A `popup` has no tab strip and no address bar, so
+ *  there is nothing in it to navigate with, and the only way back would be clearing the extension's
+ *  storage - which is not a recovery, it is an uninstall with extra steps. The service worker
+ *  cannot check this (it would need `system.display`, a permission for a cosmetic fact); this
+ *  document can, for nothing, because `screen` is already its own. So the check lives where the
+ *  knowledge is, and it runs on every load rather than only on the first: the run that needs it is
+ *  by definition one where a place was already remembered.
+ */
+async function placeWindow() {
   try {
     const { zoostWindowBounds } = await chrome.storage.local.get('zoostWindowBounds');
-    if (zoostWindowBounds && zoostWindowBounds.width) return;
     const self = await chrome.windows.getCurrent();
-    const half = Math.round(screen.availWidth / 2);
-    const bounds = { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
-                     width: half, height: Math.round(screen.availHeight) };
+    if (zoostWindowBounds && zoostWindowBounds.width) {
+      if (withinReach()) return;
+    } else if (zoostWindowBounds) {
+      return;                              // maximised and nothing else remembered: the browser placed it
+    }
+    const bounds = halfTheScreen();
     await chrome.windows.update(self.id, bounds);
-    await chrome.storage.local.set({ zoostWindowBounds: bounds });
+    // Every field named, not spread: two files write this key and the check that holds them to
+    // «keep what you do not know about» reads the fields it can see.
+    await chrome.storage.local.set({ zoostWindowBounds: {
+      left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height, state: 'normal' } });
   } catch (_) { /* a window that will not move is still a window; nothing here is worth a sentence */ }
 }
-void placeWindowOnFirstRun();
+// **In this order, and awaited.** The unset fold default is decided from
+// `window.innerHeight`, and on a first run the window is created at 1200x900 and then
+// placed at the height of the screen - so asking before the placing measured a window that
+// was about to stop existing, and a short screen got the unfolded chrome the default is
+// there to avoid. Right from the second run on, which is exactly how a first-run defect
+// stays invisible.
+void placeWindow().then(restoreChromeFold);
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_t, info) => { if (info.status === 'complete' || info.url) refreshContext(); });

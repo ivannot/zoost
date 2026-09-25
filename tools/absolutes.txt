@@ -86,7 +86,7 @@ fe2044800a0bd72a  apps/analytics/workbench.html: Everything Share-safe Views - t
 09ed735e87093ffd  apps/analytics/workbench.js: The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.
 5e10e1ec5ba2617c  apps/crm/graphview.js: Nothing in that file is on this diagram - it was saved from a different graph, or everything in it has since been renamed.
 ba89dffc50f0a566  apps/crm/graphview.js: moved \u00b7 nothing is covered
-693b11999c36b84e  apps/crm/options.html: A tab you turn off is absent , not greyed out - the panel is 400px wide and a control that does nothing is just noise.
+63c2a90a1770e6d6  apps/crm/options.html: A tab you turn off is absent , not greyed out - a control that does nothing is just noise.
 c6b9eb44b2454e2b  apps/crm/options.html: Functions - inventory, namespaces, cross-references Deluge source code - the full body of every function the most sensitive part Module schema - fields, types, lookups, picklists Layout detail - sections and per-layout fields Relations - related-list API names and Deluge calls Workflows - triggers, criteria, actions Schedules Blueprints - the process each module's records walk Actions - notifications, field updates, tasks and webhooks, and which rules fire each Sender addresses - the address each notification goes out as.
 1932a2c8788ebbeb  apps/crm/options.html: It is the starting point for Go to Zoho CRM on the screen shown when there is no Zoho CRM tab - that screen carries a picklist of every data centre, because after signing out of one org which one you want next is a choice, not something to deduce from the one you happen to have open.
 4b7da9657ba874ae  apps/crm/options.html: Nothing is deleted by hiding a tab: Pull all still mirrors that type, and it still appears in exports and in what the AI can see - unless you also clear its pull box, which is the separate question of whether Zoost should ask Zoho for that type at all.
@@ -261,6 +261,7 @@ f1608bbd1ea626f8  site/docs-analytics.html: The Markdown carries one thing the H
 3cc7cee9aff74867  site/docs-analytics.html: The chips above the tabs are the filter and the colour key at once, grouped by what they ask: Views is which kinds are on screen and every one of them starts on, so switching one off removes it; Only narrows to tables that are also a hub, an orphan or a system table, and starts empty.
 0fd9fa42e904a9a7  site/docs-analytics.html: The first search of a session reads every .sql file once - the panel says how many, and says so again if any of them would not open, because a query it could not read is not a query with no match.
 c7df81e071091229  site/docs-analytics.html: The same action is the primary choice in the sample's own group on the Not on a Zoho Analytics tab screen, as Sample workspace : a sample owes the platform nothing, so it opens and reads without a tab and without an account.
+cb87ee9d2c332186  site/docs-analytics.html: The two rows that state something - which workspace the tab is on, and the warning when the tab and the workspace disagree - never fold.
 00c6c6e5a78e3d87  site/docs-analytics.html: The window also has a Relations tab: one row per join, searchable by table, column or join, and every join copyable.
 aeaf04ab914655cf  site/docs-analytics.html: The worst it can do to your workspace is nothing.
 17e023f421aceb1c  site/docs-analytics.html: There is no single right value for every graph.
@@ -289,6 +290,7 @@ d46596c26e556b05  site/docs-crm.html: A workflow or a schedule that fires one is
 e9887f7bcdd4ce2e  site/docs-crm.html: A workflow rule almost never does the work itself: it points at something that exists on its own in Zoho CRM and is reused across rules - an email notification , a field update , a task , a webhook .
 b8c39b7e4633e967  site/docs-crm.html: After signing out of one org, which org you want next is a choice and nothing here can deduce it: a consultant with clients on .eu , .com and .jp may well want the one they have never opened from this machine.
 d526906a4512534d  site/docs-crm.html: All of it comes from what is already on your disk: a workflow's own JSON says which functions it fires, a schedule's index row names the one it runs, and a function's captured meta lists its connections.
+43794477391c2443  site/docs-crm.html: Amber with no mark means never published; amber with a trailing + means published with a later edit that is not live.
 141d1047a04a2f6d  site/docs-crm.html: And a name is only shown when it is a module this org actually has: a word that looks like one and is not says nothing.
 91c589c9c2792d1d  site/docs-crm.html: And who the recipients are - the count comes back with the rule, the list of people does not, and Zoost never asks for it.
 9a9833eb72d7d5c4  site/docs-crm.html: Beside the button is a picklist of every data centre.
@@ -301,7 +303,6 @@ a7c560aa804df643  site/docs-crm.html: Chapter 9: the catalogue, and which functi
 c0a970763287a425  site/docs-crm.html: Code you have commented out does not count as a call, so a function whose only mention is a disabled line is named here rather than left looking alive.
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 0d28d5f88365cf2e  site/docs-crm.html: Directories and subdirectories are preserved explicitly, even when empty; full-text search includes every file.
-a19bfe5e2d2d68e4  site/docs-crm.html: Draft means never published, Draft + means published with a later edit that is not live, and the detail spells out the publication date.
 6579ac075b364a97  site/docs-crm.html: Each function also has a .meta.json sidecar functions/index.json the census: every function with its namespace, id and where it is wired modules/ one file per module - fields, types, lookup targets, picklist values.
 8756fe2d46f0bc32  site/docs-crm.html: Each is absent when it would do nothing.
 9b0d2daa6a6356ba  site/docs-crm.html: Each section keeps its own, and the button lights up - with the words Unsaved changes beside it - only while what is on screen differs from what is stored.
@@ -329,6 +330,7 @@ bbb4881c12a0342f  site/docs-crm.html: It no longer comes and goes with the tab: 
 8de5e000fafd2693  site/docs-crm.html: Java, Python and Node functions are written, saved and then published , so the source in the mirror can be code the org has never run - and nothing on disk tells the two apart.
 c6c8d19e0ec544cb  site/docs-crm.html: Later pulls skip a refused area on purpose - re-asking an answered question on every pull is a thousand requests for one role change - so ticking that box, and pressing Save tabs , is what puts the area back into the next pull, once.
 ac0b9a1e4ccbdcf0  site/docs-crm.html: Length and outbound calls cover every function; the run counts cover the busiest few and come from Zoho.
+841cc5d57f8e67f3  site/docs-crm.html: Live / Draft on a compiled function's row is what Zoho is actually running, and it is carried by the colour of the language name rather than by a column of its own: the list has one cell where it had two, because on a narrow panel a reserved column costs its width on every row whether or not it has anything in it.
 3aa746d9cc9ee1c9  site/docs-crm.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: a Zoho CRM instance id is exact without being memorable, and two sandboxes of the same org differ by nothing you would recognise at a glance.
 1c0ca583b59af0f9  site/docs-crm.html: Nobody can decrypt that key without the passphrase, Zoost included - this is the only way out, and it is a button rather than a sequence you have to work out.
 77128ef67a1ead78  site/docs-crm.html: Not every Zoho user may read every one of these.
@@ -373,6 +375,7 @@ e7856343b82fe03d  site/docs-crm.html: The function a button calls opens from the
 15d535be05b3dfae  site/docs-crm.html: The same action is the primary choice in the sample's own group on the Not on a Zoho CRM tab screen, as Sample workspace : a sample owes the platform nothing, so it opens and reads without a tab and without an account.
 559f912244b58afb  site/docs-crm.html: The same page is where you choose which tabs to show at all, and in what order - the panel is narrow, and a type you never look at is only in the way.
 f16e5aeb13321429  site/docs-crm.html: The tree takes the keyboard too: click it once, then ↑ and ↓ walk the functions that are on screen - what the search and the type filter have left, never inside a collapsed group - and open each as a click would; Home and End go to the two ends.
+9c9cd9714344de82  site/docs-crm.html: The two rows that state something - which org the tab is on, and the warning when the tab and the workspace disagree - never fold: those are not decoration.
 98ecb6a7dd36d2ac  site/docs-crm.html: The whole conversation is re-sent with every message, so a long thread costs more per question and drags old, irrelevant context into new answers.
 0558870da9bdd943  site/docs-crm.html: The ✎ Name this workspace button next to the list gives it a name of your own, and 🗑 Remove workspace beside it deletes that folder - the local mirror only, never anything in Zoho, and a pull brings it back.
 c20afb970bfeba78  site/docs-crm.html: There is no analytics and no tracking of any kind, and nothing leaves unless you press something: the AI assistant , described below, and Report this problem , which shows you the whole report and sends it only when you press Send.
@@ -409,7 +412,7 @@ bd143e2488fb02f5  site/emergency.html: Going back is two clicks, but nothing wil
 391912f7775b90c9  site/emergency.html: Nothing on this page decides for you.
 5832e19315d75b32  site/emergency.html: Point the new copy at the same working folder with Choose folder , grant access again, and every workspace, every pulled function and every bit of history you committed is there, exactly as it was.
 fe9bf05921eee8cd  site/emergency.html: Submission for review is a separate step, and the version appears on the Store only after approval.
-42ae8337e0f2f9b3  site/emergency.html: The extension appears in the list with an ordinary card, and its side panel opens the way it always did.
+4784693e79306dc9  site/emergency.html: The extension appears in the list with an ordinary card, and its window opens the way it always did.
 9754b176703085f9  site/how-to.html: Zoost - workbench for Zoho CRM Working folder and workspaces, pulling functions, module schema and automations, the reference graph and the ER diagram, full-text search across every function, the health audit, exports, and the AI assistant.
 469f9e338e5d7eff  site/index.html: A four-hundred-line function may be a perfectly clean mapping table, and only you know which of yours those are.
 96aaee7713102f18  site/index.html: Both ask for their own platform's domains in every data centre, api.anthropic.com / api.openai.com , and zoost.it .
@@ -434,7 +437,7 @@ fbaedb8a02c944c1  site/index.html: The whole thing at once Search everything tog
 ec9d647694a3c233  site/index.html: Try Zoost CRM with sample data Try Zoost Analytics with sample data Read-only towards Zoho · no account · data on your computer · open source You are about to change one function What else will this change affect?
 fa2d2003cff4f14e  site/index.html: Two things leave only if you send them: what you ask the optional AI assistant, with your own key - what it adds, and when it is not worth one - and a problem report , which you read in full first.
 29290ba71ebebc5c  site/index.html: What both workbenches share It only reads No Zoost calls an endpoint that creates, edits or deletes anything in Zoho.
-42e8cb1d23151817  site/index.html: What it asks Chrome for Four permissions - sidePanel , storage , scripting , tabs - and a named list of hosts, never <all_urls> .
+dca6fb7e5409346e  site/index.html: What it asks Chrome for Three permissions - storage , scripting , tabs - and a named list of hosts, never <all_urls> .
 9064b4a61fb2af1c  site/index.html: What it does → How to use it → Install ↗ Zoost Analytics on the Chrome Web Store Zoost - workbench for Zoho Analytics Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the entire workspace, and a list of views with no known dependants.
 482b466bb7f7447b  site/index.html: What it reads Configuration only: code, field definitions, automations, the structure of a workspace.
 9ea4af958b0f82d6  site/index.html: What it writes To Zoho, nothing: it calls no endpoint that creates, edits or deletes.
@@ -567,6 +570,7 @@ e7a47c2471751917  site/it/docs-analytics.html: Il modello mentale Tre concetti s
 8677b20617151edd  site/it/docs-analytics.html: La stessa azione è la scelta principale nel gruppo del sample sulla schermata Not on a Zoho Analytics tab , come Sample workspace : un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
 a68b09b3d913dd3a  site/it/docs-analytics.html: Le chip sopra le schede sono insieme il filtro e la legenda dei colori, raggruppate per la domanda che pongono: Views è quali tipi sono a schermo e partono tutti accesi, quindi spegnerne uno lo toglie; Only restringe alle tabelle che sono anche hub, orfane o di sistema, e parte vuoto.
+0e81e5cba54b772e  site/it/docs-analytics.html: Le due righe che dichiarano qualcosa - su quale workspace è la scheda, e l'avviso quando scheda e workspace non coincidono - non si ripiegano mai.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
 2da2f1024d05dfb5  site/it/docs-analytics.html: Lineage: per ogni query table, quali colonne legge e da quale vista.
 6ff01eeb54cbeeac  site/it/docs-analytics.html: Lo dichiariamo qui per evitare che sembri una contraddizione con la sola lettura.
@@ -607,6 +611,7 @@ cbb5993fc49dd69e  site/it/docs-analytics.html: Sono l'unica cosa in Zoho Analyti
 9e76fcd9de637347  site/it/docs-analytics.html: Su disco ogni query è un file a sé, così grep e git log -p ci lavorano come su qualunque altro sorgente.
 c270ab816a516be2  site/it/docs-analytics.html: Sul workspace di test non c'è, perché dietro non c'è niente da aprire.
 bcd418e3c870952c  site/it/docs-analytics.html: Tabelle e query table hanno le proprie; un report o una pivot non ne ha nessuna, quindi Zoost segue ciò su cui è costruito e mostra quella struttura - dicendo di chi è, invece di spacciarla per quella del report.
+62d6c4ed6a04f6fe  site/it/docs-analytics.html: Un mirror sono file locali: leggerlo, cercarci dentro, disegnarlo ed esportarlo non chiede nessuna scheda - quello che è spento è la metà che parla con Zoho, e la riga dice quale.
 dc73873e4a48b573  site/it/docs-analytics.html: Una parola che potrebbe essere una colonna, una funzione di un dialetto che qui nessuno ha letto per intero, un nome che sembra riservato e non lo è - restano neutri, perché un'evidenziazione sbagliata è peggio di una che manca.
 be557ac9a0cb37e4  site/it/docs-analytics.html: Una riga aperta da questa ricerca si apre sulla scheda SQL , con ogni corrispondenza dipinta nel sorgente - la stessa ricerca, seguita fino in fondo.
 392d93ab03fef158  site/it/docs-analytics.html: Una tabella che non compare in nessuna relazione può essere una tabella di appoggio voluta; una vista che nessuno legge può alimentare un export schedulato.
@@ -619,6 +624,7 @@ cbdf2ba58ab43188  site/it/docs-analytics.html: Zoost non esegue, non valida e no
 a7b2d1b38291e6ef  site/it/docs-analytics.html: ↺ All rimette tutto e None spegne tutto, così basta un clic per riaccendere il tipo che ti serve.
 1cc263a2156cea9f  site/it/docs-crm.html: A quel punto non è stato mandato niente: il testo ce l'hai davanti, e Send as a public issue lo premi tu o no.
 1b499e5458f56031  site/it/docs-crm.html: Accanto al tasto c'è una tendina con tutti i data centre.
+d9abc3091fcb578f  site/it/docs-crm.html: Ambra senza segno vuol dire mai pubblicata; ambra con un + finale vuol dire pubblicata con una modifica successiva che non è live.
 21bb261b7a10d7c8  site/it/docs-crm.html: Anche l'albero prende la tastiera: cliccalo una volta, poi ↑ e ↓ scorrono le funzioni visibili - quelle che la ricerca e il filtro per tipo hanno lasciato, mai dentro un gruppo chiuso - e ne aprono una come farebbe un clic; Home e End vanno ai due estremi.
 caae116ac8dc8732  site/it/docs-crm.html: Capitolo 10: candidati da guardare, mai un verdetto - e la nota sulla copertura sta sopra l'elenco, non in fondo.
 835e01d5b54ab96c  site/it/docs-crm.html: Capitolo 5: in: code trasforma la casella in una ricerca dentro il sorgente di ogni funzione - qui quattro corrispondenze in due file, con la riga in cui stanno.
@@ -640,7 +646,6 @@ d8aca002fe82ab7b  site/it/docs-crm.html: Cosa sta fallendo davvero L'audit di sa
 ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
 c4759d38fe05e15f  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei modelli e ogni altra impostazione restano; la chiave API la incolli di nuovo dalla dashboard del tuo provider.
 2e4716d3552a0532  site/it/docs-crm.html: Dopo essere uscito da un'org, quale org vuoi aprire adesso è una scelta e da qui non si deduce: un consulente con clienti su .eu , .com e .jp può benissimo volere quello che da questa macchina non ha mai aperto.
-33cbdd91bf33c142  site/it/docs-crm.html: Draft vuol dire mai pubblicata, Draft + pubblicata con una modifica successiva che non è live, e il dettaglio scrive per esteso la data di pubblicazione.
 98359655a0231aaf  site/it/docs-crm.html: Due controlli si salvano da soli mentre li cambi, e te lo dicono: il data centre e il motore AI, ognuno una scelta singola senza niente da comporre.
 fbc9c046d9b5f837  site/it/docs-crm.html: Due pulsanti coprono l'altra direzione: ↺ All rimette tutto, None spegne tutto, così un clic solo riaccende la categoria che ti serve.
 5dd1c8d4764acaac  site/it/docs-crm.html: E un modulo che nessuna automazione tocca non c'è: è un'altra domanda, a cui risponde l'audit Health .
@@ -657,6 +662,7 @@ e46961abb53c0a61  site/it/docs-crm.html: I chip in alto sono insieme il filtro e
 27098dfc26517577  site/it/docs-crm.html: I commenti e il testo fra virgolette vengono messi da parte prima, quindi una chiamata che hai commentato non è una freccia - e la funzione che nominava può a quel punto comparire nell'audit di salute come una che nessuno chiama.
 584366bc3ae1ca59  site/it/docs-crm.html: I conteggi d'uso coprono soltanto le funzioni Deluge di questo workspace .
 01e5697dcd20143c  site/it/docs-crm.html: I pull successivi saltano apposta un'area rifiutata - rifare a ogni pull una domanda già risposta sono mille richieste per un solo cambio di ruolo - quindi è spuntare quella casella, e premere Save tabs , a rimettere l'area nel pull successivo , una volta sola.
+b4a351db3638d89e  site/it/docs-crm.html: I pulsanti Zoho sono disattivati O non c'è nessuna scheda Zoho CRM aperta, oppure quella che il pannello ha risolto è su un'org diversa dal workspace selezionato.
 2b7b3da5542f5255  site/it/docs-crm.html: I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.
 57d500e9e6b6c5b1  site/it/docs-crm.html: Il filtro è Attached to nothing , e lo stesso elenco compare nell'audit di salute sotto Wiring .
 c0337979a22febe2  site/it/docs-crm.html: Il gruppo tratteggiato Only è l'altra domanda - «restringi ai nodi che sono anche…» - e parte vuoto, perché è la verità quando non hai scelto niente; quei tre valgono per le funzioni.
@@ -677,10 +683,12 @@ f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra por
 213ec87479d3315e  site/it/docs-crm.html: La stessa azione è la scelta principale nel gruppo del sample sulla schermata Not on a Zoho CRM tab , come Sample workspace : un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.
 54b824cebd26d9df  site/it/docs-crm.html: La stessa pagina è dove scegli quali schede mostrare e in che ordine - il pannello è stretto, e un tipo che non guardi mai è solo d'intralcio.
 7128e5a227a2a59e  site/it/docs-crm.html: Le colonne restano allineate lungo tutto l'elenco - il modulo a cui appartiene l'azione e quante regole la fanno scattare - e Sort riordina per Kind, then name (il default), Rules that fire it , Module o Last modified ; il pulsante ↑/↓ accanto inverte la direzione.
+a6d99e8017c4958d  site/it/docs-crm.html: Le due righe che dichiarano qualcosa - su quale org è la scheda, e l'avviso quando scheda e workspace non coincidono - non si ripiegano mai: quelle non sono decorazione.
 60d7520463fd5629  site/it/docs-crm.html: Le funzioni Java, Python e Node si scrivono, si salvano e poi si pubblicano , quindi il sorgente nel mirror può essere codice che l'org non ha mai eseguito - e niente, sul disco, distingue le due.
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 67f35f5ba0961a4b  site/it/docs-crm.html: Le regole innescate da un'intera sezione, le condizioni su un modulo collegato, le regole non scaricate e gli aggiornamenti di campo eseguiti da un blueprint invece che da una regola non sono contati - la tabella dice quante regole non ha potuto leggere modules/layouts/ un file per modulo, con le sezioni e i campi di ogni layout - sotto i moduli che descrivono workflows/ un file per regola: trigger, criteri, azioni immediate e differite schedules/ , connections/ l'elenco delle schedulazioni e il catalogo delle connessioni dell'org export/ i report che generi Il mirror conserva tutti i file dei progetti Java, Python e Node.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
+94f9cf8db5188ed2  site/it/docs-crm.html: Live / Draft sulla riga di una funzione compilata dice cosa sta girando davvero in Zoho, ed è portato dal colore del nome del linguaggio invece che da una colonna a sé: la lista ha una cella dove ne aveva due, perché su un pannello stretto una colonna riservata costa la sua larghezza su ogni riga, che abbia qualcosa da dire o no.
 482fbacebcf284d4  site/it/docs-crm.html: Lo stato compare anche in tutti e due i report.
 e9b082a5ca27517a  site/it/docs-crm.html: Lo stesso filtro dispone il grafo allo stesso modo ogni volta.
 2111218ffad46d2b  site/it/docs-crm.html: Lunghezza e chiamate coprono tutte le funzioni; i conteggi di esecuzione coprono le più attive e vengono da Zoho.
@@ -749,6 +757,7 @@ f9361537f89b4ce0  site/it/docs-crm.html: Trovare il nome di una relazione L'API 
 de13555469a0facd  site/it/docs-crm.html: Tutta la conversazione viene rimandata a ogni messaggio, quindi un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
 11bf4ce1dde20ab4  site/it/docs-crm.html: Tutti e due vengono dalla regola che hai già su disco, quindi per rispondere a «quali workflow non partono subito» non viene chiesto niente a Zoho.
 103ff924d2b7fcdd  site/it/docs-crm.html: Tutto ciò che dipende da questa connessione è già rotto.
+cdc898d5e017c321  site/it/docs-crm.html: Tutto ciò che legge il mirror - gli elenchi, la ricerca, i diagrammi, gli export, l'assistente - continua a funzionare anche senza nessuna scheda, perché sono file locali.
 5cb426bc923ad45a  site/it/docs-crm.html: Tutto il resto aspetta il suo Save.
 9673f3bcc6c69fca  site/it/docs-crm.html: Tutto il resto di Zoost è locale.
 b568a66c73bc12a1  site/it/docs-crm.html: Tutto viene da quello che hai già su disco: il JSON di un workflow dice quali funzioni lancia, la riga di indice di uno schedule nomina quella che esegue, e il meta catturato di una funzione elenca le sue connessioni.
@@ -781,14 +790,13 @@ aa26b7a94bc39415  site/it/docs-crm.html: git commit -m "baseline" Quello che ti 
 749edc42cd1e3920  site/it/docs-crm.html: È generato, non scaricato - la barra del workspace lo dice, e tutto quello che parlerebbe con Zoho è disabilitato.
 cdffb4ce7b71d830  site/it/docs-crm.html: È l'unico capitolo di un report che porta la propria data.
 14205d46b22af9e3  site/it/docs-crm.html: È l'unico posto in cui un campo vuoto vuol dire cancella - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che c'è», ed è quello che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare perché è cifrata.
-c8edf3ee22bc1e8a  site/it/docs-crm.html: È tutto disattivato O non c'è nessuna scheda Zoho CRM attiva, oppure l'org della scheda non corrisponde al workspace selezionato.
 78809f2957da8069  site/it/docs-crm.html: È un indirizzo della tua organizzazione o di un tuo utente, mai di un cliente.
 b6fa23956ae5ef1b  site/it/docs-crm.html: È una misura, non un giudizio: una regola mai eseguita può essere corretta e semplicemente in attesa, mentre una eseguita moltissime volte può non essere più utile.
 e167ce54b254925c  site/it/emergency.html: A richiedere giorni può essere invece la coda di revisione di Google, che nessuno qui può accorciare.
 06c2a315fd1d4c57  site/it/emergency.html: Chrome mostra anche un avviso "Disattiva le estensioni in modalità sviluppatore" all'avvio finché ne hai una caricata, su alcune piattaforme tutte le volte.
 2074d1ae2e604da9  site/it/emergency.html: Due copie che guardano la stessa scheda Zoho non sono un caso per cui qui sia stato progettato niente, e su Zoho CRM non è solo disordine: l'hook che Zoost inserisce nella pagina ha una guardia per cui vince la copia caricata per prima, quindi il comportamento dipende dall'ordine di caricamento invece che da quale volevi usare.
 dad7701590b39a6c  site/it/emergency.html: Il percorso che segue una rottura è breve: non c'è nessuno con cui coordinarsi, nessun treno di rilascio da prendere e nessun confine di sprint da aspettare, quindi una fix piccola può essere capita, scritta, taggata e costruita il giorno stesso in cui viene segnalata.
-48948f8cb7757a85  site/it/emergency.html: L'estensione compare nell'elenco con una scheda normale, e il suo pannello laterale si apre come ha sempre fatto.
+ccc79a88aa3eff35  site/it/emergency.html: L'estensione compare nell'elenco con una scheda normale, e la sua finestra si apre come ha sempre fatto.
 57a25dfe0302421f  site/it/emergency.html: La cartella unpacked si può cancellare; il tuo mirror sta da tutt'altra parte e niente di tutto questo lo tocca.
 880fcb8ed9e9abf9  site/it/emergency.html: Le valutazioni del progetto indicano spesso questo come il rischio principale, e a ragione: non c'è un team, non ci sono turni e non c'è nessuno a cui passare il lavoro.
 aca1ab009d04cbdf  site/it/emergency.html: Nessuna cartella di lavoro, nessun provider AI né chiave API, nessuna passphrase, nessun default del diagramma.
@@ -811,7 +819,7 @@ e305005289b6cce5  site/it/index.html: Apri il workspace di test → dati inventa
 141adc135b7b6321  site/it/index.html: Come giudicarlo senza di me Ogni comando sta sulla pagina nerd : cosa ha costruito GitHub, lo stesso archivio ricostruito sulla tua macchina, e il registro di quello che è stato inviato allo Store - comprese le voci che dichiara di non poter dimostrare, e perché.
 7fabb845bd0e0b21  site/it/index.html: Come si comincia Provalo senza collegare niente.
 7075499851f47f5a  site/it/index.html: Continui a lavorare dove hai sempre lavorato: questa è solo la finestra da cui lo vedi.
-9c601c624f1839a2  site/it/index.html: Cosa chiede a Chrome Quattro permessi - sidePanel , storage , scripting , tabs - e un elenco di host scritti uno per uno, mai <all_urls> .
+1bfeae51cf93883f  site/it/index.html: Cosa chiede a Chrome Tre permessi - storage , scripting , tabs - e un elenco di host scritti uno per uno, mai <all_urls> .
 e62ff476ad4dc922  site/it/index.html: Cosa condividono i due workbench Leggono e basta Nessuna estensione Zoost chiama un endpoint che crea, modifica o cancella qualcosa dentro Zoho.
 2d78f7c075fc6db9  site/it/index.html: Cosa fa → Come si usa → Installa ↗ Zoost Analytics sul Chrome Web Store Zoost - workbench for Zoho Analytics Ogni vista di un workspace con il suo tipo, la cartella e le date, le colonne e le chiavi esterne di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER dell'insieme e l'elenco di quello da cui sembra non dipendere più niente.
 7484efe1d1261339  site/it/index.html: Cosa scrive Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa.
@@ -1106,7 +1114,6 @@ fd6c294af113d488  store/analytics/store-listing.md: - Foreign keys on every colu
 49773b43ee74aff1  store/analytics/store-listing.md: - It never reads the rows in your tables.
 cea95bbc5a16019e  store/analytics/store-listing.md: - What nothing depends on.
 871364923250ce2c  store/analytics/store-listing.md: A dialog decides section by section what the file may contain; the SQL is opt-in and flagged every time.
-9ef8210fe151af11  store/analytics/store-listing.md: A popup, which closes on every click, cannot do that.
 89e048c5b9e26259  store/analytics/store-listing.md: All of them with type, folder, owner, column count and dates, filtered by type and searched by name, folder or column name.
 bfc95cca0b3471b7  store/analytics/store-listing.md: Ask Zoho Analytics its own dependency question for every view, and see which ones nothing in the workspace reads.
 0ea2238017366035  store/analytics/store-listing.md: Counts and lists, with no thresholds and no score, and every figure stating what it does not cover.
@@ -1128,7 +1135,6 @@ a2820e715c0c9baf  store/analytics/store-listing.md: The API key may be protected
 b66b7bad19d6a07b  store/analytics/store-listing.md: The Zoho Analytics hosts in the manifest: the analytics.* domain of every data centre, and the two suite shells.
 5099d4de2ed81ea6  store/analytics/store-listing.md: The extension reads the workspace through Zoho Analytics' own endpoints, which are only reachable from a page on the Zoho Analytics origin with the user's session cookies.
 411019000cbd837f  store/analytics/store-listing.md: The extension reads the workspace's structure from Zoho Analytics' own endpoints, on whichever data centre the account is on - it cannot know which in advance.
-94d3c26f67a7d8d1  store/analytics/store-listing.md: The panel has to stay visible while the user navigates Zoho Analytics, because the workspace it acts on is whichever one the active tab is in - the panel reads the workspace id from the tab's URL and disables every Zoho-bound action when the tab moves to a different workspace.
 97ba193d4983d0fb  store/analytics/store-listing.md: The rows inside tables are never sent, because the extension does not read them.
 3fa339dd1eb94af9  store/analytics/store-listing.md: The two AI providers, Anthropic and OpenAI, are needed only by the optional AI assistant and only after the user enters their own API key for one of them.
 d628771f119998ca  store/analytics/store-listing.md: The whole workspace as one self-contained HTML file, or as Markdown shaped as context for an external AI tool - the Markdown carries the constraints of Zoho Analytics' own SQL dialect too, so an assistant that has never seen Zoho Analytics does not write queries that cannot run.
@@ -1149,7 +1155,6 @@ e137733b0f9d0cdd  store/analytics/store-listing.md: chrome.scripting injects thi
 ddf674b812c4b6c2  store/crm/store-listing.md: - Every part knows when it was last read.
 cb78a0169fe8a79f  store/crm/store-listing.md: - Search across every function at once.
 515a1a78dd67a223  store/crm/store-listing.md: A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.
-20171cb62774c59d  store/crm/store-listing.md: A popup would close on every click on the page, and an injected overlay would modify Zoho's own interface, which Zoost deliberately never does.
 11f7c1dbefbaaffe  store/crm/store-listing.md: A workflow almost never does the work itself: it points at an email notification, a field update, a task or a webhook, each of which exists on its own in Zoho and is reused across rules.
 4ac5f11707a8b336  store/crm/store-listing.md: About half of them are attached to nothing in a real org; that is a candidate to review, never a verdict.
 984130bf96ae4bf9  store/crm/store-listing.md: An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change.
@@ -1189,7 +1194,6 @@ b6b3546999b7efaa  store/crm/store-listing.md: The Zoho CRM hosts in the manifest
 4984bdcd73e87c04  store/crm/store-listing.md: The extension is inert on every other site.
 ce7c9a016a9674af  store/crm/store-listing.md: The only other thing that leaves is a problem report the user writes, reads in full and sends by pressing Send; it becomes a public issue.
 07f8dfd2e4f8618b  store/crm/store-listing.md: The same read is what lets the panel recognise a Zoho Analytics tab and name the product that reads it, instead of only refusing.
-9d25858ce82dca10  store/crm/store-listing.md: The sidePanel permission is used only to open and manage that panel.
 796557bc685f6655  store/crm/store-listing.md: Two things leave your machine, and only when you make them.
 f9c6fd904203ccc4  store/crm/store-listing.md: With Anthropic it runs as an agent with read-only tools and explores your org itself, showing every tool call; with OpenAI it answers in one pass from the org index and the function you have open.
 7c979389495f0d12  store/crm/store-listing.md: With no AI provider configured and no report sent, nothing leaves the machine.

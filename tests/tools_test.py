@@ -7119,7 +7119,7 @@ class EveryStoredKeyIsAccountedFor(unittest.TestCase):
         'exportScopeAnalytics': 'export defaults',
         'rxShortcuts': 'saved search patterns',
         'sampleWs': 'the sample workspace',
-        'tabPrefs': 'which side-panel tabs you show',
+        'tabPrefs': 'which tabs you show',
         'tabAccessView': 'access record',
         'zohoDc': 'fallback Zoho data centre',
         'rootDir': 'handle for the working folder',

@@ -19,7 +19,11 @@
   .wsroot.needgrant{border-style:solid;border-color:#b06a1c;color:#f0a44a;background:rgba(217,119,6,.10);font-weight:600}
   .wsroot.needgrant:hover{background:rgba(217,119,6,.20);border-color:#d97706;color:#fbbf24}
   .wsbar select{flex:1;min-width:0;background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:12px var(--sans)}   /* min-width:0 lets the select shrink (and ellipsize) instead of shoving Remove off-screen */
-  .wsbar button{flex:none}
+  /* `.wsroot` asks to take the remaining room and to ellipsize a long folder name; this sat
+     five lines below it with higher specificity and turned both off, so the name grew the
+     button instead and ran off the edge of a body that hides its overflow. The one that
+     wants to flex is named out of the rule rather than given a third copy of the property. */
+  .wsbar button:not(.wsroot){flex:none}
   .modebar{display:flex;flex-wrap:wrap;gap:3px;padding:6px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
   /* Applied by fitTabs() when the segments would otherwise wrap - see the note there for why it is
      measured and not a media query. Measured on the six shipped tabs: they need 380px as authored
@@ -525,7 +529,6 @@
   .connfns{padding:6px 10px 2px}
   /* A chip that follows text needs air on its left: `.rlbl` only ever had it on the right, because
      until now every one of them opened a line. Reported - «la chip è attaccata al testo accanto». */
-  .rlbl.spaced{margin-left:7px}
   /* The relation between the two halves, which is the one thing on this line worth seeing first. */
   #ctx .ok{color:var(--ok)}
   #ctx .neq{color:var(--bad);font-weight:700;margin-right:6px}
@@ -592,7 +595,9 @@
   #resizer.show{display:block}
   #resizer::after{content:'';position:absolute;left:50%;top:2.5px;width:34px;height:3px;border-radius:2px;background:#3a4a63;transform:translateX(-50%)}
   /* preview (high contrast vs tree) */
-  #preview{position:relative;display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+  /* The same on the other axis, and for the same reason: a tall pane remembered from a tall
+     window turned the whole panel into a scrolling page in a short one. */
+  #preview{position:relative;display:none;flex-direction:column;flex:0 1 auto;min-height:120px;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
   #preview.show{display:flex}
   /* The row must not change height as the buttons come and go: with «Records»/«Layouts» or
      «Open in Zoho» it measured 36px and with none of them 29, so selecting a connection after a
@@ -700,7 +705,6 @@
   /* The marker column is always there, empty on a file: without it every file sits one character
      left of its own folder's children and the indentation stops meaning depth. */
   #pvfiles .pfmk{flex:none;width:9px;color:var(--muted)}
-  #pvfiles .pfempty{color:var(--muted);padding:6px 10px}
   #pvbody{flex:1;display:flex;overflow:auto;min-height:0}
   /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
      Settings, Help and About were unreachable - and Settings is where somebody who has just
@@ -824,7 +828,14 @@
     #resizer::after{left:2.5px;top:50%;width:3px;height:34px;transform:translateY(-50%)}
     #tree{flex:1 1 auto;min-width:280px}
     #resizer{width:8px;height:auto;flex:none;cursor:col-resize;border-top:0;border-bottom:0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
-    #preview{height:auto !important;width:var(--splitw,52%);min-width:340px;box-shadow:-10px 0 24px rgba(0,0,0,.45)}
+  /* **It may shrink.** `flex:none` with an explicit size is a box that keeps its width however
+     little room there is - so a split dragged wide in a wide window, and then met again in a
+     narrow one, put its own header off the right-hand edge: the close mark and both «Open in
+     Zoho» buttons sat outside the window with `overflow-x:hidden` and no scrollbar to reach them,
+     and nothing in the panel closed the pane. `min-width` cannot help a box that never shrinks.
+     Reachable the day the window became the reader's to resize. The floor is the same 340px the
+     drag clamps to, so shrinking stops where dragging stops. */
+    #preview{height:auto !important;width:var(--splitw,52%);min-width:340px;flex:0 1 auto;box-shadow:-10px 0 24px rgba(0,0,0,.45)}
   }
 
   /* ------------------------------------------------------------------ *
@@ -859,10 +870,14 @@
   body.chromefolded #ctx{padding-right:34px}
 
   /* One line for the search and the filters, once there is a line to share. The wrapper is
-     transparent below the breakpoint - `display:contents` - so the narrow panel keeps exactly the
-     two rows it had, each with its own rule and its own border. Above it, the find box stops being
-     a field the width of the whole panel for a word of eight letters, and the filters take the
-     rest. Reported with a picture of the two rows. */
+     transparent until something merges it - `display:contents` - so the panel keeps exactly the two
+     rows it had, each with its own rule and its own border. Merged, the find box stops being a
+     field the width of the whole panel for a word of eight letters, and the filters take the rest.
+     Reported with a picture of the two rows.
+     **The width is not what decides it: `fitFindFilter` measures.** This note used to say «below
+     the breakpoint», and that is not what is written here - these rules sit outside the media
+     query, so a narrow panel whose two rows happen to fit gets the merged band too. Which is the
+     behaviour that was wanted, and the sentence was describing a rule that was never written. */
   #findfilter{display:contents}
   /* **One line only when everything actually fits on one line.** A breakpoint cannot know: the
      filter row's controls change with the tab and with the reader's own labels, which is the same

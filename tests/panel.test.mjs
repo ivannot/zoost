@@ -21,9 +21,17 @@ import { readdirSync, existsSync } from 'node:fs';
 const _panelText = {};
 const appPanel = (app) => (_panelText[app] ??= APP_FILES[app].map(read).join('\n'));
 const crmPanel = () => appPanel('crm');
-// Markup and stylesheet are one rendered page even though they live in separate files. Tests about
+// Markup and stylesheets are one rendered page even though they live in separate files. Tests about
 // either read the composed subject, while APP_FILES below still derives script order from the HTML.
-const panelPage = (app) => read(`apps/${app}/workbench.html`) + '\n' + read(`apps/${app}/workbench.css`);
+// **Every sheet the page links, not the one named after it.** `base.css` holds the vocabulary the
+// three pages share, and a helper that stopped at `workbench.css` would have let a case asserting
+// «no rule for this survives» pass because it was looking in the wrong file - the silent direction,
+// which is the one worth spending a line on.
+const sheetsOf = (app, page) => (read(`apps/${app}/${page}.html`).match(/<link[^>]+href="([^"]+\.css)"/g) || [])
+  .map((tag) => tag.match(/href="([^"]+)"/)[1]);
+const pageAndSheets = (app, page) => [read(`apps/${app}/${page}.html`)]
+  .concat(sheetsOf(app, page).map((href) => read(`apps/${app}/${href}`))).join('\n');
+const panelPage = (app) => pageAndSheets(app, 'workbench');
 const aiFile = (app) => `apps/${app}/ai.js`;
 const filesystemFile = (app) => `apps/${app}/filesystem-adapter.js`;
 
@@ -1421,8 +1429,8 @@ test('analytics: only the tab-scoped workspaceInfo is exempt from the mismatch g
   assert.match(marked[0], /cmd:\s*'workspaceInfo'/, 'aboutTab marks something other than workspaceInfo');
   // The guard is still the guard for everything else, including the pull's own workspaceInfo.
   const guard = src.slice(src.indexOf('async function toBridge'));
-  assert.match(guard, /msg\.cmd !== 'context' && !aboutTab && bound && !guardOk\(\)/);
-  assert.match(guard, /const expected = \(msg && msg\.cmd !== 'context' && !aboutTab && bound\)/,
+  assert.match(guard, /msg\.cmd !== 'context' && !aboutTab && binding && !guardOk\(\)/);
+  assert.match(guard, /const expected = \(msg && msg\.cmd !== 'context' && !aboutTab && binding\)/,
     'the binding would travel with it and the page would refuse what the panel allowed');
 });
 
@@ -1765,8 +1773,8 @@ test('the loud bar is for a Zoho tab that is the wrong one, and the quiet line f
   // for this workspace, or is there not.** A wrong tab is loud, because both buttons the bar carries
   // are things the reader can act on. No tab is quiet and says so in the workspace's own terms.
   for (const [app, path] of [['crm', 'apps/crm/crm-context.js'],
-                             ['analytics', 'apps/analytics/sidepanel.js']]) {
-    const src = read(path.replace('sidepanel', 'workbench'));
+                             ['analytics', 'apps/analytics/workbench.js']]) {
+    const src = read(path);
     assert.ok(!/const mm = !!\(activeId/.test(src),
       `${app}: the alarm still asks whether the tab is in front, which is never true in a window`);
     // The *markup*, not the word: the note explaining why the marker went says «not in front» and
@@ -3096,7 +3104,7 @@ test('the diagram window can change subject, and says why when it cannot', async
   assert.equal(sent[0].token, 't1', 'the switch does not say which window is asking');
   assert.equal(reloaded, false, 'it reloaded on a failed switch');
   assert.match(alerted, /no working folder is open in the panel/, 'the panel\'s own reason was swallowed');
-  assert.match(alerted, /side panel/, 'the message does not name where the folder lives');
+  assert.match(alerted, /Zoost window/, 'the message does not name where the folder lives');
   assert.equal(stat.innerHTML, '', 'the status line was left saying it was building');
 
   // ...and a switch that works reloads, which is the whole mechanism: every global here was derived
@@ -6131,7 +6139,7 @@ for (const app of ['crm', 'analytics']) {
     const line = send.split('\n').find((l) => app === 'crm'
       ? /if \(message && message\.cmd/.test(l) : /if \(msg && msg\.cmd/.test(l));
     assert.ok(app === 'crm' ? /&& bound && !options\.guardOk\(\)/.test(line)
-                            : /&& bound && !guardOk\(\)/.test(line),
+                            : /&& binding && !guardOk\(\)/.test(line),
       'the transport lets anything through, so removing a disabled attribute is enough');
     // The exemptions are **derived from the line and checked against a declared set**, not pinned as
     // an expression: this used to assert the condition character for character, so adding a third
@@ -6140,10 +6148,12 @@ for (const app of ['crm', 'analytics']) {
     // named here with its reason, and a fourth invented tomorrow fails until it is.
     //   context   the probe that detects the mismatch in the first place - refusing it is circular
     //   bound     a panel with nothing bound is creating its first workspace, which is no mismatch
+    //   binding   the same thing in Analytics, under the name it has since it was captured at entry
+    //             rather than read from the module global four awaits later - see the case below
     //   aboutTab  «Create workspace for <the tab's>», the control offered to *resolve* the mismatch.
     //             Safe because the bridge's workspaceInfo takes its id from the page's own URL.
     const declared = { crm: ["cmd !== 'context'", 'bound', '!guardOk()'],
-                       analytics: ["cmd !== 'context'", '!aboutTab', 'bound', '!guardOk()'] }[app];
+                       analytics: ["cmd !== 'context'", '!aboutTab', 'binding', '!guardOk()'] }[app];
     const clauses = line.slice(line.indexOf('if (') + 4, line.lastIndexOf(') {') > 0
       ? line.lastIndexOf(') {') : line.lastIndexOf(') throw')).split('&&')
       .map((c) => c.trim().replace(/^msg\.?/, ''))
@@ -6158,6 +6168,32 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+test('the binding a command carries is read before anything awaits', () => {
+  // **The one check this product rests on, switched off by an await.** `expectedMatches` in both
+  // content bridges lets a command through when it carries no expectation at all - `if (!x) return
+  // true` - so a command built from a binding that has gone null in the meantime is accepted by the
+  // page unconditionally. Analytics read the module global after four awaits, one of which can
+  // inject a script twice and sleep, while `refreshWorkspaces` and `delWorkspace` both set it to
+  // null; the CRM twin captured it on the first line. The class is the one this repository has
+  // found six times - a global read after an await - and it was sitting inside the identity check.
+  //
+  // Derived, not spelled: the capture must come before the first `await` in the function, and what
+  // travels must be built from the capture. Both halves, or the fix is a name change.
+  for (const [app, fn] of [['crm', sliceFn('apps/crm/zoho-bridge.js', 'send')],
+                           ['analytics', sliceFn('apps/analytics/workbench.js', 'toBridge')]]) {
+    const body = fn.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const capture = body.search(/const (bound|binding) = /);
+    const firstAwait = body.search(/\bawait\b/);
+    assert.ok(capture >= 0, `${app}: nothing captures the binding at all`);
+    assert.ok(firstAwait < 0 || capture < firstAwait,
+      `${app}: the binding is read after an await, so it can be null by the time it travels`);
+    const name = body.match(/const (bound|binding) = /)[1];
+    const expected = body.slice(body.indexOf('expected'));
+    assert.ok(new RegExp(`${name}\\.(org|workspace)`).test(expected),
+      `${app}: what travels is not built from the captured binding`);
+  }
+});
 
 // ---------------------------------------------------------------------------------------------
 // «Nothing came back» is not «there is nothing». A mirror that cannot tell those apart writes a
@@ -22470,6 +22506,8 @@ test('the Remove tooltip describes the state the button is actually in', () => {
     pullBusy: false, busy: false, dir: null, wsList: [], root: { name: 'folder' }, rootGranted: true,
     lastCtx: null, sampleWsKnown: null, ctx: null,
     renderGoDc: () => {}, updateSampleButtons: () => {}, addWorkspaceView: () => ({}),
+    // The fold is derived on this pass too - it hides the very controls this function enables.
+    syncChromeFold: () => {},
   };
   const { updateWsButtons } = load([sliceApp('crm', 'updateWsButtons')], g);
 

@@ -119,8 +119,8 @@ const MSG = {
   // fact written twice, in two places, ready to come apart. It says both halves now:
   // what still works, and the way out, which is this project's rule for an empty state.
   noTab: 'No Zoho Analytics tab is open - the mirror still reads.',
-  twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
-  twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
+  twinInstalled: (t) => `A ${t.name} tab is open. ${t.product} reads it - open it from the toolbar.`,
+  twinMissing: (t) => `A ${t.name} tab is open. ${t.product} reads it.`,
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   narrow: 'Use a longer substring to narrow.',
@@ -890,9 +890,29 @@ let twinAsked;                   // the *promise* of the answer, not the answer:
  *  extension's side panel, and this document survives every tab switch, so a memo held for the
  *  session told whoever followed our own link that the twin was still missing.
  */
+/** Is a tab of the *other* product's platform open?
+ *
+ *  **The question used to be «is the tab in front one», and that question no longer has an answer.**
+ *  It was `{active: true, currentWindow: true}` plus a host test, which was exactly right while
+ *  Zoost was a panel inside the browser window: the active tab of that window was the page the
+ *  reader was looking at. From a window of its own, `currentWindow` is Zoost's window and its active
+ *  tab is `workbench.html` - so the test could never pass and the whole offer, chip and overlay box
+ *  alike, went quiet without a single error. It returned `null`, which is what it returns on the
+ *  ordinary day, and nothing anywhere could tell the two apart.
+ *
+ *  What survives the move is the case the offer was written for: this product has nothing to read,
+ *  and the other product's platform is open. That is answerable without knowing which window has the
+ *  focus, and it is asked only on the branch where it is true - see its caller. «Where you are
+ *  standing» has become «what you have open», which is less than it knew before and is all there is.
+ *
+ *  **Every tab, not a filtered query.** The twin's hosts are not in this product's
+ *  `host_permissions`; the `tabs` permission is what puts `url` on a Tab, and both manifests declare
+ *  it - so the pattern lives here, in one regular expression, rather than as a second list of data
+ *  centres to keep in step with the first.
+ */
 async function twinTab() {
-  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!active || !TWIN_HOST_RE.test(active.url || '')) return null;
+  const tabs = await chrome.tabs.query({});
+  if (!tabs.some((t) => TWIN_HOST_RE.test(t.url || ''))) return null;
   return { ...TWIN, installed: await twinAnswers() };
 }
 /** Does the twin answer? Measured before this was written: a message crosses between extensions
@@ -907,7 +927,7 @@ function twinAnswers() {
   // **It expires.** Held for the life of the panel it made the commonest path wrong: the
   // reader follows our own link, installs the twin, comes back to the tab - and is told it is
   // still not installed until they close the panel. Re-asked at most every thirty seconds,
-  // and only while the twin's own tab is in front, which is where the question is asked at
+  // and only while a tab of the twin's platform is open, which is where the question is asked at
   // all. Assigned before this scope awaits anything, so no global is written after an await.
   const now = Date.now();
   if (!twinAsked || now - twinAskedAt > TWIN_ASK_TTL) { twinAskedAt = now; twinAsked = askTwin(); }
@@ -947,7 +967,11 @@ function offerCtxTwin(twin) {
   const img = a.querySelector('img');
   if (img && !img.getAttribute('src')) img.src = img.dataset.src;
   // It uses the answer it asked for, on the one surface that speaks while a sample is open.
-  a.title = `This is a Zoho CRM tab and this panel reads Zoho Analytics only. `
+  // **«This is a Zoho CRM tab» is a claim this can no longer make.** The window model knows
+  // what is *open*, not what is in front - see `twinTab` - and a sentence that overstates what was
+  // measured is the defect this project refuses on every other surface. It is offered only where it
+  // is useful, which is with no Zoho Analytics tab to read: the caller decides that.
+  a.title = `A Zoho CRM tab is open and this reads Zoho Analytics only. `
     + (twin.installed
       ? `${twin.product} reads it - click its icon in your toolbar.`
       /* **«No answer» is not «not installed», and this surface used to say it was.** The
@@ -965,14 +989,14 @@ function offerTwin(twin) {
   // **The lead says what is on the screen, and only that.** With the twin's box drawn there are
   // three ways out; without it there are two, and a sentence promising a box that is not there is
   // the same defect this whole screen was built to remove, one layer up.
-  $('offtitle').textContent = twin ? `This is a Zoho CRM tab` : `Not on a Zoho Analytics tab`;
+  $('offtitle').textContent = twin ? `A Zoho CRM tab is open` : `Not on a Zoho Analytics tab`;
   $('offlead').textContent = twin
     ? 'Three ways on: open the other Zoost, go to Zoho Analytics, or work in a sample workspace.'
     : 'Two ways on: go to Zoho Analytics, or work in a sample workspace.';
   if (!twin) return;
-  $('offtwins').textContent = `You are on Zoho CRM and this panel reads Zoho Analytics only. `
+  $('offtwins').textContent = `You have Zoho CRM open and this reads Zoho Analytics only. `
     + (twin.installed
-      ? `Click the ${twin.product} icon in your toolbar - it reads this tab.`
+      ? `Click the ${twin.product} icon in your toolbar - it reads that tab.`
       /* Never «you do not have it»: nothing here can establish that. An unanswered ask is also what
          an older copy of the twin looks like - which is every installed copy until both products
          ship the listening half. */
@@ -994,10 +1018,6 @@ function offerTwin(twin) {
 }
 
 
-async function analyticsTabId() {
-  const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return a && HOST_RE.test(a.url || '') ? a.id : null;
-}
 /** Any Zoho Analytics tab, in any window, for when the one in front is not one.
  *
  *  The twin has always had this fallback and this panel never did, so «which tab will a command
@@ -1030,7 +1050,40 @@ function pulledWhen(value) {
   return isNaN(d.valueOf()) ? String(value) : d.toLocaleString();
 }
 
+/** The last answer, for a second or two - the twin's note says why. */
+let resolvedTab = { id: null, at: 0, ws: null };
+const RESOLVE_TTL = 2000;
+function forgetAnalyticsTab() { resolvedTab = { id: null, at: 0, ws: null }; }
+
 async function anyAnalyticsTabId() {
+  // **A pull is one command per item, and this runs on every one of them.** Word for word the
+  // twin's reasoning, because it is word for word the twin's walk: with a second Analytics tab open
+  // every command asked every candidate for its context and revived our script in any that had gone
+  // quiet. Held for two seconds, dropped the moment a send fails. It decides which page is asked,
+  // never what that page will agree to do.
+  // **The answer belongs to the workspace it was resolved for.** The walk prefers the tab on the
+  // bound workspace, so an answer carried across a workspace change is an answer to a question
+  // nobody asked - and writing it back without saying which binding produced it is the
+  // global-after-an-await class, in a line added to remove a cost. It is not a safety hole (the
+  // page still refuses a command that is not its own) and it is still wrong: it would send the
+  // first command after a switch to the old workspace's tab, for a refusal nobody can explain.
+  const want = boundWs();
+  const now = Date.now();
+  if (resolvedTab.id !== null && resolvedTab.ws === want && now - resolvedTab.at < RESOLVE_TTL) {
+    return resolvedTab.id;
+  }
+  const id = await resolveAnalyticsTab();
+  if (!inSameWorkspace(want)) return id;         // it moved while we were asking: answer, do not keep
+  resolvedTab = { id, at: Date.now(), ws: want };
+  return id;
+}
+/** The bound workspace as a comparable value, or `null` while nothing is bound. */
+function boundWs() { return bound ? String(bound.workspace) : null; }
+/** Is the panel still on the workspace it was on when `want` was taken? The named form is the one
+ *  `tools/asynccheck.py` can read, and a check it cannot read is a check nobody is counting. */
+function inSameWorkspace(want) { return want === boundWs(); }
+
+async function resolveAnalyticsTab() {
   const tabs = (await chrome.tabs.query({ url: ZOHO_MATCHES })).filter((t) => HOST_RE.test(t.url || ''));
   if (tabs.length < 2) return tabs[0] ? tabs[0].id : null;
   // **More than one candidate, so ask which one this workspace belongs to.** «The first tab the
@@ -1040,7 +1093,10 @@ async function anyAnalyticsTabId() {
   // for the same reason. A tab that does not answer is skipped, not repaired.
   const asked = await Promise.all(tabs.map(tabWorkspace));
   const want = bound && bound.workspace;
-  const match = want && asked.find((a) => a && String(a.ws) === String(want));
+  // The preference is stated in the same terms as `guardOk` and as the page's own check: a tab on
+  // the right workspace id at the wrong origin is not this workspace's tab.
+  const match = want && asked.find((a) => a && String(a.ws) === String(want)
+    && (!bound.origin || !a.origin || a.origin === bound.origin));
   return match ? match.id : ((asked.find((a) => a) || {}).id ?? tabs[0].id);
 }
 /** Which workspace a candidate tab is looking at, or `null` when it will not say.
@@ -1052,7 +1108,7 @@ async function tabWorkspace(t) {
   try {
     const reply = await chrome.tabs.sendMessage(t.id, { cmd: 'context' });
     const ws = reply && reply.ok && reply.workspace;
-    if (ws) return { id: t.id, ws };
+    if (ws) return { id: t.id, ws, origin: reply.origin };
   } catch (_) { /* fall through and revive our own script in that tab */ }
   // **A silent candidate is repaired before it is written off**, for the reason the twin's note
   // gives: this content script is declared in the manifest for these hosts, so `ensureBridge` is
@@ -1062,7 +1118,7 @@ async function tabWorkspace(t) {
     if (!(await ensureBridge(t.id))) return null;
     const again = await chrome.tabs.sendMessage(t.id, { cmd: 'context' });
     const ws = again && again.ok && again.workspace;
-    return ws ? { id: t.id, ws } : null;
+    return ws ? { id: t.id, ws, origin: again.origin } : null;
   } catch (_) { return null; }
 }
 /** Which of a tab's frames is the Analytics application, decided by asking them.
@@ -1159,16 +1215,26 @@ async function toBridge(msg) {
   // only ever describe the workspace the tab is on. There is no parameter through which another
   // workspace could be named, and a test holds both halves of that.
   const aboutTab = !!(msg && msg.aboutTab);
+  // **The binding is read once, here, before anything awaits.** It used to be read from the module
+  // global four awaits later - past the tab resolution, past `ensureBridge`, which can inject twice
+  // and sleep - and `expectedMatches` in the content bridge lets a command through when it carries
+  // no expectation at all. So a workspace closing in that window (`refreshWorkspaces` and
+  // `delWorkspace` both set it to null) would send a command with nothing for the page to check it
+  // against, and the far end - «the only party in the exchange that cannot be out of date about
+  // which workspace it is» - would accept it unconditionally. That is the one check this product
+  // rests on, switched off by the global-written-after-an-await class, inside the check itself. The
+  // twin captures it at entry; this now does too.
+  const binding = bound;
   // **The tab a command will reach, not the one in front.** This asked for the *active* tab, and
   // the CRM twin has resolved «the active one, or any Zoho tab anywhere» since it was written - a
   // divergence that was invisible while both panels lived beside the browser's own tabs. The day
   // this one became a window of its own, its active tab became Zoost, and every pull failed with
   // «the active tab is not Zoho Analytics» while an Analytics tab sat open next to it. Reported.
-  const id = await analyticsTabId() || await anyAnalyticsTabId();
+  const id = await anyAnalyticsTabId();
   // **Two states, and they had one sentence between them** - see the twin's note. With no tab open
   // the guard is false because there is nothing to match against, and the refusal claimed the tab
   // was a different workspace. The tab is resolved first, and that decides which refusal is owed.
-  if (msg && msg.cmd !== 'context' && !aboutTab && bound && !guardOk()) {
+  if (msg && msg.cmd !== 'context' && !aboutTab && binding && !guardOk()) {
     throw new Error(id == null ? MSG.noTab : MSG.mismatchRefused);
   }
   if (id == null) throw new Error(MSG.noTab);
@@ -1179,13 +1245,19 @@ async function toBridge(msg) {
   // The same exception, one layer down: the page refuses a command whose `__zoostExpected` does not
   // match it, and the whole point here is that it does not - we are asking a tab about itself while
   // bound elsewhere. Sending the binding would have the page refuse what the panel just allowed.
-  const expected = (msg && msg.cmd !== 'context' && !aboutTab && bound)
-    ? { workspace: bound.workspace, origin: bound.origin } : null;
+  const expected = (msg && msg.cmd !== 'context' && !aboutTab && binding)
+    ? { workspace: binding.workspace, origin: binding.origin } : null;
   // The Analytics frame, like the context probe. A command addressed to the whole tab reaches the
   // shell as well, and the bridge is not the only listener a page may have.
   const afid = await analyticsFrameId(id);
-  const r = await chrome.tabs.sendMessage(id, bridgeCommand(msg, expected),
-                                          afid === null ? {} : { frameId: afid });
+  let r;
+  try {
+    r = await chrome.tabs.sendMessage(id, bridgeCommand(msg, expected),
+                                      afid === null ? {} : { frameId: afid });
+  } catch (e) {
+    forgetAnalyticsTab();          // the tab it named is not answering: resolve again next time
+    throw e;
+  }
   if (!r) throw new Error(MSG.staleBridge);
   validateBridgeReply(msg, r);
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
@@ -1205,7 +1277,20 @@ async function toBridge(msg) {
 const isSample = () => !!(bound && bound.sample);
 // Everything platform-bound funnels through here, so this is the one place a sample has to be
 // refused - rather than a condition repeated at each button, where one is eventually forgotten.
-const guardOk = () => !isSample() && !!(bound && ctx && ctx.workspace && String(ctx.workspace) === String(bound.workspace));
+/** Does the tab this panel resolves to hold the workspace it is bound to?
+ *
+ *  **Origin as well as id, because that is what the far end compares.** This asked about the
+ *  workspace id alone while `expectedMatches` in the content bridge asks about the id *and* the
+ *  origin - so the panel could draw a tick, enable Pull and then have every command refused by the
+ *  page, with nothing on screen to explain the contradiction. Workspace ids look data-centre-local
+ *  and I have not established that they never repeat across two, which is the whole reason to state
+ *  the guard in the same terms as the check it is standing in for rather than in terms that happen
+ *  to agree. The twin compares `base` for exactly this. `!bound.origin` is the older binding that
+ *  never recorded one: it is not evidence of a mismatch, so it does not make one.
+ */
+const guardOk = () => !isSample() && !!(bound && ctx && ctx.workspace
+  && String(ctx.workspace) === String(bound.workspace)
+  && (!bound.origin || !ctx.origin || ctx.origin === bound.origin));
 // The one refusal every «open this in Zoho Analytics» navigation makes. A sample workspace has no
 // Zoho Analytics workspace behind it, so a link built from its id would open a URL that does not
 // exist: refused with a reason rather than left to 404, because «nothing talks to the platform» has
@@ -1242,17 +1327,16 @@ async function refreshContext() {
   // twin's note: the guard asks about the tab a command will reach, and what makes that safe is the
   // page at the far end refusing a command whose expected workspace is not its own. Nothing here
   // weakens that, and nothing here may.
-  const activeId = await analyticsTabId();
+  const id = await anyAnalyticsTabId();
   if (!current()) return;
-  const id = activeId || await anyAnalyticsTabId();
-  if (!current()) return;
-  // **Two independent facts, and they were one for an hour.** «Which tab are you looking at» decides
-  // whether the other product's mark is offered; «is there a tab of ours anywhere» decides what is
-  // enabled. Collapsed, the twin offer disappeared the moment the panel stopped blocking on a
-  // foreign tab - reported on the twin, and it is the feature that was asked for whole. Somebody
-  // standing on a Zoho CRM tab is looking at Zoho CRM whether or not an Analytics tab is open two
-  // windows away, and the extension that reads what they are looking at is the other one.
-  const twin = await twinTab();
+  // **Asked only where it can help.** «Which tab are you looking at» and «is there a tab of ours
+  // anywhere» were two independent facts while a panel sat beside the browser's tabs, and the offer
+  // belonged to the first of them. The first no longer exists, so what is left is the case the offer
+  // was written for and the only one it can still answer: this product has no tab to read, and the
+  // other product's platform is open. With a tab of our own the panel is *working*, and a stray tab
+  // of the twin's platform two windows away is not news - it would be a mark on a working bar with
+  // nothing to do about it.
+  const twin = id ? null : await twinTab();
   if (!current()) return;
   offerCtxTwin(twin);
   // A sample is a workspace whose honest label is «generated, never pulled»: its `.zoost.json`
@@ -1527,7 +1611,7 @@ async function goToZoho(url, how) {
   // A modifier means «not here», so the tab-reuse below is skipped: asking for a new window is not
   // asking to navigate the one you have. The host check above still runs first.
   if (how) return await openElsewhere(url, how) ? true : null;
-  const id = await analyticsTabId() || await anyAnalyticsTabId();
+  const id = await anyAnalyticsTabId();
   if (!id) {
     // No Analytics tab anywhere, so one is made - and its window comes forward with it, or the tab
     // appears behind Zoost's own window and nothing seems to have happened.
@@ -1558,12 +1642,21 @@ async function openZohoHome(how) {
   if (sampleRefuse()) return;
   const url = homeUrl();
   if (how) { await openElsewhere(url, how); return; }
-  const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (a && HOST_RE.test(a.url || '')) await focusTab(a.id, { url, active: true });
-  else await chrome.tabs.create({ url, active: true });
+  // **The same resolution every other control here uses, and for the same reason.** This asked for
+  // the tab in front and tested its host - which from Zoost's own window is always
+  // `workbench.html`, so the test never passed and the button made another Analytics tab on every
+  // press however many were already open. And the tab it made appeared behind Zoost, because the
+  // window it lands in is not raised: the twin's `goToZoho` had learnt that twenty-five lines up
+  // and this one had not.
+  const id = await anyAnalyticsTabId();
+  if (id) { await focusTab(id, { url, active: true }); return; }
+  const t = await chrome.tabs.create({ url, active: true });
+  try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
 }
 
 function updateButtons() {
+  // The fold hides the controls this function is deriving - see the twin's note.
+  syncChromeFold();
   if (!dir) closeOverview();
   // The detail pane is part of the panel, so its controls are derived on the same pass as
   // everything else rather than once, when it happened to open.
@@ -2283,7 +2376,10 @@ function fitFindFilter() {
 // The panel is resized by dragging its edge, which fires continuously - debounced for the same
 // reason the CRM debounces its own fit.
 let fitTimer = null;
-window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitFindFilter, 120); });
+window.addEventListener('resize', () => {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(() => { fitFindFilter(); clampSplit(); }, 120);
+});
 
 function renderTypeFilter() {
   const sel = $('typesel');
@@ -3762,20 +3858,61 @@ document.addEventListener('click', (e) => {
 // above the breakpoint the list and the detail are columns and this bar moves a vertical edge,
 // below it they are stacked and it moves a horizontal one.
 const wideSplit = () => window.matchMedia('(min-width: 720px)').matches;
+// **What was dragged in one window has to fit in the next one.** The sizes are remembered as
+// pixels, and until now they were handed back raw: a pane dragged to 700px in a 1200px window and
+// met again in a 900px one drew itself from 288 to 988, with its own header - the close mark and
+// both «Open in Zoho» buttons - past the right-hand edge of a body that hides its overflow. The
+// stylesheet lets the pane shrink now, which stops the overflow; this keeps the *stored* number
+// honest, so the next drag starts from where the reader can see it. Both axes, because the
+// vertical one had the same defect: a 500px pane in a 313px viewport made the whole panel scroll.
+const SPLIT_LIST_MIN = 280, SPLIT_detail_MIN = 340, SPLIT_BAR = 8;
+const SPLIT_LIST_MIN_H = 80, SPLIT_detail_MIN_H = 120;
+/** The room the pane may take, on whichever axis is splitting. `null` when there is not enough of
+ *  it for both minimums - the stylesheet decides that case and a number here would fight it. */
+function splitRoom(r) {
+  if (!r.width || !r.height) return null;              // not laid out yet
+  const room = wideSplit() ? r.width - SPLIT_LIST_MIN - SPLIT_BAR : r.height - SPLIT_LIST_MIN_H;
+  const floor = wideSplit() ? SPLIT_detail_MIN : SPLIT_detail_MIN_H;
+  return room < floor ? null : room;
+}
+function clampSplit() {
+  const el = $('detail'), room = splitRoom($('split').getBoundingClientRect());
+  if (room == null) return;
+  if (wideSplit()) {
+    const cur = parseFloat(el.style.getPropertyValue('--splitw'));
+    if (!isFinite(cur)) return;                        // never dragged: the stylesheet's share holds
+    const w = Math.max(SPLIT_detail_MIN, Math.min(room, cur));
+    if (w !== cur) el.style.setProperty('--splitw', w + 'px');
+    return;
+  }
+  const cur = parseFloat(el.style.height);
+  if (!isFinite(cur)) return;
+  const h = Math.max(SPLIT_detail_MIN_H, Math.min(room, cur));
+  if (h !== cur) el.style.height = h + 'px';
+}
 let dragY = false;
 $('resizer').addEventListener('mousedown', () => { dragY = true; document.body.style.userSelect = 'none'; });
 window.addEventListener('mousemove', (e) => {
   if (!dragY) return;
+  // **The button is gone, so the drag is over.** There is no `mouseup` when the release happens
+  // outside the window, and the clamp above stops the divider well short of the edge while the
+  // cursor keeps travelling - so letting go out there left the drag live: the pane then resized
+  // itself under a cursor with no button held, and text stayed unselectable, until the reader
+  // clicked again, which also pressed whatever was under them. `buttons` is the browser's own
+  // answer to «is anything held», asked at the only moment it matters.
+  if (!e.buttons) { endSplitDrag(); return; }
   const r = $('split').getBoundingClientRect();
   if (wideSplit()) {
-    const w = Math.max(340, Math.min(r.width - 280, r.right - e.clientX));
+    // The divider is 8 of the pixels being shared out, and this forgot it - see the twin's note.
+    const w = Math.max(SPLIT_PANE_MIN, Math.min(r.width - SPLIT_LIST_MIN - SPLIT_BAR, r.right - e.clientX));
     $('detail').style.setProperty('--splitw', w + 'px');
     return;
   }
-  const h = Math.max(120, Math.min(r.height - 80, r.bottom - e.clientY));
+  const h = Math.max(SPLIT_PANE_MIN_H, Math.min(r.height - SPLIT_LIST_MIN_H, r.bottom - e.clientY));
   $('detail').style.height = h + 'px';
 });
-window.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => { endSplitDrag(); });
+function endSplitDrag() {
   if (!dragY) return;
   dragY = false; document.body.style.userSelect = '';
   // Cosmetic, and best-effort by declaration - see the CRM twin's note on the same write. Two
@@ -3785,7 +3922,7 @@ window.addEventListener('mouseup', () => {
   // that holds every stored key against what the privacy page tells the reader.
   if (wideSplit()) void chrome.storage.local.set({ detailW: $('detail').style.getPropertyValue('--splitw') }).catch(() => {});
   else void chrome.storage.local.set({ detailH: $('detail').style.height }).catch(() => {});
-});
+}
 
 /** The chrome's fold: the reader's choice if they have made one, otherwise the screen's answer.
  *
@@ -3802,8 +3939,24 @@ async function restoreChromeFold() {
 }
 const FOLD_SHOW = 'Show the workspace and tools rows again';
 const FOLD_HIDE = 'Fold the workspace and tools rows away';
+/** **The fold is for a panel that is working, and it stays open on one that is not.**
+ *
+ *  Folded, the chrome takes `#wsroot`, the workspace picker, `+ Workspace`, `+ Sample`, `Pull all`
+ *  and every tool with it - measured, all of them zero-sized. And `emptyReason()` names exactly
+ *  those: «Press Sample … or use + Workspace», «press + … or press + Sample», «Press Pull all». A
+ *  reader on a short screen gets the fold by default, with no working folder yet, and is told to
+ *  press three buttons that are not on the screen - the guide's own «wrong missing thing», which is
+ *  the one empty-state failure this project treats as worse than silence, arriving on the very
+ *  first run. So the choice is remembered and honoured, and it is *applied* only once there is a
+ *  workspace open: the fold buys room for a list, and with no list there is nothing to buy it for.
+ */
+let chromeFoldWanted = false;
+function syncChromeFold() {
+  document.body.classList.toggle('chromefolded', chromeFoldWanted && !!dir);
+}
 function applyChromeFold(folded) {
-  document.body.classList.toggle('chromefolded', folded);
+  chromeFoldWanted = folded;
+  syncChromeFold();
   const b = $('chromefold');
   if (!b) return;
   b.setAttribute('aria-expanded', folded ? 'false' : 'true');
@@ -3814,11 +3967,10 @@ function applyChromeFold(folded) {
   b.title = folded ? FOLD_SHOW : `${FOLD_HIDE} - the list gets the room`;
 }
 $('chromefold').onclick = () => {
-  const folded = !document.body.classList.contains('chromefolded');
+  const folded = !chromeFoldWanted;
   applyChromeFold(folded);
   void chrome.storage.local.set({ chromeFolded: folded }).catch(() => {});
 };
-void restoreChromeFold();
 
 /** On a first run the window places itself, instead of landing wherever Chrome decides.
  *
@@ -3832,24 +3984,69 @@ void restoreChromeFold();
  *  moves or resizes it, that is where it belongs, and a default that re-asserted itself would undo
  *  a choice on every open. The same rule as the folded chrome, one surface up.
  */
-async function placeWindowOnFirstRun() {
+/** The right-hand half of the screen, which is where this window starts life. */
+function halfTheScreen() {
+  const half = Math.round(screen.availWidth / 2);
+  return { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
+           width: half, height: Math.round(screen.availHeight) };
+}
+/** Is enough of this window on a screen to grab hold of? A window is dragged by its top edge, so
+ *  the test is about that edge and not about area: 120x40 of it inside the work area is a title bar
+ *  somebody can reach. */
+function withinReach() {
+  const l = window.screenX, t = window.screenY, r = l + window.outerWidth, b = t + window.outerHeight;
+  const al = screen.availLeft, at = screen.availTop;
+  const ar = al + screen.availWidth, ab = at + screen.availHeight;
+  return Math.min(r, ar) - Math.max(l, al) >= 120 && Math.min(b, ab) - Math.max(t, at) >= 40;
+}
+/** Place it on the first run, and bring it back if where it was left is no longer anywhere.
+ *
+ *  **The remembered place is handed straight back to `windows.create`, and a place can stop
+ *  existing.** Work with Zoost on a second monitor, undock, click the icon: the window is created
+ *  off the side of the only screen there is. A `popup` has no tab strip and no address bar, so
+ *  there is nothing in it to navigate with, and the only way back would be clearing the extension's
+ *  storage - which is not a recovery, it is an uninstall with extra steps. The service worker
+ *  cannot check this (it would need `system.display`, a permission for a cosmetic fact); this
+ *  document can, for nothing, because `screen` is already its own. So the check lives where the
+ *  knowledge is, and it runs on every load rather than only on the first: the run that needs it is
+ *  by definition one where a place was already remembered.
+ */
+async function placeWindow() {
   try {
     const { zoostWindowBounds } = await chrome.storage.local.get('zoostWindowBounds');
-    if (zoostWindowBounds && zoostWindowBounds.width) return;
     const self = await chrome.windows.getCurrent();
-    const half = Math.round(screen.availWidth / 2);
-    const bounds = { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
-                     width: half, height: Math.round(screen.availHeight) };
+    if (zoostWindowBounds && zoostWindowBounds.width) {
+      if (withinReach()) return;
+    } else if (zoostWindowBounds) {
+      return;                              // maximised and nothing else remembered: the browser placed it
+    }
+    const bounds = halfTheScreen();
     await chrome.windows.update(self.id, bounds);
-    await chrome.storage.local.set({ zoostWindowBounds: bounds });
+    // Every field named, not spread: two files write this key and the check that holds them to
+    // «keep what you do not know about» reads the fields it can see.
+    await chrome.storage.local.set({ zoostWindowBounds: {
+      left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height, state: 'normal' } });
   } catch (_) { /* a window that will not move is still a window; nothing here is worth a sentence */ }
 }
-void placeWindowOnFirstRun();
+// **In this order, and awaited.** The unset fold default is decided from
+// `window.innerHeight`, and on a first run the window is created at 1200x900 and then
+// placed at the height of the screen - so asking before the placing measured a window that
+// was about to stop existing, and a short screen got the unfolded chrome the default is
+// there to avoid. Right from the second run on, which is exactly how a first-run defect
+// stays invisible.
+void placeWindow().then(restoreChromeFold);
 
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 window.addEventListener('focus', () => refreshContext());
+// **And on a clock, the way the twin does.** The three events above are all about a tab the reader
+// touches; the tab this panel resolves to is one they may not be watching at all now that Zoost has
+// its own window, and closing a background Analytics tab fires none of them. The focus listener
+// covers it the moment they click back in here - but `refreshContext` is asynchronous, so a press of
+// Pull in that same moment gets past the guard on a context that no longer describes anything. The
+// twin has polled since it was written; this was the divergence, not the poll.
+setInterval(refreshContext, 5000);
 
 /** Everything the panel has to read before it can draw itself, in the order it needs it.
  *
@@ -3863,6 +4060,7 @@ async function boot() {
     // Only read in the two-column mode, where the stylesheet overrides the height anyway - so both
     // are restored without either having to know which mode is showing.
     if (r && r.detailW) $('detail').style.setProperty('--splitw', r.detailW);
+    clampSplit();                  // a size from another window is a size this one may not have
   } catch (_) {}
   await loadScope(); await loadZohoDc(); await restoreRoot(); await refreshContext();
 }

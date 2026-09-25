@@ -690,6 +690,10 @@ async function cacheBinding(b) {
 }
 
 function updateWsButtons() {
+  // The fold hides the controls this function is deriving, and whether it may is a question about
+  // the same state - so it is answered on the same pass rather than once, at startup, when there
+  // was no workspace yet and there was going to be one a moment later.
+  syncChromeFold();
   const add = $('wsadd'), rt = $('wsroot');
   $('ws').disabled = pullBusy;
   rt.disabled = pullBusy;

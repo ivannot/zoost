@@ -171,16 +171,16 @@ CHECKS = [
         'title': 'A profile that has never seen Zoost',
         'do': ['Load the extension into a Chrome profile that has never had it, or clear its storage.',
                'Click the toolbar icon.'],
-        'pass': ('The side panel opens from the icon, and the two starter search patterns are already '
+        'pass': ('The Zoost window opens from the icon, and the two starter search patterns are already '
                  'in the list. Both are written once, on install, and only a fresh profile runs that.'),
         'covers': ['apps/*/background.js', 'apps/*/manifest.json'],
     },
     {
         'id': 'chrome',
-        'by': "probe.py: the toolbar is measured at the panel's minimum width",
-        'title': 'The panel at its narrowest, and the help inside it',
-        'do': ['Drag the side panel to its minimum width.',
-               'Open the ? help from the panel.'],
+        'by': "probe.py: the toolbar is measured at the window's minimum width",
+        'title': 'Zoost at its narrowest, and the help inside it',
+        'do': ['Drag the Zoost window to its narrowest.',
+               'Open the ? help from it.'],
         'pass': ('Every control in the toolbar is still reachable without scrolling the row sideways, '
                  'and the help describes what you are actually looking at.'),
         'covers': ['apps/*/workbench.html', 'apps/*/workbench.css', 'apps/*/product-help.js'],

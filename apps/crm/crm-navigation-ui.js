@@ -105,7 +105,13 @@ async function switchTab() {
   if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target - pull that workspace once from its own tab.', 'warn'); return; }
   const targetHome = workspaceHomeUrl();
   const curBase = (lastCtx && lastCtx.origin) || bound.base;
-  const id = await activeZohoTabId();
+  // The tab this workspace resolves to, which is the tab `lastCtx` was read from and therefore the
+  // one the sentence below is about. It asked for «the tab in front» until Zoost became a window of
+  // its own, at which point that was always `workbench.html` and the answer was always `null`: both
+  // branches fell to `tabs.create`, so a same-account switch opened another tab on every press, and
+  // a different-account switch opened the logout somewhere new and left the tab holding the session
+  // it had just ended sitting there, live-looking and dead.
+  const id = await zohoTabId();
   // Same Zoho account (prod <-> sandbox on the same data center) shares an SSO session: just navigate, no logout.
   const dc = (b) => (b || '').replace(/:\/\/(crm|crmsandbox)\./, '://');
   const sameAccount = dc(curBase) === dc(bound.base) && envOf(curBase) !== envOf(bound.base);
@@ -117,7 +123,13 @@ async function switchTab() {
     return;
   }
   // Different account: a clean logout + re-login is required. Confirm first, since it ends the current Zoho session.
-  const ok = window.confirm(`Switch to «${bound.instance}» (org ${bound.org})?\n\nThis logs you out of the current Zoho session «${lastCtx?.instance || '?'}» (org ${lastCtx?.org || '?'}) and takes this tab to the login for the target org.`);
+  // **It says which tab, because it is no longer the one you are looking at.** «This tab» was true
+  // when Zoost was a panel in the browser window and the panel spoke about the tab beside it; from
+  // a window of its own, the tab being navigated is one of the reader's other tabs and naming the
+  // session it holds is the only way they can tell which.
+  const ok = window.confirm(`Switch to «${bound.instance}» (org ${bound.org})?\n\n`
+    + `This logs you out of the current Zoho session «${lastCtx?.instance || '?'}» (org ${lastCtx?.org || '?'}) and takes `
+    + `${id ? 'the tab it is open in' : 'a new tab'} to the login for the target org.`);
   if (!ok) return;
   const accounts = curBase.replace(/:\/\/[^.]+\./, '://accounts.');   // crm./crmsandbox. -> accounts.
   const url = `${accounts}/logout?servicename=ZohoCRM&serviceurl=${encodeURIComponent(targetHome)}`;

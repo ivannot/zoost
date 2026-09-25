@@ -139,7 +139,7 @@ async function init() {
   const store = await chrome.storage.session.get(key);
   DATA = store[key];
   if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
-  if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
+  if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the Zoost window.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   // The numbers are written by `graphStat()`, which replaces the whole line and runs during this
   // init a few lines below. Poking the spans here wrote them once and never again - the pattern the

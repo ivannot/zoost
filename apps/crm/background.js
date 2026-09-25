@@ -6,25 +6,43 @@
 // `sidePanel` permission leaves the manifest with it: a permission that goes away is silent for
 // everybody who has the extension, and one fewer thing to justify on the listing.
 //
-// **One window, and the browser is the authority on whether it is still there.** The id is a note,
-// not a claim: `windows.update` on a window that has been closed rejects, and that rejection is the
-// answer - which is worth more than a flag in storage that can outlive what it describes.
-async function openWindow() {
-  try {
-    const { zoostWindowId } = await chrome.storage.session.get('zoostWindowId');
-    if (zoostWindowId != null) {
-      // `focused` alone: `drawAttention` is documented as drawing the eye *without* changing the
-      // focused window, so passing both is two instructions that contradict each other.
-      await chrome.windows.update(zoostWindowId, { focused: true });
-      return;
-    }
-  } catch (_) { /* it is gone; fall through and make one */ }
-  let bounds = null;
-  try { ({ zoostWindowBounds: bounds } = await chrome.storage.local.get('zoostWindowBounds')); } catch (_) {}
+// **One window, and the browser is the authority on whether it is still there.** The id in storage
+// is a note and not a claim, so it is checked against `windows.get` rather than against a flag that
+// can outlive what it describes.
+//
+// **`windows.update` rejecting is not the window being gone, and reading it that way makes a second
+// one.** The first version of this had one `try` around the storage read and the raise together, and
+// a comment saying «it is gone; fall through and make one» - true of one of the two reasons that
+// block can fail and false of every other, minimising and a transient refusal included. `windows.get`
+// answers the question that was actually being asked, and a raise that fails leaves the window that
+// exists alone: failing to bring a window forward is a nuisance, and opening a duplicate on top of
+// it is a second copy of the product writing into the same mirror folder.
+let opening = null;
+/** One at a time. Between reading the id and storing a new one sits the whole of `windows.create`,
+ *  and two clicks inside that gap both read «no window» and both make one - which is not a rare
+ *  race but the ordinary impulse: the window takes a beat to appear, so the second click is the
+ *  reflex of somebody who thinks the first did nothing. The loser of the race joins the winner
+ *  instead of starting again, so the icon still answers every click. */
+function openWindow() {
+  if (!opening) opening = raiseOrOpen().then(clearOpenFailure, reportOpenFailure).finally(() => { opening = null; });
+  return opening;
+}
+async function raiseOrOpen() {
+  const win = await existingWindow();
+  if (win) {
+    // Restoring is part of raising when it is minimised, and `state` is only sent then: passing
+    // `normal` unconditionally would un-maximise a window the reader had maximised on purpose.
+    try {
+      await chrome.windows.update(win.id, win.state === 'minimized'
+        ? { focused: true, state: 'normal' } : { focused: true });
+    } catch (_) { /* it is there and it would not come forward - never a reason to open a second */ }
+    return;
+  }
   // Where it is *not* placed on a first run: over the page you are reading. The service worker has
   // no idea how big the screen is - `chrome.system.display` would say, and it is a new permission
   // for a cosmetic fact - so the window is created at a readable size and **places itself** once it
-  // is open, from `screen.availWidth`, which its own document can read for nothing.
+  // is open, from `screen.availWidth`, which its own document can read for nothing. The same
+  // document is what rescues a window whose remembered place is no longer on any screen.
   // **A popup: no tab strip, no address bar.** It was briefly a normal window on a diagnosis of
   // mine that turned out to be wrong - the folder grant did nothing on the first run of this
   // window, and I read that as «a popup has no tab, so `requestPermission()` has nowhere to ask».
@@ -32,12 +50,57 @@ async function openWindow() {
   // measurement says otherwise: the folder prompt appears here exactly as it did in the panel.
   // Written down because the wrong reason was more confident than the right one, and the only
   // thing that separated them was asking the browser instead of the search results.
-  const create = bounds && bounds.width
-    ? { url: 'workbench.html', type: 'popup', focused: true,
-        left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height }
-    : { url: 'workbench.html', type: 'popup', focused: true, width: 1200, height: 900 };
-  const win = await chrome.windows.create(create);
-  try { await chrome.storage.session.set({ zoostWindowId: win.id }); } catch (_) {}
+  const bounds = await rememberedBounds();
+  const plain = { url: 'workbench.html', type: 'popup', focused: true, width: 1200, height: 900 };
+  // A maximised window is re-created maximised and not at the rectangle maximising gave it: Chrome
+  // refuses `state` together with a rectangle, and the two are alternatives rather than a pair.
+  const placed = !bounds ? plain
+    : bounds.state === 'maximized' ? { ...plain, state: 'maximized' }
+      : { ...plain, left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
+  let made;
+  try {
+    made = await chrome.windows.create(placed);
+  } catch (e) {
+    // **The one entry point the whole product has, so it may not fail in silence.** A remembered
+    // place Chrome will not accept is re-read on every click, so without this the icon is dead for
+    // ever and nothing anywhere says why. The place is what was refused: drop it and open plainly.
+    if (placed === plain) throw e;
+    try { await chrome.storage.local.remove('zoostWindowBounds'); } catch (_) {}
+    made = await chrome.windows.create(plain);
+  }
+  try { await chrome.storage.session.set({ zoostWindowId: made.id }); } catch (_) {}
+}
+/** Our window, or `null` - and `null` only when the browser says the id names nothing. */
+async function existingWindow() {
+  let id = null;
+  try { ({ zoostWindowId: id } = await chrome.storage.session.get('zoostWindowId')); } catch (_) { return null; }
+  if (id == null) return null;
+  try { return await chrome.windows.get(id); } catch (_) { return null; }
+}
+async function rememberedBounds() {
+  try {
+    const { zoostWindowBounds: b } = await chrome.storage.local.get('zoostWindowBounds');
+    if (!b) return null;
+    return b.state === 'maximized' || (b.width > 0 && b.height > 0) ? b : null;
+  } catch (_) { return null; }
+}
+/** The badge is cleared by the click that works, or a refusal that is over would sit on the icon
+ *  for the life of the profile. */
+async function clearOpenFailure() {
+  try {
+    await chrome.action.setBadgeText({ text: '' });
+    await chrome.action.setTitle({ title: '' });
+  } catch (_) {}
+}
+/** Both halves of «it did nothing»: the badge is what a reader sees, the log is what they can send.
+ *  A click that cannot be answered says so on the icon it was aimed at. */
+async function reportOpenFailure(e) {
+  console.error('Zoost: the window would not open', e);
+  try {
+    await chrome.action.setBadgeText({ text: '!' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#b3261e' });
+    await chrome.action.setTitle({ title: `Zoost could not open its window: ${e && e.message ? e.message : e}` });
+  } catch (_) {}
 }
 chrome.action.onClicked.addListener(() => { void openWindow(); });
 // Where the reader leaves it is where it comes back. Saved from the browser's own event rather than
@@ -48,7 +111,20 @@ async function rememberBounds(win) {
   try {
     const { zoostWindowId } = await chrome.storage.session.get('zoostWindowId');
     if (win.id !== zoostWindowId) return;
-    await chrome.storage.local.set({ zoostWindowBounds: { left: win.left, top: win.top, width: win.width, height: win.height } });
+    // **Only a window sitting where the reader put it says where the reader put it.** This event
+    // fires for a change of state as well as for a drag, and a minimised window's rectangle is not
+    // a place on a screen - remembering one and handing it back to `windows.create` is how the
+    // toolbar icon would come to open a window nobody can see. Maximised is remembered as a state,
+    // which is what it is, and the normal rectangle underneath it stays whatever it last was.
+    if (win.state === 'minimized') return;
+    if (win.state === 'maximized') {
+      const { zoostWindowBounds: had } = await chrome.storage.local.get('zoostWindowBounds');
+      await chrome.storage.local.set({ zoostWindowBounds: Object.assign({}, had, { state: 'maximized' }) });
+      return;
+    }
+    await chrome.storage.local.set({
+      zoostWindowBounds: { left: win.left, top: win.top, width: win.width, height: win.height, state: 'normal' },
+    });
   } catch (_) {}
 }
 // And forgotten when it closes, so the next click makes one instead of trying to raise a ghost.

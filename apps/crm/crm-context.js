@@ -32,7 +32,11 @@ function offerCtxTwin(twin) {
   // It uses the answer it asked for. This said «or get it from the Chrome Web Store» and linked
   // there whatever the twin had replied - on the one surface that speaks while a sample is open,
   // which is where the reader is least able to work it out for themselves.
-  a.title = `This is a Zoho Analytics tab and this panel reads Zoho CRM only. `
+  // **«This is a Zoho Analytics tab» is a claim this can no longer make.** The window model knows
+  // what is *open*, not what is in front - see `twinTab` - and a sentence that overstates what was
+  // measured is the defect this project refuses on every other surface. It is offered only where it
+  // is useful, which is with no Zoho CRM tab to read: the caller decides that.
+  a.title = `A Zoho Analytics tab is open and this reads Zoho CRM only. `
     + (twin.installed
       ? `${twin.product} reads it - click its icon in your toolbar.`
       /* **«No answer» is not «not installed», and this surface used to say it was.** The
@@ -50,14 +54,14 @@ function offerTwin(twin) {
   // **The lead says what is on the screen, and only that.** With the twin's box drawn there are
   // three ways out; without it there are two, and a sentence promising a box that is not there is
   // the same defect this whole screen was built to remove, one layer up.
-  $('offtitle').textContent = twin ? `This is a Zoho Analytics tab` : `Not on a Zoho CRM tab`;
+  $('offtitle').textContent = twin ? `A Zoho Analytics tab is open` : `Not on a Zoho CRM tab`;
   $('offlead').textContent = twin
     ? 'Three ways on: open the other Zoost, go to Zoho CRM, or work in a sample workspace.'
     : 'Two ways on: go to Zoho CRM, or work in a sample workspace.';
   if (!twin) return;
-  $('offtwins').textContent = `You are on Zoho Analytics and this panel reads Zoho CRM only. `
+  $('offtwins').textContent = `You have Zoho Analytics open and this reads Zoho CRM only. `
     + (twin.installed
-      ? `Click the ${twin.product} icon in your toolbar - it reads this tab.`
+      ? `Click the ${twin.product} icon in your toolbar - it reads that tab.`
       /* Never «you do not have it»: nothing here can establish that. An unanswered ask is also what
          an older copy of the twin looks like - which is every installed copy until both products
          ship the listening half. */
@@ -95,18 +99,20 @@ async function refreshContext() {
   // Reported, and the argument is his: the panel was denying a local mirror to somebody standing in
   // the wrong place. A pull is read-only towards Zoho; what has to be protected is the *mirror*, and
   // what protects it is the match - not which window has the focus.
-  const activeId = await activeZohoTabId();
+  // One resolution, not «the tab in front, or else any of them». That pair meant something while
+  // Zoost was a panel inside the browser window; from a window of its own the tab in front is
+  // always `workbench.html`, so the first half answered `null` on every pass and the second half
+  // did all the work. `zohoTabId()` asks the candidates which one this workspace belongs to.
+  const zohoId = await zohoTabId();
   if (!current()) return;
-  const zohoId = activeId || await zohoTabId();
-  if (!current()) return;
-  // **Two independent facts, and they were one for an hour.** «Which tab are you looking at» decides
-  // whether the other product's mark is offered; «is there a tab of ours anywhere» decides what is
-  // enabled. Collapsing them is what the branch below used to do, and the moment the panel stopped
-  // blocking on a foreign tab the twin offer disappeared with the block - reported, and it is the
-  // feature that was asked for whole. Somebody standing on a Zoho Analytics tab is looking at Zoho
-  // Analytics whether or not a CRM tab is open two windows away, and the extension that reads what
-  // they are looking at is the other one.
-  const twin = await twinTab();
+  // **Asked only where it can help.** «Which tab are you looking at» and «is there a tab of ours
+  // anywhere» were two independent facts while a panel sat beside the browser's tabs, and the offer
+  // belonged to the first of them. The first no longer exists, so what is left is the case the offer
+  // was written for and the only one it can still answer: this product has no tab to read, and the
+  // other product's platform is open. With a tab of our own the panel is *working*, and a stray tab
+  // of the twin's platform two windows away is not news - it would be a mark on a working bar with
+  // nothing to do about it.
+  const twin = zohoId ? null : await twinTab();
   if (!current()) return;
   offerCtxTwin(twin);
   if (!zohoId) {                           // no Zoho CRM tab anywhere, not just not in front
@@ -188,13 +194,27 @@ async function refreshContext() {
   // arrives at*, and until now the only record of arriving at it was the words on screen - which say
   // that it happened and nothing about why. Whoever reads this next has the tab, the frames that
   // were there, the frame we asked, and what the answer was.
-  console.info(`[zoost] ctx tab=${zohoId}${activeId ? '' : ' (not in front)'} frames=[${crmZohoBridge.seenFrames()}] asked=${cfid === null ? 'any' : cfid}`
+  console.info(`[zoost] ctx tab=${zohoId} frames=[${crmZohoBridge.seenFrames()}] asked=${cfid === null ? 'any' : cfid}`
     + ` -> ${lastCtx ? 'ok' : 'NOT READY' + (_ctxErr ? ' (' + _ctxErr + ')' : '')}`
     + ` ${Date.now() - _t0}ms`);
   _ctxErr = null;
   // Named and actionable, the way the twin says it: «not ready» on its own tells the reader a state
   // and no way out of it, and reloading that tab is the way out.
-  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho CRM tab (not ready - reload it)'; bnd.textContent = ''; blockZoho(true); updateWsButtons(); return; }
+  // **And it leaves the screen consistent on the way out.** This branch used to keep the amber
+  // mismatch bar - drawn on a previous pass from a `lastCtx` that is now null, so it named a tab
+  // and offered to switch to it while the line above said the tab would not answer - and it wiped
+  // the workspace chip, in the one state where the reader most needs to know which mirror they are
+  // looking at. Both of its neighbours do neither; the twin does neither. Three branches, one of
+  // them wrong, which is what an early return costs when the branches below it are the ones that
+  // clear up.
+  if (!lastCtx) {
+    ctxEl.className = 'offzoho';
+    who.innerHTML = 'Zoho CRM tab (not ready - reload it)';
+    bnd.innerHTML = isSample() ? SAMPLE_CHIP
+      : (bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '');
+    $('mmbar').classList.remove('show');
+    blockZoho(true); updateWsButtons(); return;
+  }
   // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
   // side implying a relationship - reported as «switching to the test org leaves ZOHO TAB on the

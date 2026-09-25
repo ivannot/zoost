@@ -280,8 +280,8 @@ const MSG = {
   // a missing Zoho tab costs is the half that talks to Zoho, and saying that is more use than
   // naming the tab the reader happens to have in front of them.
   // The same fact when a Zoho tab *is* open somewhere and it is not this workspace's: what the
-  twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
-  twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
+  twinInstalled: (t) => `A ${t.name} tab is open. ${t.product} reads it - open it from the toolbar.`,
+  twinMissing: (t) => `A ${t.name} tab is open. ${t.product} reads it.`,
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
   // Settings is a separate tab and nothing disables it while a pull runs - it was believed to be
@@ -891,7 +891,6 @@ const visibleTabs = () => tabOrder().filter((id) => !isHiddenByUser(id) && !isFo
 const crmZohoBridge = createCrmZohoBridge({
   chromeApi: chrome,
   zohoMatches: ZOHO_MATCHES,
-  zohoHost: ZOHO_HOST_RE,
   bound: () => bound,
   guardOk,
   mismatchMessage: MSG.mismatchRefused,
@@ -902,7 +901,6 @@ const crmZohoBridge = createCrmZohoBridge({
   context: bridgeContext,
   log: (message) => console.info(message),
 });
-const tabHasCrmFrame = crmZohoBridge.tabHasCrmFrame;
 const zohoTabId = crmZohoBridge.tabId;
 const TWIN_ASK_TTL = 30000;      // how long an answer about another extension is worth
 let twinAskedAt = 0;
@@ -927,9 +925,29 @@ let twinAsked;                   // the *promise* of the answer, not the answer:
  *  extension's side panel, and this document survives every tab switch, so a memo held for the
  *  session told whoever followed our own link that the twin was still missing.
  */
+/** Is a tab of the *other* product's platform open?
+ *
+ *  **The question used to be «is the tab in front one», and that question no longer has an answer.**
+ *  It was `{active: true, currentWindow: true}` plus a host test, which was exactly right while
+ *  Zoost was a panel inside the browser window: the active tab of that window was the page the
+ *  reader was looking at. From a window of its own, `currentWindow` is Zoost's window and its active
+ *  tab is `workbench.html` - so the test could never pass and the whole offer, chip and overlay box
+ *  alike, went quiet without a single error. It returned `null`, which is what it returns on the
+ *  ordinary day, and nothing anywhere could tell the two apart.
+ *
+ *  What survives the move is the case the offer was written for: this product has nothing to read,
+ *  and the other product's platform is open. That is answerable without knowing which window has the
+ *  focus, and it is asked only on the branch where it is true - see its caller. «Where you are
+ *  standing» has become «what you have open», which is less than it knew before and is all there is.
+ *
+ *  **Every tab, not a filtered query.** The twin's hosts are not in this product's
+ *  `host_permissions`; the `tabs` permission is what puts `url` on a Tab, and both manifests declare
+ *  it - so the pattern lives here, in one regular expression, rather than as a second list of data
+ *  centres to keep in step with the first.
+ */
 async function twinTab() {
-  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!active || !TWIN_HOST_RE.test(active.url || '')) return null;
+  const tabs = await chrome.tabs.query({});
+  if (!tabs.some((t) => TWIN_HOST_RE.test(t.url || ''))) return null;
   return { ...TWIN, installed: await twinAnswers() };
 }
 /** Does the twin answer? Measured before this was written: a message crosses between extensions
@@ -944,7 +962,7 @@ function twinAnswers() {
   // **It expires.** Held for the life of the panel it made the commonest path wrong: the
   // reader follows our own link, installs the twin, comes back to the tab - and is told it is
   // still not installed until they close the panel. Re-asked at most every thirty seconds,
-  // and only while the twin's own tab is in front, which is where the question is asked at
+  // and only while a tab of the twin's platform is open, which is where the question is asked at
   // all. Assigned before this scope awaits anything, so no global is written after an await.
   const now = Date.now();
   if (!twinAsked || now - twinAskedAt > TWIN_ASK_TTL) { twinAskedAt = now; twinAsked = askTwin(); }
@@ -959,7 +977,6 @@ async function askTwin() {
     return !!(r && r.product);
   } catch (_) { return false; }   // not installed, or installed and unwilling: same answer to us
 }
-const activeZohoTabId = crmZohoBridge.activeTabId;
 const answeringFrame = crmZohoBridge.answeringFrame;
 const askFrame = crmZohoBridge.askFrame;
 const crmFrameId = crmZohoBridge.frameId;
@@ -1175,7 +1192,7 @@ function fitTabs() {
 let fitTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(() => { fitTabs(); fitFindFilter(); }, 120);
+  fitTimer = setTimeout(() => { fitTabs(); fitFindFilter(); clampSplit(); }, 120);
 });
 /** Is this path one module's file?
  *

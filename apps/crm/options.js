@@ -1,8 +1,8 @@
 /* options.js - Zoost settings.
- * Everything here writes to storage the side panel and the graph window already read:
+ * Everything here writes to storage the workbench and the graph window already read:
  *   IndexedDB 'zoost'/kv  → rootDir (FileSystemDirectoryHandle)
  *   chrome.storage.local  → aicfg, exportScope, erParams, erDrawMax
- * A `settingsStamp` is bumped on every change so an open side panel can react.
+ * A `settingsStamp` is bumped on every change so an open workbench can react.
  */
 const $ = (id) => document.getElementById(id);
 // Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
@@ -100,7 +100,7 @@ async function onPickRoot() {
       + `${BLAST_RADIUS}\n\nUse this folder anyway?`)) return;
     await window.idbHandle.set('rootDir', h);
     await stamp(); await showRoot();
-    toast('Working folder set. Reopen the side panel to see the workspaces.');
+    toast('Working folder set. Reopen the Zoost window to see the workspaces.');
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
 }
 $('pickRoot').onclick = onPickRoot;
@@ -711,7 +711,7 @@ async function loadLay() {
 //
 // The list is the registry's, kept in one place: adding a type to the panel must not mean
 // remembering to add a row here. It is duplicated as a literal rather than imported because the
-// options page and the side panel do not share a module - if they ever do, this is the first thing
+// options page and the workbench do not share a module - if they ever do, this is the first thing
 // that should move.
 const TAB_DEFS = window.ZOOST_TABS;   // one registry, in tabs.js - see the note at the top of it
 const TAB_IDS = TAB_DEFS.map((t) => t.id);
@@ -796,7 +796,7 @@ function renderTabs() {
     // this preference. Reported as «non capisco il comportamento». It says what is true: not shown,
     // and not yours to change until Zoho answers otherwise - which is what the sentence beside it
     // is for. The pull switch next to it has read this way since it was written.
-    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabHiddenCur.includes(id)) ? '' : 'checked'} data-id="${escA(id)}" title="${denied ? 'Zoho refused this area, so the panel hides its tab whatever this says' : 'Show this tab in the side panel'}">
+    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabHiddenCur.includes(id)) ? '' : 'checked'} data-id="${escA(id)}" title="${denied ? 'Zoho refused this area, so the panel hides its tab whatever this says' : 'Show this tab in the Zoost window'}">
       <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
       <label class="pl" title="Include this type when you click Pull all"><input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabNoPullCur.includes(id)) ? '' : 'checked'} data-pull="${escA(id)}">pull</label>
       ${denied ? `<label class="pl" title="Ask Zoho about this area once more on the next Pull all, in case your role has changed. Spent by that pull."><input type="checkbox" ${tabRecheckCur.includes(id) ? 'checked' : ''} data-recheck="${escA(id)}">ask again</label>` : ''}
@@ -919,7 +919,7 @@ $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []
 // ---------- guarding against the stale save ----------
 //
 // One window stops you *having* two copies of this form. It does not stop this copy being out of
-// date: it can sit open for hours while the side panel writes some of the same keys - exportScope
+// date: it can sit open for hours while the workbench writes some of the same keys - exportScope
 // is rewritten every time you export with a different scope, aicfg when the engine changes - and
 // then Save writes back what was true when the page loaded. That is the lost update, and it is the
 // bug being described: the older copy wins because it saved last.
