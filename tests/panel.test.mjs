@@ -1500,7 +1500,15 @@ test('the search and the filters share a line only when they actually fit on one
   // which is what these stubs say.
   for (const app of ['crm', 'analytics']) {
     const rel = `apps/${app}/sidepanel.js`;
-    const row = (want, have) => ({ scrollWidth: want, clientWidth: have });
+    // A row, and optionally the wrapping box inside it. **The first version of this case modelled
+    // two flat rows and passed while the panel on screen was visibly wrong**: the CRM lays its
+    // filters out inside `.chips`, a wrapping flex row of its own, and a child that wraps makes its
+    // parent taller rather than wider - so the row never overflowed and the band stayed merged. A
+    // stub simpler than its subject is a stub that cannot fail on the subject's defect.
+    const row = (want, have, inner) => ({
+      scrollWidth: want, clientWidth: have,
+      querySelectorAll: (sel) => (inner && sel === '.chips' ? [inner] : []),
+    });
     const wrap = (rows) => {
       const on = new Set();
       return { children: rows, classList: { add: (c) => on.add(c), remove: (c) => on.delete(c),
@@ -1518,6 +1526,10 @@ test('the search and the filters share a line only when they actually fit on one
       `${app}: the filters do not fit on the line and the band was merged anyway`);
     assert.equal(run([row(900, 460), row(500, 700)]), false,
       `${app}: the search box does not fit on the line and the band was merged anyway`);
+    // The defect this case could not see until it was shaped like its subject: the row fits, the
+    // box inside it does not, and the band is two lines on screen while the measurement says one.
+    assert.equal(run([row(300, 460), row(500, 700, row(900, 700))]), false,
+      `${app}: the filters wrapped inside the band and the band was kept merged anyway`);
     // The decision is always taken from the two-row state. A panel that has been narrow and is
     // widened again must be able to merge, which it cannot if the measurement is taken while merged.
     const w = wrap([row(300, 460), row(500, 700)]);

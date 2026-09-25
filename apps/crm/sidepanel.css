@@ -868,5 +868,16 @@
      `nowrap` is what makes the measurement possible: with it the row overflows instead of wrapping,
      so `scrollWidth > clientWidth` answers «does this fit» directly. */
   #findfilter.oneline{display:flex;align-items:stretch}
-  #findfilter.oneline>.controls{flex:1 1 auto;min-width:0;flex-wrap:nowrap}
-  #findfilter.oneline>.controls:first-child{flex:0 1 460px;min-width:220px;border-right:1px solid var(--line)}
+  /* `nowrap` reaches the box that actually wraps. In the CRM the filters live inside `.chips`,
+     which is a wrapping flex row of its own: with only the `.controls` set to nowrap the row never
+     overflowed - it grew taller - so the measurement answered «it fits» about a band that had
+     already become two lines. Reported with a picture of exactly that. */
+  #findfilter.oneline>.controls,#findfilter.oneline .chips{flex-wrap:nowrap}
+  /* **The filters keep their natural width; the search gives up the rest.** A fixed basis for the
+     search row was wrong in the direction nobody notices: its own content - the field, the scope
+     button, the name toggle - is wider than the basis, so under `nowrap` *it* overflowed and the
+     band fell back to two rows while the filters had room to spare - reported as a band that broke
+     when everything would have fitted. The field inside can shrink to 190px, which is what makes
+     the remainder work. */
+  #findfilter.oneline>.controls:first-child{flex:1 1 auto;min-width:0;border-right:1px solid var(--line)}
+  #findfilter.oneline>.controls:last-child{flex:0 0 auto}

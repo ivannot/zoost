@@ -2075,9 +2075,15 @@ function fitFindFilter() {
   const rows = [...wrap.children];
   if (rows.length !== 2) return;
   wrap.classList.add('oneline');
-  // `nowrap` is on in this mode, so a row that does not fit overflows and says so. One pixel of
+  // `nowrap` is on in this mode, so a box that does not fit overflows and says so. One pixel of
   // tolerance because a fractional layout width rounds the two apart on some zoom levels.
-  const overflows = rows.some((r) => r.scrollWidth > r.clientWidth + 1);
+  //
+  // **And the question is asked of the box that actually lays the controls out**, not only of the
+  // row around it. The CRM builds its filters inside `.chips`, a wrapping flex row of its own: asking
+  // the row alone, the answer was «it fits» while the band on screen had already become two lines,
+  // because a child that wraps makes its parent taller and never wider. Reported with a picture.
+  const boxes = rows.flatMap((r) => [r, ...r.querySelectorAll('.chips')]);
+  const overflows = boxes.some((b) => b.scrollWidth > b.clientWidth + 1);
   if (overflows) wrap.classList.remove('oneline');
 }
 // The panel is resized by dragging its edge, which fires continuously - debounced for the same
