@@ -2650,7 +2650,7 @@ test('every kind gets a colour, and no condition gets one', () => {
   }
 
   for (const app of ['crm', 'analytics']) {
-    const css = read(`apps/${app}/graphview.html`);
+    const css = read(`apps/${app}/graphview.css`);   // the block moved to its own file
     for (const c of ['all', 'hub', 'orphan', 'dead', 'unres']) {
       assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
     }
@@ -2845,7 +2845,7 @@ test('the chips show what is on screen and are switched off, not on', () => {
   // So every kind starts *on* - the chips are what you are looking at - and clicking one removes it.
   // The conditions are the other question, «narrow to nodes that are also...», and they start off,
   // which is the honest state when none is chosen.
-  const css = read('apps/crm/graphview.html');
+  const css = read('apps/crm/graphview.css');   // the block moved to its own file
   assert.match(css, /\.dim\{[^}]*border:1px solid var\(--border\)/, 'the dimensions have no container');
   assert.match(css, /\.dimt\{/, 'the dimensions are not named');
   assert.match(css, /\.dim\.only\{border-style:dashed\}/, 'the conditions look like a kind');
@@ -3372,13 +3372,15 @@ test('the list folds to zero on both sides, min-width included', () => {
   // its min-content size and floors the width at whatever the search box needs. Nothing errors, and
   // there is no way to see it except by measuring - which is why it is asserted rather than trusted.
   for (const app of ['crm', 'analytics']) {
-    const css = read(`apps/${app}/graphview.html`);
+    const css = read(`apps/${app}/graphview.css`);   // the block moved to its own file
     const m = css.match(/body\.no-aside #v-explorer aside\{([^}]*)\}/);
     assert.ok(m, `${app}: the list cannot be folded away`);
     assert.match(m[1], /(^|;)width:0(;|$)/, `${app}: the folded list has no width rule`);
     assert.match(m[1], /min-width:0/, `${app}: width:0 is floored by min-width:auto and nothing happens`);
-    // It is a mark, so the name has to live where a screen reader can reach it.
-    const btn = css.match(/<button id="asidebtn"[\s\S]*?>/);
+    // It is a mark, so the name has to live where a screen reader can reach it. **Two files now**:
+    // this case read one because the page carried its stylesheet inside its markup, and it does
+    // not any more - the rules live in `graphview.css` and the button in the page.
+    const btn = read(`apps/${app}/graphview.html`).match(/<button id="asidebtn"[\s\S]*?>/);
     assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
     assert.match(gsrc(app), /classList\.toggle\('no-aside'/, `${app}: nothing toggles it`);
 
@@ -3387,7 +3389,8 @@ test('the list folds to zero on both sides, min-width included', () => {
     // the wrong argument ("a control that comes and goes" is the rule about a navigation shape, not
     // about a control whose target is off screen), then behind a check in the view switch, and the
     // markup now makes both unnecessary.
-    const view = css.slice(css.indexOf('id="v-explorer"'), css.indexOf('id="v-visual"'));
+    const page = read(`apps/${app}/graphview.html`);
+    const view = page.slice(page.indexOf('id="v-explorer"'), page.indexOf('id="v-visual"'));
     assert.ok(view.includes('id="asidebtn"'), `${app}: the fold control is not inside the view it folds`);
   }
 });

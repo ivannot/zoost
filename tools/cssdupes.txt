@@ -5,43 +5,43 @@
 # that should own it - and moving one is a job with a screenshot after it, because these
 # rules win by order inside their own page and lose that when they move.
 # selector	where
-analytics:#ertools button.on	apps/analytics/graphview.html
-analytics:*	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/workbench.css
-analytics:.ck	apps/analytics/options.html,apps/analytics/workbench.css
-analytics:.ck input	apps/analytics/options.html,apps/analytics/workbench.css
-analytics:.empty	apps/analytics/graphview.html,apps/analytics/workbench.css
-analytics:.erbox	apps/analytics/graphview.html
-analytics:.mk	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/workbench.css
-analytics:.wrap	apps/analytics/graphview.html,apps/analytics/options.html
-analytics:[hidden]	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/workbench.css
-analytics:body	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/workbench.css
-analytics:button	apps/analytics/options.html,apps/analytics/workbench.css
-analytics:button.primary	apps/analytics/options.html,apps/analytics/workbench.css
-analytics:header	apps/analytics/graphview.html,apps/analytics/options.html
-analytics:header h1	apps/analytics/graphview.html,apps/analytics/options.html
-crm:#ertools button.on	apps/crm/graphview.html
-crm:*	apps/crm/graphview.html,apps/crm/options.html,apps/crm/workbench.css
-crm:.chips	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.ck	apps/crm/options.html,apps/crm/workbench.css
-crm:.ck em	apps/crm/options.html,apps/crm/workbench.css
-crm:.ck input	apps/crm/options.html,apps/crm/workbench.css
-crm:.ck.ind	apps/crm/options.html,apps/crm/workbench.css
-crm:.empty	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.erbox	apps/crm/graphview.html
-crm:.ftbl	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.ftbl td	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.ftbl td.mono	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.ftbl th	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.ftbl tr:hover	apps/crm/graphview.html,apps/crm/workbench.css
-crm:.mk	apps/crm/graphview.html,apps/crm/options.html,apps/crm/workbench.css
-crm:.tabrow	apps/crm/graphview.html,apps/crm/options.html
-crm:.tabs	apps/crm/graphview.html,apps/crm/options.html
-crm:.wrap	apps/crm/graphview.html,apps/crm/options.html
-crm:[hidden]	apps/crm/graphview.html,apps/crm/options.html,apps/crm/workbench.css
-crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/workbench.css
-crm:button	apps/crm/options.html,apps/crm/workbench.css
-crm:button.primary	apps/crm/options.html,apps/crm/workbench.css
-crm:header	apps/crm/graphview.html,apps/crm/options.html
-crm:header h1	apps/crm/graphview.html,apps/crm/options.html
+analytics:#ertools button.on	apps/analytics/graphview.css
+analytics:*	apps/analytics/graphview.css,apps/analytics/options.css,apps/analytics/workbench.css
+analytics:.ck	apps/analytics/options.css,apps/analytics/workbench.css
+analytics:.ck input	apps/analytics/options.css,apps/analytics/workbench.css
+analytics:.empty	apps/analytics/graphview.css,apps/analytics/workbench.css
+analytics:.erbox	apps/analytics/graphview.css
+analytics:.mk	apps/analytics/graphview.css,apps/analytics/options.css,apps/analytics/workbench.css
+analytics:.wrap	apps/analytics/graphview.css,apps/analytics/options.css
+analytics:[hidden]	apps/analytics/graphview.css,apps/analytics/options.css,apps/analytics/workbench.css
+analytics:body	apps/analytics/graphview.css,apps/analytics/options.css,apps/analytics/workbench.css
+analytics:button	apps/analytics/options.css,apps/analytics/workbench.css
+analytics:button.primary	apps/analytics/options.css,apps/analytics/workbench.css
+analytics:header	apps/analytics/graphview.css,apps/analytics/options.css
+analytics:header h1	apps/analytics/graphview.css,apps/analytics/options.css
+crm:#ertools button.on	apps/crm/graphview.css
+crm:*	apps/crm/graphview.css,apps/crm/options.css,apps/crm/workbench.css
+crm:.chips	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.ck	apps/crm/options.css,apps/crm/workbench.css
+crm:.ck em	apps/crm/options.css,apps/crm/workbench.css
+crm:.ck input	apps/crm/options.css,apps/crm/workbench.css
+crm:.ck.ind	apps/crm/options.css,apps/crm/workbench.css
+crm:.empty	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.erbox	apps/crm/graphview.css
+crm:.ftbl	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.ftbl td	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.ftbl td.mono	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.ftbl th	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.ftbl tr:hover	apps/crm/graphview.css,apps/crm/workbench.css
+crm:.mk	apps/crm/graphview.css,apps/crm/options.css,apps/crm/workbench.css
+crm:.tabrow	apps/crm/graphview.css,apps/crm/options.css
+crm:.tabs	apps/crm/graphview.css,apps/crm/options.css
+crm:.wrap	apps/crm/graphview.css,apps/crm/options.css
+crm:[hidden]	apps/crm/graphview.css,apps/crm/options.css,apps/crm/workbench.css
+crm:body	apps/crm/graphview.css,apps/crm/options.css,apps/crm/workbench.css
+crm:button	apps/crm/options.css,apps/crm/workbench.css
+crm:button.primary	apps/crm/options.css,apps/crm/workbench.css
+crm:header	apps/crm/graphview.css,apps/crm/options.css
+crm:header h1	apps/crm/graphview.css,apps/crm/options.css
 site:header .brand	site/site.css
 site:header nav a.nprod	site/site.css
