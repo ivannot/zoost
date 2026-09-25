@@ -48,8 +48,14 @@ function createCrmZohoBridge(options) {
     try {
       const reply = await options.chromeApi.tabs.sendMessage(t.id, options.command({ cmd: 'context' }, null));
       const ctx = reply && options.context(reply);
+      if (ctx && ctx.org) return { id: t.id, ctx };
+    } catch (_) { /* fall through and try to revive our own script in that tab */ }
+    try {
+      if (!(await ensure(t.id))) return null;
+      const again = await options.chromeApi.tabs.sendMessage(t.id, options.command({ cmd: 'context' }, null));
+      const ctx = again && options.context(again);
       return ctx && ctx.org ? { id: t.id, ctx } : null;
-    } catch (_) { return null; }                   // no bridge in that tab, or it is asleep
+    } catch (_) { return null; }                   // it will not answer even after a repair
   }
 
   async function tabId() {
@@ -65,8 +71,17 @@ function createCrmZohoBridge(options) {
     // the panel announced a mismatch about a tab the reader was not using, while the right one sat
     // open two tabs away. Reported from exactly that arrangement.
     //
-    // A tab that does not answer is **skipped, not repaired**: this is a choice among tabs, and
-    // injecting into one nobody has used in order to decide whether to use it is the wrong order.
+    // **And a candidate that does not answer is repaired before it is written off.** The first
+    // version skipped it, on the argument that injecting into a tab nobody has used in order to
+    // decide whether to use it is the wrong order. That argument was wrong about what is being
+    // injected: this content script is *declared in the manifest* for these hosts and loads on
+    // every such page already, so `ensure` revives our own script rather than reaching anywhere new.
+    //
+    // And the case it was getting wrong is the ordinary one: **reloading an unpacked extension
+    // orphans the content scripts in tabs that are already open.** Reported from exactly that -
+    // production open in a tab, the panel reloaded, and only the sandbox answered, so the one tab
+    // that matched was invisible and the bar named the one that did not.
+    //
     // The answer is only a preference - whichever tab is chosen, the page at the far end still
     // refuses a command whose expected org is not its own, so this cannot widen what may be reached.
     const asked = await Promise.all(tabs.map(tabOrg));

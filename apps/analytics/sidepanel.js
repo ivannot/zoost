@@ -111,6 +111,8 @@ const MSG = {
   // a reader who has both must not meet two voices. See the note in that panel for why there are two.
   // What is off, rather than where you are standing - see the twin's note on the same line.
   noZohoTab: 'No Zoho Analytics tab open - the mirror reads, Zoho actions are off',
+  // The same fact when a Zoho tab is open somewhere and it is not this workspace's - see the twin.
+  noTabForWorkspace: (ws) => `No Zoho Analytics tab open for \u00ab${ws}\u00bb - the mirror reads, Zoho actions are off`,
   twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
@@ -1023,6 +1025,16 @@ async function tabWorkspace(t) {
   try {
     const reply = await chrome.tabs.sendMessage(t.id, { cmd: 'context' });
     const ws = reply && reply.ok && reply.workspace;
+    if (ws) return { id: t.id, ws };
+  } catch (_) { /* fall through and revive our own script in that tab */ }
+  // **A silent candidate is repaired before it is written off**, for the reason the twin's note
+  // gives: this content script is declared in the manifest for these hosts, so `ensureBridge` is
+  // reviving our own script and not reaching anywhere new - and the case it gets wrong otherwise is
+  // the ordinary one, because reloading an unpacked extension orphans the scripts in open tabs.
+  try {
+    if (!(await ensureBridge(t.id))) return null;
+    const again = await chrome.tabs.sendMessage(t.id, { cmd: 'context' });
+    const ws = again && again.ok && again.workspace;
     return ws ? { id: t.id, ws } : null;
   } catch (_) { return null; }
 }
@@ -1275,7 +1287,15 @@ async function refreshContext() {
     // used to rest on the one being read being in front of the reader. It rests on the match now,
     // checked by the page itself, so the panel has to say which one it resolved.
     const behind = !activeId ? '<span class="rlbl remote">not in front</span>' : '';
-    who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> · not related to the sample</span>' : ''}${behind}`;
+    // **And when the tab it resolved is neither in front nor the right one, it says that in the
+    // reader's terms and not in its own** - see the twin's note. Standing on a tab that has nothing
+    // to do with Zoho, an amber bar accusing a background tab is a sentence about a relationship the
+    // reader never agreed to; what is true for them is that nothing is open for the workspace they
+    // are working in.
+    const behindAndWrong = !activeId && !!bound && !isSample() && !guardOk();
+    who.innerHTML = behindAndWrong
+      ? esc(MSG.noTabForWorkspace(wsShown(bound)))
+      : `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> · not related to the sample</span>' : ''}${behind}`;
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
     // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never
@@ -1292,7 +1312,9 @@ async function refreshContext() {
   // platform-bound is already refused for it, and blocking would make it unusable the whole time an
   // Analytics tab is open. Say it, do not stop it.
   const sampleMm = !!(bound && ctx && ctx.workspace && isSample());
-  const mm = !!(bound && ctx && ctx.workspace && !guardOk() && !isSample());
+  // The loud bar belongs to the tab you are looking at: it offers «switch tab» and «switch
+  // workspace», two actions about a thing on screen.
+  const mm = !!(activeId && bound && ctx && ctx.workspace && !guardOk() && !isSample());
   $('mmbar').classList.toggle('show', mm || sampleMm);
   $('mmbar').classList.toggle('soft', sampleMm);
   if (mm || sampleMm) {

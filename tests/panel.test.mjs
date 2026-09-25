@@ -1683,6 +1683,28 @@ test('each panel attributes its Store link to itself, from one source', () => {
 // data with nothing to do about it. Reported as the hardest of the lot to read. The mark carries the
 // way out there, because that line is nowrap with an ellipsis and a longer sentence is one nobody
 // finishes.
+test('the loud mismatch bar is raised about the tab you are looking at, not one behind it', () => {
+  // Reported from a tab with nothing to do with Zoho, while the right Zoho tab sat open elsewhere:
+  // an amber alarm naming a background tab's org. Which tab the panel was opened from is clear to
+  // whoever built it and is a technicality to everybody else - for the reader that bond does not
+  // exist.
+  //
+  // The bar offers «switch tab» and «switch workspace» - two actions about something on screen - so
+  // raising it over a tab in another window is an alarm about something the reader is not doing.
+  // What is true for them is that nothing is open for the workspace they are working in, and that
+  // is a different sentence.
+  for (const [app, path] of [['crm', 'apps/crm/crm-context.js'],
+                             ['analytics', 'apps/analytics/sidepanel.js']]) {
+    const src = read(path);
+    assert.match(src, /const mm = !!\(activeId &&/,
+      `${app}: the mismatch bar is raised without asking whether that tab is the one in front`);
+    assert.match(src, /behindAndWrong/,
+      `${app}: nothing says what is off in the reader's own terms when the tab is behind and wrong`);
+    assert.match(read(`apps/${app}/sidepanel.js`), /noTabForWorkspace: \(ws\) =>/,
+      `${app}: the workspace-centric sentence does not exist`);
+  }
+});
+
 test('a mismatch says so and closes nothing that is already on disk', () => {
   // The bar has promised «what is already mirrored stays readable» for as long as it has existed,
   // and the CRM closed the open detail pane on every pass while mismatched - reported as a pane

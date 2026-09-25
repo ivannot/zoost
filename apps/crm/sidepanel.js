@@ -258,6 +258,9 @@ const MSG = {
   // a missing Zoho tab costs is the half that talks to Zoho, and saying that is more use than
   // naming the tab the reader happens to have in front of them.
   noZohoTab: 'No Zoho CRM tab open - the mirror reads, Zoho actions are off',
+  // The same fact when a Zoho tab *is* open somewhere and it is not this workspace's: what the
+  // reader needs is not an accusation about that tab, it is what is off and for which workspace.
+  noTabForWorkspace: (ws) => `No Zoho CRM tab open for \u00ab${ws}\u00bb - the mirror reads, Zoho actions are off`,
   twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   folder: 'Folder access needs re-granting - click ↻ Refresh.',

@@ -195,8 +195,18 @@ async function refreshContext() {
   // into another workspace's mirror used to rest on the org being in front of the reader's eyes.
   // It rests on the match now - checked by the page itself - so the panel has to *say* which org it
   // has resolved, every time, or the reader has no way to notice that it is not the one on screen.
+  // **And when the tab it resolved is neither in front nor the right one, it says that in the
+  // reader's terms and not in its own.** Reported, and the argument is his: which tab the panel was
+  // opened from is clear to whoever built it and is a technicality to everybody else - for the
+  // reader that bond does not exist. Standing on a tab that has nothing to do with Zoho, an amber bar accusing a background
+  // tab of being the wrong org is a sentence about a relationship the reader never agreed to. What
+  // is true *for them* is that nothing is open for the workspace they are working in, so that is
+  // what the line says, and the bar stays down.
+  const behindAndWrong = !activeId && !!bound && !isSample() && !guardOk();
   const behind = !activeId ? '<span class="rlbl remote">not in front</span>' : '';
-  who.innerHTML = `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>${behind}`;
+  who.innerHTML = behindAndWrong
+    ? escHtml(MSG.noTabForWorkspace(wsShown(bound)))
+    : `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>${behind}`;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
   else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = SAMPLE_CHIP; }
@@ -220,7 +230,10 @@ async function refreshContext() {
   // five-second poll re-deriving the state and closing it, which looks like the layout losing your
   // place rather than like a rule being applied. The Analytics twin never did this.
   const sampleMm = !!(bound && lastCtx && isSample());
-  const mm = !!(bound && lastCtx && !guardOk() && !isSample());
+  // The loud bar belongs to the tab you are looking at: it offers «switch tab» and «switch
+  // workspace», two actions about a thing on screen. Raised over a tab in another window it is an
+  // alarm about something the reader is not doing.
+  const mm = !!(activeId && bound && lastCtx && !guardOk() && !isSample());
   const mmbar = $('mmbar');
   mmbar.classList.toggle('show', mm || sampleMm);
   mmbar.classList.toggle('soft', sampleMm);
