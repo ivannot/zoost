@@ -1081,6 +1081,30 @@ function renderTabs() {
   // Afterwards, only move when the tab being shown has gone away.
   if (vis.length && (viewMode === null || !vis.includes(viewMode))) setMode(vis[0]);
   fitTabs();
+  fitFindFilter();
+}
+/** One band or two, decided by measuring rather than by a width typed here.
+ *
+ *  The same rule as `fitTabs()` above, for the same reason: what has to fit is not a constant. The
+ *  filter row carries a different set of controls on each tab, and the reader's own language decides
+ *  how wide its labels are - so a breakpoint either merges rows that do not fit or keeps two rows
+ *  apart that would. Reported on a panel where the filters wrapped inside the merged band: «se il
+ *  gruppo dei filtri va a capo, tanto vale mantenere le due righe separate».
+ *
+ *  **Always decided from the two-row state**, like the segment row: a decision taken while merged
+ *  measures the merged layout and latches, and the band never comes back when the panel is widened.
+ */
+function fitFindFilter() {
+  const wrap = $('findfilter');
+  if (!wrap) return;
+  wrap.classList.remove('oneline');
+  const rows = [...wrap.children];
+  if (rows.length !== 2) return;
+  wrap.classList.add('oneline');
+  // `nowrap` is on in this mode, so a row that does not fit overflows and says so. One pixel of
+  // tolerance because a fractional layout width rounds the two apart on some zoom levels.
+  const overflows = rows.some((r) => r.scrollWidth > r.clientWidth + 1);
+  if (overflows) wrap.classList.remove('oneline');
 }
 /** One row of segments or two, decided by measuring rather than by a width typed here.
  *
@@ -1117,7 +1141,10 @@ function fitTabs() {
 // The panel is resized by dragging its edge, which fires resize continuously - debounced for the
 // same reason the diagram window debounces its re-fit.
 let fitTimer = null;
-window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitTabs, 120); });
+window.addEventListener('resize', () => {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(() => { fitTabs(); fitFindFilter(); }, 120);
+});
 /** Is this path one module's file?
  *
  * Eight walks used to spell this out, each re-stating «a .json under modules/ that is not the index»

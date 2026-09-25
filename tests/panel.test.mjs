@@ -1488,6 +1488,46 @@ test('the twin offer never sells what the reader already has', () => {
   }
 });
 
+test('the search and the filters share a line only when they actually fit on one', () => {
+  // Reported on a real panel: merged by a breakpoint, the filter group wrapped *inside* the band -
+  // «se il gruppo dei filtri va a capo, tanto vale mantenere le due righe separate». A width typed
+  // into a stylesheet cannot answer this: the filter row carries a different set of controls on
+  // each tab and the reader's own language decides how wide its labels are, which is the same
+  // reason `fitTabs()` measures instead of guessing.
+  //
+  // Driven rather than read, because what has to hold is the *decision*, not the spelling of the
+  // condition. `nowrap` is on in the merged mode, so a row that does not fit overflows its box -
+  // which is what these stubs say.
+  for (const app of ['crm', 'analytics']) {
+    const rel = `apps/${app}/sidepanel.js`;
+    const row = (want, have) => ({ scrollWidth: want, clientWidth: have });
+    const wrap = (rows) => {
+      const on = new Set();
+      return { children: rows, classList: { add: (c) => on.add(c), remove: (c) => on.delete(c),
+                                            contains: (c) => on.has(c) }, on };
+    };
+    const run = (rows) => {
+      const w = wrap(rows);
+      const m = load([sliceFn(rel, 'fitFindFilter')], { $: (id) => (id === 'findfilter' ? w : null) });
+      m.fitFindFilter();
+      return w.on.has('oneline');
+    };
+    assert.equal(run([row(300, 460), row(500, 700)]), true,
+      `${app}: both rows fit and the band was kept apart anyway`);
+    assert.equal(run([row(300, 460), row(900, 700)]), false,
+      `${app}: the filters do not fit on the line and the band was merged anyway`);
+    assert.equal(run([row(900, 460), row(500, 700)]), false,
+      `${app}: the search box does not fit on the line and the band was merged anyway`);
+    // The decision is always taken from the two-row state. A panel that has been narrow and is
+    // widened again must be able to merge, which it cannot if the measurement is taken while merged.
+    const w = wrap([row(300, 460), row(500, 700)]);
+    w.classList.add('oneline');
+    const m = load([sliceFn(rel, 'fitFindFilter')], { $: (id) => (id === 'findfilter' ? w : null) });
+    m.fitFindFilter();
+    assert.equal(w.on.has('oneline'), true, `${app}: the band latched and cannot come back`);
+  }
+});
+
 test('a sample workspace is never labelled as a live binding', () => {
   // Its .zoost.json carries an invented org and workspace, and the off-platform branch is the only
   // thing that speaks while a sample is open - so it read «prod «sampleorg» org 1234567890» the

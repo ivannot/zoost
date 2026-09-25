@@ -43,7 +43,13 @@ function buildTypeChips() {
     renderConnections: (...args) => renderConnections(...args),
     renderTree: (...args) => renderTree(...args),
   });
-  return _buildTypeChips();
+  const out = _buildTypeChips();
+  // **The band is re-measured wherever the row it measures is rebuilt.** The filter row carries a
+  // different set of controls on each tab, so whether it still fits beside the search box is a new
+  // question every time this runs - and this is the one funnel every caller passes through, which
+  // is why the call is here and not at each of them.
+  fitFindFilter();
+  return out;
 }
 $('nameToggle').onclick = () => {
   if (viewMode === 'functions') {

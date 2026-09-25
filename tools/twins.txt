@@ -135,6 +135,7 @@ escReportA	46ee492a3bf3	46ee492a3bf3	identical
 escapeCloses	689dae1b2284	689dae1b2284	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	a5e28e42df49	33abab42f44e	divergent
+fitFindFilter	6283304b93a7	6283304b93a7	identical
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	edab5c06776e	edab5c06776e	identical
 grantRoot	1e1447674d2d	50f056678e38	divergent

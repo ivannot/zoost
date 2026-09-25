@@ -2058,6 +2058,33 @@ function shortDate(ms) {
 // One line, not two rows of chips: the CRM made this call already and wrote down why - seven
 // filters wrapped, and the list below needs the vertical space more than the filter does. The counts
 // move into the option labels so nothing is lost by dropping the chips.
+/** One band or two, decided by measuring rather than by a width typed here.
+ *
+ *  Word for word the CRM twin's, for the reason it gives: what has to fit is not a constant. Here it
+ *  is the type filter's own label that moves - «All (39)» against «All (1204)» - and the reader's
+ *  language decides the rest. Reported on a panel where the filters wrapped inside the merged band:
+ *  two clean rows beat one that has become two.
+ *
+ *  **Always decided from the two-row state**: a decision taken while merged measures the merged
+ *  layout and latches, and the band never comes back when the panel is widened again.
+ */
+function fitFindFilter() {
+  const wrap = $('findfilter');
+  if (!wrap) return;
+  wrap.classList.remove('oneline');
+  const rows = [...wrap.children];
+  if (rows.length !== 2) return;
+  wrap.classList.add('oneline');
+  // `nowrap` is on in this mode, so a row that does not fit overflows and says so. One pixel of
+  // tolerance because a fractional layout width rounds the two apart on some zoom levels.
+  const overflows = rows.some((r) => r.scrollWidth > r.clientWidth + 1);
+  if (overflows) wrap.classList.remove('oneline');
+}
+// The panel is resized by dragging its edge, which fires continuously - debounced for the same
+// reason the CRM debounces its own fit.
+let fitTimer = null;
+window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitFindFilter, 120); });
+
 function renderTypeFilter() {
   const sel = $('typesel');
   if (!views.length) { sel.innerHTML = '<option value="">—</option>'; sel.disabled = true; return; }
@@ -2070,6 +2097,9 @@ function renderTypeFilter() {
   });
   if (deps) opts.push(`<option value="${escA(ORPHANS)}">Nothing depends on (${views.filter(isOrphanCandidate).length})</option>`);
   sel.innerHTML = opts.join('');
+  // The widest option decides how wide the select draws, so the band is asked again here -
+  // «All (39)» and «All (1204)» are not the same width.
+  fitFindFilter();
   // A filter this workspace has no option for is dropped rather than kept invisibly. `typeFilter` is
   // module state and survives a change of workspace, which is right while the choice still applies -
   // «Table» means the same thing in both. It stops applying when the new workspace has none of that

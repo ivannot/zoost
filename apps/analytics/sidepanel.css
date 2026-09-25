@@ -594,8 +594,12 @@
      a field the width of the whole panel for a word of eight letters, and the filters take the
      rest. Reported with a picture of the two rows. */
   #findfilter{display:contents}
-  @media (min-width: 720px){
-    #findfilter{display:flex;align-items:stretch}
-    #findfilter>.controls{flex:1 1 auto;min-width:0}
-    #findfilter>.controls:first-child{flex:0 1 460px;border-right:1px solid var(--line)}
-  }
+  /* **One line only when everything actually fits on one line.** A breakpoint cannot know: the
+     filter row's controls change with the tab and with the reader's own labels, which is the same
+     reason `fitTabs()` measures instead of guessing. Reported on a panel where the filters wrapped
+     inside the merged row - two clean rows are better than one that has become two.
+     `nowrap` is what makes the measurement possible: with it the row overflows instead of wrapping,
+     so `scrollWidth > clientWidth` answers «does this fit» directly. */
+  #findfilter.oneline{display:flex;align-items:stretch}
+  #findfilter.oneline>.controls{flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+  #findfilter.oneline>.controls:first-child{flex:0 1 460px;min-width:220px;border-right:1px solid var(--line)}
