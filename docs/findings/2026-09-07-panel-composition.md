@@ -6,7 +6,7 @@ one surface require navigating unrelated code and kept presentation rules mixed 
 structure.
 
 Analytics AI, export and Health now live in `ai.js`, `export.js` and `health.js`, loaded as readable
-classic scripts before the 3,572-line orchestration file. Both panels load `sidepanel.css` instead of
+classic scripts before the 3,572-line orchestration file. Both panels load `workbench.css` instead of
 embedding their styles. No module bundler, framework or runtime dependency was introduced.
 
 The move exposed a blind spot rather than hiding it: `twincheck.py` and `csscheck.py` only inspected

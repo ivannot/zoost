@@ -2,7 +2,7 @@
  * workspace-controller.js - CRM working-folder and workspace lifecycle.
  *
  * This is the stateful counterpart to workspace.js: it owns selection, creation, sample
- * materialisation, naming and removal. It is loaded before sidepanel.js; function bodies
+ * materialisation, naming and removal. It is loaded before workbench.js; function bodies
  * receive the panel globals through the shared classic-script scope at runtime.
  */
 // ---------- workspaces ----------

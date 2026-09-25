@@ -95,7 +95,7 @@ ALIAS = {
 def surfaces(app: str):
     """Every shipped file of a product that can define a control, with its text.
 
-    This file read `apps/<app>/sidepanel.html` and nothing else. The panel is not the product: the
+    This file read `apps/<app>/workbench.html` and nothing else. The panel is not the product: the
     settings page and the diagram window are two more documents the guides describe, and a control
     is a control wherever it is written. Measured when this was widened: 78 buttons in the two side
     panels, **161** across the six pages and the scripts that build markup - so more than half of the
@@ -106,7 +106,7 @@ def surfaces(app: str):
     by a variable cannot be seen by any amount of regex, and this check does not claim to.
     """
     out = []
-    for name in ('sidepanel.html', 'options.html', 'graphview.html'):
+    for name in ('workbench.html', 'options.html', 'graphview.html'):
         p = ROOT / f'apps/{app}/{name}'
         if p.exists():
             out.append((f'apps/{app}/{name}', p.read_text(encoding='utf-8')))
@@ -190,7 +190,7 @@ MARKED = re.compile(r'<button([^>]*)>\s*<svg class="mk[ "]')
 
 def marked_controls(app: str) -> set:
     """The controls a panel draws as a mark rather than a word, by name."""
-    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
+    html = (ROOT / f'apps/{app}/workbench.html').read_text(encoding='utf-8')
     out = set()
     for attrs in MARKED.findall(html):
         m = re.search(r'aria-label="([^"]+)"', attrs)
@@ -202,7 +202,7 @@ def marked_controls(app: str) -> set:
 def filter_options(app: str) -> set:
     """The named choices in the panel's filter and sort dropdowns.
 
-    This file read `<button>` elements in sidepanel.html and nothing else, so a whole class of
+    This file read `<button>` elements in workbench.html and nothing else, so a whole class of
     control was invisible to it: the filter and sort dropdowns are built in JS, from literal pairs
     inside `buildTypeChips()`, and every choice in them is a capability with a name. Adding
     "Has scheduled actions" — the answer to "which workflows do not run immediately" — passed this
@@ -211,7 +211,7 @@ def filter_options(app: str) -> set:
     A "control" here is a thing the user can pick and would search the guide for, so it is the label
     that is compared, not the internal key. `All` is skipped: it is the absence of a filter.
     """
-    js = (ROOT / f'apps/{app}/sidepanel.js').read_text(encoding='utf-8')
+    js = (ROOT / f'apps/{app}/workbench.js').read_text(encoding='utf-8')
     out = set()
     m = re.search(r'function buildTypeChips\(\)[\s\S]*?\n}', js)
     if m:
@@ -220,7 +220,7 @@ def filter_options(app: str) -> set:
     # sort. Only literal options count: `#ws` and `#gozohodc` are filled from the folder and from
     # the manifest, so their contents are the user's data and Zoho's domains, not our vocabulary -
     # and a select the panel fills in JS simply has none here to read.
-    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
+    html = (ROOT / f'apps/{app}/workbench.html').read_text(encoding='utf-8')
     for sel in re.findall(r'<select\b[^>]*>([\s\S]*?)</select>', html):
         out |= {t.strip() for t in re.findall(r'<option[^>]*>([^<]+)</option>', sel) if t.strip()}
     return {x for x in out if x.lower() not in ('all', '\u2014', '-')}

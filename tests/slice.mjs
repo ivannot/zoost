@@ -1,7 +1,7 @@
 /*
  * slice.mjs — lift a named function out of a shipped file and evaluate it in isolation.
  *
- * The panels are browser scripts, not modules: `sidepanel.js` is 3000 lines that assume `document`,
+ * The panels are browser scripts, not modules: `workbench.js` is 3000 lines that assume `document`,
  * `chrome` and a DOM, and nothing in them is exported. Restructuring them so they could be imported
  * is exactly the refactor this project has no safety net for — CLAUDE.md says so in as many words —
  * and doing it *in order to add tests* would be spending the risk before earning the cover.
@@ -182,7 +182,7 @@ export function blankNonCode(src) {
     // Not `/*` and not `//`: a comment opener is not a regex, and this branch sits above the two
     // that handle them. Without the exclusion it read `/** The one writer of \`functions/` as a
     // regex - a closing slash inside a path in the prose - and the backtick after it opened a
-    // template that swallowed the next eleven lines. **535 code lines in `sidepanel.js` alone**,
+    // template that swallowed the next eleven lines. **535 code lines in `workbench.js` alone**,
     // measured against the 2 the old scanner lost there: a widening that made the hole bigger, which
     // is what the crude count is for.
     if (c === '/' && src[i + 1] !== '*' && src[i + 1] !== '/' && (prev === '' || REGEX_AFTER.has(prev))) {

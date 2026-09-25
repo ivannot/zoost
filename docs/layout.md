@@ -37,7 +37,7 @@ Each app carries its **own `manifest.json` and its own version number** — they
 `./build.sh crm` and `./build.sh analytics` package them separately.
 
 Each side panel is deliberately assembled from small classic scripts and a linked
-`sidepanel.css`. This preserves the no-build, inspectable distribution while keeping AI, exports,
+`workbench.css`. This preserves the no-build, inspectable distribution while keeping AI, exports,
 Health, problem-report redaction, pure state and panel orchestration at separate maintenance
 boundaries.
 
@@ -310,7 +310,7 @@ a button the panel stopped drawing, or that a short description repeats the item
 Both of those reached him, and neither was a lapse of attention that more attention would have fixed:
 each was a dimension nothing measured. `featurecheck.py` now compares the panel's *marks* against what
 the guide draws, not only what it names — and its **filter and sort dropdowns**, which it could not
-see at all: it read `<button>` elements in `sidepanel.html`, while those menus are built in JS from
+see at all: it read `<button>` elements in `workbench.html`, while those menus are built in JS from
 literal pairs inside `buildTypeChips()`. Every choice in them is a capability with a name, and
 `Has scheduled actions` shipped past the check without the site knowing the feature existed, and `auditcheck.py` reports a description that borrows three
 consecutive words from its own item name. The rule is the one already here — **extend the check, never

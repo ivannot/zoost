@@ -137,6 +137,7 @@ fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	a5e28e42df49	33abab42f44e	divergent
 fitFindFilter	e9a480e21d5c	e9a480e21d5c	identical
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
+forgetWindow	ff0e1bb85b25	ff0e1bb85b25	identical
 friendlyError	edab5c06776e	edab5c06776e	identical
 grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	50e566ea6668	9db12f0021b7	divergent
@@ -170,7 +171,7 @@ markOwn	7986da9d2681	7986da9d2681	identical
 matchArrangement	a8f7bcc97145	a8f7bcc97145	identical
 matchSpans	d4e179bbd076	d4e179bbd076	identical
 mergeKeys	ad756dd98e9a	ad756dd98e9a	identical
-mismatchRefuse	375f245e1392	fda4a5879a7f	divergent
+mismatchRefuse	0e0a1a582c6a	c38b0d5d1bdf	divergent
 navClear	582e1e2418ff	582e1e2418ff	identical
 navHere	646042fcc766	e2d15ed53789	divergent
 navShow	957d90ae94fd	4c46bbd337a1	divergent
@@ -200,8 +201,9 @@ openRxMenu	56e77cef3e64	353dff6f7ca2	divergent
 openSampleWorkspace	218a5748923a	adbf10fa3978	divergent
 openSchemaGraph	6d3af7aaabaf	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
+openWindow	25ba0d4aaaf8	25ba0d4aaaf8	identical
 openWorkspaceForContext	da43d67fd784	368dfecfbf70	divergent
-openZohoHome	2382b4f61123	ccaa6b79d370	divergent
+openZohoHome	bd92c5b4dda9	ca43728dfade	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
 otherWindowChanged	b0649c31fb20	b0649c31fb20	identical
@@ -215,6 +217,7 @@ passKind	684df355a097	bdf6d02817df	divergent
 patchCfg	36bf3c3c0b3e	022f4520707e	divergent
 pdfTitle	f485a3c63451	7f605af98241	divergent
 pickRoot	47616b97252d	fd5c0127dff5	divergent
+placeWindowOnFirstRun	cb6998f9a033	cb6998f9a033	identical
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
 pullAll	44136fa355b3	1d67081cbf83	divergent
@@ -225,12 +228,13 @@ redact	118bf5e6b5ae	118bf5e6b5ae	identical
 redactHard	242058967c20	242058967c20	identical
 redrawOpenViews	cf2e0a34bf88	5a6c69136e78	divergent
 refRow	854405aca965	947afeea3b64	divergent
-refreshContext	d43217cb0fef	2cc39de95294	divergent
+refreshContext	0575b7fb0e77	697cfcd05c62	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
 regrantOnAnyClick	2830b907d8df	3339fc00869d	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	4d6325a17da8	divergent
 rememberActive	74f9a0e0cbc6	74f9a0e0cbc6	identical
+rememberBounds	e03c8aa0fe07	e03c8aa0fe07	identical
 renameWorkspace	60a7f9c0ba22	bf0d938e89ff	divergent
 render	1f1f526caa02	b44d36ae2b45	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
@@ -278,7 +282,7 @@ statCounts	df6998dd5891	df6998dd5891	identical
 statOf	8b674948e7e6	61a9d1873462	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
 stepSelection	01087cab90ac	060e86ed5417	divergent
-switchTab	147323632e4d	07e791a9cd39	divergent
+switchTab	c98db8eebae4	07e791a9cd39	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 takeTheirs	e157a3cfc9a3	e157a3cfc9a3	identical

@@ -8,7 +8,7 @@ models were already separate, but their accepted rows, filters and callbacks wer
 Each extension now ships its own `report.js`, loaded as a readable classic script before the panel.
 No runtime code is shared between products and no build step was added. The panel tests locate the
 report declarations through the page's script composition, and the Worker comparison reads the new
-owner directly. CRM `sidepanel.js` fell from 7,272 to 7,132 lines and Analytics from 3,572 to 3,432.
+owner directly. CRM `workbench.js` fell from 7,272 to 7,132 lines and Analytics from 3,572 to 3,432.
 
 `report.js`, `list-model.js`, and the already separated workspace, navigation and search-state
 modules now opt into `@ts-check`. JSDoc contracts describe the problem-report whitelist, list rows,

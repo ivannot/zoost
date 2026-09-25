@@ -247,9 +247,9 @@ const DRIVER = String.raw`
 `;
 
 function panelHtml() {
-  let html = fs.readFileSync(path.join(APP, 'sidepanel.html'), 'utf8');
+  let html = fs.readFileSync(path.join(APP, 'workbench.html'), 'utf8');
   const first = '<script src="sample-org.js"></script>', idb = '<script src="idb.js"></script>';
-  if (!html.includes(first) || !html.includes(idb)) throw new Error('sidepanel script order changed');
+  if (!html.includes(first) || !html.includes(idb)) throw new Error('workbench script order changed');
   html = html.replace(first, `<script>window.crmZgid=${JSON.stringify(fixture.org)};</script><input id="dreZuId" value="${fixture.zuid}">\n<script src="/__probe/platform.js"></script>\n${first}`);
   return html.replace(idb, `${idb}\n<script src="/__probe/fsshim.js"></script>\n<script src="/__probe/setup.js"></script>\n<script src="content-bridge.js"></script>\n<script src="/__probe/driver.js"></script>`);
 }

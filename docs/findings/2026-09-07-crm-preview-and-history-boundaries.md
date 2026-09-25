@@ -2,7 +2,7 @@
 
 ## What remained concentrated
 
-After pull, workspace and live reconciliation had moved out, `apps/crm/sidepanel.js` still
+After pull, workspace and live reconciliation had moved out, `apps/crm/workbench.js` still
 implemented the complete item-preview surface and the browser-like navigation history. That kept
 file-tree projection, detail rendering, selection, keyboard movement and history replay interleaved
 with the composition root, even though each already had a stable behavioural boundary.
@@ -14,14 +14,14 @@ file and directory set shown in the preview. `preview-controller.js` owns the pr
 tree, item detail, selection and keyboard stepping. `history-controller.js` maps the existing pure
 navigation state to CRM items and to the history overlay.
 
-The scripts still ship as readable classic JavaScript. They are loaded before `sidepanel.js`, expose
+The scripts still ship as readable classic JavaScript. They are loaded before `workbench.js`, expose
 only state and callable functions while loading, and leave DOM event binding and startup in the
-composition root. The panel test harness reads the script order from `sidepanel.html`, so moving a
+composition root. The panel test harness reads the script order from `workbench.html`, so moving a
 function does not weaken a behavioural assertion or create a second hand-maintained runtime list.
 
 ## Measured result
 
-CRM `sidepanel.js` fell from 4,968 to 4,005 lines in this tranche: 963 lines left the composition
+CRM `workbench.js` fell from 4,968 to 4,005 lines in this tranche: 963 lines left the composition
 root. From the 7,110-line baseline before the controller work, 3,105 lines have moved behind complete
 responsibility boundaries, a reduction of 43.7%. The CRM extension now ships 39 JavaScript files;
 the pure preview model is the thirteenth CRM module checked by the static-contract gate.

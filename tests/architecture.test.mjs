@@ -131,7 +131,7 @@ test('bridge errors preserve an upstream contract code and detail', () => {
 });
 
 test('a mirror writer refuses a validator that returns false', () => {
-  const source = readFileSync(new URL('../apps/analytics/sidepanel.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../apps/analytics/workbench.js', import.meta.url), 'utf8');
   assert.match(source, /if \(validateMirrorPlan\(mirrorPlan\) !== true\) throw/);
   const writer = source.slice(source.indexOf('async function writeToDisk'));
   assert.ok(writer.indexOf('validateMirrorPlan(mirrorPlan)') < writer.indexOf("op.write(PULL_STATE"),
@@ -448,7 +448,7 @@ test('Analytics: a pull interrupted while writing does not silence the next one'
   const context = { Math, Object, Error, String, JSON, updateButtons: () => {} };
   vm.createContext(context);
   vm.runInContext(readFileSync(new URL('../apps/analytics/pull-lifecycle.js', import.meta.url), 'utf8'), context);
-  const panel = readFileSync(new URL('../apps/analytics/sidepanel.js', import.meta.url), 'utf8');
+  const panel = readFileSync(new URL('../apps/analytics/workbench.js', import.meta.url), 'utf8');
   const lock = panel.slice(panel.indexOf('function setPullBusy(on) {'), panel.indexOf('function workspaceChangeRefuse'));
   vm.runInContext('let pullDepth = 0, pullBusy = false; const pullLifecycle = createPullLifecycle();', context);
   vm.runInContext(lock, context);

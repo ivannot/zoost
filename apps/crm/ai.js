@@ -1,6 +1,6 @@
 /*
  * ai.js - the AI assistant, whole: configuration, key unlock, context seeding, the tool loop,
- * rendering, and the chat's own controls. Moved out of sidepanel.js as the first slice of taking
+ * rendering, and the chat's own controls. Moved out of workbench.js as the first slice of taking
  * that file apart - it was 7,300 lines in which everything could touch everything, and this block
  * had the cleanest boundary: the rest of the panel reaches it through a dozen names (open, close,
  * clear, send, the caches dropped on a workspace change) and it reaches the rest through the
@@ -9,7 +9,7 @@
  * A classic script on purpose, like tabs.js and highlight.js: top-level `let`/`const` land in the
  * page's shared lexical environment, so the two files see each other's declarations exactly as they
  * did when they were one - order decides only what runs first, and this file is declarations only.
- * It loads BEFORE sidepanel.js, whose bottom wiring assigns `aiSend` and friends to buttons at load
+ * It loads BEFORE workbench.js, whose bottom wiring assigns `aiSend` and friends to buttons at load
  * time; a function declared in a later script would arrive as `undefined` there, silently.
  */
 

@@ -2,7 +2,7 @@
  * modules.js - the Modules tab, whole: the pull with its layout files and its pruning, the tree, the
  * detail with its field table and layout matrix, the per-module resync, and the schema-graph bridge.
  * Fifth slice, same contract as ai.js / export.js / health.js: declarations only, loaded before
- * sidepanel.js, proven by executing the file in an empty scope.
+ * workbench.js, proven by executing the file in an empty scope.
  */
 
 // ---------- modules: pull ----------

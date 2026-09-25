@@ -1,5 +1,5 @@
 /*
- * sidepanel.js - Zoost for Zoho Analytics.
+ * workbench.js - Zoost for Zoho Analytics.
  *
  * Mirrors a Zoho Analytics workspace into plain local files, then lets you navigate what came back:
  * every view with its type and folder, the columns of every table and query table, the SQL that
@@ -110,9 +110,15 @@ const MSG = {
   // Word for word the CRM's pair, and deliberately so: the two panels answer the same question and
   // a reader who has both must not meet two voices. See the note in that panel for why there are two.
   // What is off, rather than where you are standing - see the twin's note on the same line.
-  noZohoTab: 'No Zoho Analytics tab open - the mirror reads, Zoho actions are off',
-  // The same fact when a Zoho tab is open somewhere and it is not this workspace's - see the twin.
-  noTabForWorkspace: (ws) => `No Zoho Analytics tab open for \u00ab${ws}\u00bb - the mirror reads, Zoho actions are off`,
+  // **«Nothing here» plus the reason plus what to do about it**, which is this project's rule for
+  // an empty state. The refusal used to borrow the mismatch sentence, which claimed a tab that was
+  // not there was the wrong workspace - two states sharing one line, and the line was false in one
+  // of them.
+  // **One state, one sentence.** It had two - the context bar said «the mirror reads,
+  // Zoho actions are off» and the refusal said «press Open in Zoho» - which is the same
+  // fact written twice, in two places, ready to come apart. It says both halves now:
+  // what still works, and the way out, which is this project's rule for an empty state.
+  noTab: 'No Zoho Analytics tab is open - the mirror still reads.',
   twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
@@ -1003,6 +1009,27 @@ async function analyticsTabId() {
  *  the other end: every command carries the workspace the panel expects and `expectedMatches` in the
  *  content bridge refuses one that is not its own. This only decides *which* page gets asked.
  */
+/** Make the tab current **and bring its window forward.**
+ *
+ *  Word for word the twin's, for the reason it gives: `tabs.update({active:true})` selects the tab
+ *  inside its own window and says nothing about which window you are looking at. Invisible while
+ *  Zoost lived in a side panel - the panel is *in* that window - and with Zoost in a window of its
+ *  own it meant «Open in Zoho» selecting a tab nobody could see.
+ */
+async function focusTab(tabId, props) {
+  const tab = await chrome.tabs.update(tabId, props);
+  try {
+    if (tab && tab.windowId != null) await chrome.windows.update(tab.windowId, { focused: true });
+  } catch (_) { /* the window refused focus; the tab is still the current one in it */ }
+  return tab;
+}
+
+/** When something was pulled, in the reader's own time. See the note at its one caller. */
+function pulledWhen(value) {
+  const d = new Date(value);
+  return isNaN(d.valueOf()) ? String(value) : d.toLocaleString();
+}
+
 async function anyAnalyticsTabId() {
   const tabs = (await chrome.tabs.query({ url: ZOHO_MATCHES })).filter((t) => HOST_RE.test(t.url || ''));
   if (tabs.length < 2) return tabs[0] ? tabs[0].id : null;
@@ -1132,9 +1159,19 @@ async function toBridge(msg) {
   // only ever describe the workspace the tab is on. There is no parameter through which another
   // workspace could be named, and a test holds both halves of that.
   const aboutTab = !!(msg && msg.aboutTab);
-  if (msg && msg.cmd !== 'context' && !aboutTab && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
-  const id = await analyticsTabId();
-  if (id == null) throw new Error('The active tab is not Zoho Analytics.');
+  // **The tab a command will reach, not the one in front.** This asked for the *active* tab, and
+  // the CRM twin has resolved «the active one, or any Zoho tab anywhere» since it was written - a
+  // divergence that was invisible while both panels lived beside the browser's own tabs. The day
+  // this one became a window of its own, its active tab became Zoost, and every pull failed with
+  // «the active tab is not Zoho Analytics» while an Analytics tab sat open next to it. Reported.
+  const id = await analyticsTabId() || await anyAnalyticsTabId();
+  // **Two states, and they had one sentence between them** - see the twin's note. With no tab open
+  // the guard is false because there is nothing to match against, and the refusal claimed the tab
+  // was a different workspace. The tab is resolved first, and that decides which refusal is owed.
+  if (msg && msg.cmd !== 'context' && !aboutTab && bound && !guardOk()) {
+    throw new Error(id == null ? MSG.noTab : MSG.mismatchRefused);
+  }
+  if (id == null) throw new Error(MSG.noTab);
   await ensureBridge(id);
   // The identity travels with the command and is checked *in the page that will run it* - see the
   // note in the CRM twin. Everything above is a check against a memory of which workspace the tab
@@ -1182,7 +1219,11 @@ const guardOk = () => !isSample() && !!(bound && ctx && ctx.workspace && String(
 // than as a bug: «since Pull is disabled, everything that talks to Zoho should be».
 function mismatchRefuse() {
   if (guardOk()) return false;
-  status(MSG.mismatchRefused, 'warn');
+  // **Which refusal, decided by which state.** It said «a different workspace» whenever the guard
+  // was false, and with no Zoho tab open at all the guard is false because there is nothing to
+  // compare against - so a click was refused with a claim about a tab that did not exist. The third
+  // place this sentence was doing that, and the last.
+  status(ctx && ctx.workspace ? MSG.mismatchRefused : MSG.noTab, 'warn');
   return true;
 }
 function sampleRefuse() {
@@ -1253,12 +1294,16 @@ async function refreshContext() {
     // the reader is standing. Without one, the old sentence is still the right one.
     who.innerHTML = twin
       ? esc(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
-      : (dir ? MSG.noZohoTab : 'Not on a Zoho Analytics tab');
+      : (dir ? esc(MSG.noTab) : 'Not on a Zoho Analytics tab');
+    // **The way out is a control, not an instruction** - see the twin's note. It appears in exactly
+    // the state it resolves: a mirror to read, and no tab to reach Zoho with.
+    $('ctxopen').hidden = !dir || !!twin;
     offerTwin(twin);        // the overlay's group, which only exists on this branch
     bnd.innerHTML = localLbl;
     return updateButtons();
   }
   $('offoverlay').classList.remove('show');
+  $('ctxopen').hidden = true;   // a tab was resolved, so there is nothing to open
   await ensureBridge(id);
   if (!current()) return;
   const afid = await analyticsFrameId(id);
@@ -1290,20 +1335,23 @@ async function refreshContext() {
     // the widening, paid here rather than skipped: the protection against mixing two workspaces
     // used to rest on the one being read being in front of the reader. It rests on the match now,
     // checked by the page itself, so the panel has to say which one it resolved.
-    const behind = !activeId ? '<span class="rlbl remote spaced">not in front</span>' : '';
     // **And when the tab it resolved is neither in front nor the right one, it says that in the
     // reader's terms and not in its own** - see the twin's note. Standing on a tab that has nothing
     // to do with Zoho, an amber bar accusing a background tab is a sentence about a relationship the
     // reader never agreed to; what is true for them is that nothing is open for the workspace they
     // are working in.
-    const behindAndWrong = !activeId && !!bound && !isSample() && !guardOk();
+    // **«Not in front» stopped meaning anything the day the panel became a window** - see the
+    // twin's note: Zoost's own window has Zoost as its active tab, so a Zoho tab never is. What
+    // survives is the distinction underneath it: is there a tab for this workspace, or not.
     // The tab half is drawn only when it differs from the workspace: agreeing, it said the same
     // thing twice, which is half of what made this line unreadable.
-    who.innerHTML = behindAndWrong
-      ? esc(MSG.noTabForWorkspace(wsShown(bound)))
-      : (bound && guardOk() && !isSample()
-          ? behind
-          : `<span class="rlbl remote">Tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> \u00b7 not related to the sample</span>' : ''}${behind}`);
+    // **Two states and no bridge between them** - see the twin's note. «No tab at all» is the
+    // branch above; «the wrong tab» is the amber bar below, with the two ways out on it. What used
+    // to sit between them was «the tab is behind you», which stopped being a state the day this
+    // panel became a window: its own window has Zoost as the active tab, so a Zoho tab never is.
+    who.innerHTML = (bound && guardOk() && !isSample()
+          ? ''
+          : `<span class="rlbl remote">Tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> \u00b7 not related to the sample</span>' : ''}`);
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' <span class="ok">\u2713</span>'; bnd.title = wsTitle; }
     // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never
@@ -1322,7 +1370,9 @@ async function refreshContext() {
   const sampleMm = !!(bound && ctx && ctx.workspace && isSample());
   // The loud bar belongs to the tab you are looking at: it offers «switch tab» and «switch
   // workspace», two actions about a thing on screen.
-  const mm = !!(activeId && bound && ctx && ctx.workspace && !guardOk() && !isSample());
+  // The loud bar is for a Zoho tab that exists and is the wrong one: both its buttons are things
+  // the reader can act on there. Tied to «in front» it would now never appear at all.
+  const mm = !!(bound && ctx && ctx.workspace && !guardOk() && !isSample());
   $('mmbar').classList.toggle('show', mm || sampleMm);
   $('mmbar').classList.toggle('soft', sampleMm);
   if (mm || sampleMm) {
@@ -1338,12 +1388,21 @@ async function refreshContext() {
   // the two buttons are how.
     $('mmtext').textContent = sampleMm
       ? `Sample workspace - invented data. Pulling is off: nothing here comes from workspace ${ctx.workspace}, and nothing here can reach it.`
-      : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${wsShown(bound)}\u00bb (${bound.workspace}). Pulling is off until they match; what is already mirrored stays readable.`;
+    // **It said «*the* tab», and there can be several.** The panel resolves one - whichever of the
+    // open Zoho tabs it was given - and the sentence named that one as though it were the only
+    // thing the reader had open, which is a statement about this panel's bookkeeping rather than
+    // about their browser. What is true for them does not depend on which tab was picked: none of
+    // the tabs they have open is on the workspace they are looking at. Reported.
+      : `No open Zoho Analytics tab is on \u00ab${wsShown(bound)}\u00bb (${bound.workspace}). Pulling is off until one is; what is already mirrored stays readable.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
     // the workspace the tab is already in - switching to it if it exists locally, creating it if not.
     // The first is meaningless for a sample: there is no Zoho Analytics workspace to switch to.
     $('mmgo').style.display = sampleMm ? 'none' : '';
-    $('mmgo').textContent = `Switch tab \u2192 \u00ab${wsShown(bound)}\u00bb \u2197`;
+    // **«Open», not «switch».** «Switch tab» names the mechanism - reuse the tab you have - and
+    // the mechanism is not always what happens: with no Zoho tab open this button makes one. It
+    // also read as an instruction about something the reader could do themselves, which it is not.
+    // What is constant is the destination, so that is what the button says. Reported.
+    $('mmgo').textContent = `Open \u00ab${wsShown(bound)}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
     const sw = $('mmsw'); sw.className = 'znav'; sw.style.display = sampleMm ? 'none' : '';
@@ -1441,24 +1500,51 @@ function zohoUrlOk(url) {
     return u.protocol === 'https:' && APP_HOSTS.has(u.host);
   } catch (_) { return false; }
 }
-async function goToZoho(url) {
+/** Where the reader asked for it to open, from the modifiers the whole web already teaches.
+ *
+ *  Word for word the twin's: Ctrl or Cmd is a new tab in the background, Shift is a new window that
+ *  comes forward. Nothing to learn, and the context menu is left alone - which a right-click
+ *  override would not be. It matters since Zoost left the side panel: on two screens, «open this in
+ *  a second Zoho window» is a thing somebody actually wants.
+ */
+function howFrom(ev) {
+  if (!ev) return null;
+  if (ev.shiftKey) return 'window';
+  return (ev.ctrlKey || ev.metaKey) ? 'tab' : null;
+}
+async function openElsewhere(url, how) {
+  if (how === 'window') { await chrome.windows.create({ url, focused: true }); return true; }
+  await chrome.tabs.create({ url, active: false });
+  return true;
+}
+
+async function goToZoho(url, how) {
   if (!zohoUrlOk(url)) {
     status('This workspace points at ' + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
       + ', which is not a Zoho Analytics address. Nothing was opened - check where this workspace folder came from.', 'bad');
     return null;
   }
-  const id = await analyticsTabId();
-  if (!id) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
+  // A modifier means «not here», so the tab-reuse below is skipped: asking for a new window is not
+  // asking to navigate the one you have. The host check above still runs first.
+  if (how) return await openElsewhere(url, how) ? true : null;
+  const id = await analyticsTabId() || await anyAnalyticsTabId();
+  if (!id) {
+    // No Analytics tab anywhere, so one is made - and its window comes forward with it, or the tab
+    // appears behind Zoost's own window and nothing seems to have happened.
+    const t = await chrome.tabs.create({ url, active: true });
+    try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
+    return t.id;
+  }
   const fid = await analyticsFrameId(id);
   if (fid) {
     try {
       await chrome.scripting.executeScript({ target: { tabId: id, frameIds: [fid] },
                                              func: (u) => { location.href = u; }, args: [url] });
-      await chrome.tabs.update(id, { active: true });
+      await focusTab(id, { active: true });
       return id;
     } catch (_) { /* fall through to the tab */ }
   }
-  await chrome.tabs.update(id, { url, active: true });
+  await focusTab(id, { url, active: true });
   return id;
 }
 async function switchTab() {
@@ -1468,16 +1554,20 @@ async function switchTab() {
 /** The way *in*, and deliberately the tab rather than a frame: this is the control for when there is
  *  no context at all, and a reader who presses it is asking to go to Zoho Analytics, not to move a
  *  frame inside a page they may not be on. The CRM's own home button is the same. */
-async function openZohoHome() {
+async function openZohoHome(how) {
   if (sampleRefuse()) return;
-  const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = homeUrl();
-  if (a && HOST_RE.test(a.url || '')) await chrome.tabs.update(a.id, { url, active: true });
+  if (how) { await openElsewhere(url, how); return; }
+  const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (a && HOST_RE.test(a.url || '')) await focusTab(a.id, { url, active: true });
   else await chrome.tabs.create({ url, active: true });
 }
 
 function updateButtons() {
   if (!dir) closeOverview();
+  // The detail pane is part of the panel, so its controls are derived on the same pass as
+  // everything else rather than once, when it happened to open.
+  if (selectedId && $('detail').classList.contains('show')) detailZohoControls();
   renderGoDc();                      // the list it offers is the workspaces, so it moves with them
   $('ws').disabled = pullBusy;
   $('wsroot').disabled = pullBusy;
@@ -2073,7 +2163,15 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   // A load that is short says so on the line that reports it, and says it as a warning: this is the
   // only sentence between «one file would not open» and every surface below stating an absence.
   const shortBy = diskUnreadableAll.map((f) => f.rel).join(', ');
-  if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}`
+  // **The date and the hour, not the date.** Asked for, and it is the difference between «pulled
+  // today» and «pulled at 23:50 last night», which is the question somebody looks at this line to
+  // answer. `toLocaleString` and not a slice of the ISO string: that string is UTC, so printing
+  // its first sixteen characters would show an hour the reader did not live through.
+  //
+  // The same rule as the overview's own `when()`, which is written inside that pure render module
+  // because it takes its text escaper from its options and cannot reach anything here. Two small
+  // copies of one rule, and the boundary is the reason - said rather than left to be found.
+  if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + pulledWhen(v.pulledAt) : ''}`
     + `${mirrorIsOlderThanSchema() ? ' · written by an older Zoost - Pull all captures what this one reads' : ''}.`
     + (shortBy ? ` ${diskUnreadableAll.length} file(s) here would not open (${shortBy}) - what they hold is missing from every count below. Press ↻ Refresh, or Pull all to rewrite them.` : ''),
     shortBy ? 'warn' : '');
@@ -2578,6 +2676,28 @@ function resetDetailScroll() {
   doIt(); requestAnimationFrame(doIt);
 }
 
+/** The detail pane's Zoho-bound controls, derived from the context as it is *now*.
+ *
+ *  **They were set once, when the pane opened, and never again.** Close the Zoho tab, reopen it,
+ *  and the panel noticed - the context line updated itself on the next pass - while «Pull» stayed
+ *  disabled on a pane that had been open the whole time. Reported, and it is the shape this panel
+ *  already names twice elsewhere: a state that has to hold across time is *derived* where
+ *  everything else is derived, never assigned once and left to age.
+ *
+ *  One function, called from both places, so the sentence on the tooltip cannot come apart from the
+ *  condition that shows it.
+ */
+function detailZohoControls() {
+  const b = $('dpull');
+  if (!b) return;
+  b.disabled = busy || pullBusy || !guardOk();
+  b.title = guardOk()
+    ? 'Pull - this view only, its SQL and its lineage; «Pull all» does every view'
+    : (ctx && ctx.workspace
+        ? 'The tab is a different workspace, so nothing can be pulled'
+        : MSG.noTab);
+}
+
 async function openDetail(id) {
   const mine = ++detailLoad;
   const op = beginWorkspaceOp();
@@ -2598,10 +2718,7 @@ async function openDetail(id) {
   // means "reload from disk / re-grant folder access" in the CRM panel and must keep meaning only
   // that here - a symbol that fetches from Zoho in one app and reads the disk in the other is worse
   // than no symbol.
-  $('dpull').disabled = busy || pullBusy || !guardOk();
-  $('dpull').title = guardOk()
-    ? 'Pull - this view only, its SQL and its lineage; «Pull all» does every view'
-    : 'The active tab is a different workspace, so nothing can be pulled';
+  detailZohoControls();
   $('dpull').onclick = () => pullOne(v.id);
   // Focused ER, exactly as the CRM opens a module's relations: the window takes it from here and
   // the depth stays adjustable there.
@@ -2636,7 +2753,7 @@ async function openDetail(id) {
   // the reader was in, while the CRM's own «Open in Zoho» has always moved the tab they are on.
   // Reported: «Analytics behaves differently from CRM». One of a set that did not do what its
   // siblings do, which is the miss this repository asks to be caught by diffing against them.
-  $('dzoho').onclick = () => { if (zurl) goToZoho(zurl); };
+  $('dzoho').onclick = (ev) => { if (zurl) goToZoho(zurl, howFrom(ev)); };
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty - and
   // it says which silence it is, in a title, the way the ER button beside it has always done.
@@ -3183,7 +3300,13 @@ $('pull').onclick = pullAll;
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
-$('gozoho').onclick = openZohoHome;
+$('gozoho').onclick = (ev) => openZohoHome(howFrom(ev));
+// The same action from the context bar - see the twin. Wired once, with its siblings.
+// **This workspace's Zoho, not the way in.** The bar has just named the workspace on screen, so
+// the button beside it goes there. `openZohoHome()` is the other intention - the way in, when there
+// is no workspace at all - and the twin sent a reader working in a sandbox to production by reusing
+// it here. `workspaceUrl()` already exists for exactly this and falls back to the home itself.
+$('ctxopen').onclick = (ev) => { if (!sampleRefuse()) void goToZoho(workspaceUrl(), howFrom(ev)); };
 // ---- keyboard: the selection follows the arrows ------------------------------------------------
 // Up and down used to scroll the list, because that is what a browser does with a scrollable box.
 // What a reader wants is the next view *open* - the same thing a click does - and the list is what
@@ -3696,6 +3819,33 @@ $('chromefold').onclick = () => {
   void chrome.storage.local.set({ chromeFolded: folded }).catch(() => {});
 };
 void restoreChromeFold();
+
+/** On a first run the window places itself, instead of landing wherever Chrome decides.
+ *
+ *  **The document knows what the service worker cannot.** `screen.availWidth` and its siblings are
+ *  readable by any page for nothing; the worker that created this window would need
+ *  `chrome.system.display` to learn the same thing, which is a permission asked for a cosmetic
+ *  fact. So the window is created at a readable size and moves itself once it can see.
+ *
+ *  The right half of the screen it was born on, full height - beside the browser rather than over
+ *  the page being read. It runs **only** while nothing has been remembered: the moment the reader
+ *  moves or resizes it, that is where it belongs, and a default that re-asserted itself would undo
+ *  a choice on every open. The same rule as the folded chrome, one surface up.
+ */
+async function placeWindowOnFirstRun() {
+  try {
+    const { zoostWindowBounds } = await chrome.storage.local.get('zoostWindowBounds');
+    if (zoostWindowBounds && zoostWindowBounds.width) return;
+    const self = await chrome.windows.getCurrent();
+    const half = Math.round(screen.availWidth / 2);
+    const bounds = { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
+                     width: half, height: Math.round(screen.availHeight) };
+    await chrome.windows.update(self.id, bounds);
+    await chrome.storage.local.set({ zoostWindowBounds: bounds });
+  } catch (_) { /* a window that will not move is still a window; nothing here is worth a sentence */ }
+}
+void placeWindowOnFirstRun();
+
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });

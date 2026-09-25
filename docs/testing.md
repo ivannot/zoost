@@ -57,7 +57,7 @@ proliferano le funzioni duplicate è la fine», and a *message* written out twic
 layer down: the two copies are one careless edit away from disagreeing, and nothing would say so.
 Measured on the tree before the fold - a quoted literal, never a template chunk, starting with a
 capital and containing a space - **39 clusters across the 22 shipped scripts**, 25 of them in
-`apps/crm/sidepanel.js` alone. The worst was not the count: a lapsed folder permission was reported
+`apps/crm/workbench.js` alone. The worst was not the count: a lapsed folder permission was reported
 as **«needs re-granting» (x5), «denied» (x3) and «not granted» (x2)**, so one browser behaviour
 arrived as three different problems, one of which - «denied» - names a state with no action in it.
 They are one sentence now, **`Folder access needs re-granting - click ↻ Refresh.`**, which names the
@@ -79,7 +79,7 @@ than argued: on the folded tree it reports **zero** across all 22 scripts, so ev
 real. It reads literals inside `${…}` interpolations (that is where both options pages' engine
 labels were hiding, invisible to the first pass), decodes escapes so `'…'` and `'…'` are one
 message, and skips comments - outward the rule never bends, between us it can. Proven by
-reintroducing a duplicate in `sidepanel.js` and in `options.js`, and by drifting the twin wording by
+reintroducing a duplicate in `workbench.js` and in `options.js`, and by drifting the twin wording by
 one verb: three findings, one each.
 
 **What it does not catch, said rather than left to be found.** A fragment starting lowercase -

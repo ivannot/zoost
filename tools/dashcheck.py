@@ -45,7 +45,10 @@ import storecopy  # noqa: E402
 
 # Which store-listing.md section each dashboard field is. The host justification is the one whose
 # payload is not a permission name - Google numbers it instead.
-FIELD = {'single-purpose': 4, 'sidePanel': 5, 'storage': 6, 'scripting': 7, 'tabs': 8, '1': 9}
+FIELD = {'single-purpose': 4, 'storage': 5, 'scripting': 6, 'tabs': 7, '1': 8}
+# `sidePanel` was 5 and is gone: the panel became a window of its own, the permission left the
+# manifest with it, and a justification for a permission nobody asks for is a field the reviewer
+# reads and cannot check. The numbers below it closed up rather than leaving a hole.
 
 TEXTAREA = re.compile(r'<textarea\b(?P<attrs>[^>]*)>(?P<body>.*?)</textarea>', re.S)
 PAYLOAD = re.compile(r'data-payload=(?:"([^"]*)"|([^\s>]+))')

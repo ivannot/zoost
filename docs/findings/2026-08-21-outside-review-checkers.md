@@ -32,7 +32,7 @@ docstring, in the terms a reader would use to check.
 
 ## 2. Two `escHtml` in attribute position, in the blind spot, on one twin only - medium
 
-**What broke.** `apps/crm/sidepanel.js` built `href="${escHtml(PRODUCT_URL)}/privacy.html"` and
+**What broke.** `apps/crm/workbench.js` built `href="${escHtml(PRODUCT_URL)}/privacy.html"` and
 `href="mailto:${escHtml(CONTACT_EMAIL)}"`. `escHtml` does not escape quotes - that is the whole reason
 `escA` exists and the whole reason `htmlcheck` exists. Inert, because both are module constants; the
 Analytics twin uses `escA` on the identical line.

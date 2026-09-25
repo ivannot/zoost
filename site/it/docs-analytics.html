@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:f6c6334a40edc2cd -->
+<!-- translated-from: site/docs-analytics.html sha256:879a8df2c961713a -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -119,7 +119,7 @@
   <h2 id="first-run">2. Primo avvio</h2>
   <ol>
     <li>Installa dal Chrome Web Store e apri una scheda di Zoho Analytics.</li>
-    <li>Clicca l'icona di Zoost per aprire il pannello laterale.</li>
+    <li>Clicca l'icona di Zoost: si apre la sua finestra, spostabile e ridimensionabile.</li>
     <li>Apri il workspace che vuoi rispecchiare. Il suo URL ha questa forma:
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
     <li><b class="ui">+ Workspace</b> - al primo avvio la stessa azione ti chiede una cartella di
@@ -255,7 +255,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </figure>
 
   <h2 id="structure">6. Struttura e chiavi esterne</h2>
-  <p>Clicca una riga qualsiasi per aprire il pannello di dettaglio. <b>Dove si apre dipende da quanto spazio ha il pannello.</b> Dagli abbastanza larghezza - Chrome lascia trascinare un side panel fino a due terzi della finestra - e lista e dettaglio stanno <b>affiancati</b>; più stretto, il dettaglio si apre sotto come prima. Trascina la barra fra i due per ridimensionare: le due misure vengono ricordate separatamente, perché quanto vuoi alto il dettaglio in un pannello stretto non è quanto lo vuoi largo in uno ampio.</p>
+  <p>Clicca una riga qualsiasi per aprire il pannello di dettaglio. <b>Dove si apre dipende da quanto spazio ha il pannello.</b> Allarga abbastanza la finestra e lista e dettaglio stanno <b>affiancati</b>; più stretto, il dettaglio si apre sotto come prima. Trascina la barra fra i due per ridimensionare: le due misure vengono ricordate separatamente, perché quanto vuoi alto il dettaglio in un pannello stretto non è quanto lo vuoi largo in uno ampio.</p>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, in <b>alto a destra del pannello</b>, ripiega la cartella di lavoro, il selettore di workspace e la barra degli strumenti quando preferisci dare lo spazio all'elenco, e li riporta. La tua scelta viene ricordata; su uno schermo basso parte ripiegato. Le due righe che <em>dichiarano</em> qualcosa - su quale workspace è la scheda, e l'avviso quando scheda e workspace non coincidono - non si ripiegano mai.</p>
   <p><b class="ui">Columns</b> mostra ogni colonna con il suo tipo di dato Zoho. Tabelle e query table hanno
     le proprie; un report o una pivot non ne ha nessuna, quindi Zoost segue ciò su cui è costruito e mostra
@@ -572,7 +572,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h2 id="goes-wrong">13. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e la cartella del workspace che hai
     selezionato sono due workspace diversi, e tutto quello che parla con Zoho Analytics è disattivato finché
-    non si accordano. <b class="ui">Switch tab → «workspace» ↗</b> porta la scheda sul workspace a cui appartiene la
+    non si accordano. <b class="ui">Open «workspace» ↗</b> porta la scheda sul workspace a cui appartiene la
     cartella, oppure sposti la cartella su quella della scheda.</p>
   <p><b>Se non c'è nessuna scheda Zoho Analytics</b> il pannello lo dice sopra tutto il workbench e
     offre <b class="ui">Go to Zoho Analytics ↗</b>, che apre Zoho Analytics e non un workspace
@@ -604,7 +604,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
           d'uscita: porta la scheda sul workspace rispecchiato, o sposta il pannello su quello in cui è la
           scheda.</td></tr>
       <tr><td class="k" data-label="Sintomo">«No Zoho Analytics tab open - the mirror reads, Zoho actions are off»</td>
-        <td data-label="Causa e rimedio"><b>Il pannello funziona lo stesso.</b> Un mirror sono file locali: leggerlo, cercarci dentro,
+        <td data-label="Causa e rimedio"><b>Il pannello funziona lo stesso.</b> <b class="ui">Open Zoho Analytics ↗</b>, accanto a quella riga, apre una scheda sul workspace in cui sei - sua istanza e suo ambiente. Un mirror sono file locali: leggerlo, cercarci dentro,
           disegnarlo ed esportarlo non chiede nessuna scheda - quello che è spento è la metà che parla con Zoho, e la riga dice quale.
           Apri una scheda di Zoho Analytics e i pulsanti tornano; <b>non deve essere la scheda che hai davanti</b>, e quando non lo è
           la barra di contesto segna il workspace che ha risolto come <b>not in front</b>, così vedi quale sta leggendo.

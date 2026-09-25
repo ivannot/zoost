@@ -586,10 +586,10 @@ def render_panel(shot):
                               hosts=hosts_of(app),
                               taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
-        page = stage / "sidepanel.html"
+        page = stage / "workbench.html"
         html = page.read_text(encoding="utf-8")
         # Immediately after idb.js: loading it earlier lets the real idb.js overwrite the shim;
-        # loading it only before sidepanel.js misses any extracted panel slice that executes a
+        # loading it only before workbench.js misses any extracted panel slice that executes a
         # Chrome listener at load time. The HTML script order is the product's composition root.
         first = '<script src="idb.js"></script>'
         assert first in html, key + ": the panel does not load idb.js where this expects"

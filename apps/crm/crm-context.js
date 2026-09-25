@@ -142,7 +142,15 @@ async function refreshContext() {
     // tab exists. Without one, the old sentence is still the right one - there is nothing else to say.
     who.innerHTML = twin
       ? escHtml(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
-      : (dir ? MSG.noZohoTab : 'Not on a Zoho CRM tab');
+      : (dir ? escHtml(MSG.noTab) : 'Not on a Zoho CRM tab');
+    // **The way out is a control, not an instruction.** «Press Open in Zoho» asks the reader to go
+    // and find a button; this *is* the button, and it appears exactly in the state it resolves -
+    // a mirror to read and no tab to reach Zoho with. This project's rule for an empty state is
+    // «what is missing, why, and what to do about it», and the third part is worth more pressed.
+    $('ctxopen').hidden = !dir || !!twin;
+    if (dir) {
+      who.innerHTML = `<span>${escHtml(MSG.noTab)}</span>`;
+    }
     offerTwin(twin);        // the overlay's group, which only exists on this branch
     // **A sample is never presented as a live binding.** Its `.zoho.json` carries an invented org
     // and instance, so this line read «prod «sampleorg» org 1234567890» the moment the reader left a
@@ -154,6 +162,7 @@ async function refreshContext() {
     return;
   }
   $('offoverlay').classList.remove('show');
+  $('ctxopen').hidden = true;   // a tab was resolved, so there is nothing to open
   await ensureBridge(zohoId);
   if (!current()) return;
   const cfid = await crmFrameId(zohoId);
@@ -202,7 +211,11 @@ async function refreshContext() {
   // tab of being the wrong org is a sentence about a relationship the reader never agreed to. What
   // is true *for them* is that nothing is open for the workspace they are working in, so that is
   // what the line says, and the bar stays down.
-  const behindAndWrong = !activeId && !!bound && !isSample() && !guardOk();
+  // **«Not in front» stopped meaning anything the day the panel became a window.** Zoost's own
+  // window has Zoost as its active tab, so a Zoho tab is *never* in front - a marker that is always
+  // lit carries no information, and it was reported as noise within an hour of the window shipping.
+  // The distinction that matters now is the one that was always underneath it: **is there a Zoho
+  // tab for this workspace, or not.**
   // **One thing when there is one thing to say.** Reported as unreadable, and the count was the
   // reason: a dot, two uppercase chips, two instance names, two eleven-digit org ids, two
   // environments and a tick - ten facts on one line, and when the two sides agreed it said the same
@@ -214,13 +227,17 @@ async function refreshContext() {
   // list an hour ago.
   const tabTitle = `Zoho CRM tab: ${lastCtx.instance || '?'} \u00b7 org ${lastCtx.org || '?'} \u00b7 ${envOf(lastCtx.origin)}`;
   const tabHalf = `<span class="rlbl remote">Tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>(${envOf(lastCtx.origin)})</span>`;
-  const behind = !activeId ? '<span class="rlbl remote spaced">not in front</span>' : '';
-  who.innerHTML = behindAndWrong
-    ? escHtml(MSG.noTabForWorkspace(wsShown(bound)))
-    : (bound && guardOk() && !isSample()
-        // Agreeing, so the workspace half says it alone and this one is the marker and nothing else.
-        ? behind
-        : `<span title="${escA(tabTitle)}">${tabHalf}${isSample() ? '<span> \u00b7 not related to the sample</span>' : ''}</span>${behind}`);
+  // **Two states, and no bridge between them.** «No Zoho tab at all» is answered in the branch
+  // above, where the panel says so and keeps reading the mirror; «a tab that is the wrong one» is
+  // the amber bar below, which carries the two ways out. What used to sit between them was «the tab
+  // is behind you», and the day this panel became a window of its own that stopped being a state:
+  // Zoost's own window has Zoost as its active tab, so a Zoho tab never is in front.
+  //
+  // Agreeing, the workspace half says it alone and this one is empty: two names carrying one fact
+  // is what made this line unreadable, and there is no marker left to put here.
+  who.innerHTML = (bound && guardOk() && !isSample()
+        ? ''
+        : `<span title="${escA(tabTitle)}">${tabHalf}${isSample() ? '<span> \u00b7 not related to the sample</span>' : ''}</span>`);
   who.title = tabTitle;
   // The workspace half, in the same words as the tab half - name, then environment in brackets -
   // because two facts of the same kind written two different ways are two things to learn. The org
@@ -254,7 +271,10 @@ async function refreshContext() {
   // The loud bar belongs to the tab you are looking at: it offers «switch tab» and «switch
   // workspace», two actions about a thing on screen. Raised over a tab in another window it is an
   // alarm about something the reader is not doing.
-  const mm = !!(activeId && bound && lastCtx && !guardOk() && !isSample());
+  // The loud bar is for **a Zoho tab that exists and is the wrong one**: there its two buttons -
+  // switch workspace, switch tab - are both things the reader can do. Tied to «is it in front» it
+  // would now never appear at all, and those two ways out would have gone with it.
+  const mm = !!(bound && lastCtx && !guardOk() && !isSample());
   const mmbar = $('mmbar');
   mmbar.classList.toggle('show', mm || sampleMm);
   mmbar.classList.toggle('soft', sampleMm);
@@ -271,10 +291,19 @@ async function refreshContext() {
   // the two buttons are how.
     $('mmtext').textContent = sampleMm
       ? `Sample workspace - invented data. Pulling is off: nothing here comes from \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}), and nothing here can reach it.`
-      : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${wsShown(bound)}\u00bb (org ${bound.org}). Pulling is off until they match; what is already mirrored stays readable.`;
+    // **It said «*the* tab», and there can be several.** The panel resolves one - whichever of the
+    // open Zoho tabs it was given - and the sentence named that one as though it were the only
+    // thing the reader had open, which is a statement about this panel's bookkeeping rather than
+    // about their browser. What is true for them does not depend on which tab was picked: none of
+    // the tabs they have open is on the workspace they are looking at. Reported.
+      : `No open Zoho CRM tab is on \u00ab${wsShown(bound)}\u00bb (org ${bound.org}). Pulling is off until one is; what is already mirrored stays readable.`;
     // «Switch tab» is meaningless for a sample: there is no Zoho org to switch to.
     $('mmgo').style.display = sampleMm ? 'none' : '';
-    $('mmgo').textContent = `Switch tab \u2192 \u00ab${wsShown(bound)}\u00bb \u2197`;
+    // **«Open», not «switch».** «Switch tab» names the mechanism - reuse the tab you have - and
+    // the mechanism is not always what happens: with no Zoho tab open this button makes one. It
+    // also read as an instruction about something the reader could do themselves, which it is not.
+    // What is constant is the destination, so that is what the button says. Reported.
+    $('mmgo').textContent = `Open \u00ab${wsShown(bound)}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id !== activeWsId && w.binding && w.binding.org === lastCtx.org && (!w.binding.base || !lastCtx.origin || w.binding.base === lastCtx.origin));
     const sw = $('mmsw'); sw.style.display = sampleMm ? 'none' : '';

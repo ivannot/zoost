@@ -101,7 +101,7 @@ function buildReport(r) {
   const L = [];
   const red = { n: 0 };
   // Two levels, because the two kinds of text are not alike. The stack is ours by construction -
-  // chrome-extension://<id>/sidepanel.js - so it keeps its file and line, which is the whole of its
+  // chrome-extension://<id>/workbench.js - so it keeps its file and line, which is the whole of its
   // value. Everything else was built by interpolating whatever was to hand, and is treated as such.
   /** @param {unknown} s */
   const clean = (s) => { const o = redactHard(s); red.n += o.n; return o.text; };

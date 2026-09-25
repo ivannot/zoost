@@ -1,6 +1,6 @@
 # Three reviewers on the panel refactor - 7 September 2026
 
-Twenty-four commits split `apps/crm/sidepanel.js` from 7,110 lines to 4,005 across thirteen new
+Twenty-four commits split `apps/crm/workbench.js` from 7,110 lines to 4,005 across thirteen new
 files. The battery was green on arrival - 1,103 node cases, 413 python, every checker at zero, both
 packages built, all six browser paths driven. Three readers with no memory of writing any of it were
 pointed at what does not work. They found eight things, and the two that matter are not in the
@@ -34,7 +34,7 @@ leaving the tab lost it. Held by a check that counts the writers of `$('find').v
 exactly one - the painter.
 
 **A script before the composition root declares; the root binds.** `live-sync.js` called
-`addListener` at load, four scripts before `sidepanel.js` declares what the handler reads. Nothing
+`addListener` at load, four scripts before `workbench.js` declares what the handler reads. Nothing
 was observed, because no sender exists in that window - which is why it needed a check rather than a
 report: `test('no script before the composition root binds a runtime listener at load time')`
 derives the order from the page.

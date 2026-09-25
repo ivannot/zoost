@@ -1143,7 +1143,7 @@ for (const app of ['crm', 'analytics']) {
 }
 
 test('analytics: the panel does not offer a diagram that cannot contain the view', () => {
-  const src = read('apps/analytics/sidepanel.js');
+  const src = read('apps/analytics/workbench.js');
   const i = src.indexOf("$('dgraph').disabled");
   assert.ok(i > 0, 'the ER button is gone');
   const block = src.slice(i - 400, i + 700);
@@ -1157,7 +1157,7 @@ test('analytics: the panel opens the diagram for an entity with no relations', (
   // links to it, which is the finding somebody focusing it was asking for. Greying the button out
   // hid that answer, and it was reported as a bug twice in one session - first as an empty sheet,
   // then as a button that would not open.
-  const src = read('apps/analytics/sidepanel.js');
+  const src = read('apps/analytics/workbench.js');
   const i = src.indexOf("$('dgraph').disabled");
   const line = src.slice(i, src.indexOf('\n', i));
   assert.ok(!/relationsOf/.test(line),

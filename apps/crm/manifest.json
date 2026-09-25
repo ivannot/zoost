@@ -13,7 +13,6 @@
     "open_in_tab": true
   },
   "permissions": [
-    "sidePanel",
     "storage",
     "scripting",
     "tabs"
@@ -66,9 +65,6 @@
   ],
   "background": {
     "service_worker": "background.js"
-  },
-  "side_panel": {
-    "default_path": "sidepanel.html"
   },
   "action": {
     "default_title": "Zoost - workbench for Zoho CRM",

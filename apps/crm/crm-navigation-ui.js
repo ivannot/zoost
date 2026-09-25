@@ -39,9 +39,9 @@ const crmZohoNavigator = createCrmZohoNavigator({
     + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad'),
 });
 const goToZoho = crmZohoNavigator.open;
-async function openZohoHome() {
+async function openZohoHome(how) {
   if (sampleRefuse()) return;
-  await goToZoho(homeUrl());
+  await goToZoho(homeUrl(), how);
 }
 function actionUrl(a) { return crmActionUrl(crmNavigationContext(), a); }
 function templateUrl(a) { return crmTemplateUrl(crmNavigationContext(), a); }
@@ -87,10 +87,23 @@ function moduleNavigable(m) {
   if (m.viewable === false || m.visible === false || m.api_supported === false) return false;
   return true;
 }
+/** The Zoho home of **this workspace**, which is not the same question as «the way in».
+ *
+ *  `homeUrl()` above answers the second one and says so: it returns production deliberately,
+ *  because it belongs to the screen where no workspace is open and a sandbox is a place you arrive
+ *  at from a workspace that already knows it is one. The context bar's «Open Zoho CRM» reused it
+ *  and sent a reader working in a sandbox to production. Reported.
+ *
+ *  Two intentions had one function, which is the shape this panel names elsewhere in these words.
+ *  This is the first intention, in one place, so the address cannot be built two ways.
+ */
+function workspaceHomeUrl() {
+  return bound && bound.base && bound.instance ? `${bound.base}/crm/${bound.instance}/` : homeUrl();
+}
 async function switchTab() {
   if (sampleRefuse()) return;
   if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target - pull that workspace once from its own tab.', 'warn'); return; }
-  const targetHome = `${bound.base}/crm/${bound.instance}/`;
+  const targetHome = workspaceHomeUrl();
   const curBase = (lastCtx && lastCtx.origin) || bound.base;
   const id = await activeZohoTabId();
   // Same Zoho account (prod <-> sandbox on the same data center) shares an SSO session: just navigate, no logout.
@@ -100,7 +113,7 @@ async function switchTab() {
   // navigation inside somebody's shell: a logout in an iframe leaves the shell around it holding a
   // session that no longer exists. `goToZoho` is for going to a *page*.
   if (sameAccount) {
-    if (id) await chrome.tabs.update(id, { url: targetHome, active: true }); else await chrome.tabs.create({ url: targetHome, active: true });
+    if (id) await crmZohoNavigator.focusTab(id, { url: targetHome, active: true }); else await chrome.tabs.create({ url: targetHome, active: true });
     return;
   }
   // Different account: a clean logout + re-login is required. Confirm first, since it ends the current Zoho session.
@@ -108,7 +121,7 @@ async function switchTab() {
   if (!ok) return;
   const accounts = curBase.replace(/:\/\/[^.]+\./, '://accounts.');   // crm./crmsandbox. -> accounts.
   const url = `${accounts}/logout?servicename=ZohoCRM&serviceurl=${encodeURIComponent(targetHome)}`;
-  if (id) await chrome.tabs.update(id, { url, active: true });
+  if (id) await crmZohoNavigator.focusTab(id, { url, active: true });
   else await chrome.tabs.create({ url, active: true });
 }
 async function openTargetZoho() {
@@ -123,17 +136,23 @@ async function openTargetZoho() {
  *  opens, and it means the functions page specifically - its callers read the tab id it returns.
  *  Functions keeps its own builder because it lands on `myFunctions`; the rest come from the map in
  *  `zoho-navigation.js`, and a tab with no row there is not offered the control at all. */
-async function openTabZoho() {
+async function openTabZoho(how) {
   if (sampleRefuse()) return null;
   const url = viewMode === 'functions' ? functionsUrl() : crmTabUrl(crmNavigationContext(), viewMode);
   if (!url) { setStatus(MSG.noTarget, 'warn'); return null; }
-  return goToZoho(url);
+  return goToZoho(url, how);
 }
-$('funcs').onclick = () => openTabZoho();
+$('funcs').onclick = (ev) => openTabZoho(crmZohoNavigator.howFrom(ev));
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
-$('gozoho').onclick = () => openZohoHome();
+$('gozoho').onclick = (ev) => openZohoHome(crmZohoNavigator.howFrom(ev));
+// The same action from the context bar, where the panel has just said there is no tab. Wired
+// once, here with its siblings - not re-bound on every context pass, which is how a handler
+// ends up attached twice.
+// **This workspace's Zoho, not the way in.** The bar has just named the workspace on screen, so
+// the button beside it goes there - to its own instance and its own environment, sandbox included.
+$('ctxopen').onclick = (ev) => { if (!sampleRefuse()) void goToZoho(workspaceHomeUrl(), crmZohoNavigator.howFrom(ev)); };
 $('mmgo').onclick = () => switchTab();   // mismatch: log out current session and land on the workspace's org (current tab)
 
 
@@ -197,6 +216,9 @@ async function revealFromPreview(action) {
   try { await reveal({ id: e.id, uiId: e.uiId, name: info?.name || e.api_name, displayName: e.display_name, apiName: e.api_name }); }
   catch (err) { setStatus('Find failed: ' + err.message, 'warn'); }
 }
+// No modifier here: these two go through `reveal()`, which drives a search and a filter rather
+// than opening a page, so «in a new window» would mean re-pointing that whole flow. A control
+// that accepted the keystroke and ignored it would be worse than one that does not offer it.
 $('pvreveal').onclick = () => revealFromPreview('edit');
 $('pvfind').onclick = () => revealFromPreview('filter');
 

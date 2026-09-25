@@ -319,7 +319,7 @@ class BareNamesInTheApps(unittest.TestCase):
 
     def test_paths_and_identifiers_are_exempt(self):
         # `analytics/` is a folder and `CRM_HOSTS` is an identifier; neither is a sentence.
-        self.assertFalse(self.bare('apps/analytics/sidepanel.js was written first'))
+        self.assertFalse(self.bare('apps/analytics/workbench.js was written first'))
         self.assertFalse(self.bare('the value comes from CRM_HOSTS at the top'))
 
     def test_a_defect_in_an_html_attribute_is_reported(self):
@@ -329,7 +329,7 @@ class BareNamesInTheApps(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             app = pathlib.Path(d) / 'apps' / 'analytics'
             app.mkdir(parents=True)
-            (app / 'sidepanel.html').write_text(src, encoding='utf-8')
+            (app / 'workbench.html').write_text(src, encoding='utf-8')
             old, namecheck.ROOT = namecheck.ROOT, pathlib.Path(d)
             try:
                 namecheck.check_bare_names('analytics', findings)
@@ -659,8 +659,8 @@ class GuidesDepictMarks(unittest.TestCase):
             (root / 'site' / 'docs-crm.html').write_text(
                 (ROOT / 'site' / 'docs-crm.html').read_text(encoding='utf-8'), encoding='utf-8')
             for app in ('analytics', 'crm'):
-                (root / 'apps' / app / 'sidepanel.html').write_text(
-                    (ROOT / 'apps' / app / 'sidepanel.html').read_text(encoding='utf-8'), encoding='utf-8')
+                (root / 'apps' / app / 'workbench.html').write_text(
+                    (ROOT / 'apps' / app / 'workbench.html').read_text(encoding='utf-8'), encoding='utf-8')
             oldr, olds = featurecheck.ROOT, featurecheck.SITE
             featurecheck.ROOT, featurecheck.SITE = root, root / 'site'
             try:
@@ -2169,7 +2169,7 @@ class TheSampleWorkflowsActuallyFireSomething(unittest.TestCase):
         # Counted in a real org's mirror: 149 actions of type `functions` and 2 of type `function`,
         # identical in shape. Nine readers compared against the plural only, so those two fired a
         # function nothing here ever knew about.
-        src = (ROOT / 'apps/crm/sidepanel.js').read_text(encoding='utf-8')
+        src = (ROOT / 'apps/crm/workbench.js').read_text(encoding='utf-8')
         self.assertIn("const isFnAction = (a) => a && (a.type === 'functions' || a.type === 'function')", src)
         self.assertEqual(src.count("type === 'functions'"), 1,
                          'a reader still compares the type by hand instead of asking isFnAction()')
@@ -3620,7 +3620,7 @@ class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
     def test_the_first_export_does_not_carry_it(self):
         """**Both writers of the preference, not only the panel.**
 
-        This read `sidepanel.js` and nothing else, and its second assertion - «nothing initialises a
+        This read `workbench.js` and nothing else, and its second assertion - «nothing initialises a
         scope from SCOPE_FULL any more» - would have failed on `options.js` from the day it was
         written. The settings page is the other writer: it started from SCOPE_FULL, drew «Deluge
         source code» ticked over a stored preference where it is off, and one press of Save wrote that
@@ -3630,7 +3630,7 @@ class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
         """
         for app, key in self.SENSITIVE.items():
             app_dir = ROOT / 'apps' / app
-            html = (app_dir / 'sidepanel.html').read_text(encoding='utf-8')
+            html = (app_dir / 'workbench.html').read_text(encoding='utf-8')
             scripts = re.findall(r'<script[^>]+src="([^"]+\.js)"', html)
             panel = '\n'.join((app_dir / name).read_text(encoding='utf-8') for name in scripts)
             self._source(panel, app, key, 'panel scripts')
@@ -3719,7 +3719,7 @@ class TheScrollingRowDoesNotShaveItsOwnLabel(unittest.TestCase):
 
     def test_the_label_fits_inside_the_row_that_clips_it(self):
         for app in ('crm', 'analytics'):
-            css = (ROOT / 'apps' / app / 'sidepanel.css').read_text(encoding='utf-8')
+            css = (ROOT / 'apps' / app / 'workbench.css').read_text(encoding='utf-8')
             row = self.rule(css, '.wsgroup')
             self.assertIn('overflow-x:auto', row.replace(' ', ''),
                           f'{app}: the row no longer scrolls, so this check is about nothing')
@@ -4101,7 +4101,7 @@ class LangCheckHoldsOneLanguage(unittest.TestCase):
         m = self._mod()
         self.assertTrue(m.skipped('site/it/index.html'))
         self.assertTrue(m.skipped('tools/absolutes.txt'), 'the ledger of published claims is not exempt')
-        self.assertFalse(m.skipped('apps/crm/sidepanel.js'))
+        self.assertFalse(m.skipped('apps/crm/workbench.js'))
         self.assertFalse(m.skipped('docs/naming.md'))
         self.assertFalse(m.skipped('site/index.html'), 'an English page is not exempt because it is a page')
 
@@ -4358,13 +4358,13 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
         app = 'crm'
         with tempfile.TemporaryDirectory() as tmp:
             mod.record_path = lambda a: pathlib.Path(tmp) / 'rec.json'
-            mod.changed = lambda a: [f'apps/{app}/sidepanel.js']
+            mod.changed = lambda a: [f'apps/{app}/workbench.js']
             mod.head = lambda: 'a' * 40
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 mod.record(app, [1], 'pass', '')
                 # The panel moved after he answered: the pull check is about the panel, so it expires.
-                mod.changed_between = lambda a, since: [f'apps/{app}/sidepanel.js']
+                mod.changed_between = lambda a, since: [f'apps/{app}/workbench.js']
                 rc = mod.check(app)
             self.assertEqual(rc, 1, out.getvalue())
             self.assertIn('what it exercises has changed since', out.getvalue())
@@ -4376,7 +4376,7 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
         mod = self._mod()
         with tempfile.TemporaryDirectory() as tmp:
             mod.record_path = lambda a: pathlib.Path(tmp) / 'rec.json'
-            mod.changed = lambda a: ['apps/crm/sidepanel.js']
+            mod.changed = lambda a: ['apps/crm/workbench.js']
             mod.head = lambda: 'a' * 40
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
@@ -4399,7 +4399,7 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
         mod = self._mod()
         with tempfile.TemporaryDirectory() as tmp:
             mod.record_path = lambda a: pathlib.Path(tmp) / 'rec.json'
-            mod.changed = lambda a: ['apps/crm/sidepanel.js']
+            mod.changed = lambda a: ['apps/crm/workbench.js']
             mod.head = lambda: 'c' * 40
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
@@ -4620,7 +4620,7 @@ class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
 
     def test_analytics_boundary_is_complete_and_has_no_legacy_fallbacks(self):
         tool = (ROOT / 'tools/typecheck.sh').read_text(encoding='utf-8')
-        panel = (ROOT / 'apps/analytics/sidepanel.js').read_text(encoding='utf-8')
+        panel = (ROOT / 'apps/analytics/workbench.js').read_text(encoding='utf-8')
         for name in ('analytics-sql.js', 'analytics-mirror-writer.js', 'analytics-view-model.js',
                      'bootstrap.js', 'bridge-contract.js', 'content-bridge.js', 'error-model.js',
                      'filesystem-adapter.js', 'idb.js', 'keyvault.js', 'list-model.js',
@@ -4704,7 +4704,7 @@ class CssScannerReadsEveryRule(unittest.TestCase):
     def test_linked_extension_stylesheets_are_in_the_subject(self):
         where = {path for _, path, _ in self.c.sheets()}
         for app in ('crm', 'analytics'):
-            self.assertIn(f'apps/{app}/sidepanel.css', where,
+            self.assertIn(f'apps/{app}/workbench.css', where,
                           f'{app}: extracting the panel CSS made it invisible to csscheck')
 
 
@@ -4801,10 +4801,10 @@ class AsyncCheckReadsWhatItOpens(unittest.TestCase):
                                f'{rel}: the checker sees no shared state in a file that has plenty')
 
     def test_the_wrapper_is_detected_from_the_first_statement(self):
-        # The loose version matched any line beginning with «(» and called `sidepanel.js` wrapped,
+        # The loose version matched any line beginning with «(» and called `workbench.js` wrapped,
         # then looked for functions at indentation two and found none - 79 sites down to 30, with
         # nothing on screen saying so.
-        self.assertFalse(self.a._iife((ROOT / 'apps/crm/sidepanel.js').read_text(encoding='utf-8')))
+        self.assertFalse(self.a._iife((ROOT / 'apps/crm/workbench.js').read_text(encoding='utf-8')))
         self.assertTrue(self.a._iife('/* c */\n(function () {\n  function f() {}\n})();'))
         self.assertFalse(self.a._iife('// c\nlet x = 1;\n(function () {})();'))
 
@@ -5901,7 +5901,7 @@ def _code_only(src):
 
     A `/*` and a `//` are excluded from that branch by hand, because the first widening did not do so
     and read the opener of `/** The one writer of ...functions/` as a regex - a closing slash inside a path
-    in the prose - which lost 535 code lines in `sidepanel.js` against the 2 the narrow version lost.
+    in the prose - which lost 535 code lines in `workbench.js` against the 2 the narrow version lost.
     Measuring caught it; reading it would not have.
     """
     out = []
@@ -6010,10 +6010,10 @@ class ExportReadsNothingLate(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('ac_for_export', ROOT / 'tools' / 'asynccheck.py')
         ac = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ac)
-        src = (ROOT / 'apps' / 'crm' / 'sidepanel.js').read_text(encoding='utf-8')
+        src = (ROOT / 'apps' / 'crm' / 'workbench.js').read_text(encoding='utf-8')
         names = set()
         # A trailing comment is part of the line, and `;\s*$` does not allow one. Measured when a
-        # later check needed the same list: `sidepanel.js` has **8** such declarations and
+        # later check needed the same list: `workbench.js` has **8** such declarations and
         # `graphview.js` **14**, `erCut` and `erPrintFull` among them - names that were invisible to
         # every derivation built on this pattern, including this one, on the day it was written.
         for m in re.finditer(r'^(?:let|var)\s+(.+?);[ \t]*(?://.*)?$', src, re.M):
@@ -6741,7 +6741,7 @@ class TheCodeScannerReadsRegexLiterals(unittest.TestCase):
 
     **And widening it made the hole bigger before it made it smaller.** The first version treated
     `/**` as a regex start, found the closing slash inside a path in the prose, and let the backtick
-    after it open a template - 535 code lines lost in `sidepanel.js` alone, against the 2 the old
+    after it open a template - 535 code lines lost in `workbench.js` alone, against the 2 the old
     scanner lost there. Only measuring caught that; reading it would not have.
     """
 
@@ -6755,7 +6755,7 @@ class TheCodeScannerReadsRegexLiterals(unittest.TestCase):
 
     def test_positions_are_preserved(self):
         # Everything below reads by line, and a scanner that shifts one is worse than none.
-        for rel in ('apps/crm/export.js', 'site/site.js', 'apps/crm/sidepanel.js'):
+        for rel in ('apps/crm/export.js', 'site/site.js', 'apps/crm/workbench.js'):
             raw = (ROOT / rel).read_text(encoding='utf-8')
             self.assertEqual(len(self.scan(rel)), len(raw), f'{rel}: the scan changed the length')
 
@@ -6789,7 +6789,7 @@ class TheCodeScannerReadsRegexLiterals(unittest.TestCase):
 
         Line by line and stripped, because trailing space is not a disagreement about code.
         """
-        for rel in ('apps/crm/export.js', 'site/site.js', 'apps/crm/sidepanel.js',
+        for rel in ('apps/crm/export.js', 'site/site.js', 'apps/crm/workbench.js',
                     'site/_worker.js', 'apps/analytics/graphview.js'):
             raw = (ROOT / rel).read_text(encoding='utf-8')
             py = _code_only(raw).split('\n')
@@ -6814,7 +6814,7 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
     by nothing: 122 shared ids, against the 80 on the panel that were. Proven by giving the shared
     `#v-er` a different class *and* an inline style on the Analytics side only - twincheck 0
     findings, and htmlcheck, namecheck, featurecheck, csscheck and callcheck 0 as well. The same
-    drift on `#pfoot` in `sidepanel.html` is two findings.
+    drift on `#pfoot` in `workbench.html` is two findings.
 
     Derived from the filenames, so a fourth page added to both products is compared without anybody
     remembering, and the run prints how many shared ids it read on each - which it did not before,
@@ -6837,7 +6837,7 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
     def test_every_shared_page_is_opened(self):
         out = self.run_it().stdout
         for name in self.pairs():
-            if name == 'sidepanel.html':
+            if name == 'workbench.html':
                 self.assertIn('shared elements whose tag, class or inline style differs', out,
                               'the panel comparison is gone')
                 continue
@@ -6854,7 +6854,7 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
 
     def test_the_linked_panel_stylesheets_are_part_of_the_comparison(self):
         for app in ('crm', 'analytics'):
-            html = (ROOT / 'apps' / app / 'sidepanel.html').read_text(encoding='utf-8')
+            html = (ROOT / 'apps' / app / 'workbench.html').read_text(encoding='utf-8')
             css = twincheck.styles(html, app)
             self.assertIn(':root', twincheck.rules(css),
                           f'{app}: the panel stylesheet is linked but twincheck reads no rules')
@@ -7130,6 +7130,8 @@ class EveryStoredKeyIsAccountedFor(unittest.TestCase):
         'previewW': 'preview and detail panes',
         'detailW': 'preview and detail panes',
         'chromeFolded': 'whether you folded the workspace and tools rows away',
+        'zoostWindowBounds': 'where you last put the Zoost window and how big you made it',
+        'zoostWindowId': 'where you last put the Zoost window and how big you made it',
         'settingsStamp': 'timestamp the settings page writes',
         'aikeys': 'unlocked',
         'graphData': 'the drawing it is given',
@@ -8139,12 +8141,12 @@ class KeyCheckFindsWhatNoKeyboardReaches(unittest.TestCase):
         # while the same id on a second page is its own entry, because reaching it there is its own
         # question.
         m = self._mod()
-        self.assertNotEqual(m.key('apps/crm/sidepanel.html', 'aix'),
-                            m.key('apps/analytics/sidepanel.html', 'aix'))
-        self.assertNotEqual(m.key('apps/crm/sidepanel.html', 'aix'),
-                            m.key('apps/crm/sidepanel.html', 'aigear'))
-        self.assertEqual(m.key('apps/crm/sidepanel.html', 'aix'),
-                         m.key('apps/crm/sidepanel.html', 'aix'))
+        self.assertNotEqual(m.key('apps/crm/workbench.html', 'aix'),
+                            m.key('apps/analytics/workbench.html', 'aix'))
+        self.assertNotEqual(m.key('apps/crm/workbench.html', 'aix'),
+                            m.key('apps/crm/workbench.html', 'aigear'))
+        self.assertEqual(m.key('apps/crm/workbench.html', 'aix'),
+                         m.key('apps/crm/workbench.html', 'aix'))
 
     def test_the_crude_pass_sees_nothing_the_careful_one_missed(self):
         # The mechanism htmlcheck and featurecheck already use here, and the one that found this

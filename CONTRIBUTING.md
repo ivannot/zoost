@@ -26,7 +26,7 @@ The single most useful thing you can include is **how to reproduce it**. Specifi
   (OneDrive, Dropbox, iCloud Drive - these are known to cause trouble).
 - Which Zoho data centre (`crm.zoho.eu`, `.com`, `.in`, …), and whether production or sandbox.
 - What you did, what you expected, what happened.
-- Anything in the browser console: right-click the side panel → Inspect → Console.
+- Anything in the browser console: right-click the Zoost window → Inspect → Console.
 
 **Never paste Deluge source, org ids, instance names, API keys or CRM data into an issue.**
 The panel will build you something that is safe to paste: when something fails, **Report this

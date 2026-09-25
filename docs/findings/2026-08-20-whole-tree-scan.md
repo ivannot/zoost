@@ -15,7 +15,7 @@ bottom, in its own words.
 
 ## 1. Analytics: every Pull all failed, and said the mirror was corrupt - critical
 
-**What broke.** `pruneSql()` in `apps/analytics/sidepanel.js` enumerated the workspace with
+**What broke.** `pruneSql()` in `apps/analytics/workbench.js` enumerated the workspace with
 `walk(op.root)`. `walk()` is a **CRM panel** function and has never existed on the Analytics side -
 the line was written from the CRM side, which is what the twin rule makes likely rather than
 unlikely. Every Pull all therefore threw `ReferenceError: walk is not defined`, and it threw *inside

@@ -116,14 +116,24 @@ function createCrmZohoNavigator(options) {
    * always opens in the tab the reader already has, and brings it to the front.
    *
    * @param {string} url */
-  async function open(url) {
+  async function open(url, how) {
     if (!allows(url)) {
       options.refused(url);
       return null;
     }
+    // **A modifier means «not here»**, so the tab-reuse machinery below is skipped entirely: the
+    // reader asking for a new window is not asking to navigate the one they have. The host check
+    // above still runs first - «certain, or stop» does not bend for a keystroke.
+    if (how) return await openElsewhere(url, how) ? true : null;
     let tabId = await options.findTab();
     if (!tabId) {
+      // The original tab is gone, so one is made - and its window is brought forward with it, for
+      // the same reason the reuse path does: made in a browser window that stays behind Zoost's
+      // own, a new tab is a thing that happened where nobody is looking.
       const tab = await options.chromeApi.tabs.create({ url, active: true });
+      try {
+        if (tab && tab.windowId != null) await options.chromeApi.windows.update(tab.windowId, { focused: true });
+      } catch (_) { /* the window refused focus; the tab is still there and current */ }
       return tab.id;
     }
     const frameId = await options.findFrame(tabId);
@@ -134,13 +144,54 @@ function createCrmZohoNavigator(options) {
           func: (destination) => { location.href = destination; },
           args: [url],
         });
-        await options.chromeApi.tabs.update(tabId, { active: true });
+        await raise_(tabId, { active: true });
         return tabId;
       } catch (_) { /* frame navigation refused: preserve the established tab fallback */ }
     }
-    await options.chromeApi.tabs.update(tabId, { url, active: true });
+    await raise_(tabId, { url, active: true });
     return tabId;
   }
 
-  return { allows, open };
+  /** Make the tab current **and bring its window forward.**
+   *
+   *  `tabs.update({active:true})` selects the tab inside its own window and does nothing about
+   *  which window you are looking at. That was invisible while Zoost lived in a side panel - the
+   *  panel is *in* the browser window, so the tab it selected was already in front. With Zoost in a
+   *  window of its own, and the browser possibly behind it or on another monitor, «Open in Zoho»
+   *  selected a tab nobody could see and appeared to do nothing at all. Asked before it was built.
+   *
+   *  One function rather than the same two lines at each call site, which is where one of them
+   *  eventually gets forgotten - the reason `guardOk()` and `blockZoho()` are single places too.
+   */
+  /** Where the reader asked for it to open, from the modifiers the whole web already teaches.
+   *
+   *  Ctrl or Cmd is a new tab, Shift is a new window - the idiom every browser has taught for
+   *  twenty years, so there is nothing to learn and the context menu is left alone, which a
+   *  right-click override would not be. It matters more since Zoost left the side panel: on two
+   *  screens, «open this in a second Zoho window» is a thing somebody actually wants.
+   *
+   *  A new tab opens **in the background**, because that is what Ctrl-click does everywhere; a new
+   *  window comes forward, because that is what Shift-click does. Following the idiom means
+   *  following all of it.
+   */
+  function howFrom(ev) {
+    if (!ev) return null;
+    if (ev.shiftKey) return 'window';
+    return (ev.ctrlKey || ev.metaKey) ? 'tab' : null;
+  }
+  async function openElsewhere(url, how) {
+    if (how === 'window') { await options.chromeApi.windows.create({ url, focused: true }); return true; }
+    await options.chromeApi.tabs.create({ url, active: false });
+    return true;
+  }
+
+  async function raise_(tabId, props) {
+    const tab = await options.chromeApi.tabs.update(tabId, props);
+    try {
+      if (tab && tab.windowId != null) await options.chromeApi.windows.update(tab.windowId, { focused: true });
+    } catch (_) { /* the window refused focus; the tab is still the current one in it */ }
+    return tab;
+  }
+
+  return { allows, open, focusTab: raise_, howFrom, openElsewhere };
 }

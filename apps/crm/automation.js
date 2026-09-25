@@ -3,9 +3,9 @@
  * and the actions the rules fire. One file rather than three, because they lean on each other - the
  * actions census joins against the workflow files on disk, and the workflows pull is what refreshes
  * the action users - while the rest of the panel reaches all of it through the per-tab handful
- * (pull*, rebuild*, render*, open*). Fourth slice, and the one that loads AFTER sidepanel.js: its
- * ACTION_SORTS initializer reads MSG.lastModified at load time, and MSG lives in sidepanel.js -
- * while nothing in sidepanel's own top level reads a name from here outside a closure. Proven both
+ * (pull*, rebuild*, render*, open*). Fourth slice, and the one that loads AFTER workbench.js: its
+ * ACTION_SORTS initializer reads MSG.lastModified at load time, and MSG lives in workbench.js -
+ * while nothing in the workbench's own top level reads a name from here outside a closure. Proven both
  * ways in an empty scope: this file loads with MSG alone, and needs it.
  */
 

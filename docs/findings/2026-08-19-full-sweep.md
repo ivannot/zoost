@@ -18,7 +18,7 @@ always `null`. The documented call `{ name: "T1" }` answered `View not found: T1
 covered it asserted only that a non-empty string came back, so it passed on the wrong answer.
 
 **The fix.** The distinction is now only between global tools and view-bound tools, and a relations
-search by name resolves the view. `dispatch()` in `apps/analytics/sidepanel.js`, its handler, and a
+search by name resolves the view. `dispatch()` in `apps/analytics/workbench.js`, its handler, and a
 semantic case in `tests/panel.test.mjs`.
 
 **The rule.** **A test that asserts «something came back» tests the plumbing, not the answer.** Assert

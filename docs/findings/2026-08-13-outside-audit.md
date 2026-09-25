@@ -113,14 +113,14 @@ missing, and the count is omitted rather than shown as zero, because zero is a m
   rather than in the prompt, which is what the audit asked for.
 - **«Add a version field to the encrypted envelope.»** `v: 1` has been there since the vault was
   written. The iteration count was the part missing, and that is fixed above.
-- Its line counts are slightly stale (`sidepanel.js` is 5,385 lines, not 5,288), which is worth
+- Its line counts are slightly stale (`workbench.js` is 5,385 lines, not 5,288), which is worth
   knowing about the rest of it: it read a checkout that was a few days old.
 
 ---
 
 ## Refused, with reasons
 
-### Splitting `sidepanel.js` into ~25 ES modules (their P1.1)
+### Splitting `workbench.js` into ~25 ES modules (their P1.1)
 
 This is the single riskiest thing that could be done to this repository, and the audit says so itself
 two paragraphs after proposing it: no big bang, extract one seam at a time. There is no regression

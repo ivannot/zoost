@@ -2340,8 +2340,8 @@ def coverage():
     import re
     out = []
     clicked = set(re.findall(r"\$\('([^']+)'\)\s*\.click\(\)", pathlib.Path(__file__).read_text(encoding="utf-8")))
-    for app in sorted(d.name for d in (ROOT / "apps").iterdir() if (d / "sidepanel.html").exists()):
-        html = (ROOT / "apps" / app / "sidepanel.html").read_text(encoding="utf-8")
+    for app in sorted(d.name for d in (ROOT / "apps").iterdir() if (d / "workbench.html").exists()):
+        html = (ROOT / "apps" / app / "workbench.html").read_text(encoding="utf-8")
         js = "".join(f.read_text(encoding="utf-8") for f in (ROOT / "apps" / app).glob("*.js"))
         ids = set(re.findall(r'<button[^>]*\bid="([^"]+)"', html))
         ids |= set(re.findall(r"\$\('([^']+)'\)\.onclick\s*=", js))

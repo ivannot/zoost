@@ -64,9 +64,9 @@ def payload(app: str, ws: str, expr: str) -> dict:
             shots.PANEL_STUB.format(name=json.dumps(shots.NAME[app]), files=json.dumps(files),
                                     script=script, hosts=shots.hosts_of(app),
                                     taburl=json.dumps(taburl), ctx=ctx), encoding='utf-8')
-        page = stage / 'sidepanel.html'
+        page = stage / 'workbench.html'
         html = page.read_text(encoding='utf-8')
-        first = '<script src="sidepanel.js"></script>'
+        first = '<script src="workbench.js"></script>'
         page.write_text(html.replace(
             first, '<script src="fsshim.js"></script>\n<script src="shot.js"></script>\n' + first, 1),
             encoding='utf-8')

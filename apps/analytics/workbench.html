@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Zoost - workbench for Zoho Analytics</title>
-<link rel="stylesheet" href="sidepanel.css">
+<link rel="stylesheet" href="workbench.css">
 </head>
 <body>
 
@@ -18,7 +18,7 @@
 </div>
 
 <div id="ctx" class="unbound">
-  <span class="dot"></span><span class="who" id="who">Not on a Zoho Analytics tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span><button type="button" id="chromefold" class="foldbtn bare" aria-expanded="true" aria-label="Fold the workspace and tools rows away" title="Fold the workspace and tools rows away - the list gets the room"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg></button>
+  <span class="dot"></span><span class="who" id="who">Not on a Zoho Analytics tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span><button type="button" id="ctxopen" class="znav ctxopen" hidden>Open Zoho Analytics ↗</button><button type="button" id="chromefold" class="foldbtn bare" aria-expanded="true" aria-label="Fold the workspace and tools rows away" title="Fold the workspace and tools rows away - the list gets the room"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg></button>
 </div>
 <div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button><button id="mmgo"></button></div></div>
 <div id="status"><i class="spin"></i><span id="statustext">Ready.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button><button id="repdismiss" title="Dismiss this - the report page stays open in its own window">✕</button><button id="expopen" class="bare"></button></div>
@@ -216,6 +216,6 @@
 <script src="ai.js"></script>
 <script src="export.js"></script>
 <script src="health.js"></script>
-<script src="sidepanel.js"></script>
+<script src="workbench.js"></script>
 </body>
 </html>

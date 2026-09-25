@@ -8,7 +8,7 @@ different links, a release titled "Zoost for crm", and a generic /docs URL owned
 None of them were hard to see. All of them were invisible to the checks that existed, for two
 reasons worth stating because they are the actual lesson:
 
-  1. `twincheck.py` compares exactly two files per app — sidepanel.html and sidepanel.js — out of
+  1. `twincheck.py` compares exactly two files per app — workbench.html and workbench.js — out of
      the twelve each one ships. graphview.html and options.html were never looked at by anything.
      The list of files was written by hand, which is the "checklist wearing a script's clothes"
      failure that CLAUDE.md warns about, sitting inside the tool meant to prevent it.
@@ -52,7 +52,7 @@ OTHER = {'crm': 'analytics', 'analytics': 'crm'}
 # something makes it reported, which is the only direction that fails safe.
 ALLOWED = {
     # file suffix -> list of (fragment, reason)
-    'apps/analytics/sidepanel.js': [
+    'apps/analytics/workbench.js': [
         ('the CRM', 'comments comparing the two panels are how the twin rule is documented in code'),
         # Not a comment, and that is the point: this panel *tells the reader* which product reads the
         # tab in front of them, by name, when they have opened the wrong extension. Measured before
@@ -70,7 +70,7 @@ ALLOWED = {
     'apps/analytics/ai.js': [
         ('the CRM', 'comments comparing the two assistants are how the twin rule is documented in code'),
     ],
-    'apps/crm/sidepanel.js': [
+    'apps/crm/workbench.js': [
         # **Narrowed on 18 September 2026.** It read `'Analytics'`, which excused every occurrence of
         # the word anywhere in the file - including one in a *string*, which is user-visible and is
         # exactly what this checker exists to read. It passed by luck rather than by correctness: a

@@ -178,10 +178,15 @@ function createCrmZohoBridge(options) {
   /** @param {CrmBridgeCommand} message */
   async function send(message) {
     const bound = options.bound();
-    if (message && message.cmd !== 'context' && bound && !options.guardOk()) {
-      throw new Error(options.mismatchMessage);
-    }
+    // **Two states, and they had one sentence between them.** With no Zoho tab open at all the
+    // guard is false - there is nothing to match against - so a pull was refused with «the active
+    // tab is a different workspace», which is a claim about a tab that does not exist. Reported
+    // after closing the Zoho tab and pressing Pull. The tab is resolved first now, and *that*
+    // decides which of the two refusals the reader is owed.
     const id = await tabId();
+    if (message && message.cmd !== 'context' && bound && !options.guardOk()) {
+      throw new Error(id ? options.mismatchMessage : options.noTabMessage);
+    }
     if (!id) throw new Error(options.noTabMessage);
     await ensure(id);
     const found = await frameId(id);

@@ -1,6 +1,6 @@
 /*
  * connections.js - the org-wide connections catalogue with its usage join against the call graph.
- * Sixth slice, same contract: declarations only, loaded before sidepanel.js.
+ * Sixth slice, same contract: declarations only, loaded before workbench.js.
  */
 
 // ---------- connections view (org-wide catalogue + usage) ----------

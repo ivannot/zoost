@@ -13,7 +13,7 @@
       "zoho-bridge.js", "zoho-navigation.js", "background.js", "hook.js", "live-sync.js"
     ],
     "ui": [
-      "sidepanel.js", "options.js", "graphview.js", "graph-core.js", "overview-view.js",
+      "workbench.js", "options.js", "graphview.js", "graph-core.js", "overview-view.js",
       "highlight.js", "report.js", "reportshell.js", "export.js", "health.js", "ai.js",
       "product-help.js", "sample-org.js", "automation.js", "connections.js", "modules.js",
       "preview-model.js", "tabs.js", "export-scope.js", "analytics-sql.js"
@@ -37,7 +37,7 @@
       "analytics-mirror-writer.js": ["filesystem-adapter.js", "mirror-plan.js"],
       "analytics-view-model.js": ["list-model.js", "search-state.js"],
       "bootstrap.js": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js"],
-      "sidepanel.js": ["bootstrap.js", "analytics-mirror-writer.js", "analytics-view-model.js"]
+      "workbench.js": ["bootstrap.js", "analytics-mirror-writer.js", "analytics-view-model.js"]
     }
   }
 }

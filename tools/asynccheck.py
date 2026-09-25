@@ -53,7 +53,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
 # ai.js since the split: same page, same shared scope, same class of state.
 # Grouped per page, not per file: classic scripts on one page share a single lexical scope, so a
-# write in ai.js to a `let` declared in sidepanel.js is exactly as global as one next to the
+# write in ai.js to a `let` declared in workbench.js is exactly as global as one next to the
 # declaration - and reading each file's own declarations alone made those writes invisible the day
 # the panel was split. The names are the union of the page's files; the findings stay per file.
 # Derived from each page's own <script> tags: the HTML is what Chrome loads, so a slice added there
@@ -77,7 +77,7 @@ def _scripts_of(app, page):
 def _manifest_scopes(app):
     """The scopes no page declares: the service worker, and each content-script world.
 
-    They were outside this check entirely - `sidepanel.html` was the whole of its subject, which is
+    They were outside this check entirely - `workbench.html` was the whole of its subject, which is
     **9 of the 32 shipped scripts**, while the comment said only that the shared libraries were
     excluded. Measured by a review. A background script and a content script have globals and awaits
     like anything else, and the one place a stale write there would show is a console nobody watches.
@@ -122,7 +122,7 @@ def _pages():
 PAGES = _pages()
 FILES = sorted({f for fs in PAGES.values() for f in fs})
 # Which files share a lexical scope with which - a `.then(fn)` in `ai.js` refers to a declaration in
-# `sidepanel.js`, because classic scripts on one page share one scope.
+# `workbench.js`, because classic scripts on one page share one scope.
 PAGES_OF = {}
 for _fs in PAGES.values():
     for _f in _fs:
@@ -152,7 +152,7 @@ def _iife(src):
     """True when the whole file is wrapped in an immediately-invoked function.
 
     The **first statement**, not any line that happens to begin with `(`. The loose version matched a
-    continuation line in the middle of `sidepanel.js`, decided the file was wrapped, looked for
+    continuation line in the middle of `workbench.js`, decided the file was wrapped, looked for
     functions at indentation two and found **none** - taking the tool from 79 sites to 30 while
     reporting nothing wrong. A detector has to be measured on every file it will meet, which is what
     the sweep in `tests/tools_test.py` now does.

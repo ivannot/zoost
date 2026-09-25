@@ -6,7 +6,7 @@ or finishes a read from Zoho. `pull-controller.js` now owns that complete use ca
 readers, runners, renderers and state publications explicitly. The panel remains the adapter for
 Chrome, Zoho and the filesystem; the controller contains no one of those APIs.
 
-The extraction reduced `apps/crm/sidepanel.js` from 7,110 to 7,016 lines. More important than the
+The extraction reduced `apps/crm/workbench.js` from 7,110 to 7,016 lines. More important than the
 number, the nesting counter is private now: `pullBusy` has one publication callback, and every exit
 from a user-initiated read passes through the controller's `finally`. Pull all walks one immutable
 plan, checks its operation before each area, spends only rechecks whose verdict moved, preserves the

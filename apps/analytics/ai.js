@@ -1,7 +1,7 @@
 /*
  * ai.js - the Analytics assistant, isolated from panel navigation and rendering.
  *
- * A classic script loaded before sidepanel.js. Its declarations keep the shipped global-script
+ * A classic script loaded before workbench.js. Its declarations keep the shipped global-script
  * contract; the panel owns wiring while this file owns assistant state, tools and provider calls.
  */
 // ---------- AI ----------

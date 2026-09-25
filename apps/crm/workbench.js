@@ -1,5 +1,5 @@
 /*
- * sidepanel.js - IDE orchestrator (multi-workspace).
+ * workbench.js - IDE orchestrator (multi-workspace).
  */
 // Which tabs count as Zoho, taken from the manifest rather than copied out of it. It was eighteen
 // patterns typed here as well, so adding a data centre meant remembering this file - and Zoho has
@@ -68,13 +68,24 @@ const ZOHO_BTNS = ['pull', 'pullone', 'pulllist', 'funcs', 'pvreveal', 'pvfind']
 // «Pull list» says what exists in Zoho in seconds, «Pull» reads every item again. The rest are a list
 // and nothing else, and one button is all they have.
 const LIST_PULL_TABS = new Set(['functions', 'modules', 'workflows', 'blueprints', 'actions']);
+// **Navigating *to* Zoho is not reading *from* it.** The URL is built from this workspace's own
+// binding: nothing is fetched, nothing is written, and there is no other org it could reach. So the
+// one control that opens a Zoho tab stays on when the block is «there is no Zoho tab» - it is the
+// way out of that state, and disabling it made the panel say «Zoho actions are off» while hiding
+// the action that turns them back on. His idea, and it found a hole that was already there.
+//
+// Not on a mismatch: there the tab exists and is the wrong org, and the amber bar already carries
+// the two ways out. Not on a sample either, which owns its own refusal.
+const NAV_BTNS = new Set(['funcs']);
+const canOpenZoho = () => !!(bound && !isSample() && !lastCtx);
 function blockZoho(on) {
   document.body.classList.toggle('zoho-blocked', on);
   ZOHO_BTNS.forEach((id) => {
+    const off = on && !(NAV_BTNS.has(id) && canOpenZoho());
     const el = $(id);
     if (!el) return;
-    if ('disabled' in el) el.disabled = on;
-    el.classList.toggle('zblocked', on);
+    if ('disabled' in el) el.disabled = off;
+    el.classList.toggle('zblocked', off);
   });
   const p = $('pull');
   // **What Pull all pulls, from the list it actually runs.** The markup said «functions, modules,
@@ -101,7 +112,11 @@ const isSample = () => !!(bound && bound.sample);
 // than as a bug: «since Pull is disabled, everything that talks to Zoho should be».
 function mismatchRefuse() {
   if (zohoReady()) return false;
-  setStatus(MSG.mismatchRefused, 'warn');
+  // **Which refusal, decided by which state.** It said «a different workspace» whenever the guard
+  // was false, and with no Zoho tab open at all the guard is false because there is nothing to
+  // compare against - so a click was refused with a claim about a tab that did not exist. The third
+  // place this sentence was doing that, and the last.
+  setStatus(lastCtx ? MSG.mismatchRefused : MSG.noTab, 'warn');
   return true;
 }
 function sampleRefuse() {
@@ -250,17 +265,21 @@ const MSG = {
   // found the org under it had changed. Two sentences, two moments - and this one was written out
   // twice, in two pulls, until a check said so.
   envMismatch: 'Environment mismatch - refusing.',
-  noTab: 'No Zoho CRM tab open.',
+  // **«Nothing here» plus the reason plus what to do about it**, which is this project's rule
+  // for an empty state and was being broken by a full stop. Press «Open in Zoho» and there is
+  // one: that control stays enabled precisely in this state, because it is the way out of it.
+  // **One state, one sentence.** It had two - the context bar said «the mirror reads,
+  // Zoho actions are off» and the refusal said «press Open in Zoho» - which is the same
+  // fact written twice, in two places, ready to come apart. It says both halves now:
+  // what still works, and the way out, which is this project's rule for an empty state.
+  noTab: 'No Zoho CRM tab is open - the mirror still reads.',
   // Two sentences for one situation, because the useful half is different in each case: whoever
   // already has the other extension needs to be told where it is, not sold it. Which one is shown
   // is the other extension's own answer - it replies to a message, or it does not.
   // **What is off, rather than where you are standing.** With a mirror open the panel works; what
   // a missing Zoho tab costs is the half that talks to Zoho, and saying that is more use than
   // naming the tab the reader happens to have in front of them.
-  noZohoTab: 'No Zoho CRM tab open - the mirror reads, Zoho actions are off',
   // The same fact when a Zoho tab *is* open somewhere and it is not this workspace's: what the
-  // reader needs is not an accusation about that tab, it is what is off and for which workspace.
-  noTabForWorkspace: (ws) => `No Zoho CRM tab open for \u00ab${ws}\u00bb - the mirror reads, Zoho actions are off`,
   twinInstalled: (t) => `This is a ${t.name} tab. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `This is a ${t.name} tab. ${t.product} reads it.`,
   folder: 'Folder access needs re-granting - click ↻ Refresh.',

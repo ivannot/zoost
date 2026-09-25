@@ -79,7 +79,7 @@ CHECKS = [
                'Press Pull all and leave it alone until it stops.'],
         'pass': ('It ends on a line that names what it read - not on «interrupted», not on «could not». '
                  'The tree fills, and the counts match what the platform shows you.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/*/bridge-contract.js', 'apps/*/filesystem-adapter.js',
+        'covers': ['apps/*/workbench.js', 'apps/*/bridge-contract.js', 'apps/*/filesystem-adapter.js',
                    'apps/crm/zoho-bridge.js', 'apps/crm/pull-plan.js', 'apps/crm/pull-controller.js',
                    'apps/*/pull-lifecycle.js', 'apps/*/mirror-plan.js', 'apps/*/error-model.js',
                    'apps/*/pull-usecase.js', 'apps/*/pull-adapter.js', 'apps/crm/function-stats.js', 'apps/crm/graph-session.js', 'apps/crm/crm-utils.js', 'apps/crm/crm-pull-graph.js', 'apps/crm/crm-download.js', 'apps/crm/crm-failures.js',
@@ -98,7 +98,7 @@ CHECKS = [
         'do': ['Press Pull all again on the same workspace, without changing anything.'],
         'pass': ('It finishes the same way, nothing is reported as failed to remove, and the counts '
                  'do not move. A second pull is where a half-written mirror shows.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/crm/live-sync.js', 'apps/*/content-bridge.js'],
+        'covers': ['apps/*/workbench.js', 'apps/crm/live-sync.js', 'apps/*/content-bridge.js'],
     },
     {
         'id': 'progress',
@@ -107,7 +107,7 @@ CHECKS = [
         'do': ['Watch the status line during the pull above.'],
         'pass': ('No stretch where the line stands still on a finished stage while the spinner turns. '
                  'Every stage names itself, and the ones that count, count.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/crm/workspace-controller.js'],
+        'covers': ['apps/*/workbench.js', 'apps/crm/workspace-controller.js'],
     },
     {
         'id': 'wrong-tab',
@@ -116,14 +116,14 @@ CHECKS = [
         'do': ['With a workspace bound to one org, open a Zoho tab for another (or a sandbox).',
                'Try a pull.'],
         'pass': 'It refuses, names both sides, and offers the way to align them. It does not write.',
-        'covers': ['apps/*/sidepanel.js', 'apps/*/content-bridge.js'],
+        'covers': ['apps/*/workbench.js', 'apps/*/content-bridge.js'],
     },
     {
         'id': 'live-save',
         'title': 'A function saved in Zoho reaches the mirror (Zoho CRM only)',
         'do': ['With the panel open, edit and save a Deluge function in Zoho\'s own editor.'],
         'pass': 'The row updates on its own, without a pull, and the file on disk carries the change.',
-        'covers': ['apps/crm/hook.js', 'apps/crm/content-bridge.js', 'apps/crm/sidepanel.js'],
+        'covers': ['apps/crm/hook.js', 'apps/crm/content-bridge.js', 'apps/crm/workbench.js'],
         'app': 'crm',
     },
     {
@@ -131,7 +131,7 @@ CHECKS = [
         'title': 'The assistant answers about the org, with a real key',
         'do': ['With an API key configured, ask it something that needs a tool - «who calls X».'],
         'pass': 'It answers, the tools it opened are listed in the chat, and nothing it says is invented.',
-        'covers': ['apps/*/ai.js', 'apps/*/sidepanel.js', 'apps/*/options.js'],
+        'covers': ['apps/*/ai.js', 'apps/*/workbench.js', 'apps/*/options.js'],
     },
     {
         'id': 'export',
@@ -141,7 +141,7 @@ CHECKS = [
         'pass': ('Every section the panel shows is in them, nothing in them is empty or invented, and '
                  'the two HTML reports are the same document: same header, same index, same cards, '
                  'same foot.'),
-        'covers': ['apps/*/export.js', 'apps/crm/export-scope.js', 'apps/*/sidepanel.js', 'apps/*/health.js',
+        'covers': ['apps/*/export.js', 'apps/crm/export-scope.js', 'apps/*/workbench.js', 'apps/*/health.js',
                    'apps/*/reportshell.js'],
     },
     {
@@ -164,7 +164,7 @@ CHECKS = [
         'pass': ('It writes, the tree fills, and the panel says nothing was fetched from Zoho. This is '
                  'the workspace every picture on the site is rendered from, so it is also the one a '
                  'first-time reader sees.'),
-        'covers': ['apps/*/sample-org.js', 'apps/*/workspace.js', 'apps/*/overview-view.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/sample-org.js', 'apps/*/workspace.js', 'apps/*/overview-view.js', 'apps/*/workbench.js'],
     },
     {
         'id': 'fresh-profile',
@@ -183,7 +183,7 @@ CHECKS = [
                'Open the ? help from the panel.'],
         'pass': ('Every control in the toolbar is still reachable without scrolling the row sideways, '
                  'and the help describes what you are actually looking at.'),
-        'covers': ['apps/*/sidepanel.html', 'apps/*/sidepanel.css', 'apps/*/product-help.js'],
+        'covers': ['apps/*/workbench.html', 'apps/*/workbench.css', 'apps/*/product-help.js'],
     },
     {
         'id': 'detail',
@@ -192,7 +192,7 @@ CHECKS = [
         'do': ['Open a Deluge function (Zoho CRM) or a query table (Zoho Analytics) from the tree.'],
         'pass': ('The source is coloured, and a name inside it that Zoost can open is a link that goes '
                  'where it says. For a query, the SQL is the SQL the platform shows.'),
-        'covers': ['apps/*/highlight.js', 'apps/analytics/analytics-sql.js', 'apps/*/sidepanel.js',
+        'covers': ['apps/*/highlight.js', 'apps/analytics/analytics-sql.js', 'apps/*/workbench.js',
                    'apps/crm/preview-model.js', 'apps/crm/preview-controller.js'],
     },
     {
@@ -203,7 +203,7 @@ CHECKS = [
                'Open the history menu and clear it.'],
         'pass': ('Back and forward open the expected item; a new turn drops the old forward tail; '
                  'the menu lists the same walk; Clear keeps only what is currently open.'),
-        'covers': ['apps/*/navigation.js', 'apps/crm/zoho-navigation.js', 'apps/*/sidepanel.js',
+        'covers': ['apps/*/navigation.js', 'apps/crm/zoho-navigation.js', 'apps/*/workbench.js',
                    'apps/crm/history-controller.js'],
     },
     {
@@ -214,7 +214,7 @@ CHECKS = [
                'In CRM, change tab and return to Functions.'],
         'pass': ('Text, search subject and pattern mode change together; a CRM tab keeps its own '
                  'search; disabling pattern mode does not reinterpret the pattern as literal text.'),
-        'covers': ['apps/*/search-state.js', 'apps/*/sidepanel.js'],
+        'covers': ['apps/*/search-state.js', 'apps/*/workbench.js'],
     },
     {
         'id': 'list-selection',
@@ -223,7 +223,7 @@ CHECKS = [
         'do': ['Choose one type, then sort by a measured column in both directions.'],
         'pass': ('Only that type remains; each direction draws every row in the exact order selected '
                  'by the model, including rows whose measurement is unavailable.'),
-        'covers': ['apps/*/list-model.js', 'apps/*/sidepanel.js', 'apps/crm/type-chips.js'],
+        'covers': ['apps/*/list-model.js', 'apps/*/workbench.js', 'apps/crm/type-chips.js'],
     },
     {
         'id': 'passphrase',
@@ -243,7 +243,7 @@ CHECKS = [
         'pass': ('It says the folder needs re-granting and one click anywhere in the panel restores '
                  'it; the change you made in Settings is still there. A stored handle loses its '
                  'permission between sessions, and that is the path every returning user takes.'),
-        'covers': ['apps/*/idb.js', 'apps/*/sidepanel.js', 'apps/*/options.js', 'apps/*/options.html',
+        'covers': ['apps/*/idb.js', 'apps/*/workbench.js', 'apps/*/options.js', 'apps/*/options.html',
                    'apps/crm/tabs.js'],
     },
     {
@@ -267,7 +267,7 @@ CHECKS = [
                  'neither in front, the panel resolves the first it is given. If that is the wrong org it '
                  'refuses and says which one it read - focus the right tab and it resolves. It fails '
                  'safe; it is not silent.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/crm/crm-context.js', 'apps/crm/zoho-bridge.js',
+        'covers': ['apps/*/workbench.js', 'apps/crm/crm-context.js', 'apps/crm/zoho-bridge.js',
                    'apps/*/content-bridge.js', 'apps/crm/pull-controller.js', 'apps/*/pull-usecase.js'],
     },
     {
@@ -287,8 +287,8 @@ CHECKS = [
                  'installed copy is silent - and an unpacked copy can never be recognised at all, '
                  'because its id comes from its folder path. Confirm that half on the release after '
                  'both of these are live.'),
-        'covers': ['apps/*/sidepanel.js', 'apps/*/background.js', 'apps/crm/crm-context.js',
-                   'apps/*/sidepanel.html', 'apps/*/sidepanel.css', 'apps/*/manifest.json',
+        'covers': ['apps/*/workbench.js', 'apps/*/background.js', 'apps/crm/crm-context.js',
+                   'apps/*/workbench.html', 'apps/*/workbench.css', 'apps/*/manifest.json',
                    'apps/*/icons/twin-48.png'],
     },
 ]

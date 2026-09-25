@@ -29,26 +29,26 @@ def _html_scripts(root: Path, app: str) -> tuple[list[str], list[str]]:
     dependency graph.  A checker that only classifies files cannot see a missing or duplicated
     provider; this small structural pass does, without pretending to parse JavaScript globals.
     """
-    html = root / "apps" / app / "sidepanel.html"
+    html = root / "apps" / app / "workbench.html"
     if not html.exists():
-        return [], [f"{app}: sidepanel.html is missing"]
+        return [], [f"{app}: workbench.html is missing"]
     text = html.read_text(encoding="utf-8")
     scripts = re.findall(r'<script\b[^>]*\bsrc=["\']([^"\']+)["\']', text)
     findings: list[str] = []
     seen: set[str] = set()
     for name in scripts:
         if name in seen:
-            findings.append(f"{app}: sidepanel loads script more than once: {name}")
+            findings.append(f"{app}: the workbench loads script more than once: {name}")
         seen.add(name)
         if not (root / "apps" / app / name).is_file():
-            findings.append(f"{app}: sidepanel references missing script: {name}")
+            findings.append(f"{app}: the workbench references missing script: {name}")
     # These are the non-negotiable composition constraints of the two current panels.  Keeping
     # them here makes an HTML reorder fail before a browser discovers an undefined global.
     pos = {name: i for i, name in enumerate(scripts)}
     if app == "analytics":
         required = ("pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js",
                     "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js",
-                    "sidepanel.js")
+                    "workbench.js")
         missing = [name for name in required if name not in pos]
         if missing:
             findings.append(f"{app}: composition is missing required script(s): {', '.join(missing)}")
@@ -140,23 +140,23 @@ def self_test() -> None:
         (root / "tools").mkdir()
         (root / "apps" / "crm").mkdir(parents=True)
         (root / "apps" / "analytics").mkdir(parents=True)
-        (root / "apps" / "crm" / "sidepanel.html").write_text(
+        (root / "apps" / "crm" / "workbench.html").write_text(
             '<script src="pure.js"></script><script src="pull-lifecycle.js"></script>'
             '<script src="pull-controller.js"></script><script src="pull-adapter.js"></script>'
             '<script src="crm-bootstrap.js"></script>', encoding="utf-8")
-        (root / "apps" / "analytics" / "sidepanel.html").write_text(
+        (root / "apps" / "analytics" / "workbench.html").write_text(
             '<script src="pull-lifecycle.js"></script><script src="pull-usecase.js"></script>'
             '<script src="pull-adapter.js"></script><script src="bootstrap.js"></script>'
             '<script src="filesystem-adapter.js"></script><script src="analytics-mirror-writer.js"></script>'
             '<script src="analytics-view-model.js"></script>'
-            '<script src="sidepanel.js"></script>', encoding="utf-8")
+            '<script src="workbench.js"></script>', encoding="utf-8")
         for app, names in {
             "crm": ["pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-bootstrap.js"],
-            "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js", "sidepanel.js"],
+            "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js", "workbench.js"],
         }.items():
             for name in names:
                 (root / "apps" / app / name).write_text("", encoding="utf-8")
-        cfg = {"version": 1, "categories": {"domain": ["pure.js", "analytics-view-model.js"], "ports": [], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js", "filesystem-adapter.js", "analytics-mirror-writer.js"], "ui": ["sidepanel.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
+        cfg = {"version": 1, "categories": {"domain": ["pure.js", "analytics-view-model.js"], "ports": [], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js", "filesystem-adapter.js", "analytics-mirror-writer.js"], "ui": ["workbench.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
         (root / "tools" / "architecture.json").write_text(json.dumps(cfg), encoding="utf-8")
         (root / "apps" / "crm" / "pure.js").write_text("const x = 1;", encoding="utf-8")
         (root / "apps" / "analytics" / "pure.js").write_text("const x = 2;", encoding="utf-8")
@@ -166,8 +166,8 @@ def self_test() -> None:
         # A classification-only checker stayed green when a required provider disappeared.  The
         # manifest edge must turn that mutation red even though every remaining file is classified.
         (root / "apps" / "analytics" / "pure.js").write_text("const x = 2;", encoding="utf-8")
-        html = (root / "apps" / "analytics" / "sidepanel.html").read_text(encoding="utf-8")
-        (root / "apps" / "analytics" / "sidepanel.html").write_text(
+        html = (root / "apps" / "analytics" / "workbench.html").read_text(encoding="utf-8")
+        (root / "apps" / "analytics" / "workbench.html").write_text(
             html.replace('<script src="analytics-view-model.js"></script>', ''), encoding="utf-8")
         assert any("analytics-view-model.js" in item for item in scan(root))
 

@@ -234,9 +234,9 @@ and stays that way until that probe runs.
 **Raised** 25 September 2026 by the author, reading the markup and asking why some styles are
 declared in the HTML at all when a stylesheet exists. Measured rather than argued:
 
-| page | inline CSS | selectors | also in `sidepanel.css` |
+| page | inline CSS | selectors | also in `workbench.css` |
 |---|---|---|---|
-| `sidepanel.html` | none | - | links the sheet |
+| `workbench.html` | none | - | links the sheet |
 | `graphview.html` | 34,228 chars | 246 | **13** |
 | `options.html` | 7,780 chars | 78 | **11** |
 
@@ -266,3 +266,40 @@ done quickly rather than one at a time.
 
 **State:** open, deliberately behind anything a user can feel - agreed as «not now» on the day it
 was raised, with the overlay work taking its place.
+
+---
+
+## The graph and the settings become views inside the window, not pages of their own
+
+**Raised** 25 September 2026, minutes apart, by the author - first about the diagram, then about the
+settings - and they are one piece of work. His argument: a separate window made sense for
+readability while the panel was narrow, and now it only risks confusing the reader.
+
+**The reason they were separate has gone.** Both opened in their own popup window because the side
+panel was capped at two thirds of a browser window and a diagram cannot be read in 400px. Zoost is
+now a window of its own, as wide as the reader makes it, so a second window is no longer room - it
+is one more thing to find, raise and close.
+
+**The pattern already exists in the product.** `#healthview`, `#aiview` and `#overviewview` are
+full-panel overlays inside `#main`, each with its own header and its own close. The diagram and the
+settings would be the fourth and the fifth of that family, which is also the answer to «where does
+the reader close it».
+
+**The prerequisite, and it is the whole cost.** These are not empty pages:
+
+| page | inline CSS | selectors | shared with the panel |
+|---|---|---|---|
+| `graphview.html` | 34,228 chars | 246 | 13 |
+| `options.html` | 7,780 chars | 78 | 11 |
+
+Bringing either into the panel's document means those selectors meet the panel's own. The shared
+ones - `:root` tokens, `body`, `.mk`, `button`, `.ck`, `.chips`, `.ftbl`, `.empty` - are exactly the
+ones recorded as repeated in `tools/cssdupes.txt`, so **the consolidation deferred in the entry
+above stops being debt and becomes step one of this**. The rest are the graph's own vocabulary and
+belong in a sheet the panel loads only where it draws one.
+
+And the same measurement applies: merging rules moved 5-20% of the pixels on six site pages, because
+a rule winning by order inside its own block stops winning. One selector at a time, with
+`tools/pngsame.py` on the before and after.
+
+**State:** open, and next after the consolidation - which it turns from a tidy-up into a dependency.

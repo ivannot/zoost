@@ -15,7 +15,7 @@ interesting surface is small and specific:
 
 - The content scripts each extension injects into its own product's pages - `content-bridge.js`
   and, for Zoho CRM, `hook.js`.
-- The side panel, options page and graph window, and anything they render from data read out of
+- The workbench window, the options page and the graph window, and anything they render from data read out of
   Zoho or off the disk.
 - The local files written through the File System Access API.
 - The requests made to the AI provider the user configured, when that optional feature is on.

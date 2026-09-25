@@ -1,7 +1,7 @@
 /*
  * preview-controller.js - CRM item preview, project files and list selection.
  *
- * Loaded before sidepanel.js. It declares state and callable controllers only; sidepanel.js
+ * Loaded before workbench.js. It declares state and callable controllers only; workbench.js
  * remains the composition root that attaches controls after every script has loaded.
  */
 let currentPath = null;
@@ -673,7 +673,16 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
     // people open a function for. The depth travels with it, or the tooltip would name a control
     // that is on the other tab. The Modules preview keeps its own bar, because that detail has no
     // strip to move to and nothing is hiding it.
-    if (callers.length || (node.calls || []).length) pvDiagram(node.namespace + '.' + node.name, 'function');
+    // **Offered whether or not anything links to it.** It used to appear only for a function with
+    // callers or calls, and «nothing links to this» was read as «nothing to show» - but a function
+    // that calls nobody and is called by nobody is an *orphan*, which is the finding somebody opens
+    // a wiring diagram to see. The window draws it alone and says so. Reported as a button that
+    // comes and goes with no visible rule.
+    //
+    // The Analytics twin learnt exactly this and wrote it down - «the entity is the answer... a
+    // finding rather than an absence» - and this side kept the old rule. `openCallFocus` refuses
+    // cleanly for a node that is not in the graph at all, which is the only case worth refusing.
+    pvDiagram(node.namespace + '.' + node.name, 'function');
   } catch { box.className = ''; }
 }
 // ---- keyboard: the selection follows the arrows ------------------------------------------------

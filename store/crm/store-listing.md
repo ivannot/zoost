@@ -117,31 +117,19 @@ Using the Zoho CRM session already open, it reads Deluge, Java, Python and Node 
 Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM records, and does nothing on any other website.
 ```
 
-## 5. sidePanel justification (max 1000)
-
-```
-The extension's entire user interface is a Chrome side panel.
-
-This is deliberate rather than cosmetic: the tool is used side by side with Zoho CRM. The user reads a function in the panel while the corresponding record or setup page is open in the tab, jumps from a function to its callers, and moves between the panel and the Zoho editor continuously. A popup would close on every click on the page, and an injected overlay would modify Zoho's own interface, which Zoost deliberately never does.
-
-The side panel also lets the extension observe which Zoho tab is active and keep the local workspace aligned with it, which is what makes the production/sandbox guard possible.
-
-No content is injected into the page for UI purposes. The sidePanel permission is used only to open and manage that panel.
-```
-
-## 6. storage justification (max 1000)
+## 5. storage justification (max 1000)
 
 ```
 storage persists the user's own settings between sessions, in chrome.storage.local. Nothing is stored remotely or synced.
 
-What is kept: the selected AI engine, model id and API key (optional; encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; the fallback Zoho data centre; saved search patterns (named regular expressions the search box offers); which side panel tabs are shown, in what order, and which a pull asks Zoho for; which data types the user's Zoho role refused; and the sample workspace's id, so the panel can offer to open it before it may read the folder.
+What is kept: the selected AI engine, model id and API key (optional; encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; the fallback Zoho data centre; saved search patterns (named regular expressions the search box offers); which of the workbench tabs are shown, in what order, and which a pull asks Zoho for; which data types the user's Zoho role refused; and the sample workspace's id, so the panel can offer to open it before it may read the folder.
 
 chrome.storage.session holds the decrypted API key while protection is unlocked, and the diagram data on its way to that window - removed when it is read. Both memory-only, cleared when the browser closes.
 
 No browsing data, Zoho CRM data or personal information go into extension storage. Mirrored function sources are files in the user's folder.
 ```
 
-## 7. scripting justification (max 1000)
+## 6. scripting justification (max 1000)
 
 ```
 scripting injects this extension's own code, never remote code, only into the manifest's hosts.
@@ -157,7 +145,7 @@ scripting injects this extension's own code, never remote code, only into the ma
 Every request this sends Zoho CRM is a read: no create, update or delete call exists in it.
 ```
 
-## 8. tabs justification (max 1000)
+## 7. tabs justification (max 1000)
 
 ```
 tabs is used to identify the Zoho CRM tab the user is working in, and to navigate to Zoho pages on request.
@@ -169,7 +157,7 @@ Specifically:
 The extension does not read browsing history, does not enumerate tabs, and takes no action on any other site.
 ```
 
-## 9. Host permission justification (max 1000)
+## 8. Host permission justification (max 1000)
 
 ```
 Three groups, all strictly necessary.
@@ -185,7 +173,7 @@ The extension is inert on every other site.
 
 ---
 
-## 10. Data disclosures (dashboard checkboxes)
+## 9. Data disclosures (dashboard checkboxes)
 
 | Category | Collected? | Notes |
 |---|---|---|

@@ -27,7 +27,7 @@ where `META_SV` is **2**, connections as strings where they are objects, and on 
 the raw `VIEW_ID`/`VIEW_NAME` the bridge renames to `id`/`name` before anything reaches disk. The
 panel answered with «wfIdx is not iterable», «idx.map is not a function», no connections, a broken
 export and a graph that would not open - five separate reports from one mistake. A test now reads
-every key of every index against `content-bridge.js` and `sidepanel.js`, so the fixture cannot drift
+every key of every index against `content-bridge.js` and `workbench.js`, so the fixture cannot drift
 from what a real workspace contains.
 
 **And a state has to be *created*, not asserted.** «Unresolved» and «ambiguous» were written into the

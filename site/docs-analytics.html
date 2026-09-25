@@ -110,7 +110,7 @@
   <h2 id="first-run">2. First run</h2>
   <ol>
     <li>Install from the Chrome Web Store and open a Zoho Analytics tab.</li>
-    <li>Click the Zoost icon to open the side panel.</li>
+    <li>Click the Zoost icon: it opens in its own window, which you can move and resize.</li>
     <li>Open the workspace you want to mirror. Its URL looks like
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
     <li><b class="ui">+ Workspace</b> - if this is the first run, the same action asks you for a
@@ -239,7 +239,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </figure>
 
   <h2 id="structure">6. Structure and foreign keys</h2>
-  <p>Click any row to open the detail pane. <b>Where it opens depends on how much room the panel has.</b> Give it enough width - Chrome lets you drag a side panel out to two thirds of the window - and the list and the detail sit <b>side by side</b>; narrower, the detail opens underneath as before. Drag the bar between them to resize, and the two sizes are remembered apart: how tall you want the detail in a narrow panel is not how wide you want it in a broad one.</p>
+  <p>Click any row to open the detail pane. <b>Where it opens depends on how much room the panel has.</b> Make the window wide enough and the list and the detail sit <b>side by side</b>; narrower, the detail opens underneath as before. Drag the bar between them to resize, and the two sizes are remembered apart: how tall you want the detail in a narrow panel is not how wide you want it in a broad one.</p>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, at the <b>top right of the panel</b>, does what it says: the working folder, the workspace picker and the tools row go, the list gets the room, and pressing it again brings them back. Your choice is remembered; on a short screen it starts folded. The two rows that <em>state</em> something - which workspace the tab is on, and the warning when the tab and the workspace disagree - never fold.</p>
   <p><b class="ui">Columns</b> shows every column with its Zoho data type. Tables and query tables carry
     their own; a report or a pivot carries none, so Zoost follows what it is built on and shows
@@ -516,7 +516,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </figure>
 
   <h2 id="goes-wrong">13. When something goes wrong</h2>
-  <p>If the bar under the toolbar is amber, the tab you are on and the workspace folder you have selected are different workspaces, and everything that talks to Zoho Analytics is disabled until they agree. <b class="ui">Switch tab → «workspace» ↗</b> takes the tab to the workspace the folder belongs to, or you switch the folder to match the tab.</p>
+  <p>If the bar under the toolbar is amber, the tab you are on and the workspace folder you have selected are different workspaces, and everything that talks to Zoho Analytics is disabled until they agree. <b class="ui">Open «workspace» ↗</b> takes the tab to the workspace the folder belongs to, or you switch the folder to match the tab.</p>
   <p><b>With no Zoho Analytics tab at all</b> the panel says so over the whole workbench and offers
     <b class="ui">Go to Zoho Analytics ↗</b>. That opens Zoho Analytics itself rather than a
     particular workspace, which is the right button after signing out of one account to sign into
@@ -545,7 +545,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td data-label="Cause and fix">The tab and the folder are different workspaces. The amber bar offers both ways out: take the
           tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
       <tr><td class="k" data-label="Symptom">"No Zoho Analytics tab open - the mirror reads, Zoho actions are off"</td>
-        <td data-label="Cause and fix"><b>The panel still works.</b> A mirror is local files, so reading it, searching it, drawing it
+        <td data-label="Cause and fix"><b>The panel still works.</b> <b class="ui">Open Zoho Analytics ↗</b> beside that line opens a tab for the workspace you are in - its own instance and its own environment. A mirror is local files, so reading it, searching it, drawing it
           and exporting it need no tab at all - what is off is the half that talks to Zoho, and the line says which half.
           Open a Zoho Analytics tab and the buttons come back; <b>it does not have to be the tab you are looking at</b>, and when
           it is not, the context bar marks the workspace it resolved as <b>not in front</b> so you can see which one it is reading.

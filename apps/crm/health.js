@@ -1,8 +1,8 @@
 /*
  * health.js - the audit view, whole: buildHealth over the mirror, the grouped rendering, the
- * open-a-finding map, and the view's own open/close. The third slice of splitting sidepanel.js,
+ * open-a-finding map, and the view's own open/close. The third slice of splitting workbench.js,
  * same contract as ai.js and export.js: a classic script of declarations only, loaded before
- * sidepanel.js, whose bottom wiring assigns toggleHealth and friends at load time.
+ * workbench.js, whose bottom wiring assigns toggleHealth and friends at load time.
  *
  * What deliberately stays behind: pullHealthRuntime and healthSay live with the other pulls -
  * a pull is wired and guarded like its siblings, wherever its view's code lives - and

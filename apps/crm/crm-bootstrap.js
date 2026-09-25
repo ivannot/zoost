@@ -229,6 +229,33 @@ $('chromefold').onclick = () => {
   void chrome.storage.local.set({ chromeFolded: folded }).catch(() => {});
 };
 void restoreChromeFold();
+
+/** On a first run the window places itself, instead of landing wherever Chrome decides.
+ *
+ *  **The document knows what the service worker cannot.** `screen.availWidth` and its siblings are
+ *  readable by any page for nothing; the worker that created this window would need
+ *  `chrome.system.display` to learn the same thing, which is a permission asked for a cosmetic
+ *  fact. So the window is created at a readable size and moves itself once it can see.
+ *
+ *  The right half of the screen it was born on, full height - beside the browser rather than over
+ *  the page being read. It runs **only** while nothing has been remembered: the moment the reader
+ *  moves or resizes it, that is where it belongs, and a default that re-asserted itself would undo
+ *  a choice on every open. The same rule as the folded chrome, one surface up.
+ */
+async function placeWindowOnFirstRun() {
+  try {
+    const { zoostWindowBounds } = await chrome.storage.local.get('zoostWindowBounds');
+    if (zoostWindowBounds && zoostWindowBounds.width) return;
+    const self = await chrome.windows.getCurrent();
+    const half = Math.round(screen.availWidth / 2);
+    const bounds = { left: Math.round(screen.availLeft + half), top: Math.round(screen.availTop),
+                     width: half, height: Math.round(screen.availHeight) };
+    await chrome.windows.update(self.id, bounds);
+    await chrome.storage.local.set({ zoostWindowBounds: bounds });
+  } catch (_) { /* a window that will not move is still a window; nothing here is worth a sentence */ }
+}
+void placeWindowOnFirstRun();
+
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_t, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 loadWorkspaces();

@@ -2,7 +2,7 @@
  * history-controller.js - browser-like CRM item history and its overlay.
  *
  * The pure walk lives in navigation.js; this controller maps its entries to CRM items and DOM.
- * Control bindings stay in sidepanel.js so this slice performs no work while scripts load.
+ * Control bindings stay in workbench.js so this slice performs no work while scripts load.
  */
 // ---------- history: the chain you have walked, and the way back up it ----------
 // A browser's three: back, forward, and the list itself, because «back» alone only reaches the step

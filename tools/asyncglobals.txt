@@ -31,7 +31,7 @@
 #   workspace that has since changed - has nothing to be wrong about here. Each write takes the
 #   value the same operation just computed from the control it read after the await.
 # The 24 lines added on 22 August 2026 are the options pages, the backgrounds and the content
-# scripts, which this check had never read - `sidepanel.html` was its whole subject, 9 of the 32
+# scripts, which this check had never read - `workbench.html` was its whole subject, 9 of the 32
 # shipped scripts. The content scripts were *opened* and not read: both are wrapped in an IIFE, so
 # every function in them is indented by two, and this tool looked at column zero - 0 of 32 and 0 of
 # 19, over 42 awaits, in the two files that do the authenticated fetching. Corrected 22 August 2026,
@@ -72,39 +72,39 @@ apps/analytics/options.js	onAiengine	prevEngine
 apps/analytics/options.js	saveAi	aiPassChanging
 apps/analytics/options.js	saveKeys	dirty
 apps/analytics/options.js	saveKeys	ownWrite
-apps/analytics/sidepanel.js	analyticsFrameId	_afCandidates
-apps/analytics/sidepanel.js	analyticsFrameId	_afFrame
-apps/analytics/sidepanel.js	createSampleWorkspace	sampleBusy
-apps/analytics/sidepanel.js	createWorkspaceForContext	dir
-apps/analytics/sidepanel.js	delWorkspace	bound
-apps/analytics/sidepanel.js	delWorkspace	deps
-apps/analytics/sidepanel.js	delWorkspace	dir
-apps/analytics/sidepanel.js	delWorkspace	folders
-apps/analytics/sidepanel.js	delWorkspace	relations
-apps/analytics/sidepanel.js	delWorkspace	schema
-apps/analytics/sidepanel.js	delWorkspace	selectedId
-apps/analytics/sidepanel.js	delWorkspace	sqls
-apps/analytics/sidepanel.js	delWorkspace	views
-apps/analytics/sidepanel.js	delWorkspace	viewsPulledAt
-apps/analytics/sidepanel.js	ensureBridge	_afFrame
-apps/analytics/sidepanel.js	grantRoot	rootGranted
-apps/analytics/sidepanel.js	listWorkspaces	rootGranted
-apps/analytics/sidepanel.js	loadFromDisk	viewsPulledAt
-apps/analytics/sidepanel.js	pickRoot	root
-apps/analytics/sidepanel.js	pickRoot	rootGranted
-apps/analytics/sidepanel.js	readRememberedSample	sampleWsKnown
-apps/analytics/sidepanel.js	refreshWorkspaces	bound
-apps/analytics/sidepanel.js	refreshWorkspaces	deps
-apps/analytics/sidepanel.js	refreshWorkspaces	dir
-apps/analytics/sidepanel.js	refreshWorkspaces	folders
-apps/analytics/sidepanel.js	refreshWorkspaces	relations
-apps/analytics/sidepanel.js	refreshWorkspaces	schema
-apps/analytics/sidepanel.js	refreshWorkspaces	sqls
-apps/analytics/sidepanel.js	refreshWorkspaces	views
-apps/analytics/sidepanel.js	refreshWorkspaces	viewsPulledAt
-apps/analytics/sidepanel.js	refreshWorkspaces	wsList
-apps/analytics/sidepanel.js	restoreRoot	root
-apps/analytics/sidepanel.js	restoreRoot	rootGranted
+apps/analytics/workbench.js	analyticsFrameId	_afCandidates
+apps/analytics/workbench.js	analyticsFrameId	_afFrame
+apps/analytics/workbench.js	createSampleWorkspace	sampleBusy
+apps/analytics/workbench.js	createWorkspaceForContext	dir
+apps/analytics/workbench.js	delWorkspace	bound
+apps/analytics/workbench.js	delWorkspace	deps
+apps/analytics/workbench.js	delWorkspace	dir
+apps/analytics/workbench.js	delWorkspace	folders
+apps/analytics/workbench.js	delWorkspace	relations
+apps/analytics/workbench.js	delWorkspace	schema
+apps/analytics/workbench.js	delWorkspace	selectedId
+apps/analytics/workbench.js	delWorkspace	sqls
+apps/analytics/workbench.js	delWorkspace	views
+apps/analytics/workbench.js	delWorkspace	viewsPulledAt
+apps/analytics/workbench.js	ensureBridge	_afFrame
+apps/analytics/workbench.js	grantRoot	rootGranted
+apps/analytics/workbench.js	listWorkspaces	rootGranted
+apps/analytics/workbench.js	loadFromDisk	viewsPulledAt
+apps/analytics/workbench.js	pickRoot	root
+apps/analytics/workbench.js	pickRoot	rootGranted
+apps/analytics/workbench.js	readRememberedSample	sampleWsKnown
+apps/analytics/workbench.js	refreshWorkspaces	bound
+apps/analytics/workbench.js	refreshWorkspaces	deps
+apps/analytics/workbench.js	refreshWorkspaces	dir
+apps/analytics/workbench.js	refreshWorkspaces	folders
+apps/analytics/workbench.js	refreshWorkspaces	relations
+apps/analytics/workbench.js	refreshWorkspaces	schema
+apps/analytics/workbench.js	refreshWorkspaces	sqls
+apps/analytics/workbench.js	refreshWorkspaces	views
+apps/analytics/workbench.js	refreshWorkspaces	viewsPulledAt
+apps/analytics/workbench.js	refreshWorkspaces	wsList
+apps/analytics/workbench.js	restoreRoot	root
+apps/analytics/workbench.js	restoreRoot	rootGranted
 apps/crm/automation.js	blueprintFieldsNow	blueprintFields
 apps/crm/automation.js	fieldTriggersNow	fieldTriggers
 apps/crm/content-bridge.js	pageCsrfToken	_pageCsrf
@@ -148,12 +148,12 @@ apps/crm/preview-controller.js	openFile	currentPath
 apps/crm/preview-controller.js	showCallers	runtimeFrom
 apps/crm/preview-controller.js	showCallers	runtimeTo
 apps/crm/preview-controller.js	showCallers	runtimeWindow
-apps/crm/sidepanel.js	applySettingsChange	ownPrefsWrite
-apps/crm/sidepanel.js	applySettingsChange	pendingRootReload
-apps/crm/sidepanel.js	applySettingsChange	prefsSavedDuringPull
-apps/crm/sidepanel.js	applySettingsChange	root
-apps/crm/sidepanel.js	applySettingsChange	zohoDc
-apps/crm/sidepanel.js	takeRecheck	tabPrefs
+apps/crm/workbench.js	applySettingsChange	ownPrefsWrite
+apps/crm/workbench.js	applySettingsChange	pendingRootReload
+apps/crm/workbench.js	applySettingsChange	prefsSavedDuringPull
+apps/crm/workbench.js	applySettingsChange	root
+apps/crm/workbench.js	applySettingsChange	zohoDc
+apps/crm/workbench.js	takeRecheck	tabPrefs
 apps/crm/workspace-controller.js	createSampleWorkspace	sampleBusy
 apps/crm/workspace-controller.js	grantRoot	rootGranted
 apps/crm/workspace-controller.js	loadWorkspaces	dir

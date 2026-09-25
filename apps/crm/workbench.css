@@ -887,3 +887,6 @@
      the remainder work. */
   #findfilter.oneline>.controls:first-child{flex:1 1 auto;min-width:0;border-right:1px solid var(--line)}
   #findfilter.oneline>.controls:last-child{flex:0 0 auto}
+  /* The way out, in the bar that says there is no tab. `znav` is this panel's own «go to Zoho»
+     button, so the reader has met it before; it only needs room and a smaller footprint here. */
+  #ctx .ctxopen{flex:none;height:20px;padding:0 8px;font-size:11px;margin-left:8px}

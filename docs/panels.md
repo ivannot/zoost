@@ -4,9 +4,34 @@
 
 # The panels: what Analytics exposes, and how the chrome is arranged
 
+**Zoost is a window of its own, and everything below about the side panel is history.** The
+toolbar icon opens `workbench.html` in a `chrome.windows.create({type:'popup'})` window - resizable,
+movable, and able to sit on a second monitor, which is how this product is actually used: Zoho on
+one screen and Zoost on the other. The `sidePanel` permission left both manifests with it, and the
+`side_panel` key with the permission - **removing the permission alone did nothing**, because Chrome
+kept routing the action click at the declared panel and the click then did nothing at all.
+
+What that ended, and what it did not:
+
+- **Ended**: the two-thirds cap measured below, the panel vanishing and reappearing with each tab,
+  and the whole notion of «the tab in front», which in a window of Zoost's own is always Zoost.
+- **Did not end**: the width work below, which is what makes a wide window worth having, and the
+  measurements that produced it. They are why the window was worth moving to at all.
+
+**A popup window has no tab strip and no address bar, and it can still ask for the working folder.**
+That was doubted, on a diagnosis that read «no tab, so `requestPermission()` cannot be asked» - the
+source behind it was about the extension *action popup*, a different surface. The window was briefly
+made `normal` for that reason and put back: the folder prompt appears in a popup exactly as it did in
+the panel. Measured by asking the browser, which is the only thing that could answer.
+
+**The geometry is the reader's.** `chrome.windows.onBoundsChanged` records where they leave it; a
+first run has nothing to restore, so the *page* places itself from `screen.availWidth` - the service
+worker cannot see a screen without `chrome.system.display`, which is a permission for a cosmetic
+fact. One window: the id is a note and `windows.update` on a closed one rejects, which is the answer.
+
 **A panel page is now composition, not an implementation file.** Both side panels keep their markup
-in `sidepanel.html` and their visual rules in `sidepanel.css`. Independent surfaces are classic
-scripts loaded before `sidepanel.js`: AI, export and Health keep their product-specific files, while
+in `workbench.html` and their visual rules in `workbench.css`. Independent surfaces are classic
+scripts loaded before `workbench.js`: AI, export and Health keep their product-specific files, while
 `report.js` owns the identical privacy-critical redaction and bounded diagnostic buffer on each
 side. `overview-view.js` turns the Overview model into DOM and delegates every action back to the
 panel; it reads no workspace or Chrome state. CRM's `pull-plan.js` freezes which areas one Pull all
@@ -23,7 +48,7 @@ CRM's `preview-model.js` owns the pure projection from a function row to its loc
 `history-controller.js` adapts the pure navigation state to CRM items and the history overlay.
 The export-scope dialog and its persisted policy live in `export-scope.js`, separate from the
 workspace snapshot and report builders in `export.js`.
-`sidepanel.js` supplies shared panel state and composes these boundaries; it no longer implements
+`workbench.js` supplies shared panel state and composes these boundaries; it no longer implements
 their mechanics. There is still no build step and no runtime dependency: the browser loads the
 readable source files that ship. Tests derive the script set and order from the page rather than
 maintaining another file list.
@@ -150,7 +175,7 @@ What that earns, in both products, word for word:
   «si sposta in base al click».
 
 **The CRM's tabs come from one registry, and what a role cannot reach is measured, not assumed.**
-`TABS` in `sidepanel.js` is the single list; the segment row is built from it, so adding a type does
+`TABS` in `workbench.js` is the single list; the segment row is built from it, so adding a type does
 not mean remembering it in the markup, in five `.active` toggles, in five click handlers and in two
 label maps — which is what it used to mean, and why the set could never be reordered. Two independent
 reasons remove a tab, and they must not be conflated:

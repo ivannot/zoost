@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Zoost - workbench for Zoho CRM</title>
-<link rel="stylesheet" href="sidepanel.css">
+<link rel="stylesheet" href="workbench.css">
 </head>
 <body>
   <div class="wsbar">
@@ -16,7 +16,7 @@
     <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
   </div>
   <div id="ctx" class="unbound">
-    <span class="dot"></span><span class="who" id="who">Not on a Zoho CRM tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span><button type="button" id="chromefold" class="foldbtn bare" aria-expanded="true" aria-label="Fold the workspace and tools rows away" title="Fold the workspace and tools rows away - the list gets the room"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg></button>
+    <span class="dot"></span><span class="who" id="who">Not on a Zoho CRM tab</span><a class="ctxtwin" id="ctxtwin" style="display:none" target="_blank" rel="noopener"><img data-src="icons/twin-48.png" alt="" width="14" height="14"></a><span class="bound" id="bound"></span><button type="button" id="ctxopen" class="znav ctxopen" hidden>Open Zoho CRM ↗</button><button type="button" id="chromefold" class="foldbtn bare" aria-expanded="true" aria-label="Fold the workspace and tools rows away" title="Fold the workspace and tools rows away - the list gets the room"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg></button>
   </div>
   <div id="scrim" class="scrim"></div>
   <div id="expscope" class="dlg">
@@ -75,7 +75,7 @@
     <div class="nvtools"><input id="navfind" placeholder="Find in the history…" autocomplete="off"><button id="navname" title="Toggle internal / display name">Name: display</button></div>
     <div id="navbody"></div>
   </div>
-  <!-- Built from the TABS registry in sidepanel.js: which segments exist, and in what order, depends
+  <!-- Built from the TABS registry in workbench.js: which segments exist, and in what order, depends
        on the user's settings and on what the org's roles actually grant. Empty in the markup on
        purpose - five hard-coded buttons here is what made the set impossible to reorder. -->
   <div class="modebar" id="modebar"></div>
@@ -247,7 +247,7 @@
   <script src="graph-core.js"></script>
   <script src="function-stats.js"></script>
   <script src="tabs.js"></script>
-  <!-- ai.js first: sidepanel.js wires its functions to buttons at load time, and a function
+  <!-- ai.js first: workbench.js wires its functions to buttons at load time, and a function
        declared in a later classic script arrives there as undefined, silently. -->
   <script src="ai.js"></script>
   <script src="reportshell.js"></script>
@@ -261,7 +261,7 @@
   <script src="preview-controller.js"></script>
   <script src="history-controller.js"></script>
   <script src="crm-context.js"></script>
-  <script src="sidepanel.js"></script>
+  <script src="workbench.js"></script>
   <script src="crm-tree.js"></script>
   <script src="crm-graph.js"></script>
   <script src="graph-session.js"></script>
@@ -271,7 +271,7 @@
   <script src="crm-search.js"></script>
   <script src="crm-navigation-ui.js"></script>
   <script src="crm-workflow-ui.js"></script>
-  <!-- after sidepanel.js, alone among the slices: its ACTION_SORTS reads MSG at load time. -->
+  <!-- after workbench.js, alone among the slices: its ACTION_SORTS reads MSG at load time. -->
   <script src="automation.js"></script>
   <script src="crm-bootstrap.js"></script>
 </body>

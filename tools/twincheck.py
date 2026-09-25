@@ -54,13 +54,13 @@ ROOT = Path(__file__).resolve().parent.parent
 # the graph engine was ported. `tools/namecheck.py` covers *every* shipped file for the one property
 # that must hold across all of them — that a file names its own product and no other — and it globs
 # rather than holding a list, so a file added tomorrow is covered without anyone remembering.
-PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
+PANELS = {'crm': ROOT / 'apps/crm/workbench.html', 'analytics': ROOT / 'apps/analytics/workbench.html'}
 # **And the other two pages each product ships.** The sentence above says «this compares the two side
 # panels, and only those», which was true and read as the whole subject: 80 shared ids were compared
 # and **122 were not** - 48 on `options.html`, 74 on `graphview.html`. Proven by giving the shared
 # `#v-er` a different class *and* an inline style on the Analytics side only: twincheck 0 findings,
 # and htmlcheck, namecheck, featurecheck, csscheck and callcheck 0 as well. The same drift on
-# `#pfoot` in `sidepanel.html` is two findings.
+# `#pfoot` in `workbench.html` is two findings.
 #
 # Only the property that means the same thing on differently-shaped pages: a shared id must not
 # differ in tag, class or inline style. Their CSS and their behaviour genuinely diverge - the panels
@@ -70,14 +70,14 @@ PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/ana
 OTHER_PAGES = sorted(
     (f.name, f, ROOT / 'apps/analytics' / f.name)
     for f in (ROOT / 'apps/crm').glob('*.html')
-    if f.name != 'sidepanel.html' and (ROOT / 'apps/analytics' / f.name).exists())
+    if f.name != 'workbench.html' and (ROOT / 'apps/analytics' / f.name).exists())
 # The CRM panel is composed of two classic scripts since the split - one shared scope on the page -
 # so «the panel's code» is their concatenation, or every AI function reads as removed on one side.
 # Derived from each page's own <script> tags - the HTML is the authority on what composes a panel -
 # minus the shared libraries, which are compared by their own byte-identical entries in the ledger.
 _LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$')
 def _page_scripts(app):
-    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
+    html = (ROOT / f'apps/{app}/workbench.html').read_text(encoding='utf-8')
     # Tolerant of a second attribute - see the same correction in `asynccheck.py`: the narrow form
     # drops a whole file out of the subject and says nothing.
     return [ROOT / f'apps/{app}/{m}' for m in re.findall(r'<script[^>]+src="([^"]+\.js)"', html)

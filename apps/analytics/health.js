@@ -1,7 +1,7 @@
 /*
  * health.js - the Analytics audit model, rendering and view controls.
  *
- * A classic script loaded before sidepanel.js. It reads the local mirror through the existing
+ * A classic script loaded before workbench.js. It reads the local mirror through the existing
  * panel helpers and exposes the same open/close surface used by the panel wiring.
  */
 // ---------- health ----------

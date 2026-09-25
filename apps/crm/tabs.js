@@ -1,7 +1,7 @@
 /*
  * tabs.js - the one list of the panel's tabs, read by the side panel and by the settings page.
  *
- * It was written twice: `TABS` in sidepanel.js and `TAB_DEFS` in options.js, kept in step by nobody.
+ * It was written twice: `TABS` in workbench.js and `TAB_DEFS` in options.js, kept in step by nobody.
  * Adding Actions to the panel therefore left Settings unable to hide, reorder or exclude it - the
  * duplication this repository spends its length fighting, in the one place a new tab is most likely
  * to be forgotten. Same shape as product-help.js and analytics-sql.js: one text, several readers.

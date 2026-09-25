@@ -339,10 +339,10 @@ const DRIVER = String.raw`
 `;
 
 function panelHtml() {
-  let html = fs.readFileSync(path.join(APP, 'sidepanel.html'), 'utf8');
+  let html = fs.readFileSync(path.join(APP, 'workbench.html'), 'utf8');
   const first = '<script src="sample-org.js"></script>';
   const idb = '<script src="idb.js"></script>';
-  if (!html.includes(first) || !html.includes(idb)) throw new Error('sidepanel script order changed');
+  if (!html.includes(first) || !html.includes(idb)) throw new Error('workbench script order changed');
   html = html.replace(first, '<script src="/__probe/platform.js"></script>\n' + first);
   html = html.replace(idb, idb
     + '\n<script src="/__probe/fsshim.js"></script>'

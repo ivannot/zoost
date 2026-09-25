@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:899e7d1081941eb0 -->
+<!-- translated-from: site/docs-crm.html sha256:8bc76995c14fa1e0 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -114,7 +114,7 @@
 
   <h2 id="first-run">2. Primo avvio</h2>
   <ol>
-    <li>Apri una scheda di Zoho CRM e apri il pannello laterale di Zoost (l'icona dell'estensione).</li>
+    <li>Apri una scheda di Zoho CRM e clicca l'icona di Zoost: si apre la sua finestra.</li>
     <li>Fai clic su <b class="ui">+ Workspace</b>. Al primo avvio la stessa azione ti chiede una
       <b>cartella di lavoro dedicata e vuota</b>, per esempio <code>~/Documents/Zoost</code>, e poi continua.
       In seguito puoi cambiarla con <b class="ui">📁 Set working folder…</b>.</li>
@@ -155,7 +155,7 @@
       mostra sempre il simbolo accanto al nome.</p>
   </div>
   <p class="note"><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx=".8"/><rect x="9.5" y="1.5" width="5" height="5" rx=".8"/><rect x="1.5" y="9.5" width="5" height="5" rx=".8"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/></svg> Workspace overview</b> apre il riepilogo della copertura locale e le azioni principali. Un workspace nuovo si apre qui automaticamente con un percorso in tre passi e una sola prossima azione evidenziata; il sample parte da Browse perché la sua copia inventata è già locale. Riaprendo un workspace esistente non perdi il punto in cui eri.</p>
-  <p>Chrome non mantiene i permessi sul filesystem fra una riapertura e l'altra del pannello laterale: è
+  <p>Chrome non mantiene i permessi sul filesystem fra una riapertura e l'altra della finestra: è
     così che funziona la File System Access API del browser per le estensioni, non è un bug. Zoost lo
     ripristina al primo clic in un punto qualsiasi del pannello, quindi normalmente non te ne accorgi.
     Se ha bisogno di te, il pulsante della cartella diventa ambra e si legge
@@ -251,9 +251,8 @@ git commit -m "baseline"</code></pre>
   <p>I segmenti di modalità cambiano cosa elenca l'albero: <b class="ui">Functions</b>,
     <b class="ui">Modules</b>, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>,
     <b class="ui">Actions</b>, <b class="ui">Connections</b>. Seleziona un elemento e l'anteprima si apre
-    - <b>sotto l'elenco, oppure accanto quando il pannello è abbastanza largo</b>. Chrome lascia
-    trascinare un side panel fino a due terzi della finestra: dagli quello spazio ed elenco e anteprima
-    stanno affiancati, che è dove una funzione lunga smette di essere letta da una feritoia. Trascina la
+    - <b>sotto l'elenco, oppure accanto quando il pannello è abbastanza largo</b>. Allarga
+    abbastanza la finestra ed elenco e anteprima stanno affiancati, che è dove una funzione lunga smette di essere letta da una feritoia. Trascina la
     barra fra i due per ridimensionare: le due misure vengono ricordate separatamente, perché quanto
     vuoi alto il codice in un pannello stretto non è quanto lo vuoi largo in uno ampio.</p>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, in <b>alto a destra del pannello</b>, ripiega la cartella di lavoro, il selettore di
@@ -576,7 +575,7 @@ git commit -m "baseline"</code></pre>
   </div>
   <p>Due posti te la danno:</p>
   <ul>
-    <li><b>L'anteprima del modulo</b>, nel pannello laterale. Il suo dettaglio ha <b class="ui">Fields</b>,
+    <li><b>L'anteprima del modulo</b>, nella finestra. Il suo dettaglio ha <b class="ui">Fields</b>,
       <b class="ui">Related lists</b>, <b class="ui">Details</b> e, dove il modulo li ha,
       <b class="ui">Pipelines</b> e <b class="ui">Buttons</b>.
       Clicca un API name per copiarlo.</li>
@@ -905,7 +904,7 @@ git commit -m "baseline"</code></pre>
   <h2 id="goes-wrong">14. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e il workspace che hai selezionato
     appartengono a due org diverse, e tutto quello che parla con Zoho CRM è disattivato finché non si
-    accordano. La barra offre due vie d'uscita: <b class="ui">Switch tab → «instance» ↗</b> porta la scheda
+    accordano. La barra offre due vie d'uscita: <b class="ui">Open «instance» ↗</b> porta la scheda
     sull'org a cui appartiene il workspace, oppure sposti il workspace su quello della scheda. Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di
     un'altra.</p>
   <p><b>Se non c'è nessuna scheda Zoho CRM</b> il pannello lo dice sopra tutto il workbench e offre
@@ -936,7 +935,7 @@ git commit -m "baseline"</code></pre>
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>
       <tr><td class="k" data-label="Sintomo">Il pulsante della cartella è ambra</td><td data-label="Causa e rimedio">Il browser ha lasciato scadere il permesso sul filesystem. Un click lo ripristina; non si apre nessun selettore di file.</td></tr>
-      <tr><td class="k" data-label="Sintomo">I pulsanti Zoho sono disattivati</td><td data-label="Causa e rimedio">O non c'è <em>nessuna</em> scheda Zoho CRM aperta, oppure quella che il pannello ha risolto è su un'org diversa dal workspace selezionato. La barra in alto dice quale delle due. <b>Non deve essere la scheda che hai davanti</b>: quando non lo è, la barra la segna come <b>not in front</b> e nomina l'org che ha letto, così vedi che non è quella sullo schermo. Tutto ciò che legge il mirror - gli elenchi, la ricerca, i diagrammi, gli export, l'assistente - continua a funzionare anche senza nessuna scheda, perché sono file locali. Se la scheda su cui sei è di Zoho Analytics, il pannello lo dice e indica Zoost Analytics, che la legge - Chrome non permette a un'estensione di aprirne un'altra, quindi la apri tu dalla barra.</td></tr>
+      <tr><td class="k" data-label="Sintomo">I pulsanti Zoho sono disattivati</td><td data-label="Causa e rimedio">O non c'è <em>nessuna</em> scheda Zoho CRM aperta, oppure quella che il pannello ha risolto è su un'org diversa dal workspace selezionato. La barra in alto dice quale delle due. <b>Non deve essere la scheda che hai davanti</b>: quando non lo è, la barra la segna come <b>not in front</b> e nomina l'org che ha letto, così vedi che non è quella sullo schermo. <b class="ui">Open Zoho CRM ↗</b>, in quella barra, apre una scheda sul workspace in cui sei - sua istanza e suo ambiente, sandbox compresa. Tutto ciò che legge il mirror - gli elenchi, la ricerca, i diagrammi, gli export, l'assistente - continua a funzionare anche senza nessuna scheda, perché sono file locali. Se la scheda su cui sei è di Zoho Analytics, il pannello lo dice e indica Zoost Analytics, che la legge - Chrome non permette a un'estensione di aprirne un'altra, quindi la apri tu dalla barra.</td></tr>
       <tr><td class="k" data-label="Sintomo">Niente related list / nessuna matrice dei layout</td><td data-label="Causa e rimedio">Quel workspace è stato scaricato prima che esistessero. Rifai <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> e riapri il diagramma.</td></tr>
       <tr><td class="k" data-label="Sintomo">La scheda Connections è vuota</td><td data-label="Causa e rimedio">Il catalogo arriva con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (o con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> nella scheda Connections). Serve una scheda Zoho attiva e corrispondente.</td></tr>
       <tr><td class="k" data-label="Sintomo">Un modulo non ha campi e ha un <b>⊘</b> grigio</td><td data-label="Causa e rimedio">Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti. Il pannello riporta la risposta di Zoho e il giorno in cui è stata chiesta, e gli export portano la stessa nota, perché una sezione con tre tabelle vuote e nessuna spiegazione si legge come un modulo che non contiene niente. Rifare il pull richiede di nuovo, il che ha senso se nel frattempo il modulo è stato reso visibile; cambiare la risposta non è in potere di Zoost. Quel modulo non ha il pulsante del diagramma ER e non si può nemmeno aprire nella finestra del diagramma: non c'è niente da disegnare, e un diagramma vuoto si leggerebbe come «questo non è in relazione con niente».</td></tr>

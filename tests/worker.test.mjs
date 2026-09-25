@@ -818,7 +818,7 @@ test('the report page is English only, and nothing points at a translation of it
   // exists because the opposite is a href away, and a link to a page that does not exist answers 404.
   assert.ok(!existsSync(new URL('../site/it/report.html', import.meta.url)),
     'site/it/report.html is back - it was removed on purpose, one page or two is a decision');
-  for (const f of listPages().concat(['site/report.js', 'apps/crm/sidepanel.js', 'apps/analytics/sidepanel.js'])) {
+  for (const f of listPages().concat(['site/report.js', 'apps/crm/workbench.js', 'apps/analytics/workbench.js'])) {
     assert.ok(!read(f).includes('/it/report'), `id=${f} points at a page that does not exist`);
   }
 });

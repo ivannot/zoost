@@ -106,15 +106,7 @@ Its single purpose is comprehension and versioning of a Zoho Analytics workspace
 
 ---
 
-## 5. sidePanel justification (max 1000)
-
-```
-The extension's entire interface is a side panel shown beside the Zoho Analytics tab. The panel has to stay visible while the user navigates Zoho Analytics, because the workspace it acts on is whichever one the active tab is in - the panel reads the workspace id from the tab's URL and disables every Zoho-bound action when the tab moves to a different workspace. A popup, which closes on every click, cannot do that. No other surface is used.
-```
-
----
-
-## 6. storage justification (max 1000)
+## 5. storage justification (max 1000)
 
 ```
 chrome.storage.local holds the user's own settings, on their machine only: the AI provider, model name and API key, the agent's tool-step limit, the diagram layout defaults, the fallback Zoho data centre, the saved search patterns (named regular expressions the search box offers), and the sample workspace's id, so the panel can offer to open it before it may read the folder. The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256).
@@ -126,10 +118,10 @@ No workspace content is stored there. The mirror is written to the folder the us
 
 ---
 
-## 7. scripting justification (max 1000)
+## 6. scripting justification (max 1000)
 
 ```
-The extension reads the workspace through Zoho Analytics' own endpoints, which are only reachable from a page on the Zoho Analytics origin with the user's session cookies. A content script on that origin performs those authenticated reads and hands the results to the side panel.
+The extension reads the workspace through Zoho Analytics' own endpoints, which are only reachable from a page on the Zoho Analytics origin with the user's session cookies. A content script on that origin performs those reads and hands the results to the extension.
 
 chrome.scripting injects this extension's own code, never remote code, and only into the manifest's hosts.
 
@@ -144,7 +136,7 @@ Nothing outside this package is injected, and no site outside the manifest's hos
 
 ---
 
-## 8. tabs justification (max 1000)
+## 7. tabs justification (max 1000)
 
 ```
 The panel needs to know which Zoho Analytics workspace the active tab is looking at, because that is what identifies the workspace being mirrored - Zoho Analytics puts the workspace id in the URL. It reads the active tab's URL to establish that, to detect when the user moves to a different workspace so it can disable actions that would otherwise mix two workspaces, and to send messages to the content script on that tab.
@@ -154,7 +146,7 @@ It also reads the active tab's URL to recognise when that tab belongs to Zoho CR
 
 ---
 
-## 9. Host permission justification (max 1000)
+## 8. Host permission justification (max 1000)
 
 ```
 The Zoho Analytics hosts in the manifest: the analytics.* domain of every data centre, and the two suite shells. The extension reads the workspace's structure from Zoho Analytics' own endpoints, on whichever data centre the account is on - it cannot know which in advance. The shells are not read: they are named so the panel can find the frame with the workspace in it.
@@ -168,7 +160,7 @@ No other host is requested, and none of these are contacted unless the user acts
 
 ---
 
-## 10. Data disclosures (dashboard checkboxes)
+## 9. Data disclosures (dashboard checkboxes)
 
 | Category | Collected? | Notes |
 |---|---|---|

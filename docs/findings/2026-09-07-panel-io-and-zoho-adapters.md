@@ -2,7 +2,7 @@
 
 ## What was concentrated
 
-The CRM panel still implemented three independent boundaries inside `sidepanel.js`: workspace file
+The CRM panel still implemented three independent boundaries inside `workbench.js`: workspace file
 access, Chrome tab/frame discovery and Zoho-page navigation. Each boundary mixed long-lived panel
 state with mechanics that have their own invariants. The same filesystem mechanics were also copied
 inside Analytics.
@@ -25,14 +25,14 @@ bounded bridge injection and message transport. It receives the mismatch policy,
 and reply validation from the panel. `zoho-navigation.js` owns URL construction, the manifest-derived
 host allow-list and frame-aware navigation with the existing tab fallback.
 
-The shipped page loads these readable classic scripts before `sidepanel.js`; there is no dependency,
+The shipped page loads these readable classic scripts before `workbench.js`; there is no dependency,
 bundler or generated runtime. The panel tests execute the adapter factories with refusing filesystem
 handles, multi-frame tabs, missing frames and hostile destinations rather than requiring the logic to
-remain physically inside `sidepanel.js`.
+remain physically inside `workbench.js`.
 
 ## Measured result
 
-CRM `sidepanel.js` fell from 7,016 to 6,639 lines in this pass (471 lines below the 7,110-line point
+CRM `workbench.js` fell from 7,016 to 6,639 lines in this pass (471 lines below the 7,110-line point
 before the preceding pull-controller extraction). Analytics fell from 3,416 to 3,338 lines. The
 important reduction is four boundary responsibilities removed from the CRM orchestrator, not the
 number of files created.

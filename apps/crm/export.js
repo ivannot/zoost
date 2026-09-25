@@ -1,10 +1,10 @@
 /*
  * export.js - the two self-contained reports, whole: the shared CSS, every section builder, and the
- * writers for HTML and Markdown. The second slice of splitting sidepanel.js, cut on the same rule as
+ * writers for HTML and Markdown. The second slice of splitting workbench.js, cut on the same rule as
  * ai.js: a block the rest of the panel reaches through two names (exportHtml, exportMarkdown) and
  * that reaches the rest through the loaders and beginWorkspaceOp.
  *
- * A classic script loaded BEFORE sidepanel.js, declarations only - same contract as ai.js, proven
+ * A classic script loaded BEFORE workbench.js, declarations only - same contract as ai.js, proven
  * the same way, by executing the file in an empty scope.
  */
 

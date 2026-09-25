@@ -435,7 +435,7 @@ test('a failed unlock says so beside the field, not only in the status bar', () 
   // next to that field; the status line is a second copy, not the only one.
   for (const app of ['crm', 'analytics']) {
     const js = panelSrc(app);
-    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.html'), 'utf8');
     assert.match(html, /id="ailockmsg"/, `${app}: no message element inside the unlock row`);
     assert.match(js, /function aiLockMsg\(text\)/, `${app}: aiLockMsg() is gone`);
     // Sliced per branch, not across the function: `[\s\S]*` reaching the success path's aiLockMsg('')
@@ -491,21 +491,21 @@ test('the footer is outside the container the AI view covers', () => {
 // The panel scripts share one classic scope, so a test about «the panel» reads them composed.
 function panelSrc(app) {
   // Derived from the page: the HTML is the authority on what composes a panel.
-  const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.html'), 'utf8');
   const parts = [...html.matchAll(/<script\s+src="([^"]+\.js)"><\/script>/g)]
     .map((m) => m[1]).filter((f) => !/(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$/.test(f))
     .map((f) => { try { return fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8'); } catch { return ''; } });
   return parts.join('\n');
 }
 function panelPage(app) {
-  const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
-  const css = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.css'), 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.html'), 'utf8');
+  const css = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.css'), 'utf8');
   return html + '\n' + css;
 }
 function errText(app) {
-  // The CRM's assistant lives in ai.js since the panel was split; MSG stays in sidepanel.js. The
+  // The CRM's assistant lives in ai.js since the panel was split; MSG stays in workbench.js. The
   // search covers both files so the twin that has not been split reads exactly as before.
-  const files = ['ai.js', 'sidepanel.js']
+  const files = ['ai.js', 'workbench.js']
     .map((f) => { try { return fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8'); } catch { return ''; } });
   const src = files.find((t) => t.includes('function friendlyError(e)')) || '';
   const msgSrc = files.find((t) => /\nconst MSG = \{/.test(t)) || '';
@@ -596,7 +596,7 @@ test('the glyph for Clear is not the glyph for Refresh', () => {
   // ↺ and ↻ differ only in the direction of the arrow, at 11px, in a narrow bar. The rotational glyph
   // belongs to "reload"; a second meaning for it is worse than no glyph, so Clear lost its own.
   for (const app of ['crm', 'analytics']) {
-    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.html'), 'utf8');
     assert.ok(!html.includes('\u21ba'), `${app}: ↺ is back next to ↻`);
     assert.ok(html.includes('\u21bb'), `${app}: Refresh has lost its glyph`);
   }
@@ -620,7 +620,7 @@ test('the way out of a lost passphrase is offered in every state where one exist
 test('every message about a lost passphrase names the control that exists', () => {
   // The messages pointed at "Forget", which is the per-provider button and only half the sequence.
   for (const app of ['crm', 'analytics']) {
-    for (const f of ['options.js', 'sidepanel.js']) {
+    for (const f of ['options.js', 'workbench.js']) {
       const src = fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8');
       assert.ok(!src.includes('press Forget above'), `${app}/${f}: still sends the user round the old sequence`);
     }

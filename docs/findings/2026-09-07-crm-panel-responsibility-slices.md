@@ -2,7 +2,7 @@
 
 ## What remained concentrated
 
-After the I/O and Zoho adapters were extracted, `apps/crm/sidepanel.js` still owned three complete
+After the I/O and Zoho adapters were extracted, `apps/crm/workbench.js` still owned three complete
 subsystems that did not belong to its composition role: the working-folder/workspace lifecycle, the
 live-page reconciliation state machine, and the persisted export-scope dialog. Their state and
 handlers were interleaved with function browsing and pull composition, leaving the file at 6,639
@@ -24,20 +24,20 @@ construction and writing. The first attempt placed both responsibilities in `exp
 late-global checker rejected that boundary, and the policy/UI code was separated rather than
 weakening the checker.
 
-The panel test harness now resolves historical `sidepanel.js` subjects against the scripts actually
-loaded by `sidepanel.html`. A moved subject still fails when absent from the composed application,
+The panel test harness now resolves historical `workbench.js` subjects against the scripts actually
+loaded by `workbench.html`. A moved subject still fails when absent from the composed application,
 but changing its file no longer turns a behavioural test into a file-layout test.
 
 ## Measured result
 
-CRM `sidepanel.js` fell from 6,639 to 4,968 lines in this tranche: 1,671 lines removed from the
+CRM `workbench.js` fell from 6,639 to 4,968 lines in this tranche: 1,671 lines removed from the
 composition root, and 2,142 below the 7,110-line baseline before the pull-controller work. The
 extension still ships readable classic JavaScript with no dependency, bundler or generated runtime.
 
 The application now has 36 CRM JavaScript files and 24 Analytics files. The public verification
 pages and the Italian translations derive and state those counts. The panel suite passes all 851
 cases, including composed-script evaluation and the workspace/pull race cases. The browser probe
-initially caught an extracted controller starting its remembered-sample read before `sidepanel.js`
+initially caught an extracted controller starting its remembered-sample read before `workbench.js`
 had declared the shared workspace state. Startup was moved back to the composition root, as were the
 eight DOM bindings, and the fixture shim is now inserted after `idb.js` rather than immediately
 before the historically monolithic file. All six driven CRM/Analytics panel and diagram paths then

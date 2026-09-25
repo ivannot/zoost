@@ -21,7 +21,7 @@
  * every record carries the keys the pull writes - `nameSpace` with a capital S, `rest_api` rather
  * than a boolean `rest`, `sv: 2` and not 3, connections as objects. The first version guessed, and
  * the panel answered with `wfIdx is not iterable`, `idx.map is not a function`, no connections and a
- * broken export. Derive a shape from the writer in content-bridge.js and the reader in sidepanel.js,
+ * broken export. Derive a shape from the writer in content-bridge.js and the reader in workbench.js,
  * never from what looks reasonable.
  *
  * A DELUGE NAMESPACE IS NOT FREE. `CALL_RE` in graph-core.js matches `<namespace>.<name>(` for

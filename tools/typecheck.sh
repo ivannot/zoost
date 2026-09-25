@@ -23,7 +23,7 @@ ANALYTICS_BOUNDARY=(
 )
 ANALYTICS_DOM_ONLY=(
   ai.js background.js export.js graphlogic.js graphview.js health.js highlight.js options.js
-  overview-view.js product-help.js report.js reportshell.js sample-org.js sidepanel.js
+  overview-view.js product-help.js report.js reportshell.js sample-org.js workbench.js
 )
 
 for app in crm analytics; do

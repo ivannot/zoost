@@ -175,6 +175,7 @@
           second before it has permission to look in the folder. Two smaller ones with no bearing on
           anything: how tall - or, when the panel is wide enough to put them side by side, how wide - you
           dragged the preview and detail panes, whether you folded the workspace and tools rows away,
+          where you last put the Zoost window and how big you made it,
           and a timestamp the settings page writes when you save, so an open panel knows to re-read
           rather than poll.</td>
         <td data-label="Why">Settings must survive a browser restart.</td>
@@ -281,7 +282,7 @@
     it describes.</p>
 
   <h2>5. Permissions, and why each one exists</h2>
-  <p>Both extensions request the same four API permissions - <code>sidePanel</code>,
+  <p>Both extensions request the same three API permissions -
     <code>storage</code>, <code>scripting</code> and <code>tabs</code> - for the same reasons. They
     differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data
     centres, the Zoho Analytics one the Zoho Analytics data centres, and <em>both</em> list the two
@@ -289,7 +290,6 @@
     <code>api.anthropic.com</code> and <code>api.openai.com</code>, used only by the optional
     assistant and only if you configure it.</p>
   <ul>
-    <li><code>sidePanel</code> - the extension's interface is a Chrome side panel.</li>
     <li><code>storage</code> - to keep your settings, as described above.</li>
     <li><code>scripting</code> - to inject the bridge script that talks to the Zoho API using your
       session; in Zoost CRM also the hook that notices when you save a function, so the local copy

@@ -1,7 +1,7 @@
 /*
  * export.js - Analytics HTML and Markdown report builders and their file writers.
  *
- * A classic script loaded before sidepanel.js. Report data still comes through the panel's local
+ * A classic script loaded before workbench.js. Report data still comes through the panel's local
  * mirror adapters; this file owns only assembly and export behaviour.
  */
 // ---------- export ----------

@@ -278,7 +278,7 @@ say so.
 
 **Function meta carries a schema version (`sv`), and old copies backfill themselves.** When the pull
 starts capturing a new field (e.g. `connections`, `modified_by` in 1.2.0), bump `sv` in
-`content-bridge.js` `toFile()` and in `META_SV` in `sidepanel.js`. Functions on disk below `META_SV`
+`content-bridge.js` `toFile()` and in `META_SV` in `workbench.js`. Functions on disk below `META_SV`
 render as **stale** (amber ◐ dot) and are folded into the "Complete missing / Refresh outdated"
 flow, so existing workspaces top up the new fields with one click instead of a full re-download.
 This is how you evolve the captured data without orphaning already-pulled workspaces.

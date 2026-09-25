@@ -243,7 +243,8 @@ extension message bus and the real folder-permission lifetime remain outside aut
 1. Open `chrome://extensions`, enable **Developer mode**.
 2. **Load unpacked** → select **`apps/crm`**, not the repository root. Each extension lives in its
    own folder under `apps/` and is loaded separately.
-3. Open Zoho CRM in a tab, then open the extension's **side panel**.
+3. Open Zoho CRM in a tab, then click the extension's icon: Zoost opens in **its own window**,
+   which you can move to a second monitor and resize.
 
 ## Quick start
 
@@ -403,7 +404,6 @@ The first two restate what Manifest V3 enforces anyway; the last two are stricte
 free, because nothing shipped uses a form or a `<base>`. It is written down because every other
 security property here is.
 
-- `sidePanel` - the entire UI is a Chrome side panel.
 - `storage` - persist the workspace list/binding, generated graph data, and AI settings locally.
 - `scripting` - inject the extension's own content scripts into an already-open Zoho tab if
   missing (e.g. after an update).
@@ -421,8 +421,8 @@ security property here is.
   takes the CSRF token with a different prefix), and each function's `associated_place`.
 - Auth = your session cookies + `X-ZCSRF-TOKEN` (from the page's CSRF cookie), scoped per host.
 - `hook.js` (MAIN world) detects save PUTs; `content-bridge.js` (ISOLATED world) performs the
-  authenticated fetches; the side panel owns the filesystem, the graph, the health engine, the
-  exports and the AI agent. Content scripts are auto-injected if missing.
+  authenticated fetches; the workbench window owns the filesystem, the graph, the health engine,
+  the exports and the AI agent. Content scripts are auto-injected if missing.
 
 ---
 

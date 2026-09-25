@@ -14,7 +14,7 @@ async function sendGraphWhenBuilt(kind, token, sendResponse) {
 /** What the panel does with a message from the content bridge or the diagram window.
  *
  *  **Declared here, registered by the composition root.** This file is loaded four scripts
- *  before `sidepanel.js`, and it used to call `addListener` at load time - so a `saved`,
+ *  before `workbench.js`, and it used to call `addListener` at load time - so a `saved`,
  *  `created`, `deleted` or `pullProgress` arriving in that window ran a handler whose
  *  `pullActive` and `beginWorkspaceOp` are lexical globals still in the temporal dead zone,
  *  and threw inside the listener where nobody sees it. No sender exists in those few

@@ -106,7 +106,7 @@
 
   <h2 id="first-run">2. First run</h2>
   <ol>
-    <li>Open a Zoho CRM tab and open the Zoost side panel (the extension icon).</li>
+    <li>Open a Zoho CRM tab and click the Zoost icon: it opens in its own window, which you can move and resize.</li>
     <li>Click <b class="ui">+ Workspace</b>. If this is the first run, the same action asks you for a
       <b>dedicated, empty working folder</b>, such as <code>~/Documents/Zoost</code>, then continues.
       <b class="ui">📁 Set working folder…</b> changes it later.</li>
@@ -236,9 +236,8 @@ git commit -m "baseline"</code></pre>
   <p>The mode segments switch what the tree lists: <b class="ui">Functions</b>, <b class="ui">Modules</b>,
     <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Actions</b>,
     <b class="ui">Connections</b>. Select an item and
-    the preview opens - <b>below the list, or beside it when the panel is wide enough</b>. Chrome lets
-    you drag a side panel out to two thirds of the window; give it that room and the list and the
-    preview sit side by side, which is where a long function stops being read through a slot. Drag the
+    the preview opens - <b>below the list, or beside it when the panel is wide enough</b>. Make the
+    window wide enough and the list and the preview sit side by side, which is where a long function stops being read through a slot. Drag the
     bar between them to resize, and the two sizes are remembered apart: how tall you want the code in a
     narrow panel is not how wide you want it in a broad one.</p>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10.5 8 5.5l5 5"/></svg> Fold the workspace and tools rows away</b>, at the <b>top right of the panel</b>, does what it says: the working folder,
@@ -517,7 +516,7 @@ git commit -m "baseline"</code></pre>
   </div>
   <p>Two places give it to you:</p>
   <ul>
-    <li><b>The module preview</b>, in the side panel. Its detail has <b class="ui">Fields</b>, <b class="ui">Related lists</b>,
+    <li><b>The module preview</b>, in the workbench. Its detail has <b class="ui">Fields</b>, <b class="ui">Related lists</b>,
       <b class="ui">Details</b> and, where the module has them, <b class="ui">Pipelines</b> and
       <b class="ui">Buttons</b>. Click an API name to copy it.</li>
     <li><b class="ui">Buttons</b> lists the custom buttons on the module - what each one runs, where it
@@ -827,7 +826,7 @@ git commit -m "baseline"</code></pre>
     inside the file, not in the folder name.</p>
 
   <h2 id="goes-wrong">14. When something goes wrong</h2>
-  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Switch tab → «instance» ↗</b> takes the tab to the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
+  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Open «instance» ↗</b> takes the tab to the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
   <p><b>With no Zoho CRM tab at all</b> the panel says so over the whole workbench and offers
     <b class="ui">Go to Zoho CRM ↗</b>. That opens your Zoho CRM home - the account's, not a
     particular org's - which is the right button after signing out of one org to sign into another.
@@ -855,7 +854,7 @@ git commit -m "baseline"</code></pre>
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
       <tr><td class="k" data-label="Symptom">Folder button is amber</td><td data-label="Cause and fix">The browser dropped the file-system permission. One click restores it; no file picker opens.</td></tr>
-      <tr><td class="k" data-label="Symptom">The Zoho buttons are disabled</td><td data-label="Cause and fix">Either no Zoho CRM tab is open <em>anywhere</em>, or the one it resolved is on a different org from the selected workspace. The bar at the top says which. <b>The tab does not have to be the one you are looking at</b>: when it is not, the bar marks it <b>not in front</b> and names the org it read, so you can see it is not the tab on screen. Everything that reads the mirror - the lists, the search, the diagrams, the exports, the assistant - keeps working with no tab at all, because those are local files. If the tab you are on is Zoho Analytics, the panel says so and points at Zoost Analytics, which reads it - Chrome does not let one extension open another, so you open it from the toolbar.</td></tr>
+      <tr><td class="k" data-label="Symptom">The Zoho buttons are disabled</td><td data-label="Cause and fix">Either no Zoho CRM tab is open <em>anywhere</em>, or the one it resolved is on a different org from the selected workspace. The bar at the top says which. <b>The tab does not have to be the one you are looking at</b>: when it is not, the bar marks it <b>not in front</b> and names the org it read, so you can see it is not the tab on screen. <b class="ui">Open Zoho CRM ↗</b>, in that bar, opens a tab for the workspace you are in - its own instance and its own environment, sandbox included. Everything that reads the mirror - the lists, the search, the diagrams, the exports, the assistant - keeps working with no tab at all, because those are local files. If the tab you are on is Zoho Analytics, the panel says so and points at Zoost Analytics, which reads it - Chrome does not let one extension open another, so you open it from the toolbar.</td></tr>
       <tr><td class="k" data-label="Symptom">No related lists / no layout matrix</td><td data-label="Cause and fix">That workspace was pulled before those existed. Run <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> again and reopen the diagram.</td></tr>
       <tr><td class="k" data-label="Symptom">Connections tab is empty</td><td data-label="Cause and fix">The catalogue arrives with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (or <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> in the Connections tab). It needs an active, matching Zoho tab.</td></tr>
       <tr><td class="k" data-label="Symptom">A module shows no fields and a grey <b>⊘</b></td><td data-label="Cause and fix">Zoho refused to describe it - usually because the module is hidden in that org - so its fields, layouts and related lists were never read. The panel quotes what Zoho answered and the day it was asked, and the exports carry the same note, because a section with three empty tables and no reason reads as a module with nothing in it. Pulling again re-asks, which is worth doing if the module has since been unhidden; nothing in Zoost can change the answer. That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".</td></tr>
