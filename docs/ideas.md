@@ -162,3 +162,67 @@ decides which of the two it is.
 
 **State:** open, not scheduled. Nothing on the listing is wrong, so this waits behind anything a
 user can see.
+
+---
+
+## Zoost outside Chrome: a desktop app that embeds the browser
+
+**Raised** 25 September 2026 by the author, as a fantasy rather than a plan, and from a real
+complaint: the product is good and its limit is usability, because it lives in a side panel and
+sometimes there is not enough room. The shape imagined: a desktop app for Mac and Windows that
+embeds a browser, with the Zoho page in the background and Zoost in front - a browser that exists
+only to visit Zoho.
+
+**What actually binds this product to Chrome**, in increasing order of difficulty:
+
+- **Where the panel sits** (`sidePanel`). Placement, nothing else.
+- **The mirror on disk** (File System Access, persisted handles, the permission that lapses between
+  sessions). Native makes this *vanish* rather than easier: direct file system, no handles, no
+  «grant access again», and with it goes a class of defects and one of the manual checks.
+- **The authentication, which decides the whole question.** Zoost never logs in. It reads the org
+  and user id out of the page and **borrows the session of the Zoho tab you already have open** -
+  the CSRF tokens come from cookies (`CT_CSRF_TOKEN`, `crmcsr`, `drecn`) and the requests go out
+  with that session. It is authenticated because *you* are, in that browser. A native app can only
+  reproduce that by embedding a real browser you log into.
+
+**The fast road is Electron**, and not out of habit: Electron *is* Chromium. The panel - 40k lines
+of JavaScript with no framework and no build step - ports nearly as it stands; the Zoho view becomes
+a `BrowserView` in a persistent partition, which is a profile with its own cookies; the bridge
+becomes a preload in the same model as today; cross-origin calls leave from the main process, where
+CORS does not apply. Tauri is the elegant answer and the wrong one here: it uses the system webview,
+so Chromium on Windows and Safari on macOS - two engines under the part that borrows another page's
+tokens, which is the twin divergence this repository already pays for, multiplied by two operating
+systems.
+
+**What it would cost, and the expensive half is not the code:**
+
+- **Distribution.** No Web Store: an Apple Developer ID with notarization, a Windows code-signing
+  certificate (without one, SmartScreen treats the installer as suspect for months), an update
+  server, and the release chain - reproducible build, Release asset, signed attestation - redesigned
+  for two installers instead of one zip. These are recurring costs.
+- **The trust posture inverts.** Today the pitch is readable source, minimal permissions all visible
+  in the manifest, no write path to Zoho, and it never sees a password because it rides a session it
+  did not create. An app that embeds a browser is an app you **log into**: it holds the Zoho session,
+  and what is being asked of the user changes category. That is not a technical obstacle, it is the
+  selling argument turning around.
+- **Three products, not one.** The extension cannot be withdrawn - it is published and has users -
+  so a desktop app is added to the two, not substituted for them. This is the same arithmetic the
+  «one extension instead of two» entry above gets wrong if read hopefully.
+
+**What it would buy, beyond the room:** one codebase and one release chain for both products, which
+is exactly what that other entry wants and cannot have without asking the whole installed base to
+re-authorise.
+
+**The recommendation, and the order matters.** Separate the *problem* from the *fantasy*. The
+problem is room, and the cure for it is half-built already: detached windows exist here (the graph,
+the exports, the report all open 1240px windows). A persistent detached panel, or a full-tab mode,
+costs days rather than months and must be measured **first** - if it settles the usability, the
+desktop app becomes something done because it is wanted, not because it is needed.
+
+If it is still wanted, the first step is not architecture but **one probe**, as the standing rule
+demands: a minimal Electron shell, a `BrowserView` on Zoho, a login by hand, and the bridge reading
+the CSRF and making one call that works today. A day of work, and it answers the only question the
+rest depends on. **Everything written above about the third binding is reasoning, not measurement**,
+and stays that way until that probe runs.
+
+**State:** open. Worth a day of probing before it is worth an hour of planning.
