@@ -203,14 +203,35 @@ async function refreshContext() {
   // is true *for them* is that nothing is open for the workspace they are working in, so that is
   // what the line says, and the bar stays down.
   const behindAndWrong = !activeId && !!bound && !isSample() && !guardOk();
-  const behind = !activeId ? '<span class="rlbl remote">not in front</span>' : '';
+  // **One thing when there is one thing to say.** Reported as unreadable, and the count was the
+  // reason: a dot, two uppercase chips, two instance names, two eleven-digit org ids, two
+  // environments and a tick - ten facts on one line, and when the two sides agreed it said the same
+  // thing twice. Reported as: plenty of information, certainly all of it useful, and unreadable.
+  //
+  // So the tab half is drawn **only when it differs from the workspace**, which is the only case
+  // where two names carry two facts. The org ids leave the line for the tooltip: eleven digits are
+  // for verifying, never for glancing, and the same move took the publish word out of the function
+  // list an hour ago.
+  const tabTitle = `Zoho CRM tab: ${lastCtx.instance || '?'} \u00b7 org ${lastCtx.org || '?'} \u00b7 ${envOf(lastCtx.origin)}`;
+  const tabHalf = `<span class="rlbl remote">Tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>(${envOf(lastCtx.origin)})</span>`;
+  const behind = !activeId ? '<span class="rlbl remote spaced">not in front</span>' : '';
   who.innerHTML = behindAndWrong
     ? escHtml(MSG.noTabForWorkspace(wsShown(bound)))
-    : `<span class="rlbl remote">Zoho CRM tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>${behind}`;
+    : (bound && guardOk() && !isSample()
+        // Agreeing, so the workspace half says it alone and this one is the marker and nothing else.
+        ? behind
+        : `<span title="${escA(tabTitle)}">${tabHalf}${isSample() ? '<span> \u00b7 not related to the sample</span>' : ''}</span>${behind}`);
+  who.title = tabTitle;
+  // The workspace half, in the same words as the tab half - name, then environment in brackets -
+  // because two facts of the same kind written two different ways are two things to learn. The org
+  // id and the folder go to the tooltip, where a number that is checked rather than read belongs.
+  const wsTitle = bound ? `Workspace: ${bound.instance || '?'} \u00b7 org ${bound.org} \u00b7 ${envOf(bound.base)}` : '';
+  const wsHalf = bound ? `<b>${escHtml(bound.instance || '?')}</b> <span>(${envOf(bound.base)})</span>` : '';
+  bnd.title = wsTitle;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
-  else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
+  else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${wsHalf} <span class="ok">\u2713</span>`; }
   else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = SAMPLE_CHIP; }
-  else { ctxEl.className = 'mismatch'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>≠ ${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✗`; }
+  else { ctxEl.className = 'mismatch'; bnd.innerHTML = `<span class="neq">\u2260</span><span class="rlbl local">Workspace</span>${wsHalf}`; }
   // The discrepancy is stated in both cases, and the sample is one of them. Suppressing the bar for
   // it was wrong: reading invented data while looking at a real org is exactly what this bar is for,
   // and one muted line in the workspace half is too quiet to carry it. Reported.

@@ -1218,8 +1218,12 @@ async function refreshContext() {
   // carries an invented workspace id, so every reader of this - including the off-platform branch,
   // which is the only surface that speaks while a sample is open - would otherwise dress invented
   // data as a live binding.
+  // **One thing when there is one thing to say** - see the twin's note. The workspace id leaves the
+  // line for the tooltip: a number that is checked rather than read does not belong where the eye
+  // lands, and the two halves now use the same shape, name then the rest in brackets.
+  const wsTitle = bound ? `Workspace: ${bound.name || bound.workspace} \u00b7 ${bound.workspace}` : '';
   const localLbl = isSample() ? SAMPLE_CHIP : (bound
-    ? `<span class="rlbl local">Workspace</span>«${esc(bound.name || bound.workspace)}» ${esc(bound.workspace)}`
+    ? `<span class="rlbl local">Workspace</span><b>${esc(bound.name || bound.workspace)}</b>`
     : '<span class="rlbl local">Workspace</span><span>not bound yet</span>');
 
   if (id == null) {                                  // the ACTIVE tab is not Analytics
@@ -1286,22 +1290,26 @@ async function refreshContext() {
     // the widening, paid here rather than skipped: the protection against mixing two workspaces
     // used to rest on the one being read being in front of the reader. It rests on the match now,
     // checked by the page itself, so the panel has to say which one it resolved.
-    const behind = !activeId ? '<span class="rlbl remote">not in front</span>' : '';
+    const behind = !activeId ? '<span class="rlbl remote spaced">not in front</span>' : '';
     // **And when the tab it resolved is neither in front nor the right one, it says that in the
     // reader's terms and not in its own** - see the twin's note. Standing on a tab that has nothing
     // to do with Zoho, an amber bar accusing a background tab is a sentence about a relationship the
     // reader never agreed to; what is true for them is that nothing is open for the workspace they
     // are working in.
     const behindAndWrong = !activeId && !!bound && !isSample() && !guardOk();
+    // The tab half is drawn only when it differs from the workspace: agreeing, it said the same
+    // thing twice, which is half of what made this line unreadable.
     who.innerHTML = behindAndWrong
       ? esc(MSG.noTabForWorkspace(wsShown(bound)))
-      : `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> · not related to the sample</span>' : ''}${behind}`;
+      : (bound && guardOk() && !isSample()
+          ? behind
+          : `<span class="rlbl remote">Tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> \u00b7 not related to the sample</span>' : ''}${behind}`);
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
-    else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
+    else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' <span class="ok">\u2713</span>'; bnd.title = wsTitle; }
     // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never
     // will. It says what it is instead.
     else if (isSample()) { el.className = 'unbound'; bnd.innerHTML = SAMPLE_CHIP; }
-    else { el.className = 'mismatch'; bnd.innerHTML = localLbl + ' ✗'; }
+    else { el.className = 'mismatch'; bnd.innerHTML = '<span class="neq">\u2260</span>' + localLbl; bnd.title = wsTitle; }
   }
 
   // The mismatch bar offers the one action that resolves it, and the overlay makes it impossible to

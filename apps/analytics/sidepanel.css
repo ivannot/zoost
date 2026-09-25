@@ -101,6 +101,12 @@
   #ctx .who b{color:var(--ink)} #ctx .who span{color:var(--muted)}
   #ctx .bound{margin-left:auto;color:var(--muted);font:11px var(--mono);white-space:nowrap}
   #ctx.mismatch .bound{color:var(--bad)}
+  /* A chip that follows text needs air on its left: `.rlbl` only ever had it on the right, because
+     until now every one of them opened a line. Reported. */
+  .rlbl.spaced{margin-left:7px}
+  /* The relation between the two halves, which is the one thing on this line worth seeing first. */
+  #ctx .ok{color:var(--ok)}
+  #ctx .neq{color:var(--bad);font-weight:700;margin-right:6px}
   .rlbl{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:middle}
   .rlbl.remote{background:#1e3a5f;color:#8ec5ff}
   .rlbl.local{background:#2a2140;color:#c9b3ff}
