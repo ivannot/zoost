@@ -328,3 +328,46 @@ because the page has already loaded. `nameMode`, `MSG`, `esc`, `escA`, `$`, `ren
 `drawMax` and the rest were found by a derivation over every top-level binding, not by reading; the
 first version of that derivation read only the first name in a comma list and missed the one that
 actually broke the page.
+
+---
+
+## A Zoost handle injected into the Zoho page
+
+**Raised** 25 September 2026 by the author: extensions can inject into a page, so put a Zoost mark
+inside Zoho - the CRM one on a CRM URL, the Analytics one on an Analytics URL - draggable and
+dismissible, so the reader decides whether to see it at all.
+
+**It is cheap, and that is not the question.** Both products already inject `content-bridge.js` into
+those hosts, so the handle needs no new permission, no new host and no re-authorisation. Opening the
+window from it is one message to the service worker, which already answers exactly that ask - it is
+how Chrome's own «Options» entry reaches the settings view.
+
+**What it costs is the posture, and that is the argument against.** Everything this product says
+about itself is that it *reads* the platform: «no write path to Zoho», «no synthetic clicks into a
+DOM contract we do not own», a content script that observes and answers. A floating control is a
+visible write into somebody else's page. It does not touch a record and it does not weaken the
+bridge - but the sentence «Zoost never changes anything in Zoho» stops being simply true, and the
+first person to test it is the approver reading the listing with the page open beside it. This
+project has already had to walk back one absolute; walking back a second, for a shortcut, is a poor
+trade.
+
+Three smaller costs, each real:
+
+- **Dismissible argues the feature away.** Once it is gone the way back is the toolbar icon - the
+  thing the handle was there to replace - so for every reader who dismisses it, the feature has
+  spent its complexity and bought nothing.
+- **Position is somebody else's problem, permanently.** Zoho moves its layout without telling us;
+  a handle that lands on their own floating controls is a defect report we cannot reproduce, and
+  «drag it out of the way» makes the reader do the fixing.
+- **It appears for every profile that has the extension**, including one used by somebody who only
+  ever opens Zoho.
+
+**The alternative that buys most of it for nothing: a keyboard shortcut.** A `commands` entry opens
+the window from anywhere, in any tab, with no DOM written and no page touched - and it is the thing
+that was lost when `_execute_side_panel` went with the panel. It costs one manifest key.
+
+**Cost:** the handle is half a day and a paragraph of store copy re-pasted by hand. The shortcut is
+an hour. They are not alternatives in effort, they are alternatives in what is being claimed.
+
+**State:** open, and recommended against in its injected form - his call, not mine. The shortcut is
+worth doing on its own merits and is not blocked by this.
