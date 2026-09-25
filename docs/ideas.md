@@ -226,3 +226,43 @@ rest depends on. **Everything written above about the third binding is reasoning
 and stays that way until that probe runs.
 
 **State:** open. Worth a day of probing before it is worth an hour of planning.
+
+---
+
+## The two other pages inline their stylesheets
+
+**Raised** 25 September 2026 by the author, reading the markup and asking why some styles are
+declared in the HTML at all when a stylesheet exists. Measured rather than argued:
+
+| page | inline CSS | selectors | also in `sidepanel.css` |
+|---|---|---|---|
+| `sidepanel.html` | none | - | links the sheet |
+| `graphview.html` | 34,228 chars | 246 | **13** |
+| `options.html` | 7,780 chars | 78 | **11** |
+
+He is right in principle and this repository already agrees with him: `csscheck` exists for the rule
+that a selector is defined in one place, it reads inline `<style>` blocks per document, and
+`tools/cssdupes.txt` records 40 known repetitions that **should shrink**. So this is recorded debt,
+not an oversight.
+
+**What makes it not a tidy-up.** Consolidating is measured to move pixels: `CLAUDE.md` records that
+merging 58 rules into the site's shared sheet shifted 5-20% of the pixels on six pages, because a
+rule that was winning by order inside its own `<style>` stops winning. It is one selector at a time
+with `tools/pngsame.py` on the before and after, not a file move.
+
+**And the target is not «one CSS file».** 233 of the graph view's 246 selectors are about a canvas,
+boxes and arcs, and have nothing to do with the panel; a shared sheet would make every page load a
+vocabulary it does not use. The shape worth having is:
+
+- a shared sheet for what is genuinely shared - the ~24 selectors above: the `:root` tokens, `body`,
+  `.mk`, `button`, `.ck`, `.chips`, `.ftbl`, `.empty`. Those are the ones that can drift, and drift
+  is the real defect: a class meaning two things depending on which page you landed on;
+- each page's own rules in its own `.css` file rather than inline - free, and it makes them greppable
+  and reachable by the same tools as everything else.
+
+**Cost:** about half a day. ~24 selectors, each with a pixel comparison across three documents. The
+payoff is measurable - the duplication ledger loses 24 of its 40 rows - and the risk is real if it is
+done quickly rather than one at a time.
+
+**State:** open, deliberately behind anything a user can feel - agreed as «not now» on the day it
+was raised, with the overlay work taking its place.
