@@ -99,6 +99,16 @@ async function refreshContext() {
   if (!current()) return;
   const zohoId = activeId || await zohoTabId();
   if (!current()) return;
+  // **Two independent facts, and they were one for an hour.** «Which tab are you looking at» decides
+  // whether the other product's mark is offered; «is there a tab of ours anywhere» decides what is
+  // enabled. Collapsing them is what the branch below used to do, and the moment the panel stopped
+  // blocking on a foreign tab the twin offer disappeared with the block - reported, and it is the
+  // feature that was asked for whole. Somebody standing on a Zoho Analytics tab is looking at Zoho
+  // Analytics whether or not a CRM tab is open two windows away, and the extension that reads what
+  // they are looking at is the other one.
+  const twin = await twinTab();
+  if (!current()) return;
+  offerCtxTwin(twin);
   if (!zohoId) {                           // no Zoho CRM tab anywhere, not just not in front
     lastCtx = null; $('mmbar').classList.remove('show'); updateWsButtons();
     // **The overlay is for having nothing to read, not for standing in the wrong place.** A mirror
@@ -123,9 +133,9 @@ async function refreshContext() {
     // **And when the tab belongs to the twin, say so and say what to do about it.** «Not on a Zoho
     // CRM tab» is true there and useless: it describes what this panel wants and not where the
     // reader is standing, which is how somebody who clicked the wrong icon is left to work it out.
-    // The URL was already being read one step earlier and thrown away; `twinTab()` keeps it.
-    const twin = await twinTab();
-    if (!current()) return;
+    // The URL was already being read one step earlier and thrown away; `twinTab()` keeps it - and it
+    // is asked above now, on every pass, because it answers a question about the tab in front rather
+    // than about this branch.
     ctxEl.className = 'offzoho';
     // With a workspace open the panel is *working*, so the line says what is off rather than where
     // the reader is standing: everything local reads, and everything Zoho-bound is disabled until a
@@ -133,8 +143,7 @@ async function refreshContext() {
     who.innerHTML = twin
       ? escHtml(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
       : (dir ? MSG.noZohoTab : 'Not on a Zoho CRM tab');
-    offerTwin(twin);
-    offerCtxTwin(twin);
+    offerTwin(twin);        // the overlay's group, which only exists on this branch
     // **A sample is never presented as a live binding.** Its `.zoho.json` carries an invented org
     // and instance, so this line read «prod «sampleorg» org 1234567890» the moment the reader left a
     // Zoho tab - invented data dressed as production, with the overlay deliberately down and nothing
@@ -145,9 +154,6 @@ async function refreshContext() {
     return;
   }
   $('offoverlay').classList.remove('show');
-  // Off the twin's tab the mark goes with it. It is drawn in the branch above and nothing
-  // else touches it, so without this it survives the return to a proper tab.
-  offerCtxTwin(null);
   await ensureBridge(zohoId);
   if (!current()) return;
   const cfid = await crmFrameId(zohoId);

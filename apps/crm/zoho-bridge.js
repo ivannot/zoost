@@ -38,12 +38,43 @@ function createCrmZohoBridge(options) {
     } catch (_) { return false; }
   }
 
+  /** Which org a candidate tab is on, or `null` when it will not say.
+   *
+   *  A named declaration and not an arrow inside the `map`: every async scope shipped here is one,
+   *  because that is the only shape `asynccheck` can read, and a scope it cannot read is a scope
+   *  nobody is checking for a global written after an await.
+   */
+  async function tabOrg(t) {
+    try {
+      const reply = await options.chromeApi.tabs.sendMessage(t.id, options.command({ cmd: 'context' }, null));
+      const ctx = reply && options.context(reply);
+      return ctx && ctx.org ? { id: t.id, ctx } : null;
+    } catch (_) { return null; }                   // no bridge in that tab, or it is asleep
+  }
+
   async function tabId() {
     const [active] = await options.chromeApi.tabs.query({ active: true, currentWindow: true });
     if (active && options.zohoHost.test(active.url || '')) return active.id;
     if (active && (await tabHasCrmFrame(active.id))) return active.id;
     const tabs = await options.chromeApi.tabs.query({ url: options.zohoMatches });
-    return tabs[0]?.id ?? null;
+    if (tabs.length < 2) return tabs[0]?.id ?? null;
+    // **More than one candidate, so ask which one this workspace belongs to.**
+    //
+    // «The first tab the query returns» is a coin toss, and production plus a sandbox both open is
+    // the ordinary case rather than an exotic one: step onto a third tab that is not Zoho at all and
+    // the panel announced a mismatch about a tab the reader was not using, while the right one sat
+    // open two tabs away. Reported from exactly that arrangement.
+    //
+    // A tab that does not answer is **skipped, not repaired**: this is a choice among tabs, and
+    // injecting into one nobody has used in order to decide whether to use it is the wrong order.
+    // The answer is only a preference - whichever tab is chosen, the page at the far end still
+    // refuses a command whose expected org is not its own, so this cannot widen what may be reached.
+    const asked = await Promise.all(tabs.map(tabOrg));
+    const bound = options.bound();
+    const match = bound && asked.find((a) => a && String(a.ctx.org) === String(bound.org)
+      && (!bound.base || a.ctx.origin === bound.base)
+      && (!bound.instance || !a.ctx.instance || a.ctx.instance === bound.instance));
+    return match ? match.id : (asked.find((a) => a) || {}).id ?? tabs[0].id;
   }
 
   async function activeTabId() {

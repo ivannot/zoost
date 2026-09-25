@@ -1002,9 +1002,29 @@ async function analyticsTabId() {
  *  content bridge refuses one that is not its own. This only decides *which* page gets asked.
  */
 async function anyAnalyticsTabId() {
-  const tabs = await chrome.tabs.query({ url: ZOHO_MATCHES });
-  const hit = tabs.find((t) => HOST_RE.test(t.url || ''));
-  return hit ? hit.id : null;
+  const tabs = (await chrome.tabs.query({ url: ZOHO_MATCHES })).filter((t) => HOST_RE.test(t.url || ''));
+  if (tabs.length < 2) return tabs[0] ? tabs[0].id : null;
+  // **More than one candidate, so ask which one this workspace belongs to.** «The first tab the
+  // query returns» is a coin toss, and two workspaces open at once is the ordinary case: step onto
+  // a third tab that is not Zoho at all and the panel announced a mismatch about a tab the reader
+  // was not using, while the right one sat open two tabs away. Reported on the twin, and true here
+  // for the same reason. A tab that does not answer is skipped, not repaired.
+  const asked = await Promise.all(tabs.map(tabWorkspace));
+  const want = bound && bound.workspace;
+  const match = want && asked.find((a) => a && String(a.ws) === String(want));
+  return match ? match.id : ((asked.find((a) => a) || {}).id ?? tabs[0].id);
+}
+/** Which workspace a candidate tab is looking at, or `null` when it will not say.
+ *
+ *  A named declaration and not an arrow inside the `map`, for the reason the twin's note gives:
+ *  an async scope `asynccheck` cannot read is a scope nobody is checking.
+ */
+async function tabWorkspace(t) {
+  try {
+    const reply = await chrome.tabs.sendMessage(t.id, { cmd: 'context' });
+    const ws = reply && reply.ok && reply.workspace;
+    return ws ? { id: t.id, ws } : null;
+  } catch (_) { return null; }
 }
 /** Which of a tab's frames is the Analytics application, decided by asking them.
  *
@@ -1173,6 +1193,15 @@ async function refreshContext() {
   if (!current()) return;
   const id = activeId || await anyAnalyticsTabId();
   if (!current()) return;
+  // **Two independent facts, and they were one for an hour.** «Which tab are you looking at» decides
+  // whether the other product's mark is offered; «is there a tab of ours anywhere» decides what is
+  // enabled. Collapsed, the twin offer disappeared the moment the panel stopped blocking on a
+  // foreign tab - reported on the twin, and it is the feature that was asked for whole. Somebody
+  // standing on a Zoho CRM tab is looking at Zoho CRM whether or not an Analytics tab is open two
+  // windows away, and the extension that reads what they are looking at is the other one.
+  const twin = await twinTab();
+  if (!current()) return;
+  offerCtxTwin(twin);
   // A sample is a workspace whose honest label is «generated, never pulled»: its `.zoost.json`
   // carries an invented workspace id, so every reader of this - including the off-platform branch,
   // which is the only surface that speaks while a sample is open - would otherwise dress invented
@@ -1200,24 +1229,20 @@ async function refreshContext() {
     // the overlay is the case it was written for - a panel with nothing in it.
     $('offoverlay').classList.toggle('show', !dir && !sampleBusy);
     $('mmbar').classList.remove('show');
-    // The twin's tab, named - see the note in the CRM panel, which met this first.
-    const twin = await twinTab();
-    if (!current()) return;
+    // The twin's tab, named - see the note in the CRM panel, which met this first. It is asked above
+    // now, on every pass, because it answers a question about the tab in front rather than about
+    // this branch.
     el.className = 'offzoho';
     // With a workspace open the panel is *working*, so the line says what is off rather than where
     // the reader is standing. Without one, the old sentence is still the right one.
     who.innerHTML = twin
       ? esc(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
       : (dir ? MSG.noZohoTab : 'Not on a Zoho Analytics tab');
-    offerTwin(twin);
-    offerCtxTwin(twin);
+    offerTwin(twin);        // the overlay's group, which only exists on this branch
     bnd.innerHTML = localLbl;
     return updateButtons();
   }
   $('offoverlay').classList.remove('show');
-  // Off the twin's tab the mark goes with it. It is drawn in the branch above and nothing
-  // else touches it, so without this it survives the return to a proper tab.
-  offerCtxTwin(null);
   await ensureBridge(id);
   if (!current()) return;
   const afid = await analyticsFrameId(id);

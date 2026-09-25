@@ -1683,6 +1683,47 @@ test('each panel attributes its Store link to itself, from one source', () => {
 // data with nothing to do about it. Reported as the hardest of the lot to read. The mark carries the
 // way out there, because that line is nowrap with an ellipsis and a longer sentence is one nobody
 // finishes.
+test('with two Zoho tabs open and neither in front, the one this workspace belongs to is chosen', async () => {
+  // Reported from the ordinary arrangement: production and a sandbox both open, then a step onto a
+  // third tab that is not Zoho at all. «The first tab the query returns» is a coin toss, and half
+  // the time the panel announced a mismatch about a tab the reader was not using while the right
+  // one sat open two tabs away.
+  //
+  // The answer is only a *preference*. Whichever tab is chosen, the page at the far end still
+  // refuses a command whose expected org is not its own - so this cannot widen what may be reached,
+  // it only stops the panel refusing work it is perfectly able to do.
+  const tabs = [{ id: 7, url: 'https://crm.zoho.eu/x' }, { id: 9, url: 'https://crmsandbox.zoho.eu/x' }];
+  const orgs = { 7: { org: '111', origin: 'https://crm.zoho.eu' }, 9: { org: '222', origin: 'https://crmsandbox.zoho.eu' } };
+  const asked = [];
+  const api = {
+    tabs: {
+      query: async (q) => (q.active ? [{ id: 3, url: 'https://example.com/' }] : tabs),
+      sendMessage: async (id) => { asked.push(id); return orgs[id]; },
+    },
+  };
+  const bridge = crmBridgeFor(api, { bound: () => ({ org: '222', base: 'https://crmsandbox.zoho.eu' }) });
+  assert.equal(await bridge.tabId(), 9, 'it took whichever tab came first instead of the one bound here');
+  // Both candidates asked. Not «only these two»: the active tab is asked first by the check that
+  // recognises a CRM frame inside a page that is not Zoho by its URL, which is older than this and
+  // right - a suite shell is exactly that shape.
+  assert.ok(asked.includes(7) && asked.includes(9), `it decided without asking both candidates: ${asked}`);
+
+  // A single candidate is not worth a question: the old path stands, and nothing is sent.
+  const one = [];
+  const solo = crmBridgeFor({ tabs: {
+    query: async (q) => (q.active ? [{ id: 3, url: 'https://example.com/' }] : [tabs[0]]),
+    sendMessage: async (id) => { one.push(id); return orgs[id]; },
+  } }, { bound: () => ({ org: '999' }) });
+  assert.equal(await solo.tabId(), 7, 'the only Zoho tab open was not used');
+  assert.ok(!one.includes(7),
+    `it interrogated the only candidate when there was nothing to choose between: ${one}`);
+
+  // And when none of them matches, it still answers with a tab rather than with nothing: the
+  // mismatch bar is then telling the truth about a real tab, which is what lets the reader fix it.
+  const none = crmBridgeFor(api, { bound: () => ({ org: '333' }) });
+  assert.ok([7, 9].includes(await none.tabId()), 'no candidate matched and it refused to name any tab');
+});
+
 test('the context bar offers the twin, and stops offering it on the way out', () => {
   for (const [app, path] of [['crm', 'apps/crm/crm-context.js'],
                              ['analytics', 'apps/analytics/sidepanel.js']]) {
@@ -1691,14 +1732,19 @@ test('the context bar offers the twin, and stops offering it on the way out', ()
     // The explanation goes in the title: the line it sits on cannot grow.
     assert.match(src, /a\.title = /, `${app}: the mark says nothing when you rest on it`);
     assert.match(src, /utm_source=zoost-/, `${app}: the context mark's link is unattributed`);
-    // **And it is switched off outside the branch that switched it on.** A mark drawn in one branch
-    // and never cleared survives the return to a proper tab - the class this repository records as
-    // «state set imperatively and never cleared», met again here.
-    assert.match(src, /offerCtxTwin\(null\)/,
-                 `${app}: the twin mark stays lit after leaving the twin's tab`);
-    const on = src.indexOf('offerCtxTwin(twin)');
-    const off = src.indexOf('offerCtxTwin(null)');
-    assert.ok(on > 0 && off > 0, `${app}: the mark is only ever set, or only ever cleared`);
+    // **Derived once per pass, not set in one branch and cleared in another.** It used to be drawn
+    // where the panel refused a foreign tab and cleared on the way back, and the pair held only
+    // while those were the same two paths - the day the panel stopped refusing, the mark went with
+    // the refusal. Reported, and it was the feature asked for whole.
+    //
+    // So the property is stronger and cheaper to hold: **one call site.** A single call, with
+    // whatever the tab in front answers, cannot be lit in one branch and forgotten in another -
+    // which is this repository's own rule about a state that has to hold across time being a term
+    // in the condition rather than an assignment on top of it.
+    const calls = [...src.matchAll(/offerCtxTwin\(/g)].length
+      - [...src.matchAll(/function offerCtxTwin\(/g)].length;
+    assert.equal(calls, 1,
+                 `${app}: the twin mark is written from ${calls} places, so one of them can forget`);
   }
   // Both panels carry the element the function writes into, or it writes into nothing.
   for (const app of ['crm', 'analytics']) {
