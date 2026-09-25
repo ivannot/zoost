@@ -217,18 +217,13 @@ document.addEventListener('click', (e) => {
 // it instead of at the top of a page about eight. An already-open settings window is focused *and*
 // moved, because otherwise the second ask does nothing visible and reads as a broken button.
 async function openSettings(where) {
-  const url = chrome.runtime.getURL('options.html') + (where || '');
-  try {
-    const open = await chrome.tabs.query({ url: chrome.runtime.getURL('options.html') });
-    if (open && open.length) {
-      await chrome.windows.update(open[0].windowId, { focused: true });
-      await chrome.tabs.update(open[0].id, { active: true, url });
-      return;
-    }
-    await chrome.windows.create({ url, type: 'popup', width: 880, height: 900 });
-  } catch (_) {
-    chrome.runtime.openOptionsPage();   // whatever went wrong, the settings must still be reachable
-  }
+  // **The settings are a view of this window now.** They opened in a popup because a side panel
+  // could not hold a form of this size; Zoost is a window the reader sizes, so the form lives in it
+  // and the second window - with its own de-duplication across browser windows, because two forms
+  // are two snapshots and saving the older overwrites the newer - is gone along with the problem it
+  // solved. `options.html` stays as the page Chrome's own menu points at, and all it does is open
+  // this window here.
+  await openSettingsView(where);
 }
 
 // Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
@@ -4224,3 +4219,26 @@ async function applySizeFloor() {
   } catch (_) { /* a window that will not resize is still a window */ }
 }
 window.addEventListener('resize', holdTheSizeFloor);
+// And once on the way in, because a window remembers the size it was left at: a reader who
+// dragged it down to a sliver yesterday would otherwise meet the sliver again today and have
+// to resize it before the floor had anything to correct.
+void applySizeFloor();
+
+/** A view asked for from outside this window - Chrome's own «Options» entry, by way of
+ *  `options.html` and the service worker. Two ways in, because a window that has just been created
+ *  is not listening when the ask is made and an already-open one will never read a note it has
+ *  already passed: the note covers the first, the message covers the second.
+ */
+async function openPendingView() {
+  let view = null;
+  try {
+    ({ zoostPendingView: view } = await chrome.storage.session.get('zoostPendingView'));
+    if (view) await chrome.storage.session.remove('zoostPendingView');
+  } catch (_) { return; }
+  if (view === 'settings') await openSettingsView();
+}
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg && msg.zoost === 'view' && msg.view === 'settings') void openSettingsView();
+  return undefined;
+});
+void openPendingView();

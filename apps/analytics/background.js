@@ -103,6 +103,37 @@ async function reportOpenFailure(e) {
   } catch (_) {}
 }
 chrome.action.onClicked.addListener(() => { void openWindow(); });
+
+/** The one ask this worker answers from a page: «open Zoost, on this view».
+ *
+ *  `options.html` is the page Chrome's own «Options» entry points at, and all it does is send this.
+ *  The worker is the only party that can *raise* a window that already exists instead of opening a
+ *  second one, which is why the ask comes here rather than the page trying it for itself.
+ *
+ *  The view is left in session storage as well as announced, because a window that has just been
+ *  created is not listening yet - the message would arrive before its scripts had run. The panel
+ *  reads the note on load and clears it; an already-open panel hears the announcement instead. Both
+ *  halves, because either one alone is wrong on one of the two paths.
+ */
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || msg.zoost !== 'open') return undefined;
+  void answerOpenAsk(msg, sendResponse);
+  return true;                 // the answer comes later
+});
+/** Named, and at this file's top level: `tools/asynccheck.py` reads declarations, and an inline
+ *  `async () => {}` is a scope nothing looks inside - so a global written after an await in there
+ *  is a global nobody is checking. */
+async function answerOpenAsk(msg, sendResponse) {
+  try {
+    if (msg.view) await chrome.storage.session.set({ zoostPendingView: msg.view });
+    await openWindow();
+    if (msg.view) {
+      try { await chrome.runtime.sendMessage({ zoost: 'view', view: msg.view }); }
+      catch (_) { /* nobody listening yet; the note in session storage covers that path */ }
+    }
+    sendResponse({ ok: true });
+  } catch (e) { sendResponse({ ok: false, error: e && e.message ? e.message : String(e) }); }
+}
 // Where the reader leaves it is where it comes back. Saved from the browser's own event rather than
 // from a resize handler in the page, because a window is moved as often as it is resized and only
 // one of those reaches the document.

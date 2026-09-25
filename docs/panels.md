@@ -4,7 +4,21 @@
 
 # The panels: what Analytics exposes, and how the chrome is arranged
 
-**Zoost is a window of its own, and everything below about the side panel is history.** The
+**Zoost is a window of its own, and everything below about the side panel is history.** So is
+everything about the diagram and the settings being *separate* windows: both are views of that one
+window now - `#graphview` and `#settingsview`, the fourth and fifth of the family `#overviewview`,
+`#healthview` and `#aiview` already formed. What is left at `options.html` is the page Chrome's own
+«Options» entry points at; it opens this window on the settings view and closes itself. `graphview.html`
+is gone entirely.
+
+Two things that cost, written here because the next page to move will meet both. **One document means
+one global scope**: a `const` declared in two classic scripts kills the second one outright, with
+nothing in the console after load - `nameMode` did exactly that, and it was found by deriving every
+top-level binding rather than by reading. And **a sheet joins the panel's cascade unless it is
+scoped**: both views re-declare their own tokens on their container, which is enough to dress a whole
+subtree without a rule of the panel's moving.
+
+The
 toolbar icon opens `workbench.html` in a `chrome.windows.create({type:'popup'})` window - resizable,
 movable, and able to sit on a second monitor, which is how this product is actually used: Zoho on
 one screen and Zoost on the other. The `sidePanel` permission left both manifests with it, and the

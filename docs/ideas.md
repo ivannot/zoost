@@ -306,4 +306,25 @@ And the same measurement applies: merging rules moved 5-20% of the pixels on six
 a rule winning by order inside its own block stops winning. One selector at a time, with
 `tools/pngsame.py` on the before and after.
 
-**State:** open, and next after the consolidation - which it turns from a tidy-up into a dependency.
+**State: done, 25 September 2026** - and two things in the entry above were wrong, which is worth
+more than the entry.
+
+**The consolidation was never a dependency.** This said «246 selectors meet the panel's own», and it
+was counting the *shared vocabulary* rather than the *collisions*. Measured: 2 ids and 4-8 selectors
+per product for the diagram, and 22 ids for the settings. Nothing had to be merged - the diagram's
+sheet is scoped under `#graphview` and the settings' under `#settingsview`, so the two never meet the
+panel's rules at all, and the ids that did collide were renamed on the side that is the *copy* (the
+settings form's `cfgsc_…` boxes, the diagram's `gv…`).
+
+**And the instability that gated it does not reproduce.** The entry above says the call graph is
+captured in two different states, on one observation. Rendering it three times in a row, which that
+entry itself prescribes as the first step, gives three byte-identical files - so `pngsame.py` could
+have measured this all along. It is what proved the move a no-op: the rendered diagram is identical
+before and after.
+
+What did cost, and was not in the estimate at all: **the shared global scope.** Classic scripts in
+one document share one scope, and a redeclared `const` kills the second script outright - silently,
+because the page has already loaded. `nameMode`, `MSG`, `esc`, `escA`, `$`, `render`, `SCOPE_*`,
+`drawMax` and the rest were found by a derivation over every top-level binding, not by reading; the
+first version of that derivation read only the first name in a comma list and missed the one that
+actually broke the page.

@@ -163,7 +163,9 @@ for (const app of ['crm', 'analytics']) {
     // patience against how much of the graph they get. Three things have to hold for that to be true
     // rather than decorative, and each has been wrong at some point in a setting on this page.
     const gv = read(`apps/${app}/graphview.js`), oj = read(`apps/${app}/options.js`);
-    const oh = read(`apps/${app}/options.html`);
+    // The settings form is a view of the panel now, so its markup is in `workbench.html`; what is
+    // left at `options.html` is the page Chrome's own menu points at.
+    const oh = read(`apps/${app}/workbench.html`);
     // it is read from storage, and the predicate reads the variable rather than the constant
     assert.ok(/const drawable = \(n\) => n <= drawMax;/.test(gv),
       'the ceiling predicate reads the built-in constant, so the setting cannot move it');
@@ -186,11 +188,14 @@ for (const app of ['crm', 'analytics']) {
       .filter((i) => i >= 0).concat([Infinity]));
     assert.ok(Number.isFinite(at), 'saveLay writes nothing that this test can find');
     const set = lay.slice(at);
-    assert.match(set.slice(0, 200), /erDrawMax: drawMax/, 'the ceiling is not written as its own key');
+    // `setDrawMax` is the settings form's own copy of the ceiling: the diagram already had a
+    // `drawMax` and the two now share a document, where a redeclared const kills the second script.
+    // The key it is written under has not moved, which is what the diagram reads.
+    assert.match(set.slice(0, 200), /erDrawMax: setDrawMax/, 'the ceiling is not written as its own key');
     const inParams = set.slice(set.indexOf('erParams:'), set.indexOf('erDrawMax:'));
     assert.ok(!/drawMax/i.test(inParams),
       'the ceiling is parked inside erParams, where a slider drag would drop it');
-    assert.ok(/erDrawMax: drawMax/.test(oj), 'the ceiling is not stored under a key of its own');
+    assert.ok(/erDrawMax: setDrawMax/.test(oj), 'the ceiling is not stored under a key of its own');
     // and the field is bounded, because a number input accepts whatever is typed into it
     assert.ok(/id="pDrawMax"[^>]*min="\d+"[^>]*max="\d+"/.test(oh),
       'the ceiling field has no bounds, so 0 refuses every diagram and a huge value hangs the window');

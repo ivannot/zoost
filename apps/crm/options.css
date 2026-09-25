@@ -8,100 +8,123 @@
      visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
-  :root{
+  /* **The settings are a view of this window, not a page of their own.**
+     They opened in a popup because a side panel could not hold a form; Zoost is a window the reader
+     sizes, so the form lives in it and `options.html` is left as the one thing Chrome still needs -
+     the `options_page` its own menu points at, which opens this window on this view.
+     Its own palette on the container, the way the diagram does it: custom properties cascade, so
+     re-declaring the tokens here dresses the whole subtree without a rule of the panel's moving. */
+  #settingsview{
+    display:none; position:fixed; inset:0; z-index:9; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#3b82f6; --sel-soft:#16263f;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
-  .wrap{max-width:780px;margin:0 auto;padding:28px 22px 60px}
-  header{display:flex;align-items:baseline;gap:12px;margin-bottom:22px}
-  header h1{font-size:19px;margin:0}
-  header .v{font:12px var(--mono);color:var(--muted)}
-  section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
-  section h2{font-size:14px;margin:0 0 4px}
+
+  /* (the shell is declared with the tokens above - one rule, one place) */
+  /* **No reservation for the close control.** It is fixed to the window's corner rather than laid
+     out in here, so padding for it only pushed the form off its own centre and left an empty column
+     down the right-hand side - reported as exactly that. The form is centred and symmetrical; the
+     control floats over it, the way it does on the diagram. */
+  #settingsview .wrap{max-width:780px;margin:0 auto;padding:28px 22px 60px}
+  #settingsview header{display:flex;align-items:baseline;gap:12px;margin-bottom:22px}
+  #settingsview header h1{font-size:19px;margin:0}
+  #settingsview header .v{font:12px var(--mono);color:var(--muted)}
+  #settingsview section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  #settingsview section h2{font-size:14px;margin:0 0 4px}
   /* No measure cap. It was `max-width:62ch`, written to hold a line near 62 characters, and `ch` is
      the width of a "0" - in a proportional font the lowercase letters are far narrower, so the rule
      produced 80 characters inside 64% of the column and left the rest empty. It did not even buy the
      measure it was written for, and it made the paragraph narrower than the heading directly above
      it inside the same box, which is what reads as broken. Two overrides had already been added for
      single cases (`.keynote`, `.lockhint`) instead of fixing the rule - the usual sign. */
-  section .sub{font-size:12px;color:var(--muted);margin:0 0 14px}
-  label{display:block;margin:10px 0}
-  label .lt{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
-  input[type=text],input[type=password],input[type=number],select{
+  #settingsview section .sub{font-size:12px;color:var(--muted);margin:0 0 14px}
+  #settingsview label{display:block;margin:10px 0}
+  #settingsview label .lt{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
+  #settingsview input[type=text], #settingsview input[type=password], #settingsview input[type=number], #settingsview select{
     width:100%;background:#0f1826;color:var(--ink);border:1px solid var(--border);
     border-radius:8px;padding:9px 11px;font:13px var(--sans);outline:none}
-  input:focus,select:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
-  input[type=number]{width:110px}
-  button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
+  #settingsview input:focus, #settingsview select:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  #settingsview input[type=number]{width:110px}
+  #settingsview button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
     border-radius:8px;padding:8px 14px;cursor:pointer}
-  button:hover{border-color:var(--sel)}
-  button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
-  button.primary:hover{background:#2f6fe0}
+  #settingsview button:hover{border-color:var(--sel)}
+  #settingsview button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
+  #settingsview button.primary:hover{background:#2f6fe0}
   /* A Save that has something to save says so in two ways, because a state carried by colour alone
      is one some readers never receive. `.primary` is added by `paintDirty()`, not by the markup:
      permanently bright, it was the loudest thing in the section at the moment it meant nothing. */
-  button.pending{box-shadow:0 0 0 2px var(--sel-soft)}
-  .unsaved{color:var(--sel);font-size:12px;align-self:center;margin-left:2px}
-  button.danger{color:#f4a9a9;border-color:#5c3436}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .rxrow{display:flex;gap:8px;align-items:center;margin:0 0 8px}
-  .rxrow .rxname{width:170px;flex:none}
-  .rxrow .rxpat{flex:1;font-family:ui-monospace,monospace}
-  .rxrow .rxdel{padding:6px 10px;flex:none}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
-  .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
-  .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
-  .prov h3 button{margin-left:auto;font-size:11px;padding:2px 8px;text-transform:none;letter-spacing:0}
-  .prov.on{border-color:#3f6ea8;background:rgba(47,111,237,.06)}
-  .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
-  .ck.ind{padding-left:22px}
-  .ck input{margin-top:3px;accent-color:var(--sel)}
-  .ck em{font-style:normal;color:#f0a44a}
-  .path{font:12.5px var(--mono);color:#83d8c6;background:#0f1826;border:1px solid var(--border);
+  #settingsview button.pending{box-shadow:0 0 0 2px var(--sel-soft)}
+  #settingsview .unsaved{color:var(--sel);font-size:12px;align-self:center;margin-left:2px}
+  #settingsview button.danger{color:#f4a9a9;border-color:#5c3436}
+  #settingsview .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #settingsview .rxrow{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+  #settingsview .rxrow .rxname{width:170px;flex:none}
+  #settingsview .rxrow .rxpat{flex:1;font-family:ui-monospace,monospace}
+  #settingsview .rxrow .rxdel{padding:6px 10px;flex:none}
+  #settingsview .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  #settingsview .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
+  #settingsview .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
+  #settingsview .prov h3 button{margin-left:auto;font-size:11px;padding:2px 8px;text-transform:none;letter-spacing:0}
+  #settingsview .prov.on{border-color:#3f6ea8;background:rgba(47,111,237,.06)}
+  #settingsview .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
+  #settingsview .ck.ind{padding-left:22px}
+  #settingsview .ck input{margin-top:3px;accent-color:var(--sel)}
+  #settingsview .ck em{font-style:normal;color:#f0a44a}
+  #settingsview .path{font:12.5px var(--mono);color:#83d8c6;background:#0f1826;border:1px solid var(--border);
     border-radius:8px;padding:8px 11px;flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .path.none{color:var(--muted)}
-  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
-  .warnbox{border-left:2px solid var(--warn);padding-left:10px;color:#e2c98a;font-size:12px;margin-top:10px}
-  .slid{display:flex;align-items:center;gap:10px;margin:8px 0}
-  .slid .lt{flex:0 0 130px;margin:0}
-  .slid input[type=range]{flex:1;accent-color:#d97706}
-  .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#f0a44a}
+  #settingsview .path.none{color:var(--muted)}
+  #settingsview .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
+  #settingsview .warnbox{border-left:2px solid var(--warn);padding-left:10px;color:#e2c98a;font-size:12px;margin-top:10px}
+  #settingsview .slid{display:flex;align-items:center;gap:10px;margin:8px 0}
+  #settingsview .slid .lt{flex:0 0 130px;margin:0}
+  #settingsview .slid input[type=range]{flex:1;accent-color:#d97706}
+  #settingsview .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#f0a44a}
   /* The sliders all show something like "28px", so a fixed 44px keeps their values in a column.
      The ceiling says "boxes (measured)" and wrapped onto two lines in all that empty space -
      reported with a picture. Widened here rather than by loosening .val, which would take the
      column the sliders line up in away from them. */
-  .slid #vDrawMax{flex:0 0 auto;white-space:nowrap}
-  .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
-  a{color:#83d8c6}
-  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
+  #settingsview .slid #vDrawMax{flex:0 0 auto;white-space:nowrap}
+  #settingsview .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
+  #settingsview a{color:#83d8c6}
+  #settingsview #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#16351f;border:1px solid #2f6f4a;color:#a7e8c0;padding:9px 16px;border-radius:9px;
     font-size:13px;transition:opacity .18s,transform .18s;pointer-events:none}
-  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-  #toast.bad{background:#3a1f22;border-color:#7a3a40;color:#f4b8b8}
-  .tabs{display:flex;flex-direction:column;gap:6px}
-  .tabrow{display:flex;align-items:center;gap:9px;padding:7px 10px;background:#0f1826;border:1px solid var(--border);border-radius:8px}
-  .tabrow .tn{flex:1;min-width:0}
-  .tabrow .tn b{color:var(--ink)}
-  .tabrow .why{display:block;font-size:11px;color:var(--muted);margin-top:2px}
-  .tabrow.denied{opacity:.75;border-style:dashed}
-  .tabrow.denied .tn b{color:var(--muted)}
-  .tabrow .pl{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);flex:none;cursor:pointer}
-  .tabrow .pl input{margin:0}
-  .tabrow .mv{padding:2px 8px;font-size:12px;line-height:1.3;flex:none}
-  .tabrow .mv:disabled{opacity:.3}
-  .conflict{margin:0 0 14px;padding:9px 11px;border:1px solid #6b3a1f;background:#2a1c14;border-radius:8px;font-size:12px;color:#f0b483;line-height:1.5}
-  .conflict b{color:#fbbf24;display:block}
-  .conflict .cfb{display:flex;gap:8px;margin-top:8px}
-  .conflict .cfb button{padding:3px 10px;font-size:12px}
-  .keyprot{margin:14px 0 0;padding:12px 14px;border:1px solid var(--border);border-radius:9px;background:#0f1826}
-  .lockrow{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-  .keynote{margin:10px 0 0}
-  .lockhint{margin:2px 0 0}
-  .lockhint button{margin-left:6px;font-size:11px;padding:2px 8px}
-  .lockhint.bad{color:#f4b8b8}
-  .ctl{margin-top:12px}
-  .ctl > .note{margin-top:6px}
+  #settingsview #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  #settingsview #toast.bad{background:#3a1f22;border-color:#7a3a40;color:#f4b8b8}
+  #settingsview .tabs{display:flex;flex-direction:column;gap:6px}
+  #settingsview .tabrow{display:flex;align-items:center;gap:9px;padding:7px 10px;background:#0f1826;border:1px solid var(--border);border-radius:8px}
+  #settingsview .tabrow .tn{flex:1;min-width:0}
+  #settingsview .tabrow .tn b{color:var(--ink)}
+  #settingsview .tabrow .why{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  #settingsview .tabrow.denied{opacity:.75;border-style:dashed}
+  #settingsview .tabrow.denied .tn b{color:var(--muted)}
+  #settingsview .tabrow .pl{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);flex:none;cursor:pointer}
+  #settingsview .tabrow .pl input{margin:0}
+  #settingsview .tabrow .mv{padding:2px 8px;font-size:12px;line-height:1.3;flex:none}
+  #settingsview .tabrow .mv:disabled{opacity:.3}
+  #settingsview .conflict{margin:0 0 14px;padding:9px 11px;border:1px solid #6b3a1f;background:#2a1c14;border-radius:8px;font-size:12px;color:#f0b483;line-height:1.5}
+  #settingsview .conflict b{color:#fbbf24;display:block}
+  #settingsview .conflict .cfb{display:flex;gap:8px;margin-top:8px}
+  #settingsview .conflict .cfb button{padding:3px 10px;font-size:12px}
+  #settingsview .keyprot{margin:14px 0 0;padding:12px 14px;border:1px solid var(--border);border-radius:9px;background:#0f1826}
+  #settingsview .lockrow{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  #settingsview .keynote{margin:10px 0 0}
+  #settingsview .lockhint{margin:2px 0 0}
+  #settingsview .lockhint button{margin-left:6px;font-size:11px;padding:2px 8px}
+  #settingsview .lockhint.bad{color:#f4b8b8}
+  #settingsview .ctl{margin-top:12px}
+  #settingsview .ctl > .note{margin-top:6px}
+  #settingsview.show{display:block}
+
+  /* **The same control as the diagram's, in the same corner.** Two full-window views that are left
+     in two different ways is the divergence this project spends its checkers on; reported the
+     moment both existed. The declarations are the diagram's, written here because this is the
+     sheet this view links - `tools/cssdupes.txt` records the pair rather than letting it drift. */
+  #settingsview .stx{position:fixed;top:10px;right:12px;z-index:10;
+    display:inline-flex;align-items:center;gap:6px;
+    font:12px var(--sans);font-weight:600;line-height:1;padding:7px 12px;border-radius:8px;
+    background:var(--sel);border:1px solid var(--sel);color:#fff;cursor:pointer;white-space:nowrap}
+  #settingsview .stx:hover{filter:brightness(1.12)}
+  #settingsview .stx:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

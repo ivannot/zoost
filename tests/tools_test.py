@@ -3646,7 +3646,13 @@ class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
         # no export section at all, and requiring a default there would be a check about a screen
         # that does not exist. The subject is «every file that builds a scope», derived by whether
         # it names SCOPE_FULL, not a list of file names.
-        if 'SCOPE_FULL' not in src:
+        #
+        # **And a file that only *reads* the shared constants is not one of them.** The CRM settings
+        # form declared its own `SCOPE_FULL`, `SCOPE_DEFAULT` and the rest while it was a page of its
+        # own; it is a view of the panel now and uses the panel's, so it names `SCOPE_FULL` without
+        # building anything - and asking it for a default of its own would be asking it to declare
+        # the duplication that was just removed.
+        if 'SCOPE_FULL' not in src or 'const SCOPE_FULL' not in src:
             return
         m = re.search(r'const SCOPE_DEFAULT = Object\.assign\(\{\}, SCOPE_FULL, \{([^}]*)\}\)', src)
         self.assertIsNotNone(m, f'{app}/{name}: there is no SCOPE_DEFAULT, so the scope starts from SCOPE_FULL')
@@ -6855,10 +6861,14 @@ class TwinCheckOpensEveryPageBothProductsShip(unittest.TestCase):
         # difference(s)» over two unopened pages reads exactly like «0» over three opened ones.
         out = self.run_it().stdout
         read = [int(m) for m in re.findall(r': (\d+) shared id\(s\) compared', out)]
-        # One page, not two: the diagram stopped being a page of its own and its markup is in
-        # `workbench.html`, which is compared by the section above rather than counted here.
+        # **The «other pages» are one page now, and it is a doormat.** The diagram and the settings
+        # were pages of their own and are views of the panel; what is left at `options.html` is the
+        # page Chrome's «Options» entry points at, which opens the window and closes itself. So this
+        # section compares one page with a handful of ids in it, and the substance moved into the
+        # panel comparison above - which the case beside this one asserts still happens.
         self.assertGreaterEqual(len(read), 1, f'only {len(read)} page(s) report a work unit:\n{out}')
-        self.assertGreater(sum(read), 40, 'the pages are opened and almost nothing in them is read')
+        self.assertIn('shared elements whose tag, class or inline style differs', out,
+                      'the panel comparison - where the substance now is - is gone')
 
     def test_the_linked_panel_stylesheets_are_part_of_the_comparison(self):
         for app in ('crm', 'analytics'):
@@ -7142,6 +7152,7 @@ class EveryStoredKeyIsAccountedFor(unittest.TestCase):
         'chromeFolded': 'whether you folded the workspace and tools rows away',
         'zoostWindowBounds': 'where you last put the Zoost window and how big you made it',
         'zoostWindowId': 'where you last put the Zoost window and how big you made it',
+        'zoostPendingView': "which view Chrome's own",
         'settingsStamp': 'timestamp the settings page writes',
         'aikeys': 'unlocked',
         'graphData': 'the drawing it is given',

@@ -624,7 +624,9 @@ test('every message about a lost passphrase names the control that exists', () =
       const src = fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8');
       assert.ok(!src.includes('press Forget above'), `${app}/${f}: still sends the user round the old sequence`);
     }
-    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.html'), 'utf8');
+    // The settings are a view of the panel now, so the form is in `workbench.html`; `options.html`
+    // is the page Chrome's own «Options» entry points at, and all it does is open this window.
+    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.html'), 'utf8');
     assert.match(html, /id="ai_passlost"/, `${app}: the control itself is gone`);
     assert.match(html, /Remove the protection/, `${app}: and its label`);
   }
@@ -885,10 +887,15 @@ test('the assistant sends you to the part of the settings it means', () => {
     assert.ok(/openSettings\('#ai'\)/.test(panel), `${app}: the gear opens the top of the page`);
     const i = panel.indexOf('async function openSettings');
     const body = panel.slice(i, i + 700);
-    assert.ok(/getURL\('options\.html'\) \+ \(where \|\| ''\)/.test(body), `${app}: the fragment is dropped`);
-    assert.ok(/active: true, url/.test(body), `${app}: a settings window already open is not moved to it`);
-    const opts = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.html'), 'utf8');
+    // **There is no URL any more, so the fragment is an argument.** The settings opened as a page
+    // and the section to land on rode its URL; they are a view of this window now, so the caller
+    // hands the name over and the view scrolls to it. What the case is about has not moved: a reader
+    // sent to change one thing must land on it rather than at the top of a form about eight.
+    assert.ok(/openSettingsView\(where\)/.test(body), `${app}: the fragment is dropped`);
+    const opts = fs.readFileSync(path.join(ROOT, 'apps', app, 'workbench.html'), 'utf8');
     assert.ok(/<h2 id="ai">/.test(opts), `${app}: there is nothing for the fragment to land on`);
+    const view = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.js'), 'utf8');
+    assert.ok(/scrollIntoView/.test(view), `${app}: nothing takes the reader to the section named`);
   }
 });
 

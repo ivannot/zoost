@@ -104,6 +104,17 @@ EQUIV = {
 # Elements that exist in one product because the other has no such concept. Each owes a reason.
 PRODUCT_ONLY = {
     'crm': {
+        # ---- the settings form's, visible here since it became a view of the panel rather than a
+        # page of its own. Each is a section one product has and the other has no equivalent of.
+        'blastbox': 'the warning about what a working folder grants - the CRM asks for one and '
+                    'Analytics reads its workspaces from the same one the CRM picked',
+        'pickRoot': 'ditto', 'clearRoot': 'ditto', 'rootPath': 'ditto',
+        'ai_addr': 'the CRM assistant can be pointed at an OpenAI-compatible address; the Analytics '
+                   'one offers the two engines and no custom endpoint',
+        'saveScope': 'the export-defaults section, which only the CRM settings form carries',
+        'saveTabs': 'the tab-preferences section, which only the CRM settings form carries',
+        'scFull': 'ditto - its two presets', 'scSafe': 'ditto',
+        'tablist': 'ditto', 'tabnote': 'ditto', 'tabReset': 'ditto',
         # ---- the diagram's, visible here since it stopped being a page of its own and joined
         # `workbench.html`. The CRM diagram draws two subjects and Analytics draws one.
         'subj': 'the control that switches the CRM diagram between Wiring and Schema; the Analytics '
@@ -132,6 +143,10 @@ PRODUCT_ONLY = {
         'scstale': 'per-area staleness: only the CRM pulls its areas separately, so only there can one fall behind',
     },
     'analytics': {
+        # ---- and the Analytics settings form's own two
+        'sqlrules': 'the SQL dialect rules the Analytics settings page lets a reader refresh; the '
+                    'CRM reads Deluge and has no such table',
+        'ttl': 'how long Analytics keeps a pulled result before re-reading it; the CRM pulls on ask',
         'typesel': 'the type picklist; the CRM builds its own dynamically',
         'sort': 'the sort picklist; the CRM builds its own dynamically',
         'sortdir': 'ditto — the CRM creates the direction button in JS',
@@ -150,12 +165,26 @@ PRODUCT_ONLY = {
     },
 }
 PRODUCT_PREFIX = {
-    'crm': {'m': 'mode segments (Functions/Modules/…)', 'pv': 'the source preview', 'sc_': 'export scope keys'},
-    'analytics': {'sc_': 'export scope keys', 'tab_': 'detail pane tabs'},
+    # `cfgsc_` is the settings form's own copy of the export-scope boxes. It took that name when the
+    # form became a view of the panel and met the export dialog's `sc_` boxes in one document; the
+    # areas behind them are each product's own, which is why `sc_` is already here.
+    'crm': {'m': 'mode segments (Functions/Modules/…)', 'pv': 'the source preview',
+            'sc_': 'export scope keys', 'cfgsc_': 'the settings form\'s copy of the export scope keys'},
+    'analytics': {'sc_': 'export scope keys', 'cfgsc_': 'the settings form\'s copy of the export scope keys',
+                  'tab_': 'detail pane tabs'},
 }
 
 # Declarations that differ on purpose.
 EXPECTED = {
+    # ---- the settings form in each product's own colour. Same difference the panels already
+    # declare for `:root` and `button.primary:hover`: blue is the CRM, pink is Analytics.
+    ('#settingsview', '--sel'): 'the product colour: blue in CRM, pink in Analytics',
+    ('#settingsview', '--sel-soft'): 'a light tint of each product accent',
+    ('#settingsview .prov.on', 'background'): 'the selected engine card, in the product accent',
+    ('#settingsview .prov.on', 'border-color'): 'ditto',
+    ('#settingsview .slid .val', 'color'): "the slider's value, in the product accent",
+    ('#settingsview a', 'color'): 'a link, in the product accent',
+    ('#settingsview button.primary:hover', 'background'): 'the hover of each product accent',
     # ---- the two diagrams' node palettes and their print blocks. This tool flattens `@media`, so a
     # rule that only exists inside `@media print` shows up here as a divergence; both of these are
     # that shape and neither is new.
@@ -205,6 +234,24 @@ EXPECTED = {
     ('#healthbody', 'line-height'): 'ditto',
 }
 EXPECTED_SOLO = {
+    # ---- the two settings forms, visible here since they became views of the panel. The CRM's form
+    # has three sections Analytics has no equivalent of - a working folder to pick, export defaults
+    # to set, and a list of tabs to order - so the rules that dress them are one-sided too.
+    '#settingsview .path': 'the working folder the CRM settings form picks; Analytics reads its '
+                           'workspaces out of the same folder and has nothing to pick',
+    '#settingsview .path.none': 'ditto',
+    '#settingsview .tabs': "the CRM settings form's list of panel tabs to order and hide",
+    '#settingsview .tabrow': 'ditto', '#settingsview .tabrow .mv': 'ditto',
+    '#settingsview .tabrow .mv:disabled': 'ditto', '#settingsview .tabrow .pl': 'ditto',
+    '#settingsview .tabrow .pl input': 'ditto', '#settingsview .tabrow .tn': 'ditto',
+    '#settingsview .tabrow .tn b': 'ditto', '#settingsview .tabrow .why': 'ditto',
+    '#settingsview .tabrow.denied': 'ditto', '#settingsview .tabrow.denied .tn b': 'ditto',
+    '#settingsview .ck.ind': "the export-defaults boxes the CRM form carries, indented under the "
+                             'area they belong to',
+    '#settingsview .ck em': 'ditto - the mark on the sensitive one',
+    '#settingsview code': 'the CRM settings form quotes a path; the Analytics one has none to quote',
+    '#settingsview button.primary': 'the Analytics primary is bold and the CRM inherits its weight - '
+                                    'the same difference the panels already declare for `button.primary`',
     # ---- the two diagrams, which became visible here the day the diagram stopped being a page of
     # its own and joined `workbench.html`. They were compared as `graphview.html` against
     # `graphview.html` before, and none of them is new: the CRM draws functions, modules, workflows

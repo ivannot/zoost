@@ -469,3 +469,26 @@ async function applySizeFloor() {
   } catch (_) { /* a window that will not resize is still a window */ }
 }
 window.addEventListener('resize', holdTheSizeFloor);
+// And once on the way in, because a window remembers the size it was left at: a reader who
+// dragged it down to a sliver yesterday would otherwise meet the sliver again today and have
+// to resize it before the floor had anything to correct.
+void applySizeFloor();
+
+/** A view asked for from outside this window - Chrome's own «Options» entry, by way of
+ *  `options.html` and the service worker. Two ways in, because a window that has just been created
+ *  is not listening when the ask is made and an already-open one will never read a note it has
+ *  already passed: the note covers the first, the message covers the second.
+ */
+async function openPendingView() {
+  let view = null;
+  try {
+    ({ zoostPendingView: view } = await chrome.storage.session.get('zoostPendingView'));
+    if (view) await chrome.storage.session.remove('zoostPendingView');
+  } catch (_) { return; }
+  if (view === 'settings') await openSettingsView();
+}
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg && msg.zoost === 'view' && msg.view === 'settings') void openSettingsView();
+  return undefined;
+});
+void openPendingView();

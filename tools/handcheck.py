@@ -244,6 +244,7 @@ CHECKS = [
                  'it; the change you made in Settings is still there. A stored handle loses its '
                  'permission between sessions, and that is the path every returning user takes.'),
         'covers': ['apps/*/idb.js', 'apps/*/workbench.js', 'apps/*/options.js', 'apps/*/options.html',
+                   'apps/*/options-bridge.js',
                    'apps/crm/tabs.js'],
     },
     {

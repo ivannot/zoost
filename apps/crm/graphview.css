@@ -60,7 +60,7 @@
   /* Two rows: the title line, then the view tabs under it, left-aligned. They used to sit top
      right, opposite the title, which put the thing you switch with furthest from where the
      eye starts and left a stripe of nothing between them. */
-  #graphview header{padding:11px 150px 12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:11px}
+  #graphview header{padding:11px 92px 12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:11px}
   #graphview header .hrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
   #graphview header h1{font-size:15px;margin:0}
   #graphview header .stat{font-size:12px;color:var(--muted)} #graphview header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -435,7 +435,11 @@
      bare mark in the corner and was reported as too faint: a view that fills the window is a place
      the reader is *in*, and the only way back cannot be quieter than the chips beside it. So it is
      a control with a word on it, in the product's own accent, at the end of the title row. */
-  #graphview .gvx{position:absolute;top:10px;right:12px;z-index:10;
+  /* **Fixed, so scrolling never takes it away.** The settings view scrolls and the diagram does
+     not, which would have made one of them keep its way out and the other lose it halfway down the
+     form - the divergence between two full-window views this project spends its checkers on.
+     Reported about the settings; applied to both, because they are the same control. */
+  #graphview .gvx{position:fixed;top:10px;right:12px;z-index:10;
     display:inline-flex;align-items:center;gap:6px;
     font:12px var(--sans);font-weight:600;line-height:1;padding:7px 12px;border-radius:8px;
     background:var(--sel);border:1px solid var(--sel);color:#fff;cursor:pointer;white-space:nowrap}

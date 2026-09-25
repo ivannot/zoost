@@ -524,18 +524,13 @@ document.addEventListener('click', (e) => {
 // it instead of at the top of a page about eight. An already-open settings window is focused *and*
 // moved, because otherwise the second ask does nothing visible and reads as a broken button.
 async function openSettings(where) {
-  const url = chrome.runtime.getURL('options.html') + (where || '');
-  try {
-    const open = await chrome.tabs.query({ url: chrome.runtime.getURL('options.html') });
-    if (open && open.length) {
-      await chrome.windows.update(open[0].windowId, { focused: true });
-      await chrome.tabs.update(open[0].id, { active: true, url });
-      return;
-    }
-    await chrome.windows.create({ url, type: 'popup', width: 880, height: 900 });
-  } catch (_) {
-    chrome.runtime.openOptionsPage();   // whatever went wrong, the settings must still be reachable
-  }
+  // **The settings are a view of this window now.** They opened in a popup because a side panel
+  // could not hold a form of this size; Zoost is a window the reader sizes, so the form lives in it
+  // and the second window - with its own de-duplication across browser windows, because two forms
+  // are two snapshots and saving the older overwrites the newer - is gone along with the problem it
+  // solved. `options.html` stays as the page Chrome's own menu points at, and all it does is open
+  // this window here.
+  await openSettingsView(where);
 }
 
 // Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM

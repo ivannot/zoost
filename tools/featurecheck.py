@@ -33,6 +33,15 @@ PAGES = {
 # Controls a reader never needs told about. A dialog's Cancel is not a feature; describing it would
 # be noise, and noise is what makes a document stop being read.
 EXPECTED_ABSENT = {
+    # **The engine names in the settings form's picker.** They were outside this check while the
+    # settings were a page of their own; the form is a view of the panel now, so its `<option>`s are
+    # panel controls. `site/ai.html` is a page about nothing else - which engine to choose, what
+    # each one can do, what it costs - and it names both of them throughout. What it does not do is
+    # quote the words inside the picker, and requiring it to would be asking the prose to spell an
+    # option label rather than explain the choice.
+    'Anthropic (Claude) - full agent, tool use': 'site/ai.html is a page about choosing between the '
+                                                 'two engines and names both throughout',
+    'OpenAI (GPT) - one-shot answers': 'ditto',
     'Cancel': 'closing a dialog without acting needs no explanation',
     'Close': 'ditto',
     'Everything': 'a preset inside the export dialog, explained by the dialog itself',
@@ -80,7 +89,8 @@ EXPECTED_ABSENT = {
 ALIAS = {
     # The way out of the diagram. Its tooltip says where it takes you - «and go back to Zoost» - and
     # the guide names the control the reader actually sees, which is the words on the button.
-    'Close the diagram and go back to Zoost': 'close diagram',
+    'Close the diagram and go back to Zoost': 'close the diagram',
+    'Close the settings and go back to Zoost': 'close the settings',
     '+ Workspace': 'workspace',
     'Pull all': 'pull all',
     'Name: display': 'name: display',

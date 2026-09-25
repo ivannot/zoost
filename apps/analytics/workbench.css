@@ -80,7 +80,12 @@
   .abtn:hover:not(:disabled){background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
 
   /* ---- workspace bar - same two rows, same ids, same affordances as the CRM panel ---- */
+  /* The fold control is `position:fixed` in the top right corner, so the first row has to keep
+     that corner clear or whatever grows into it ends up underneath. `.wsroot` does grow - it
+     takes the room left over so a long folder name can ellipsize instead of overflowing - and
+     it ran straight under the chevron. Reported with a picture of the two on top of each other. */
   .wsbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .wsbar:first-of-type{padding-right:36px}
   .wsbar2{padding-top:0;border-bottom:1px solid var(--line)}
   .wsroot{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:1px dashed var(--border);color:var(--muted)}
   .wsroot:hover{border-color:var(--sel);color:var(--ink);border-style:solid}

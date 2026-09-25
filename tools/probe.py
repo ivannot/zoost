@@ -2416,6 +2416,31 @@ def click_guard_installed() -> tuple:
     return missing, seen
 
 
+# **The settings, opened as a view of the panel.** They were a popup page of their own until the
+# panel became a window; nothing here could drive them then, because a second page is a second
+# render. They are in this document now, so one scenario asks the two things that actually broke
+# while they were being moved: does the form paint from what is stored, and does the way out work.
+#
+# It borrows the preamble - `say`, `until`, `$`, the click guard - from a scenario that has one,
+# rather than carrying a sixty-line copy that would drift from it. The steps are what is new.
+SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
+  const view = $('settingsview');
+  if (!view) say('the settings are not in this window at all');
+  if (view.classList.contains('show')) say('the settings are open before anybody asked');
+  await openSettingsView();
+  await until(() => view.classList.contains('show'), 'the settings view to open');
+  // Painted from what is stored rather than left as the markup's placeholders: `#ver` is written
+  // by the paint, so an empty one means the form opened over nothing.
+  await until(() => ($('ver').textContent || '').trim().length > 0, 'the version to be filled in');
+  // Every section reports itself unchanged straight after a paint - that is what «no unsaved
+  // changes» means, and it was wrong once because the rebase ran before the reads.
+  const dirty = [...document.querySelectorAll('[data-section]')].filter((x) => x.classList.contains('dirty'));
+  if (dirty.length) say('a section says it has unsaved changes the moment it is opened: ' + dirty.map((x) => x.dataset.section).join(', '));
+  $('settingsx').click();
+  await until(() => !view.classList.contains('show'), 'the settings view to close');
+})();
+"""
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -2443,7 +2468,9 @@ def main() -> int:
         for key, app, ws, script in (("probe-crm", "crm", "crm/sampleorg-1234567890", CRM),
                                      ("probe-analytics", "analytics", "analytics/sample-workspace", AN),
                                      ("pull-analytics", "analytics", "analytics/sample-workspace", PULL_AN),
-                                     ("pull-crm", "crm", "crm/sampleorg-1234567890", PULL_CRM)):
+                                     ("pull-crm", "crm", "crm/sampleorg-1234567890", PULL_CRM),
+                                     ("settings-crm", "crm", "crm/sampleorg-1234567890", SETTINGS),
+                                     ("settings-analytics", "analytics", "analytics/sample-workspace", SETTINGS)):
             print(f"  {key:18s} driving\u2026", flush=True)
             dest = shots.render_panel((key, app, ws, script))
             dest.unlink(missing_ok=True)          # a probe is not a picture to publish

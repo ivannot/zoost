@@ -6,18 +6,13 @@
  */
 'use strict';
 
-const $ = (id) => document.getElementById(id);
 // Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
 // the panels and the graph windows - one behaviour under one name, so a reader never has to check
 // which file they are in.
-const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
 // What this page says in more than one place. `saveFailed` prefixes the platform's own sentence
 // rather than replacing it, at all three writers. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
-const MSG = {
+const SMSG = {
   saveFailed: 'Could not save: ',
   // A read that failed is not «nothing is stored»: the one write on this page that can destroy a key
   // the user cannot recover has to refuse rather than merge onto an empty answer.
@@ -29,16 +24,10 @@ const MSG = {
 const ENGINE_LABEL = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (ChatGPT)' };
 const engineLabel = (id) => ENGINE_LABEL[id] || id;
 
-const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation. '
-  + '"Zoho" and "Zoho Analytics" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility. '
-  + 'Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. '
-  + 'The author accepts no liability for any loss, damage or data issue arising from its use, and is under no obligation to provide support or maintenance. '
-  + 'Deciding what may be extracted from Zoho Analytics, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
-
 // The ER preset the graph window starts from. Kept identical to ER_PRESET.modules in graphview.js:
 // the two are the same setting seen from two places, not a default and a copy of it.
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
-const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
+const LAY_CTL = [['cfgMargin', 'cfgvMargin', 'margin'], ['cfgSpread', 'cfgvSpread', 'spread'], ['cfgGap', 'cfgvGap', 'gap'], ['cfgFs', 'cfgvFs', 'fs']];
 let lay = Object.assign({}, LAY_DEFAULT);
 // The ceiling is not one of the layout values: the graph window's Layout panel does not edit it,
 // `Restore built-in defaults` above is about the sliders, and erSaveParams() there writes the whole
@@ -46,7 +35,7 @@ let lay = Object.assign({}, LAY_DEFAULT);
 // own key, and the built-in default is the measured one: 800, which covers the 725 a real org
 // reported. 400 satisfied the profile and refused that org, which is the wrong way round.
 const DRAW_MAX_DEFAULT = 800;
-let drawMax = DRAW_MAX_DEFAULT;
+let setDrawMax = DRAW_MAX_DEFAULT;
 
 let toastT = null;
 function toast(msg, bad) {
@@ -337,7 +326,7 @@ async function saveAi() {
   // not by the expensive one.
   let prev;
   try { const c = await readCfgForWrite(); prev = { anthropic: c.anthropic || {}, openai: c.openai || {} }; }
-  catch (_) { toast(MSG.readFailed, true); return; }
+  catch (_) { toast(SMSG.readFailed, true); return; }
   const wantLock = $('ai_lock').checked;
   const pass = $('ai_pass').value;
   const cur = $('ai_passcur').value;
@@ -416,21 +405,21 @@ async function saveAi() {
 
 function layToUI() {
   LAY_CTL.forEach(([sl, lb, k]) => { $(sl).value = lay[k]; $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
-  $('pSub').checked = !!lay.sub;
-  $('pDrawMax').value = drawMax;
-  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
+  $('cfgSub').checked = !!lay.sub;
+  $('pDrawMax').value = setDrawMax;
+  $('vDrawMax').textContent = setDrawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 }
 LAY_CTL.forEach(([sl, lb, k]) => {
   $(sl).addEventListener('input', () => { lay[k] = parseInt($(sl).value, 10); $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
 });
-$('pSub').onchange = () => { lay.sub = $('pSub').checked; };
+$('cfgSub').onchange = () => { lay.sub = $('cfgSub').checked; };
 $('pDrawMax').addEventListener('input', () => {
   // Clamped to the field's own bounds rather than trusted: a number input accepts anything typed
   // into it, and 0 would refuse every diagram while 10 million would hang the window for minutes.
   const raw = parseInt($('pDrawMax').value, 10);
   const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
-  drawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
-  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
+  setDrawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
+  $('vDrawMax').textContent = setDrawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
 // **A preset is an edit, and the page only counted the ones it could hear.** Marks are attached
 // to the section - one `input`, one `change` - so a field added later is covered without anyone
@@ -439,7 +428,7 @@ $('pDrawMax').addEventListener('input', () => {
 // The cost lands on the next write from the diagram window or a second settings tab: an
 // unmarked section is reloaded on the spot, without the conflict box, and the preset the reader
 // had just applied disappeared while they were looking at it.
-$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); setDrawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
 async function onSaveLay() {
   if (layLoadFailed) { toast(loadState(layLoadFailed), true); return; }
   // Merged, like the CRM twin and for the same reason: `mode` belongs to the diagram window, which
@@ -451,8 +440,8 @@ async function onSaveLay() {
   // `saveKeys`, which catches and says so.
   let prev;
   try { prev = (await chrome.storage.local.get('erParams')).erParams || {}; }
-  catch (_) { toast(MSG.readFailed, true); return; }
-  if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: drawMax })) return;
+  catch (_) { toast(SMSG.readFailed, true); return; }
+  if (!await saveKeys({ erParams: Object.assign({}, prev, { current: lay }), erDrawMax: setDrawMax })) return;
   rebase('erParams'); paintDirty();
   toast('Diagram defaults saved.');
 }
@@ -485,10 +474,10 @@ async function loadLay() {
     // with only the first, a ceiling the reader had typed survived a reload that was meant to
     // replace it - so «Take theirs» kept the typed number, stored none, and reported the section
     // clean. The same shape as the tab arrays one file over, found the same way.
-    if (current()) drawMax = Number.isFinite(r.erDrawMax) ? Math.min(hi, Math.max(lo, r.erDrawMax)) : DRAW_MAX_DEFAULT;
+    if (current()) setDrawMax = Number.isFinite(r.erDrawMax) ? Math.min(hi, Math.max(lo, r.erDrawMax)) : DRAW_MAX_DEFAULT;
   } catch (_) { layLoadFailed = 'failed'; }
   // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
-  // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
+  // are safe either way - their handlers write straight into `lay` - but `setDrawMax` is not: with the
   // second read discarded, `layToUI()` paints the built-in ceiling into the box and a Save writes it
   // over whatever was stored. A read that was overtaken, or cancelled because the reader started
   // typing, has nothing to publish.
@@ -759,7 +748,7 @@ function loadState(flag) {
     + 'give it a moment and try again.';
   if (flag === 'never') return 'This page never finished reading your stored settings, so nothing was '
     + 'saved. Reload the page.';
-  return MSG.readFailed;
+  return SMSG.readFailed;
 }
 /** A reader's edit is newer than every read already in flight for that section.
  *
@@ -902,7 +891,7 @@ async function saveKeys(obj) {
     // that happened to match the disk left an idle button and no words - the failure said only a
     // toast, which is gone in two seconds.
     paintDirty();
-    toast(MSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
+    toast(SMSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
     return false;
   }
   // **Not `rebase` here.** A write is not the moment the form and the store agree: three of
@@ -1031,10 +1020,39 @@ async function init() {
   document.querySelectorAll('[data-section]').forEach((sec) => rebase(sec.dataset.section));
   paintDirty();
 }
-init();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {
   $(id).oninput = () => { syncLockRow(); markEngineOptions(); };
 });
 $('ai_passlost').onclick = loseLock;
 $('ai_passchange').onclick = () => { aiPassChanging = true; syncLockRow(); focusFirstAsked(); };
+
+/** Open the settings on this window, and paint them from what is stored.
+ *
+ *  The only way in. It was a popup window at `options.html`, de-duplicated across every browser
+ *  window because two settings forms are two snapshots of the same values and saving the older one
+ *  overwrites the newer. That whole argument goes away with the window: there is one panel, so
+ *  there is one form, and it cannot be opened twice.
+ *
+ *  `where` is a fragment - `#ai` from the assistant, `#rx` from the saved-patterns menu - so a
+ *  reader sent to change one thing lands on it rather than at the top of a form about eight.
+ */
+async function openSettingsView(where) {
+  const view = document.getElementById('settingsview');
+  if (view) view.classList.add('show');
+  await init();
+  if (where) {
+    const sec = document.getElementById(String(where).replace(/^#/, ''));
+    if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });
+  }
+}
+/** Close them. Nothing is discarded: the form refuses to save over a value that changed underneath
+ *  it, and reopening reads what is stored - so what is on screen is never the authority. */
+function closeSettingsView() {
+  const view = document.getElementById('settingsview');
+  if (view) view.classList.remove('show');
+}
+{
+  const x = document.getElementById('settingsx');
+  if (x) x.onclick = () => closeSettingsView();
+}

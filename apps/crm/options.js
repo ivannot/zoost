@@ -4,18 +4,14 @@
  *   chrome.storage.local  → aicfg, exportScope, erParams, erDrawMax
  * A `settingsStamp` is bumped on every change so an open workbench can react.
  */
-const $ = (id) => document.getElementById(id);
 // Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
 // the panels and the graph windows - one behaviour under one name, so a reader never has to check
 // which file they are in.
-const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-
 // What this page says in more than one place. `saveFailed` prefixes the platform's own sentence
 // rather than replacing it: the browser knows why it refused and we do not. The Analytics twin had
 // this and the CRM did not - so a refused save was said there and silent here, which is why the
 // helper below carries the message rather than each writer.
-const MSG = {
+const SMSG = {
   saveFailed: 'Could not save: ',
   // A read that failed is not «nothing is stored»: the one write on this page that can destroy a key
   // the user cannot recover has to refuse rather than merge onto an empty answer.
@@ -27,7 +23,7 @@ const MSG = {
 const ENGINE_LABEL = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (ChatGPT)' };
 const engineLabel = (id) => ENGINE_LABEL[id] || id;
 
-const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by '
+const SET_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by '
   + 'Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of Zoho Corporation, used here in a nominative '
   + 'sense only, to indicate compatibility. Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES '
   + 'OR CONDITIONS OF ANY KIND, express or implied. The author accepts no liability for any loss, damage or data issue '
@@ -40,9 +36,6 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 // on screen: it looked like the whole set.
 // The panel's stamp, kept in step by a case: this page writes the same preference and must say
 // which build wrote it, or the panel's one-shot migration fires over a fresh choice.
-const SCOPE_SV = 2;
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'blueprints', 'actions', 'addresses', 'connections', 'failures', 'health'];
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, blueprints: true, actions: true, addresses: false, connections: true, failures: true, health: true };
 // **What an export contains when nobody has chosen yet - and it is not «everything».** The panel
 // starts from this; this page started from `SCOPE_FULL`, which has `code: true`. So a reader who had
 // never opened the export dialog came here and was shown «Deluge source code» already ticked, over a
@@ -52,21 +45,14 @@ const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, 
 // opt-in; this page was opting the reader in on their behalf and calling it their setting.
 //
 // Byte-identical to the panel's own constant, and a case holds the two in step.
-const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { code: false, sv: SCOPE_SV });
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, blueprints: false, actions: true, addresses: false, connections: true, failures: true, health: false };
 const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
-const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
+const LAY_CTL = [['cfgMargin', 'cfgvMargin', 'margin'], ['cfgSpread', 'cfgvSpread', 'spread'], ['cfgGap', 'cfgvGap', 'gap'], ['cfgFs', 'cfgvFs', 'fs']];
 const CFG_FILE = '.zoost.json';
 // **The blast radius, said once.** It was written three times in the CRM and nowhere at all in
 // Analytics, and the three did not agree: one said the permission lasts «permanently», which is
 // not true of a stored handle - Chrome drops it between sessions, which is why both panels have a
 // re-grant path. A warning that overstates is read once and discounted afterwards. Same sentence
 // in both products and on the settings page, held by a test that strips the markup and compares.
-const BLAST_RADIUS = 'Zoost will hold read and write access to everything inside that folder, for as long '
-  + 'as the browser keeps the permission. A dedicated folder is strongly recommended - not your home or '
-  + 'Documents.';
-
-
 let toastT = null;
 function toast(msg, bad) {
   const t = $('toast'); t.textContent = msg; t.classList.toggle('bad', !!bad); t.classList.add('on');
@@ -443,7 +429,7 @@ async function onSaveAi() {
   // not by the expensive one.
   let prev;
   try { const c = await readCfgForWrite(); prev = { anthropic: c.anthropic || {}, openai: c.openai || {} }; }
-  catch (_) { toast(MSG.readFailed, true); return; }
+  catch (_) { toast(SMSG.readFailed, true); return; }
   const wantLock = $('ai_lock').checked;
   const pass = $('ai_pass').value;
   const cur = $('ai_passcur').value;
@@ -535,19 +521,19 @@ let scope = Object.assign({}, SCOPE_DEFAULT);
 let aiLoadFailed = 'never';
 let layLoadFailed = 'never';
 let scopeLoadFailed = 'never';
-function scopeToUI() {
-  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!scope[k]; });
+function scopeFormToUI() {
+  SCOPE_KEYS.forEach((k) => { const e = $('cfgsc_' + k); if (e) e.checked = !!scope[k]; });
   $('sc_code').disabled = !scope.functions;
   $('sc_layouts').disabled = !scope.modules;
   $('sc_relations').disabled = !scope.modules;
 }
-function scopeFromUI() {
-  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) scope[k] = !!e.checked; });
+function scopeFormFromUI() {
+  SCOPE_KEYS.forEach((k) => { const e = $('cfgsc_' + k); if (e) scope[k] = !!e.checked; });
   if (!scope.functions) scope.code = false;
   if (!scope.modules) { scope.layouts = false; scope.relations = false; }
-  scopeToUI();
+  scopeFormToUI();
 }
-async function loadScope() {
+async function loadScopeForm() {
   scopeLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
   const current = beginLoad('exportScope');
   // **A read that failed is not «nothing is stored».** This swallowed it and drew the built-in
@@ -564,16 +550,16 @@ async function loadScope() {
     scopeLoadFailed = false;
   } catch (_) { if (current()) scopeLoadFailed = 'failed'; }
   if (!current()) return;
-  scopeToUI();
+  scopeFormToUI();
 }
-SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
+SCOPE_KEYS.forEach((k) => { const e = $('cfgsc_' + k); if (e) e.onchange = scopeFormFromUI; });
 // Merged over what is stored, never a replacement. It used to say «this page knows nine of the twelve
 // sections the panel's export dialog has»; it has had all twelve for a while, and the sentence stayed
 // - a comment describing a shape the file no longer has, which is worse than none. What is still true
 // is the reason for merging: this page does not carry `sv`, the stamp that says which build wrote the
 // preference, so a replacement would drop it.
 //
-// Replacing the object wholesale dropped all four. Then the panel's `loadScope` found `sv` missing,
+// Replacing the object wholesale dropped all four. Then the panel's `loadScopeForm` found `sv` missing,
 // took the preference for one written before the source-code default changed, and **set `code` back
 // to false** - so pressing «Everything», with the source-code box ticked, and saving, turned the
 // source code off. Measured by running the sequence. The three unexpressed choices reverted to their
@@ -587,12 +573,12 @@ SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFro
 // The cost lands on the next write from the diagram window or a second settings tab: an
 // unmarked section is reloaded on the spot, without the conflict box, and the preset the reader
 // had just applied disappeared while they were looking at it.
-$('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeToUI(); markDirty('exportScope'); };
-$('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeToUI(); markDirty('exportScope'); };
+$('scFull').onclick = () => { scope = Object.assign({}, scope, SCOPE_FULL); scopeFormToUI(); markDirty('exportScope'); };
+$('scSafe').onclick = () => { scope = Object.assign({}, scope, SCOPE_SAFE); scopeFormToUI(); markDirty('exportScope'); };
 async function onSaveScope() {
   // Nothing is written over a preference this page never managed to read.
   if (scopeLoadFailed) { toast(loadState(scopeLoadFailed), true); return; }
-  scopeFromUI();
+  scopeFormFromUI();
   // Stamped, like every other writer of this preference. Without it the panel reads what this page
   // saved as a scope from before the source-code default changed, applies its one-shot migration and
   // turns the source code back off - so the first «Save defaults» a person ever pressed undid the box
@@ -612,26 +598,26 @@ let lay = Object.assign({}, LAY_DEFAULT);
 // own key, and the built-in default is the measured one: 800, which covers the 725 a real org
 // reported. 400 satisfied the profile and refused that org, which is the wrong way round.
 const DRAW_MAX_DEFAULT = 800;
-let drawMax = DRAW_MAX_DEFAULT;
+let setDrawMax = DRAW_MAX_DEFAULT;
 function layToUI() {
   LAY_CTL.forEach(([sl, lb, k]) => { $(sl).value = lay[k]; $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
-  $('pSub').checked = !!lay.sub;
-  $('pDrawMax').value = drawMax;
-  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
+  $('cfgSub').checked = !!lay.sub;
+  $('pDrawMax').value = setDrawMax;
+  $('vDrawMax').textContent = setDrawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 }
 LAY_CTL.forEach(([sl, lb, k]) => {
   $(sl).addEventListener('input', () => { lay[k] = parseInt($(sl).value, 10); $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
 });
-$('pSub').onchange = () => { lay.sub = $('pSub').checked; };
+$('cfgSub').onchange = () => { lay.sub = $('cfgSub').checked; };
 $('pDrawMax').addEventListener('input', () => {
   // Clamped to the field's own bounds rather than trusted: a number input accepts anything typed
   // into it, and 0 would refuse every diagram while 10 million would hang the window for minutes.
   const raw = parseInt($('pDrawMax').value, 10);
   const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
-  drawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
-  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
+  setDrawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
+  $('vDrawMax').textContent = setDrawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 });
-$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); setDrawMax = DRAW_MAX_DEFAULT; layToUI(); markDirty('erParams'); };
 async function onSaveLay() {
   if (layLoadFailed) { toast(loadState(layLoadFailed), true); return; }
   // Merged, never replaced. This page edits the sliders; `kind` and `mode` belong to the diagram
@@ -646,7 +632,7 @@ async function onSaveLay() {
   // `saveKeys`, which catches and says so.
   let prev;
   try { prev = (await chrome.storage.local.get('erParams')).erParams || {}; }
-  catch (_) { toast(MSG.readFailed, true); return; }
+  catch (_) { toast(SMSG.readFailed, true); return; }
   // `kind` is dropped, and that is the point of writing it out rather than merging blindly.
   //
   // The window records which graph it was tuned on, and the window applies a saved `current` only
@@ -661,7 +647,7 @@ async function onSaveLay() {
   // show: `current` for everyone, and `mode` carried because the window owns it and this page has no
   // control for it.
   const { kind: _windowKind, ...keep } = prev;
-  if (!await saveKeys({ erParams: Object.assign({}, keep, { current: lay }), erDrawMax: drawMax })) return;
+  if (!await saveKeys({ erParams: Object.assign({}, keep, { current: lay }), erDrawMax: setDrawMax })) return;
   rebase('erParams'); paintDirty();
   await stamp(); toast('Diagram defaults saved.'); 
 }
@@ -694,10 +680,10 @@ async function loadLay() {
     // with only the first, a ceiling the reader had typed survived a reload that was meant to
     // replace it - so «Take theirs» kept the typed number, stored none, and reported the section
     // clean. The same shape as the tab arrays one file over, found the same way.
-    if (current()) drawMax = Number.isFinite(r.erDrawMax) ? Math.min(hi, Math.max(lo, r.erDrawMax)) : DRAW_MAX_DEFAULT;
+    if (current()) setDrawMax = Number.isFinite(r.erDrawMax) ? Math.min(hi, Math.max(lo, r.erDrawMax)) : DRAW_MAX_DEFAULT;
   } catch (_) { layLoadFailed = 'failed'; }
   // **The one loader that drew after a cancelled read.** Every other one returns first. The sliders
-  // are safe either way - their handlers write straight into `lay` - but `drawMax` is not: with the
+  // are safe either way - their handlers write straight into `lay` - but `setDrawMax` is not: with the
   // second read discarded, `layToUI()` paints the built-in ceiling into the box and a Save writes it
   // over whatever was stored. A read that was overtaken, or cancelled because the reader started
   // typing, has nothing to publish.
@@ -739,7 +725,7 @@ const dayOf = (iso) => {
   return isNaN(d) ? null : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-function renderTabs() {
+function renderTabPrefs() {
   const box = $('tablist');
   // **The failed read has to be said here, or the wrong missing thing is.** Drawn without it,
   // the list shows the built-in order as though it were the stored one and every row explains
@@ -822,7 +808,7 @@ function renderTabs() {
       // back on for the tenth case - someone who mirrors a type for Git and never browses it.
       if (!tabNoPullCur.includes(id)) { tabNoPullCur = tabNoPullCur.concat([id]); pullOffByHide.add(id); }
     }
-    renderTabs();
+    renderTabPrefs();
   }));
   box.querySelectorAll('input[data-pull]').forEach((c) => (c.onchange = () => {
     const id = c.dataset.pull;
@@ -838,7 +824,7 @@ function renderTabs() {
   box.querySelectorAll('input[data-recheck]').forEach((c) => (c.onchange = () => {
     const id = c.dataset.recheck;
     tabRecheckCur = c.checked ? tabRecheckCur.concat([id]) : tabRecheckCur.filter((x) => x !== id);
-    renderTabs();   // the sentence beside it says what happens next, and it has just changed
+    renderTabPrefs();   // the sentence beside it says what happens next, and it has just changed
   }));
   box.querySelectorAll('[data-up]').forEach((b) => (b.onclick = () => move(b.dataset.up, -1)));
   box.querySelectorAll('[data-down]').forEach((b) => (b.onclick = () => move(b.dataset.down, 1)));
@@ -863,7 +849,7 @@ function move(id, d) {
   const i = tabOrderCur.indexOf(id); const j = i + d;
   if (i < 0 || j < 0 || j >= tabOrderCur.length) return;
   tabOrderCur.splice(j, 0, tabOrderCur.splice(i, 1)[0]);
-  renderTabs();
+  renderTabPrefs();
 }
 async function loadTabs() {
   tabsLoadFailed = 'loading';   // in flight, so a cancellation has something to cancel
@@ -893,7 +879,7 @@ async function loadTabs() {
     if (st && st.tabAccessView) tabAccessCur = st.tabAccessView;
     tabsLoadFailed = false;
   } catch (_) { if (current()) tabsLoadFailed = 'failed'; }
-  renderTabs();
+  renderTabPrefs();
 }
 async function onSaveTabs() {
   // Nothing is written over an order this page never managed to read.
@@ -913,7 +899,7 @@ $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []
   // The record describes «this hide switched that pull off», and this empties the pulls without
   // hiding anything - so an id left behind made a later show turn back on a pull the reader had
   // set themselves. Two doors, and this was the second.
-  pullOffByHide.clear(); renderTabs(); markDirty('tabPrefs'); };
+  pullOffByHide.clear(); renderTabPrefs(); markDirty('tabPrefs'); };
 
 
 // ---------- guarding against the stale save ----------
@@ -1080,7 +1066,7 @@ $('saveRx').onclick = onSaveRx;
 
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
-  exportScope: { label: 'Export defaults', reload: loadScope },
+  exportScope: { label: 'Export defaults', reload: loadScopeForm },
   // Two keys, one section, the same shape as the diagram pair below: `tabPrefs` is what this page
   // writes, and `tabAccessView` is what the **panel** writes when a pull discovers that a role no
   // longer grants a tab - which is exactly what the Tabs section shows. Only the first was
@@ -1150,7 +1136,7 @@ function loadState(flag) {
     + 'give it a moment and try again.';
   if (flag === 'never') return 'This page never finished reading your stored settings, so nothing was '
     + 'saved. Reload the page.';
-  return MSG.readFailed;
+  return SMSG.readFailed;
 }
 /** A reader's edit is newer than every read already in flight for that section.
  *
@@ -1302,7 +1288,7 @@ async function saveKeys(obj) {
     // that happened to match the disk left an idle button and no words - the failure said only a
     // toast, which is gone in two seconds.
     paintDirty();
-    toast(MSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
+    toast(SMSG.saveFailed + (e && e.message ? e.message : 'the browser refused the write'), true);
     return false;
   }
   // **Not `rebase` here.** A write is not the moment the form and the store agree: three of
@@ -1419,17 +1405,46 @@ try {
 // inside it, awaits included.
 async function init() {
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
-  $('legal').textContent = LEGAL_DISCLAIMER;
-  await showRoot(); await loadDc(); await loadAi(); await loadScope(); await loadLay(); await loadTabs(); await loadRx();
+  $('legal').textContent = SET_DISCLAIMER;
+  await showRoot(); await loadDc(); await loadAi(); await loadScopeForm(); await loadLay(); await loadTabs(); await loadRx();
   // Every section now shows what is stored, which is what «no unsaved changes» means. Taken here,
   // once, after the reads: before them there is nothing on screen to compare against.
   document.querySelectorAll('[data-section]').forEach((sec) => rebase(sec.dataset.section));
   paintDirty();
 }
-init();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {
   $(id).oninput = () => { syncLockRow(); markEngineOptions(); };
 });
 $('ai_passlost').onclick = loseLock;
 $('ai_passchange').onclick = () => { aiPassChanging = true; syncLockRow(); focusFirstAsked(); };
+
+/** Open the settings on this window, and paint them from what is stored.
+ *
+ *  The only way in. It was a popup window at `options.html`, de-duplicated across every browser
+ *  window because two settings forms are two snapshots of the same values and saving the older one
+ *  overwrites the newer. That whole argument goes away with the window: there is one panel, so
+ *  there is one form, and it cannot be opened twice.
+ *
+ *  `where` is a fragment - `#ai` from the assistant, `#rx` from the saved-patterns menu - so a
+ *  reader sent to change one thing lands on it rather than at the top of a form about eight.
+ */
+async function openSettingsView(where) {
+  const view = document.getElementById('settingsview');
+  if (view) view.classList.add('show');
+  await init();
+  if (where) {
+    const sec = document.getElementById(String(where).replace(/^#/, ''));
+    if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });
+  }
+}
+/** Close them. Nothing is discarded: the form refuses to save over a value that changed underneath
+ *  it, and reopening reads what is stored - so what is on screen is never the authority. */
+function closeSettingsView() {
+  const view = document.getElementById('settingsview');
+  if (view) view.classList.remove('show');
+}
+{
+  const x = document.getElementById('settingsx');
+  if (x) x.onclick = () => closeSettingsView();
+}

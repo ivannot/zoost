@@ -68,6 +68,7 @@ apps/analytics/options.js	loadAi	aiLoadFailed
 apps/analytics/options.js	loseLock	aiPassChanging
 apps/analytics/options.js	onAiengine	prevEngine
 apps/analytics/options.js	saveAi	aiPassChanging
+apps/analytics/options.js	saveAi	sel
 apps/analytics/options.js	saveKeys	dirty
 apps/analytics/options.js	saveKeys	ownWrite
 apps/analytics/workbench.js	analyticsFrameId	_afCandidates
@@ -129,6 +130,8 @@ apps/crm/crm-tree.js	showFunctionRuntime	label
 apps/crm/crm-workflow-ui.js	openWorkflow	currentPath
 apps/crm/export-scope.js	loadScope	expScope
 apps/crm/export-scope.js	loadTabPrefs	tabPrefs
+apps/crm/export.js	exportHtml	scope
+apps/crm/export.js	exportMarkdown	scope
 apps/crm/filesystem-adapter.js	createWorkspaceFilesystem	root
 apps/crm/graphview.js	applyGraph	curFocus
 apps/crm/graphview.js	applyGraph	drawMax
@@ -140,6 +143,7 @@ apps/crm/live-sync.js	reconcileNow	pendingAfterPull
 apps/crm/live-sync.js	runSyncSlot	syncAgain
 apps/crm/live-sync.js	runSyncSlot	syncBusy
 apps/crm/live-sync.js	runSyncSlot	syncing
+apps/crm/modules.js	buildSchemaGraph	lay
 apps/crm/modules.js	openModule	currentPath
 apps/crm/modules.js	openModule	label
 apps/crm/modules.js	openModule	sel

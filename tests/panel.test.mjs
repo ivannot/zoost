@@ -42,7 +42,33 @@ const panelPage = (app) => pageAndSheets(app, 'workbench');
  *  off for the same reason - `#graphview .erbox{…}` and `.erbox{…}` are one rule asked for from two
  *  places, and no pixel moved in the change: the rendered diagram is byte-identical before and after.
  */
-const diagramPage = (app) => pageAndSheets(app, 'workbench').split('#graphview ').join('');
+const between = (text, from, to) => {
+  const i = text.indexOf(from);
+  if (i < 0) return text;
+  const j = to ? text.indexOf(to, i) : -1;
+  return text.slice(i, j < 0 ? undefined : j);
+};
+/** The diagram's own markup, and its own rules - not the whole page it now lives in.
+ *
+ *  Sharing a document means sharing the words in it: `html.indexOf('<header')` found the diagram's
+ *  header for as long as the diagram was the only thing in the file, and found the *settings*
+ *  header the day they moved in beside it. Two cases went red for that and neither was about
+ *  anything that had changed. A case about the diagram is given the diagram.
+ */
+const diagramPage = (app) => (between(read(`apps/${app}/workbench.html`), 'id="graphview"', 'id="offoverlay"')
+  + '\n' + read(`apps/${app}/graphview.css`)).split('#graphview ').join('');
+/** The settings, as the browser receives them.
+ *
+ *  **`options.html` is no longer the settings.** They opened in a popup page of their own while a
+ *  side panel could not hold a form; they are a view of the panel now, so the markup is in
+ *  `workbench.html` and the rules in an `options.css` scoped to `#settingsview`. What is left at
+ *  `options.html` is the page Chrome's own «Options» entry points at, which opens this window on
+ *  this view and closes itself - so a case that reads it by name is reading a doormat. The scope
+ *  prefix comes off for the same reason it does for the diagram: the rule is the subject, not its
+ *  address.
+ */
+const settingsPage = (app) => (between(read(`apps/${app}/workbench.html`), 'id="settingsview"', 'id="graphview"')
+  + '\n' + read(`apps/${app}/options.css`)).split('#settingsview ').join('');
 const aiFile = (app) => `apps/${app}/ai.js`;
 const filesystemFile = (app) => `apps/${app}/filesystem-adapter.js`;
 
@@ -2422,8 +2448,11 @@ const attributeEscapers = () => {
 
 test('a quote cannot close the attribute it sits in - every escaper, both products', () => {
   const found = attributeEscapers();
-  // If the derivation finds nothing, it is the derivation that is broken, not the tree.
-  assert.ok(found.length >= 6, `only ${found.length} attribute escaper(s) found across both products`);
+  // If the derivation finds nothing, it is the derivation that is broken, not the tree. Five, not
+  // six: the settings and the diagram are views of the panel now and share its document, so the
+  // copies they each used to declare are gone and they use the panel's. Fewer escapers is the point
+  // of that change - what this case holds is that every one that exists escapes the quote.
+  assert.ok(found.length >= 5, `only ${found.length} attribute escaper(s) found across both products`);
   for (const [rel, name, fn] of found) {
     // The documented trap, found again by an outside review: escHtml() escapes & < > and not quotes,
     // so a name from Zoho containing a quote ends the attribute and whatever follows becomes markup.
@@ -5339,7 +5368,7 @@ test('the data centres offered are the hosts the manifest can reach', () => {
         `id=dc ${f}: a data centre is written out in code, so there are two lists again`);
     }
     // and the form no longer carries them in markup either
-    assert.ok(!/<option value="zoho/.test(read(`apps/${app}/options.html`)),
+    assert.ok(!/<option value="zoho/.test(settingsPage(app)),
       `id=dc ${app}: Settings still lists data centres in its markup`);
   }
 });
@@ -5455,7 +5484,7 @@ test('crm: an access verdict is published only after its workspace config commit
     TAB: { modules: {} }, tabAccess: { modules: { state: 'ok', pulledAt: 'old' } },
     accessOf: (area) => ctx.tabAccess[area]?.state || null,
     patchCfg: async () => { live = false; },
-    publishAccess: () => { published++; }, renderTabs: () => {}, setStatus: () => {},
+    publishAccess: () => { published++; }, renderTabPrefs: () => {}, setStatus: () => {},
     tabLabel: (x) => x, Date, Object,
   };
   vm.createContext(ctx);
@@ -7195,7 +7224,7 @@ test('the binding a command carries is read before anything awaits', () => {
       Object, Array, Set, Map, JSON, String, Number, Boolean, Error, Promise, console,
       WS_MOVED: 'moved', META_SV: 4, treeData, index: new Map(),
       _dirtyMeta: new Set(), dirtyMeta: new Set(), dir: {},
-      MSG: { folder: 'folder' }, setStatus: () => {},
+      SMSG: { folder: 'folder' }, setStatus: () => {},
       isDeluge: (l) => !l || /^deluge/i.test(String(l)),
       fnMetaPath: (f, s) => `functions/${f}/${s}.meta.json`,
       fnProjectRoot: (f, s) => `functions/${f}/${s}.files`,
@@ -13171,11 +13200,17 @@ for (const app of ['crm', 'analytics']) {
     return m[1].split(',').map((s) => s.trim().replace(/^'|'$/g, ''));
   };
 
-  test('the settings page never writes an export section the panel does not have', () => {
-    const here = keysOf(opts), there = keysOf(panel);
-    const unknown = here.filter((k) => !there.includes(k));
-    assert.deepEqual(unknown, [], `the settings page writes ${unknown} which the panel does not read`);
-    assert.ok(there.length >= here.length, 'the panel now knows fewer sections than the page writes');
+  test('the settings form writes no export section the panel does not have', () => {
+    // **It cannot, and that is the change.** This used to compare two lists - the settings page had
+    // a `SCOPE_KEYS` of its own and the panel had one, and a section added to the panel and not to
+    // the page would have been dropped on the next save. The settings are a view of the panel now,
+    // in the same document, so there is one list and the comparison has nothing left to compare.
+    // What the case holds instead is what makes that true: the form must not grow a second list.
+    assert.ok(!/const SCOPE_KEYS =/.test(opts),
+      'the settings form declares its own SCOPE_KEYS again, so the two lists can part');
+    assert.ok(keysOf(panel).length >= 8, 'the panel no longer declares the sections it exports');
+    // And it must actually read the shared one, or it is writing nothing at all.
+    assert.match(opts, /SCOPE_KEYS/, 'the settings form does not read the export sections it saves');
   });
 
   test('a preset keeps what the page cannot show', () => {
@@ -14342,7 +14377,7 @@ test('a refused save keeps the edits and says so', async () => {
     const said = [];
     const ctx = {
       Object, Set, Map, Date, Promise, Array, String, console,
-      MSG: { saveFailed: 'Could not save: ' },
+      SMSG: { saveFailed: 'Could not save: ' },
       toast: (m, bad) => said.push([m, !!bad]),
       conflictBox: () => {},
       // The paint is derived from `dirty` and asserted in its own case; here it only has to exist.
@@ -14581,7 +14616,7 @@ test('asking for the export scope twice never abandons the first question', asyn
                  querySelectorAll: () => [], setAttribute() {}, removeAttribute() {} };
     const ctx = {
       Object, Set, Map, Array, Promise, String, Number, Boolean, console, document: { body: el, getElementById: () => el },
-      $: () => el, scopeToUI: () => {}, scopeStaleNote: () => {}, areaStale: () => false,
+      $: () => el, scopeFormToUI: () => {}, scopeToUI: () => {}, scopeStaleNote: () => {}, areaStale: () => false,
       TABS: [], AREA_SCOPE: {}, AREA_IDS: [], expScope: { functions: true }, dlgScope: null, dlgAutoCleared: null,
       panelInert: () => {},
     };
@@ -14663,7 +14698,7 @@ test('a stored diagram setting outside a slider is saved as what is shown', asyn
       $: el, LAY_CTL: [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],
                        ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']],
       LAY_DEFAULT: { margin: 36, spread: 42, gap: 8, fs: 10, sub: true },
-      DRAW_MAX_DEFAULT: 800, lay: null, drawMax: 800, layLoadFailed: false,
+      DRAW_MAX_DEFAULT: 800, lay: null, setDrawMax: 800, layLoadFailed: false,
       dirtyPeer: () => undefined,   // nothing unsaved in this scenario: a read may publish
       chrome: { storage: { local: { get: async (k) => (k === 'erParams'
         ? { erParams: { current: { margin: 9999, spread: 42, gap: 8, fs: 10, sub: true } } }
@@ -14689,18 +14724,21 @@ test('the diagram sliders mean the same thing in Settings and in the window', ()
   //
   // The limit: it compares the ranges by id, so a control renamed on one side reads as absent on
   // that side and is reported as such rather than passing quietly.
-  const ranges = (rel) => {
+  // **Both copies are in one page now, so they are told apart by name rather than by file.** The
+  // settings form and the diagram both carry these sliders; the diagram is a view of the panel and
+  // so are the settings, so the settings' copies were renamed `cfg…` to stop two elements sharing
+  // an id. What this case is about has not moved: the two declare the same range, or a reader sets
+  // a default the diagram will not accept.
+  const ranges = (rel, prefix) => {
     const out = {};
-    for (const m of read(rel).matchAll(/id="(p\w+)"[^>]*\bmin="(-?\d+)"[^>]*\bmax="(-?\d+)"/g)) {
+    for (const m of read(rel).matchAll(new RegExp(`id="${prefix}(\\w+)"[^>]*\\bmin="(-?\\d+)"[^>]*\\bmax="(-?\\d+)"`, 'g'))) {
       out[m[1]] = [Number(m[2]), Number(m[3])];
     }
     return out;
   };
   for (const app of readdirSync(join(ROOT, 'apps'))) {
-    const a = ranges(`apps/${app}/options.html`);
-    // The diagram's sliders live in the panel's markup now; the settings page still has its own
-    // copy, and the point of this case is that the two declare the same range.
-    const b = ranges(`apps/${app}/workbench.html`);
+    const a = ranges(`apps/${app}/workbench.html`, 'cfg');
+    const b = ranges(`apps/${app}/workbench.html`, 'p');
     const shared = Object.keys(a).filter((k) => k in b);
     assert.ok(shared.length >= 4,
       `id=${app}: only ${shared.length} slider(s) declared on both sides - the derivation broke, ` +
@@ -14986,7 +15024,7 @@ test('no settings page writes over a preference it could not read', async () => 
       const g = {
         console, Object, Promise, Math, Number, JSON, Set, Date, Array,
         $: () => el(), toast: (t, bad) => said.push([String(t), !!bad]),
-        MSG: { readFailed: 'READFAIL', saveFailed: 'SAVEFAIL' },
+        SMSG: { readFailed: 'READFAIL', saveFailed: 'SAVEFAIL' },
         // The write itself works; what fails is the read the merge needs.
         saveKeys: async () => { wrote = true; return true; },
         stamp: async () => {}, markClean: () => {}, beginLoad: () => () => true, currentLoad: () => 1,
@@ -14997,10 +15035,10 @@ test('no settings page writes over a preference it could not read', async () => 
                   showDirectoryPicker: async () => { throw Object.assign(new Error('no'), { name: 'AbortError' }); } },
         confirm: () => false,
         // Everything the individual handlers reach for; a missing one throws and is reported as such.
-        scope: {}, lay: {}, drawMax: 800, SCOPE_KEYS: [], SCOPE_FULL: {}, SCOPE_SV: 2, LAY_CTL: [],
+        scope: {}, lay: {}, setDrawMax: 800, SCOPE_KEYS: [], SCOPE_FULL: {}, SCOPE_SV: 2, LAY_CTL: [],
         TAB_IDS: [], tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabAccessCur: {},
         scopeLoadFailed: false, tabsLoadFailed: false, rxLoadFailed: false, rxCur: [],
-        layFromUI: () => {}, scopeFromUI: () => {}, renderTabs: () => {}, renderRx: () => {},
+        layFromUI: () => {}, scopeFormFromUI: () => {}, renderTabPrefs: () => {}, renderRx: () => {},
         mergeKeys: async () => ({}), engineIncomplete: () => false, showForget: () => {},
         aiLockUI: () => {}, loadAi: async () => {}, showRoot: async () => {}, loadRx: async () => {},
         currentAi: async () => ({ anthropic: {}, openai: {} }), engineLabel: (x) => x,
@@ -15610,7 +15648,12 @@ test('a settings page waits for the settings it is loading', async () => {
     const finished = [];
     const g = { console, Object, Math, Number, JSON, Set, Array, String, Promise,
                 $: () => ({ textContent: '', innerHTML: '', value: '' }),
-                esc: (x) => String(x), LEGAL_DISCLAIMER: 'x',
+                esc: (x) => String(x),
+                // Both names: the CRM settings form renamed its copy when it joined the panel's
+                // document (the panel already had a `LEGAL_DISCLAIMER`), and the Analytics one had
+                // an identical copy that was simply dropped, so it reads the panel's under the old
+                // name. One case, two products, two spellings of the same sentence.
+                SET_DISCLAIMER: 'x', LEGAL_DISCLAIMER: 'x',
                 showRoot: async () => {},
                 // `init` ends by recording what every section now shows as its baseline; this case
                 // is about the order of the reads, and an empty page lets that step run for real.
@@ -15676,7 +15719,7 @@ test('the folder warning is one sentence, in every place either product says it'
   }
 
   // The settings page says it in markup, because it bolds the part that matters. Same words.
-  const html = read('apps/crm/options.html');
+  const html = settingsPage('crm');
   const box = /<div class="warnbox" id="blastbox">([\s\S]*?)<\/div>/.exec(html);
   assert.ok(box, 'apps/crm/options.html no longer carries #blastbox - the warning left the page it is read on');
   const shown = box[1].replace(/<[^>]+>/g, '').split(/\s+/).filter(Boolean).join(' ');
@@ -15717,15 +15760,15 @@ test('an edit then a Save writes, in every section of both settings pages', asyn
                               document: { querySelectorAll: () => [], querySelector: () => null },
                               SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
                               TAB_IDS: ['functions'], tabOrderCur: ['functions'], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
-                              scope: {}, scopeFromUI: () => {}, rxCur: [{ name: 'a', pattern: 'b' }],
-                              rxProblems: () => null, renderRx: () => {}, renderTabs: () => {},
+                              scope: {}, scopeFormFromUI: () => {}, rxCur: [{ name: 'a', pattern: 'b' }],
+                              rxProblems: () => null, renderRx: () => {}, renderTabPrefs: () => {},
                               SCOPE_SV: 2, MSG: { readFailed: 'read failed' },
                               toast: (t) => said.push(String(t)),
                               saveKeys: async (o) => { writes.push(o); return true; },
                               rebase: () => {},
                 rebase: () => {}, paintDirty: () => {},
                               stamp: async () => {},
-                              loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
+                              loadDc: async () => {}, loadAi: async () => {}, loadScopeForm: async () => {},
                               loadTabs: async () => {}, loadLay: async () => {}, loadRx: async () => {} }, seed);
     // The state a finished page is in: every read published, every flag clear.
     g.scopeLoadFailed = false; g.tabsLoadFailed = false; g.rxLoadFailed = false;
@@ -15854,7 +15897,7 @@ test('typing during a reload keeps what was typed, and says the two have parted'
               tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [], tabAccessCur: {}, tabsLoadFailed: false,
               document: { querySelectorAll: () => [], querySelector: () => null },
               renderTabs: () => { drew++; },
-              loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
+              loadDc: async () => {}, loadAi: async () => {}, loadScopeForm: async () => {},
               loadRx: async () => {}, loadLay: async () => {},
               chrome: { storage: { local: { get: async () => { await held; return { tabPrefs: { order: ['modules'], hidden: [] } }; } } } } };
   // `markLoadCancelled` too: a cancelled read records *why* it did not publish, and the refusal a
@@ -15955,7 +15998,7 @@ test('a key arriving from elsewhere does not reload a section with unsaved edits
 test('a button that rewrites the form marks its section as edited', () => {
   for (const app of ['crm', 'analytics']) {
     const rel = `apps/${app}/options.js`;
-    const sections = [...read(`apps/${app}/options.html`).matchAll(/data-section="(\w+)"/g)].map((m) => m[1]);
+    const sections = [...settingsPage(app).matchAll(/data-section="(\w+)"/g)].map((m) => m[1]);
     assert.ok(sections.length, `${app}: options.html declares no [data-section] - this case has lost its subject`);
 
     const lines = read(rel).split('\n')
@@ -15971,9 +16014,9 @@ test('a button that rewrites the form marks its section as edited', () => {
                           querySelectorAll: () => [], querySelector: () => null, appendChild() {}, focus() {} });
       const g = { console, Object, Math, Number, JSON, Set, Array, String,
                   $: () => el(), markDirty: (k) => marked.push(k),
-                  scopeToUI() {}, layToUI() {}, renderTabs() {}, renderRx() {},
+                  scopeFormToUI() {}, scopeToUI() {}, layToUI() {}, renderTabPrefs() {}, renderTabs() {}, renderRx() {},
                   SCOPE_FULL: {}, SCOPE_SAFE: {}, LAY_DEFAULT: {}, DRAW_MAX_DEFAULT: 800, TAB_IDS: [],
-                  scope: {}, lay: {}, drawMax: 0, tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], rxCur: [] };
+                  scope: {}, lay: {}, setDrawMax: 0, tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], rxCur: [] };
       // The line is evaluated as written - `$('x').onclick = ...` - and `$` hands back one box, so
       // what the page attached is what this reads back off it. Rewriting the line into something
       // else would be testing a transcription.
@@ -16195,7 +16238,7 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
       setStatus: (t, c) => said.push([String(t), c]), dir: null,
       hasPerm: async () => granted, ensurePerm: async () => granted, renderBlocked: () => {},
       appRoot: async () => ({ name: 'crm', values: async function* () { throw new Error('NotFoundError'); } }),
-      dropWorkspaceState: () => {}, renderTabs: () => {}, activate: async () => {},
+      dropWorkspaceState: () => {}, renderTabPrefs: () => {}, activate: async () => {},
       window: { idbHandle: { get: async () => null, set: async () => {} } },
       emptyReason: () => '', renderTree: () => {}, refreshContext: async () => {},
     };
@@ -16228,7 +16271,11 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
 // on the settings page did the same. Measured in that order, both paths.
 test('every writer of the export scope stamps it, and the two products agree', () => {
   const sv = {};
-  for (const [rel, name] of [['apps/crm/export-scope.js', 'crm panel'], ['apps/crm/options.js', 'crm settings'],
+  // **The settings form is not in this list any more, and that is stronger than being in it.** It
+  // declared its own `SCOPE_SV` while it was a page of its own, and the two could part - which is
+  // the defect this case was written for. It is a view of the panel now and reads the panel's, so
+  // there is one stamp; what has to hold is that it does not grow a second, asserted below.
+  for (const [rel, name] of [['apps/crm/export-scope.js', 'crm panel'],
                              ['apps/analytics/export.js', 'analytics panel']]) {
     const src = read(rel);
     const m = /const SCOPE_SV = (\d+);/.exec(src);
@@ -17131,7 +17178,7 @@ test('crm: diagram defaults saved in Settings are applied by either graph', asyn
   let stored = { erParams: { current: { margin: 36 }, mode: 'modules', kind: 'calls' } };
   const ctx = {
     Object, Promise, Number, Math, Array, String, JSON, console,
-    lay: { margin: 60, spread: 42, gap: 8, fs: 10, sub: true }, drawMax: 800,
+    lay: { margin: 60, spread: 42, gap: 8, fs: 10, sub: true }, setDrawMax: 800,
     saveKeys: async (o) => { Object.assign(stored, JSON.parse(JSON.stringify(o))); return true; },
     rebase: () => {}, paintDirty: () => {},
     stamp: async () => {}, toast: () => {},
@@ -17393,15 +17440,24 @@ test('crm: Settings can set every export scope the panel offers', () => {
     return m[1].split(',').map((x) => x.trim().replace(/^'|'$/g, ''));
   };
   const panel = keysOf('apps/crm/export-scope.js');
-  const page = keysOf('apps/crm/options.js');
+  // **The settings form reads the panel's list rather than keeping one.** It had its own while it
+  // was a page of its own, and a section added to the panel and not to the page would have been
+  // dropped on the next save - which is what this case was written for. They are one document now,
+  // so the disagreement is not possible; what has to hold is that no second list comes back.
+  assert.ok(!/^const SCOPE_KEYS = \[/m.test(read('apps/crm/options.js')),
+    'the settings form declares its own export scopes again, so the two lists can part');
+  const page = panel;
   assert.ok(panel.length >= 10, `the panel offers ${panel.length} scope(s) - the derivation broke`);
   assert.deepEqual(page, panel,
     `Settings and the export dialog disagree about what an export may contain: Settings is missing ` +
     `${panel.filter((k) => !page.includes(k))}, and invents ${page.filter((k) => !panel.includes(k))}`);
 
   // And a key with no control is a default nobody can set.
-  const html = read('apps/crm/options.html');
-  const without = panel.filter((k) => !html.includes(`id="sc_${k}"`));
+  const html = settingsPage('crm');
+  // `cfgsc_`, because the settings form's boxes were renamed when it joined the panel's document -
+  // the export dialog's own `sc_` boxes are in the same page now, and two elements cannot share an
+  // id. The question is unchanged: every scope the panel exports has a box here to set it by.
+  const without = panel.filter((k) => !html.includes(`id="cfgsc_${k}"`));
   assert.deepEqual(without, [],
     `these export scopes have no checkbox on the settings page, so they cannot be made a default: ${without}`);
 });
@@ -17430,7 +17486,7 @@ test('crm: both reports carry the run counts and the credit reading', () => {
     moduleRefusal: () => '', actionKindLabel: (k) => k, firedBy: () => [],
     actStale: () => false, actKept: () => false, actThin: () => false,
     _mdCell: (x) => String(x == null ? '' : x),
-    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', SET_DISCLAIMER: 'x',
     SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '', sanitize: (x) => String(x || ''),
     escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
     esc: (x) => String(x == null ? '' : x), hl: (x) => String(x || ''), first: (x) => String(x || ''),
@@ -17536,7 +17592,7 @@ test('a constant declared in two scripts of one product is not two lists', () =>
 
   const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true })
     .filter((d) => d.isDirectory()).map((d) => d.name);
-  let pairs = 0;
+  let pairs = 0, seen = 0;
   const bad = [];
   for (const app of apps) {
     const per = new Map();
@@ -17544,6 +17600,7 @@ test('a constant declared in two scripts of one product is not two lists', () =>
       for (const [name, body] of decls(rel)) {
         if (!per.has(name)) per.set(name, []);
         per.get(name).push({ rel, body });
+        seen++;
       }
     }
     for (const [name, where] of per) {
@@ -17572,7 +17629,13 @@ test('a constant declared in two scripts of one product is not two lists', () =>
       }
     }
   }
-  assert.ok(pairs >= 4, `only ${pairs} duplicated constant(s) compared - the derivation broke`);
+  // **Zero pairs is the answer now, and it is the one this case wanted.** It guarded on «at least
+  // four compared», because a derivation that finds nothing looks exactly like a tree with nothing
+  // wrong in it - and the four it found were the settings form's copies of the panel's constants.
+  // The settings became a view of the panel, the copies went, and the comparison has nothing left
+  // to compare. So the guard moved to what still distinguishes the two: the derivation must be
+  // reading constants at all, and any pair that comes back must agree.
+  assert.ok(seen >= 40, `only ${seen} constant(s) read across both products - the derivation broke`);
   assert.deepEqual(bad, [], `a list is written out twice and the copies have drifted:\n  ${bad.join('\n  ')}`);
 });
 
@@ -17681,7 +17744,7 @@ test('crm: both reports are produced with every chapter ticked and something in 
     actProv: () => '', actProvRest: () => '', actWhen: () => '', actStale: () => false, actKept: () => false,
     actThin: () => false, _mdCell: (x) => String(x == null ? '' : x),
     PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', PRODUCT_AUTHOR: 'Ivan',
-    LEGAL_DISCLAIMER: 'x', SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '',
+    SET_DISCLAIMER: 'x', SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '',
     sanitize: (x) => String(x || ''), escHtml: (x) => String(x == null ? '' : x),
     escA: (x) => String(x == null ? '' : x), esc: (x) => String(x == null ? '' : x),
     hl: (x) => String(x || ''), first: (x) => String(x || ''), params: () => '',
@@ -17877,7 +17940,7 @@ test('crm: the export contents name the chapters the export has, in the order it
     actProv: () => '', actProvRest: () => '', actWhen: () => '',
     actStale: () => false, actKept: () => false, actThin: () => false,
     _mdCell: (x) => String(x == null ? '' : x),
-    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', SET_DISCLAIMER: 'x',
     SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '', sanitize: (x) => String(x || ''),
     escHtml: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
     esc: (x) => String(x == null ? '' : x), hl: (x) => String(x || ''), first: (x) => String(x || ''),
@@ -17972,7 +18035,7 @@ test('analytics: the export contents name the chapters in the order the document
   const globals = {
     window: win,
     chrome: { runtime: { getManifest: () => ({ version: '1.2.3' }) } },
-    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', LEGAL_DISCLAIMER: 'x',
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', SET_DISCLAIMER: 'x',
     bound: { workspace: 'w', name: 'W', label: '', origin: 'o' },
     views: [], schema: {}, relations: [], deps: null,
     esc: (x) => String(x == null ? '' : x), escA: (x) => String(x == null ? '' : x),
@@ -18061,7 +18124,7 @@ test('crm: the reports escape what came out of the org, with the escapers the pa
     moduleRefusal: () => '', actionKindLabel: (k) => k, firedBy: () => [],
     actProv: () => '', actProvRest: () => '', actWhen: () => '',
     actStale: () => false, actKept: () => false, actThin: () => false,
-    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: '', PRODUCT_AUTHOR: 'Ivan', SET_DISCLAIMER: 'x',
     SPONSOR_URL: '', KOFI_URL: '', EXPORT_CSS: '',
     // The shipped ones, which is the whole point of this case.
     sanitize: real.sanitize, escHtml: real.escHtml, escA: real.escA, esc: real.escHtml,
@@ -18230,7 +18293,7 @@ test('a number the settings page offers is the number the panel uses', () => {
     .filter((d) => d.isDirectory()).map((d) => d.name);
   let controls = 0, prose = 0, derived = 0;
   for (const app of apps) {
-    const html = read(`apps/${app}/options.html`);
+    const html = settingsPage(app);
     const own = shippedScripts().filter((f) => f.startsWith(`apps/${app}/`));
     // The source, not the scan, and the reason is worth writing down because the first version got
     // it the other way round: every control here is found **by its id**, which is a string literal,
@@ -18426,7 +18489,7 @@ test('crm: every area the panel reports on is an area the panel can record', asy
     tabAccess: {}, Object, Date, Promise, console,
     accessOf: () => 'ok',
     patchCfg: async (o) => { calls.push(o); },
-    publishAccess: () => {}, renderTabs: () => {}, setStatus: () => {}, tabLabel: (x) => x,
+    publishAccess: () => {}, renderTabPrefs: () => {}, setStatus: () => {}, tabLabel: (x) => x,
   };
   const { noteAccess } = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], globals);
   const op = { current: () => true };
@@ -19383,13 +19446,13 @@ test('a Save refuses over an unread section and works over a read one', async ()
     const rel = `apps/${app}/options.js`;
     const writes = [];
     const g = { console, Object, Set, Array, Number, Math, JSON, Boolean, String,
-                MSG: { readFailed: 'read failed' }, toast: () => {},
+                SMSG: { readFailed: 'read failed' }, toast: () => {},
                 saveKeys: async (o) => { writes.push(...Object.keys(o)); return true; },
     rebase: () => {}, paintDirty: () => {},
                 stamp: async () => {}, markEngine: () => {}, mergeKeys: (a) => a,
                 readCfgForWrite: async () => ({}), engineLabel: () => 'x', aiForget: new Set(),
                 loadAi: async () => {}, layToUI: () => {}, erPreview: () => {},
-                LAY_CTL: [], LAY_DEFAULT: {}, lay: {}, drawMax: 800,
+                LAY_CTL: [], LAY_DEFAULT: {}, lay: {}, setDrawMax: 800,
                 chrome: { storage: { local: { get: async () => ({}), set: async () => {} } } },
                 $: () => ({ value: '', checked: false, min: '0', max: '9999', style: {}, placeholder: '' }) };
     const savers = app === 'crm' ? [['onSaveLay', 'erParams'], ['onSaveAi', 'aicfg']]
@@ -19860,6 +19923,9 @@ test('an export preset keeps what the page needs to read it back', () => {
     const src = appPanel(app).replace(/^\s*\/\/.*$/gm, '');
     // Derived: whatever `loadScope` compares to decide a stored scope is old. Naming `sv` here would
     // survive the day that field is renamed and stop meaning anything.
+    // The **panel's** loader, not the settings form's: `sliceApp` walks the panel's scripts, and the
+    // settings form is one of them since it became a view - so the name has to say which of the two
+    // is meant. The export dialog is what reads a stored scope back when you export.
     const stamp = /(\w+)\.(\w+) !== \w+/.exec(sliceApp(app, 'loadScope').replace(/^\s*\/\/.*$/gm, ''));
     assert.ok(stamp, `${app}: loadScope no longer tests a stamp on the stored scope - this case has lost its subject`);
     for (const preset of ['SCOPE_FULL', 'SCOPE_SAFE']) {
@@ -20531,7 +20597,7 @@ test('a refused area is described in the words the refusal came with', () => {
   // stored with the verdict, so the sentence outlives the run that heard it.
   assert.match(sliceFn(rel, 'noteAccess'), /note: \(err && err\.note\) \|\| null/,
                'the verdict is recorded without the words it came in, so Settings can only invent them');
-  assert.match(sliceFn('apps/crm/options.js', 'renderTabs'), /a\.note \|\|/,
+  assert.match(sliceFn('apps/crm/options.js', 'renderTabPrefs'), /a\.note \|\|/,
                'Settings states a cause of its own over the one Zoho gave');
   const closing = sliceFn(rel, 'forbiddenNote');
   assert.doesNotMatch(closing, /not granted to your Zoho role/,
@@ -20658,7 +20724,7 @@ test('a refused area is asked again by the next pull, once, and only when asked 
 
   // Settings offers it where there is something to overturn, saves it with its siblings, and talks
   // to nothing: the version that talked to the panel is what died on the folder permission.
-  const tabs = sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, '');
+  const tabs = sliceFn('apps/crm/options.js', 'renderTabPrefs').replace(/^\s*\/\/.*$/gm, '');
   assert.match(tabs, /denied \? `<label class="pl"[^`]*data-recheck=/,
                'the tick is offered on rows with no verdict to overturn, or on none at all');
   assert.doesNotMatch(tabs, /chrome\.storage|button class="mv" data-recheck/,
@@ -20692,7 +20758,7 @@ test('a refused area is asked again by the next pull, once, and only when asked 
 test('every Save says whether it has something to save, in both products', () => {
   for (const app of ['crm', 'analytics']) {
     const rel = `apps/${app}/options.js`;
-    const markup = read(`apps/${app}/options.html`);
+    const markup = settingsPage(app);
     assert.doesNotMatch(markup, /<button id="save\w+" class="primary"/,
                         `${app}: a Save is bright in the markup, so it is bright when it means nothing`);
 
@@ -20831,7 +20897,7 @@ test('a section redrawn from another window is compared against what it now show
               paintDirty: () => {}, invalidateSectionLoads: () => {},
               SEC_TABS: 'Tabs', SEC_DIAGRAM: 'Diagram',
               aiForget: new Set(), tabOrderCur: [], tabHiddenCur: [], tabNoPullCur: [], tabRecheckCur: [],
-              loadDc: async () => {}, loadAi: async () => {}, loadScope: async () => {},
+              loadDc: async () => {}, loadAi: async () => {}, loadScopeForm: async () => {},
               loadRx: async () => {}, loadLay: async () => {},
               // The reload redraws the section, which is the whole point of the path under test.
               loadTabs: async () => { shown = 'after'; },
@@ -20914,7 +20980,7 @@ test('an empty list says what Zoho last answered about that area', () => {
   // failed; branching on the refusal's *words* was worse the other way, because exactly one refusal
   // in the extension carries any - so a 500, a 429 and a stale bridge all showed the healthy note
   // and nothing anywhere recorded the failure. The verdict says which of the two it was.
-  const tabsSrc = sliceFn('apps/crm/options.js', 'renderTabs').replace(/^\s*\/\/.*$/gm, '');
+  const tabsSrc = sliceFn('apps/crm/options.js', 'renderTabPrefs').replace(/^\s*\/\/.*$/gm, '');
   assert.match(tabsSrc, /a\.state !== 'ok' && !a\.stored/,
                'the settings row either calls a short pull a failure, or says nothing about a real one');
   assert.match(tabsSrc, /a\.note \|\| 'Last pull did not succeed'/,
@@ -20967,7 +21033,7 @@ test('a pull that stored nothing does not claim to have read anything', () => {
     const m = load([sliceFn(rel, 'noteAccess')], {
       console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
       accessOf: () => 'ok', tabAccess: { workflows: { state: 'ok', pulledAt: '2026-05-01T10:00:00.000Z' } },
-      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
       setStatus: () => {}, tabLabel: (a) => a,
     });
     return m.noteAccess('workflows', null, { current: () => true }, stored).then(() => wrote.access.workflows);
@@ -21111,8 +21177,8 @@ test('turning a hidden tab back on restores the pull switch that hiding it turne
   g.$ = (id) => (id === 'tablist' ? tabsBox : { style: {}, textContent: '', title: '', onclick: null });
   boxes.show = { dataset: { id: 'actions' }, checked: true, onchange: null };
   boxes.pull = { dataset: { pull: 'actions' }, checked: true, onchange: null };
-  const m = load([sliceConst(rel, 'pullOffByHide'), sliceFn(rel, 'renderTabs')], g);
-  m.renderTabs();
+  const m = load([sliceConst(rel, 'pullOffByHide'), sliceFn(rel, 'renderTabPrefs')], g);
+  m.renderTabPrefs();
 
   boxes.show.checked = false; boxes.show.onchange();
   assert.deepEqual(g.tabHiddenCur, ['actions'], 'hiding a tab no longer hides it');
@@ -23101,7 +23167,7 @@ test('a list pull moves the list time and not the details time, and the tab says
     const m = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], {
       console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
       accessOf: () => 'ok', tabAccess: { workflows: prev },
-      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
       setStatus: () => {}, tabLabel: (a) => a,
     });
     await m.noteAccess('workflows', null, { current: () => true }, true, depth);
@@ -23184,7 +23250,7 @@ test('an area whose first pull was a list pull says nothing was read, not that i
     const m = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], {
       console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
       accessOf: () => 'ok', tabAccess: { workflows: prev },
-      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
       setStatus: () => {}, tabLabel: (a) => a,
     });
     await m.noteAccess('workflows', null, { current: () => true }, true, depth);
@@ -23252,7 +23318,7 @@ test('a full pull that came up short is partial, counted, cleared by a complete 
     const m = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], {
       console, Object, Date, TAB: { modules: {} }, AREA_SCOPE: { modules: 1 },
       accessOf: () => 'ok', tabAccess: { modules: prev },
-      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabs: () => {},
+      patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
       setStatus: () => {}, tabLabel: (a) => a,
     });
     await m.noteAccess('modules', null, { current: () => true }, true, depth, gaps);

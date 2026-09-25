@@ -7,20 +7,9 @@
 # selector	where
 analytics:#graphview #ertools button.on	apps/analytics/graphview.css
 analytics:#graphview .erbox	apps/analytics/graphview.css
-analytics:*	apps/analytics/options.css,apps/analytics/workbench.css
-analytics:.ck	apps/analytics/options.css,apps/analytics/workbench.css
-analytics:.ck input	apps/analytics/options.css,apps/analytics/workbench.css
-analytics:body	apps/analytics/options.css,apps/analytics/workbench.css
-analytics:button	apps/analytics/options.css,apps/analytics/workbench.css
+analytics:*	apps/analytics/workbench.css
 crm:#graphview #ertools button.on	apps/crm/graphview.css
 crm:#graphview .erbox	apps/crm/graphview.css
-crm:*	apps/crm/options.css,apps/crm/workbench.css
-crm:.ck	apps/crm/options.css,apps/crm/workbench.css
-crm:.ck em	apps/crm/options.css,apps/crm/workbench.css
-crm:.ck input	apps/crm/options.css,apps/crm/workbench.css
-crm:.ck.ind	apps/crm/options.css,apps/crm/workbench.css
-crm:body	apps/crm/options.css,apps/crm/workbench.css
-crm:button	apps/crm/options.css,apps/crm/workbench.css
-crm:button.primary	apps/crm/options.css,apps/crm/workbench.css
+crm:*	apps/crm/workbench.css
 site:header .brand	site/site.css
 site:header nav a.nprod	site/site.css

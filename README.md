@@ -244,7 +244,8 @@ extension message bus and the real folder-permission lifetime remain outside aut
 2. **Load unpacked** → select **`apps/crm`**, not the repository root. Each extension lives in its
    own folder under `apps/` and is loaded separately.
 3. Open Zoho CRM in a tab, then click the extension's icon: Zoost opens in **its own window**,
-   which you can move to a second monitor and resize.
+   which you can move to a second monitor and resize. The diagram and the settings open inside that
+   window rather than in windows of their own; **✕ Close**, top right, gives the panel back.
 
 ## Quick start
 
