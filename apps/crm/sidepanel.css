@@ -854,3 +854,15 @@
   /* Folded, the bar that states the binding becomes the top row and would run under the control.
      Unfolded it does not, which is why the reserve is on the folded state and not always. */
   body.chromefolded #ctx{padding-right:34px}
+
+  /* One line for the search and the filters, once there is a line to share. The wrapper is
+     transparent below the breakpoint - `display:contents` - so the narrow panel keeps exactly the
+     two rows it had, each with its own rule and its own border. Above it, the find box stops being
+     a field the width of the whole panel for a word of eight letters, and the filters take the
+     rest. Reported with a picture of the two rows. */
+  #findfilter{display:contents}
+  @media (min-width: 720px){
+    #findfilter{display:flex;align-items:stretch}
+    #findfilter>.controls{flex:1 1 auto;min-width:0}
+    #findfilter>.controls:first-child{flex:0 1 460px;border-right:1px solid var(--line)}
+  }

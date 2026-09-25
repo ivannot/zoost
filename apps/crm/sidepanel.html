@@ -89,6 +89,12 @@
     <button id="missing" style="display:none"></button>
     <span id="behind" class="behind" hidden></span>
   </div>
+  <!-- **The find box and the filters share a line when there is one to share.** Reported: two rows
+       stacked vertically, and «ha poco senso un box find cosi' largo» - at 1200px the field was as
+       wide as the whole panel for a word of eight letters. The wrapper is `display:contents` below
+       the breakpoint, so the narrow layout is byte-for-byte what it was: two rows, each with its
+       own rule. -->
+  <div id="findfilter">
   <div class="controls">
     <div class="findgrp">
       <div class="findwrap"><input id="find" placeholder="Find…" autocomplete="off"><button type="button" class="fx bare" id="findx" title="Clear" aria-label="Clear the search">✕</button></div>
@@ -99,6 +105,7 @@
     <div class="ntog"><button id="nameToggle" title="Toggle internal / display name">Name: display</button></div>
   </div>
   <div class="controls"><div class="chips" id="typechips"></div></div>
+  </div>
 
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button><button id="repdismiss" title="Dismiss this - the report page stays open in its own window">✕</button><button id="expopen" class="bare"></button></div>
 

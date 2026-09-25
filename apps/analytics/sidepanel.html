@@ -51,6 +51,12 @@
     <div id="navbody"></div>
   </div>
 
+  <!-- **The find box and the filters share a line when there is one to share.** Reported: two rows
+       stacked vertically, and «ha poco senso un box find cosi' largo» - at 1200px the field was as
+       wide as the whole panel for a word of eight letters. The wrapper is `display:contents` below
+       the breakpoint, so the narrow layout is byte-for-byte what it was: two rows, each with its
+       own rule. -->
+<div id="findfilter">
 <div class="controls">
   <div class="findgrp">
     <div class="findwrap"><input id="find" type="search" placeholder="Find…" autocomplete="off"><button type="button" class="fx bare" id="findclear" title="Clear" aria-label="Clear the search">✕</button></div>
@@ -73,6 +79,7 @@
     <option value="owner">Owner</option>
   </select>
   <button class="sortdir" id="sortdir" title="Ascending / descending">&#8593;</button>
+</div>
 </div>
 
 
