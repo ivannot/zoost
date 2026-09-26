@@ -46,6 +46,20 @@ def hosts_of(app: str) -> str:
     import json as _json
     m = _json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
     return _json.dumps(m.get('host_permissions', []))
+
+
+def version_of(app: str) -> str:
+    """The app's real version, for the stubbed getManifest().
+
+    The same lesson as `hosts_of` one field further in: the settings form prints
+    `'v' + getManifest().version` beside its title, the stub did not carry one, and the picture
+    published to the site and the Store read **«vundefined»**. It was invisible while the settings
+    were a page of their own with a stub that happened to have the field; it arrived the moment they
+    became a view photographed through the panel's stub.
+    """
+    import json as _json
+    m = _json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
+    return _json.dumps(m.get('version', ''))
 OUT = ROOT / "dist" / "shots"
 def _chrome() -> str:
     """Where Chrome is. It was one macOS path, which is the whole of what stopped these tools
@@ -168,64 +182,10 @@ SHOTS = [
     """),
 ]
 
-STUB = """// **When is the picture final?** Under `--virtual-time-budget` that question answered itself: the
-// clock ran forward, so every timer had already fired by the time the capture happened and one
-// number covered every page. Driving a real browser there is no such clock, and guessing from
-// outside does not work - a fixed wait left six of twenty-seven images different, and waiting for
-// two identical captures left twenty-one, because these pages are perfectly still right after load,
-// before the shot script has done anything at all.
-//
-// So the page answers instead. Every `setTimeout` and `requestAnimationFrame` scheduled from here on
-// is counted, and `__zoostPending` is what is left outstanding; the renderer waits for it to reach
-// zero. `setInterval` is deliberately not counted - the panel polls its context every few seconds,
-// so a counter that included it would never reach zero and the wait would be a wait for the cap.
-//
-// First in the file, before anything else runs, or the work scheduled by whatever ran earlier is
-// invisible to it.
-(function pending() {{
-  let out = 0;
-  const ST = window.setTimeout, RAF = window.requestAnimationFrame;
-  window.setTimeout = function (fn, ms) {{
-    if (typeof fn !== 'function') return ST.apply(window, arguments);
-    out++;
-    const rest = Array.prototype.slice.call(arguments, 2);
-    return ST.call(window, function () {{
-      try {{ fn.apply(this, rest); }} finally {{ out--; }}
-    }}, ms);
-  }};
-  window.requestAnimationFrame = function (fn) {{
-    out++;
-    return RAF.call(window, function (t) {{
-      try {{ fn(t); }} finally {{ out--; }}
-    }});
-  }};
-  Object.defineProperty(window, '__zoostPending', {{ get: () => out }});
-}})();
-// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
-// ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
-// crm-health at 2x - five identical renders and a sixth that was not - which is why the published
-// WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
-// picture: a frame caught mid-transition shows a state the reader never sits in front of.
-(function still() {{
-  const css = '*,*::before,*::after{{animation:none!important;transition:none!important;'
-    + 'caret-color:transparent!important}}';
-  const put = () => {{ const st = document.createElement('style'); st.textContent = css;
-    (document.head || document.documentElement).appendChild(st); }};
-  put();
-  document.addEventListener('DOMContentLoaded', put);
-}})();
-window.chrome = {{
-  runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: () => {{}} }},
-  // The window reads the drawing from `session` - it is a hand-off, not a setting, and it stopped
-  // carrying the Deluge source when it moved there. `local` answers empty, so a page that went back
-  // to reading it would draw nothing and the shot would fail, which is the direction to fail in.
-  storage: {{ session: {{ get: async () => ({{ graphData: {data} }}), set: async () => {{}} }},
-              local: {{ get: async () => ({{}}), set: async () => {{}} }} }},
-}};
-window.addEventListener('load', () => setTimeout(() => {{
-  try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}
-}}, 500));
-"""
+# `STUB` lived here and is gone with `graphview.html`, the page it stubbed. The diagram is a view of
+# the workbench, so it is photographed through `PANEL_STUB` below - which is also what found this:
+# a template nothing formats keeps compiling, and it had just acquired a field no caller passes.
+
 
 
 # Device pixels per CSS pixel. The Store wants 1280x800 exactly, so this stays 1 here; tools that
@@ -484,7 +444,7 @@ def render(shot):
                   + " } catch (e) { document.title = 'SHOT ERROR: ' + e.message; } })();")
         (stage / "shot.js").write_text(
             PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=opened,
-                              hosts=hosts_of(app),
+                              hosts=hosts_of(app), ver=version_of(app), stored="{}",
                               taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
         page = stage / "workbench.html"
@@ -547,10 +507,14 @@ PANEL_STUB = """// **When is the picture final?** Under `--virtual-time-budget` 
   document.addEventListener('DOMContentLoaded', put);
 }})();
 window.chrome = {{
-  runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: (m, cb) => cb && cb(null),
+  runtime: {{ getManifest: () => ({{ name: {name}, version: {ver}, host_permissions: {hosts} }}), sendMessage: (m, cb) => cb && cb(null),
               onMessage: {{ addListener: () => {{}}, removeListener: () => {{}} }}, lastError: null, getURL: (p) => p,
               onInstalled: {{ addListener: () => {{}} }} }},
-  storage: {{ local: {{ get: async () => ({{}}), set: async () => {{}},
+  // `{stored}` is what `chrome.storage.local` answers, so a shot can photograph a *configured*
+  // install rather than an empty form - which is the whole point of the settings picture. Every
+  // other shot passes `{{}}` and is unaffected. The whole object comes back whatever is asked for,
+  // which is enough for every reader in the panel and in the settings form.
+  storage: {{ local: {{ get: async () => ({stored}), set: async () => {{}},
                         onChanged: {{ addListener: () => {{}} }} }},
               session: {{ get: async () => ({{}}), set: async () => {{}} }},
               onChanged: {{ addListener: () => {{}} }} }},
@@ -624,7 +588,7 @@ def render_panel(shot):
         taburl, ctx = PANEL_CTX[app]
         (stage / "shot.js").write_text(
             PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=script,
-                              hosts=hosts_of(app),
+                              hosts=hosts_of(app), ver=version_of(app), stored="{}",
                               taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
         page = stage / "workbench.html"
@@ -644,100 +608,59 @@ def render_panel(shot):
 
 
 
-OPTIONS_STUB = """// **When is the picture final?** Under `--virtual-time-budget` that question answered itself: the
-// clock ran forward, so every timer had already fired by the time the capture happened and one
-// number covered every page. Driving a real browser there is no such clock, and guessing from
-// outside does not work - a fixed wait left six of twenty-seven images different, and waiting for
-// two identical captures left twenty-one, because these pages are perfectly still right after load,
-// before the shot script has done anything at all.
-//
-// So the page answers instead. Every `setTimeout` and `requestAnimationFrame` scheduled from here on
-// is counted, and `__zoostPending` is what is left outstanding; the renderer waits for it to reach
-// zero. `setInterval` is deliberately not counted - the panel polls its context every few seconds,
-// so a counter that included it would never reach zero and the wait would be a wait for the cap.
-//
-// First in the file, before anything else runs, or the work scheduled by whatever ran earlier is
-// invisible to it.
-(function pending() {{
-  let out = 0;
-  const ST = window.setTimeout, RAF = window.requestAnimationFrame;
-  window.setTimeout = function (fn, ms) {{
-    if (typeof fn !== 'function') return ST.apply(window, arguments);
-    out++;
-    const rest = Array.prototype.slice.call(arguments, 2);
-    return ST.call(window, function () {{
-      try {{ fn.apply(this, rest); }} finally {{ out--; }}
-    }}, ms);
-  }};
-  window.requestAnimationFrame = function (fn) {{
-    out++;
-    return RAF.call(window, function (t) {{
-      try {{ fn(t); }} finally {{ out--; }}
-    }});
-  }};
-  Object.defineProperty(window, '__zoostPending', {{ get: () => out }});
-}})();
-// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
-// ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
-// crm-health at 2x - five identical renders and a sixth that was not - which is why the published
-// WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
-// picture: a frame caught mid-transition shows a state the reader never sits in front of.
-(function still() {{
-  const css = '*,*::before,*::after{{animation:none!important;transition:none!important;'
-    + 'caret-color:transparent!important}}';
-  const put = () => {{ const st = document.createElement('style'); st.textContent = css;
-    (document.head || document.documentElement).appendChild(st); }};
-  put();
-  document.addEventListener('DOMContentLoaded', put);
-}})();
-
-window.chrome = {{
-  runtime: {{ getManifest: () => ({{ name: {name}, version: '0.0.0', host_permissions: {hosts} }}), id: 'shot',
-              openOptionsPage: () => {{}}, sendMessage: async () => ({{ ok: true }}),
-              onMessage: {{ addListener: () => {{}}, removeListener: () => {{}} }}, lastError: null }},
-  storage: {{ local: {{ get: async (k) => ({stored}), set: async () => {{}}, remove: async () => {{}},
-                        onChanged: {{ addListener: () => {{}} }} }},
-              session: {{ get: async () => ({{}}), set: async () => {{}} }},
-              onChanged: {{ addListener: () => {{}} }} }},
-  tabs: {{ query: async () => [], create: () => {{}}, onUpdated: {{ addListener: () => {{}} }} }},
-  windows: {{ getAll: async () => [], create: () => {{}} }},
-}};
-// A folder, chosen, with its permission still granted - because that is the page a reader of
-// this product has in front of them. Answering `null` rendered the working-folder row as «Not
-// set» and published a picture of somebody who has never used it. The same lesson the panel
-// shots already record about the Zoho context - «the off-platform state, photographed and
-// published» - on the source beside it. `sample` is what the file shim calls its root, so the
-// two pictures agree about what the reader's folder is called.
-window.idbHandle = {{ get: async () => ({{ name: 'sample',
-  queryPermission: async () => 'granted', requestPermission: async () => 'granted' }}),
-  set: async () => {{}} }};
-window.addEventListener('load', () => setTimeout(() => {{
-  try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}
-}}, 700));
-"""
-
+# `OPTIONS_STUB` lived here and is gone with the page it stubbed: the settings are a view of the
+# workbench, so they are photographed through `PANEL_STUB` like every other view of it. Its one
+# original idea - answer `chrome.storage` with a configured install rather than an empty form - is
+# the `stored` field of that stub.
 
 def render_options(shot):
-    """The settings page. It needs no folder and no Zoho tab - only `chrome.storage` for what it
-    shows and `idbHandle` for the working-folder row, both stubbed here rather than through the file
-    shim, because nothing on this page reads the mirror."""
+    """The settings, drawn inside the panel that now holds them.
+
+    **It used to open `options.html` on its own.** That page was the settings while Zoost was a side
+    panel that could not hold a form; it is a view of the workbench now - `options.html` is left as
+    the thing Chrome's own «Options» entry points at, and it loads a bridge, not the form. This was
+    the last piece of the move nobody carried across: the function went on injecting itself before
+    `<script src="options.js">` in a page that no longer has one, and the assertion that says so is
+    what caught it.
+
+    So it boots the panel the way the diagram shot does - the same file-system shim, because the
+    panel will not start without a folder - and opens the view. `stored` is what `chrome.storage`
+    answers, so the picture is of a configured install and not of an empty form.
+    """
     key, app, stored, script = shot
     src = ROOT / "apps" / app
+    base = fixtures_for(key) / WS_FOR_GRAPH[app]
+    files = files_under(base, WS_FOR_GRAPH[app])
     with tempfile.TemporaryDirectory() as tmp:
         stage = pathlib.Path(tmp)
         for f in src.iterdir():
             if f.is_file():
                 shutil.copy2(f, stage / f.name)
+        shutil.copy2(ROOT / "tools" / "fsshim.js", stage / "fsshim.js")
+        taburl, ctx = PANEL_CTX[app]
+        # Its own async scope, for the same reason the diagram shot has one: the stub runs the
+        # scenario inside a plain `try`, so an `await` at that level is a syntax error and the shot
+        # dies with a message about nothing.
+        opened = ("(async () => { try {"
+                  + " if (typeof openSettingsView !== 'function') throw new Error("
+                  + "'the panel did not load the settings: openSettingsView=' + typeof openSettingsView"
+                  + " + ' view=' + !!document.getElementById('settingsview'));"
+                  + " await openSettingsView();"
+                  + " await new Promise((r) => setTimeout(r, 600));"
+                  + script
+                  + " } catch (e) { document.title = 'SHOT ERROR: ' + e.message; } })();")
         (stage / "shot.js").write_text(
-            OPTIONS_STUB.format(name=json.dumps(NAME[app]), stored=stored, script=script,
-                                hosts=hosts_of(app)),
+            PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=opened,
+                              hosts=hosts_of(app), ver=version_of(app), stored=stored,
+                              taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
-        page = stage / "options.html"
+        page = stage / "workbench.html"
         html = page.read_text(encoding="utf-8")
-        first = '<script src="options.js"></script>'
-        assert first in html, key + ": the settings page does not load options.js where this expects"
-        page.write_text(html.replace(first, '<script src="shot.js"></script>\n  ' + first, 1),
-                        encoding="utf-8")
+        first = '<script src="idb.js"></script>'
+        assert first in html, key + ": the panel does not load idb.js where this expects"
+        page.write_text(html.replace(
+            first, first + '\n  <script src="fsshim.js"></script>\n  <script src="shot.js"></script>', 1),
+            encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         capture(page, dest, 60000)

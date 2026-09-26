@@ -146,17 +146,20 @@ async function refreshContext() {
     // With a workspace open the panel is *working*, so the line says what is off rather than where
     // the reader is standing: everything local reads, and everything Zoho-bound is disabled until a
     // tab exists. Without one, the old sentence is still the right one - there is nothing else to say.
+    // The `<span>` is what `#ctx .who span` paints muted, and it belongs to *this* arm. It was a
+    // second assignment below the ternary - `if (dir) who.innerHTML = <span>...` - which ran after
+    // the twin arm had already written its sentence and overwrote it. So standing on a Zoho
+    // Analytics tab with a workspace open, the panel said «No Zoho CRM tab is open» and hid the
+    // button (`!!twin`), leaving the reader the problem, no explanation and no way out. The twin
+    // has never had that second write, which is how the divergence stayed invisible.
     who.innerHTML = twin
       ? escHtml(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
-      : (dir ? escHtml(MSG.noTab) : 'Not on a Zoho CRM tab');
+      : (dir ? `<span>${escHtml(MSG.noTab)}</span>` : 'Not on a Zoho CRM tab');
     // **The way out is a control, not an instruction.** «Press Open in Zoho» asks the reader to go
     // and find a button; this *is* the button, and it appears exactly in the state it resolves -
     // a mirror to read and no tab to reach Zoho with. This project's rule for an empty state is
     // «what is missing, why, and what to do about it», and the third part is worth more pressed.
     $('ctxopen').hidden = !dir || !!twin;
-    if (dir) {
-      who.innerHTML = `<span>${escHtml(MSG.noTab)}</span>`;
-    }
     offerTwin(twin);        // the overlay's group, which only exists on this branch
     // **A sample is never presented as a live binding.** Its `.zoho.json` carries an invented org
     // and instance, so this line read «prod «sampleorg» org 1234567890» the moment the reader left a

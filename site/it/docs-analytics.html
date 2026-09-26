@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:6240fab82c46a94c -->
+<!-- translated-from: site/docs-analytics.html sha256:433599f0a3eaa413 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://zoost.it/it/docs-analytics">
 <meta property="og:title" content="Come si usa Zoost Analytics">
 <meta property="og:description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=1fb4ad21d2">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=7acd4bd2a0">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
@@ -54,7 +54,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.34.0</span> · aggiornata il <span class="dd" data-stamp="updated">25 settembre 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">2.0.0</span> · aggiornata il <span class="dd" data-stamp="updated">26 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -249,7 +249,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     viste no.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-lineage.webp?v=0e8acd35ca" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-lineage.webp?v=f6731ecea5" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La scheda Lineage di una query table, con le colonne che legge e da dove.">
     <figcaption>Lineage: per ogni query table, quali colonne legge e da quale vista. È la catena che Zoho Analytics non disegna. Ogni nome è un link alla vista corrispondente, come le chiavi esterne sotto <b class="ui">Columns</b>.</figcaption>
   </figure>
@@ -272,7 +272,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h2 id="diagram">7. Il diagramma ER</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> apre tutto il workspace dentro Zoost; lo stesso pulsante nel
     dettaglio di una tabella apre lo stesso diagramma centrato su quella tabella, a profondità 2.</p>
-  <p class="note"><b>Si apre dentro Zoost, non in una finestra a sé.</b> Il diagramma era una seconda finestra del browser, perché un pannello laterale largo poche centinaia di pixel non può mostrarne uno. Ora Zoost è una finestra che ridimensioni tu, quindi il diagramma la riempie e <b class="ui">✕ Close</b>, in alto a destra, chiude il diagramma e ti restituisce il pannello. Chiuderlo non perde nulla: il disegno viene ricostruito dal mirror la volta successiva che lo chiedi.</p>
+  <p class="note"><b>Si apre dentro Zoost, non in una finestra a sé.</b> Il diagramma era una seconda finestra del browser, perché un pannello laterale non può uscire dalla finestra a cui è agganciato e Chrome lo limita a due terzi di essa. Ora Zoost è una finestra che ridimensioni tu, quindi il diagramma la riempie e <b class="ui">✕ Close</b>, in alto a destra, chiude il diagramma e ti restituisce il pannello. Chiuderlo scarta questo disegno - i riquadri che hai spostato, i filtri che hai messo, quello che avevi selezionato - e il prossimo viene ricostruito dal mirror. In nessuno dei due casi viene toccato qualcosa su disco.</p>
   <p class="note"><b>Anche le impostazioni si aprono dentro Zoost.</b> Erano una finestra a sé quando Zoost era un pannello laterale che non poteva contenere un modulo; ora l'ingranaggio le apre sopra il pannello, e <b class="ui">✕ Close</b>, in alto a destra, chiude le impostazioni e ti riporta indietro. Anche la voce &laquo;Opzioni&raquo; di Chrome, sulla scheda dell'estensione in <code>chrome://extensions</code>, apre la stessa vista: porta avanti la finestra di Zoost invece di aprire una seconda copia del modulo.</p>
   <p class="note"><b>Una scorciatoia da tastiera la apre da ovunque.</b> <b class="ui">Alt+Shift+A</b> (<b class="ui">Ctrl+Shift+A</b> su Mac) apre Zoost, o la porta in primo piano se è già aperta, da qualsiasi scheda e senza cercare la toolbar. Chrome ti permette di cambiarla: <code>chrome://extensions/shortcuts</code>.</p>
   <ul>
@@ -364,7 +364,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     join, e ogni join si può copiare.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-er.webp?v=ac1ed05876" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-er.webp?v=cfcb0f72b5" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il diagramma ER del workspace, le tabelle unite dalle loro relazioni.">
     <figcaption>Il diagramma ER: metti a fuoco una tabella e segui le sue relazioni nel workspace.</figcaption>
   </figure>
@@ -420,7 +420,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.</p>
 
 <figure class="shot">
-    <img src="/img/analytics-search.webp?v=0763a807b1" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-search.webp?v=45bedd98e8" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il pannello Analytics con la ricerca su «in: SQL»: sette query table che contengono JOIN, ognuna con la riga in cui si trova.">
     <figcaption>Capitolo 8: <b>in: SQL</b> guarda dentro tutte le query del workspace in una volta
       sola - qui le sette che fanno una join, ognuna con la riga in cui sta il termine.</figcaption>
@@ -436,7 +436,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     cominciare a chiedere, non come una coda di cancellazione.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-health.webp?v=c51e110de6" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-health.webp?v=0fb0cd9b5d" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La vista health con le viste che non hanno dipendenze note, accanto ai limiti dell'analisi.">
     <figcaption>Le viste senza dipendenze note, con i limiti dell'analisi dichiarati accanto al totale.</figcaption>
   </figure>
@@ -459,7 +459,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Analytics</b>, così un assistente che legge quel file non scrive query che non possono girare.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-export.webp?v=d2e62c08a8" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-export.webp?v=7137166b75" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La finestra dell'export per un workspace Zoho Analytics.">
     <figcaption>Cosa può uscire dalla macchina, sezione per sezione.</figcaption>
   </figure>
@@ -567,7 +567,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-settings.webp?v=676e8dab8c" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-settings.webp?v=d069f5cd26" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La pagina impostazioni con il motore AI, il modello e la chiave.">
     <figcaption>Dove si scelgono motore e chiave.</figcaption>
   </figure>

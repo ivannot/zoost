@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/docs-analytics">
 <meta property="og:title" content="How to use Zoost Analytics">
 <meta property="og:description" content="Guide to Zoost Analytics: workspaces, pull, a table's structure, its foreign keys, the SQL as files, exports and the assistant.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=1fb4ad21d2">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=7acd4bd2a0">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.34.0</span> · updated <span class="dd" data-stamp="updated">25 September 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">2.0.0</span> · updated <span class="dd" data-stamp="updated">26 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -233,7 +233,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     rather than built by you. Zoho Analytics' own ER model knows which; the view list does not.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-lineage.webp?v=0e8acd35ca" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-lineage.webp?v=f6731ecea5" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Lineage tab of a query table, showing which columns it reads and from where.">
     <figcaption>Lineage: for a query table, which columns it reads and from which view - the chain Zoho Analytics does not draw. Every name in it is a link to that view, as are the foreign keys under <b class="ui">Columns</b>.</figcaption>
   </figure>
@@ -256,7 +256,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h2 id="diagram">7. The ER diagram</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> opens the whole workspace inside Zoost; the same button in a
     table's detail pane opens the same diagram focused on that table, at depth 2.</p>
-  <p class="note"><b>It opens inside Zoost, not in a window of its own.</b> The diagram used to be a second browser window, because a side panel capped at a few hundred pixels cannot show one. Zoost is a window you size yourself now, so the diagram fills it and <b class="ui">✕ Close</b>, top right, is how you close the diagram and get the panel back. Nothing is lost by closing it: the drawing is rebuilt from the mirror the next time you ask for it.</p>
+  <p class="note"><b>It opens inside Zoost, not in a window of its own.</b> The diagram used to be a second browser window, because a side panel cannot leave the browser window it is attached to and Chrome caps it at two thirds of it. Zoost is a window you size yourself now, so the diagram fills it and <b class="ui">✕ Close</b>, top right, is how you close the diagram and get the panel back. Closing it discards this drawing - the boxes you moved, the filters you set, what you had selected - and the next one is built again from the mirror. Nothing on disk is touched either way.</p>
   <p class="note"><b>Settings open inside Zoost too.</b> They were a window of their own while Zoost was a side panel that could not hold a form; the gear opens them over the panel now, and <b class="ui">✕ Close</b>, top right, is how you close the settings and get back. Chrome's own &laquo;Options&raquo; entry, on the extension's card in <code>chrome://extensions</code>, opens the same view - it brings the Zoost window forward rather than opening a second copy of the form.</p>
   <p class="note"><b>A keyboard shortcut opens it from anywhere.</b> <b class="ui">Alt+Shift+A</b> (<b class="ui">Ctrl+Shift+A</b> on a Mac) opens Zoost, or brings it forward if it is already open - from any tab, without reaching for the toolbar. Chrome lets you change it: <code>chrome://extensions/shortcuts</code>.</p>
   <ul>
@@ -314,7 +314,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     and every join copyable.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-er.webp?v=ac1ed05876" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-er.webp?v=cfcb0f72b5" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The ER diagram of the workspace, tables joined by their relations.">
     <figcaption>The ER diagram: focus on one table, then follow its relations through the workspace.</figcaption>
   </figure>
@@ -366,7 +366,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Zoho Analytics remains the only thing that can tell you a query compiles.</p>
 
 <figure class="shot">
-    <img src="/img/analytics-search.webp?v=0763a807b1" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-search.webp?v=45bedd98e8" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Analytics panel with the search scope on «in: SQL»: seven query tables matching JOIN, each row showing the line it is on.">
     <figcaption>Chapter 8: <b>in: SQL</b> looks inside every query in the workspace at once - here the
       seven that join something, each with the line the term is on.</figcaption>
@@ -381,7 +381,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     consumer is invisible to that graph. Treat the list as a place to start asking, not a delete queue.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-health.webp?v=c51e110de6" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-health.webp?v=0fb0cd9b5d" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The health view listing views nothing depends on, next to what the scan cannot see.">
     <figcaption>Views with no known dependants, with the limits of the analysis stated beside the total.</figcaption>
   </figure>
@@ -408,7 +408,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     an assistant reading that file does not write queries that cannot run.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-export.webp?v=d2e62c08a8" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-export.webp?v=7137166b75" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The export dialog for a Zoho Analytics workspace.">
     <figcaption>What may leave the machine, section by section.</figcaption>
   </figure>
@@ -513,7 +513,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     the developer. Check this is acceptable for your organisation before enabling it.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-settings.webp?v=676e8dab8c" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-settings.webp?v=d069f5cd26" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The settings page with the AI engine, the model and the key.">
     <figcaption>Where the engine and the key are chosen.</figcaption>
   </figure>

@@ -659,10 +659,16 @@ async function activate(w, viaGesture) {
   if (!sameWs) {
     const n = dropWorkspaceState();
     if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn');
+    // A different workspace: the chain is dropped, because every step in it names a file in the org
+    // the reader has just left. This is the one place that forgets.
+    //
+    // **Inside the guard, where the twin has always had it.** It sat outside, so a re-activation of
+    // the workspace already open closed the detail pane and emptied History - and re-activation is
+    // what the click-anywhere re-grant does, and what every Save in Settings did. The line above it
+    // spares the assistant's conversation on exactly this path; this one threw away the reader's
+    // place in the same breath, two lines apart.
+    currentPath = null; navClear(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   }
-  // A different workspace: the chain is dropped, because every step in it names a file in the org
-  // the reader has just left. This is the one place that forgets.
-  currentPath = null; navClear(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
   // Carrying the previous org's answers over would hide a tab in an org that grants it - the same
   // class of mistake the environment guard exists to prevent, one field further in.

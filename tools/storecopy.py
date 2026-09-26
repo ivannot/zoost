@@ -7,8 +7,8 @@ thousand characters of detailed description to find the one that moved, and sele
 which is how a paste ends up with a stray line or half a paragraph.
 
     python3 tools/storecopy.py crm            # what the sections are, how long, and their limit
-    python3 tools/storecopy.py crm 9          # print section 9
-    python3 tools/storecopy.py crm 9 --copy   # and put it on the clipboard instead
+    python3 tools/storecopy.py crm 9          # print section 9 (its box name also works)
+    python3 tools/storecopy.py crm tabs-justification --copy   # onto the clipboard instead
     python3 tools/storecopy.py all --files    # one file per box, named as the dashboard names it
 
 The numbering is the file's own (`## 9. Host permission justification`), not the dashboard's, because
@@ -123,8 +123,17 @@ def unwrap(body: str) -> str:
 
 
 def digests(app: str) -> dict:
-    """Each section's text, hashed. Recorded at submission and compared before the next one."""
-    return {str(n): hashlib.sha256(body.encode()).hexdigest()[:12] for n, _, _, body in sections(app)}
+    """Each section's text, hashed, under the name of the box it is pasted into.
+
+    **Never the section number.** It was, and the first release that removed a permission proved why:
+    `sidePanel` left both manifests, its justification left this file, and everything after it moved
+    up one - so the record said five boxes had drifted in each product when the true answer was one.
+    Four of the five would have been retyped for nothing, and the one that mattered was indoors among
+    them. An ordinal is a position in a list that changes; the box name is the thing itself, and it is
+    already derived here for the filenames (`box()`), on his rule that the number is misleading.
+    """
+    return {box(name): hashlib.sha256(body.encode()).hexdigest()[:12]
+            for _n, name, _cap, body in sections(app)}
 
 
 def changed_sections(app: str) -> list:
@@ -139,8 +148,8 @@ def changed_sections(app: str) -> list:
     was = json.loads(led.read_text(encoding='utf-8')).get('sections', {}) if led.exists() else {}
     if not was:
         return []
-    return [str(n) for n, _name, _cap, body in sections(app)
-            if was.get(str(n)) != hashlib.sha256(body.encode()).hexdigest()[:12]]
+    return [box(name) for _n, name, _cap, body in sections(app)
+            if was.get(box(name)) != hashlib.sha256(body.encode()).hexdigest()[:12]]
 
 
 def changed(app: str) -> int:
@@ -159,11 +168,11 @@ def changed(app: str) -> int:
         print(f'  after the next submission: python3 tools/submitted.py {app}')
         return 0
     moved = [(n, name, cap, body) for n, name, cap, body in sections(app)
-             if was.get(str(n)) != hashlib.sha256(body.encode()).hexdigest()[:12]]
+             if was.get(box(name)) != hashlib.sha256(body.encode()).hexdigest()[:12]]
     if not moved:
         print(f'{app}: every store field is what was submitted for {json.loads(led.read_text(encoding="utf-8")).get("version", "?")} - nothing to paste.')
-    for n, name, cap, _ in moved:
-        print(f'  §{n} {name} - changed. python3 tools/storecopy.py {app} {n} --copy')
+    for _n, name, cap, _ in moved:
+        print(f'  {name} - changed. python3 tools/storecopy.py {app} {box(name)} --copy')
     shots = ROOT / 'store' / app / 'screenshots.json'
     if shots.exists():
         j = json.loads(shots.read_text(encoding='utf-8'))
@@ -250,9 +259,12 @@ def main() -> int:
             print(f'{n}. {name:<44} {len(body):>5} chars'
                   + (f'  (max {cap}){"  OVER THE LIMIT" if over else ""}' if cap else ''))
         return 0
-    want = int(sys.argv[2])
+    # A box is asked for by its name or by its number. The name is what the record and the printed
+    # lines use, because it survives a section being removed; the number is what the file shows and
+    # what a reader has in front of them, so both answer.
+    want = sys.argv[2]
     for n, name, cap, body in found:
-        if n != want:
+        if str(n) != want and box(name) != want:
             continue
         if '--copy' in sys.argv:
             subprocess.run(clipboard(), input=body, text=True, check=True)
@@ -261,7 +273,8 @@ def main() -> int:
         else:
             print(body)
         return 0
-    sys.exit(f'{app} has no section {want}')
+    sys.exit(f'{app} has no section {want} - the boxes are: '
+             + ', '.join(box(name) for _n, name, _cap, _b in found))
 
 
 if __name__ == '__main__':

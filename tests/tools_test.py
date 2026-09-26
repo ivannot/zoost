@@ -4748,6 +4748,67 @@ class StoreCopySeesEverySection(unittest.TestCase):
                              f'compares them against the dashboard and nothing says when they drift')
 
 
+class TheSubmittedRecordSurvivesARenumbering(unittest.TestCase):
+    """A dashboard box is recorded under its name, because the number it has is not its own.
+
+    2.0.0 removed the `sidePanel` permission, so its justification left `store/<app>/store-listing.md`
+    and every section after it moved up one. The record was keyed by ordinal, so `--changed` reported
+    **five** boxes to paste in each product when the true answer was **one** - four of them identical
+    text under a new number, and the one that had really moved standing among them indistinguishable.
+    A handover like that is worse than no handover: it costs four pastes and teaches the reader that
+    the list is noise, which is how the fifth gets skipped.
+
+    So the record is keyed by `box(name)` - the same name the files are written under, on his rule
+    that «il numero progressivo e' fuorviante» - and this case removes a section from the middle and
+    asserts the rest do not read as drifted. It fails on the ordinal version.
+    """
+
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('storecopy_renum', ROOT / 'tools' / 'storecopy.py')
+        self.sc = importlib.util.module_from_spec(spec); spec.loader.exec_module(self.sc)
+
+    def listing(self, *names):
+        return ''.join(f'## {i}. {n} (max 1000)\n\n```\nthe text of {n}\n```\n\n'
+                       for i, n in enumerate(names, 1))
+
+    def test_removing_a_section_does_not_drift_the_ones_after_it(self):
+        import json
+        with tempfile.TemporaryDirectory() as t:
+            root = pathlib.Path(t)
+            (root / 'store' / 'crm').mkdir(parents=True)
+            md = root / 'store' / 'crm' / 'store-listing.md'
+            self.sc.ROOT = root
+            md.write_text(self.listing('Item name', 'sidePanel justification',
+                                       'storage justification', 'tabs justification'), encoding='utf-8')
+            (root / 'store' / 'crm' / 'listing.json').write_text(
+                json.dumps({'version': '1.0.0', 'sections': self.sc.digests('crm')}), encoding='utf-8')
+            self.assertEqual(self.sc.changed_sections('crm'), [],
+                             'the record was just taken from this very file and reads as drifted')
+            md.write_text(self.listing('Item name', 'storage justification', 'tabs justification'),
+                          encoding='utf-8')
+            self.assertEqual(self.sc.changed_sections('crm'), [],
+                             'a permission was removed and the boxes after it read as needing a paste, '
+                             'which is four wasted pastes and one real change hidden among them')
+
+    def test_a_box_whose_text_moved_is_still_reported(self):
+        # The other direction, on the same tree: the check must not have become one that never fires.
+        import json
+        with tempfile.TemporaryDirectory() as t:
+            root = pathlib.Path(t)
+            (root / 'store' / 'crm').mkdir(parents=True)
+            md = root / 'store' / 'crm' / 'store-listing.md'
+            self.sc.ROOT = root
+            md.write_text(self.listing('Item name', 'sidePanel justification',
+                                       'storage justification'), encoding='utf-8')
+            (root / 'store' / 'crm' / 'listing.json').write_text(
+                json.dumps({'version': '1.0.0', 'sections': self.sc.digests('crm')}), encoding='utf-8')
+            md.write_text(self.listing('Item name', 'storage justification').replace(
+                'the text of storage justification', 'the text of storage justification, reworded'),
+                encoding='utf-8')
+            self.assertEqual(self.sc.changed_sections('crm'), ['storage-justification'])
+
+
 class TheTwoHostListsAgree(unittest.TestCase):
     """Where a content script is injected, and where the extension may reach, are two lists.
 
@@ -7401,12 +7462,19 @@ class TheSettingsShotIsOfAProductInUse(unittest.TestCase):
     """
 
     def test_the_folder_row_is_not_photographed_empty(self):
+        """**The subject moved with the page.** This used to read `OPTIONS_STUB`, which stubbed
+        `window.idbHandle` for a settings *page*. The settings are a view of the workbench now and are
+        photographed through `PANEL_STUB` with the file shim under them - so the folder the picture
+        shows is the shim's own root, and the way to lose it is for that line to go, not for a stub to
+        answer `null`. The fact being protected is unchanged: a published settings screenshot must not
+        show the row as «Not set», which is a picture of a product nobody has used.
+        """
         sys.path.insert(0, str(ROOT / 'tools'))
         try:
             import shots
         finally:
             sys.path.pop(0)
-        stub = shots.OPTIONS_STUB.format(name='"x"', stored='{}', script='', hosts='[]')
+        stub = shots.PANEL_STUB
 
         for app in sorted(p.name for p in (ROOT / 'apps').iterdir() if (p / 'options.js').exists()):
             src = (ROOT / 'apps' / app / 'options.js').read_text(encoding='utf-8')
@@ -7418,20 +7486,33 @@ class TheSettingsShotIsOfAProductInUse(unittest.TestCase):
             self.assertIsNotNone(
                 empty, f'{app}: showRoot no longer says anything when there is no folder - either the '
                        'row lost its empty state, or this check has stopped reading it')
-            i = stub.index('window.idbHandle')
-            hand = stub[i:stub.index(';', stub.index('set:', i))]
-            self.assertNotIn(
-                'get: async () => null', hand,
-                f'{app}: the render harness answers no working folder, so every published settings '
-                f'screenshot shows the row as «{empty.group(1)}» - a picture of a product nobody has '
-                'used yet, which is the one state the reader is not looking at it to learn about')
             self.assertIn(
-                "queryPermission", hand,
-                f'{app}: the stubbed handle cannot answer whether its permission still stands, so the '
-                'row is photographed with the «access needs to be granted again» tail it would not '
-                'normally carry')
-            self.assertIn(key, "rootDir",
-                          f'{app}: the page asks idbHandle for «{key}» and this check assumed rootDir')
+                f"window.idbHandle.set('{key}', window.__fsshim.root())", stub,
+                f'{app}: the render harness never gives the panel a working folder, so every published '
+                f'settings screenshot shows the row as «{empty.group(1)}» - a picture of a product '
+                'nobody has used yet, which is the one state the reader is not looking at it to '
+                'learn about')
+
+    def test_the_settings_shot_is_of_a_configured_install(self):
+        """The other half of «a product in use», and it is why the stub can be seeded at all.
+
+        The AI section is the reason this picture exists - the engine, the model, the key - and an
+        empty form photographs the same nothing the folder row would. `chrome.storage` answers
+        `{stored}` in the panel stub for exactly this, so the shot asks for a configured install.
+        """
+        sys.path.insert(0, str(ROOT / 'tools'))
+        try:
+            import shots
+        finally:
+            sys.path.pop(0)
+        self.assertIn('get: async () => ({stored})', shots.PANEL_STUB,
+                      'the panel stub no longer lets a shot seed chrome.storage, so the settings '
+                      'picture is of an empty form')
+        self.assertTrue(shots.OPTIONS, 'there is no settings shot at all')
+        for key, app, stored, _script in shots.OPTIONS:
+            self.assertIn('aicfg', stored,
+                          f'{key}: the shot seeds no AI configuration, so the section the picture '
+                          'exists for is photographed empty')
 
 
 class WhatDecidesAPictureIsWhatIsHashed(unittest.TestCase):

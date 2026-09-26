@@ -153,13 +153,28 @@ async function answerOpenAsk(msg, sendResponse) {
     // it sat in session storage until the *next* plain click on the toolbar icon, which then opened
     // straight into Settings for no reason the reader could see. One wrong open per visit to
     // Chrome's Options entry, which is exactly the shape that reads as «random».
+    // **Written before the window exists, not after it has been made.** The page reads this note
+    // at the end of its own load, and the worker was writing it once `windows.create` had already
+    // resolved - two things racing, with nothing ordering them. Loading four stylesheets and fifty
+    // scripts is slower than a `storage.session.set`, so the note won in practice; «in practice» is
+    // not an ordering, and the way it loses is the one that reads as random - Chrome's Options entry
+    // opens Zoost on the panel, and the note survives to open the *next* plain click on Settings.
+    // Put first, there is no window that can read it too early.
+    if (msg.view) await chrome.storage.session.set({ zoostPendingView: msg.view });
     const built = await openWindow();
-    if (msg.view) {
-      if (built) await chrome.storage.session.set({ zoostPendingView: msg.view });
-      else { try { await chrome.runtime.sendMessage({ zoost: 'view', view: msg.view }); } catch (_) { /* it went while we asked; the next open has no note and that is right */ } }
+    // A window that was already open never reads a note - it read one at its own load, once - so the
+    // note is taken back and the view asked for over the wire instead.
+    if (msg.view && !built) {
+      await chrome.storage.session.remove('zoostPendingView');
+      try { await chrome.runtime.sendMessage({ zoost: 'view', view: msg.view }); } catch (_) { /* it went while we asked; the next open has no note and that is right */ }
     }
     sendResponse({ ok: true });
-  } catch (e) { sendResponse({ ok: false, error: e && e.message ? e.message : String(e) }); }
+  } catch (e) {
+    // The open failed, so nothing will consume the note: left behind it would open the next plain
+    // click straight into that view, which is the defect this whole path was rewritten to remove.
+    if (msg.view) { try { await chrome.storage.session.remove('zoostPendingView'); } catch (_) {} }
+    sendResponse({ ok: false, error: e && e.message ? e.message : String(e) });
+  }
 }
 // Where the reader leaves it is where it comes back. Saved from the browser's own event rather than
 // from a resize handler in the page, because a window is moved as often as it is resized and only

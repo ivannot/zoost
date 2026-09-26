@@ -139,10 +139,24 @@ function escapeCloses() {
 
 // inside a field, where the arrows belong to the text.
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && escapeCloses()) { e.preventDefault(); return; }
+  // **`stopImmediatePropagation`, because the diagram listens on this same node.** Both handlers
+  // are on `document` and this file is loaded first, so an Escape answered here still reached
+  // `graphview.js` on the same event: with the settings painted over the diagram, one keypress
+  // closed the settings *and* destroyed an arrangement of hand-placed boxes behind them.
+  // `preventDefault` does not stop a sibling listener - only this does.
+  if (e.key === 'Escape' && escapeCloses()) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   // Not behind a dialog: it makes the panel inert, which stops clicks and focus and not a listener
   // on the document, so Alt+Left walked the history underneath an open layer. Found by review.
-  if (!e.altKey || document.querySelector('.dlg.on') || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
+  // **And not behind the two full-window views either.** The guard named `.dlg.on` and nothing
+  // else, because when it was written those two were separate browser windows and could not
+  // receive this key at all. Inside one window they can: with the diagram open, Alt+Left - the
+  // universal «go back», and the reflex after clicking into boxes - walked the panel's history
+  // underneath it, opening a different item and possibly switching tab, with nothing on screen
+  // changing. The reader found out on closing the diagram.
+  if (!e.altKey || document.querySelector('.dlg.on')
+      || (document.getElementById('graphview') || {}).classList?.contains('show')
+      || (document.getElementById('settingsview') || {}).classList?.contains('show')
+      || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   const at = navHistory.snapshot().position;
   if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(at - 1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(at + 1); }

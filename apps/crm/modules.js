@@ -985,7 +985,11 @@ async function buildSchemaGraph(focusApi, depth, op = beginWorkspaceOp()) {
   }
   const edges = keepEdges.map((e) => { const [a, b] = e.split('\u0000'); return [a, b]; });
   const dead = Object.values(outNodes).filter((n) => n.dead_suspect).length;
-  return { kind: 'schema', nodes: outNodes, edges, focus: (focusApi && nodes[focusApi]) ? focusApi : null, depth: (focusApi && nodes[focusApi]) ? Math.max(1, depth || 2) : null, counts: { nodes: Object.keys(outNodes).length, edges: edges.length, dead_suspects: dead, unresolved: 0 }, workspace: { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null } };
+  // `graphIdentity()` rather than a second copy of the same three fields: this one had drifted -
+  // no `idWord`, so the header the two products share wrote the org number with nothing to say what
+  // it was, and no `label`, so it could not use the fuller form at all. `publishGraph` overwrites
+  // this block with the identity anyway, which is what kept the divergence invisible.
+  return { kind: 'schema', nodes: outNodes, edges, focus: (focusApi && nodes[focusApi]) ? focusApi : null, depth: (focusApi && nodes[focusApi]) ? Math.max(1, depth || 2) : null, counts: { nodes: Object.keys(outNodes).length, edges: edges.length, dead_suspects: dead, unresolved: 0 }, workspace: graphIdentity() };
 }
 // Open the call graph centred on one function, at a depth. The same shape as openSchemaFocus for
 // modules, and deliberately so: the window, the controls and the wording are the ones already there.

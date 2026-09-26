@@ -183,7 +183,8 @@ CHECKS = [
                'Open the ? help from it.'],
         'pass': ('Every control in the toolbar is still reachable without scrolling the row sideways, '
                  'and the help describes what you are actually looking at.'),
-        'covers': ['apps/*/workbench.html', 'apps/*/workbench.css', 'apps/*/product-help.js'],
+        'covers': ['apps/*/workbench.html', 'apps/*/workbench.css', 'apps/*/base.css',
+                   'apps/*/product-help.js'],
     },
     {
         'id': 'detail',
@@ -292,6 +293,43 @@ CHECKS = [
                    'apps/*/workbench.html', 'apps/*/workbench.css', 'apps/*/manifest.json',
                    'apps/*/icons/twin-48.png'],
     },
+    {
+        'id': 'own-window',
+        'title': 'Zoost is a window, and it is where you left it',
+        'do': ['Click the toolbar icon. Move the window, resize it, then close it and click the icon again.',
+               'With it open, click the icon a second time.',
+               'Press Alt+Shift+Z (Zoho CRM) or Alt+Shift+A (Zoho Analytics) - Ctrl+Shift+ on a Mac.',
+               'Drag it as small as it will go, then maximise it, close it and open it again.',
+               'Click the ? help, the sponsor link and the Ko-fi link in the foot.'],
+        'pass': ('It opens as its own window - a toolbar-less popup you can put on another monitor - '
+                 'and comes back the size and in the place you left it, maximised included. The second '
+                 'click raises the one that is open instead of opening a second, and so does the '
+                 'shortcut. It stops shrinking at roughly a square of 420px rather than becoming a '
+                 'sliver. Each of the three links opens ONE ordinary browser tab, with a toolbar, in '
+                 'your normal window - not a second popup, and not both.'),
+        # The service worker decides all of this and the page places itself on a first run, so both
+        # ends are named. The manifest carries the shortcut and no longer carries a side panel.
+        'covers': ['apps/*/background.js', 'apps/*/manifest.json', 'apps/*/workbench.js',
+                   'apps/*/crm-bootstrap.js'],
+    },
+    {
+        'id': 'views-inside',
+        'title': 'The diagram and the settings open inside that window',
+        'do': ['Open the call graph (Zoho CRM) or the ER model (Zoho Analytics), then close it.',
+               'Open Settings from the gear, scroll to the foot of the form, then close it.',
+               'Open Chrome\'s own «Options» entry on the extension card in chrome://extensions.',
+               'Open the diagram again and press Escape with a menu open, then with nothing open.'],
+        'pass': ('Both draw over the panel inside the Zoost window: no second browser window opens '
+                 'anywhere, and nothing else on your screen moves. Both are closed by the same Close '
+                 'control in the top right corner, which stays there while the settings scroll. '
+                 'Closing either returns the panel as you left it - the same tab, the same row '
+                 'selected, the same scroll. Chrome\'s «Options» brings the Zoost window forward on '
+                 'the settings rather than opening a form of its own. In the diagram, Escape closes '
+                 'the open menu first and only closes the diagram when there is nothing else to close '
+                 '- it must never discard an arrangement of boxes to dismiss a menu.'),
+        'covers': ['apps/*/graphview.css', 'apps/*/options.css', 'apps/*/options.html',
+                   'apps/*/options-bridge.js', 'apps/*/workbench.html'],
+    },
 ]
 
 
@@ -328,8 +366,14 @@ def last_tag(app: str) -> str:
 
 
 def changed_between(app: str, since: str) -> list:
-    """Shipped files of this app touched between a commit and now. What makes an answer expire."""
-    out = sh('git', 'diff', '--name-only', f'{since}..HEAD', '--', f'apps/{app}')
+    """Shipped files of this app touched between a commit and now. What makes an answer expire.
+
+    **A deleted file is not a changed file** (`--diff-filter=d` excludes deletions). The release that
+    turned the side panel into a window deleted four shipped pages, and this reported them as needing
+    a manual check - `sidepanel.html` and `graphview.html`, which no longer exist and which nobody can
+    open. An entry cannot be written for them, so the run ended in a finding that could not be cleared
+    and a release could not be cut. What is gone is exercised by whatever replaced it."""
+    out = sh('git', 'diff', '--name-only', '--diff-filter=d', f'{since}..HEAD', '--', f'apps/{app}')
     return [p for p in out.splitlines() if p]
 
 
@@ -352,7 +396,7 @@ def changed(app: str) -> list:
     and the other product cannot change what a person has to exercise here."""
     tag = last_tag(app)
     rng = f'{tag}..HEAD' if tag else 'HEAD'
-    out = sh('git', 'diff', '--name-only', rng, '--', f'apps/{app}')
+    out = sh('git', 'diff', '--name-only', '--diff-filter=d', rng, '--', f'apps/{app}')
     return [p for p in out.splitlines() if p]
 
 

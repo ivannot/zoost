@@ -23,8 +23,16 @@
      overlay telling them to pick a folder: the control was dead for exactly the person who
      needed it. Below `.scrim` (85) and `.dlg` (90) on purpose, so a dialog opened from in
      here still appears over it. */
+  /* **83, one above the diagram, and the reason is a tie that had a winner nobody chose.**
+     Both full-window views were 82. They are siblings in one stacking context, so the tie was
+     settled by document order - the diagram is written later - and opening the settings while the
+     diagram was up painted the whole form *underneath* it. Chrome's own «Options» entry then read
+     as doing nothing at all, and the first Escape closed the settings the reader could not see
+     while the diagram's own handler closed the diagram on the same keypress. The settings are what
+     was just asked for, so they are on top; closing them reveals the drawing exactly as it was,
+     which is why this is a layer and not a «close the other one». */
   #settingsview{
-    display:none; position:fixed; inset:0; z-index:82; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
+    display:none; position:fixed; inset:0; z-index:83; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#dc2d7a; --sel-soft:#3a1226;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
@@ -59,6 +67,13 @@
   #settingsview button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
     border-radius:8px;padding:8px 14px;cursor:pointer}
   #settingsview button:hover{border-color:var(--sel)}
+  /* **The base rule, which this sheet had lost.** `button.primary` moved out to `base.css` when the
+     four stylesheets came out of their markup, and `#settingsview button` above it is an id rule:
+     1,0,1 beats 0,1,1, so every Save in the Analytics settings computed to the plain grey button -
+     background, colour and, through the `font` shorthand, weight. Measured in a browser: identical
+     before and after `paintDirty()` added the class, with only a near-black ring to tell them apart.
+     The CRM kept its own copy and was never affected, which is how a twin divergence hides. */
+  #settingsview button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
   #settingsview button.primary:hover{background:#c4256b}
   /* A Save that has something to save says so in two ways, because a state carried by colour alone
      is one some readers never receive. `.primary` is added by `paintDirty()`, not by the markup:

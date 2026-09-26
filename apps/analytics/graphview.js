@@ -116,7 +116,13 @@ const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
 // More kinds than hues is possible and is not hidden: past the palette the probe wraps and a
 // repeat is unavoidable. Eight is well past what either platform has shown.
 const FALLBACK_HUES = ['#0ea5e9', '#f97316', '#14b8a6', '#a855f7', '#84cc16', '#ec4899', '#64748b', '#eab308'];
-const declaredHue = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
+// **Asked of the element that declares them.** The `--n-*` tokens were on `:root` while this was a
+// page of its own; scoping the sheet moved them onto `#graphview`, and custom properties inherit
+// downwards - so `documentElement` stopped having any of them and this returned `''` for every kind.
+// Every declared hue was dead and the hashed fallback drew the whole key: `modules`, deliberately
+// the one neutral grey, came out saturated like the rest, and the near-neighbour pairs the comments
+// in the stylesheet reason about were replaced by an arbitrary palette. Measured in a browser.
+const declaredHue = (k) => getComputedStyle(document.getElementById('graphview') || document.documentElement).getPropertyValue('--n-' + k).trim();
 let _hues = null, _huesKey = null;
 const KINDCOL = (k) => declaredHue(k) || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
@@ -493,11 +499,13 @@ $('qx').onclick = () => { $('q').value = ''; renderGraph(); updateQx(); $('q').f
 // shape - several handlers on one key, none of them knowing the order, so which one wins depends on
 // which was registered last.
 //
-// **This window needed its own.** The panel's `escapeCloses()` is in the panel's scripts; the
-// diagram is a separate page that loads none of them, so the fix that reached the dialogs' backdrop
-// left the diagram's canvas exactly where it was - the same defect, corrected where it was found
-// rather than where it lives. `erSelEdge` is asked first: Escape that closes nothing must not
-// swallow the keypress, because the browser has its own uses for it.
+// **The diagram keeps its own, and it is the one that decides.** It was written when this was a
+// separate page that loaded none of the panel's scripts; they share a document now, and the panel's
+// `escapeCloses()` declines while this view is showing precisely so the order below is the one the
+// reader gets - menu, then the picked arc, then the view. The panel's handler runs first and stops
+// the event dead when it answers, so the two never act on one keypress. `erSelEdge` is asked before
+// the view: Escape that closes nothing must not swallow the keypress, because the browser has its
+// own uses for it.
 document.addEventListener('keydown', (e) => {
   const ae = document.activeElement, q = $('q');
   // `/` belongs to the Explorer's search box, so it is only taken when that box is on screen. The
@@ -507,6 +515,13 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '/' && q && q.offsetParent !== null && ae !== q
       && !/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) { e.preventDefault(); q.focus(); return; }
   if (e.key !== 'Escape') return;
+  // **Nothing at all while the view is closed.** The two menu branches below read a class that
+  // `closeGraphView` did not clear, so with the diagram shut the first Escape in the panel was
+  // swallowed here - `preventDefault()` on a keypress that dismissed a popover nobody could see,
+  // while `escapeCloses()` had already declined. `syncGraphChrome` clears those classes now and
+  // this makes the whole handler belong to the view, which is the half that cannot go stale.
+  const gvOpen = document.getElementById('graphview');
+  if (!gvOpen || !gvOpen.classList.contains('show')) return;
   // Topmost first, and here the popovers are above the drawing. Escape used to reach past an open
   // Layout or file menu and clear the picked arc behind it: the menu the reader was looking at
   // stayed, and something they could not see changed instead.
@@ -607,6 +622,12 @@ function relRender() {
 let _graphWired = false;
 function buildRelChips() {
   const box = $('relchips'); if (!box) return;
+  // **Emptied first.** This ran once per document while the diagram was a page of its own; it runs
+  // on every open now, and without this the facet row grew by a full set each time - «module
+  // relations · many-to-many · system · all · module relations · many-to-many · system · all»,
+  // with two chips lighting up on one click because the handler presses by identity across every
+  // child. Measured: 4 chips became 8 after one close and reopen, and kept going.
+  box.innerHTML = '';
   [['all', 'all'], ['user', 'yours'], ['sys', 'system tables']].forEach(([k, l]) => {
     const c = document.createElement('span'); c.className = 'chip'; c.textContent = l;
     c.setAttribute('aria-pressed', k === relFilter);
@@ -2268,8 +2289,14 @@ window.addEventListener('beforeprint', () => {
   // printing anything else in this window called `pdfTitle()`, whose first line reads
   // `DATA.workspace` - and `DATA` is null whenever the diagram is closed. An uncaught TypeError in
   // the console, and the setback below it never ran. Its sibling handler has always had this test.
-  if (curView !== 'er' || !DATA) return;
+  const gv = document.getElementById('graphview');
+  if (!gv || !gv.classList.contains('show')) return;
+  // **The class goes on for every view of the diagram, not only the drawing.** It was set inside the
+  // ER-only branch below, so Ctrl+P while the diagram was open on Explorer or Relations printed the
+  // panel *underneath* it - the workspace bar, the tree, the footer, none of which the reader could
+  // even see. Whatever this window is showing, the sheet is this window.
   document.body.classList.add('printing-diagram');   // the sheet is the drawing, not the panel
+  if (curView !== 'er' || !DATA) return;
   _prevDocTitle = document.title; document.title = pdfTitle();
   erPrintFull = true; erSizeArrows();
 });
@@ -2443,10 +2470,37 @@ function resetGraphState() {
 /** One writer per label - see the twin's note. */
 function paintFieldsLabel() { const al = $('erAll'); if (al) al.textContent = 'Fields: ' + (erAll ? 'all' : 'key'); }
 function paintEmphLabel() { const em = $('erEmph'); if (em) em.textContent = 'Emphasis: ' + EMPH_WORD[erEmph]; }
+/** Put the chrome back to what the state says - every piece of it, not only the labels.
+ *
+ *  **`resetGraphState()` resets variables; this resets the DOM, and the second half was missing.**
+ *  The diagram was a page that died on close, so the two were the same act; as a view it is opened
+ *  and closed in one document and every fact left in an element outlives the graph it described.
+ *  Measured in a browser, all of them on the second open: the search box still held the previous
+ *  text so the list drew empty with nothing on screen to explain it, the detail pane still described
+ *  a table from the other projection, `Fields: key` was greyed out for the life of the window
+ *  because only its click handler ever wrote `disabled`, `Emphasis` read its resting word while
+ *  still drawn pressed, and the Layout popover was open over a drawing it had never been opened on.
+ *
+ *  And it runs **before** the graph is applied, not after: `renderGraph()` filters on `$('q').value`,
+ *  so clearing the field afterwards left a list filtered by a search the reader could not see.
+ */
 function syncGraphChrome() {
   erParamsToUI();
   paintEmphLabel(); paintFieldsLabel();
   for (const id of ['q', 'relq']) { const f = $(id); if (f) f.value = ''; }
+  // The two facts `erEmph`'s click handler writes and nothing else does.
+  const em = $('erEmph'); if (em) em.classList.toggle('on', erEmph === 'relations');
+  const al = $('erAll'); if (al) al.disabled = erEmph === 'relations';
+  // The detail pane belongs to the graph that is going, and its empty state is markup - so it is
+  // written back rather than left describing a table from the projection before this one.
+  const mainEl = $('gvmain');
+  if (mainEl) mainEl.innerHTML = '<div class="empty">Select a table.<br>Left = what points at it (impact if you change it). Right = what it points at.</div>';
+  // A popover left open outlives its drawing, and the outside-click closer that would have shut it
+  // bails while `curView` is not the ER view - which the reset has just made true.
+  for (const [panel, opener] of [['erlay', 'erLayBtn'], ['erfile', 'erFileBtn']]) {
+    const pn = $(panel); if (pn) pn.classList.remove('on');
+    const bt = $(opener); if (bt) bt.classList.remove('on');
+  }
 }
 
 /** Open the diagram on this graph, as a view of the panel.
@@ -2461,14 +2515,21 @@ async function openGraphView(data) {
   resetGraphState();
   const view = document.getElementById('graphview');
   if (view) view.classList.add('show');
+  viewInert('graphview', true);   // the panel underneath leaves the tab order while this is up
+  syncGraphChrome();              // before the graph: `renderGraph()` reads the search box
   await applyGraph(data);
-  syncGraphChrome();
+  paintEmphLabel();               // and again, now that `DATA` can say what the word should be
   _graphWired = true;          // everything wiring-shaped has now run exactly once
 }
 /** Close it, and leave nothing of this graph behind - the reader may open another. */
 function closeGraphView() {
   const view = document.getElementById('graphview');
   if (view) view.classList.remove('show');
+  // The settings may still be open over this - they are the layer above - so the panel goes back
+  // into the tab order only when nothing is covering it any more.
+  const set = document.getElementById('settingsview');
+  if (set && set.classList.contains('show')) viewInert('settingsview', true);
+  else viewInert('graphview', false);
   resetGraphState();
 }
 {

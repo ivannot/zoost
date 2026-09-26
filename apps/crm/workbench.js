@@ -440,26 +440,17 @@ const movedInZoho = (listMs, fetchedMs) => !!(listMs && fetchedMs && String(list
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
 
-// Anything that is not Zoho opens in its own window, never a tab.
+// **Every outward link opens one ordinary tab, with no exemption.**
 //
-// chrome.tabs.create *activates* the new tab, so the panel suddenly finds itself looking at a
-// non-Zoho page: the environment guard fires, the interface empties and the mismatch overlay
-// appears. That behaviour is right when it means what it says, and here it meant nothing at all -
-// the user clicked Help and the workbench looked like it had lost its place.
+// There was one: a link on a Zoho host was let through «because it belongs in the Zoho tab». It
+// never landed there - nothing in this handler navigates the Zoho tab, `goToZoho` does that and is
+// reached from buttons - so what the exemption actually did was hand the anchor back to the browser,
+// and `target="_blank"` from inside a popup opens **another popup**. The two Zoho help articles
+// linked from the Analytics settings were the only links in either product still coming up in a
+// stripped window with no address bar, which is exactly what this release removed everywhere else.
 //
-// Derived rather than listed: every link in the panel goes through here, and the only ones let
-// through to a tab are Zoho's own, which are meant to land in the Zoho tab. A link added tomorrow
+// Derived rather than listed: every link in the panel goes through here, and a link added tomorrow
 // is covered without anyone remembering.
-// Zoho's own hosts, with or without a subdomain, and nothing that merely contains the word:
-// `notzoho.com` and `evil.com/zoho.x` are not Zoho, and treating them as such would send them to
-// the Zoho tab where the guard would then complain about a mismatch it did not cause.
-// Zoho's own pages belong in the Zoho tab. It stays a rule about the domain rather than a list of
-// granted hosts - a link to a Zoho page we do not read is still a Zoho page - and it had one
-// blind spot: the Canadian data centre is `zohocloud.ca`, which is not literally «zoho.something»,
-// so those links were opening in a window of their own.
-function isZohoUrl(u) {
-  return /^https?:\/\/(?:[^./?#]+\.)*(?:zoho\.com|zoho\.eu|zoho\.in|zoho\.com\.au|zoho\.jp|zohocloud\.ca|zoho\.sa|zoho\.uk|zoho\.ae)(?::\d+)?(?:[/?#]|$)/i.test(String(u || ''));
-}
 
 /** An outward link opens a **tab in an ordinary browser window**.
  *
@@ -505,7 +496,6 @@ async function openExternal(url) {
 document.addEventListener('click', (e) => {
   const a = e.target && e.target.closest && e.target.closest('a[href^="http"]');
   if (!a) return;
-  if (isZohoUrl(a.href)) return;   // Zoho's own pages belong in the Zoho tab
   e.preventDefault();
   openExternal(a.href);
 });
@@ -1349,10 +1339,50 @@ async function applySettingsChange(ch, area) {
   await loadScope();
   aiEngineChrome();
   const prevRoot = root; root = await window.idbHandle.get('rootDir');
-  if (root === prevRoot && dir) { updateWsButtons(); return; }
-  if (pullActive) { pendingRootReload = true; setStatus(MSG.rootLater, 'warn'); return; }
+  // **`===` on two directory handles is always false, which made this early return dead code.**
+  // IndexedDB deserializes a fresh `FileSystemDirectoryHandle` on every read - that is precisely why
+  // the File System Access API ships `isSameEntry()` - so «the folder did not change, do nothing»
+  // never fired once a folder was set, and every Save in Settings fell through to `loadWorkspaces()`
+  // and re-activated the workspace: the open function closed, History emptied, for a change to the
+  // box spacing. Asked properly, and a handle that refuses the question is treated as a change.
+  let sameRoot = false;
+  try { sameRoot = !!(prevRoot && root && await prevRoot.isSameEntry(root)); } catch (_) { sameRoot = false; }
+  if (sameRoot && dir) { updateWsButtons(); return; }
+  // **`pullBusy`, not `pullActive`** - the flag the comment below and the one twenty lines above both
+  // mean. `pullActive` is set and cleared by each *area* runner, so a save landing between two areas
+  // of a Pull all passed this guard, rebuilt the list, moved the generation, and every `op.write`
+  // still in flight threw WS_MOVED - silently, by design. The pull stopped part-way through the org
+  // and said nothing, which is the one outcome this guard exists to prevent.
+  if (pullBusy || pullActive) { pendingRootReload = true; setStatus(MSG.rootLater, 'warn'); return; }
   // Not while a pull is writing. Rebuilding the list sets `dir`, and every `op.write` still in
   // flight then throws WS_MOVED - which is *silent* by design, since a pull's status is guarded
   // by `current()`. So the pull would stop half-way and say nothing, from a click in another tab.
   await loadWorkspaces();
+}
+
+/** Everything the reader cannot see is taken out of the tab order, while a full-window view is up.
+ *
+ *  **The move put two overlays inside one document and left what they cover focusable.** `inert`
+ *  reaches the panel only behind a dialog (`panelInert`), and the diagram and the settings are not
+ *  dialogs: with either open, Tab walked off the end of it into the footer, the workspace select,
+ *  Pull all and the tree - all painted over, all reachable, and Enter fires what it lands on. When
+ *  these two were separate browser windows those controls were simply somewhere else.
+ *
+ *  It walks the view's own ancestors rather than assuming where the markup puts it: the CRM has
+ *  them inside `#belowbar` and Analytics has them on `<body>`, and a helper that knew which would be
+ *  wrong in one product the day the other moved.
+ */
+function viewInert(viewId, on) {
+  const view = document.getElementById(viewId);
+  if (!view) return;
+  const keep = new Set();
+  for (let n = view.parentElement; n && n !== document.documentElement; n = n.parentElement) keep.add(n);
+  const walk = (parent) => {
+    for (const el of [...parent.children]) {
+      if (el === view) continue;
+      if (keep.has(el)) { walk(el); continue; }
+      if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
+    }
+  };
+  walk(document.body);
 }

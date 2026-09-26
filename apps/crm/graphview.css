@@ -312,7 +312,15 @@
   #graphview #erlay .lhead{font:10.5px var(--sans);color:#94a3b8;margin:0 0 6px;line-height:1.4}
   #graphview #erlay .lrow.off{display:none}
   #graphview #erlay .lfoot{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)}
-  #graphview #erlay .lfoot button{width:100%;font:11.5px var(--sans)}
+  /* **Its colours too, because the panel's sheet now reaches it.** This button never declared a
+     background: as a page of its own it took Chrome's light grey with black text, and `workbench.css`
+     is unscoped, so `button{background:#22304a;color:var(--ink)}` from the panel found it the day
+     the two shared a document. Inside `#graphview` `--ink` is near-black, so it came out dark navy
+     with near-black text on it - measured against the old page, the one element in the diagram whose
+     colour had changed. It is the diagram's own surface, like every other control in here. */
+  #graphview #erlay .lfoot button{width:100%;font:11.5px var(--sans);
+    background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:6px;cursor:pointer}
+  #graphview #erlay .lfoot button:hover{border-color:var(--sel);color:var(--sel)}
   @media print{ #graphview #erlay{display:none !important} }
   #graphview #erdepth button{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;font-size:15px}   /* centre the −/+ glyph in its box */
   #graphview #erdepth button:disabled{opacity:.35;cursor:default}
@@ -462,8 +470,14 @@
      puts `#graphview` back into the flow - so the workspace bar, the context line, the tools row,
      the tree, the preview and the footer all landed on the sheet with it. Hidden by name, because
      a blanket `body > *` would take the diagram with it. */
+  /* **And `> *` was one level too shallow for one of the two products.** In Analytics `#graphview`
+     is a child of `<body>`; in the CRM it lives inside `#belowbar`, so `body > *:not(#graphview)`
+     matched the diagram's own *ancestor* and hid it - Save PDF there printed a blank sheet. The rule
+     below is depth-agnostic instead of being written for one markup: every element that contains the
+     diagram hides the children of its own that are neither the diagram nor another of its ancestors.
+     `#graphview` is not a descendant of itself, so nothing inside the drawing is touched. */
   @media print{
-    body.printing-diagram > *:not(#graphview){display:none !important}
+    body.printing-diagram :has(#graphview) > *:not(#graphview):not(:has(#graphview)){display:none !important}
   }
 
   /* **What the panel's own sheet now supplies, taken back.** `workbench.css` is not scoped - it

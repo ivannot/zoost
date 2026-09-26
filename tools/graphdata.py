@@ -43,6 +43,12 @@ PAYLOADS = [
 # function of text that is already in fixtures/crm/..., and the window reads it from the node only to
 # print it. Dropped after the panel has built the graph, so nothing about the building changes.
 HEAVY = ('source_code',)
+# **What `--check` must not compare, or it is a gate that always refuses.** The call graph stamps
+# itself with the moment it was built, which is a fact about the run and not about the graph: two
+# byte-identical builds differ in it, so a check that reads it reports the payload as behind on
+# every single run and stops meaning anything. Dropped from both sides of the comparison and kept in
+# the written file, because the file is a record of when it was made and the comparison is not.
+VOLATILE = ('generated',)
 
 
 def payload(app: str, ws: str, expr: str) -> dict:
@@ -63,6 +69,7 @@ def payload(app: str, ws: str, expr: str) -> dict:
         (stage / 'shot.js').write_text(
             shots.PANEL_STUB.format(name=json.dumps(shots.NAME[app]), files=json.dumps(files),
                                     script=script, hosts=shots.hosts_of(app),
+                                    ver=shots.version_of(app), stored="{}",
                                     taburl=json.dumps(taburl), ctx=ctx), encoding='utf-8')
         page = stage / 'workbench.html'
         html = page.read_text(encoding='utf-8')
@@ -97,7 +104,15 @@ def main() -> int:
         have = f.read_text(encoding='utf-8') if f.exists() else ''
         counts = g.get('counts', {})
         if args.check:
-            if want != have:
+            steady = json.dumps({k: v for k, v in g.items() if k not in VOLATILE},
+                                indent=2, sort_keys=True) + '\n'
+            try:
+                on_disk = json.loads(have) if have else {}
+            except ValueError:
+                on_disk = {}
+            was = json.dumps({k: v for k, v in on_disk.items() if k not in VOLATILE},
+                             indent=2, sort_keys=True) + '\n'
+            if steady != was:
                 bad += 1
                 print(f'  {name}: not what the panel builds - run: python3 tools/graphdata.py')
             continue

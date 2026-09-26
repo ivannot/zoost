@@ -2,7 +2,13 @@
  *  Every diagram entry read `bound`/`lastCtx` *after* its awaits, so a build begun in one workspace
  *  could be stamped with the identity of the next: data of A presented as B, which a mirror can
  *  never do. Reproduced by an outside scan. */
-const graphIdentity = () => ({ instance: bound?.instance || lastCtx?.instance || null,
+/*  `idWord` is part of the identity, not of one builder. `loadGraph()` sets it and this did not, so
+ *  every graph published through `publishGraph` - the schema, a module's relations, a function's
+ *  focus - reached the header without it, and the shared `wsLine` wrote «· sampleorg · 1234567890»
+ *  with nothing saying what the number is. The twin has no org at all and the same line has to read
+ *  «workspace», which is exactly why the word travels with the identity rather than being assumed
+ *  by the file that draws it. It was invisible because the fixture the check reads had gone stale. */
+const graphIdentity = () => ({ idWord: 'org', instance: bound?.instance || lastCtx?.instance || null,
                                org: bound?.org || lastCtx?.org || null, label: bound?.label || null });
 /** Hand a graph to the diagram view.
  *

@@ -1,16 +1,16 @@
 {
-  "_": "Each store field as submitted, hashed. `python3 tools/storecopy.py <app> --changed` compares against it and says which boxes need pasting.",
+  "_": "Each store field as submitted, hashed under the name of its dashboard box. `python3 tools/storecopy.py <app> --changed` compares against it and says which boxes need pasting. Keyed by name and not by number: removing a permission renumbers every section after it, and an ordinal record then reports drift that is not there.",
   "version": "1.53.0",
   "sections": {
-    "1": "9f38d625bb02",
-    "2": "61b3cf7583fb",
-    "3": "68670e04b39b",
-    "4": "6c50e5f1e512",
-    "5": "1d8c85f189f6",
-    "6": "b819e5c299ba",
-    "7": "0fcabaf6e00b",
-    "8": "5762645feadc",
-    "9": "87b222c45e2d",
-    "10": "a05225d1af7a"
+    "item-name": "9f38d625bb02",
+    "short-description": "61b3cf7583fb",
+    "detailed-description": "68670e04b39b",
+    "single-purpose-description": "6c50e5f1e512",
+    "sidepanel-justification": "1d8c85f189f6",
+    "storage-justification": "b819e5c299ba",
+    "scripting-justification": "0fcabaf6e00b",
+    "tabs-justification": "5762645feadc",
+    "host-permission-justification": "87b222c45e2d",
+    "data-disclosures": "a05225d1af7a"
   }
 }

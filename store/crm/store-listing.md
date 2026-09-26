@@ -30,6 +30,8 @@ If you administer or develop on Zoho CRM you know the gaps: no external editor, 
 
 WHAT IT DOES
 
+- A window of its own. Zoost opens from the toolbar icon, or with Alt+Shift+Z, as an ordinary resizable window you can move to a second monitor and leave beside Zoho. It comes back the size and in the place you left it. The call graph, the ER diagram and the settings are views inside that one window, not extra browser windows.
+
 - Judge it before you give it access to anything. "+ Sample" writes a workspace of invented data into your working folder - a couple of hundred Deluge functions with real call chains, modules with lookups, workflows, schedules, blueprints and connections - so you can open the tree, the graph, the audit and the exports without a Zoho tab and without an account. It is generated, never fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other workspace.
 
 - Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, blueprints, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Deluge functions are plain .dg files; Java, Python and Node functions keep every file in a project folder, with a .meta.json sidecar for each function. Git is optional: without it the mirror is still ordinary files you can search and hand over. Functions and project files removed in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.

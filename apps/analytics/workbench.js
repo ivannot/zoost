@@ -133,26 +133,17 @@ const MSG = {
 // Identity and legal text, worded as in the CRM panel - the two are one product to the reader.
 const PRODUCT_URL = 'https://zoost.it';
 
-// Anything that is not Zoho opens in its own window, never a tab.
+// **Every outward link opens one ordinary tab, with no exemption.**
 //
-// chrome.tabs.create *activates* the new tab, so the panel suddenly finds itself looking at a
-// non-Zoho page: the environment guard fires, the interface empties and the mismatch overlay
-// appears. That behaviour is right when it means what it says, and here it meant nothing at all -
-// the user clicked Help and the workbench looked like it had lost its place.
+// There was one: a link on a Zoho host was let through «because it belongs in the Zoho tab». It
+// never landed there - nothing in this handler navigates the Zoho tab, `goToZoho` does that and is
+// reached from buttons - so what the exemption actually did was hand the anchor back to the browser,
+// and `target="_blank"` from inside a popup opens **another popup**. The two Zoho help articles
+// linked from the Analytics settings were the only links in either product still coming up in a
+// stripped window with no address bar, which is exactly what this release removed everywhere else.
 //
-// Derived rather than listed: every link in the panel goes through here, and the only ones let
-// through to a tab are Zoho's own, which are meant to land in the Zoho tab. A link added tomorrow
+// Derived rather than listed: every link in the panel goes through here, and a link added tomorrow
 // is covered without anyone remembering.
-// Zoho's own hosts, with or without a subdomain, and nothing that merely contains the word:
-// `notzoho.com` and `evil.com/zoho.x` are not Zoho, and treating them as such would send them to
-// the Zoho tab where the guard would then complain about a mismatch it did not cause.
-// Zoho's own pages belong in the Zoho tab. It stays a rule about the domain rather than a list of
-// granted hosts - a link to a Zoho page we do not read is still a Zoho page - and it had one
-// blind spot: the Canadian data centre is `zohocloud.ca`, which is not literally «zoho.something»,
-// so those links were opening in a window of their own.
-function isZohoUrl(u) {
-  return /^https?:\/\/(?:[^./?#]+\.)*(?:zoho\.com|zoho\.eu|zoho\.in|zoho\.com\.au|zoho\.jp|zohocloud\.ca|zoho\.sa|zoho\.uk|zoho\.ae)(?::\d+)?(?:[/?#]|$)/i.test(String(u || ''));
-}
 
 /** An outward link opens a **tab in an ordinary browser window**.
  *
@@ -198,7 +189,6 @@ async function openExternal(url) {
 document.addEventListener('click', (e) => {
   const a = e.target && e.target.closest && e.target.closest('a[href^="http"]');
   if (!a) return;
-  if (isZohoUrl(a.href)) return;   // Zoho's own pages belong in the Zoho tab
   e.preventDefault();
   openExternal(a.href);
 });
@@ -1398,7 +1388,7 @@ async function refreshContext() {
     // the reader is standing. Without one, the old sentence is still the right one.
     who.innerHTML = twin
       ? esc(twin.installed ? MSG.twinInstalled(twin) : MSG.twinMissing(twin))
-      : (dir ? esc(MSG.noTab) : 'Not on a Zoho Analytics tab');
+      : (dir ? `<span>${esc(MSG.noTab)}</span>` : 'Not on a Zoho Analytics tab');
     // **The way out is a control, not an instruction** - see the twin's note. It appears in exactly
     // the state it resolves: a mirror to read, and no tab to reach Zoho with.
     $('ctxopen').hidden = !dir || !!twin;
@@ -3636,10 +3626,24 @@ function escapeCloses() {
 
 $('navfind').oninput = renderNav;
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && escapeCloses()) { e.preventDefault(); return; }
+  // **`stopImmediatePropagation`, because the diagram listens on this same node.** Both handlers
+  // are on `document` and this file is loaded first, so an Escape answered here still reached
+  // `graphview.js` on the same event: with the settings painted over the diagram, one keypress
+  // closed the settings *and* destroyed an arrangement of hand-placed boxes behind them.
+  // `preventDefault` does not stop a sibling listener - only this does.
+  if (e.key === 'Escape' && escapeCloses()) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   // Not behind a dialog: it makes the panel inert, which stops clicks and focus and not a listener
   // on the document, so Alt+Left walked the history underneath an open layer. Found by review.
-  if (!e.altKey || document.querySelector('.dlg.on') || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
+  // **And not behind the two full-window views either.** The guard named `.dlg.on` and nothing
+  // else, because when it was written those two were separate browser windows and could not
+  // receive this key at all. Inside one window they can: with the diagram open, Alt+Left - the
+  // universal «go back», and the reflex after clicking into boxes - walked the panel's history
+  // underneath it, opening a different item and possibly switching tab, with nothing on screen
+  // changing. The reader found out on closing the diagram.
+  if (!e.altKey || document.querySelector('.dlg.on')
+      || (document.getElementById('graphview') || {}).classList?.contains('show')
+      || (document.getElementById('settingsview') || {}).classList?.contains('show')
+      || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   const at = navHistory.snapshot().position;
   if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(at - 1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(at + 1); }
@@ -4178,13 +4182,21 @@ async function onRepopen() {
   reportText = buildReport(reportFacts(lastThrown, await aiEngineWord()));
   const text = reportText;
   try {
-    // A **window**, not a tab. The side panel belongs to the window it is open in, so a new tab
-    // opens with this panel still down the side of it - the reader is asked to read a report with
-    // the thing that produced it sitting next to the text. A fresh window has no panel in it.
+    // **A tab in an ordinary window, like every other outward link.** This opened a whole browser
+    // window, and the reason written here was the side panel: a new tab would have carried the
+    // panel down the side of the report that describes it. Zoost is its own window now, so a tab
+    // lands nowhere near it - and a fresh browser window is one more thing for the reader to close.
+    // The same sibling `openExternal` was fixed for, and this call site was not walked with it.
+    // It needs the tab's id for `scripting.executeScript`, which `tabs.create` returns as well.
     // `chrome.windows` needs no permission of its own; the writing still does, and that is the
     // `zoost.it` host already declared.
-    const win = await chrome.windows.create({ url: 'https://zoost.it/report', focused: true });
-    const tabId = win && win.tabs && win.tabs[0] && win.tabs[0].id;
+    const wins = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    const where = wins.find((w) => w.focused) || wins[0];
+    const made = where
+      ? await chrome.tabs.create({ url: 'https://zoost.it/report', active: true, windowId: where.id })
+      : (await chrome.windows.create({ url: 'https://zoost.it/report', type: 'normal', focused: true }) || {}).tabs?.[0];
+    if (where) { try { await chrome.windows.update(where.id, { focused: true }); } catch (_) { /* the tab is made either way */ } }
+    const tabId = made && made.id;
     if (!tabId) { setReportFallback(); return; }
     const put = (t) => {
       const b = document.getElementById('body');
@@ -4277,3 +4289,30 @@ chrome.runtime.onMessage.addListener((msg) => {
   return undefined;
 });
 void openPendingView();
+
+/** Everything the reader cannot see is taken out of the tab order, while a full-window view is up.
+ *
+ *  **The move put two overlays inside one document and left what they cover focusable.** `inert`
+ *  reaches the panel only behind a dialog (`panelInert`), and the diagram and the settings are not
+ *  dialogs: with either open, Tab walked off the end of it into the footer, the workspace select,
+ *  Pull all and the tree - all painted over, all reachable, and Enter fires what it lands on. When
+ *  these two were separate browser windows those controls were simply somewhere else.
+ *
+ *  It walks the view's own ancestors rather than assuming where the markup puts it: the CRM has
+ *  them inside `#belowbar` and Analytics has them on `<body>`, and a helper that knew which would be
+ *  wrong in one product the day the other moved.
+ */
+function viewInert(viewId, on) {
+  const view = document.getElementById(viewId);
+  if (!view) return;
+  const keep = new Set();
+  for (let n = view.parentElement; n && n !== document.documentElement; n = n.parentElement) keep.add(n);
+  const walk = (parent) => {
+    for (const el of [...parent.children]) {
+      if (el === view) continue;
+      if (keep.has(el)) { walk(el); continue; }
+      if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
+    }
+  };
+  walk(document.body);
+}

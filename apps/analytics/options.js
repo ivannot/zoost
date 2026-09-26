@@ -1037,15 +1037,28 @@ $('ai_passchange').onclick = () => { aiPassChanging = true; syncLockRow(); focus
  *  `where` is a fragment - `#ai` from the assistant, `#rx` from the saved-patterns menu - so a
  *  reader sent to change one thing lands on it rather than at the top of a form about eight.
  */
+/** Whether `init()` has run in this window. One document, one read. */
+let settingsReady = false;
 async function openSettingsView(where) {
   const view = document.getElementById('settingsview');
   // **Already open means already painted.** Asking again used to re-run `init()`, which reads every
   // section back out of storage and then rebases the dirty marks - so a reader who had typed an API
   // key and not saved it lost it, and lost the indicator that would have said so, to one click on
   // Chrome's «Options» entry. Opening what is open is a request to *look* at it, never to reload it.
-  const already = !!(view && view.classList.contains('show'));
+  // **Read once, for the life of this window - not once per opening.** `already` answered «is it on
+  // screen», which made closing and reopening a fresh page, and it is not one: `dirty`, `baseline`
+  // and the per-section load flags are module state that outlives the class being removed. So a
+  // reader who typed an API key, closed the settings and opened them again met `beginLoad` finding
+  // the section dirty, cancelling its own read, and every Save from then on refused with «This page
+  // was still loading ... Reload the page» - about a page that cannot be reloaded, since it is a
+  // view of this window. The way out was to throw the edit away, which is what they were avoiding.
+  //
+  // Nothing is lost by reading once: `otherWindowChanged` is on `chrome.storage.onChanged` and
+  // reloads a section the moment its key is written, so the form is current whether or not it is on
+  // screen - and closing it now keeps exactly what was typed, dirty marks and all.
   if (view) view.classList.add('show');
-  if (!already) await init();
+  viewInert('settingsview', true);   // everything under this form leaves the tab order
+  if (!settingsReady) { settingsReady = true; await init(); }
   if (where) {
     const sec = document.getElementById(String(where).replace(/^#/, ''));
     if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });
@@ -1056,6 +1069,11 @@ async function openSettingsView(where) {
 function closeSettingsView() {
   const view = document.getElementById('settingsview');
   if (view) view.classList.remove('show');
+  // The diagram may be underneath - the settings are the layer above it - so what goes back into
+  // the tab order is the diagram's answer, not the panel's.
+  const g = document.getElementById('graphview');
+  if (g && g.classList.contains('show')) viewInert('graphview', true);
+  else viewInert('settingsview', false);
 }
 {
   const x = document.getElementById('settingsx');

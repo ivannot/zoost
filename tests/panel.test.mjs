@@ -2381,48 +2381,15 @@ test('ready to act: visible and enabled', () => {
   }
 });
 
-// ---------- which links belong in the Zoho tab, and which get their own window ----------
-
-const { isZohoUrl } = load([sliceFn('apps/crm/workbench.js', 'isZohoUrl')]);
-
-test('Zoho pages stay in the Zoho tab', () => {
-  // Opening these in a window would defeat the point: they are meant to land where the panel is
-  // looking.
-  ['https://crm.zoho.eu/crm/tab/Contacts',
-   'https://analytics.zoho.com/workspace/123',
-   'https://crmsandbox.zoho.com/crm/x',
-   // The data centres whose domain is not literally «zoho.something» were falling through to a
-   // window of their own, and the three added later were not in the regex at all.
-   'https://crm.zohocloud.ca/crm/x',
-   'https://crm.zoho.sa/crm/x',
-   'https://crmsandbox.zoho.uk/crm/x',
-   'https://one.zoho.ae/',
-   'https://zoho.com/crm'].forEach((u) => assert.equal(isZohoUrl(u), true, u));
-});
-
-test('everything else opens in its own window', () => {
-  // chrome.tabs.create activates the new tab, so the panel finds itself on a non-Zoho page, the
-  // environment guard fires and the interface empties behind the mismatch overlay. Right behaviour,
-  // wrong cause — the user clicked Help and the workbench looked like it had lost its place.
-  ['https://zoost.it/docs-crm.html',
-   'https://github.com/ivannot/zoost',
-   'https://ko-fi.com/ivannot',
-   'https://chromewebstore.google.com/detail/abc'].forEach((u) => assert.equal(isZohoUrl(u), false, u));
-});
-
-test('a host that merely contains the word is not Zoho', () => {
-  // Sending these to the Zoho tab would make the guard complain about a mismatch it did not cause.
-  assert.equal(isZohoUrl('https://notzoho.com/x'), false);
-  assert.equal(isZohoUrl('https://evil.com/zoho.eu'), false);
-  // The registrable domain matters too. `zoho.example.com` starts with the right word but belongs
-  // to example.com; the old `[a-z.]+` suffix accepted it as one of Zoho's own hosts.
-  assert.equal(isZohoUrl('https://zoho.example.com/x'), false);
-  assert.equal(isZohoUrl('https://crm.zoho.com.example.org/x'), false);
-});
-
-test('a non-http scheme is left entirely alone', () => {
-  assert.equal(isZohoUrl('mailto:ivan@zoost.it'), false);
-});
+// ---------- outward links ----------
+//
+// **The four cases that were here are gone with the thing they tested.** They pinned `isZohoUrl`,
+// the host exemption in the panel's click handler - and the sentence they were written around, «they
+// are meant to land where the panel is looking», was never true of that handler: it navigates no
+// tab, it simply declined, and the anchor's own `target="_blank"` then opened a second popup. The
+// predicate was removed with the exemption, so the cases went with it rather than being kept green
+// against a function nothing calls. What replaced them is one behaviour, uniform: every outward
+// anchor reaches `openExternal`, which puts one tab in an ordinary window.
 
 // ---------- attribute escaping ----------
 
@@ -2686,7 +2653,10 @@ test('every kind gets a colour, and no condition gets one', () => {
     let kinds = [];
     const ctx = { allKinds: () => kinds, Set, Object,
       // nothing is declared in this stub, so every kind falls through to the fallback
-      document: { documentElement: {} },
+      // `declaredHue` asks `#graphview` for the tokens, because that is where the scoped sheet
+      // declares them; with no element here every kind falls through to the fallback, which is
+      // what this case is about.
+      document: { documentElement: {}, getElementById: () => null },
       getComputedStyle: () => ({ getPropertyValue: () => '' }) };
     const { hueFor } = load([gcon(app, 'FALLBACK_HUES'),
                              gcon(app, 'declaredHue'),
@@ -4116,6 +4086,39 @@ test('the functions drawing has one name, and the code does not write the old on
   }
 });
 
+test('the two full-window views are on different layers', () => {
+  // **A tie in z-index is decided by document order, which nobody chose.** Both were 82: siblings in
+  // one stacking context, the diagram written later in the markup, so opening the settings while the
+  // diagram was up painted the whole form underneath it and Chrome's own «Options» entry read as
+  // doing nothing. Found by two independent scans on the same day, in both products.
+  //
+  // Read out of the stylesheets rather than asserted as two numbers, so the case keeps meaning what
+  // it says when either view is restyled: what matters is that they differ, and that both still sit
+  // between the empty-state overlay and the scrim.
+  const layer = (css, sel) => {
+    const block = css.slice(css.indexOf(`${sel}{`));
+    const m = /z-index:\s*(\d+)/.exec(block.slice(0, block.indexOf('}')));
+    assert.ok(m, `${sel} declares no z-index`);
+    return Number(m[1]);
+  };
+  for (const app of ['crm', 'analytics']) {
+    const g = layer(read(`apps/${app}/graphview.css`), '#graphview');
+    const s = layer(read(`apps/${app}/options.css`), '#settingsview');
+    assert.notEqual(g, s,
+      `${app}: the diagram and the settings share z-index ${g}, so which one the reader sees is `
+      + 'decided by which is written later in workbench.html');
+    const panel = read(`apps/${app}/workbench.css`);
+    const foot = layer(panel, '#pfoot');
+    assert.ok(Math.min(g, s) > foot,
+      `${app}: a full-window view sits at or below #pfoot (${foot}), so the footer paints over it`);
+    for (const above of ['.scrim', '.dlg']) {
+      const n = layer(panel, above);
+      assert.ok(Math.max(g, s) < n,
+        `${app}: ${above} is ${n} and a full-window view reaches it, so a dialog opens underneath`);
+    }
+  }
+});
+
 test('every element the diagram window reaches for is in its own markup', () => {
   // This is the check that would have caught it on its own. Removing the Visual view from Analytics
   // left `$('visScope').onclick = …` at the top level of the script: $() returned null, assigning to
@@ -4128,13 +4131,18 @@ test('every element the diagram window reaches for is in its own markup', () => 
   // `erpickcut` and `erpickcut2` join them: the arc card writes its own buttons, because an arc has
   // two ends and what each of them says is how many boxes that end would take away.
   const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpickcut2', 'erpicksnip', 'layzone', 'up']);
+  // **And one id that is deliberately not the diagram's.** The settings are the layer above this
+  // view, so closing the diagram has to ask whether they are still up before it hands the tab order
+  // back to the panel underneath. Named here, with its reason, rather than widening the denominator
+  // to the whole page - which would stop this case seeing the defect it exists for.
+  const OTHER_VIEW = new Set(['settingsview']);
   for (const app of ['crm', 'analytics']) {
     const js = gsrc(app), html = diagramPage(app);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const used = new Set([...code.matchAll(/\$\('([^']+)'\)/g), ...code.matchAll(/getElementById\('([^']+)'\)/g)]
       .map((m) => m[1]));
-    const missing = [...used].filter((id) => !have.has(id) && !RUNTIME.has(id)).sort();
+    const missing = [...used].filter((id) => !have.has(id) && !RUNTIME.has(id) && !OTHER_VIEW.has(id)).sort();
     assert.deepEqual(missing, [], `${app}: graphview.js reaches for ids that no longer exist`);
   }
 });
@@ -6649,20 +6657,24 @@ test('the binding a command carries is read before anything awaits', () => {
     }
   });
 
-  test('the report page opens in a window of its own, not in a tab of this one', () => {
-    // Reported after the first real send: the side panel belongs to its window, so a new tab opened
-    // beside it - the reader was asked to read a report with the panel that wrote it still on screen.
-    // A window has no panel in it. The listener must then watch the tab *inside* that window, which
-    // is the part a careless change breaks silently: the injection simply never fires.
+  test('the report page opens in a tab of an ordinary window', () => {
+    // **The other way round from what this case used to assert, and the reason it did is gone.**
+    // It opened a whole browser window because the side panel belonged to its window: a new tab
+    // would have put the report beside the panel that wrote it. Zoost is its own window now, so a
+    // tab lands nowhere near it and a second browser window is one more thing to close - the same
+    // sibling `openExternal` was corrected for, and this call site had not been walked with it.
+    // A **normal** window is asked for, because `tabs.create` with no window lands in Zoost's own
+    // popup, which has no tab strip. The injection still needs that tab's id, which is the part a
+    // careless change breaks in silence: it simply never fires.
     for (const app of ['crm', 'analytics']) {
-      const src = appPanel(app);
       const block = handlerApp(app, 'repopen');
-      assert.ok(/chrome\.windows\.create/.test(block), 'why=' + app + ' opens the report in a tab');
-      assert.ok(!/chrome\.tabs\.create/.test(block), 'why=' + app + ' still opens a tab');
-      assert.ok(/win\.tabs\[0\]/.test(block),
-        'why=' + app + ' does not take the tab out of the window it just opened');
+      assert.ok(/chrome\.tabs\.create/.test(block), 'why=' + app + ' does not open the report in a tab');
+      assert.ok(/windowTypes: \['normal'\]/.test(block),
+        'why=' + app + ' puts the report tab wherever it lands, which is Zoost\'s own popup');
+      assert.ok(/made && made\.id/.test(block),
+        'why=' + app + ' does not take the id of the tab it made, so nothing can be injected into it');
       assert.ok(/if \(!tabId\) \{ setReportFallback\(\); return; \}/.test(block),
-        'why=' + app + ' bails silently when the window comes back without a tab');
+        'why=' + app + ' bails silently when the tab comes back without an id');
     }
   });
 

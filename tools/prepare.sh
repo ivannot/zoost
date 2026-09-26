@@ -40,6 +40,14 @@ bash tests/run.sh
 step 'the panels, driven — what a unit test cannot see: a click, a key, the state afterwards'
 python3 tools/probe.py
 
+# Here and not in `tests/run.sh` because it needs Chrome, which is the same reason the probe above
+# is a separate step. It earned the place: all three payloads were behind the panel, and the case
+# that reads them had been asserting against a graph no version of this product builds - so a
+# `workspace` block that lost its `idWord`, and a schema node that lost its namespace and its
+# display name, were both invisible. A fixture nothing regenerates is a photograph.
+step 'the diagram payloads — still what the shipped panel builds'
+python3 tools/graphdata.py --check
+
 step 'images again — the derived checks, now that the pages are stamped'
 # `--publishing`: this is the one moment a picture older than the panel is a defect rather than a
 # queue. The battery prints the same fact and does not refuse, because rendering the set costs seven

@@ -370,8 +370,8 @@ def store_matches_manifest(findings: list, notes: list) -> None:
                 notes.append(f'store/{app}: drift against the submitted copy could not be read ({e})')
                 continue
             if drifted:
-                notes.append(f'store/{app}: §{", §".join(drifted)} differ from what was last pasted '
-                             f'into the dashboard - `python3 tools/storecopy.py {app} <n> --copy` '
+                notes.append(f'store/{app}: {", ".join(drifted)} differ from what was last pasted '
+                             f'into the dashboard - `python3 tools/storecopy.py {app} <box> --copy` '
                              f'prints each one ready to paste')
             else:
                 notes.append(f'store/{app}: every section matches what was last pasted')

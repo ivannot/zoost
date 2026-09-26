@@ -21,8 +21,16 @@
      overlay telling them to pick a folder: the control was dead for exactly the person who
      needed it. Below `.scrim` (85) and `.dlg` (90) on purpose, so a dialog opened from in
      here still appears over it. */
+  /* **83, one above the diagram, and the reason is a tie that had a winner nobody chose.**
+     Both full-window views were 82. They are siblings in one stacking context, so the tie was
+     settled by document order - the diagram is written later - and opening the settings while the
+     diagram was up painted the whole form *underneath* it. Chrome's own «Options» entry then read
+     as doing nothing at all, and the first Escape closed the settings the reader could not see
+     while the diagram's own handler closed the diagram on the same keypress. The settings are what
+     was just asked for, so they are on top; closing them reveals the drawing exactly as it was,
+     which is why this is a layer and not a «close the other one». */
   #settingsview{
-    display:none; position:fixed; inset:0; z-index:82; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
+    display:none; position:fixed; inset:0; z-index:83; overflow:auto; background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#3b82f6; --sel-soft:#16263f;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171;

@@ -401,13 +401,21 @@ async function onRepopen() {
   reportText = buildReport(reportFacts(lastThrown, await aiEngineWord()));
   const text = reportText;
   try {
-    // A **window**, not a tab. The side panel belongs to the window it is open in, so a new tab
-    // opens with this panel still down the side of it - the reader is asked to read a report with
-    // the thing that produced it sitting next to the text. A fresh window has no panel in it.
+    // **A tab in an ordinary window, like every other outward link.** This opened a whole browser
+    // window, and the reason written here was the side panel: a new tab would have carried the
+    // panel down the side of the report that describes it. Zoost is its own window now, so a tab
+    // lands nowhere near it - and a fresh browser window is one more thing for the reader to close.
+    // The same sibling `openExternal` was fixed for, and this call site was not walked with it.
+    // It needs the tab's id for `scripting.executeScript`, which `tabs.create` returns as well.
     // `chrome.windows` needs no permission of its own; the writing still does, and that is the
     // `zoost.it` host already declared.
-    const win = await chrome.windows.create({ url: 'https://zoost.it/report', focused: true });
-    const tabId = win && win.tabs && win.tabs[0] && win.tabs[0].id;
+    const wins = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    const where = wins.find((w) => w.focused) || wins[0];
+    const made = where
+      ? await chrome.tabs.create({ url: 'https://zoost.it/report', active: true, windowId: where.id })
+      : (await chrome.windows.create({ url: 'https://zoost.it/report', type: 'normal', focused: true }) || {}).tabs?.[0];
+    if (where) { try { await chrome.windows.update(where.id, { focused: true }); } catch (_) { /* the tab is made either way */ } }
+    const tabId = made && made.id;
     if (!tabId) { setReportFallback(); return; }
     const put = (t) => {
       const b = document.getElementById('body');

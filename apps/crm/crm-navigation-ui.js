@@ -119,7 +119,19 @@ async function switchTab() {
   // navigation inside somebody's shell: a logout in an iframe leaves the shell around it holding a
   // session that no longer exists. `goToZoho` is for going to a *page*.
   if (sameAccount) {
-    if (id) await crmZohoNavigator.focusTab(id, { url: targetHome, active: true }); else await chrome.tabs.create({ url: targetHome, active: true });
+    // **It asks, because the tab it takes over is not one the reader is looking at.** No session
+    // ends on this branch, so it navigated in silence - which was right while Zoost was a panel
+    // inside the browser window and the tab was the one beside it. From a window of its own, `id`
+    // is whichever Zoho tab `resolve()` found, in any window, and it may be holding a half-edited
+    // function in another org: production and a sandbox both open is the ordinary arrangement, and
+    // `sameAccount` is true for *any* pair of them on this data centre. Navigating it away is not
+    // undoable, so it is a question. Opening a new tab asks nothing: there is nothing to lose.
+    if (id) {
+      const ok = window.confirm(`Take the Zoho tab on «${lastCtx?.instance || '?'}» to «${bound.instance}»?\n\n`
+        + 'Zoost is its own window, so that tab is somewhere else - anything unsaved in it is lost.');
+      if (!ok) return;
+      await crmZohoNavigator.focusTab(id, { url: targetHome, active: true });
+    } else await chrome.tabs.create({ url: targetHome, active: true });
     return;
   }
   // Different account: a clean logout + re-login is required. Confirm first, since it ends the current Zoho session.
