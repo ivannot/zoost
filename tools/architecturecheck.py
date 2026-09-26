@@ -89,6 +89,35 @@ def _dependency_findings(cfg: dict, app: str, scripts: list[str]) -> list[str]:
     return findings
 
 
+def _bridge_findings(root: Path, app: str) -> list[str]:
+    """Keep the declared bridge command vocabulary in sync with its dispatcher.
+
+    Classic scripts do not give the type checker an import graph.  A command can therefore be
+    added to a content bridge and silently remain absent from the panel contract (or vice versa),
+    which turns a protocol change into a runtime-only failure.  This is deliberately a narrow
+    source check: it compares literal discriminants, not arbitrary JavaScript expressions, and it
+    does not claim to validate Zoho's response payloads.  The runtime validators remain the place
+    for that boundary.
+    """
+    app_root = root / "apps" / app
+    contract_path = app_root / "bridge-contract.js"
+    bridge_path = app_root / "content-bridge.js"
+    if not contract_path.exists() or not bridge_path.exists():
+        return [f"{app}: bridge contract and content bridge are both required"]
+    contract = contract_path.read_text(encoding="utf-8")
+    bridge = bridge_path.read_text(encoding="utf-8")
+    declared = set(re.findall(r"\bcmd\s*:\s*['\"]([^'\"]+)['\"]", contract))
+    handled = set(re.findall(r"(?:msg\?\.cmd|msg\.cmd)\s*===\s*['\"]([^'\"]+)['\"]", bridge))
+    findings: list[str] = []
+    for command in sorted(handled - declared):
+        findings.append(f"{app}: content bridge handles undeclared command {command!r}")
+    for command in sorted(declared - handled):
+        findings.append(f"{app}: bridge contract declares command without handler {command!r}")
+    if "function validateBridgeReply" not in contract:
+        findings.append(f"{app}: bridge contract has no runtime reply validator")
+    return findings
+
+
 def scan(root: Path = ROOT) -> list[str]:
     cfg = json.loads((root / "tools" / "architecture.json").read_text(encoding="utf-8"))
     findings: list[str] = []
@@ -96,6 +125,7 @@ def scan(root: Path = ROOT) -> list[str]:
         scripts, html_findings = _html_scripts(root, app)
         findings.extend(html_findings)
         findings.extend(_dependency_findings(cfg, app, scripts))
+        findings.extend(_bridge_findings(root, app))
         actual = {p.name for p in (root / "apps" / app).glob("*.js")}
         cats = cfg["categories"]
         owners: dict[str, list[str]] = {}
@@ -150,13 +180,23 @@ def self_test() -> None:
             '<script src="filesystem-adapter.js"></script><script src="analytics-mirror-writer.js"></script>'
             '<script src="analytics-view-model.js"></script>'
             '<script src="workbench.js"></script>', encoding="utf-8")
+        (root / "apps" / "crm" / "bridge-contract.js").write_text(
+            "// @ts-check\n/** @typedef {{cmd: 'context'} | {cmd: 'listFunctions'}} BridgeCommand */\n"
+            "function validateBridgeReply() {}", encoding="utf-8")
+        (root / "apps" / "analytics" / "bridge-contract.js").write_text(
+            "// @ts-check\n/** @typedef {{cmd: 'context'} | {cmd: 'listViews'}} BridgeCommand */\n"
+            "function validateBridgeReply() {}", encoding="utf-8")
+        (root / "apps" / "crm" / "content-bridge.js").write_text(
+            "if (msg?.cmd === 'context') {}\nif (msg?.cmd === 'listFunctions') {}", encoding="utf-8")
+        (root / "apps" / "analytics" / "content-bridge.js").write_text(
+            "if (msg?.cmd === 'context') {}\nif (msg?.cmd === 'listViews') {}", encoding="utf-8")
         for app, names in {
             "crm": ["pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-bootstrap.js"],
             "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js", "workbench.js"],
         }.items():
             for name in names:
                 (root / "apps" / app / name).write_text("", encoding="utf-8")
-        cfg = {"version": 1, "categories": {"domain": ["pure.js", "analytics-view-model.js"], "ports": [], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js", "filesystem-adapter.js", "analytics-mirror-writer.js"], "ui": ["workbench.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
+        cfg = {"version": 1, "categories": {"domain": ["pure.js", "analytics-view-model.js"], "ports": ["bridge-contract.js"], "application": ["pull-controller.js", "pull-usecase.js", "pull-lifecycle.js"], "adapters": ["pull-adapter.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "content-bridge.js"], "ui": ["workbench.js"], "bootstrap": ["crm-bootstrap.js", "bootstrap.js"]}, "forbidden": {"domain": ["document"]}}
         (root / "tools" / "architecture.json").write_text(json.dumps(cfg), encoding="utf-8")
         (root / "apps" / "crm" / "pure.js").write_text("const x = 1;", encoding="utf-8")
         (root / "apps" / "analytics" / "pure.js").write_text("const x = 2;", encoding="utf-8")
@@ -170,6 +210,10 @@ def self_test() -> None:
         (root / "apps" / "analytics" / "workbench.html").write_text(
             html.replace('<script src="analytics-view-model.js"></script>', ''), encoding="utf-8")
         assert any("analytics-view-model.js" in item for item in scan(root))
+        html = (root / "apps" / "analytics" / "content-bridge.js").read_text(encoding="utf-8")
+        (root / "apps" / "analytics" / "content-bridge.js").write_text(
+            html + "\nif (msg?.cmd === 'newCommand') {}", encoding="utf-8")
+        assert any("undeclared command 'newCommand'" in item for item in scan(root))
 
 
 if __name__ == "__main__":
