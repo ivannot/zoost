@@ -12,6 +12,7 @@
  * chromeApi: any,
  * hostPatterns: string[],
  * findTab: () => Promise<number|null>,
+ * shell?: () => string|null,
  * refused: (url: string) => void,
  * }} CrmNavigatorOptions */
 
