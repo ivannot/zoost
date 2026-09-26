@@ -325,7 +325,8 @@ def _browser_stop():
 atexit.register(_browser_stop)
 
 
-def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, height=800):
+def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, height=800,
+            expect_ok: bool = False):
     """One screenshot of a staged page, through the browser that is already running.
 
     And the page's own verdict on the run, which used to be thrown away. Every stub writes
@@ -356,6 +357,20 @@ def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, he
                             if said.get("title", "").startswith("SHOT ERROR") else ""))
     if said.get("title", "").startswith("SHOT ERROR"):
         raise SystemExit(f"{page.name}: {said['title']}")
+    # **«It did not fail» is not «it finished», and for a driver those are the whole difference.**
+    # The loop above stops when the page is *quiet* - `__zoostPending` at zero twice - and a scenario
+    # awaiting something the counter cannot see (an IndexedDB callback, a message) is perfectly quiet
+    # in the middle of itself. The title was then read early, found not to be an error, and the run
+    # called green. Measured: a `say()` planted at the top of the CRM pull scenario turned it red and
+    # the same `say()` planted at the bottom did not - so everything after the point where the page
+    # first went quiet was being carried, not checked.
+    #
+    # So a driver says what its ending looks like and this refuses anything else. A picture has no
+    # ending to declare, which is why it is asked for rather than assumed.
+    if expect_ok and not said.get("title", "").endswith(" OK"):
+        raise SystemExit(f"{page.name}: the scenario never reached its own ending - the page went "
+                         f"quiet while it was still running, and the title is "
+                         f"«{said.get('title', '')}». Everything after that point was not checked.")
     return dest
 
 
@@ -408,7 +423,7 @@ def fixtures_for(_key: str) -> pathlib.Path:
 WS_FOR_GRAPH = {"crm": "crm/sampleorg-1234567890", "analytics": "analytics/sample-workspace"}
 
 
-def render(shot):
+def render(shot, expect_ok: bool = False):
     """A diagram, drawn inside the panel that now holds it.
 
     **It used to open `graphview.html` on its own.** That page existed because the diagram was a
@@ -456,7 +471,7 @@ def render(shot):
             encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
-        capture(page, dest, 60000)
+        capture(page, dest, 60000, expect_ok=expect_ok)
     return dest
 
 
@@ -567,7 +582,7 @@ window.addEventListener('load', () => setTimeout(() => {{
 """
 
 
-def render_panel(shot):
+def render_panel(shot, expect_ok: bool = False):
     """The side panel, rendered against the fixture through the file-system shim.
 
     Headless Chrome cannot be handed a folder - the permission is a user gesture by design - so
@@ -603,7 +618,7 @@ def render_panel(shot):
             encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
-        capture(page, dest, 60000)
+        capture(page, dest, 60000, expect_ok=expect_ok)
     return dest
 
 
@@ -663,7 +678,7 @@ def render_options(shot):
             encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
-        capture(page, dest, 60000)
+        capture(page, dest, 60000, expect_ok=expect_ok)
     return dest
 
 

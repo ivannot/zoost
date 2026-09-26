@@ -309,6 +309,10 @@ function renderTree() {
   // Before either branch appends a row: both of them draw from this same set, so the reservation is
   // the same down the whole list however it is grouped or sorted.
   setRowSlots(shown);
+  // The number that matters: what the *screen* received, against the model it was drawn from. The
+  // two disagreeing is the reported defect, and this is the only line that can say so.
+  treeTrace('draw', `shown=${shown.length} of model=${treeData.length} type=${typeFilter || 'all'}`
+    + ` lang=${langFilter || 'all'} term=${(search.text || '').length}`);
   const tree = $('tree'); tree.innerHTML = '';
   if (connectionFilter) {
     const b = document.createElement('div'); b.className = 'connbanner';
@@ -414,6 +418,40 @@ async function refineRowFromMeta(mp, op, byPath, byId, index) {
   }
 }
 
+/** The sequence, numbered, in the order it happened - for a defect nobody can reproduce on demand.
+ *
+ *  **Reported and not reproducible: a function created in Zoho, Pull list pressed, «Complete missing
+ *  (1)» counting it and no row for it in the list - and on the next try, nothing.** The button and
+ *  the list read the same array, so the model had it and the screen did not; closing and reopening
+ *  the window brought it back. A second attempt behaved. That is the shape this repository has
+ *  already paid five wrong fixes for, and the rule it earned is that the next action is an
+ *  instrument: a defect that is a *sequence* has to be recorded, never sampled and never deduced.
+ *
+ *  So every load prints where it got to and what it decided, in order, with its own number - two
+ *  overlapping rebuilds are then two interleaved numbers rather than a guess about which won.
+ *  Always on: an instrument that has to be switched on records nothing, because the moment it is
+ *  wanted has already passed.
+ *
+ *  Console only, deliberately. The problem report strips what it can recognise and these lines carry
+ *  function paths, which are the reader's own names - so they stay where the reader can see them and
+ *  decide, rather than travelling.
+ */
+let _traceN = 0;
+// Kept as well as printed, and capped: a console is where the reader looks, and an array is the only
+// thing a harness can assert against - which is what makes this instrument checkable rather than
+// hoped for. `tools/probe.py` reads it after a real pull, so «it records the sequence» is proven by
+// a positive instead of by nobody having complained.
+const TRACE_KEEP = 200;
+function treeTrace(what, detail) {
+  const line = `#${++_traceN} ${what}${detail ? ' ' + detail : ''}`;
+  try { console.info(`[zoost] tree ${line}`); } catch (_) {}
+  try {
+    const buf = (window.__zoostTreeTrace || (window.__zoostTreeTrace = []));
+    buf.push(line);
+    if (buf.length > TRACE_KEEP) buf.splice(0, buf.length - TRACE_KEEP);
+  } catch (_) {}
+}
+
 async function rebuildTree() {
   // Before anything that can yield. Whether another task could actually clear these marks in the
   // window between the permission check and here is the sort of question nobody should have to
@@ -423,13 +461,23 @@ async function rebuildTree() {
   const op = beginWorkspaceOp();
   if (!(await ensurePerm(op.root))) { op.say(MSG.folder, 'warn'); return; }
   const mine = ++treeLoad;
+  // `on ${viewMode}` rather than `viewMode=`: `asynccheck` is line-based and reads a name followed
+  // by `=` as a write, so a trace that *reads* a global looked like one that sets it after an
+  // await. A diagnostic that makes a checker lie is worse than no diagnostic.
+  treeTrace(`rebuild=${mine} enter`, `on ${viewMode}`);
+  // Every early return says which one it was and whether it was overtaken or the workspace moved -
+  // «it returned» is the fact, and *which* return is the answer.
   const current = () => mine === treeLoad && op.current();
+  const stop = (where) => {
+    treeTrace(`rebuild=${mine} stop`, `at=${where} overtaken=${mine !== treeLoad} ws=${op.current()}`);
+    return true;
+  };
   // This load's own tally of what it could not open - emptied here, read by the line that closes it.
   unreadableMetas = [];
   op.say(MSG.loadingTree, 'busy');
   graphCache = null; moduleFilesCache = null; aiConnCache = null;
   const _cfg = await opReadCfg(op); if (_cfg && current()) bound = _cfg; await cacheBinding(bound);
-  if (!current()) return;
+  if (!current()) return void stop(1);
   // Read from the config this load already has open, rather than kept as module state: there is then
   // no copy to forget to clear when the workspace changes, which is the defect class this panel has
   // paid for more than once.
@@ -439,7 +487,8 @@ async function rebuildTree() {
   // One read. It lists every function, downloaded or not, with the fields a row shows - so the panel
   // is usable before a single meta has been opened.
   let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
-  if (!current()) return;
+  treeTrace(`rebuild=${mine} index`, `entries=${idx ? idx.length : 'unreadable'}`);
+  if (!current()) return void stop(2);
   index = new Map();
   const byPath = new Map(), byId = new Map(), byMeta = new Map();
   if (idx && idx.length) {
@@ -468,6 +517,7 @@ async function rebuildTree() {
       byPath.set(path, row); byId.set(id, row); byMeta.set(row.metaPath, row);
       return row;
     });
+    treeTrace(`rebuild=${mine} model`, `rows=${treeData.length}`);
     renderTree();
     setStatus(`${treeData.length} functions - reading what is on disk\u2026`, 'busy');
   } else {
@@ -485,14 +535,14 @@ async function rebuildTree() {
     const row = byMeta.get(p) || byPath.get(dg);
     if (row) row.downloaded = true;
   }
-  if (!current()) return;
+  if (!current()) return void stop(3);
   if (!treeData.length) {
     // No index: a legacy workspace, or one whose index could not be read. The tree is what is on
     // disk, and the metas below are the only source for it - so it stays empty until they arrive.
     for (const p of metaPaths) {
       try {
         const meta = JSON.parse(await op.read(p));
-        if (!current()) return;
+        if (!current()) return void stop(4);
         const path = primaryFromMeta(meta, p);
         const id = String(meta.id == null ? p : meta.id);
         const stem = p.split('/').pop().replace(/\.meta\.json$/, '');
@@ -521,7 +571,7 @@ async function rebuildTree() {
   // else all come out right.
   let summary = null;
   try { summary = JSON.parse(await op.read(META_INDEX)); } catch (_) {}
-  if (!current()) return;
+  if (!current()) return void stop(5);
   const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   const knownByMeta = new Map(Object.entries(known).map(([path, value]) => [value.metaPath || path.replace(/\.dg$/, '.meta.json'), { path, value }]));
   const missing = [];
@@ -562,11 +612,11 @@ async function rebuildTree() {
   let done = 0, lastPaint = 0;
   const metaPathsToRead = missing;
   for (let i = 0; i < metaPathsToRead.length; i += TRANCHE) {
-    if (!current()) return;
+    if (!current()) return void stop(6);
     const batch = metaPathsToRead.slice(i, i + TRANCHE);
     await Promise.all(batch.map((mp) => refineRowFromMeta(mp, op, byPath, byId, index)));
     done += batch.length;
-    if (!current()) return;
+    if (!current()) return void stop(7);
     // Redrawing after every tranche is what a first version did, and on five thousand rows it cost
     // more than the reading: forty-two redraws of the whole tree, about a second each. The rows are
     // refined in place; the picture catches up four times a second, which is faster than anyone
@@ -576,7 +626,7 @@ async function rebuildTree() {
     if (done < metaPathsToRead.length) setStatus(`${treeData.length} functions - reading details ${done}/${metaPathsToRead.length}\u2026`, 'busy');
     await new Promise((r) => setTimeout(r, 0));   // let the panel answer whatever the reader is doing
   }
-  if (!current()) return;
+  if (!current()) return void stop(8);
   renderTree(); updateMissingButton(); attachFnStats();
   // The Language control is derived from what the workspace holds, and the filter bar is built on a
   // mode switch - which happens *before* this. Without this line the control appeared only after the
@@ -585,7 +635,7 @@ async function rebuildTree() {
   // rebuild by design, which is what the filter above was rewritten for.
   if (viewMode === 'functions') buildTypeChips();
   if (stale_summary) await saveMetaIndex(metaPaths, op);
-  if (!current()) return;
+  if (!current()) return void stop(9);
   // Put down here, not when Refresh was pressed: the pass that re-read everything has now written
   // the summary back, so the next load may believe it again.
   distrustSummary = false;

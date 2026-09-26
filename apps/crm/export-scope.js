@@ -232,6 +232,40 @@ async function noteAccess(area, err, op, stored = !err, depth = null, gaps = nul
   return true;
 }
 
+/** One item of an area has just been read - so the gap the last pull recorded is one smaller.
+ *
+ *  **The gap was a record of a pull and nothing ever reduced it.** `detailsGap` is written when a
+ *  «Pull list + details» comes up short, and it is cleared only by another full pull that reads
+ *  everything: a per-item read - the dot on a row, «Complete missing» - wrote the file and left the
+ *  count alone. So a tab sat on «8 not read» above twelve rows whose dots all said the file is here,
+ *  for good. Reported with a picture of exactly that, on Blueprints, and the same badge had already
+ *  been read the same way on the Functions tab that morning.
+ *
+ *  That is the shape this file's own comment names about the blueprint dot: two surfaces of one pull
+ *  contradicting each other, and the one that cannot be acted on is the one that lies. The dots are
+ *  a fact about the mirror, re-derived from the folder on every load; the badge was a memory.
+ *
+ *  **`unread` only.** A refusal is Zoho's answer for this user and reading one item does not change
+ *  it, so `refused` stays until a pull asks again - which is what its own words already promise. The
+ *  gap goes when every counter in it is spent, and `detailsAt` is left alone: a per-item read is not
+ *  a pull that read every item, and claiming it would be the same invention one layer on.
+ */
+async function noteItemRead(area, op, n = 1) {
+  const prev = (tabAccess || {})[area];
+  const gap = prev && prev.detailsGap;
+  if (!gap || !Number(gap.unread)) return false;
+  const next = Object.assign({}, gap, { unread: Math.max(0, Number(gap.unread) - n) });
+  const spent = !['refused', 'unread', 'kinds', 'languages'].some((k) => Number(next[k]) > 0);
+  const nextAccess = Object.assign({}, tabAccess, {
+    [area]: Object.assign({}, prev, { detailsGap: spent ? null : next }) });
+  try { await patchCfg({ access: nextAccess }, op); } catch (_) { return false; }
+  if (op && !op.current()) return false;
+  tabAccess = nextAccess;
+  publishAccess();
+  if (typeof paintBehind === 'function') paintBehind();
+  return true;
+}
+
 // What the user reads when an area is refused. Never the status line on its own: "403 on
 // /crm/v2/settings/functions" reads as Zoost being broken, which is both alarming and wrong.
 function pullFailMessage(area, e) {

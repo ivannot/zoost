@@ -2548,13 +2548,49 @@ test('nothing rebuilds the label of a button whose label is a mark', () => {
   assert.deepEqual(findings, []);
 });
 
+test('a per-item read takes what it read off the badge above the list', async () => {
+  // **The badge was a record of a pull and nothing ever reduced it.** «8 not read» sat above twelve
+  // Blueprints rows whose dots all said the file is on disk - reported with a picture, and the same
+  // badge had been read the same way on Functions that morning. A full pull cleared it and a
+  // per-item read, which is what the dot and «Complete missing» do, did not.
+  const run = async (gap, area = 'blueprints') => {
+    const g = { tabAccess: { [area]: { state: 'ok', detailsGap: gap } }, Object, Number, Math,
+                patchCfg: async () => {}, publishAccess: () => {}, setStatus: () => {},
+                tabLabel: (a) => a };
+    const { noteItemRead } = load([sliceApp('crm', 'noteItemRead')], g);
+    await noteItemRead(area, { current: () => true });
+    return g.tabAccess[area].detailsGap;
+  };
+  assert.equal((await run({ unread: 8 })).unread, 7, 'reading one left the count where it was');
+  assert.equal(await run({ unread: 1 }), null, 'the last one read left an empty gap on the badge');
+  // A refusal is Zoho's answer for this user, and reading something else does not change it.
+  assert.deepEqual(await run({ refused: 3 }), { refused: 3 }, 'a refusal was counted down');
+  // Field by field, not `deepEqual`: the object this builds is created inside the sandbox, so its
+  // prototype is that realm's and a strict deep comparison fails on the realm rather than on the
+  // values - which would read as a defect in the code and is a property of the harness.
+  const both = await run({ unread: 1, refused: 2 });
+  assert.equal(both && both.unread, 0, 'the one read was not taken off');
+  assert.equal(both && both.refused, 2, 'the gap went while a refusal was still standing');
+  // And an area with nothing recorded is left exactly as it was, rather than given a gap.
+  assert.equal(await run(null), null);
+});
+
 test('every marked button carries a name and a tooltip', () => {
+  // **A mark *instead of* a word needs a name; a mark *beside* one already has it.** The rule was
+  // written for the buttons that are only a mark, and it read «starts with an svg», which is not the
+  // same thing: the working-folder button draws a folder and then says «Set working folder…», and an
+  // `aria-label` there would override the visible text - which changes to the folder's own name - with
+  // a fixed string. That is worse than nothing for the reader it is meant to help. So the test asks
+  // what is left of the button once its markup is stripped.
   for (const app of ['crm', 'analytics']) {
     const html = panelPage(app);
-    for (const m of html.matchAll(/<button([^>]*)>\s*<svg class="mk"/g)) {
+    for (const m of html.matchAll(/<button([^>]*)>(\s*<svg class="mk"[\s\S]*?)<\/button>/g)) {
       const attrs = m[1];
       const id = (attrs.match(/id="([^"]+)"/) || [])[1] || '?';
-      assert.match(attrs, /aria-label="/, `${app}: #${id} draws a mark and has no name`);
+      const words = m[2].replace(/<[^>]*>/g, '').replace(/&[a-z]+;|&#\d+;/g, ' ').trim();
+      if (!words) {
+        assert.match(attrs, /aria-label="/, `${app}: #${id} draws a mark and has no name`);
+      }
       assert.match(attrs, /title="/, `${app}: #${id} draws a mark and has no tooltip`);
     }
   }
@@ -3580,7 +3616,9 @@ test('both panels say the same thing when the folder is not granted', () => {
     assert.ok(i > 0, `${app}: emptyReason() is gone`);
     return src.slice(i, src.indexOf('\n}', i));
   });
-  const sentence = /Folder access is not granted\.<\/b> Press <b>\\u\{1F513\} Grant access<\/b> above/;
+  // The control is drawn as a mark, so the sentence that names it carries the same mark - the rule
+  // this project states for the guide, applied where the panel names one of its own controls.
+  const sentence = /Folder access is not granted\.<\/b> Press <b>' \+ MK_UNLOCK \+ ' Grant access<\/b> above/;
   const shortcut = /click anywhere in this panel/;
   for (const [i, b] of bodies.entries()) {
     assert.match(b, sentence, `${['crm', 'analytics'][i]}: the not-granted wording has drifted`);
@@ -7244,6 +7282,9 @@ test('the binding a command carries is read before anything awaits', () => {
       Object, Array, Set, Map, JSON, String, Number, Boolean, Error, Promise, console,
       WS_MOVED: 'moved', META_SV: 4, treeData, index: new Map(),
       _dirtyMeta: new Set(), dirtyMeta: new Set(), dir: {},
+      // Same stand-in as the blueprint cases: a download reports itself, and this bench is
+      // about what the sidecar and the summary say, not about the area's record.
+      noteItemRead: async () => {},
       SMSG: { folder: 'folder' }, setStatus: () => {},
       isDeluge: (l) => !l || /^deluge/i.test(String(l)),
       fnMetaPath: (f, s) => `functions/${f}/${s}.meta.json`,
@@ -9038,7 +9079,9 @@ test('code is shown the same way in both products: lines as written, box scrolls
     // Two loads interleaving is how the older one writes its rows over the newer one's; a refresh,
     // a change of workspace and a pull can all start a second one.
     assert.ok(/const mine = \+\+treeLoad/.test(load), 'a load carries no token');
-    assert.equal((load.match(/if \(!current\(\)\) return;/g) || []).length >= 5, true,
+    // Each one says *which* return it was, now that the load records its own sequence: «it stopped»
+    // was the fact and never the answer, on a defect where two loads interleaved.
+    assert.equal((load.match(/if \(!current\(\)\) return void stop\(\d+\);/g) || []).length >= 5, true,
                  'the token is taken and then not checked between the slow steps');
   });
 
@@ -9764,7 +9807,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       const removed = [];
       const files = { 'functions/index.json': JSON.stringify([{ id: 7 }, { id: 8 }]) };
       const el = () => ({ classList: { add() {}, remove() {}, toggle() {} } });
-      const ctx = { console, Object, JSON, String, Array, Set, Map, Promise, RegExp,
+      // The tree's own instrument is a global of the panel like `$` or `esc`; a lifted function
+      // that reaches it needs it here, and a no-op is the right stand-in - what it records is for
+      // a person reading a console, never for a case to assert against.
+      const ctx = { console, Object, JSON, String, Array, Set, Map, Promise, RegExp, treeTrace: () => {},
                     index: new Map([['7', { path: 'functions/ns/fn.dg' }]]),
                     treeData: [{ id: 7, path: 'functions/ns/fn.dg' }],
                     currentPath: null, failedRemovals: new Set(), sanitize: (x) => x, $: el,
@@ -9861,7 +9907,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       const said = [];
       const pruned = [];
       const files = { 'functions/index.json': JSON.stringify([{ id: 1 }, { id: 2 }, { id: 3 }]) };
-      const ctx = { console, Object, JSON, String, Array, Set, Map, Promise, RegExp,
+      // The tree's own instrument is a global of the panel like `$` or `esc`; a lifted function
+      // that reaches it needs it here, and a no-op is the right stand-in - what it records is for
+      // a person reading a console, never for a case to assert against.
+      const ctx = { console, Object, JSON, String, Array, Set, Map, Promise, RegExp, treeTrace: () => {},
                     dir: {}, pullActive: false, pendingAfterPull: false, failedRemovals: new Set(),
                     mismatchRefuse: () => false, hasPerm: async () => true, refreshContext: async () => {},
                     guardOk: () => true,
@@ -16166,7 +16215,11 @@ test('analytics: a folder that cannot be read leaves nothing of it on screen', a
   };
   // The folder-button painter comes along rather than being stubbed: it moved out of this
   // function, and a stub here would be a second place the harness has to be told about it.
-  const { refreshWorkspaces } = load([sliceApp('analytics', 'paintFolderButton'),
+  // The marks come along too: the painter writes them, and lifting the real constants means a
+  // rename breaks this honestly instead of the harness carrying a copy of the drawing.
+  const { refreshWorkspaces } = load([sliceAppConst('analytics', 'MK_FOLDER'),
+                                      sliceAppConst('analytics', 'MK_UNLOCK'),
+                                      sliceApp('analytics', 'paintFolderButton'),
                                       sliceApp('analytics', 'refreshWorkspaces')], g);
   await refreshWorkspaces();
   // Every projection of the workspace, not just the two that were being cleared: what is left on
@@ -22649,8 +22702,15 @@ test('the Remove tooltip describes the state the button is actually in', () => {
     renderGoDc: () => {}, updateSampleButtons: () => {}, addWorkspaceView: () => ({}),
     // The fold is derived on this pass too - it hides the very controls this function enables.
     syncChromeFold: () => {},
+    // What the folder name goes through on its way into the button's markup, now that the button
+    // draws a mark and is written as HTML.
+    esc: (x) => x,
   };
-  const { updateWsButtons } = load([sliceApp('crm', 'updateWsButtons')], g);
+  // The folder button is painted on this same pass and writes its drawn marks, so they come along;
+  // `esc` is what the folder name goes through on the way into that markup.
+  const { updateWsButtons } = load([sliceAppConst('crm', 'MK_FOLDER'),
+                                    sliceAppConst('crm', 'MK_UNLOCK'),
+                                    sliceApp('crm', 'updateWsButtons')], g);
 
   const seen = () => ({ off: nodes.wsdel.disabled, says: nodes.wsdel.title });
   updateWsButtons();
@@ -23365,6 +23425,20 @@ test('a full pull that came up short is partial, counted, cleared by a complete 
   assert.equal(detailsBehind(complete), null);
   const gap = detailsBehind({ ...first, listAt: '2026-09-15T10:00:00.000Z', detailsAt: '2026-09-15T11:00:00.000Z' });
   assert.ok(gap && gap.gap, 'a partial pull newer than its details is not behind');
+  // **A date, when the gap is hours, reads as a claim about a day the reader did not spend pulling.**
+  // Pull all in the morning, Pull list in the afternoon, and the chip said «details from Sep 26» on
+  // a screen where it was still Sep 26 - reported as «questa frase è sbagliata, ho scaricato solo
+  // una funzione». Inside one day the chip says the time; across days it says the day.
+  const dayOf = (iso) => iso.slice(0, 10);
+  const clock = (iso) => iso.slice(11, 16);
+  const sameDay = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-26T09:00:00Z' }),
+                              dayOf, (x) => x, clock);
+  assert.equal(sameDay.text, '\u25d0 details from 09:00',
+               `a gap of hours is reported as a date: ${sameDay.text}`);
+  const otherDay = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-21T09:00:00Z' }),
+                               dayOf, (x) => x, clock);
+  assert.equal(otherDay.text, '\u25d0 details from 2026-09-21',
+               `a gap of days is reported as a time: ${otherDay.text}`);
   const label = behindLabel(detailsBehind({ listAt: 'x', detailsGap: { refused: 27, unread: 2, at: 'x' } }), (x) => x, (x) => x);
   assert.equal(label.text, '◐ 27 refused by Zoho, 2 not read', 'the notice does not count what it is about');
   assert.match(label.title, /pulling again will not change it/, 'the tooltip does not say a refusal is final');
@@ -23793,6 +23867,10 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
   {
     const asked = [];
     const g = {
+      // A per-item read reports what it read, so the badge above the list stops counting it.
+      // A no-op here: what it records lives in the workspace's own config, which these cases
+      // do not stage - what they are about is the two roads to a blueprint.
+      noteItemRead: async () => {},
       mismatchRefuse: () => false, dir: {}, ensurePerm: async () => true,
       setStatus: () => {}, errText: (e) => String(e && e.message), MSG: { folder: 'folder' },
       beginWorkspaceOp: () => ({ current: () => true, root: {}, write: async () => {} }),

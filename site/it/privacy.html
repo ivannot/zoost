@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:476c8e5b221226b4 -->
+<!-- translated-from: site/privacy.html sha256:acd5e4bb56372687 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://zoost.it/it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
 <meta property="og:description" content="Privacy policy delle estensioni e del sito Zoost: nessuna telemetria nelle estensioni; Cloudflare Web Analytics senza cookie e nessuna profilazione.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=7acd4bd2a0">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=3804f7822e">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/privacy">
 <link rel="alternate" hreflang="en" href="https://zoost.it/privacy">
@@ -311,11 +311,18 @@
       locale possa seguire. Gli altri usi - trovare il frame che contiene la tua org, aprirci dentro
       una pagina Zoho che hai chiesto, e compilare la pagina della segnalazione - sono descritti nei
       punti sugli host qui sotto.</li>
-    <li><code>tabs</code> - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics,
-      appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato
-      per sbaglio contro una sandbox. La stessa lettura della stessa scheda è ciò che permette a un
-      pannello di riconoscere che la scheda appartiene all'<em>altro</em> prodotto Zoho e di dire quale
-      estensione la legge, invece di limitarsi a rifiutare.</li>
+    <li><code>tabs</code> - per leggere l'indirizzo delle schede aperte sugli host Zoho che ogni
+      estensione dichiara e stabilire a quale org Zoho CRM, o a quale workspace Zoho Analytics,
+      appartiene ciascuna, così che un workspace di produzione non possa mai essere sincronizzato
+      per sbaglio contro una sandbox. La query è filtrata su quegli host, quindi le schede su
+      qualsiasi altro sito non vengono mai restituite; quando ne corrisponde più di una, a ognuna
+      viene chiesto quale org contiene e viene usata quella legata al workspace aperto. Una sola
+      domanda viene posta in modo diverso, perché così non si può porre: se una scheda
+      dell'<em>altro</em> prodotto Zoho sia aperta da qualche parte, in modo che un pannello possa
+      dire quale estensione la legge invece di limitarsi a rifiutare. Gli host di quel prodotto non
+      sono tra quelli di questo, quindi viene letto l'elenco delle schede aperte e ogni indirizzo
+      confrontato con quelli dell'altro prodotto. Al pannello arriva solo il sì o il no: nessun
+      indirizzo viene conservato e nessuno viene inviato da nessuna parte.</li>
     <li>Accesso agli host dei domini Zoho che ogni estensione legge. Il workbench per Zoho CRM elenca
       <code>crm.zoho.*</code> e <code>crmsandbox.zoho.*</code>, con le loro controparti
       <code>crm.zohocloud.ca</code> e <code>crmsandbox.zohocloud.ca</code>. Elenca anche le due

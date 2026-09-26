@@ -150,13 +150,13 @@ Every request this sends Zoho CRM is a read: no create, update or delete call ex
 ## 7. tabs justification (max 1000)
 
 ```
-tabs is used to identify the Zoho CRM tab the user is working in, and to navigate to Zoho pages on request.
+tabs identifies the Zoho CRM tab a workspace belongs to, and navigates to Zoho pages on request.
 
-Specifically:
-- To read the URL of the active tab and establish which Zoho CRM instance, data centre and org it belongs to. Each workspace is bound to one org, and every Zoho-bound action is disabled while the tab belongs to another - production versus sandbox in particular, where a pull could otherwise overwrite a production mirror. The same read is what lets the panel recognise a Zoho Analytics tab and name the product that reads it, instead of only refusing.
-- To open or focus a Zoho CRM page when the user clicks an explicit link in the extension - the functions list filtered to a function, a module's records tab, or its layout settings. The extension navigates to these pages by URL; it does not drive the Zoho interface or click on the user's behalf.
+- To read the address of the tabs open on the Zoho CRM hosts this extension declares, and establish which instance, data centre and org each belongs to. The query is filtered to those hosts, so tabs on any other site are never returned. Zoho-bound actions are disabled unless an open tab matches the workspace - production versus sandbox in particular, where a pull could otherwise overwrite a production mirror.
+- To answer whether a Zoho Analytics tab is open anywhere, so the panel can name the extension that reads it. Those hosts are not this extension's, so the open tabs are listed and each address matched against the Zoho Analytics one. Only the yes or no reaches the panel; nothing is kept or sent.
+- To open or focus, by URL, a Zoho CRM page the user clicks a link for. It never drives the Zoho interface.
 
-The extension does not read browsing history, does not enumerate tabs, and takes no action on any other site.
+It reads no browsing history and takes no action on any other site.
 ```
 
 ## 8. Host permission justification (max 1000)

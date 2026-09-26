@@ -120,11 +120,7 @@ apps/crm/crm-pull-graph.js	pullAll	currentPath
 apps/crm/crm-search.js	openRxMenu	label
 apps/crm/crm-tree.js	filterByConnection	connFilterSet
 apps/crm/crm-tree.js	filterByConnection	connectionFilter
-apps/crm/crm-tree.js	rebuildTree	aiConnCache
-apps/crm/crm-tree.js	rebuildTree	graphCache
-apps/crm/crm-tree.js	rebuildTree	moduleFilesCache
 apps/crm/crm-tree.js	rebuildTree	treeLoad
-apps/crm/crm-tree.js	rebuildTree	unreadableMetas
 apps/crm/crm-tree.js	refineRowFromMeta	unreadableMetas
 apps/crm/crm-tree.js	showFunctionRuntime	label
 apps/crm/crm-workflow-ui.js	openWorkflow	currentPath

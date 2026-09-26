@@ -35,6 +35,7 @@ passes, and the reason it is not run belongs beside the tool rather than in a no
 """
 import argparse
 import html
+import json
 import pathlib
 import re
 import sys
@@ -127,6 +128,25 @@ def main() -> int:
             findings.append(f"§{n} {key}: the dashboard differs from store/{args.app}/store-listing.md "
                             f"§{n} ({len(ours)} chars). What it should say, ready to paste:\n"
                             + '\n'.join('    | ' + ln for ln in ours.splitlines()))
+
+    # **And the other direction, which nothing walked.** The loop above asks the page for what the
+    # repository has; a box the page carries and the repository knows nothing about went unread. That
+    # is exactly the shape this release produces: `sidePanel` left both manifests, its justification
+    # left `store-listing.md`, and the dashboard goes on showing the text that was submitted for it -
+    # a reason, in front of a reviewer, for a permission the package does not request. Google decides
+    # which boxes it renders and nothing here can promise it drops that one, so it is asked of the
+    # page rather than assumed. The permissions come from the manifest, so the day one is added its
+    # justification is expected rather than reported as a surprise.
+    declared = set(json.loads((ROOT / 'apps' / args.app / 'manifest.json')
+                              .read_text(encoding='utf-8')).get('permissions', []))
+    for key, body in sorted(seen.items()):
+        if key in FIELD or not body:
+            continue
+        findings.append(
+            f"the page carries a {key!r} justification and this package does not request it - it "
+            f"asks for {', '.join(sorted(declared)) or 'no API permission'}. Clear that box: a "
+            f"reviewer reads a reason for a permission that is not in the manifest, and nothing in "
+            f"this repository can be compared against it")
 
     s = state(page)
     # The privacy URL is in no store-listing.md section, so there is nothing there to compare it

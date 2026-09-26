@@ -113,6 +113,9 @@ async function pullAll(depth = {}) {
     if (validateMirrorPlan(mirrorPlan) !== true) throw new Error('mirror plan validation did not succeed');
     pullController.phase('writing');
     await op.write('functions/index.json', JSON.stringify(merged, null, 2));
+    // The first event of the sequence: what Zoho's list held when it was written. Everything the
+    // tree does afterwards is measured against this number.
+    treeTrace('index written', `entries=${merged.length}`);
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(merged.map((e) => String(e.id))); const rmF = [];
     for await (const p of walk(op.root)) {

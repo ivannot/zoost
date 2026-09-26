@@ -130,6 +130,7 @@ async function reconcileNow(op) {
     // functions that are still in Zoho - the worst thing this product could do, and reachable on
     // any org past the paging limit by an ordinary create. Raised by an outside review.
     if (r.capped) {
+      treeTrace('live-sync asks for a rebuild');
       await rebuildTree();
       // Which of the two made it partial: a page limit is «try again», a refused language is «that
       // area of your org would not answer», and they are not the same thing to do next.
@@ -171,6 +172,7 @@ async function reconcileNow(op) {
     const gone = prev.filter((e) => !live.has(String(e.id)));
     let failed = 0;
     for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id, e) ? 0 : 1; }
+    treeTrace('live-sync asks for a rebuild');
     await rebuildTree();
     await downloadMissing(true);   // a reconcile is a pull: it re-asks what Zoho refused last time
     if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
@@ -397,6 +399,7 @@ async function syncOneNow(id) {
     if (ent) { ent.path = written.primary; ent.mirrorFiles = written.paths; ent.downloaded = true; ent.error = false;
                ent.mirrorDirectories = written.directories;
                ent.fetchedAgainst = written.listUpdated; ent.updatedTime = written.updatedTime;
+               treeTrace('live-sync asks for a rebuild');
                updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (written.paths.includes(currentPath)) await openFile(currentPath);
     setStatus(`Synced: ${written.primary}`, 'ok');

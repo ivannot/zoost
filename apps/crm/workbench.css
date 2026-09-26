@@ -322,6 +322,13 @@
   /* Actions rows: same discipline, their own classes rather than widening the four above, which
      Modules and Connections also draw. The module is a name and not a number, so it is bounded and
      clipped instead of being allowed to push the counts around. */
+  /* **The floor reserves the column; the ceiling is what threw the room away.** `max-width:78px` was
+     a fixed cell written for a panel that was ~400px wide and could not spare more - so
+     «Colloqui_di_selezione» came out «Colloqui_di_s…» on a 1900px window with two thirds of the row
+     empty. Reported with a picture of exactly that. The floor stays, because it is what keeps short
+     names lining up down the list; the ceiling grows with the window at the same breakpoint the rest
+     of this layout uses, and the trailing counts stay right-aligned either way - the group floats to
+     the right edge, so a wider cell moves its left edge and nothing else. */
   .f .rest.rm{min-width:78px;max-width:78px;text-align:right;color:#a78bfa;overflow:hidden;text-overflow:ellipsis}
   .f .rest.rs{margin-left:6px;min-width:10px;text-align:right;color:#f59e0b}
   .f .rest.rk{margin-left:6px;min-width:46px;text-align:right;color:#6b7688}
@@ -837,6 +844,10 @@
        vertical divider it is a dash nobody can explain, which is how it was reported. */
     #resizer::after{left:2.5px;top:50%;width:3px;height:34px;transform:translateY(-50%)}
     #tree{flex:1 1 auto;min-width:280px}
+    /* The module a row's action belongs to, in the room a wide window has. `min()` so it can never
+       take the name's place: on a 900px panel it stops at 34 characters, on a narrow one the rule
+       above is the whole of it. */
+    .f .rest.rm{max-width:min(34ch, 38%)}
     #resizer{width:8px;height:auto;flex:none;cursor:col-resize;border-top:0;border-bottom:0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
   /* **The size is remembered in pixels, so it has to be met against the window that is here.** A
      split dragged wide in a wide window and reopened in a narrow one put its own header off the

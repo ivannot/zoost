@@ -62,6 +62,10 @@ async function downloadOne(entry) {
     // From what was written, never from what this function believed it was about to write.
     entry.fetchedAgainst = written.listUpdated; entry.updatedTime = written.updatedTime;
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, language: f.meta.language, runtime: f.meta.runtime, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
+    // One source read is one off the gap the last pull recorded - see `noteItemRead`. Without it the
+    // line above the list went on counting sources that are now on disk, over rows whose own dots
+    // say so, and only another full pull could ever clear it.
+    await noteItemRead('functions', op);
     return true;
   // «Refused» is kept apart from «failed» on the row for the same reason it is kept apart on an
   // area: one of them is worth trying again and the other is an answer.
@@ -228,7 +232,7 @@ function detailsBehind(access) {
  *  says what it is about. `day` and `when` format a date; passed in so this stays a pure function. */
 const GAP_WORDS = { refused: (n) => `${n} refused by Zoho`, unread: (n) => `${n} not read`,
                     kinds: (n) => `${n} kind(s) not read`, languages: (n) => `${n} language(s) not listed` };
-function behindLabel(gap, day, when) {
+function behindLabel(gap, day, when, clock = when) {
   if (gap.gap) {
     const parts = Object.keys(GAP_WORDS).filter((k) => Number(gap.gap[k]) > 0).map((k) => GAP_WORDS[k](gap.gap[k]));
     return { text: `◐ ${parts.join(', ')}`,
@@ -238,7 +242,14 @@ function behindLabel(gap, day, when) {
   }
   // `never` is an area whose first pull was a list pull: nothing was ever read, which is neither a date
   // nor «older». Found by review, on a new workspace.
-  return { text: gap.detailsAt ? `◐ details from ${day(gap.detailsAt)}` : gap.never ? '◐ details not read' : '◐ details older than the list',
+  // **A date, when the gap is hours, reads as wrong.** Pull all in the morning and Pull list in the
+  // afternoon, and the chip said «details from Sep 26» on the day it was still Sep 26 - the reader
+  // sees a badge naming today and concludes it is describing a download they did not do. Reported
+  // exactly that way. Inside the same day the chip says the time, which is the part that differs;
+  // the tooltip has always carried both in full.
+  const sameDay = gap.detailsAt && day(gap.detailsAt) === day(gap.listAt);
+  return { text: gap.detailsAt ? `◐ details from ${sameDay ? clock(gap.detailsAt) : day(gap.detailsAt)}`
+    : gap.never ? '◐ details not read' : '◐ details older than the list',
     title: `The list was pulled on ${when(gap.listAt)}; `
       + (gap.detailsAt ? `each item was last read on ${when(gap.detailsAt)}`
         : gap.never ? 'no pull has read each item yet' : 'each item was last read by an earlier pull, before Zoost recorded when')
@@ -251,7 +262,8 @@ function paintBehind() {
   el.hidden = !gap;
   if (!gap) return;
   const label = behindLabel(gap, (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-    (iso) => new Date(iso).toLocaleString());
+    (iso) => new Date(iso).toLocaleString(),
+    (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }));
   el.textContent = label.text;
   el.title = label.title;
 }
@@ -274,5 +286,9 @@ function updateMissingButton() {
   // disabled: a greyed button says «there is something here you cannot have», and there is not.
   b.style.display = (n > 0 && !isSample()) ? '' : 'none';
   b.textContent = (stale && !miss) ? `Refresh ${stale} outdated` : `Complete missing (${n})`;
+  // Counted from `treeData`, which is the array the list is drawn from - so this line beside the
+  // `draw` one above says whether the button and the screen were looking at the same thing. They
+  // were not, on the run this instrument was written for.
+  treeTrace('button', `missing=${miss} outdated=${stale} model=${arr.length}`);
 }
 

@@ -2599,6 +2599,23 @@ PULL_CRM = r"""
           + ' | said, in order: ' + JSON.stringify(said.slice(-6)));
     serveCapped = false;
 
+    // **The tree's own instrument, proven to produce a positive.** It was written for a defect
+    // nobody can reproduce on demand - a function pulled into the model and missing from the list -
+    // and an instrument that has never been seen recording anything records nothing on the day it
+    // is wanted. Several real pulls have run above, so the sequence has to be there and in order.
+    const trace = window.__zoostTreeTrace || [];
+    if (!trace.length) say('the tree recorded nothing at all - the instrument is not wired');
+    else {
+      const at = (what) => trace.findIndex((l) => l.includes(what));
+      for (const step of ['index written', 'enter', 'model', 'draw', 'button']) {
+        if (at(step) < 0) say(`the tree never recorded «${step}» across ${trace.length} line(s)`);
+      }
+      if (at('enter') >= 0 && at('draw') >= 0 && at('enter') > at('draw')) {
+        say('the tree recorded a draw before the load that produced it - the order is not the order');
+      }
+      if (!/^#\d+ /.test(trace[0] || '')) say(`a trace line carries no number: «${trace[0]}»`);
+    }
+
     document.title = 'PULL OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """
@@ -2974,6 +2991,48 @@ CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
 })();
 """
 
+# **Which drivers actually reach their own ending, and the one that does not.**
+#
+# `capture` stops when the page is *quiet* - `__zoostPending` at zero twice - and a scenario awaiting
+# something that counter cannot see is perfectly quiet in the middle of itself. The title was read
+# there, found not to be an error, and the run called green. Measured rather than argued: a `say()`
+# planted at the top of `PULL_CRM` turns it red and the same `say()` planted at the bottom does not,
+# so everything after the point where that page first goes quiet has been carried and not checked -
+# including the assertions that a truncated list prunes nothing, which guard the mirror.
+#
+# So a driver declares its ending and `shots.capture` refuses anything else. This is the ledger of
+# the ones that cannot yet: **it should shrink, and a name added to it is a finding, not a note.**
+# `pull-crm` is here because the cause has not been found yet, not because it is acceptable.
+UNFINISHED = {
+    # Measured, one run, all of them: seven scenarios do reach their ending and these six do not.
+    'pull-crm': 'goes quiet mid-scenario; the tail - the capped-list assertions, which guard the '
+                'mirror against a truncated answer, and the tree trace - is not enforced.',
+    'sample-crm': 'goes quiet mid-scenario.',
+    'sample-analytics': 'goes quiet mid-scenario.',
+    'settings-crm': 'goes quiet mid-scenario.',
+    'settings-analytics': 'goes quiet mid-scenario.',
+    'nav-analytics': 'goes quiet mid-scenario.',
+}
+
+UNFINISHED_SEEN = set()
+
+
+def drive(key, run):
+    """Drive one scenario, and let a *recorded* failure to reach its ending through.
+
+    The list is walked to the end rather than stopped at the first, because «which drivers do not
+    finish» is a number and a number that stops counting at one is not a measurement. A name that is
+    not in `UNFINISHED` still stops the run: that is a driver that used to finish and no longer does.
+    """
+    try:
+        return run()
+    except SystemExit as e:
+        if key in UNFINISHED and 'never reached its own ending' in str(e):
+            UNFINISHED_SEEN.add(key)
+            return None
+        raise
+
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -3012,18 +3071,20 @@ def main() -> int:
                                      ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM),
                                      ("preview-nav-crm", "crm", "crm/sampleorg-1234567890", CRM_PREVIEW_NAV)):
             print(f"  {key:18s} driving\u2026", flush=True)
-            dest = shots.render_panel((key, app, ws, script))
-            dest.unlink(missing_ok=True)          # a probe is not a picture to publish
-            print(f"  {key:18s} ok", flush=True)
+            dest = drive(key, lambda: shots.render_panel((key, app, ws, script), expect_ok=True))
+            if dest:
+                dest.unlink(missing_ok=True)      # a probe is not a picture to publish
+            print(f"  {key:18s} {'ok' if dest else 'did not reach its ending (recorded)'}", flush=True)
         # The diagram window is a different page with a different loader - `shots.render` stages it
         # from a graph fixture where `render_panel` stages a workspace - so it is driven here rather
         # than folded into the loop above.
         for key, app, fixture, script in (("er-crm", "crm", "graph-crm-schema.json", ER),
                                           ("er-analytics", "analytics", "graph-analytics.json", ER)):
             print(f"  {key:18s} driving\u2026", flush=True)
-            dest = shots.render((key, app, fixture, script))
-            dest.unlink(missing_ok=True)
-            print(f"  {key:18s} ok", flush=True)
+            dest = drive(key, lambda: shots.render((key, app, fixture, script), expect_ok=True))
+            if dest:
+                dest.unlink(missing_ok=True)
+            print(f"  {key:18s} {'ok' if dest else 'did not reach its ending (recorded)'}", flush=True)
     finally:
         shots._browser_stop()
     for app, drove, total in coverage():
@@ -3035,6 +3096,17 @@ def main() -> int:
     # three lines later, about something else. `await until(cond, what)` costs milliseconds and names
     # the condition that never came true. Both are counted so the ratio is visible; the bare one
     # should shrink, and tests/tools_test.py holds it so it cannot grow quietly.
+    # The ledger, and whether it is still true: a name recorded here that *did* finish is as much a
+    # finding as a new one, because it means the list is describing yesterday.
+    stale = sorted(set(UNFINISHED) - UNFINISHED_SEEN)
+    print(f"probe: {len(UNFINISHED_SEEN)} of {len(UNFINISHED)} recorded scenario(s) still do not "
+          f"reach their own ending ({', '.join(sorted(UNFINISHED_SEEN)) or 'none'}) - everything "
+          f"after the point each goes quiet is carried, not checked. The rest are held to theirs.",
+          flush=True)
+    if stale:
+        print(f"probe: {', '.join(stale)} now reach their ending - take them out of UNFINISHED.",
+              flush=True)
+        return 1
     bare, cond = waits()
     # The five polling steps inside `until` itself are in the bare count and are not bets - they are
     # how a condition is watched. Said, rather than subtracted: a number with a quiet adjustment in

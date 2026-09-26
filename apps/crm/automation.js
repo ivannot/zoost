@@ -705,6 +705,7 @@ async function downloadOneWf(entry) {
     const r = await toBridge({ cmd: 'fetchWorkflow', id: entry.id });
     if (!r?.ok || !r.rule) throw new Error(r?.error || 'not found');
     await op.write(entry.path, JSON.stringify(r.rule, null, 2));
+    await noteItemRead('workflows', op);   // see the blueprint reader: the badge is a record, not a memory
     entry.downloaded = true; entry.error = false; entry.errorMsg = '';
     return true;
   } catch (e) { entry.error = true; entry.downloaded = had; entry.errorMsg = errText(e); return false; }
@@ -772,6 +773,9 @@ async function downloadOneBp(entry) {
     if (!r?.ok || !r.blueprint) throw new Error(r?.error || 'not found');
     await op.write(entry.path, JSON.stringify(r.blueprint, null, 2));
     entry.downloaded = true; entry.error = false; entry.errorMsg = '';
+    // One item read is one off the gap the last pull recorded - otherwise the badge above the list
+    // goes on counting it while the dot on its row says the file is here.
+    await noteItemRead('blueprints', op);
     return true;
   } catch (e) { entry.error = true; entry.downloaded = had; entry.errorMsg = errText(e); return false; }
 }

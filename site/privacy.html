@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
 <meta property="og:description" content="Privacy policy for the Zoost extensions and website: no extension telemetry; cookie-free Cloudflare Web Analytics and no visitor profiling.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=7acd4bd2a0">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=3804f7822e">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/privacy">
 <link rel="alternate" hreflang="en" href="https://zoost.it/privacy">
@@ -298,10 +298,16 @@
       can follow. Its other uses - finding which frame holds your org, opening a Zoho page you asked
       for inside that frame, and filling in the report page - are described in the host bullets
       below.</li>
-    <li><code>tabs</code> - to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
-      production workspace can never be synced against a sandbox by mistake. The same read of the same
-      tab is what lets a panel recognise that the tab belongs to the <em>other</em> Zoho product and say
-      which extension reads it, instead of only refusing.</li>
+    <li><code>tabs</code> - to read the address of the tabs open on the Zoho hosts each extension
+      declares, and establish which Zoho CRM org, or which Zoho Analytics workspace, each of them
+      belongs to, so that a production workspace can never be synced against a sandbox by mistake.
+      That query is filtered to those hosts, so tabs on any other site are never returned; where more
+      than one matches, each is asked which org it holds and the one bound to the open workspace is
+      used. One question is asked differently, because it cannot be asked that way: whether a tab of
+      the <em>other</em> Zoho product is open anywhere, so a panel can say which extension reads it
+      instead of only refusing. That product's hosts are not among this one's, so the list of open
+      tabs is read and each address matched against the other product's own. Only the yes or no
+      reaches the panel - no address is kept, and none is sent anywhere.</li>
     <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>, with their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts. It also lists the two suite shells - <code>one.zoho.*</code> and <code>one.zohocloud.ca</code> for Zoho One, <code>crmplus.zoho.*</code> and <code>crmplus.zohocloud.ca</code> for Zoho CRM Plus - which it does <b>not</b> read. Inside either of those, your Zoho CRM is an ordinary page on <code>crm.zoho.*</code> in a frame of its own, and that frame is the only thing the extension reads. The shell hosts are named so the panel can find that frame at all. Locating it costs one line that runs in every frame of the tab, including the shell's own, and answers with that frame's address; nothing else is read there and nothing is sent. The bridge that does the reading is injected only into the frames on <code>crm.zoho.*</code>. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>, and the same two shells for the same reason - a workspace opened inside Zoho One or Zoho CRM Plus is a frame on <code>analytics.zoho.*</code>, and the frame is what it reads.
       <br><br>Both list <b>nine</b> data centres each, the Saudi, British and Emirati ones included: an account may live on any of them, and an extension that cannot reach yours is inert on it. Zoho runs a tenth in mainland China (<code>zoho.com.cn</code>). Neither extension asks for it - nothing here can test that one, and a host we cannot test is not a host we request.</li>
     <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> - the only two

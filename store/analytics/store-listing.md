@@ -141,9 +141,11 @@ Nothing outside this package is injected, and no site outside the manifest's hos
 ## 7. tabs justification (max 1000)
 
 ```
-The panel needs to know which Zoho Analytics workspace the active tab is looking at, because that is what identifies the workspace being mirrored - Zoho Analytics puts the workspace id in the URL. It reads the active tab's URL to establish that, to detect when the user moves to a different workspace so it can disable actions that would otherwise mix two workspaces, and to send messages to the content script on that tab.
+The panel needs to know which Zoho Analytics workspace a tab is looking at, because that identifies the workspace being mirrored - Zoho Analytics puts the workspace id in the URL. It reads the address of the tabs open on the Zoho Analytics hosts this extension declares, to establish that, to disable actions that would mix two workspaces, and to message the content script on the matching tab. The query is filtered to those hosts, so tabs on any other site are never returned.
 
-It also reads the active tab's URL to recognise when that tab belongs to Zoho CRM rather than Zoho Analytics, so the panel can say which product reads it instead of only refusing - the same read of the same tab, with no action taken on it. It also uses tab access to navigate the current tab to a workspace URL the user asks for, from the "switch tab" action shown when the tab and the mirrored workspace do not match. Tabs on other sites are never read.
+It also answers whether a Zoho CRM tab is open anywhere, so the panel can say which product reads it instead of only refusing. Those hosts are not this extension's, so a filtered query cannot ask it: the open tabs are listed and each address matched against the Zoho CRM one. Only the yes or no reaches the panel; nothing is kept or sent.
+
+Tab access also navigates a Zoho Analytics tab to a workspace URL the user asks for, when the tab and the mirrored workspace do not match.
 ```
 
 ---

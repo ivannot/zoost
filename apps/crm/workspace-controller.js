@@ -57,7 +57,7 @@ function emptyReason(area) {
       + 'continues from there; every workspace lives inside it.';
   }
   if (!rootGranted) {
-    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above - or simply '
+    return '<b>Folder access is not granted.</b> Press <b>' + MK_UNLOCK + ' Grant access</b> above - or simply '
       + 'click anywhere in this panel, which does the same. One click, no folder picker.';
   }
   if (!wsList.length) {
@@ -511,6 +511,18 @@ function resetView() {
   $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   redrawOpenViews();
 }
+/** The two marks the working-folder button wears, drawn rather than typed.
+ *
+ *  **An emoji is a font the machine may not have.** `\u{1F4C1}` and `\u{1F513}` came out as an empty
+ *  box on the machine that renders this project's pictures - so the first screenshot of the shop
+ *  window carried a tofu square where the folder should be, and had done for as long as there have
+ *  been pictures. It is not only the renderer: a reader whose system has no emoji font sees the same
+ *  thing and this panel cannot know. The drawn marks are the project's own vocabulary (`.mk`), they
+ *  inherit `currentColor`, and they are the same in the panel and in the guide - which is the rule
+ *  already written down about a control drawn as a mark.
+ */
+const MK_FOLDER = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 12.7V4.2a.9.9 0 0 1 .9-.9h3.2l1.5 1.7h6.3a.9.9 0 0 1 .9.9v6.8a.9.9 0 0 1-.9.9H2.5a.9.9 0 0 1-.9-.9Z"/></svg>';
+const MK_UNLOCK = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.2" y="7.4" width="9" height="6.6" rx="1.2"/><path d="M6 7.4V4.9a2.8 2.8 0 0 1 5.6 0v1.2"/></svg>';
 /** The views standing over the workspace, rebuilt from what it says now.
  *
  * Split out of `resetView()`, which is only reached when the workspace *changed* - so a
@@ -725,9 +737,11 @@ function updateWsButtons() {
     : `Cannot name a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
   const needsGrant = !!root && !rootGranted;
   rt.classList.toggle('needgrant', needsGrant);
-  rt.textContent = !root ? '\u{1F4C1} Set working folder\u2026'
-    : needsGrant ? `\u{1F513} Grant access to ${root.name}`
-    : `\u{1F4C1} ${root.name}`;
+  // `innerHTML`, because the mark is drawn: the folder name is escaped on the way in, the way
+  // every other name this panel writes into markup is.
+  rt.innerHTML = !root ? `${MK_FOLDER} Set working folder\u2026`
+    : needsGrant ? `${MK_UNLOCK} Grant access to ${esc(root.name)}`
+    : `${MK_FOLDER} ${esc(root.name)}`;
   rt.title = !root ? 'Pick the folder that will contain all Zoost workspaces'
     : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it - no folder picker.'
     : `Working folder: ${root.name} - click to choose a different one`;

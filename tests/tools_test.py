@@ -2926,6 +2926,32 @@ class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
         self.assertIn('0 finding(s)', out)
         self.assertIn(f'{len(self.dashcheck.FIELD)} of {len(self.dashcheck.FIELD)} fields', out)
 
+    def test_a_box_for_a_permission_the_package_dropped_is_reported(self):
+        """**The direction nothing walked.** Every case above asks the page for what the repository
+        has; a box the page carries and the repository knows nothing about was read by nobody. That is
+        the shape this release makes: `sidePanel` left both manifests and its justification left
+        `store-listing.md`, while the dashboard goes on showing the text submitted for it - a reason,
+        in front of a reviewer, for a permission the package does not request. Google decides which
+        boxes it renders and nothing here can promise it drops that one, so it is asked of the page.
+        """
+        leftover = ('<textarea id="x" disabled data-payload=sidePanel>'
+                    'sidePanel is used to show the workbench beside Zoho.</textarea>')
+        code, out = self.run_it(self.page().replace('</body>', leftover + '</body>'))
+        self.assertEqual(code, 1, 'a justification for a permission that is gone, and nothing said so')
+        self.assertIn('sidePanel', out)
+        self.assertIn('does not request it', out)
+        # And it names what the package *does* ask for, so the reader can see the comparison.
+        for perm in ('storage', 'scripting', 'tabs'):
+            self.assertIn(perm, out)
+
+    def test_an_empty_leftover_box_is_not_a_finding(self):
+        # The other half: a box the dashboard renders and nobody has filled in is nothing to report -
+        # clearing it is exactly what the finding above asks for, and it must then go quiet.
+        empty = '<textarea id="x" disabled data-payload=sidePanel></textarea>'
+        code, out = self.run_it(self.page().replace('</body>', empty + '</body>'))
+        self.assertEqual(code, 0, out)
+        self.assertIn('0 finding(s)', out)
+
     def test_every_field_is_compared(self):
         # One at a time, so a field silently dropped from the map cannot hide behind another.
         for key, n in self.dashcheck.FIELD.items():
