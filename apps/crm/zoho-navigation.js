@@ -106,39 +106,29 @@ function createCrmZohoNavigator(options) {
   }
 
 
-  /** The same address, on the shell the reader is actually standing in.
+  /** The same address, on the suite shell this **workspace** is reached through.
    *
-   *  **Measured, not guessed.** Inside Zoho One the tab carries the suite's own path - the portal,
-   *  the space, several segments none of which mean anything here - and then, at the end,
-   *  `/crm/<instance>/tab/Contacts/<id>`; the direct page is
-   *  `https://crm.zoho.eu/crm/<instance>/tab/Contacts/<id>`. Five real addresses, and the tail after
-   *  `/crm/<instance>/` is **identical** in both. So there is nothing
-   *  to construct: the part before it is a prefix, and the prefix is read off the tab the reader has
-   *  open rather than assembled from anything this file claims to know about Zoho One.
+   *  **The prefix comes from the workspace's own record, not from whatever tab is open.** It used to
+   *  be read off the current tab, which made one workspace behave two ways: a plain CRM tab of an
+   *  org that lives in Zoho One lost the shell, and no Zoho tab at all lost it too. Worse, it is not
+   *  a fact about the tab - «se si cambia org e' sbagliato usare l'hostname del tab correntemente
+   *  aperto: potrei avere una org che non e' abilitata a Zoho One». It is a fact about the org, so
+   *  the pull records it where the org is and this reads it back. See `noteShell`.
    *
-   *  That is what makes it safe for a shape nobody here has seen. `<space>` is a name that portal
-   *  chose; CRM Plus is a different shell again. None of it is written down here - if the tab the
-   *  reader is on does not carry `/crm/<instance>/`, nothing is rebuilt and the direct address is
-   *  used, which is «certain, or stop» rather than a pattern that half-fits.
-   *
-   *  A plain CRM tab takes the same road and comes out unchanged: its prefix *is* the origin.
+   *  Measured, not guessed: inside Zoho One the tab carries the suite's own path and then, at the
+   *  end, `/crm/<instance>/tab/Contacts/<id>` - the same tail the direct address has. So there is
+   *  nothing to construct; there is a prefix to put back. A workspace with nothing recorded gets the
+   *  direct address, which is what a workspace pulled before this existed has.
    */
-  async function onTheSameShell(url) {
-    try {
-      const tail = url.match(/^https:\/\/[^/]+(\/crm\/[^/]+\/)/);
-      if (!tail) return url;
-      const tabId = await options.findTab();
-      if (!tabId) return url;
-      const tab = await options.chromeApi.tabs.get(tabId);
-      const here = (tab && tab.url) || '';
-      // The instance has to be in it too: the prefix of *another* org's shell would send the reader
-      // somewhere that looks right and is not.
-      const at = here.indexOf(tail[1]);
-      if (at <= 0) return url;
-      const built = here.slice(0, at) + url.slice(url.indexOf(tail[1]));
-      // The host check again, on what was built rather than on what was asked for.
-      return allows(built) ? built : url;
-    } catch (_) { return url; }
+  function onTheSameShell(url) {
+    const shell = options.shell ? options.shell() : null;
+    if (!shell) return url;
+    const tail = url.match(/^https:\/\/[^/]+(\/crm\/[^/]+\/)/);
+    if (!tail) return url;
+    // The recorded prefix belongs to the bound workspace and so does this address, so they agree by
+    // construction - and the host check runs again on what was built rather than on what was asked.
+    const built = shell + url.slice(url.indexOf(tail[1]));
+    return allows(built) ? built : url;
   }
 
   /** Take the reader to a URL inside Zoho: **a tab of its own, unless that page is already open.**
@@ -173,7 +163,7 @@ function createCrmZohoNavigator(options) {
     if (how) return await openElsewhere(url, how) ? true : null;
     // On the shell the reader is standing in, when they are standing in one - so a new tab keeps the
     // suite around it instead of landing on the bare CRM page. See `onTheSameShell`.
-    url = await onTheSameShell(url);
+    url = onTheSameShell(url);
     // Already there? Then this is a request to *look* at it, and a second copy is not an answer.
     // `tabs.query({url})` takes a match pattern and a bare host has no path to match, so the
     // address is normalised the way `openExternal` learnt to - and a lookup that cannot answer is

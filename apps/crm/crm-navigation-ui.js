@@ -27,12 +27,15 @@ function homeUrl() {
   // from a workspace that already knows it is one.
   return crmHomeUrl(dc);
 }
-// The adapter checks the complete host against manifest permissions and navigates the CRM frame
-// inside suite shells, preserving the shell instead of replacing the whole tab.
+// The adapter checks the complete host against manifest permissions and opens a tab of its own,
+// on the suite shell this workspace is reached through when the pull recorded one.
 const crmZohoNavigator = createCrmZohoNavigator({
   chromeApi: chrome,
   hostPatterns: ZOHO_MATCHES,
   findTab: zohoTabId,
+  // The workspace's own record, not the tab in front: an org that is not in Zoho One must not be
+  // reached through somebody else's suite because that tab happened to be open. See `noteShell`.
+  shell: () => (bound && bound.shell) || null,
   refused: (url) => setStatus('This workspace points at '
     + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
     + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad'),
@@ -104,33 +107,19 @@ async function switchTab() {
   if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target - pull that workspace once from its own tab.', 'warn'); return; }
   const targetHome = workspaceHomeUrl();
   const curBase = (lastCtx && lastCtx.origin) || bound.base;
-  // The tab this workspace resolves to, which is the tab `lastCtx` was read from and therefore the
-  // one the sentence below is about. It asked for «the tab in front» until Zoost became a window of
-  // its own, at which point that was always `workbench.html` and the answer was always `null`: both
-  // branches fell to `tabs.create`, so a same-account switch opened another tab on every press, and
-  // a different-account switch opened the logout somewhere new and left the tab holding the session
-  // it had just ended sitting there, live-looking and dead.
-  const id = await zohoTabId();
-  // Same Zoho account (prod <-> sandbox on the same data center) shares an SSO session: just navigate, no logout.
+  // Same Zoho account (prod <-> sandbox on the same data center) shares an SSO session: just go, no logout.
   const dc = (b) => (b || '').replace(/:\/\/(crm|crmsandbox)\./, '://');
   const sameAccount = dc(curBase) === dc(bound.base) && envOf(curBase) !== envOf(bound.base);
-  // The tab, not the frame, and both branches of this function mean it. Ending a session is not a
-  // navigation inside somebody's shell: a logout in an iframe leaves the shell around it holding a
-  // session that no longer exists. `goToZoho` is for going to a *page*.
+  // **Neither branch resolves a tab any more, and that is the change.** Both used to navigate
+  // whichever Zoho tab was found - and which tab that is stopped being «the one beside the panel»
+  // when Zoost became a window. Nothing here takes a tab over, so there is nothing to find.
   if (sameAccount) {
-    // **It asks, because the tab it takes over is not one the reader is looking at.** No session
-    // ends on this branch, so it navigated in silence - which was right while Zoost was a panel
-    // inside the browser window and the tab was the one beside it. From a window of its own, `id`
-    // is whichever Zoho tab `resolve()` found, in any window, and it may be holding a half-edited
-    // function in another org: production and a sandbox both open is the ordinary arrangement, and
-    // `sameAccount` is true for *any* pair of them on this data centre. Navigating it away is not
-    // undoable, so it is a question. Opening a new tab asks nothing: there is nothing to lose.
-    if (id) {
-      const ok = window.confirm(`Take the Zoho tab on «${lastCtx?.instance || '?'}» to «${bound.instance}»?\n\n`
-        + 'Zoost is its own window, so that tab is somewhere else - anything unsaved in it is lost.');
-      if (!ok) return;
-      await crmZohoNavigator.focusTab(id, { url: targetHome, active: true });
-    } else await chrome.tabs.create({ url: targetHome, active: true });
+    // **A tab of its own, and so nothing to ask.** It navigated whichever Zoho tab `resolve()` found
+    // - in any window, possibly holding a half-edited function in another org - so it first grew a
+    // confirmation. The confirmation was the wrong answer to the right question: the way not to take
+    // somebody's tab away is not to take it. Reported against the amber «Open» button, and it is the
+    // rule this release settled on for everything that opens an address.
+    await goToZoho(targetHome);
     return;
   }
   // Different account: a clean logout + re-login is required. Confirm first, since it ends the current Zoho session.
@@ -138,14 +127,20 @@ async function switchTab() {
   // when Zoost was a panel in the browser window and the panel spoke about the tab beside it; from
   // a window of its own, the tab being navigated is one of the reader's other tabs and naming the
   // session it holds is the only way they can tell which.
+  // **The confirmation stays here, and a new tab does not make it unnecessary.** What this branch
+  // does is end the Zoho session - which is global to the browser, so it reaches every tab whatever
+  // tab performs it. The question is about the session, never about the tab, and the sentence says
+  // so now instead of naming one.
   const ok = window.confirm(`Switch to «${bound.instance}» (org ${bound.org})?\n\n`
-    + `This logs you out of the current Zoho session «${lastCtx?.instance || '?'}» (org ${lastCtx?.org || '?'}) and takes `
-    + `${id ? 'the tab it is open in' : 'a new tab'} to the login for the target org.`);
+    + `This logs you out of the current Zoho session «${lastCtx?.instance || '?'}» (org ${lastCtx?.org || '?'}) `
+    + 'everywhere in this browser, and opens a new tab on the login for the target org.');
   if (!ok) return;
   const accounts = curBase.replace(/:\/\/[^.]+\./, '://accounts.');   // crm./crmsandbox. -> accounts.
   const url = `${accounts}/logout?servicename=ZohoCRM&serviceurl=${encodeURIComponent(targetHome)}`;
-  if (id) await crmZohoNavigator.focusTab(id, { url, active: true });
-  else await chrome.tabs.create({ url, active: true });
+  // Its own tab, like everything else that opens an address. `goToZoho` is not the road here: this
+  // is an accounts host and a logout, which that funnel is right to refuse.
+  const t = await chrome.tabs.create({ url, active: true });
+  try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
 }
 async function openTargetZoho() {
   if (sampleRefuse()) return null;   // null, not undefined: the caller reads it as "no tab id"

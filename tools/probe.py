@@ -2467,9 +2467,16 @@ PULL_CRM = r"""
       $('funcs').click();
       await until(() => window.__zoostTabs.created.length + window.__zoostTabs.updated.length > beforeNav,
                   'CRM Functions navigation did not reach the Chrome tab adapter');
-      const nav = window.__zoostTabs.updated.at(-1) || window.__zoostTabs.created.at(-1);
+      // **A tab of its own now, not the tab the reader is in.** «Go to» navigated the Zoho tab they
+      // already had, which threw away whatever was unsaved in it once Zoost stopped living beside
+      // that tab. So the thing to find is a tab that was *created* on the address - and the focus
+      // call that follows it carries no url, which is what this used to pick up instead.
+      const nav = [...window.__zoostTabs.created, ...window.__zoostTabs.updated]
+        .filter((t) => t && t.url).at(-1);
       if (!nav || nav.url !== expectedFunctionsUrl)
         say('CRM Functions navigation used an unexpected URL: ' + JSON.stringify(nav));
+      if (!window.__zoostTabs.created.some((t) => t && t.url === expectedFunctionsUrl))
+        say('CRM Functions took over an existing tab instead of opening one of its own');
     }
     await until(() => getComputedStyle($('pulllist')).display !== 'none' && !$('pulllist').disabled,
                 'Pull list never became available');

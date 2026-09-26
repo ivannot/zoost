@@ -121,7 +121,9 @@ function crmNavigatorFor(chromeApi, overrides = {}) {
     chromeApi,
     hostPatterns: overrides.hostPatterns || ['https://crm.zoho.eu/*', 'https://one.zoho.eu/*'],
     findTab: overrides.findTab || (async () => 42),
-    findFrame: overrides.findFrame || (async () => 0),
+    // The suite prefix this workspace is reached through, as the panel hands it over: a function,
+    // because it is read at the moment of the click and the workspace can change under the panel.
+    shell: overrides.shell || (() => null),
     refused: overrides.refused || (() => {}),
   });
 }
@@ -14905,49 +14907,69 @@ test('crm: every Zoho-bound control is blocked in one place, and nowhere else', 
 // character for character what `openModulePage` builds. Zoho publishes that entry point itself.
 //
 // Run rather than read, on both shapes, because the whole point is that one code path serves them.
-test('crm: a new tab keeps the suite shell the reader is standing in', async () => {
-  // **Five real addresses, from inside Zoho One, and the tail is the same in both shapes:**
-  //   https://one.zoho.eu/zohoone/<portal>/suite/aspace/crm/<instance>/tab/Contacts/<id>
-  //   https://crm.zoho.eu/crm/<instance>/tab/Contacts/<id>
-  // So nothing is constructed: the prefix is read off the tab the reader has open. That is what
-  // makes it safe for a shell nobody here has seen - `<space>` is a name that portal chose, and
-  // CRM Plus is a different shell again, and neither is written down anywhere in this product.
-  const SHELL = 'https://one.zoho.eu/zohoone/yourportal/suite/aspace/crm/yourinstance/tab/Home/begin';
+test('crm: the shell is taken from the org being read, and refreshed by every pull', async () => {
+  // **A fact about the org, measured where the org is** - not read off whatever tab is open, which
+  // made one workspace behave two ways and was wrong outright across orgs. And refreshed on every
+  // pull: an org moved into or out of a suite is a thing that happens, so a value recorded once
+  // would be a memory rather than a measurement.
+  const { shellFrom } = load([sliceApp('crm', 'shellFrom')], { String });
+  assert.equal(
+    shellFrom('https://one.zoho.eu/zohoone/yourportal/suite/aspace/crm/yourinstance/tab/Home/begin', 'yourinstance'),
+    'https://one.zoho.eu/zohoone/yourportal/suite/aspace');
+  // A plain CRM tab records the origin, so the address comes back out unchanged.
+  assert.equal(shellFrom('https://crm.zoho.eu/crm/yourinstance/tab/Home', 'yourinstance'),
+               'https://crm.zoho.eu');
+  // Another org's tab says nothing about this one.
+  assert.equal(shellFrom('https://one.zoho.eu/zohoone/other/suite/aspace/crm/otherinstance/tab/Home', 'yourinstance'), null);
+  // An address that carries no CRM page at all, and the two absences.
+  assert.equal(shellFrom('https://one.zoho.eu/zohoone/yourportal/suite/aspace/mail', 'yourinstance'), null);
+  assert.equal(shellFrom('', 'yourinstance'), null);
+  assert.equal(shellFrom('https://crm.zoho.eu/crm/yourinstance/tab/Home', ''), null);
+
+  // Every pull passes through `noteAccess`, which is why the refresh is wired there rather than at
+  // the seven call sites - the eighth added tomorrow inherits it.
+  const rec = sliceApp('crm', 'noteAccess');
+  assert.match(rec, /if \(stored\) await noteShell\(op\);/,
+               'a pull no longer refreshes the shell, so it becomes a memory of the first one');
+});
+
+test('crm: a new tab keeps the suite shell this workspace is reached through', async () => {
+  // **The prefix is the workspace's, not the open tab's**, and that is the correction. Measured from
+  // inside Zoho One: the tab carries the suite's own path and then, at the end, the same
+  // `/crm/<instance>/tab/Contacts/<id>` the direct address has - so the shell is a prefix. Reading
+  // it off whatever tab happened to be open made one workspace behave two ways, and was wrong
+  // outright across orgs: «potrei avere una org che non e' abilitata a Zoho One». The pull records
+  // it where the org is; this reads it back.
+  const SHELL = 'https://one.zoho.eu/zohoone/yourportal/suite/aspace';
   const WANT = 'https://crm.zoho.eu/crm/yourinstance/tab/Contacts/1234567890';
 
-  const mk = (here) => {
+  const mk = (shell) => {
     const made = [];
     const chromeApi = {
       tabs: { query: async () => [],
-              get: async () => ({ id: 3, url: here }),
               create: async (o) => { made.push(o.url); return { id: 9, windowId: 1 }; },
               update: async () => ({ id: 9, windowId: 1 }) },
       windows: { update: async () => {} },
     };
-    return { nav: crmNavigatorFor(chromeApi, { findTab: async () => 3 }), made };
+    return { nav: crmNavigatorFor(chromeApi, { shell: () => shell }), made };
   };
 
   const inShell = mk(SHELL);
   await inShell.nav.open(WANT);
   assert.equal(inShell.made[0],
     'https://one.zoho.eu/zohoone/yourportal/suite/aspace/crm/yourinstance/tab/Contacts/1234567890',
-    'the reader was taken out of the suite they were working in');
+    'the reader was taken out of the suite this workspace is reached through');
 
-  // A plain CRM tab takes the same road and comes out unchanged: its prefix is the origin.
-  const plain = mk('https://crm.zoho.eu/crm/yourinstance/tab/Home');
-  await plain.nav.open(WANT);
-  assert.equal(plain.made[0], WANT, 'a plain tab had its address rewritten');
+  // Nothing recorded - a workspace pulled before this existed - gets the direct address, never a
+  // prefix borrowed from somewhere else.
+  const none = mk(null);
+  await none.nav.open(WANT);
+  assert.equal(none.made[0], WANT, 'an address was rebuilt with no record to rebuild it from');
 
-  // Another org's shell is not this org's: the instance has to be in the address being read, or the
-  // prefix would send the reader somewhere that looks right and is not.
-  const other = mk('https://one.zoho.eu/zohoone/otherportal/suite/aspace/crm/otherinstance/tab/Home');
-  await other.nav.open(WANT);
-  assert.equal(other.made[0], WANT, "another org's shell was used as this one's prefix");
-
-  // And a tab whose address says nothing about the CRM leaves the direct address alone.
-  const elsewhere = mk('https://one.zoho.eu/zohoone/yourportal/suite/aspace/mail');
-  await elsewhere.nav.open(WANT);
-  assert.equal(elsewhere.made[0], WANT, 'a prefix was invented from an address that carries no CRM page');
+  // A host the manifest does not grant cannot be reached by writing it into a prefix.
+  const evil = mk('https://not-zoho.example/x');
+  await evil.nav.open(WANT);
+  assert.equal(evil.made[0], WANT, 'the host check did not run on what was built');
 });
 
 test('crm: going to a Zoho page opens a tab of its own, and focuses the one already there', async () => {
@@ -18661,6 +18683,8 @@ test('crm: every area the panel reports on is an area the panel can record', asy
     AREA_SCOPE: Object.fromEntries([...named].map((a) => [a, [a]])),
     tabAccess: {}, Object, Date, Promise, console,
     accessOf: () => 'ok',
+    // See the note in the sandboxes below: the shell is the pull's business, not this record's.
+    noteShell: async () => false,
     patchCfg: async (o) => { calls.push(o); },
     publishAccess: () => {}, renderTabPrefs: () => {}, setStatus: () => {}, tabLabel: (x) => x,
   };
@@ -21204,6 +21228,9 @@ test('a pull that stored nothing does not claim to have read anything', () => {
   const run = (stored) => {
     let wrote = null;
     const m = load([sliceFn(rel, 'noteAccess')], {
+      // The pull records the workspace's suite shell on its way through here; these cases are
+      // about the access record beside it, so it is a no-op with no tab to read.
+      noteShell: async () => false,
       console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
       accessOf: () => 'ok', tabAccess: { workflows: { state: 'ok', pulledAt: '2026-05-01T10:00:00.000Z' } },
       patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
@@ -23345,6 +23372,9 @@ test('a list pull moves the list time and not the details time, and the tab says
   const run = async (prev, depth) => {
     let wrote = null;
     const m = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], {
+      // The pull records the workspace's suite shell on its way through here; these cases are
+      // about the access record beside it, so it is a no-op with no tab to read.
+      noteShell: async () => false,
       console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
       accessOf: () => 'ok', tabAccess: { workflows: prev },
       patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
@@ -23428,6 +23458,9 @@ test('an area whose first pull was a list pull says nothing was read, not that i
   const run = async (prev, depth) => {
     let wrote = null;
     const m = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], {
+      // The pull records the workspace's suite shell on its way through here; these cases are
+      // about the access record beside it, so it is a no-op with no tab to read.
+      noteShell: async () => false,
       console, Object, Date, TAB: { workflows: {} }, AREA_SCOPE: { workflows: 1 },
       accessOf: () => 'ok', tabAccess: { workflows: prev },
       patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},
@@ -23496,6 +23529,8 @@ test('a full pull that came up short is partial, counted, cleared by a complete 
   const run = async (prev, depth, gaps) => {
     let wrote = null;
     const m = load([sliceFn('apps/crm/workbench.js', 'noteAccess')], {
+      // As in the sandboxes above: the shell is the pull's business, not this record's.
+      noteShell: async () => false,
       console, Object, Date, TAB: { modules: {} }, AREA_SCOPE: { modules: 1 },
       accessOf: () => 'ok', tabAccess: { modules: prev },
       patchCfg: async (o) => { wrote = o; }, publishAccess: () => {}, renderTabPrefs: () => {},

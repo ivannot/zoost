@@ -304,7 +304,7 @@ statCounts	df6998dd5891	df6998dd5891	identical
 statOf	8b674948e7e6	61a9d1873462	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
 stepSelection	01087cab90ac	060e86ed5417	divergent
-switchTab	605c56140c72	07e791a9cd39	divergent
+switchTab	604fd744d64b	07e791a9cd39	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncChromeFold	757139a0e21d	757139a0e21d	identical
 syncGraphChrome	8a1c7049439b	63ccfbb3f117	divergent

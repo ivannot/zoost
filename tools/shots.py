@@ -538,8 +538,20 @@ window.chrome = {{
   // nothing. The guard compares org, origin and instance, so the stub answers with the three the
   // fixture's .zoost.json holds.
   tabs: {{
-    query: async () => [{{ id: 1, url: {taburl}, active: true }}],
-    get: async () => ({{ id: 1, status: 'complete' }}),
+    // **A filtered query is answered as a filter, not as «here is the tab».** It ignored its
+    // argument and handed back the Zoho tab whatever was asked - so «is this page already open?»
+    // was always yes, and a panel that opens a new tab unless the page is already there could never
+    // be seen to open one. A shim is an approximation and says so; an approximation that answers a
+    // different question than the one asked makes the driver measure the shim.
+    query: async (q = {{}}) => {{
+      const one = {{ id: 1, url: {taburl}, active: true }};
+      // A *list* of `url`s is the match-pattern form the panel uses to find Zoho tabs at all, and
+      // this shim has no pattern matcher: it answers those the way it always did. A single url is
+      // the «is this exact page open?» question, and that one is answered honestly.
+      if (typeof (q && q.url) === 'string' && q.url !== one.url) return [];
+      return [one];
+    }},
+    get: async () => ({{ id: 1, url: {taburl}, status: 'complete' }}),
     create: async (opts = {{}}) => {{
       const id = 100 + window.__zoostTabs.created.length + 1;
       window.__zoostTabs.created.push({{ id, ...(opts || {{}}) }});

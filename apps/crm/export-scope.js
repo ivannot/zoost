@@ -225,6 +225,10 @@ async function noteAccess(area, err, op, stored = !err, depth = null, gaps = nul
   if (op && !op.current()) return false;
   tabAccess = nextAccess;
   publishAccess();
+  // **Every pull refreshes the shell**, asked for in those words. This is the one line every area's
+  // pull passes through, which is why it is here rather than at seven call sites - the eighth added
+  // tomorrow inherits it. It writes only when the answer changed, so seven areas cost one write.
+  if (stored) await noteShell(op);
   // The notice of what a list pull left is drawn from this record, and every pull reaches here after
   // its own last redraw - so without this the bar showed the state from before the pull. Found by review.
   if (typeof paintBehind === 'function') paintBehind();
@@ -291,6 +295,50 @@ async function reconcileGap(area, missing, op) {
   const n = Math.min(Number(gap.unread), Math.max(0, Number(missing) || 0));
   if (n === Number(gap.unread)) return false;
   return noteItemRead(area, op, Number(gap.unread) - n);
+}
+
+/** The suite shell this workspace is reached through, recorded where the org actually is.
+ *
+ *  **It used to be read off whatever tab happened to be open, and that is not a fact about the
+ *  workspace.** Inside Zoho One the tab is the suite's own address with `/crm/<instance>/…` at the
+ *  end, so the part before it is a prefix and a new tab built on it keeps the suite. Reading it from
+ *  the current tab made the *same* workspace behave differently depending on what was on screen: a
+ *  plain CRM tab of an org that lives in Zoho One lost the shell, and no Zoho tab at all lost it
+ *  too. «Se si cambia org, e' sbagliato usare l'hostname del tab correntemente aperto - per esempio
+ *  potrei avere una org che non e' abilitata a Zoho One» - exactly, and the answer he gave with it
+ *  is the right one: take it during the pull, where the tab being read *is* this org's.
+ *
+ *  So it lives in the workspace's own `.zoost.json`, beside `base`, `instance` and `org`, and every
+ *  pull refreshes it - an org moved into or out of a suite is a thing that happens, and a value
+ *  recorded once would be a memory rather than a measurement. A workspace pulled before this
+ *  existed carries nothing, and nothing is what it gets: the direct address, never the current
+ *  tab's. Absence is not a licence to guess.
+ */
+function shellFrom(tabUrl, instance) {
+  if (!tabUrl || !instance) return null;
+  const at = String(tabUrl).indexOf(`/crm/${instance}/`);
+  if (at <= 0) return null;
+  const prefix = String(tabUrl).slice(0, at);
+  return /^https:\/\/[^/]+(\/|$)/.test(prefix + '/') ? prefix : null;
+}
+async function noteShell(op) {
+  try {
+    const want = bound && bound.instance ? String(bound.instance) : null;
+    if (!want) return false;
+    const id = await zohoTabId();
+    if (!id || !op.current()) return false;
+    const tab = await chrome.tabs.get(id);
+    if (!op.current()) return false;
+    const shell = shellFrom(tab && tab.url, want);
+    const cfg = await opReadCfg(op);
+    // Asked again after the reads: the workspace can change under any of them, and a prefix written
+    // into another org's config is the defect this whole field exists to prevent.
+    if (!cfg || !op.current() || String((bound && bound.instance) || '') !== want) return false;
+    if ((cfg.shell || null) === (shell || null)) return false;
+    await patchCfg({ shell: shell || null }, op);
+    if (op.current() && bound && String(bound.instance) === want) bound.shell = shell || null;
+    return true;
+  } catch (_) { return false; }
 }
 
 // What the user reads when an area is refused. Never the status line on its own: "403 on
