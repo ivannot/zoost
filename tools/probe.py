@@ -1919,6 +1919,17 @@ PULL_AN = r"""
     };
     await clickPullAll();
 
+    // Opening the assistant is local UI state only. Exercise the visible entry and its close path
+    // without sending a prompt or invoking any external provider; a provider contract belongs to a
+    // separate test and must never be faked by this browser probe.
+    await until(() => !$('askai').disabled, 'Analytics AI control never became available');
+    $('askai').click();
+    await until(() => $('aiview').classList.contains('show'), 'Analytics assistant never opened');
+    if (!document.body.classList.contains('ai-open')) say('Analytics assistant opened without its body state');
+    $('aix').click();
+    await until(() => !$('aiview').classList.contains('show'), 'closing Analytics assistant failed');
+    if (document.body.classList.contains('ai-open')) say('Analytics assistant left the body in ai-open state');
+
     // A transient item failure must expose Retry and a successful retry must remove it. Pick a
     // query that really exists in the fixture, fail it once at the bridge boundary, then restore
     // the normal answer. This exercises the failure state and the visible Retry control, not just
@@ -2362,6 +2373,16 @@ PULL_CRM = r"""
       await settle(what + ' left the panel redrawing');
     };
     await clickPullAll();
+    // Opening the assistant is local UI state only. Do not send a prompt: that would require a real
+    // provider and could move mirror data outside the machine. The shipped open/close wiring is
+    // still exercised through the visible controls.
+    await until(() => !$('askai').disabled, 'CRM AI control never became available');
+    $('askai').click();
+    await until(() => $('aiview').classList.contains('show'), 'CRM assistant never opened');
+    if (!document.body.classList.contains('ai-open')) say('CRM assistant opened without its body state');
+    $('aix').click();
+    await until(() => !$('aiview').classList.contains('show'), 'closing CRM assistant failed');
+    if (document.body.classList.contains('ai-open')) say('CRM assistant left the body in ai-open state');
     // Pull list is a separate user-facing operation from Pull all. Exercise the visible control so
     // its disabled guard, progress state and completion path are covered independently.
     setMode('functions'); await settle('the functions view never finished drawing after Pull all');
