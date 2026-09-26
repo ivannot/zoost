@@ -33,7 +33,6 @@ const crmZohoNavigator = createCrmZohoNavigator({
   chromeApi: chrome,
   hostPatterns: ZOHO_MATCHES,
   findTab: zohoTabId,
-  findFrame: crmFrameId,
   refused: (url) => setStatus('This workspace points at '
     + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
     + ', which is not a Zoho address. Nothing was opened - check where this workspace folder came from.', 'bad'),

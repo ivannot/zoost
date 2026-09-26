@@ -12,7 +12,6 @@
  * chromeApi: any,
  * hostPatterns: string[],
  * findTab: () => Promise<number|null>,
- * findFrame: (tabId: number) => Promise<number|null>,
  * refused: (url: string) => void,
  * }} CrmNavigatorOptions */
 
@@ -106,14 +105,25 @@ function createCrmZohoNavigator(options) {
     } catch (_) { return false; }
   }
 
-  /** Take the reader to a URL inside Zoho: reuse the tab they have open, or make one.
+  /** Take the reader to a URL inside Zoho: **a tab of its own, unless that page is already open.**
    *
-   * It used to take an options object with `newTab` and `active`. **Neither was ever passed.** Nine
-   * call sites: eight give no options at all, and the ninth - `openTargetZoho` - was itself only ever
-   * called as `openTargetZoho(false)`, so `newTab` was constantly false and its branch could not
-   * run, while `active` was constantly `undefined` and the three `!== false` tests it fed were
-   * constantly true. Two dead fields, a dead branch and a parameter every caller agreed on: this
-   * always opens in the tab the reader already has, and brings it to the front.
+   * It navigated the Zoho tab the reader already had. That was the right default while Zoost lived
+   * inside the browser window - the tab beside the panel was the one being worked in, and going
+   * somewhere in it was the whole gesture. From a window of its own it is not: the tab it takes over
+   * is one of the reader's other tabs, and «Go to» on a function they are half-way through editing
+   * in Zoho's own editor threw the edit away. Asked for in those words, and it is the same
+   * correction the workspace switch got earlier - an action that cannot be undone does not get to
+   * assume which tab it may have.
+   *
+   * Already open is focused rather than opened twice, which is what `openExternal` does for every
+   * outward link in this panel: the same idiom, so «Go to» twice is one tab and not two.
+   *
+   * **What this gives up, stated.** Inside Zoho One or CRM Plus the CRM is a frame of the suite
+   * shell, and navigating that frame kept the reader inside the shell. A new tab lands on
+   * `crm.zoho.*` directly - the ordinary CRM, outside the suite chrome. That is a real loss and it
+   * is the smaller one: a shell to come back to costs a click, and an unsaved function costs the
+   * work. The modifiers are unchanged, so Ctrl-click is still a background tab and Shift-click a
+   * window.
    *
    * @param {string} url */
   async function open(url, how) {
@@ -125,31 +135,23 @@ function createCrmZohoNavigator(options) {
     // reader asking for a new window is not asking to navigate the one they have. The host check
     // above still runs first - «certain, or stop» does not bend for a keystroke.
     if (how) return await openElsewhere(url, how) ? true : null;
-    let tabId = await options.findTab();
-    if (!tabId) {
-      // The original tab is gone, so one is made - and its window is brought forward with it, for
-      // the same reason the reuse path does: made in a browser window that stays behind Zoost's
-      // own, a new tab is a thing that happened where nobody is looking.
-      const tab = await options.chromeApi.tabs.create({ url, active: true });
-      try {
-        if (tab && tab.windowId != null) await options.chromeApi.windows.update(tab.windowId, { focused: true });
-      } catch (_) { /* the window refused focus; the tab is still there and current */ }
-      return tab.id;
+    // Already there? Then this is a request to *look* at it, and a second copy is not an answer.
+    // `tabs.query({url})` takes a match pattern and a bare host has no path to match, so the
+    // address is normalised the way `openExternal` learnt to - and a lookup that cannot answer is
+    // not a reason to do nothing: it falls through to the tab this makes anyway.
+    let already = [];
+    try { already = await options.chromeApi.tabs.query({ url: new URL(url).href }); } catch (_) { already = []; }
+    if (already && already[0]) {
+      await raise_(already[0].id, { active: true });
+      return already[0].id;
     }
-    const frameId = await options.findFrame(tabId);
-    if (frameId) {
-      try {
-        await options.chromeApi.scripting.executeScript({
-          target: { tabId, frameIds: [frameId] },
-          func: (destination) => { location.href = destination; },
-          args: [url],
-        });
-        await raise_(tabId, { active: true });
-        return tabId;
-      } catch (_) { /* frame navigation refused: preserve the established tab fallback */ }
-    }
-    await raise_(tabId, { url, active: true });
-    return tabId;
+    // Its window is brought forward with it: made in a browser window that stays behind Zoost's
+    // own, a new tab is a thing that happened where nobody is looking.
+    const tab = await options.chromeApi.tabs.create({ url, active: true });
+    try {
+      if (tab && tab.windowId != null) await options.chromeApi.windows.update(tab.windowId, { focused: true });
+    } catch (_) { /* the window refused focus; the tab is still there and current */ }
+    return tab.id;
   }
 
   /** Make the tab current **and bring its window forward.**

@@ -628,7 +628,7 @@ def render_panel(shot, expect_ok: bool = False):
 # original idea - answer `chrome.storage` with a configured install rather than an empty form - is
 # the `stored` field of that stub.
 
-def render_options(shot):
+def render_options(shot, expect_ok: bool = False):
     """The settings, drawn inside the panel that now holds them.
 
     **It used to open `options.html` on its own.** That page was the settings while Zoost was a side

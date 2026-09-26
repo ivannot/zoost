@@ -1636,25 +1636,19 @@ async function goToZoho(url, how) {
   // A modifier means «not here», so the tab-reuse below is skipped: asking for a new window is not
   // asking to navigate the one you have. The host check above still runs first.
   if (how) return await openElsewhere(url, how) ? true : null;
-  const id = await anyAnalyticsTabId();
-  if (!id) {
-    // No Analytics tab anywhere, so one is made - and its window comes forward with it, or the tab
-    // appears behind Zoost's own window and nothing seems to have happened.
-    const t = await chrome.tabs.create({ url, active: true });
-    try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
-    return t.id;
-  }
-  const fid = await analyticsFrameId(id);
-  if (fid) {
-    try {
-      await chrome.scripting.executeScript({ target: { tabId: id, frameIds: [fid] },
-                                             func: (u) => { location.href = u; }, args: [url] });
-      await focusTab(id, { active: true });
-      return id;
-    } catch (_) { /* fall through to the tab */ }
-  }
-  await focusTab(id, { url, active: true });
-  return id;
+  // **A tab of its own, unless that page is already open** - see the twin, which met this first.
+  // It navigated the Analytics tab the reader already had, which was right while Zoost lived inside
+  // the browser window and is not from a window of its own: the tab it takes over is one of the
+  // reader's others, and «Go to» on a view they are half-way through editing threw the edit away.
+  // What is given up is the suite shell, and that is the smaller loss - a shell to come back to
+  // costs a click. Already open is focused rather than opened twice, the way every outward link in
+  // this panel is; a lookup that cannot answer still gets its tab.
+  let already = [];
+  try { already = await chrome.tabs.query({ url: new URL(url).href }); } catch (_) { already = []; }
+  if (already && already[0]) { await focusTab(already[0].id, { active: true }); return already[0].id; }
+  const t = await chrome.tabs.create({ url, active: true });
+  try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
+  return t.id;
 }
 async function switchTab() {
   if (sampleRefuse()) return;

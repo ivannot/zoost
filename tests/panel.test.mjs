@@ -14905,44 +14905,67 @@ test('crm: every Zoho-bound control is blocked in one place, and nowhere else', 
 // character for character what `openModulePage` builds. Zoho publishes that entry point itself.
 //
 // Run rather than read, on both shapes, because the whole point is that one code path serves them.
-test('crm: going to a Zoho page moves the CRM frame, and moves the tab when the tab is the CRM', async () => {
-  const mk = (frameId) => {
+test('crm: going to a Zoho page opens a tab of its own, and focuses the one already there', async () => {
+  // **The other way round from what this case used to assert, and the reason it did is gone.** It
+  // navigated the Zoho tab the reader already had - inside a shell by moving the CRM frame, so the
+  // shell survived. That was right while Zoost lived in the browser window: the tab beside the panel
+  // was the one being worked in. From a window of its own the tab it takes over is one of the
+  // reader's *other* tabs, and «Go to» on a function half-edited in Zoho's editor threw the edit
+  // away. Reported in those words. What is given up is the suite shell, and it is the smaller loss.
+  const mk = (open = []) => {
     const acted = [];
     const chromeApi = {
         tabs: {
-          update: async (id, o) => { acted.push({ what: 'tab', id, ...o }); },
-          create: async (o) => { acted.push({ what: 'create', ...o }); return { id: 99 }; },
+          query: async (q) => { acted.push({ what: 'query', url: q.url }); return open; },
+          update: async (id, o) => { acted.push({ what: 'tab', id, ...o }); return { id, windowId: 5 }; },
+          create: async (o) => { acted.push({ what: 'create', ...o }); return { id: 99, windowId: 5 }; },
         },
-        scripting: {
-          executeScript: async (o) => {
-            acted.push({ what: 'frame', frameId: o.target.frameIds[0], url: o.args[0] });
-            return [];
-          },
-        },
+        windows: { update: async (id, o) => { acted.push({ what: 'window', id, ...o }); } },
+        scripting: { executeScript: async () => { acted.push({ what: 'frame' }); return []; } },
     };
-    const navigator = crmNavigatorFor(chromeApi, { findFrame: async () => frameId });
+    const navigator = crmNavigatorFor(chromeApi, { findFrame: async () => 1 });
     return { navigator, acted };
   };
 
   const URL_ = 'https://crm.zoho.eu/crm/x/tab/Contacts';
 
-  // Inside a shell: the CRM is frame 1, and the shell must still be there afterwards.
-  const shell = mk(1);
-  await shell.navigator.open(URL_);
-  const moved = shell.acted.filter((a) => a.what === 'frame');
-  assert.deepEqual(moved.map((a) => [a.frameId, a.url]), [[1, URL_]],
-                   'the CRM frame was not the thing that moved - inside a shell that means the '
-                   + 'reader lost the shell they were working in');
-  assert.equal(shell.acted.some((a) => a.what === 'tab' && a.url), false,
-               'it navigated the tab as well, which is the defect with an extra step');
+  // Nothing open on it: a tab of its own, brought to the front with its window.
+  const fresh = mk([]);
+  assert.equal(await fresh.navigator.open(URL_), 99);
+  assert.equal(fresh.acted.some((a) => a.what === 'frame'), false,
+               'it navigated a frame the reader may be working in');
+  assert.equal(fresh.acted.some((a) => a.what === 'tab' && a.url), false,
+               'it navigated an existing tab, which is the defect this replaced');
+  const made = fresh.acted.find((a) => a.what === 'create');
+  assert.deepEqual([made.url, made.active], [URL_, true], 'the new tab is not the page, or not current');
+  assert.ok(fresh.acted.some((a) => a.what === 'window' && a.focused),
+            'the tab was made in a window nobody is looking at and left there');
 
-  // A plain CRM tab: frame 0 is the tab's own document, so this is a tab navigation and there is
-  // only one code path. A guard that never takes this branch would pass the case above and be useless.
-  const plain = mk(0);
-  await plain.navigator.open(URL_);
-  assert.deepEqual(plain.acted.map((a) => a.what), ['tab'],
-                   'on a tab whose own document is the CRM it did something other than navigate it');
-  assert.equal(plain.acted[0].url, URL_, 'it navigated the tab somewhere else');
+  // Already open on exactly that page: focused, never a second copy - the idiom `openExternal` uses.
+  const there = mk([{ id: 42 }]);
+  assert.equal(await there.navigator.open(URL_), 42);
+  assert.equal(there.acted.some((a) => a.what === 'create'), false, 'the same page was opened twice');
+  assert.ok(there.acted.some((a) => a.what === 'tab' && a.id === 42 && a.active),
+            'the tab already on that page was not brought forward');
+
+  // A lookup that cannot answer is not a reason to do nothing: it still gets its tab.
+  const broken = mk([]);
+  broken.navigator.open.call(null);   // no-op; the real check is below
+  const blind = (() => {
+    const acted = [];
+    const chromeApi = {
+      tabs: { query: async () => { throw new Error('bad pattern'); },
+              create: async (o) => { acted.push(o); return { id: 7, windowId: 1 }; },
+              update: async () => ({ id: 7, windowId: 1 }) },
+      windows: { update: async () => {} },
+      scripting: { executeScript: async () => [] },
+    };
+    return { navigator: crmNavigatorFor(chromeApi, { findFrame: async () => 1 }), acted };
+  })();
+  return blind.navigator.open(URL_).then((id) => {
+    assert.equal(id, 7, 'a refused lookup swallowed the whole gesture');
+    assert.equal(blind.acted[0].url, URL_);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -16970,17 +16993,28 @@ test('both panels reach a Zoho page through one function, and the detail button 
     const fn = app === 'crm'
       ? sliceFn('apps/crm/zoho-navigation.js', 'createCrmZohoNavigator')
       : sliceFn('apps/analytics/workbench.js', 'goToZoho');
-    assert.match(fn, app === 'crm' ? /frameIds: \[frameId\]/ : /frameIds: \[fid\]/,
-                 `${app}: goToZoho does not address a frame, so inside a shell it takes the shell away`);
-    assert.match(fn, app === 'crm' ? /location\.href = destination/ : /location\.href = u/,
-      `${app}: goToZoho navigates something other than the frame`);
+    // **What is asserted here turned over, and the reason it did is written in both functions.**
+    // It used to be «one function navigates the CRM or Analytics *frame*, so a reader inside Zoho
+    // One keeps the shell». That was the right policy while Zoost lived in the browser window and
+    // the tab beside the panel was the one being worked in. From a window of its own, navigating a
+    // tab the reader cannot see loses whatever is unsaved in it - reported about a half-edited
+    // function - so the policy is now «a tab of its own, unless that page is already open», and the
+    // shell is the smaller loss. What has not changed is that there is exactly **one** function per
+    // panel that knows how to reach a Zoho page: the divergence this case exists for is two
+    // policies, whichever policy it is.
+    assert.doesNotMatch(fn, /location\.href = /,
+                 `${app}: goToZoho still navigates a frame the reader may be working in`);
+    assert.match(fn, /tabs\.query\(\{ url:/,
+                 `${app}: goToZoho does not look for the page already being open, so «Go to» twice is two tabs`);
+    assert.match(fn, /tabs\.create\(\{ url, active: true \}\)/,
+                 `${app}: goToZoho does not open a tab of its own`);
 
-    // The only place a frame is navigated. A second one is a second policy, and the first thing that
-    // diverges between two panels is a policy that exists twice.
+    // And nowhere in the panel navigates a frame any more: a second one would be a second policy,
+    // and the first thing that diverges between two panels is a policy that exists twice.
     const injections = [...js.matchAll(/location\.href = /g)].length;
-    assert.equal(injections, 1,
-                 `${app}: ${injections} places navigate a frame - there is one function for it, or the `
-                 + 'next control added does whatever its author remembered');
+    assert.equal(injections, 0,
+                 `${app}: ${injections} place(s) still navigate a frame - a control that takes over a `
+                 + 'tab the reader is working in is what this was corrected for');
   }
 
   // The detail pane's own button, in the panel where it diverged. It is wired at the call site, so
