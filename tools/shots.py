@@ -561,7 +561,15 @@ window.chrome = {{
   tabs: {{
     query: async () => [{{ id: 1, url: {taburl}, active: true }}],
     get: async () => ({{ id: 1, status: 'complete' }}),
-    create: () => {{}},
+    create: async (opts = {{}}) => {{
+      const id = 100 + window.__zoostTabs.created.length + 1;
+      window.__zoostTabs.created.push({{ id, ...(opts || {{}}) }});
+      return {{ id, url: opts && opts.url || '' }};
+    }},
+    update: async (id, opts = {{}}) => {{
+      window.__zoostTabs.updated.push({{ id, ...(opts || {{}}) }});
+      return {{ id, ...(opts || {{}}) }};
+    }},
     // The bridge. `context` is answered here because every panel asks for it before anything else;
     // everything else is `{{ ok: true }}` unless the driving script has installed an answer, which is
     // what lets tools/probe.py run a whole pull through the shipped code instead of photographing a
@@ -578,10 +586,14 @@ window.chrome = {{
     }},
     onUpdated: {{ addListener: () => {{}} }}, onActivated: {{ addListener: () => {{}} }},
   }},
-  windows: {{ getAll: async () => [], create: () => {{}} }},
+  windows: {{ getAll: async () => [], create: async (opts = {{}}) => {{
+    window.__zoostTabs.windows.push(opts || {{}});
+    return {{ id: 200 + window.__zoostTabs.windows.length }};
+  }} }},
   scripting: {{ executeScript: async () => [{{ result: true }}] }},
   permissions: {{ contains: async () => true }},
 }};
+window.__zoostTabs = {{ created: [], updated: [], windows: [] }};
 window.__fsshim.load({files});
 window.idbHandle.set('rootDir', window.__fsshim.root());
 window.idbHandle.set('activeWs', 'org:1234567890');

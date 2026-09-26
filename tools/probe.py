@@ -1665,6 +1665,15 @@ AN = """
         $('graphx').click();
         await until(() => !$('graphview').classList.contains('show'), 'closing the detail ER diagram failed');
       }
+      if ($('dzoho') && getComputedStyle($('dzoho')).display !== 'none' && !$('dzoho').disabled) {
+        const beforeNav = window.__zoostTabs.created.length + window.__zoostTabs.updated.length;
+        $('dzoho').click();
+        await until(() => window.__zoostTabs.created.length + window.__zoostTabs.updated.length > beforeNav,
+                    'Analytics detail navigation did not reach the Chrome tab adapter');
+        const nav = window.__zoostTabs.updated.at(-1) || window.__zoostTabs.created.at(-1);
+        if (!nav || !/https?:[/][/][^/]*zoho[.][^/]+[/]/i.test(nav.url || ''))
+          say('Analytics detail navigation used an unexpected URL: ' + JSON.stringify(nav));
+      }
       $('dclose').click();
       await until(() => !$('detail').classList.contains('show'), 'closing Analytics detail failed');
       const reopenedRow = $('list').querySelector('tr[data-id]');
@@ -2351,6 +2360,18 @@ PULL_CRM = r"""
     // Pull list is a separate user-facing operation from Pull all. Exercise the visible control so
     // its disabled guard, progress state and completion path are covered independently.
     setMode('functions'); await settle('the functions view never finished drawing after Pull all');
+    // Navigation is a real user-facing action even though this probe never opens the network. The
+    // Chrome shim records the tab update/create so the test can verify the target without treating
+    // a no-op stub as success.
+    {
+      const beforeNav = window.__zoostTabs.created.length + window.__zoostTabs.updated.length;
+      $('funcs').click();
+      await until(() => window.__zoostTabs.created.length + window.__zoostTabs.updated.length > beforeNav,
+                  'CRM Functions navigation did not reach the Chrome tab adapter');
+      const nav = window.__zoostTabs.updated.at(-1) || window.__zoostTabs.created.at(-1);
+      if (!nav || !/https?:[/][/][^/]*zoho[.][^/]+[/]crm[/]/i.test(nav.url || ''))
+        say('CRM Functions navigation used an unexpected URL: ' + JSON.stringify(nav));
+    }
     await until(() => getComputedStyle($('pulllist')).display !== 'none' && !$('pulllist').disabled,
                 'Pull list never became available');
     $('pulllist').click();
