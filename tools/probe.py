@@ -1856,8 +1856,35 @@ PULL_AN = r"""
     await selectWorkspace(w);
     await settle('the selected workspace never drew');
 
-    await pullAll();
-    await wait(600);
+    // Exercise the control the reader actually presses. Calling pullAll() directly proves the
+    // use case but skips the disabled-state guard and the DOM wiring on #pull.
+    const clickPullAll = async (what = 'Pull all') => {
+      await until(() => !$('pull').disabled, what + ' never became available');
+      $('pull').click();
+      await until(() => JSON.parse(fs.read(base + '.pull-state.json') || '{}').state === 'complete',
+                  what + ' never reached a complete marker', 20000);
+      await settle(what + ' left the panel redrawing');
+    };
+    await clickPullAll();
+
+    // The main graph button is a user-facing entry point, distinct from the graph window probe
+    // below. Verify that the click opens the inline diagram and that its close control returns to
+    // the workbench rather than leaving an invisible overlay behind.
+    await until(() => !$('graph').disabled, 'the Analytics graph control never became available');
+    $('graph').click();
+    await until(() => $('graphview').classList.contains('show'), 'the Analytics graph never opened');
+    $('graphx').click();
+    await until(() => !$('graphview').classList.contains('show'), 'closing the Analytics graph failed');
+
+    // Markdown is the export path intended for hand-off to an external AI tool. Exercise its
+    // dedicated button, not only the HTML dialog, and verify that a file was actually written.
+    await until(() => !$('exportmd').disabled, 'Markdown export never became available');
+    $('exportmd').click();
+    await until(() => $('expscope').classList.contains('on'), 'Markdown export did not open its scope dialog');
+    $('expgo').click();
+    await until(() => fs.dump().some((x) => /export.*[.]md$/.test(x)),
+                'Markdown export did not write a file', 10000);
+    await settle('Markdown export left the panel redrawing');
 
     // The Analytics search has the same state transitions, with SQL as its full-text subject.
     // Drive the visible controls so both the engine and its DOM adapter have to agree.
@@ -1906,8 +1933,7 @@ PULL_AN = r"""
     // 6. A second pull, over the workspace the first one wrote. This is where a half-written mirror
     //    shows: the prune has something to do, every file is rewritten, and the marker has to come
     //    back to complete. It was a thing only a person could try.
-    await pullAll();
-    await wait(600);
+    await clickPullAll('The second Pull all');
     obs.disconnect();
     const line2 = statusEl().textContent;
     if (/interrupted|could not|failed/i.test(line2)) say('the second pull ended on: ' + line2);
@@ -1936,10 +1962,15 @@ PULL_AN = r"""
     await refreshContext();
     await settle('the panel never reacted to the tab it was given');
     const bytes = fs.dump().length;
-    let refused = false;
-    try { await pullAll(); } catch (_) { refused = true; }
+    // A mismatch is intentionally a disabled control: clicking a disabled button cannot produce a
+    // refusal message. Verify the UI explains why, then call the guarded entry point once to prove
+    // the same protection still refuses a programmatic or stale event without writing the mirror.
+    if (!$('pull').disabled) say('Pull all stayed enabled on a different workspace');
+    if (!/different workspace/i.test($('pull').title))
+      say('the disabled Pull all does not explain the workspace mismatch: ' + $('pull').title);
+    await pullAll();
     await settle('the refusal never reached the status line');
-    if (!refused && !/refus|different workspace|until they match/i.test(statusEl().textContent))
+    if (!/refus|different workspace|until they match/i.test(statusEl().textContent))
       say('a pull on a mismatched tab was not refused: ' + statusEl().textContent);
     if (fs.dump().length !== bytes) say('a refused pull still wrote to the workspace');
     document.title = 'PULL OK';
@@ -2210,6 +2241,8 @@ PULL_CRM = r"""
                               capped: serveCapped, entries: fxIndex }),
       fetchOne: (m) => (src[String(m.id)] ? { ok: true, file: src[String(m.id)] }
                                           : { ok: false, error: 'no such function: ' + m.id }),
+      pullFailures: () => ({ ok: true, at: '2026-09-26T10:00:00Z', failures: [], capped: false,
+                             usage: { success: 12, failure: 0 }, runs: [], credits: null, month: null }),
     };
 
     fs.clear();
@@ -2220,12 +2253,46 @@ PULL_CRM = r"""
     await loadWorkspaces();
     await settle('the workspace list never drew');
 
-    await pullAll();
-    await wait(1500);
+    // Exercise the control the reader actually presses. Calling pullAll() directly proves the
+    // runner but skips the disabled-state guard and the DOM wiring on #pull.
+    const clickPullAll = async (what = 'Pull all') => {
+      await until(() => !$('pull').disabled, what + ' never became available');
+      $('pull').click();
+      await until(() => !pullBusy, what + ' never finished', 20000);
+      await settle(what + ' left the panel redrawing');
+    };
+    await clickPullAll();
     // `pullAll` hands over to `downloadMissing`, which is the part that takes the time. Wait for the
     // panel to say it is done rather than for a number of seconds: a sleep long enough for a slow
     // machine is a probe that takes that long on every machine.
     for (let i = 0; i < 120 && !/downloaded|still missing/.test($('stxt').textContent); i++) await wait(250);
+    await until(() => !$('graph').disabled, 'the CRM graph control never became available');
+    $('graph').click();
+    await until(() => $('graphview').classList.contains('show'), 'the CRM graph never opened');
+    $('graphx').click();
+    await until(() => !$('graphview').classList.contains('show'), 'closing the CRM graph failed');
+
+    await until(() => !$('exportmd').disabled, 'Markdown export never became available');
+    $('exportmd').click();
+    await until(() => $('expscope').classList.contains('on'), 'Markdown export did not open its scope dialog');
+    $('expgo').click();
+    await until(() => fs.dump().some((x) => /export.*[.]md$/.test(x)),
+                'Markdown export did not write a file', 10000);
+    await settle('Markdown export left the panel redrawing');
+
+    // Health is the only other CRM control that asks Zoho for a fresh reading. Open it, execute
+    // the runtime pull through the visible button, and close it again so the test also checks the
+    // covered-view status line rather than only the local analysis.
+    $('health').click();
+    await until(() => $('healthview').classList.contains('show'), 'the CRM health view never opened');
+    await settle('the CRM health view never finished drawing');
+    await until(() => !$('healthpull').disabled, 'Pull runtime never became available');
+    $('healthpull').click();
+    await until(() => !$('healthpull').disabled, 'Pull runtime never finished', 10000);
+    if (!/Read from Zoho|nothing failing/i.test($('healthmsg').textContent))
+      say('Pull runtime finished without a runtime verdict: ' + $('healthmsg').textContent);
+    $('healthx').click();
+    await until(() => !$('healthview').classList.contains('show'), 'closing the CRM health view failed');
 
     const line = $('stxt').textContent;
     if (/still missing|failed|could not/i.test(line)) say('the pull ended on: ' + line);
@@ -2280,7 +2347,8 @@ PULL_CRM = r"""
     await openFile(openPath);
     await until(() => currentPath === openPath, 'the function never opened');
     const drawnBefore = previewLoad;
-    await pullCurrent();
+    await until(() => !$('pullone').disabled, 'Pull for the open function never became available');
+    $('pullone').click();
     await until(() => !pullBusy, 'the per-tab pull never finished', 20000);
     await settle('the panel never settled after the per-tab pull');
     if (previewLoad === drawnBefore)
@@ -2304,7 +2372,7 @@ PULL_CRM = r"""
     const stObs = new MutationObserver(() => { const t = stEl.textContent; if (said[said.length - 1] !== t) said.push(t); });
     stObs.observe(stEl, { childList: true, characterData: true, subtree: true });
     serveCapped = true;
-    await pullAll();
+    await clickPullAll('Pull all over a truncated list');
     await until(() => !pullBusy, 'the pull over a truncated list never finished', 20000);
     await settle('the panel never redrew after the truncated pull');
     const afterCap = fs.dump().filter((p) => p.startsWith(base)).length;
@@ -2327,9 +2395,9 @@ def coverage():
 
     The run used to end «both panels navigate as documented» - a sentence about the guides, printed
     after four scripted scenarios, with nothing saying how much of the panel they touch. Measured
-    when this was written: **10 of 89** clickable controls in the CRM and **7 of 79** in Analytics.
-    Every one of the four is worth having and none of them is coverage, and a reader had no way to
-    tell the two apart.
+    Before the critical-control tranche this was **21 of 105** clickable controls in the CRM and
+    **18 of 89** in Analytics. The pull, graph and Markdown-export paths now add their real buttons;
+    the remaining controls are still not exercised here, and a reader can see that from the report.
 
     The denominator is cruder than the check, which is the rule this repository states for anything
     that inspects a tree: a control is a `<button id=...>` in the panel's markup or an element given

@@ -5721,9 +5721,10 @@ class TheProbeSaysHowMuchItDrove(unittest.TestCase):
 
     The probe drives a panel in a real browser and is the only thing here that does - «a correct
     helper called from the wrong place still passes» is why it exists, and every case in it is a
-    defect that happened. What it is not is coverage: measured, it clicks **10 of the 89** clickable
-    controls in the CRM panel and **7 of 79** in Analytics, and ended with a sentence about the
-    guides that reads as a statement about the whole product.
+    defect that happened. What it is not is coverage: before this tranche, it clicked **21 of 105**
+    controls in the CRM panel and **18 of 89** in Analytics, and ended with a sentence about the
+    guides that reads as a statement about the whole product. The critical-control tranche raises
+    those measured paths to 26 and 22 respectively.
 
     The rule this repository applies to anything that inspects a tree - print what was inspected and
     derive the denominator by a cruder method - had reached `htmlcheck`, `asynccheck`,
@@ -6232,21 +6233,22 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
     every run - roughly fifty seconds of the probe is sleeping. A bet that loses reads unsettled
     state, and the failure lands three lines later about something else, which is what «flaky» is.
 
-    **They were 86 and they are 10, five of which are the polling step inside `until` itself.** The
+    **They were 86 and they are 7, five of which are the polling step inside `until` itself.** The
     conversion was not done by naming a condition 76 times - it was done by naming the one condition
     they all shared: `settle()` watches the document and returns as soon as it has been quiet for a
     moment, so «the panel has finished drawing» is asked rather than guessed. A click followed by a
     sleep followed by a read was the shape in every one of them.
 
     What `settle` does not cover is stated where it is defined: work that finishes without touching
-    the DOM. Those five are what is left, and the number below holds them. It moves in either
+    the DOM. Those seven are what is left, five of them the polling step inside `until`, and the
+    number below holds them. It moves in either
     direction only deliberately - a run that converts one must lower it in the same change, which is
     what stops a ledger that «may only shrink» from quietly stopping measuring anything. That
     absolute was stated eleven times in this repository and measured false; this one says which way
     it moved and why.
     """
 
-    CEILING = 10
+    CEILING = 7
 
     def waits(self):
         import importlib.util
