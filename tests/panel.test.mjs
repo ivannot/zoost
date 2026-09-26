@@ -14905,6 +14905,51 @@ test('crm: every Zoho-bound control is blocked in one place, and nowhere else', 
 // character for character what `openModulePage` builds. Zoho publishes that entry point itself.
 //
 // Run rather than read, on both shapes, because the whole point is that one code path serves them.
+test('crm: a new tab keeps the suite shell the reader is standing in', async () => {
+  // **Five real addresses, from inside Zoho One, and the tail is the same in both shapes:**
+  //   https://one.zoho.eu/zohoone/<portal>/home/cxapp-spaces/sales/crm/<instance>/tab/Contacts/<id>
+  //   https://crm.zoho.eu/crm/<instance>/tab/Contacts/<id>
+  // So nothing is constructed: the prefix is read off the tab the reader has open. That is what
+  // makes it safe for a shell nobody here has seen - `<space>` is a name that portal chose, and
+  // CRM Plus is a different shell again, and neither is written down anywhere in this product.
+  const SHELL = 'https://one.zoho.eu/zohoone/studicognitivi/home/cxapp-spaces/sales/crm/studi_cognitivi/tab/Home/begin';
+  const WANT = 'https://crm.zoho.eu/crm/studi_cognitivi/tab/Contacts/534982000058040005';
+
+  const mk = (here) => {
+    const made = [];
+    const chromeApi = {
+      tabs: { query: async () => [],
+              get: async () => ({ id: 3, url: here }),
+              create: async (o) => { made.push(o.url); return { id: 9, windowId: 1 }; },
+              update: async () => ({ id: 9, windowId: 1 }) },
+      windows: { update: async () => {} },
+    };
+    return { nav: crmNavigatorFor(chromeApi, { findTab: async () => 3 }), made };
+  };
+
+  const inShell = mk(SHELL);
+  await inShell.nav.open(WANT);
+  assert.equal(inShell.made[0],
+    'https://one.zoho.eu/zohoone/studicognitivi/home/cxapp-spaces/sales/crm/studi_cognitivi/tab/Contacts/534982000058040005',
+    'the reader was taken out of the suite they were working in');
+
+  // A plain CRM tab takes the same road and comes out unchanged: its prefix is the origin.
+  const plain = mk('https://crm.zoho.eu/crm/studi_cognitivi/tab/Home');
+  await plain.nav.open(WANT);
+  assert.equal(plain.made[0], WANT, 'a plain tab had its address rewritten');
+
+  // Another org's shell is not this org's: the instance has to be in the address being read, or the
+  // prefix would send the reader somewhere that looks right and is not.
+  const other = mk('https://one.zoho.eu/zohoone/altro/home/cxapp-spaces/sales/crm/altra_org/tab/Home');
+  await other.nav.open(WANT);
+  assert.equal(other.made[0], WANT, "another org's shell was used as this one's prefix");
+
+  // And a tab whose address says nothing about the CRM leaves the direct address alone.
+  const elsewhere = mk('https://one.zoho.eu/zohoone/studicognitivi/home/cxapp-spaces/sales/mail');
+  await elsewhere.nav.open(WANT);
+  assert.equal(elsewhere.made[0], WANT, 'a prefix was invented from an address that carries no CRM page');
+});
+
 test('crm: going to a Zoho page opens a tab of its own, and focuses the one already there', async () => {
   // **The other way round from what this case used to assert, and the reason it did is gone.** It
   // navigated the Zoho tab the reader already had - inside a shell by moving the CRM frame, so the

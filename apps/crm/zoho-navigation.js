@@ -105,6 +105,41 @@ function createCrmZohoNavigator(options) {
     } catch (_) { return false; }
   }
 
+
+  /** The same address, on the shell the reader is actually standing in.
+   *
+   *  **Measured, not guessed.** Inside Zoho One the tab is
+   *  `https://one.zoho.eu/zohoone/<portal>/home/cxapp-spaces/<space>/crm/<instance>/tab/Contacts/<id>`
+   *  and the direct page is `https://crm.zoho.eu/crm/<instance>/tab/Contacts/<id>` - five real
+   *  addresses, and the tail after `/crm/<instance>/` is **identical** in both. So there is nothing
+   *  to construct: the part before it is a prefix, and the prefix is read off the tab the reader has
+   *  open rather than assembled from anything this file claims to know about Zoho One.
+   *
+   *  That is what makes it safe for a shape nobody here has seen. `<space>` is a name that portal
+   *  chose; CRM Plus is a different shell again. None of it is written down here - if the tab the
+   *  reader is on does not carry `/crm/<instance>/`, nothing is rebuilt and the direct address is
+   *  used, which is «certain, or stop» rather than a pattern that half-fits.
+   *
+   *  A plain CRM tab takes the same road and comes out unchanged: its prefix *is* the origin.
+   */
+  async function onTheSameShell(url) {
+    try {
+      const tail = url.match(/^https:\/\/[^/]+(\/crm\/[^/]+\/)/);
+      if (!tail) return url;
+      const tabId = await options.findTab();
+      if (!tabId) return url;
+      const tab = await options.chromeApi.tabs.get(tabId);
+      const here = (tab && tab.url) || '';
+      // The instance has to be in it too: the prefix of *another* org's shell would send the reader
+      // somewhere that looks right and is not.
+      const at = here.indexOf(tail[1]);
+      if (at <= 0) return url;
+      const built = here.slice(0, at) + url.slice(url.indexOf(tail[1]));
+      // The host check again, on what was built rather than on what was asked for.
+      return allows(built) ? built : url;
+    } catch (_) { return url; }
+  }
+
   /** Take the reader to a URL inside Zoho: **a tab of its own, unless that page is already open.**
    *
    * It navigated the Zoho tab the reader already had. That was the right default while Zoost lived
@@ -135,6 +170,9 @@ function createCrmZohoNavigator(options) {
     // reader asking for a new window is not asking to navigate the one they have. The host check
     // above still runs first - «certain, or stop» does not bend for a keystroke.
     if (how) return await openElsewhere(url, how) ? true : null;
+    // On the shell the reader is standing in, when they are standing in one - so a new tab keeps the
+    // suite around it instead of landing on the bare CRM page. See `onTheSameShell`.
+    url = await onTheSameShell(url);
     // Already there? Then this is a request to *look* at it, and a second copy is not an answer.
     // `tabs.query({url})` takes a match pattern and a bare host has no path to match, so the
     // address is normalised the way `openExternal` learnt to - and a lookup that cannot answer is
