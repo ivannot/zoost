@@ -2491,7 +2491,7 @@ def coverage():
     after four scripted scenarios, with nothing saying how much of the panel they touch. Measured
     Before the critical-control tranche this was **21 of 105** clickable controls in the CRM and
     **18 of 89** in Analytics. The pull, graph, export, workspace and settings paths now add their
-    real buttons;
+    real buttons, including the first-run Sample path in both extensions;
     the remaining controls are still not exercised here, and a reader can see that from the report.
 
     The denominator is cruder than the check, which is the rule this repository states for anything
@@ -2578,6 +2578,28 @@ def click_guard_installed() -> tuple:
             missing.append(name)
     return missing, seen
 
+
+# The sample button is the first-run escape hatch. It must create a complete local mirror without
+# contacting Zoho, so drive it from an empty staged folder in each extension.
+SAMPLE = PULL_CRM.split('(async () => {')[0] + """(async () => {
+  const fs = window.__fsshim;
+  fs.clear();
+  const load = typeof loadWorkspaces === 'function' ? loadWorkspaces : refreshWorkspaces;
+  await load();
+  await settle('the empty workspace list never drew');
+  await until(() => !$('wssample').hidden && !$('wssample').disabled, 'Sample never became available');
+  $('wssample').click();
+  await until(() => fs.dump().some((p) => {
+    if (!p.endsWith('.zoost.json')) return false;
+    try { return !!JSON.parse(fs.read(p)).sample; } catch (_) { return false; }
+  }), 'Sample did not write a marked workspace', 30000);
+  await settle('Sample workspace left the panel redrawing', 200, 10000);
+  const status = $('stxt') || $('statustext');
+  if (status && /failed|could not write/i.test(status.textContent))
+    say('Sample ended with an error: ' + status.textContent);
+  await until(() => $('overviewview').classList.contains('show'), 'Sample did not open the workspace overview');
+})();
+"""
 
 # **The settings, opened as a view of the panel.** They were a popup page of their own until the
 # panel became a window; nothing here could drive them then, because a second page is a second
@@ -2681,6 +2703,8 @@ def main() -> int:
                                      ("probe-analytics", "analytics", "analytics/sample-workspace", AN),
                                      ("pull-analytics", "analytics", "analytics/sample-workspace", PULL_AN),
                                      ("pull-crm", "crm", "crm/sampleorg-1234567890", PULL_CRM),
+                                     ("sample-crm", "crm", "crm/sampleorg-1234567890", SAMPLE),
+                                     ("sample-analytics", "analytics", "analytics/sample-workspace", SAMPLE),
                                      ("settings-crm", "crm", "crm/sampleorg-1234567890", SETTINGS),
                                      ("settings-analytics", "analytics", "analytics/sample-workspace", SETTINGS)):
             print(f"  {key:18s} driving\u2026", flush=True)
