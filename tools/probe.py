@@ -1665,13 +1665,18 @@ AN = """
         $('graphx').click();
         await until(() => !$('graphview').classList.contains('show'), 'closing the detail ER diagram failed');
       }
-      if ($('dzoho') && getComputedStyle($('dzoho')).display !== 'none' && !$('dzoho').disabled) {
+      const analyticsSample = typeof isSample === 'function' && isSample();
+      if ($('dzoho') && !analyticsSample && getComputedStyle($('dzoho')).display === 'none')
+        say('Analytics hid Open in Zoho for a non-sample workspace');
+      if ($('dzoho') && !analyticsSample && getComputedStyle($('dzoho')).display !== 'none' && !$('dzoho').disabled) {
+        const expectedViewUrl = typeof viewUrl === 'function' ? viewUrl(firstRow.dataset.id) : null;
+        if (!expectedViewUrl) say('Analytics detail did not produce an expected Zoho view URL');
         const beforeNav = window.__zoostTabs.created.length + window.__zoostTabs.updated.length;
         $('dzoho').click();
         await until(() => window.__zoostTabs.created.length + window.__zoostTabs.updated.length > beforeNav,
                     'Analytics detail navigation did not reach the Chrome tab adapter');
         const nav = window.__zoostTabs.updated.at(-1) || window.__zoostTabs.created.at(-1);
-        if (!nav || !/https?:[/][/][^/]*zoho[.][^/]+[/]/i.test(nav.url || ''))
+        if (!nav || nav.url !== expectedViewUrl)
           say('Analytics detail navigation used an unexpected URL: ' + JSON.stringify(nav));
       }
       $('dclose').click();
@@ -2364,12 +2369,14 @@ PULL_CRM = r"""
     // Chrome shim records the tab update/create so the test can verify the target without treating
     // a no-op stub as success.
     {
+      const expectedFunctionsUrl = typeof functionsUrl === 'function' ? functionsUrl() : null;
+      if (!expectedFunctionsUrl) say('CRM Functions did not produce an expected Zoho URL');
       const beforeNav = window.__zoostTabs.created.length + window.__zoostTabs.updated.length;
       $('funcs').click();
       await until(() => window.__zoostTabs.created.length + window.__zoostTabs.updated.length > beforeNav,
                   'CRM Functions navigation did not reach the Chrome tab adapter');
       const nav = window.__zoostTabs.updated.at(-1) || window.__zoostTabs.created.at(-1);
-      if (!nav || !/https?:[/][/][^/]*zoho[.][^/]+[/]crm[/]/i.test(nav.url || ''))
+      if (!nav || nav.url !== expectedFunctionsUrl)
         say('CRM Functions navigation used an unexpected URL: ' + JSON.stringify(nav));
     }
     await until(() => getComputedStyle($('pulllist')).display !== 'none' && !$('pulllist').disabled,
