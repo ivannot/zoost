@@ -1923,12 +1923,16 @@ PULL_AN = r"""
     // without sending a prompt or invoking any external provider; a provider contract belongs to a
     // separate test and must never be faked by this browser probe.
     await until(() => !$('askai').disabled, 'Analytics AI control never became available');
+    const analyticsFetch = window.fetch; let analyticsNetwork = 0;
+    window.fetch = (...args) => { analyticsNetwork++; return analyticsFetch(...args); };
     $('askai').click();
     await until(() => $('aiview').classList.contains('show'), 'Analytics assistant never opened');
     if (!document.body.classList.contains('ai-open')) say('Analytics assistant opened without its body state');
     $('aix').click();
     await until(() => !$('aiview').classList.contains('show'), 'closing Analytics assistant failed');
     if (document.body.classList.contains('ai-open')) say('Analytics assistant left the body in ai-open state');
+    window.fetch = analyticsFetch;
+    if (analyticsNetwork) say('opening and closing Analytics assistant made ' + analyticsNetwork + ' network request(s)');
 
     // A transient item failure must expose Retry and a successful retry must remove it. Pick a
     // query that really exists in the fixture, fail it once at the bridge boundary, then restore
@@ -2377,12 +2381,16 @@ PULL_CRM = r"""
     // provider and could move mirror data outside the machine. The shipped open/close wiring is
     // still exercised through the visible controls.
     await until(() => !$('askai').disabled, 'CRM AI control never became available');
+    const crmFetch = window.fetch; let crmNetwork = 0;
+    window.fetch = (...args) => { crmNetwork++; return crmFetch(...args); };
     $('askai').click();
     await until(() => $('aiview').classList.contains('show'), 'CRM assistant never opened');
     if (!document.body.classList.contains('ai-open')) say('CRM assistant opened without its body state');
     $('aix').click();
     await until(() => !$('aiview').classList.contains('show'), 'closing CRM assistant failed');
     if (document.body.classList.contains('ai-open')) say('CRM assistant left the body in ai-open state');
+    window.fetch = crmFetch;
+    if (crmNetwork) say('opening and closing CRM assistant made ' + crmNetwork + ' network request(s)');
     // Pull list is a separate user-facing operation from Pull all. Exercise the visible control so
     // its disabled guard, progress state and completion path are covered independently.
     setMode('functions'); await settle('the functions view never finished drawing after Pull all');
@@ -2724,6 +2732,69 @@ SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
 })();
 """
 
+# Folder access is a user-facing boundary of both panels.  Exercise the real picker path with the
+# in-memory File System Access shim, without involving Zoho or changing a fixture on disk.
+FOLDER = PULL_CRM.split('(async () => {')[0] + """(async () => {
+  const fs = window.__fsshim;
+  if (!$('wsroot')) say('the working-folder control is missing');
+  const beforeWorkspaceOptions = $('ws') ? $('ws').options.length : 0;
+  await window.idbHandle.del('rootDir');
+  root = null; rootGranted = false;
+  await until(() => !$('wsroot').disabled, 'working-folder control never became available');
+  $('wsroot').click();
+  await until(() => root && rootGranted, 'folder picker did not grant the in-memory folder');
+  await settle('choosing a working folder never redrew the panel');
+  if (!/sample/i.test($('wsroot').textContent || ''))
+    say('the working-folder control did not show the selected folder: ' + $('wsroot').textContent);
+  if (!$('ws') || !$('ws').options.length || $('ws').options.length < beforeWorkspaceOptions)
+    say('choosing a working folder did not reload the workspace list');
+  if (/error|failed|could not/i.test(($('stxt') || $('statustext')).textContent || ''))
+    say('choosing a working folder ended with an error: ' + (($('stxt') || $('statustext')).textContent || ''));
+  const pickedRoot = root;
+  const persistedRoot = await window.idbHandle.get('rootDir');
+  if (!persistedRoot) say('choosing a working folder did not persist its handle');
+  const originalPicker = window.showDirectoryPicker;
+  window.showDirectoryPicker = async () => { throw Object.assign(new Error('user cancelled'), { name: 'AbortError' }); };
+  $('wsroot').click();
+  await settle('cancelling the folder picker never settled');
+  if (root !== pickedRoot || !rootGranted) say('cancelling the folder picker changed the selected root');
+  if (await window.idbHandle.get('rootDir') !== persistedRoot) say('cancelling the folder picker changed the persisted root');
+  if (/error|failed|could not/i.test(($('stxt') || $('statustext')).textContent || ''))
+    say('cancelling the folder picker showed an error: ' + (($('stxt') || $('statustext')).textContent || ''));
+  window.showDirectoryPicker = originalPicker;
+  root = pickedRoot; rootGranted = true;
+  document.title = 'FOLDER OK';
+})();
+"""
+
+# Creating a workspace for a newly observed CRM org is separate from pulling an existing one: it
+# must preserve the old mirror while writing only the new local configuration.
+WORKSPACE_CRM = PULL_CRM.split('(async () => {')[0] + """(async () => {
+  const fs = window.__fsshim;
+  const oldBase = 'crm/sampleorg-1234567890/';
+  const oldCfg = JSON.parse(fs.read(oldBase + '.zoost.json'));
+  const newCtx = { ok: true, origin: oldCfg.base, org: '9876543210', instance: 'newinstance', zuid: '0' };
+  window.__bridge = window.__bridge || {};
+  window.__bridge.context = () => newCtx;
+  await refreshContext();
+  await settle('the CRM context did not update for the new workspace');
+  await until(() => $('wsadd') && !$('wsadd').hidden && !$('wsadd').disabled,
+              'Add workspace never became available for a new CRM org');
+  $('wsadd').click();
+  const path = 'crm/newinstance-9876543210/.zoost.json';
+  await until(() => fs.dump().includes(path), 'Add workspace did not create its local config');
+  const made = JSON.parse(fs.read(path));
+  if (made.org !== newCtx.org || made.instance !== newCtx.instance || made.base !== newCtx.origin)
+    say('new workspace stored the wrong context: ' + JSON.stringify(made));
+  if (!String($('ws').value).includes(newCtx.org)) say('new workspace was not selected after creation');
+  if (!$('overviewview').classList.contains('show')) say('workspace creation did not open Overview');
+  const oldAfter = JSON.parse(fs.read(oldBase + '.zoost.json'));
+  if (oldAfter.org !== oldCfg.org || oldAfter.instance !== oldCfg.instance)
+    say('creating a workspace changed the existing workspace');
+  document.title = 'WORKSPACE OK';
+})();
+"""
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -2755,7 +2826,10 @@ def main() -> int:
                                      ("sample-crm", "crm", "crm/sampleorg-1234567890", SAMPLE),
                                      ("sample-analytics", "analytics", "analytics/sample-workspace", SAMPLE),
                                      ("settings-crm", "crm", "crm/sampleorg-1234567890", SETTINGS),
-                                     ("settings-analytics", "analytics", "analytics/sample-workspace", SETTINGS)):
+                                     ("settings-analytics", "analytics", "analytics/sample-workspace", SETTINGS),
+                                     ("folder-crm", "crm", "crm/sampleorg-1234567890", FOLDER),
+                                     ("folder-analytics", "analytics", "analytics/sample-workspace", FOLDER),
+                                     ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM)):
             print(f"  {key:18s} driving\u2026", flush=True)
             dest = shots.render_panel((key, app, ws, script))
             dest.unlink(missing_ok=True)          # a probe is not a picture to publish
