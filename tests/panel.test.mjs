@@ -23858,11 +23858,19 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
         return { result, said };
       };
       const hidden = await run({ failed: 0, read: 0, hidden: true });
-      assert.equal(hidden.result.failed, 1, 'a hidden transition keeps the pull partial');
+      // **Partial, and counted as an answer rather than as a failure.** It used to land in `failed`,
+      // which the area records as «not read» - a word that promises another pull will fix it. It
+      // cannot: the reader pulled again, read exactly as much, and pulled again. `refused` is the
+      // counter whose own words say Zoho has answered and pulling will not change it.
+      assert.equal(hidden.result.failed, 0, 'a hidden module is reported as a retryable failure');
+      assert.equal(hidden.result.refused, 1, 'a hidden module is not counted at all');
       assert.ok(hidden.said.some((s) => s.startsWith('warn:')), 'a hidden transition leaves a warning status');
       assert.match(hidden.said.join('\n'), /0 of 1 transition\(s\) read/, 'hidden work is not counted as read');
       const throttled = await run({ failed: 0, read: 0, throttled: true });
+      // Throttling stays a failure: it is this minute's answer, not this profile's, and the next
+      // pull genuinely does read more.
       assert.equal(throttled.result.failed, 1, 'a throttled transition keeps the pull partial');
+      assert.ok(!throttled.result.refused, 'throttling was recorded as Zoho refusing this user');
       assert.match(throttled.said.join('\n'), /0 of 1 transition\(s\) read/, 'the throttled request is not counted as read');
     });
 

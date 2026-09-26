@@ -83,8 +83,13 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
   }
   blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: `blueprints/${String(e.id)}.json`,
                                     downloaded: have.has(String(e.id)), error: false }));
-  // What the last pull said it could not read, met against what is on disk now - see `reconcileGap`.
-  await reconcileGap('blueprints', blueprintData.filter((e) => !e.downloaded).length, op);
+  // **No reconciliation here, and the reason is a unit.** `reconcileGap` meets a recorded count
+  // against what the mirror is missing, and for blueprints that count is blueprints *and* their
+  // transitions added together - so measuring it against «blueprints with no file» zeroed a gap that
+  // was mostly transitions, and the badge fell through to «details older than the list». Mine, and
+  // reported within the hour. Until the gap records what it is counting, the honest thing here is to
+  // leave it to a pull; `noteItemRead` still takes one off when a whole blueprint is read by hand,
+  // which can undercount and cannot invent.
   return true;
 }
 async function rebuildBlueprints() {
@@ -964,9 +969,15 @@ async function downloadMissingBp(all = false) {
     // Transitions count towards the gap, not only blueprints: a run that read every blueprint and
     // lost half their actions is not a run that read everything, and recording it as one is the
     // defect this project has already paid for once.
-    // Hidden and throttled transitions are not retryable failures, but they are still unread.  The
-    // caller must not advance the area to a full-details timestamp while either gap remains.
-    return { failed: fail + tFail + hidden + (throttled ? 1 : 0) };
+    //
+    // **But a hidden module is an answer, and it is reported as one.** It was folded in with the
+    // failures, so «1 blueprint runs on a module your Zoho profile cannot see» came back to the
+    // reader as «not read» - a word whose whole promise is that another pull will fix it. It cannot:
+    // the next pull reads exactly as much and says the same thing, and the reader pulls again.
+    // Reported as that loop. `refused` is the counter that already says «Zoho's answer for this
+    // user, and pulling again will not change it», which is what this is.
+    // Throttling stays with the failures: it is this minute's answer, not this profile's.
+    return { failed: fail + tFail + (throttled ? 1 : 0), refused: hidden };
   } finally { setPullBusy(false); }
 }
 // Org-wide blueprint list → blueprints/index.json, plus one file per blueprint when the pull is a
@@ -1012,7 +1023,7 @@ async function pullBlueprints(depth = {}) {
     // A removal that failed is a deleted blueprint still on screen: the loader reads the disk, so the
     // residue is what the reader sees - said, recorded, and retried by the next pull for free.
     if (bpRmFail.length) setStatus($('stxt').textContent + ` · ${bpRmFail.length} deleted blueprint(s) could not be removed - the next pull retries`, 'warn');
-    await noteAccess('blueprints', bpRmFail.length ? { status: 0, message: `${bpRmFail.length} stale blueprint file(s) could not be removed` } : null, op, true, ...pullDepth(full, { unread: dl ? dl.failed : 0 }));   // the mirror was written; the gap is what came up short in it
+    await noteAccess('blueprints', bpRmFail.length ? { status: 0, message: `${bpRmFail.length} stale blueprint file(s) could not be removed` } : null, op, true, ...pullDepth(full, { unread: dl ? dl.failed : 0, refused: dl ? dl.refused : 0 }));   // the mirror was written; the gap is what came up short in it
   } catch (e) { await notePullFailure('blueprints', e, op); } finally { endPull(); }
 }
 async function pullSchedules() {
