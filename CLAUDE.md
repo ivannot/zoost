@@ -1055,6 +1055,17 @@ testing, so it captured a `ReferenceError` that made the whole options page stop
 found by *him*, minutes later, in an artefact already published and attested. **Tagging early does not
 save time; it publishes whatever has not been checked yet.** Wait for the word.
 
+**Two products named is two products prepared, in one pass.** «Se ti dico che dobbiamo pubblicare
+entrambe le app mi aspetto che esegui la preparazione di tutto quanto, altrimenti devo aspettare 2
+giri» - said on 26 September 2026, after Zoho CRM 2.0.0 was tagged, built, uploaded and handed over
+while nothing at all had been prepared for Zoho Analytics. The routine below runs per app; when both
+are named, run it per app **for both, back to back**, and write one handover covering the two. What
+makes this worth a rule rather than common sense is where the cost lands: his half is dashboard
+fields, five screenshot slots and a Submit that starts a two-to-three-day review, and staging it
+product by product makes him do the whole tedious half twice for no reason. The standing instruction
+above is unchanged - a release happens for the app he names - so one product named is still one
+product released.
+
 **"Give me the zip to publish" is a request for the whole chain, never for a file.** This is standing
 instruction, not a per-release choice: a package built here and handed over is exactly the weak link
 the chain was built to remove, so producing one on request would undo the work silently. If the

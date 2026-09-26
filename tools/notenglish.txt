@@ -5,6 +5,7 @@
 # has to recognise «tutti e due» to hold that page to the truth, so the words are the subject and
 # not prose. Added 23 August 2026, with the widening that reads a sentence whose subject is not a
 # product name.
+a02c21d570967e2d  CLAUDE.md: entrambe le app mi aspetto che esegui la preparazione di tutto quanto, altrimenti devo aspettare 2
 ac1302737218f94b  apps/analytics/workbench.html: ancora meglio, metterei dei bordi esterni». -->
 c4c873f64fc87db5  apps/analytics/workbench.js: *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
 69f39e2a5bd6503a  apps/crm/crm-context.js: *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
