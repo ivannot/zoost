@@ -1905,6 +1905,39 @@ PULL_AN = r"""
     };
     await clickPullAll();
 
+    // A transient item failure must expose Retry and a successful retry must remove it. Pick a
+    // query that really exists in the fixture, fail it once at the bridge boundary, then restore
+    // the normal answer. This exercises the failure state and the visible Retry control, not just
+    // the no-failure branch that correctly hides it.
+    const retryId = Object.keys(fxIndex).find((id) => fxViews.views.some((v) => String(v.id) === String(id) && v.type === 'QueryTable'));
+    if (!retryId) say('the Analytics fixture has no query suitable for a retry path');
+    const normalPullSql = window.__bridge.pullSql;
+    let failRetryOnce = true;
+    window.__bridge.pullSql = (m) => {
+      const answer = normalPullSql(m);
+      if (failRetryOnce && m.ids.map(String).includes(String(retryId))) {
+        failRetryOnce = false;
+        delete answer.sql[retryId];
+        answer.failed = [{ id: retryId, error: 'synthetic transient failure' }];
+      }
+      return answer;
+    };
+    $('pull').click();
+    await until(() => !pullBusy, 'the pull with a transient item failure never finished', 20000);
+    await settle('the failed pull never rendered its retry state');
+    await until(() => getComputedStyle($('retry')).display !== 'none', 'the failed pull did not expose Retry');
+    $('retry').click();
+    await until(() => !pullBusy, 'Retry never finished', 20000);
+    await settle('Retry never redrew the Analytics panel');
+    if (getComputedStyle($('retry')).display !== 'none') say('Retry remained visible after the failed item was recovered');
+    window.__bridge.pullSql = normalPullSql;
+
+    // Refresh is a separate control from Pull all: it distrusts the local mirror and reads it again.
+    await until(() => !$('refresh').disabled, 'Refresh never became available after a completed pull');
+    $('refresh').click();
+    await until(() => !pullBusy, 'Refresh never finished', 20000);
+    await settle('Refresh left the Analytics panel redrawing');
+
     // The main graph button is a user-facing entry point, distinct from the graph window probe
     // below. Verify that the click opens the inline diagram and that its close control returns to
     // the workbench rather than leaving an invisible overlay behind.
@@ -2457,7 +2490,8 @@ def coverage():
     The run used to end «both panels navigate as documented» - a sentence about the guides, printed
     after four scripted scenarios, with nothing saying how much of the panel they touch. Measured
     Before the critical-control tranche this was **21 of 105** clickable controls in the CRM and
-    **18 of 89** in Analytics. The pull, graph and Markdown-export paths now add their real buttons;
+    **18 of 89** in Analytics. The pull, graph, export, workspace and settings paths now add their
+    real buttons;
     the remaining controls are still not exercised here, and a reader can see that from the report.
 
     The denominator is cruder than the check, which is the rule this repository states for anything
@@ -2594,6 +2628,19 @@ SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
   tabToggle.click(); await settle('toggling a tab preference did not redraw');
   if (!document.querySelector('[data-section="tabPrefs"] .unsaved')) say('toggling a tab did not mark the section dirty');
   $('saveTabs').click(); await until(() => !document.querySelector('[data-section="tabPrefs"] .unsaved'), 'Save tabs did not clear its dirty marker');
+  }
+  // Saved search patterns are another settings write shared by both panels. Add one valid pattern,
+  // fill the two generated fields, and verify Save consumes the section's unsaved marker.
+  if ($('rxAdd')) {
+    $('rxAdd').click(); await settle('Add pattern did not redraw');
+    const rxInputs = [...document.querySelectorAll('#rxlist input')];
+    if (rxInputs.length < 2) say('Add pattern did not create name and expression fields');
+    const nameInput = rxInputs[rxInputs.length - 2], expressionInput = rxInputs[rxInputs.length - 1];
+    nameInput.value = 'Probe pattern'; nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    expressionInput.value = 'probe'; expressionInput.dispatchEvent(new Event('input', { bubbles: true }));
+    expressionInput.dispatchEvent(new Event('change', { bubbles: true })); await settle();
+    if (!document.querySelector('[data-section="rxShortcuts"] .unsaved')) say('Add pattern did not mark saved searches dirty');
+    $('saveRx').click(); await until(() => !document.querySelector('[data-section="rxShortcuts"] .unsaved'), 'Save patterns did not clear its dirty marker');
   }
   $('settingsx').click();
   await until(() => !view.classList.contains('show'), 'the settings view to close');

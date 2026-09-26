@@ -5724,7 +5724,7 @@ class TheProbeSaysHowMuchItDrove(unittest.TestCase):
     defect that happened. What it is not is coverage: before this tranche, it clicked **21 of 105**
     controls in the CRM panel and **18 of 89** in Analytics, and ended with a sentence about the
     guides that reads as a statement about the whole product. The critical-control tranche raises
-    those measured paths to 26 and 22 respectively.
+    those measured paths to 38 and 31 respectively.
 
     The rule this repository applies to anything that inspects a tree - print what was inspected and
     derive the denominator by a cruder method - had reached `htmlcheck`, `asynccheck`,
