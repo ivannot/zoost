@@ -2222,6 +2222,24 @@ ER = """
       setFocus(erIds[0]);
       await settle('the focus never landed');
       agree('a focus');
+      // The depth control is only meaningful while a focus is active. Exercise both directions
+      // when the fixture leaves room for them; a boundary is a valid state, not a reason to invent
+      // a click on a disabled control. This is local graph state: no Zoho tab or file picker is
+      // involved.
+      const depth = () => parseInt(($('erdVal') || {}).textContent || '', 10) || 0;
+      const depthBox = $('erdepth');
+      if (depthBox && getComputedStyle(depthBox).display !== 'none') {
+        const plus = $('erdPlus'), minus = $('erdMinus');
+        if (plus && !plus.disabled) {
+          const d0 = depth(); plus.click(); await settle('increasing graph depth never finished');
+          if (depth() !== d0 + 1) say(`graph depth did not increase from ${d0} to ${depth()}`);
+        }
+        if (minus && !minus.disabled) {
+          const d1 = depth(); minus.click(); await settle('decreasing graph depth never finished');
+          if (depth() !== d1 - 1) say(`graph depth did not decrease from ${d1} to ${depth()}`);
+        }
+        agree('depth changes');
+      }
       const all = $('focusall');
       if (all && !all.disabled) {
         all.click();
@@ -2229,6 +2247,51 @@ ER = """
         agree('Everything with a focus live');
       }
     }
+
+    // The remaining ER toolbar controls change only the local drawing. Check the visible label and
+    // the resulting node count rather than relying on a click that merely did not throw.
+    const emph = $('erEmph');
+    if (emph && !emph.disabled) {
+      const beforeEmph = emph.textContent;
+      emph.click(); await settle('changing diagram emphasis never finished');
+      if (emph.textContent === beforeEmph) say('diagram emphasis did not change its label');
+      if (!erVisibleIds().length) say('changing diagram emphasis emptied the diagram');
+      emph.click(); await settle('restoring diagram emphasis never finished');
+      if (emph.textContent !== beforeEmph) say('diagram emphasis did not return to its original mode');
+    }
+    const fields = $('erAll');
+    if (fields && !fields.disabled) {
+      const beforeFields = fields.textContent;
+      fields.click(); await settle('changing diagram fields never finished');
+      if (fields.textContent === beforeFields) say('diagram fields did not change its label');
+      if (!erVisibleIds().length) say('changing diagram fields emptied the diagram');
+      fields.click(); await settle('restoring diagram fields never finished');
+      if (fields.textContent !== beforeFields) say('diagram fields did not return to its original mode');
+    }
+    const layout = $('erLayBtn'), layoutPane = $('erlay');
+    if (layout && layoutPane && !layout.disabled) {
+      layout.click();
+      await until(() => layoutPane.classList.contains('on'), 'diagram Layout did not open');
+      const slider = $('pMargin');
+      if (slider) {
+        const old = String(slider.value);
+        const next = old === slider.min ? slider.max : slider.min;
+        slider.value = next;
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        await settle('diagram spacing did not redraw');
+        if (String(slider.value) !== next) say('diagram spacing did not accept the new value');
+        $('erlayReset').click();
+        await settle('diagram layout reset never finished');
+        if (String(slider.value) === next) say('diagram layout reset did not restore spacing');
+        agree('diagram layout reset');
+      }
+      layout.click();
+      await until(() => !layoutPane.classList.contains('on'), 'diagram Layout did not close');
+    }
+    const relay = $('erRelay');
+    if (relay && !relay.disabled) { relay.click(); await settle('diagram Re-layout never finished'); agree('diagram Re-layout'); }
+    const fit = $('erFit2');
+    if (fit && !fit.disabled) { fit.click(); await settle('diagram Fit never finished'); agree('diagram Fit'); }
     document.title = 'SHOT OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """
@@ -2732,6 +2795,48 @@ SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
 })();
 """
 
+# Detail navigation is local state: it must remember a reader's path without asking Zoho again.
+# Use two real list rows and the visible Back/Forward controls, rather than calling navTo() or
+# inspecting the history object directly.  No provider, Zoho navigation, pull or download is part
+# of this scenario.
+NAV_ANALYTICS = PULL_AN.split('(async () => {')[0] + """(async () => {
+  const rows = () => [...document.querySelectorAll('#list tbody tr[data-id]')];
+  await until(() => rows().length >= 2, 'Analytics list never exposed two views for navigation');
+  const firstId = rows()[0].dataset.id, secondId = rows()[1].dataset.id;
+  if (!firstId || !secondId || firstId === secondId)
+    say('Analytics navigation fixture did not expose two distinct view ids');
+
+  rows()[0].click();
+  await until(() => $('detail').classList.contains('show') && selectedId === firstId,
+              'opening the first Analytics detail never selected its view');
+  const firstTitle = $('dtitle').textContent.trim();
+  if (!firstTitle) say('the first Analytics detail opened without a title');
+
+  rows()[1].click();
+  await until(() => $('detail').classList.contains('show') && selectedId === secondId,
+              'opening the second Analytics detail never selected its view');
+  const secondTitle = $('dtitle').textContent.trim();
+  if (!secondTitle || secondTitle === firstTitle)
+    say('Analytics detail navigation did not show a distinct second view');
+  await until(() => getComputedStyle($('dback')).display !== 'none' && $('dback').classList.contains('show'),
+              'Analytics Back never became available after visiting two views');
+
+  $('dback').click();
+  await until(() => selectedId === firstId && $('dtitle').textContent.trim() === firstTitle,
+              'Analytics Back did not restore the first view');
+  await until(() => getComputedStyle($('dfwd')).display !== 'none' && $('dfwd').classList.contains('show'),
+              'Analytics Forward never became available after going back');
+
+  $('dfwd').click();
+  await until(() => selectedId === secondId && $('dtitle').textContent.trim() === secondTitle,
+              'Analytics Forward did not restore the second view');
+
+  $('dclose').click();
+  await until(() => !$('detail').classList.contains('show') && selectedId === null,
+              'closing Analytics detail did not return to the list');
+})();
+"""
+
 # Folder access is a user-facing boundary of both panels.  Exercise the real picker path with the
 # in-memory File System Access shim, without involving Zoho or changing a fixture on disk.
 FOLDER = PULL_CRM.split('(async () => {')[0] + """(async () => {
@@ -2775,7 +2880,15 @@ WORKSPACE_CRM = PULL_CRM.split('(async () => {')[0] + """(async () => {
   const oldCfg = JSON.parse(fs.read(oldBase + '.zoost.json'));
   const newCtx = { ok: true, origin: oldCfg.base, org: '9876543210', instance: 'newinstance', zuid: '0' };
   window.__bridge = window.__bridge || {};
-  window.__bridge.context = () => newCtx;
+  const bridgeCalls = [];
+  for (const [name, fn] of Object.entries(window.__bridge)) {
+    if (typeof fn !== 'function' || name === 'context') continue;
+    window.__bridge[name] = () => {
+      bridgeCalls.push(name);
+      throw new Error('workspace creation unexpectedly called bridge command ' + name);
+    };
+  }
+  window.__bridge.context = () => { bridgeCalls.push('context'); return newCtx; };
   await refreshContext();
   await settle('the CRM context did not update for the new workspace');
   await until(() => $('wsadd') && !$('wsadd').hidden && !$('wsadd').disabled,
@@ -2788,10 +2901,68 @@ WORKSPACE_CRM = PULL_CRM.split('(async () => {')[0] + """(async () => {
     say('new workspace stored the wrong context: ' + JSON.stringify(made));
   if (!String($('ws').value).includes(newCtx.org)) say('new workspace was not selected after creation');
   if (!$('overviewview').classList.contains('show')) say('workspace creation did not open Overview');
+  if (bridgeCalls.some((name) => name !== 'context')) say('workspace creation called unexpected bridge commands: ' + bridgeCalls.join(', '));
   const oldAfter = JSON.parse(fs.read(oldBase + '.zoost.json'));
   if (oldAfter.org !== oldCfg.org || oldAfter.instance !== oldCfg.instance)
     say('creating a workspace changed the existing workspace');
   document.title = 'WORKSPACE OK';
+})();
+"""
+
+# Preview navigation is a local boundary: it changes only the selected mirror item, the detail
+# tabs and the in-panel history. Keep it separate from the pull and workspace scenarios so a
+# failure cannot be mistaken for a filesystem or bridge failure. No «Open in Zoho» control is
+# pressed here: those controls are covered by URL-adapter checks and this scenario deliberately
+# proves the path that never leaves the machine.
+CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
+  const rows = () => [...document.querySelectorAll('#tree .f')];
+  await until(() => rows().length > 1, 'CRM preview fixture did not draw two function rows');
+  const first = rows().find((row) => /Build invoice/i.test(row.textContent)) || rows()[0];
+  const second = rows().find((row) => row !== first);
+  if (!first || !second) say('CRM preview fixture has fewer than two selectable functions');
+  const firstPath = first.dataset.path, secondPath = second.dataset.path;
+
+  // The first click is the same gesture a reader uses. Check both local preview tabs rather than
+  // only their labels: a tab that is painted but cannot change the pane is still a dead control.
+  first.click();
+  await until(() => currentPath === firstPath && $('preview').classList.contains('show'),
+              'opening the first CRM function preview failed');
+  for (const id of ['pvtab_code', 'pvtab_info']) {
+    if (getComputedStyle($(id)).display === 'none') say('the function preview is missing ' + id);
+    $(id).click(); await settle('the CRM preview tab did not redraw');
+    if (!$(id).classList.contains('active')) say(id + ' did not become the active preview tab');
+  }
+  $('pvtab_code').click(); await settle();
+  if (getComputedStyle($('pvbody')).display === 'none') say('Code tab opened without showing the local source');
+
+  // A second local selection creates one history step. Back and forward must change the subject,
+  // not close the preview or issue another bridge request.
+  second.click();
+  await until(() => currentPath === secondPath, 'opening the second CRM function preview failed');
+  await until(() => $('pvback').classList.contains('show'), 'preview back was not offered after two selections');
+  $('pvback').click();
+  await until(() => currentPath === firstPath && $('preview').classList.contains('show'),
+              'preview back did not return to the first function');
+  if ($('pvfwd').classList.contains('show') === false) say('preview forward was not offered after going back');
+  $('pvfwd').click();
+  await until(() => currentPath === secondPath && $('preview').classList.contains('show'),
+              'preview forward did not return to the second function');
+
+  // Closing is local and must not leave a stale selection or an invisible overlay behind.
+  $('pvx').click();
+  await until(() => !$('preview').classList.contains('show'), 'closing the CRM preview failed');
+  if (currentPath !== null) say('closing the CRM preview left a selected path: ' + currentPath);
+
+  // Search clear is another local state transition. Use the visible search box, then its real
+  // clear control, and require the complete list to come back rather than merely checking the box.
+  const total = rows().length;
+  const find = $('find');
+  find.value = 'Build'; find.dispatchEvent(new Event('input')); await settle('CRM name search did not redraw');
+  if (!find.value) say('CRM search lost its typed value');
+  if (!rows().length || rows().length >= total) say('CRM name search did not narrow the function list');
+  $('findx').click(); await settle('CRM search clear did not redraw');
+  await until(() => find.value === '' && rows().length === total, 'CRM search clear did not restore the function list');
+  document.title = 'CRM PREVIEW NAV OK';
 })();
 """
 
@@ -2827,9 +2998,11 @@ def main() -> int:
                                      ("sample-analytics", "analytics", "analytics/sample-workspace", SAMPLE),
                                      ("settings-crm", "crm", "crm/sampleorg-1234567890", SETTINGS),
                                      ("settings-analytics", "analytics", "analytics/sample-workspace", SETTINGS),
+                                     ("nav-analytics", "analytics", "analytics/sample-workspace", NAV_ANALYTICS),
                                      ("folder-crm", "crm", "crm/sampleorg-1234567890", FOLDER),
                                      ("folder-analytics", "analytics", "analytics/sample-workspace", FOLDER),
-                                     ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM)):
+                                     ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM),
+                                     ("preview-nav-crm", "crm", "crm/sampleorg-1234567890", CRM_PREVIEW_NAV)):
             print(f"  {key:18s} driving\u2026", flush=True)
             dest = shots.render_panel((key, app, ws, script))
             dest.unlink(missing_ok=True)          # a probe is not a picture to publish
