@@ -2877,7 +2877,8 @@ FOLDER = PULL_CRM.split('(async () => {')[0] + """(async () => {
 WORKSPACE_CRM = PULL_CRM.split('(async () => {')[0] + """(async () => {
   const fs = window.__fsshim;
   const oldBase = 'crm/sampleorg-1234567890/';
-  const oldCfg = JSON.parse(fs.read(oldBase + '.zoost.json'));
+  const oldCfgRaw = fs.read(oldBase + '.zoost.json');
+  const oldCfg = JSON.parse(oldCfgRaw);
   const newCtx = { ok: true, origin: oldCfg.base, org: '9876543210', instance: 'newinstance', zuid: '0' };
   window.__bridge = window.__bridge || {};
   const bridgeCalls = [];
@@ -2902,8 +2903,8 @@ WORKSPACE_CRM = PULL_CRM.split('(async () => {')[0] + """(async () => {
   if (!String($('ws').value).includes(newCtx.org)) say('new workspace was not selected after creation');
   if (!$('overviewview').classList.contains('show')) say('workspace creation did not open Overview');
   if (bridgeCalls.some((name) => name !== 'context')) say('workspace creation called unexpected bridge commands: ' + bridgeCalls.join(', '));
-  const oldAfter = JSON.parse(fs.read(oldBase + '.zoost.json'));
-  if (oldAfter.org !== oldCfg.org || oldAfter.instance !== oldCfg.instance)
+  const oldAfterRaw = fs.read(oldBase + '.zoost.json');
+  if (oldAfterRaw !== oldCfgRaw)
     say('creating a workspace changed the existing workspace');
   document.title = 'WORKSPACE OK';
 })();
@@ -2927,6 +2928,8 @@ CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
   first.click();
   await until(() => currentPath === firstPath && $('preview').classList.contains('show'),
               'opening the first CRM function preview failed');
+  const firstName = $('pvname').textContent.trim();
+  if (!firstName) say('the first CRM preview opened without a subject label');
   for (const id of ['pvtab_code', 'pvtab_info']) {
     if (getComputedStyle($(id)).display === 'none') say('the function preview is missing ' + id);
     $(id).click(); await settle('the CRM preview tab did not redraw');
@@ -2938,14 +2941,19 @@ CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
   // A second local selection creates one history step. Back and forward must change the subject,
   // not close the preview or issue another bridge request.
   second.click();
-  await until(() => currentPath === secondPath, 'opening the second CRM function preview failed');
+  await until(() => currentPath === secondPath && $('pvname').textContent.trim() &&
+              $('pvname').textContent.trim() !== firstName,
+              'opening the second CRM function preview did not redraw its subject');
+  const secondName = $('pvname').textContent.trim();
   await until(() => $('pvback').classList.contains('show'), 'preview back was not offered after two selections');
   $('pvback').click();
-  await until(() => currentPath === firstPath && $('preview').classList.contains('show'),
+  await until(() => currentPath === firstPath && $('preview').classList.contains('show') &&
+              $('pvname').textContent.trim() === firstName,
               'preview back did not return to the first function');
   if ($('pvfwd').classList.contains('show') === false) say('preview forward was not offered after going back');
   $('pvfwd').click();
-  await until(() => currentPath === secondPath && $('preview').classList.contains('show'),
+  await until(() => currentPath === secondPath && $('preview').classList.contains('show') &&
+              $('pvname').textContent.trim() === secondName,
               'preview forward did not return to the second function');
 
   // Closing is local and must not leave a stale selection or an invisible overlay behind.
