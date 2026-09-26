@@ -1,60 +1,84 @@
 {
   "checks": {
     "assistant": {
-      "at": "2026-09-21T15:48:16+00:00",
-      "commit": "b4eaf8e434c06de1252185e6d9e8d75dd1956aec",
-      "note": "fatti tutti i test. green light. si pubblica",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "The assistant answers about the org, with a real key",
-      "version": "1.34.0"
+      "version": "2.0.0"
     },
     "export": {
-      "at": "2026-09-21T15:48:16+00:00",
-      "commit": "b4eaf8e434c06de1252185e6d9e8d75dd1956aec",
-      "note": "fatti tutti i test. green light. si pubblica",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "An export opens and reads as the panel reads",
-      "version": "1.34.0"
+      "version": "2.0.0"
     },
     "fresh-profile": {
-      "at": "2026-09-21T15:48:16+00:00",
-      "commit": "b4eaf8e434c06de1252185e6d9e8d75dd1956aec",
-      "note": "fatti tutti i test. green light. si pubblica",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "A profile that has never seen Zoost",
-      "version": "1.34.0"
+      "version": "2.0.0"
+    },
+    "own-window": {
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
+      "result": "pass",
+      "title": "Zoost is a window, and it is where you left it",
+      "version": "2.0.0"
     },
     "passphrase": {
-      "at": "2026-09-12T10:58:50+00:00",
-      "commit": "3292033498ff4c5070bf15448918e5df3db1fe02",
-      "note": "Funziona. (Profilo Chrome nuovo, entrambe le estensioni caricate: il pannello si apre dall'icona e i due pattern predefiniti ci sono.)",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "The API key under a passphrase, across a browser restart",
-      "version": "1.32.1"
+      "version": "2.0.0"
     },
     "pull-all": {
-      "at": "2026-09-21T15:48:16+00:00",
-      "commit": "b4eaf8e434c06de1252185e6d9e8d75dd1956aec",
-      "note": "fatti tutti i test. green light. si pubblica",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "Pull all, on a real org, from an empty workspace",
-      "version": "1.34.0"
+      "version": "2.0.0"
     },
     "restart": {
-      "at": "2026-09-21T15:48:16+00:00",
-      "commit": "b4eaf8e434c06de1252185e6d9e8d75dd1956aec",
-      "note": "fatti tutti i test. green light. si pubblica",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "A full browser restart: the folder, and what you changed in Settings",
-      "version": "1.34.0"
+      "version": "2.0.0"
+    },
+    "tab-not-in-front": {
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
+      "result": "pass",
+      "title": "A Zoho tab that is open but not the one you are looking at",
+      "version": "2.0.0"
     },
     "twin-tab": {
-      "at": "2026-09-21T15:48:16+00:00",
-      "commit": "b4eaf8e434c06de1252185e6d9e8d75dd1956aec",
-      "note": "fatti tutti i test. green light. si pubblica",
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
       "result": "pass",
       "title": "The other product's tab is named, and what the panel offers there",
-      "version": "1.34.0"
+      "version": "2.0.0"
+    },
+    "views-inside": {
+      "at": "2026-09-26T16:42:39+00:00",
+      "commit": "8620953945a0ddd8947d226a38dd54f479f21af3",
+      "note": "tutto verde; testato dopo avere aggiornato l'extension",
+      "result": "pass",
+      "title": "The diagram and the settings open inside that window",
+      "version": "2.0.0"
     }
   }
 }
