@@ -1647,6 +1647,29 @@ AN = """
     const firstRow = $('list').querySelector('tr[data-id]');
     if (firstRow) {
       firstRow.click(); await settle('the detail pane never opened');
+      // Exercise the stable detail-tab controls themselves, not only a text-labelled tab found by
+      // the earlier check. A view without SQL, relations or lineage legitimately keeps that tab
+      // unavailable, so only click controls the product says are usable.
+      for (const id of ['tab_sql', 'tab_rel', 'tab_lin']) {
+        const tab = $(id);
+        if (tab && getComputedStyle(tab).display !== 'none' && !tab.disabled) {
+          tab.click(); await settle('Analytics detail tab ' + id + ' never finished drawing');
+          if (!tab.classList.contains('active')) say('Analytics detail did not select ' + id);
+        }
+      }
+      // A relational view offers an ER entry point from the detail header. Open and close it
+      // through the visible button so both the guard and the return path are exercised.
+      if ($('dgraph') && !$('dgraph').disabled && getComputedStyle($('dgraph')).display !== 'none') {
+        $('dgraph').click();
+        await until(() => $('graphview').classList.contains('show'), 'the detail ER diagram never opened');
+        $('graphx').click();
+        await until(() => !$('graphview').classList.contains('show'), 'closing the detail ER diagram failed');
+      }
+      $('dclose').click();
+      await until(() => !$('detail').classList.contains('show'), 'closing Analytics detail failed');
+      const reopenedRow = $('list').querySelector('tr[data-id]');
+      if (!reopenedRow) say('closing Analytics detail removed the list row');
+      reopenedRow.click(); await settle('reopening Analytics detail failed');
       if (!$('dpull').disabled) {
         $('dpull').click();
         await until(() => !pullBusy, 'the single re-read never finished', 15000);
@@ -1855,6 +1878,21 @@ PULL_AN = r"""
     if (!w) say('the workspace is not in the list after refreshWorkspaces: ' + wsList.map((x) => x.id));
     await selectWorkspace(w);
     await settle('the selected workspace never drew');
+
+    // Exercise the workspace label and the non-destructive cancellation of Remove. The dialog
+    // result is supplied by the harness, but the click, persistence and cancellation remain the
+    // shipped Analytics handlers and filesystem adapter.
+    const oldPrompt = window.prompt;
+    window.prompt = () => 'Probe Analytics workspace';
+    $('wsrename').click();
+    await until(() => /Probe Analytics workspace/.test(fs.read(base + '.zoost.json') || ''), 'Analytics workspace rename did not persist');
+    window.prompt = oldPrompt;
+    const oldConfirm = window.confirm;
+    window.confirm = () => false;
+    $('wsdel').click();
+    await settle('Cancel Analytics workspace removal left the panel redrawing');
+    window.confirm = oldConfirm;
+    if (!fs.read(base + '.zoost.json')) say('Cancel Analytics workspace removal discarded the local config');
 
     // Exercise the control the reader actually presses. Calling pullAll() directly proves the
     // use case but skips the disabled-state guard and the DOM wiring on #pull.
@@ -2253,6 +2291,21 @@ PULL_CRM = r"""
     await loadWorkspaces();
     await settle('the workspace list never drew');
 
+    // Workspace management is part of the user's data boundary. Use the native-dialog hooks only
+    // to supply the text a real click would receive, then cancel removal so this probe never deletes
+    // even its own fixture. The rename must persist to the local config; Cancel must leave it there.
+    const oldPrompt = window.prompt;
+    window.prompt = () => 'Probe workspace';
+    $('wsrename').click();
+    await until(() => /Probe workspace/.test(fs.read(base + '.zoost.json') || ''), 'Rename workspace did not persist');
+    window.prompt = oldPrompt;
+    const oldConfirm = window.confirm;
+    window.confirm = () => false;
+    $('wsdel').click();
+    await settle('Cancel remove workspace left the panel redrawing');
+    window.confirm = oldConfirm;
+    if (!fs.read(base + '.zoost.json')) say('Cancel remove workspace discarded the local config');
+
     // Exercise the control the reader actually presses. Calling pullAll() directly proves the
     // runner but skips the disabled-state guard and the DOM wiring on #pull.
     const clickPullAll = async (what = 'Pull all') => {
@@ -2262,6 +2315,14 @@ PULL_CRM = r"""
       await settle(what + ' left the panel redrawing');
     };
     await clickPullAll();
+    // Pull list is a separate user-facing operation from Pull all. Exercise the visible control so
+    // its disabled guard, progress state and completion path are covered independently.
+    setMode('functions'); await settle('the functions view never finished drawing after Pull all');
+    await until(() => getComputedStyle($('pulllist')).display !== 'none' && !$('pulllist').disabled,
+                'Pull list never became available');
+    $('pulllist').click();
+    await until(() => !pullBusy, 'Pull list never finished', 20000);
+    await settle('Pull list left the panel redrawing');
     // `pullAll` hands over to `downloadMissing`, which is the part that takes the time. Wait for the
     // panel to say it is done rather than for a number of seconds: a sleep long enough for a slow
     // machine is a probe that takes that long on every machine.
@@ -2504,6 +2565,36 @@ SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
   // changes» means, and it was wrong once because the rebase ran before the reads.
   const dirty = [...document.querySelectorAll('[data-section]')].filter((x) => x.classList.contains('dirty'));
   if (dirty.length) say('a section says it has unsaved changes the moment it is opened: ' + dirty.map((x) => x.dataset.section).join(', '));
+  // Exercise the settings actions that write user preferences. This scenario has its own browser
+  // profile, so it can verify the dirty marker and the save result without changing a real user's
+  // settings or relying on storage state from another probe.
+  if ($('scSafe')) {
+  $('scSafe').click(); await settle('Share-safe did not update export defaults');
+  // The stored fixture may already be share-safe, so make a guaranteed edit before asserting the
+  // dirty marker. The preset click above is still covered; this toggle proves a normal checkbox
+  // edit follows the same save path.
+  const codeBox = $('cfgsc_code');
+  codeBox.checked = !codeBox.checked; codeBox.dispatchEvent(new Event('change')); await settle();
+  if (!document.querySelector('[data-section="exportScope"] .unsaved')) say('Share-safe did not mark export defaults dirty');
+  $('saveScope').click(); await until(() => !document.querySelector('[data-section="exportScope"] .unsaved'), 'Save defaults did not clear its dirty marker');
+  }
+  $('layReset').click(); await settle('Restore diagram defaults did not redraw');
+  // The stored layout may already equal the built-in preset, so change one slider after exercising
+  // the reset button to prove the section's ordinary edit path as well.
+  const margin = $('cfgMargin');
+  margin.value = String(Math.min(Number(margin.max), Number(margin.value) + Number(margin.step || 5)));
+  margin.dispatchEvent(new Event('input', { bubbles: true }));
+  margin.dispatchEvent(new Event('change', { bubbles: true })); await settle();
+  if (!document.querySelector('[data-section="erParams"] .unsaved')) say('Restore diagram defaults did not mark the section dirty');
+  $('saveLay').click(); await until(() => !document.querySelector('[data-section="erParams"] .unsaved'), 'Save diagram defaults did not clear its dirty marker');
+  if ($('tabReset')) {
+  $('tabReset').click(); await settle('Show all tabs did not redraw');
+  const tabToggle = document.querySelector('#tablist input[type="checkbox"]:not(:disabled)');
+  if (!tabToggle) say('the Tabs settings list has no editable tab');
+  tabToggle.click(); await settle('toggling a tab preference did not redraw');
+  if (!document.querySelector('[data-section="tabPrefs"] .unsaved')) say('toggling a tab did not mark the section dirty');
+  $('saveTabs').click(); await until(() => !document.querySelector('[data-section="tabPrefs"] .unsaved'), 'Save tabs did not clear its dirty marker');
+  }
   $('settingsx').click();
   await until(() => !view.classList.contains('show'), 'the settings view to close');
 })();
