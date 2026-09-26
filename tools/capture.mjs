@@ -104,8 +104,10 @@ if (arg2 === '--probe') {
     // difference that showed up on the text-heavy shots and nowhere else.
     const state = await evaluate(
       '[document.readyState, (window.__zoostPending === undefined ? 0 : window.__zoostPending),'
-      + ' document.fonts ? document.fonts.status : "loaded"]');
-    quiet = (state && state[0] === 'complete' && state[1] === 0 && state[2] === 'loaded')
+      + ' document.fonts ? document.fonts.status : "loaded", document.title]');
+    const scenarioDone = !process.env.ZOOST_EXPECT_SCENARIO || (state &&
+      (String(state[3]).endsWith(' OK') || String(state[3]).startsWith('SHOT ERROR')));
+    quiet = (scenarioDone && state && state[0] === 'complete' && state[1] === 0 && state[2] === 'loaded')
       ? quiet + 1 : 0;
     if (quiet >= 2 || Date.now() > deadline) break;
     await new Promise((r) => setTimeout(r, 120));

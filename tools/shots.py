@@ -340,8 +340,14 @@ def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, he
     a test framework and without the project's first dependency.
     """
     ws, _, _ = _browser_for(width, height, SCALE)
+    capture_env = os.environ.copy()
+    if expect_ok:
+        capture_env["ZOOST_EXPECT_SCENARIO"] = "1"
+    else:
+        capture_env.pop("ZOOST_EXPECT_SCENARIO", None)
     out = subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, page.as_uri(),
-                          str(dest), str(wait_ms)], check=True, capture_output=True, text=True)
+                          str(dest), str(wait_ms)], check=True, capture_output=True, text=True,
+                          env=capture_env)
     try:
         said = json.loads(out.stdout or "{}")
     except ValueError:

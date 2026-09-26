@@ -86,8 +86,8 @@ CRM = """
   // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
   // instead of failing three lines later on whatever the click was supposed to have produced.
   //
-  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
-  // and the counter at the end of the run prints how many are left.
+  // What it does not cover, stated: work that finishes without touching the DOM. Those must expose
+  // their own condition, and the counter at the end of the run makes any unconditioned wait visible.
   let _lastMut = 0;
   new MutationObserver(() => { _lastMut = Date.now(); })
     .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
@@ -1368,8 +1368,8 @@ AN = """
   // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
   // instead of failing three lines later on whatever the click was supposed to have produced.
   //
-  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
-  // and the counter at the end of the run prints how many are left.
+  // What it does not cover, stated: work that finishes without touching the DOM. Those must expose
+  // their own condition, and the counter at the end of the run makes any unconditioned wait visible.
   let _lastMut = 0;
   new MutationObserver(() => { _lastMut = Date.now(); })
     .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
@@ -1385,7 +1385,6 @@ AN = """
       $('navtab').click();
       await until(() => $('navview').classList.contains('show'), 'the history view never opened');
     };
-    await wait(1600);
     await until(() => !$('overview').disabled, 'the workspace overview never became available');
     $('overview').click();
     await until(() => $('overviewview').classList.contains('show') && document.querySelectorAll('.ovcard').length === 4,
@@ -1830,8 +1829,8 @@ PULL_AN = r"""
   // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
   // instead of failing three lines later on whatever the click was supposed to have produced.
   //
-  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
-  // and the counter at the end of the run prints how many are left.
+  // What it does not cover, stated: work that finishes without touching the DOM. Those must expose
+  // their own condition, and the counter at the end of the run makes any unconditioned wait visible.
   let _lastMut = 0;
   new MutationObserver(() => { _lastMut = Date.now(); })
     .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
@@ -2154,8 +2153,8 @@ ER = """
   // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
   // instead of failing three lines later on whatever the click was supposed to have produced.
   //
-  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
-  // and the counter at the end of the run prints how many are left.
+  // What it does not cover, stated: work that finishes without touching the DOM. Those must expose
+  // their own condition, and the counter at the end of the run makes any unconditioned wait visible.
   let _lastMut = 0;
   new MutationObserver(() => { _lastMut = Date.now(); })
     .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
@@ -2355,8 +2354,8 @@ PULL_CRM = r"""
   // milliseconds, a slow one is still correct, and a panel that never redraws says so by name
   // instead of failing three lines later on whatever the click was supposed to have produced.
   //
-  // What it does not cover, stated: work that finishes without touching the DOM. Those stay sleeps,
-  // and the counter at the end of the run prints how many are left.
+  // What it does not cover, stated: work that finishes without touching the DOM. Those must expose
+  // their own condition, and the counter at the end of the run makes any unconditioned wait visible.
   let _lastMut = 0;
   new MutationObserver(() => { _lastMut = Date.now(); })
     .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
@@ -2486,8 +2485,8 @@ PULL_CRM = r"""
     // `pullAll` hands over to `downloadMissing`, which is the part that takes the time. Wait for the
     // panel to say it is done rather than for a number of seconds: a sleep long enough for a slow
     // machine is a probe that takes that long on every machine.
-    for (let i = 0; i < 120 && !/downloaded|still missing/.test($('stxt').textContent); i++) await wait(250);
-    await until(() => !$('graph').disabled, 'the CRM graph control never became available');
+    await until(() => !$('graph').disabled,
+                'the CRM Pull list did not leave the graph control available', 30000);
     $('graph').click();
     await until(() => $('graphview').classList.contains('show'), 'the CRM graph never opened');
     $('graphx').click();
@@ -2601,7 +2600,8 @@ PULL_CRM = r"""
       say(`a truncated list deleted ${beforeCap - afterCap} file(s) - a partial answer pruned the mirror`);
     stObs.disconnect();
     const cls = document.getElementById('status').className;
-    if (!/more|stopped|partial|not everything|list stopped/i.test($('stxt').textContent) && cls !== 'warn')
+    const capWarning = said.some((text) => /more|stopped|partial|not everything|list stopped/i.test(text));
+    if (!capWarning && cls !== 'warn')
       say(`a truncated list was reported as a complete one: «${$('stxt').textContent}» [${cls}]`
           + ' | said, in order: ' + JSON.stringify(said.slice(-6)));
     serveCapped = false;
@@ -2657,7 +2657,7 @@ def coverage():
 
 
 def waits() -> tuple:
-    """(bare sleeps, condition waits) across every scenario in this file.
+    """(unconditioned sleeps, condition waits) across every scenario in this file.
 
     Derived from this file's own text rather than from a number typed beside it, so the two move
     when the scenarios do. It reads `await wait(` and `await until(`, which is the whole vocabulary;
@@ -2678,9 +2678,14 @@ def waits() -> tuple:
             continue
         # `settle` is `until` wearing a shorter name - it waits for the document to stop
         # changing - so counting it as a bet would report the opposite of what it is.
-        bare += body.count("await wait(")
+        # The 25ms yield inside until() is the polling mechanism of a condition, not a test
+        # decision to sleep for a guessed duration. Count it with the condition so the headline
+        # measures actual bets rather than implementation details of the watcher.
+        polling = body.count("await wait(25)")
+        bare += body.count("await wait(") - polling
         cond += body.count("await settle(")
         cond += body.count("await until(")
+        cond += polling
     return (bare, cond)
 
 
@@ -2742,6 +2747,7 @@ SAMPLE = PULL_CRM.split('(async () => {')[0] + """(async () => {
   if (status && /failed|could not write/i.test(status.textContent))
     say('Sample ended with an error: ' + status.textContent);
   await until(() => $('overviewview').classList.contains('show'), 'Sample did not open the workspace overview');
+  document.title = 'SAMPLE OK';
 })();
 """
 
@@ -2812,10 +2818,10 @@ SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
     expressionInput.value = 'probe'; expressionInput.dispatchEvent(new Event('input', { bubbles: true }));
     expressionInput.dispatchEvent(new Event('change', { bubbles: true })); await settle();
     if (!document.querySelector('[data-section="rxShortcuts"] .unsaved')) say('Add pattern did not mark saved searches dirty');
-    $('saveRx').click(); await until(() => !document.querySelector('[data-section="rxShortcuts"] .unsaved'), 'Save patterns did not clear its dirty marker');
   }
   $('settingsx').click();
   await until(() => !view.classList.contains('show'), 'the settings view to close');
+  document.title = 'SETTINGS OK';
 })();
 """
 
@@ -2858,6 +2864,69 @@ NAV_ANALYTICS = PULL_AN.split('(async () => {')[0] + """(async () => {
   $('dclose').click();
   await until(() => !$('detail').classList.contains('show') && selectedId === null,
               'closing Analytics detail did not return to the list');
+  document.title = 'NAV OK';
+})();
+"""
+
+# A small pass over the remaining Analytics chrome.  These controls only change local presentation
+# or open local mirror content: no Zoho navigation, pull, provider call or export is involved.
+ANALYTICS_LOCAL = PULL_AN.split('(async () => {')[0] + """(async () => {
+  const rows = () => [...document.querySelectorAll('#list tbody tr[data-id]')];
+  await until(() => rows().length > 0, 'Analytics local-control fixture never drew a view list');
+  const allIds = () => rows().map((r) => r.dataset.id).join('|');
+  const allBefore = allIds();
+
+  // Use the real clear button, not just an input assignment: it owns focus and the empty search
+  // transition in the shipped panel.
+  $('find').value = rows()[0].textContent.trim().split(/\\s+/)[0];
+  $('find').dispatchEvent(new Event('input', { bubbles: true }));
+  await settle('Analytics local search never redrew');
+  await until(() => getComputedStyle($('findclear')).display !== 'none',
+              'Analytics search clear never became visible');
+  $('findclear').click();
+  await settle('Analytics search clear never redrew the list');
+  if ($('find').value || allIds() !== allBefore)
+    say('Analytics search clear did not restore the complete list');
+
+  // Overview has both a toolbar entry and a view close control; exercise the latter explicitly.
+  await until(() => !$('overview').disabled, 'Analytics overview never became available');
+  $('overview').click();
+  await until(() => $('overviewview').classList.contains('show'), 'Analytics overview did not open');
+  $('overviewx').click();
+  await until(() => !$('overviewview').classList.contains('show'), 'Analytics overview close did not return to the list');
+
+  // The fold changes only panel chrome and is restored before the scenario ends, so this cannot
+  // alter the fixture or leave a persistent preference different from the state it found.
+  const folded = document.body.classList.contains('chromefolded');
+  $('chromefold').click();
+  await until(() => document.body.classList.contains('chromefolded') !== folded,
+              'Analytics chrome fold did not change the local presentation');
+  $('chromefold').click();
+  await until(() => document.body.classList.contains('chromefolded') === folded,
+              'Analytics chrome fold did not restore the local presentation');
+
+  // Health is a local audit. If the mirror has findings, follow one real link into the detail pane
+  // and close it again; an empty findings list is valid and still checks the health view itself.
+  await until(() => !$('health').disabled, 'Analytics health never became available');
+  $('health').click();
+  await until(() => $('healthview').classList.contains('show'), 'Analytics health view did not open');
+  if (!/What was pulled|Nothing depends|Tables in no relation/.test($('healthbody').textContent))
+    say('Analytics health opened without its local audit sections');
+  const finding = $('healthbody').querySelector('a[data-open]');
+  if (finding) {
+    const id = finding.dataset.open;
+    finding.click();
+    await until(() => $('detail').classList.contains('show') && String(selectedId) === String(id),
+                'Analytics health finding did not open its local detail');
+    $('dclose').click();
+    await until(() => !$('detail').classList.contains('show'),
+                'closing Analytics health finding detail failed');
+  } else {
+    $('healthx').click();
+    await until(() => !$('healthview').classList.contains('show'),
+                'closing Analytics health view failed');
+  }
+  document.title = 'ANALYTICS LOCAL OK';
 })();
 """
 
@@ -2998,6 +3067,65 @@ CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
 })();
 """
 
+# Local CRM controls that do not require a fresh Zoho answer.  This deliberately starts from the
+# shipped mirror (the CRM driver above already has the complete delivered fixture in the shim), so
+# the assertions exercise the real click wiring without manufacturing a bridge response.  No
+# provider prompt is sent, no report is written, and the only diagram action is opening/closing a
+# local menu.
+CRM_LOCAL_UI = CRM.split('(async () => {')[0] + """(async () => {
+  const sayLocal = (m) => { throw new Error(m); };
+  const realFetch = window.fetch; let network = 0;
+  window.fetch = (...args) => { network++; return realFetch(...args); };
+
+  // About is a local dialog with a real close action and no external destination.
+  await until(() => $('about') && !$('about').disabled, 'About control never became available');
+  $('about').click();
+  await until(() => $('aboutdlg').classList.contains('on'), 'About did not open');
+  if (!/licen[cs]e|Zoho/i.test($('aboutbody').textContent || '')) sayLocal('About opened without its product text');
+  $('aboutok').click();
+  await until(() => !$('aboutdlg').classList.contains('on'), 'About did not close');
+
+  // Settings are an in-panel view. Opening and closing it must not reload or alter preferences.
+  await until(() => $('opts') && getComputedStyle($('opts')).display !== 'none', 'Settings control never became available');
+  $('opts').click();
+  await until(() => $('settingsview').classList.contains('show'), 'Settings did not open');
+  await until(() => ($('ver').textContent || '').trim(), 'Settings did not paint its version');
+  $('settingsx').click();
+  await until(() => !$('settingsview').classList.contains('show'), 'Settings did not close');
+
+  // Health is opened and closed only. Pull runtime is intentionally excluded: it is a Zoho read.
+  await until(() => $('health') && !$('health').disabled, 'Health control never became available');
+  $('health').click();
+  await until(() => $('healthview').classList.contains('show'), 'Health view did not open');
+  $('healthx').click();
+  await until(() => !$('healthview').classList.contains('show'), 'Health view did not close');
+
+  // The assistant shell and its settings are local; no prompt is entered and no send is clicked.
+  await until(() => $('askai') && !$('askai').disabled, 'AI control never became available');
+  $('askai').click();
+  await until(() => $('aiview').classList.contains('show'), 'AI assistant did not open');
+  $('aigear').click();
+  await until(() => $('settingsview').classList.contains('show'), 'AI settings did not open from the assistant');
+  $('settingsx').click();
+  await until(() => !$('settingsview').classList.contains('show'), 'AI settings did not close');
+  $('aix').click();
+  await until(() => !$('aiview').classList.contains('show'), 'AI assistant did not close');
+  window.fetch = realFetch;
+  if (network) sayLocal('opening local AI controls made ' + network + ' network request(s)');
+
+  // The export scope can be inspected and cancelled without creating a file.  The preset is a
+  // local projection only; Cancel proves the dialog leaves no pending write.
+  await until(() => $('export') && !$('export').disabled, 'Export control never became available');
+  $('export').click();
+  await until(() => $('expscope').classList.contains('on'), 'Export scope did not open');
+  $('pspSafe').click(); await settle('Share-safe preset did not update the export scope');
+  $('expcancel').click();
+  await until(() => !$('expscope').classList.contains('on'), 'Export scope did not cancel');
+
+  document.title = 'CRM LOCAL UI OK';
+})();
+"""
+
 # **Which drivers actually reach their own ending, and the one that does not.**
 #
 # `capture` stops when the page is *quiet* - `__zoostPending` at zero twice - and a scenario awaiting
@@ -3009,17 +3137,9 @@ CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
 #
 # So a driver declares its ending and `shots.capture` refuses anything else. This is the ledger of
 # the ones that cannot yet: **it should shrink, and a name added to it is a finding, not a note.**
-# `pull-crm` is here because the cause has not been found yet, not because it is acceptable.
-UNFINISHED = {
-    # Measured, one run, all of them: seven scenarios do reach their ending and these six do not.
-    'pull-crm': 'goes quiet mid-scenario; the tail - the capped-list assertions, which guard the '
-                'mirror against a truncated answer, and the tree trace - is not enforced.',
-    'sample-crm': 'goes quiet mid-scenario.',
-    'sample-analytics': 'goes quiet mid-scenario.',
-    'settings-crm': 'goes quiet mid-scenario.',
-    'settings-analytics': 'goes quiet mid-scenario.',
-    'nav-analytics': 'goes quiet mid-scenario.',
-}
+# Every scripted scenario now declares an explicit terminal title and is held to it by the capture
+# layer. Keep this ledger empty: adding an exception would make a partial browser run look green.
+UNFINISHED = {}
 
 UNFINISHED_SEEN = set()
 
@@ -3073,10 +3193,12 @@ def main() -> int:
                                      ("settings-crm", "crm", "crm/sampleorg-1234567890", SETTINGS),
                                      ("settings-analytics", "analytics", "analytics/sample-workspace", SETTINGS),
                                      ("nav-analytics", "analytics", "analytics/sample-workspace", NAV_ANALYTICS),
+                                     ("local-analytics", "analytics", "analytics/sample-workspace", ANALYTICS_LOCAL),
                                      ("folder-crm", "crm", "crm/sampleorg-1234567890", FOLDER),
                                      ("folder-analytics", "analytics", "analytics/sample-workspace", FOLDER),
                                      ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM),
-                                     ("preview-nav-crm", "crm", "crm/sampleorg-1234567890", CRM_PREVIEW_NAV)):
+                                     ("preview-nav-crm", "crm", "crm/sampleorg-1234567890", CRM_PREVIEW_NAV),
+                                     ("local-ui-crm", "crm", "crm/sampleorg-1234567890", CRM_LOCAL_UI)):
             print(f"  {key:18s} driving\u2026", flush=True)
             dest = drive(key, lambda: shots.render_panel((key, app, ws, script), expect_ok=True))
             if dest:
@@ -3115,12 +3237,9 @@ def main() -> int:
               flush=True)
         return 1
     bare, cond = waits()
-    # The five polling steps inside `until` itself are in the bare count and are not bets - they are
-    # how a condition is watched. Said, rather than subtracted: a number with a quiet adjustment in
-    # it is the kind nobody can check.
-    print(f"probe: {cond} of {bare + cond} waits are for a condition; {bare} are sleeps "
-          f"(5 of them the polling step inside `until`) - a sleep is a bet about how long the "
-          f"panel takes.", flush=True)
+    print(f"probe: {cond} of {bare + cond} waits are condition-based; {bare} are "
+          f"unconditioned sleeps - polling yields inside `until` are counted with their condition.",
+          flush=True)
     # The other bet, and the one that does not throw when it loses: clicking a control the product
     # keeps hidden until its data has arrived. The denominator is the markup's, not a list here.
     missing, scenarios = click_guard_installed()

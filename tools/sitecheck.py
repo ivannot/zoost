@@ -363,7 +363,8 @@ NUM = {8: ('eight', 'otto'), 9: ('nine', 'nove'), 10: ('ten', 'dieci'), 11: ('el
        25: ('twenty-five', 'venticinque'), 26: ('twenty-six', 'ventisei'),
        27: ('twenty-seven', 'ventisette'), 28: ('twenty-eight', 'ventotto'),
        29: ('twenty-nine', 'ventinove'), 30: ('thirty', 'trenta'),
-       32: ('thirty-two', 'trentadue'), 58: ('fifty-eight', 'cinquantotto')}
+       32: ('thirty-two', 'trentadue'), 33: ('thirty-three', 'trentatré'),
+       58: ('fifty-eight', 'cinquantotto'), 59: ('fifty-nine', 'cinquantanove')}
 
 
 def translations_have_the_same_shape(findings: list) -> None:
@@ -453,6 +454,29 @@ def file_count_is_derived(findings: list) -> None:
                     findings.append(f'site/{rel}: «{word} ... {name}» - {app} ships {counts[app]} .js '
                                     f'files, so that number is «{right}». A count in prose is a claim, '
                                     f'and it is the one an approver tests.')
+
+def llms_script_count_is_derived(findings: list) -> None:
+    """Keep the digit-based machine description tied to the package census."""
+    page = SITE / 'llms.txt'
+    if not page.exists():
+        return
+    text = page.read_text(encoding='utf-8')
+    counts = {app: len(list((ROOT / 'apps' / app).glob('*.js'))) for app in ('crm', 'analytics')}
+    patterns = [
+        (r'(\d+) readable files of the Zoho CRM extension and the (\d+) of the Zoho Analytics one',
+         'readable extension counts'),
+        (r'(\d+) files of plain JavaScript for Zoho CRM and (\d+) for Zoho Analytics',
+         'plain JavaScript counts'),
+    ]
+    for pattern, label in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            findings.append(f'site/llms.txt: missing {label} statement')
+            continue
+        got = tuple(map(int, match.groups()))
+        want = (counts['crm'], counts['analytics'])
+        if got != want:
+            findings.append(f'site/llms.txt: {label} says {got[0]}/{got[1]}, package census is {want[0]}/{want[1]}')
 
 
 def data_centre_count_is_derived(findings: list) -> None:
@@ -1058,6 +1082,7 @@ def main() -> int:
     hosts_declared(findings)
     data_centre_count_is_derived(findings)
     file_count_is_derived(findings)
+    llms_script_count_is_derived(findings)
     translations_have_the_same_shape(findings)
 
     # The site's own scripts build visible text — the footer badge's product labels live in

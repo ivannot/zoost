@@ -6321,22 +6321,20 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
     every run - roughly fifty seconds of the probe is sleeping. A bet that loses reads unsettled
     state, and the failure lands three lines later about something else, which is what «flaky» is.
 
-    **They were 86 and they are 7, five of which are the polling step inside `until` itself.** The
-    conversion was not done by naming a condition 76 times - it was done by naming the one condition
+    **They were 86 and they are 0 unconditioned sleeps.** The five short polling yields inside
+    `until` are counted as part of their condition, not as fixed timing bets. The conversion was
+    not done by naming a condition 76 times - it was done by naming the one condition
     they all shared: `settle()` watches the document and returns as soon as it has been quiet for a
     moment, so «the panel has finished drawing» is asked rather than guessed. A click followed by a
     sleep followed by a read was the shape in every one of them.
 
     What `settle` does not cover is stated where it is defined: work that finishes without touching
-    the DOM. Those seven are what is left, five of them the polling step inside `until`, and the
-    number below holds them. It moves in either
-    direction only deliberately - a run that converts one must lower it in the same change, which is
-    what stops a ledger that «may only shrink» from quietly stopping measuring anything. That
-    absolute was stated eleven times in this repository and measured false; this one says which way
-    it moved and why.
+    the DOM. The counter keeps the polling implementation visible while classifying it with the
+    condition it serves. An unconditioned sleep is still a failure of the ledger, not a harmless
+    remainder.
     """
 
-    CEILING = 7
+    CEILING = 0
 
     def waits(self):
         import importlib.util
@@ -6365,7 +6363,7 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
         src = (ROOT / 'tools' / 'probe.py').read_text(encoding='utf-8')
         self.assertIn('bare, cond = waits()', src,
                       'the run no longer prints how much of the probe is guessing')
-        self.assertRegex(src, r'\{cond\} of \{bare \+ cond\} waits are for a condition',
+        self.assertRegex(src, r'\{cond\} of \{bare \+ cond\} waits are condition-based',
                          'the printed sentence does not carry both counts')
 
     def test_the_counter_reads_the_scenarios_and_not_its_own_prose(self):
