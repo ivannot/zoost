@@ -83,6 +83,8 @@ async function loadBlueprintIndex(op = beginWorkspaceOp()) {
   }
   blueprintData = idx.map((e) => ({ ...e, id: String(e.id), path: `blueprints/${String(e.id)}.json`,
                                     downloaded: have.has(String(e.id)), error: false }));
+  // What the last pull said it could not read, met against what is on disk now - see `reconcileGap`.
+  await reconcileGap('blueprints', blueprintData.filter((e) => !e.downloaded).length, op);
   return true;
 }
 async function rebuildBlueprints() {
@@ -606,6 +608,8 @@ async function loadWorkflowIndex(op = beginWorkspaceOp()) {
   // on a guard this same session had added - a guard that returns is a guard that must not leave
   // half a state behind.
   const nextData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
+  // The same reconciliation the blueprint loader does, for the same reason.
+  await reconcileGap('workflows', nextData.filter((e) => !e.downloaded).length, op);
   const nextIndex = new Map();
   // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
   // downloaded yet has neither, and says so as absence rather than as a zero - «0 scheduled» about a

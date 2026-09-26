@@ -266,6 +266,33 @@ async function noteItemRead(area, op, n = 1) {
   return true;
 }
 
+/** What the last pull could not read, against what the mirror now holds - asked, not remembered.
+ *
+ *  **`noteItemRead` was only half of it.** It counts a read down as it happens, which is right and
+ *  does nothing for a workspace already carrying a gap: the eight blueprints were on disk, nothing
+ *  would ever read them again, and the badge was going to say «8 not read» over twelve green dots
+ *  until somebody ran a full pull. «Update and it is still there - do I have to pull again?» - and
+ *  the honest answer is that pulling again would clear it, which is not a fix, it is a chore handed
+ *  to the reader for a number the panel can work out by itself.
+ *
+ *  So the count is met against the folder every time an area's list is loaded: whatever the last
+ *  pull failed to read, it cannot be more than what is still missing now. The rule this repository
+ *  already states, one area further in - invalidation derives from what is true, never from the
+ *  memory of whoever caused it.
+ *
+ *  Only downwards. A mirror missing more than the pull reported is not evidence that the pull came
+ *  up shorter than it said: files go missing for reasons that have nothing to do with it, and a
+ *  count that grew here would be this panel inventing a failure Zoho never reported.
+ */
+async function reconcileGap(area, missing, op) {
+  const prev = (tabAccess || {})[area];
+  const gap = prev && prev.detailsGap;
+  if (!gap || !Number(gap.unread)) return false;
+  const n = Math.min(Number(gap.unread), Math.max(0, Number(missing) || 0));
+  if (n === Number(gap.unread)) return false;
+  return noteItemRead(area, op, Number(gap.unread) - n);
+}
+
 // What the user reads when an area is refused. Never the status line on its own: "403 on
 // /crm/v2/settings/functions" reads as Zoost being broken, which is both alarming and wrong.
 function pullFailMessage(area, e) {

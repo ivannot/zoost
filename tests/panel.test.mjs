@@ -2575,6 +2575,27 @@ test('a per-item read takes what it read off the badge above the list', async ()
   assert.equal(await run(null), null);
 });
 
+test('a gap the mirror has since filled goes without another pull', async () => {
+  // **The half that reaches a workspace already carrying one.** Counting a read down as it happens
+  // does nothing for eight blueprints that were read yesterday: the files are on disk, nothing will
+  // ever read them again, and the badge would have said «8 not read» over twelve green dots until
+  // somebody ran a full pull. Asked exactly that way - «I updated and it is still there, do I have
+  // to pull again?» - and «yes» is a chore handed to the reader for a number the panel can work out.
+  const run = async (unread, missing) => {
+    const g = { tabAccess: { blueprints: { state: 'ok', detailsGap: { unread } } },
+                Object, Number, Math, patchCfg: async () => {}, publishAccess: () => {},
+                setStatus: () => {}, tabLabel: (a) => a };
+    const { reconcileGap } = load([sliceApp('crm', 'noteItemRead'),
+                                   sliceApp('crm', 'reconcileGap')], g);
+    await reconcileGap('blueprints', missing, { current: () => true });
+    return g.tabAccess.blueprints.detailsGap;
+  };
+  assert.equal(await run(8, 0), null, 'every item is on disk and the badge still counts eight');
+  assert.equal((await run(8, 3)).unread, 3, 'the count is not what the mirror is actually missing');
+  // Only downwards: a mirror missing more than the pull reported is not evidence about the pull.
+  assert.equal((await run(2, 9)).unread, 2, 'the panel invented a failure Zoho never reported');
+});
+
 test('every marked button carries a name and a tooltip', () => {
   // **A mark *instead of* a word needs a name; a mark *beside* one already has it.** The rule was
   // written for the buttons that are only a mark, and it read «starts with an svg», which is not the
@@ -24017,6 +24038,9 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     };
     const mk = (moduleData) => {
       const g = {
+        // The loader meets the recorded gap against the folder on its way out; what these cases are
+        // about is which name resolves a module, so it is a no-op here.
+        reconcileGap: async () => {},
         moduleData, blueprintData: [], bpModLabel: new Map(), collapsed: new Set(),
         sanitize: (x) => String(x), viewMode: 'blueprints',
         walk: async function* () { yield 'blueprints/7000.json'; },
@@ -24061,6 +24085,8 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
         'modules/Iscrizioni.json': JSON.stringify({ api_name: 'Iscrizioni', plural_label: 'Iscrizioni' }),
       };
       const g = {
+        // Same stand-in as the case above: the loader reconciles the recorded gap on its way out.
+        reconcileGap: async () => {},
         moduleData: [], blueprintData: [], bpModLabel: new Map(), collapsed: new Set(),
         sanitize: (x) => String(x), viewMode: 'blueprints',
         walk: async function* () { yield 'blueprints/7000.json'; },

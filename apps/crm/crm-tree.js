@@ -627,6 +627,9 @@ async function rebuildTree() {
     await new Promise((r) => setTimeout(r, 0));   // let the panel answer whatever the reader is doing
   }
   if (!current()) return void stop(8);
+  // What the last pull said it could not read, met against what is on disk now - see
+  // `reconcileGap`. Here, where every row's `downloaded` is final for this load.
+  await reconcileGap('functions', treeData.filter((r) => r.mirrored !== false && !r.downloaded && !r.refused).length, op);
   renderTree(); updateMissingButton(); attachFnStats();
   // The Language control is derived from what the workspace holds, and the filter bar is built on a
   // mode switch - which happens *before* this. Without this line the control appeared only after the
