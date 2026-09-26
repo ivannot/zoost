@@ -2590,11 +2590,17 @@ SETTINGS = PULL_CRM.split('(async () => {')[0] + """(async () => {
   const view = $('settingsview');
   if (!view) say('the settings are not in this window at all');
   if (view.classList.contains('show')) say('the settings are open before anybody asked');
-  await openSettingsView();
+  // Enter through the toolbar control a reader uses. Calling openSettingsView() directly would
+  // validate the view while skipping the wiring from the workbench.
+  await until(() => $('opts') && getComputedStyle($('opts')).display !== 'none', 'Settings control never became visible');
+  $('opts').click();
   await until(() => view.classList.contains('show'), 'the settings view to open');
   // Painted from what is stored rather than left as the markup's placeholders: `#ver` is written
   // by the paint, so an empty one means the form opened over nothing.
   await until(() => ($('ver').textContent || '').trim().length > 0, 'the version to be filled in');
+  // The toolbar handler starts init asynchronously. Wait for a value written by the layout read,
+  // not merely for the version label written before that read begins, before pressing Save.
+  await until(() => ($('cfgvMargin').textContent || '').trim().length > 0, 'settings values to finish loading');
   // Every section reports itself unchanged straight after a paint - that is what «no unsaved
   // changes» means, and it was wrong once because the rebase ran before the reads.
   const dirty = [...document.querySelectorAll('[data-section]')].filter((x) => x.classList.contains('dirty'));
