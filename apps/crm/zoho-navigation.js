@@ -108,10 +108,11 @@ function createCrmZohoNavigator(options) {
 
   /** The same address, on the shell the reader is actually standing in.
    *
-   *  **Measured, not guessed.** Inside Zoho One the tab is
-   *  `https://one.zoho.eu/zohoone/<portal>/home/cxapp-spaces/<space>/crm/<instance>/tab/Contacts/<id>`
-   *  and the direct page is `https://crm.zoho.eu/crm/<instance>/tab/Contacts/<id>` - five real
-   *  addresses, and the tail after `/crm/<instance>/` is **identical** in both. So there is nothing
+   *  **Measured, not guessed.** Inside Zoho One the tab carries the suite's own path - the portal,
+   *  the space, several segments none of which mean anything here - and then, at the end,
+   *  `/crm/<instance>/tab/Contacts/<id>`; the direct page is
+   *  `https://crm.zoho.eu/crm/<instance>/tab/Contacts/<id>`. Five real addresses, and the tail after
+   *  `/crm/<instance>/` is **identical** in both. So there is nothing
    *  to construct: the part before it is a prefix, and the prefix is read off the tab the reader has
    *  open rather than assembled from anything this file claims to know about Zoho One.
    *
