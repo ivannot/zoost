@@ -211,15 +211,17 @@ def write_files(dest: pathlib.Path, apps=APPS) -> int:
     rewriting twenty identical files on every run is twenty events about nothing.
     """
     dest.mkdir(parents=True, exist_ok=True)
-    wrote, index = 0, []
+    wrote, index, count, gone = 0, [], 0, []
     for app in apps:
         ver = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))['version']
         moved = set(changed_sections(app))
         index.append(f'\nZOOST {"CRM" if app == "crm" else "ANALYTICS"} {ver}')
         texts = dest / app / 'texts'
         texts.mkdir(parents=True, exist_ok=True)
-        for n, name, cap, body in sections(app):
+        current = set()
+        for _n, name, cap, body in sections(app):
             f = texts / f'{box(name)}.txt'
+            current.add(f.name)
             # No trailing newline: the last character of the text is the last character of the text.
             # A file conventionally ends in one, and that convention travels into the box.
             if not f.exists() or f.read_text(encoding='utf-8') != body:
@@ -227,14 +229,27 @@ def write_files(dest: pathlib.Path, apps=APPS) -> int:
                 wrote += 1
             size = f'{len(body)} of {cap}' if cap else f'{len(body)} chars'
             index.append(f'  {app}/texts/{f.name:<44} {name}  ({size})'
-                         + ('  <- CHANGED since it was last pasted' if str(n) in moved else ''))
+                         + ('  <- CHANGED since it was last pasted' if box(name) in moved else ''))
+            count += 1
+        # **A box that no longer exists leaves no file behind.** Removing the `sidePanel` permission
+        # took its justification out of the listing and left `sidepanel-justification.txt` sitting in
+        # the folder he opens to paste from - a field the dashboard no longer has, indistinguishable
+        # from the ones it does. This folder is the handover, so it holds what is to be pasted and
+        # nothing else.
+        for stale in texts.glob('*.txt'):
+            if stale.name not in current:
+                stale.unlink()
+                gone.append(f'{app}/texts/{stale.name}')
     readme = ('The Web Store fields, one file per box, named as the dashboard names them.\n'
               f'Written {datetime.date.today().strftime("%-d %B %Y")} from store/<app>/store-listing.md.\n'
               '\nEach file holds exactly what goes in the box: no line break inside a sentence, and\n'
               'no newline at the end. Paste the whole file.\n'
               + '\n'.join(index) + '\n')
     (dest / 'READ-ME-FIRST.txt').write_text(readme, encoding='utf-8')
-    print(f'{dest}: {len(apps) * 10} box file(s), {wrote} written, the rest already in step')
+    # Counted, not multiplied by a number typed here: the listing had ten sections and has nine, and
+    # `len(apps) * 10` went on claiming the old one for as long as nobody looked.
+    print(f'{dest}: {count} box file(s), {wrote} written, the rest already in step'
+          + (f'; removed {", ".join(gone)}' if gone else ''))
     return 0
 
 
