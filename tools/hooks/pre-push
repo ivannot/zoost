@@ -59,18 +59,29 @@ fi
 if [ -f "$VERDICT" ] && [ "$(cat "$VERDICT")" = "0" ]; then
   echo "pre-push: the battery is already recorded green on ${SHA:0:7} - not re-running it."
 else
-  rm -f "$VERDICT"
-  # Yesterday's answers are about yesterday's commits and nothing ever removed them. Same shape as
-  # the 72 archives `dist/` had accumulated: one file per commit, for ever, in a directory nobody
-  # looks at. The current one is written below; the rest have said all they will ever say.
-  find .git -maxdepth 1 -name 'zoost-battery-*' ! -name "zoost-battery-$SHA" -delete 2>/dev/null || true
   if command -v systemd-run >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
     UNIT="zoost-prepush-${SHA:0:7}"
-    systemctl --user reset-failed "$UNIT.service" >/dev/null 2>&1 || true
-    echo "pre-push: running the battery on ${SHA:0:7}, outside this session's process tree…"
-    systemd-run --user --collect --same-dir --unit="$UNIT" \
-      --setenv=PATH="$PATH" --setenv=HOME="$HOME" \
-      -- bash -c "bash tests/run.sh > $LOG 2>&1; echo \$? > $VERDICT" >/dev/null
+    # **A run already in flight for this commit is joined, never restarted.** «Pushing again costs
+    # nothing» is promised twenty lines up and was false: this deleted the verdict the live run was
+    # about to write, then failed to start a second unit under a name systemd still held - «already
+    # loaded or has a fragment file» - so the push was refused and the next one started the whole
+    # battery again. Measured, twice in one session, at about eight minutes each. And the first wait
+    # being killed is the *expected* path on this machine, so the cost landed every single time.
+    if systemctl --user is-active --quiet "$UNIT.service"; then
+      echo "pre-push: a battery for ${SHA:0:7} is already running - waiting on that one rather than"
+      echo "starting a second. Its log is in $LOG."
+    else
+      rm -f "$VERDICT"
+      # Yesterday's answers are about yesterday's commits and nothing ever removed them. Same shape
+      # as the 72 archives `dist/` had accumulated: one file per commit, for ever, in a directory
+      # nobody looks at. The current one is written below; the rest have said all they will say.
+      find .git -maxdepth 1 -name 'zoost-battery-*' ! -name "zoost-battery-$SHA" -delete 2>/dev/null || true
+      systemctl --user reset-failed "$UNIT.service" >/dev/null 2>&1 || true
+      echo "pre-push: running the battery on ${SHA:0:7}, outside this session's process tree…"
+      systemd-run --user --collect --same-dir --unit="$UNIT" \
+        --setenv=PATH="$PATH" --setenv=HOME="$HOME" \
+        -- bash -c "bash tests/run.sh > $LOG 2>&1; echo \$? > $VERDICT" >/dev/null
+    fi
     # Waiting is the part that can be killed. If it is, this script dies and git refuses the push -
     # and the run carries on to write its verdict, so pushing again costs nothing.
     while [ ! -f "$VERDICT" ]; do
@@ -82,6 +93,8 @@ else
       sleep 10
     done
   else
+    rm -f "$VERDICT"
+    find .git -maxdepth 1 -name 'zoost-battery-*' ! -name "zoost-battery-$SHA" -delete 2>/dev/null || true
     # No user systemd here - another machine, or a container. Run it inline: this is what the hook
     # always did, and it is still right wherever nothing is killing long children.
     echo "pre-push: running the battery on ${SHA:0:7}…"

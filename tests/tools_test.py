@@ -4988,6 +4988,31 @@ class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
         self.assertIn('REFUSED - the battery stopped without a verdict', src,
                       'a run that vanishes without answering must refuse the push, not pass it')
 
+    def test_a_run_already_in_flight_for_this_commit_is_joined_not_restarted(self):
+        """«Pushing again costs nothing» was promised in the hook's own preamble and was false.
+
+        The first wait being killed is the *expected* path on this machine - the comment above says
+        so - so the second push is the normal case, not the unlucky one. It ran `rm -f "$VERDICT"`
+        and then tried to start a unit under a name systemd was still holding: the verdict the live
+        run was about to write was deleted, `systemd-run` answered «already loaded or has a fragment
+        file», the push was refused, and the push after that started the whole battery again.
+        Measured twice in one session at about eight minutes a run.
+
+        Asserted by position rather than by presence, because both lines existed before and the
+        defect was their order. This is a shell script with no seam to lift, so reading it is the
+        only method available - which is a limit of this case, not a claim about it.
+        """
+        src = self.HOOK.read_text(encoding='utf-8')
+        join = src.find('is-active --quiet "$UNIT.service"')
+        wipe = src.find('rm -f "$VERDICT"')
+        self.assertNotEqual(join, -1, 'nothing looks for a run already in flight for this commit')
+        self.assertNotEqual(wipe, -1, 'the verdict is never cleared, so a stale answer could be reused')
+        self.assertLess(join, wipe,
+                        'the hook clears the verdict before checking whether a battery for this '
+                        'commit is already running, so a second push destroys the first run\'s answer')
+        self.assertIn('already running - waiting on that one', src,
+                      'a joined run says nothing, so it is indistinguishable from a hung push')
+
     def test_a_dirty_tree_is_refused_before_anything_is_recorded(self):
         """A verdict is about a tree, not only about a commit.
 
