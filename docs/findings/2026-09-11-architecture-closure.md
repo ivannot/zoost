@@ -28,5 +28,7 @@ governs the shipped flow.
 - Public source-count claims are derived from the shipped trees and now agree across English,
   Italian and llms.txt (58 CRM scripts, 32 Analytics scripts).
 
-The live Zoho canary remains `never-run`: credentials and a controlled synthetic organisation are not
-available in this environment, so no live evidence is fabricated.
+Live Zoho access is intentionally out of scope for this project: tests and releases do not receive a
+real organisation or credentials. `tools/zoho-canary-status.json` records `not-applicable`; committed
+raw-endpoint fixtures, parser tests and local browser probes are the authoritative compatibility
+evidence. The optional canary tool remains available for a separately governed operator environment.

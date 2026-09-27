@@ -189,6 +189,12 @@ function checkRunRecord(file, ageDays) {
   let record;
   try { record = JSON.parse(fs.readFileSync(file, 'utf8')); }
   catch (_) { throw new Error(`canary record is missing or unreadable: ${file}`); }
+  if (record.status === 'not-applicable') {
+    if (record.schema !== 1 || typeof record.note !== 'string' || !record.note.trim()) {
+      throw new Error('canary not-applicable marker is malformed');
+    }
+    return { status: 'not-applicable', note: record.note };
+  }
   if (record.status === 'never-run' || !record.recordedAt) throw new Error('canary has never completed a live run');
   if (record.status !== 'success' || record.schema !== 1) throw new Error('canary record is not a successful schema-1 run');
   const at = Date.parse(record.recordedAt);

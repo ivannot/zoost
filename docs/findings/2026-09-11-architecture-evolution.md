@@ -20,8 +20,9 @@ and authentication matching uses the response status or a bounded status token.
 
 ## Deliberate limits
 
-The live canary requires a synthetic organisation and credentials supplied at execution time; the
-battery verifies only its dry-run path. The CRM monolith was not rewritten in one risky tranche: new
+Live Zoho access is outside the project boundary: the battery verifies committed raw-endpoint
+fixtures and local probes, while `tools/zoho-canary.mjs` remains optional operator tooling for a
+separately governed environment. The CRM monolith was not rewritten in one risky tranche: new
 boundaries were added without changing behaviour. ES modules and React remain conditional on measurable
 benefit.
 

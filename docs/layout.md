@@ -379,9 +379,10 @@ read - the same differential shape as `tools/absolutes.txt`.
 
 `tools/architecture.json` and `tools/architecturecheck.py` hold the declared dependency roles;
 `tools/perf-budget.mjs` exercises small, medium and large generated workspaces without touching the
-checkout; `tools/zoho-canary.mjs` is the explicit, read-only live-contract probe and requires secrets
-only through environment variables. Operational ownership and transfer steps live in
-`docs/operations.md`.
+checkout; raw-endpoint fixtures and local probes are the authoritative Zoho compatibility checks.
+`tools/zoho-canary.mjs` remains optional, read-only operator tooling for environments that choose to
+provide live credentials; it is not required by the project. Operational ownership and transfer
+steps live in `docs/operations.md`.
 
 **Being *behind* is a finding too, and that is the part that makes it work.** A pair that moved on
 both sides honoured the twin rule, so it is not a drift - but leaving it unrecorded means the next

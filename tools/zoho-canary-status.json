@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "status": "never-run",
-  "cadenceDays": 30,
+  "status": "not-applicable",
+  "cadenceDays": null,
   "lastSuccess": null,
   "profiles": ["crm", "analytics"],
-  "note": "This tracked marker is deliberately not evidence of a live run. Keep one sanitized private record per profile and verify each with zoho-canary.mjs --check-record."
+  "note": "Live Zoho access is intentionally out of scope for this project. Compatibility is verified with committed raw-endpoint fixtures and local probes; no real organisation, credentials or live evidence is expected."
 }

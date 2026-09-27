@@ -334,12 +334,15 @@ test('the default canary contract catches a later array type change and missing 
   assert.ok(viewDiff.some((line) => line.includes('missing required value "VIEW_NAME"')));
 });
 
-test('canary run records are sanitized and distinguish never-run from a recent success', async () => {
+test('canary run records distinguish out-of-scope live access from private evidence', async () => {
   const { checkRunRecord, writeRunRecord, loadContracts } = await import('../tools/zoho-canary.mjs');
   const root = mkdtempSync(join(tmpdir(), 'zoost-canary-record-'));
   try {
     const file = join(root, 'last-run.json');
-    assert.throws(() => checkRunRecord(new URL('../tools/zoho-canary-status.json', import.meta.url), 30), /never completed/);
+    assert.equal(checkRunRecord(new URL('../tools/zoho-canary-status.json', import.meta.url), 30).status, 'not-applicable');
+    const neverRun = join(root, 'never-run.json');
+    writeFileSync(neverRun, JSON.stringify({ schema: 1, status: 'never-run' }));
+    assert.throws(() => checkRunRecord(neverRun, 30), /never completed/);
     writeRunRecord(file, [
       { app: 'crm', results: [
         { name: 'context', status: 200 }, { name: 'functions', status: 200 },

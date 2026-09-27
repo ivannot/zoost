@@ -11,7 +11,7 @@ with that inventory; this table supplies the transfer procedure and the dashboar
 | Cloudflare KV | `STATUS` namespace declared in wrangler | account KV access | read the `status` key without modifying it |
 | Cloudflare RUM | site RUM setting, no extension code | Cloudflare owner | verify the beacon only on the site and disclose it in privacy |
 | Chrome Web Store | manifest and archives produced by `build.sh` | publisher account and Store credentials | compare archive hash with the approved tag |
-| Zoho canary | `tools/zoho-canary-contract.json`, `tools/zoho-canary-status.json`, per-product `ZOOST_CANARY_*` variables (never committed) | synthetic organisation/workspace, CSRF token and temporary session | run each profile with `--record=<private path>`; `--check-record=<path>` rejects never-run or stale evidence |
+| Zoho canary | `tools/zoho-canary-contract.json`, raw-endpoint fixtures and local probes | no live Zoho organisation or credentials in the project | the tracked marker is `not-applicable`; private live records remain optional operator tooling, never release evidence |
 
 Secrets and bindings are intentionally separated by consumer:
 
@@ -25,19 +25,20 @@ Secrets and bindings are intentionally separated by consumer:
 
 Transfer checklist: create a new owner account, export the non-secret bindings, recreate each secret
 in the correct consumer, revoke the former owner's tokens, run the offline battery, deploy a dry run,
-read `/api/versions`, perform a synthetic report, then enable the read-only Zoho canary. No secret
-value belongs in this repository.
+read `/api/versions` and perform a synthetic report. Live Zoho access is intentionally outside the
+project boundary; no real organisation, cookie, token or secret value belongs in this repository.
 
 Transfer does not include tokens or cookies. The new owner recreates secrets in their vault, runs
 offline checks first, and only then enables a read-only canary. No command updates fixtures
 automatically.
 
-## Governed live-canary evidence
+## Optional live-canary tooling
 
-The tracked `tools/zoho-canary-status.json` starts as `never-run` on purpose. It is not a claim that
-Zoho was reached. A live run is performed separately for CRM and Analytics with temporary synthetic
-credentials and a private output path. Each run writes one independently verifiable product record;
-do not merge the two records by hand:
+The tracked `tools/zoho-canary-status.json` is deliberately `not-applicable`: this project and its
+tests never receive a real organisation or credentials. The authoritative compatibility evidence is
+the committed raw-endpoint fixtures, parser tests and local browser probes. The following commands
+remain available as optional tooling for an operator who has a separate controlled environment;
+their records are never required by the repository battery:
 
 ```text
 node tools/zoho-canary.mjs --app=crm --record=/private/zoost-canary/crm.json
@@ -48,11 +49,9 @@ node tools/zoho-canary.mjs --check-record=/private/zoost-canary/analytics.json
 
 The record contains only schema version, timestamp, product, route names, HTTP statuses and the
 SHA-256 of the reviewed contract. Cookies, tokens, organisation ids, workspace ids and response
-values never enter it. `--check-record` fails distinctly for missing, never-run, malformed, stale,
-contract-mismatched, incomplete or unsuccessful evidence. It also requires exactly the reviewed
-route set for the product recorded in that file, so a green contract test cannot be mistaken for a
-live check. Run the two profiles independently and retain their sanitized records in the operator's
-private evidence store according to the chosen 30-day cadence; do not commit them to this repository.
+values never enter it. If used outside the project, `--check-record` fails distinctly for missing,
+never-run, malformed, stale, contract-mismatched, incomplete or unsuccessful evidence. Run the two
+profiles independently and retain any sanitized records outside this repository.
 
 The CRM canary variables are explicit: `ZOOST_CANARY_CRM_BASE`, `ZOOST_CANARY_CRM_SESSION`,
 `ZOOST_CANARY_CRM_CSRF`, `ZOOST_CANARY_CRM_ORG` and `ZOOST_CANARY_CRM_INSTANCE`. Analytics uses
