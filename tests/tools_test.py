@@ -5013,6 +5013,29 @@ class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
         self.assertIn('already running - waiting on that one', src,
                       'a joined run says nothing, so it is indistinguishable from a hung push')
 
+    def test_a_battery_for_another_commit_is_refused_rather_than_raced(self):
+        """Joining the same commit's run leaves the case that actually costs.
+
+        Two batteries for two different commits, in one working directory, rewrite the same derived
+        files under each other. Measured: a push was refused for «the battery left changes behind»
+        naming five files that were clean a second later, because the other run was mid-write when
+        this one looked. Neither verdict was about the tree it claimed to judge, and the one that
+        reached a person was a refusal with no defect behind it.
+
+        Read from the source, like its siblings above: a shell hook has no seam to lift, and that is
+        a limit of this case rather than a claim about it.
+        """
+        src = self.HOOK.read_text(encoding='utf-8')
+        self.assertIn("list-units 'zoost-prepush-*'", src,
+                      'nothing looks for a battery running here for some other commit')
+        self.assertIn('a battery for another commit is running here', src,
+                      'the refusal does not say what is in the way, so it reads as a flaky gate')
+        # It must refuse rather than wait: the other run is judging a different tree, so its verdict
+        # can never answer for this one however long you wait for it.
+        guard = src.find("list-units 'zoost-prepush-*'")
+        self.assertLess(guard, src.find('is-active --quiet "$UNIT.service"'),
+                        'the other-commit guard runs after the join, so a race is entered before it is checked')
+
     def test_a_dirty_tree_is_refused_before_anything_is_recorded(self):
         """A verdict is about a tree, not only about a commit.
 

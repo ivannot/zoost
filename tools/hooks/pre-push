@@ -67,6 +67,21 @@ else
     # loaded or has a fragment file» - so the push was refused and the next one started the whole
     # battery again. Measured, twice in one session, at about eight minutes each. And the first wait
     # being killed is the *expected* path on this machine, so the cost landed every single time.
+    # **And a battery for *another* commit is refused, not raced.** The join below matches on this
+    # commit's own unit, which leaves the case that actually costs: two runs for two different
+    # commits, in one working directory, rewriting the same derived files under each other. Measured
+    # - a push was refused for «the battery left changes behind» naming five files that were clean a
+    # second later, because the other run was mid-write when this one looked. Neither answer was
+    # about the tree either of them was judging.
+    OTHER=$(systemctl --user list-units 'zoost-prepush-*' --state=active --no-legend 2>/dev/null \
+            | awk '{print $1}' | grep -v "^$UNIT.service$" | head -1)
+    if [ -n "$OTHER" ]; then
+      echo
+      echo "pre-push: REFUSED - a battery for another commit is running here ($OTHER)."
+      echo "Two runs in one working directory rewrite each other's derived files, so neither answer"
+      echo "is about the tree it is judging. Wait for it, or stop it, then push again."
+      exit 1
+    fi
     if systemctl --user is-active --quiet "$UNIT.service"; then
       echo "pre-push: a battery for ${SHA:0:7} is already running - waiting on that one rather than"
       echo "starting a second. Its log is in $LOG."
