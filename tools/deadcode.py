@@ -86,14 +86,30 @@ def read(p: pathlib.Path) -> str:
     return p.read_bytes().decode("utf-8", "replace")
 
 
-# An identifier, and never a property access: `obj.foo` is not a reference to a declared `foo`. The
-# same expression the per-name search used, hoisted so the corpus is read once instead of once per
-# declaration.
-IDENT = re.compile(r'(?<![\w$.])([A-Za-z_$][\w$]*)')
+# An identifier, and never a property access: `obj.foo` is not a reference to a declared `foo`.
+#
+# **But `...foo` is one, and the lookbehind could not tell the two apart.** A single expression -
+# `(?<![\w$.])` - excludes anything after a dot, and the third dot of a spread is a dot: so
+# `...pullDepth(full, gaps)`, the way five shipped files call it, scored nothing and the function
+# was reported as kept alive only by tests. Reported from outside, and it is the dangerous
+# direction for a tool whose output is a list of things to delete.
+#
+# The decision needs the two characters before the dot, which `re` cannot express as a lookbehind of
+# variable width, so it is made here: after a dot is a property access *unless* the dot is the last
+# of three.
+IDENT = re.compile(r'[A-Za-z_$][\w$]*')
 
 
 def tally(text: str) -> collections.Counter:
-    return collections.Counter(m.group(1) for m in IDENT.finditer(text))
+    seen = collections.Counter()
+    for m in IDENT.finditer(text):
+        i = m.start()
+        if i and (text[i - 1].isalnum() or text[i - 1] in '_$'):
+            continue                                  # inside a longer identifier
+        if i and text[i - 1] == '.' and text[i - 3:i] != '...':
+            continue                                  # obj.foo - not a reference to a declared foo
+        seen[m.group(0)] += 1
+    return seen
 
 
 def sweep(app: str) -> list:
@@ -127,6 +143,21 @@ def sweep(app: str) -> list:
     code = "".join(strip_comments(read(p)) for p in js_files)
     out = []
 
+    # **A name declared in two files of one product is ambiguous, not dead.** The tally is per app
+    # and cannot tell two declarations of one name apart - `removeFileAt` in a panel and the
+    # `async function removeFileAt` inside the adapter's factory are different scopes with one
+    # spelling - so a dead one scores its namesake's uses and a live one can be scored by a dead
+    # namesake. Neither answer is trustworthy, and «ambiguous» is the honest third verdict: it says
+    # where to look without proposing a deletion. Resolving it properly needs an AST, which is a
+    # different tool from this one.
+    declared = collections.Counter()
+    for f in js_files:
+        body = strip_comments(read(f))
+        for pat in (r'^[ \t]*(?:async\s+)?function(?:\s*\*\s*|\s+)([A-Za-z_$][\w$]*)',
+                    r'^[ \t]*const\s+([A-Za-z_$][\w$]*)\s*='):
+            for name in set(re.findall(pat, body, re.M)):
+                declared[name] += 1
+
     # 1. declarations, classified by who still reaches them. One hit is the declaration itself.
     for p in js_files:
         s = strip_comments(read(p))
@@ -148,6 +179,11 @@ def sweep(app: str) -> list:
                 # than dropped: it is not a deletion - a landmark held by a test is exactly what the
                 # paragraph above defends - but it is the one thing this sweep could never see
                 # before, and it is where carried-but-unreachable code hides.
+                if declared[name] > 1:
+                    out.append(f"{app}/{p.name}: {kind} {name} - ambiguous: declared in "
+                               f"{declared[name]} files of this product, so the count is not about "
+                               f"this declaration. Read them; do not delete on this line.")
+                    continue
                 where = "kept alive only by tests or tools" if suite[name] else "referred to nowhere"
                 out.append(f"{app}/{p.name}: {kind} {name} - declared, {where}")
 
