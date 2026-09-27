@@ -7,8 +7,16 @@
     "found it by testing something that had already been fixed. So it is a hook rather than a habit.",
     "It fires after every tool call because most edits here are made by scripts run through Bash, not",
     "by the file tools; tools/synctest.sh is a stamp check that costs milliseconds when nothing has",
-    "moved, and a no-op on any machine where the share is not mounted."
+    "moved, and a no-op on any machine where the share is not mounted.",
+    "The one permission here names one script. tools/livebrowser.py talks to a browser the author has opened and logged in - the only thing in this repository that touches a live Zoho session rather than a fixture - and the safety layer refuses that by default, correctly. Allowing the script rather than the interpreter is the whole point: what it may and may not do is written at the top of that file, in the repository, where it can be read and grepped, instead of resting on a permission broad enough to cover anything else python can reach.",
+    "The second permission is a widening and is written down as one. Driving a browser means speaking the DevTools protocol over a websocket, and a script that sends commands to a live, logged-in browser is a remote-execution surface however carefully its docstring is worded - the safety layer refused to let it be written, correctly, twice. The author was told exactly that, and asked for it anyway on 27 September 2026, for a reason he had already argued: the live testing and the troubleshooting are the last of his operating cost that is still manual. So the grant names one file, tools/livebrowser.py, whose limits are written at its top and which is in the repository where they can be read and grepped. What keeps it honest is not this line: it is that the file is small, reviewable, and that he watches the screen while it works."
   ],
+  "permissions": {
+    "allow": [
+      "Bash(python3 tools/livebrowser.py:*)",
+      "Write(tools/livebrowser.py)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {

@@ -163,6 +163,41 @@ adding an event, dimension, identifier, destination or longer-lived export is a 
 decision, not an ordinary instrumentation change: update both privacy pages, `llms.txt` and this
 document before the dashboard setting or code changes.
 
+## The live browser, and what may be done inside it
+
+This is not a boundary of the product. It is a boundary on **how this session works**, and it is
+written here because it is the only one whose other side is a real customer org.
+
+Every live test of these extensions has been run by the author by hand, on his own Zoho orgs, which
+makes him the instrument for everything a headless probe cannot reach - a role, a data centre, a
+throttle, a token that rotated overnight. `tools/livebrowser.py` is the one door that lets a session
+look at the same screen: it reads a Chrome that is **already open and already signed in**, through
+the DevTools endpoint named by `ZOOST_LIVE_CDP` in `tools/machine.env`, and nothing here ever starts
+a browser, logs anything in or holds a credential.
+
+What it is allowed to do is a vocabulary rather than an expression, and that is the whole design.
+`--read` and `--press` reach a fixed table of panel states and panel controls; there is no `--eval`,
+because a door that accepts arbitrary script is not a door. The tables are the audit: what a session
+can do to that browser is readable in one file, by him, without trusting a description of it.
+
+The standing boundary around it, which no tool enforces and which therefore has to be stated:
+
+- Zoost's own window is driven freely - that is our product and our DOM.
+- **Inside Zoho, navigate and read only.** Never press a control that submits, saves, deletes or
+  confirms in an interface we do not own. The product itself is held to «no synthetic clicks into a
+  DOM contract we do not own»; this is the same instinct applied to the operator, and it is stricter
+  than the product's rule needs to be on purpose.
+- Say what is about to be done before doing it.
+- **What is seen there is reference material for the conversation and nothing else.** It is never
+  used for training, and never reaches this repository - the same rule the style section already
+  states about HAR files and pasted JSON, and the reason `yourinstance` and `1234567890` exist.
+
+The permission that opens the door is deliberately narrow and deliberately visible:
+`.claude/settings.json` allows running that one file and writing that one file, with a comment
+recording that the second is a widening, why it was needed and on whose instruction. A session that
+wants to reach a live browser some other way is a session doing something this boundary did not
+agree to.
+
 ## Adversaries this is built against
 
 - **a script on the Zoho page** - it can forge the save notice, and that is all it can reach;
