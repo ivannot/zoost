@@ -28,9 +28,9 @@ in the correct consumer, revoke the former owner's tokens, run the offline batte
 read `/api/versions` and perform a synthetic report. Live Zoho access is intentionally outside the
 project boundary; no real organisation, cookie, token or secret value belongs in this repository.
 
-Transfer does not include tokens or cookies. The new owner recreates secrets in their vault, runs
-offline checks first, and only then enables a read-only canary. No command updates fixtures
-automatically.
+Transfer does not include tokens or cookies. The new owner recreates secrets in their vault and runs
+offline checks first. A separately governed operator may enable the optional read-only canary, but it
+is not part of this project's release evidence. No command updates fixtures automatically.
 
 ## Optional live-canary tooling
 
