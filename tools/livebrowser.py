@@ -78,6 +78,21 @@ TITLE = {'crm': 'Zoho CRM', 'analytics': 'Zoho Analytics'}
 # window** that may be pressed. Nothing here addresses a page of Zoho's: the two are different
 # origins and different responsibilities, and the separation is the boundary made mechanical rather
 # than promised.
+# The stored working-folder handle, read out of the panel's own IndexedDB the way the panel reads
+# it - `zoost`, store `kv`, key `rootDir`, which both products share because each extension is its
+# own origin. Wrapped so that a browser with nothing stored, or a database that will not open,
+# answers a sentence instead of throwing across the websocket.
+HANDLE_TEMPLATE = (
+    "(async () => {{ try {{"
+    " const db = await new Promise((res, rej) => {{ const q = indexedDB.open('zoost', 1);"
+    " q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }});"
+    " const h = await new Promise((res, rej) => {{"
+    " const t = db.transaction('kv').objectStore('kv').get('rootDir');"
+    " t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }});"
+    " return {answer};"
+    " }} catch (e) {{ return 'unreadable: ' + ((e && e.message) || e); }} }})()"
+)
+
 READS = {
     'status': "(document.getElementById('stxt')||document.getElementById('statustext')||{}).textContent||''",
     'workspace': "(document.getElementById('ws')||{}).value||''",
@@ -88,6 +103,19 @@ READS = {
     'missing': "(document.getElementById('missing')||{}).textContent||''",
     'rows': "document.querySelectorAll('#tree .f').length",
     'mode': "(document.querySelector('.mseg.on,#modebar button.on')||{}).textContent||''",
+    # **What Chrome says about the working folder, rather than what the panel says about it.**
+    # Added the day a question about the folder prompt was answered by asking him to paste a line
+    # into a console - with this tool open and a browser attached. The table *is* the extension
+    # point of this design, and skipping it to hand the work to a person is the one use of it that
+    # defeats the point. `handle` is what the browser has stored; `permission` is what it will
+    # answer for it without being asked twice.
+    #
+    # `requestPermission()` is deliberately absent and must stay absent. It is not a read: it can
+    # raise a browser dialog, it needs a gesture this tool does not have, and it *changes* the
+    # grant. A table whose entries have effects is not a vocabulary of questions any more.
+    'handle': HANDLE_TEMPLATE.format(answer="h ? h.name : 'no handle stored'"),
+    'permission': HANDLE_TEMPLATE.format(
+        answer="h ? await h.queryPermission({ mode: 'readwrite' }) : 'no handle stored'"),
 }
 CONTROLS = {
     # The tab strip: which list the panel is showing.

@@ -400,23 +400,26 @@ panels check with `queryPermission()` at startup and draw the banner on anything
 dormant persistent grant reports `prompt`, that banner is drawn in both products whatever Chrome has
 recorded - which is not what is observed, so something here is still unknown.
 
-**So the next step is a measurement and not a change**, which is this project's standing order about
-probing a call before building on it. On the Mac, in each panel's console, on the stored handle:
-`queryPermission()` then `requestPermission()`. `prompt` followed by a silent `granted` says the
-grant is dormant and that asking is what wakes it; `granted` twice says the banner has another cause
-entirely and the defect is ours.
+**Answered, on 27 September 2026, by answering it.** On the Windows PC the CRM panel raised the
+three-way prompt on its own - the banner behind it reading «Folder access is not granted. Press Grant
+access above - or simply click anywhere in this panel», which is the stored-handle path Chrome
+documents. «Allow on every visit», then closed and reopened: «non mi ha chiesto piu' il permesso».
 
-**The change that would follow from the first answer** is small and contained: at startup, when the
-stored handle does not report `granted`, ask rather than only report - with a persistent grant that
-resolves silently and no banner is ever drawn, and without one it throws for want of a user gesture,
-which is caught and falls back to exactly today's behaviour. An hour, plus the case that proves both
-branches.
+**And the dormancy question is answered too, by measuring it rather than reasoning about it.** With
+the grant active, both panels were read through `tools/livebrowser.py`: the stored handle is
+`zoost` and `queryPermission({mode:'readwrite'})` answers **`granted`** at page load, on both
+products. Nothing is dormant and nothing needs waking, so the startup check the panels already make
+is the right one and is sufficient. What was happening on the Mac is that the grant was not active
+there, whatever the settings row showed.
 
-**What no change here can do:** grant the permission itself. `requestPermission()` needs a gesture,
-and the persistence is Chrome's to offer.
+**So there is nothing here to build.** The prompt was reachable on both products all along and no
+code blocked it; what differed was which of the three buttons had been pressed, and that is Chrome
+asking the owner of a disk a question it is right to ask.
 
-**Cost:** the measurement is two lines pasted into a console. The change is an hour, and it can only
-be checked on a profile that already holds a persistent grant - a fresh Chrome has nothing dormant
-to wake, so it cannot be measured here.
+**What is worth keeping** is the shape of the two dead hypotheses, which is why they are still
+written above: a difference between two products that turned out to be a difference between two
+answers a person gave.
 
-**State:** open, waiting on the measurement. Nothing is worth writing until that comes back.
+**Cost:** none taken.
+
+**State:** closed, without a change.
