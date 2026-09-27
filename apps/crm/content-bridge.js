@@ -21,6 +21,7 @@
   // the re-injection that was supposed to replace it returned at this line. A guard that cannot tell
   // two builds apart is the boolean it was written to stop being.
   const BRIDGE_V = chrome.runtime.getManifest().version;
+  const BRIDGE_PROTOCOL_V = 2;
   if (window.__zoostBridge === BRIDGE_V) { return; }
   window.__zoostBridge = BRIDGE_V;
 
@@ -1846,8 +1847,12 @@
     // null-origin iframes (location.origin === 'null'), where fetch(BASE + path) becomes a relative,
     // malformed URL (…/null/crm/v2/…) → 400. Those frames must stay silent so the real CRM frame answers.
     if (!/^https:\/\/crm(sandbox)?\.zoho/.test(location.origin)) return false;
+    if (msg?.__zoostProtocol !== undefined && msg.__zoostProtocol !== BRIDGE_PROTOCOL_V) {
+      sendResponse({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: false, error: 'Unsupported bridge protocol', code: 'bridge-protocol' });
+      return;
+    }
     if (msg?.cmd !== 'context' && !expectedMatches(msg && msg.__zoostExpected, context())) {
-      sendResponse({ ok: false, error: 'The Zoho tab is not the one this workspace is bound to - the command was refused.' });
+      sendResponse({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: false, error: 'The Zoho tab is not the one this workspace is bound to - the command was refused.' });
       return;
     }
 
@@ -1859,12 +1864,12 @@
   async function answer(p, send, shape) {
     let r;
     try { r = await p; } catch (e) { fail(send)(e); return; }
-    send(shape ? shape(r) : { ok: true, ...r });
+    send(shape ? { __zoostProtocol: BRIDGE_PROTOCOL_V, ...shape(r) } : { __zoostProtocol: BRIDGE_PROTOCOL_V, ok: true, ...r });
   }
 
   // `diag` crosses with the rest: a property hung on an Error does not survive `sendResponse`, so
   // anything the panel needs has to be named here. It carries names and counts, never a value.
-  const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
+  const fail = (send) => (e) => send({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
     forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null,
     // What to say to the reader when this refusal has its own words. Without it a refusal Zoho
     // spelled differently arrives as the one generic sentence about roles, which is a cause nobody
@@ -1883,7 +1888,7 @@
     // The org is the right thing to require, and not one more name to exclude: it is read from the
     // page's own `crmZgid`, which only the application has, and the whole mismatch guard compares
     // orgs - so a context without one could never match anything and was never an identity.
-    if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance && c.org) sendResponse(c); return; }
+    if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance && c.org) sendResponse({ __zoostProtocol: BRIDGE_PROTOCOL_V, ...c }); return; }
     // One reply for every command, which is the shape the Analytics bridge has had from the start.
     // Here each line carried its own `.then(...).catch(fail(...))` - eleven copies of one chain,
     // eleven scopes `tools/asynccheck.py` cannot enter, and eleven chances to write the eleventh

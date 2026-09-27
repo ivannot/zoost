@@ -39,7 +39,7 @@ askScope	d27f77a79c58	5a0012715e71	divergent
 askTwin	cf520e4a0d60	cf520e4a0d60	identical
 beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
-bridgeCommand	43c239bf9acf	43c239bf9acf	identical
+bridgeCommand	996fdc5bdf4c	996fdc5bdf4c	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
 bridgeResponseError	2675476e3c3f	2675476e3c3f	identical
 buildChips	8a88fe99de94	8a88fe99de94	identical
@@ -322,7 +322,7 @@ updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
 updateScopeUI	fb2e5760e9e9	ff54308a4864	divergent
-validateBridgeReply	36ac8f1a3e55	e0cd2e4989ef	divergent
+validateBridgeReply	730b6499854e	1455070803e1	divergent
 validateMirrorPlan	1e1eb19c46d0	1e1eb19c46d0	identical
 viewInert	630e33436b3e	630e33436b3e	identical
 visibleKindCount	e1dd4478c03d	e1dd4478c03d	identical

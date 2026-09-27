@@ -5,8 +5,12 @@
  * distinguish a missing listener from a negative reply, and rebuild the facts carried by errors.
  */
 
+// Optional on the wire for one-release compatibility: an older bridge ignores the extra field,
+// while a newer bridge can refuse a future protocol instead of interpreting it as an old command.
+const BRIDGE_PROTOCOL_V = 2;
+
 /** @typedef {{[field: string]: unknown}} BridgeIdentity */
-/** @typedef {{__zoostExpected?: BridgeIdentity} & ({cmd: "context"} | {cmd: "listFunctions"} | {cmd: "functionUiIds"} |
+/** @typedef {{__zoostExpected?: BridgeIdentity, __zoostProtocol?: number} & ({cmd: "context"} | {cmd: "listFunctions"} | {cmd: "functionUiIds"} |
  * {cmd: "functionRuntime", id: string, language?: string, period?: string, from?: string, to?: string} |
  * {cmd: "listWorkflows"} | {cmd: "fetchWorkflow", id: string} | {cmd: "workflowUsage", id: string, from?: string, till?: string} |
  * {cmd: "listSchedules"} | {cmd: "listBlueprints"} | {cmd: "fetchBlueprint", id: string} |
@@ -21,14 +25,16 @@
 /** @typedef {{ok: true, rule?: object, blueprint?: object, transition?: object, action?: object, usage?: object, fields?: object[], window?: object, logs?: object, revisions?: object}} CrmDetailReply */
 /** @typedef {{ok: false, error: string, status?: number, forbidden?: boolean, area?: string, note?: string, diag?: unknown,
  * code?: string, detail?: unknown}} BridgeErrorReply */
-/** @typedef {CrmContextReply | CrmListReply | CrmFileReply | CrmDetailReply | BridgeErrorReply} BridgeReply */
+/** @typedef {{__zoostProtocol?: number} & (CrmContextReply | CrmListReply | CrmFileReply | CrmDetailReply | BridgeErrorReply)} BridgeReply */
 /** @typedef {Error & {status: number, forbidden: boolean, note: unknown, diag: unknown, upstreamCode: string|null, detail: unknown}} BridgeReplyError */
 
 /** @param {BridgeCommand} message @param {BridgeIdentity|null} identity @returns {BridgeCommand} */
 function bridgeCommand(message, identity) {
+  // Keep the value local as well as global: the panel lifter tests this function in isolation.
+  const versioned = { ...message, __zoostProtocol: 2 };
   return identity && message.cmd !== 'context'
-    ? { ...message, __zoostExpected: identity }
-    : message;
+    ? { ...versioned, __zoostExpected: identity }
+    : versioned;
 }
 
 /** @param {unknown} reply @returns {BridgeReply|null} */
@@ -41,6 +47,9 @@ function bridgeContext(reply) {
 function validateBridgeReply(command, reply) {
   if (!reply || typeof reply !== 'object') throw new Error('bridge returned no response');
   const r = /** @type {BridgeReply} */ (reply);
+  if (r.__zoostProtocol !== undefined && r.__zoostProtocol !== BRIDGE_PROTOCOL_V) {
+    throw new Error(`bridge protocol ${String(r.__zoostProtocol)} is not supported`);
+  }
   if (r.ok === false && typeof r.error !== 'string') throw new Error('bridge returned an invalid error response');
   if (r.ok !== true && r.ok !== false) throw new Error('bridge returned an invalid response envelope');
   if (r.ok === true && command && typeof command === 'object') {

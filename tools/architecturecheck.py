@@ -115,6 +115,8 @@ def _bridge_findings(root: Path, app: str) -> list[str]:
         findings.append(f"{app}: bridge contract declares command without handler {command!r}")
     if "function validateBridgeReply" not in contract:
         findings.append(f"{app}: bridge contract has no runtime reply validator")
+    if "const BRIDGE_PROTOCOL_V = 2" not in contract or "const BRIDGE_PROTOCOL_V = 2" not in bridge:
+        findings.append(f"{app}: bridge protocol version is not declared by both ends")
     return findings
 
 
@@ -181,15 +183,15 @@ def self_test() -> None:
             '<script src="analytics-view-model.js"></script>'
             '<script src="workbench.js"></script>', encoding="utf-8")
         (root / "apps" / "crm" / "bridge-contract.js").write_text(
-            "// @ts-check\n/** @typedef {{cmd: 'context'} | {cmd: 'listFunctions'}} BridgeCommand */\n"
+            "// @ts-check\nconst BRIDGE_PROTOCOL_V = 2;\n/** @typedef {{cmd: 'context'} | {cmd: 'listFunctions'}} BridgeCommand */\n"
             "function validateBridgeReply() {}", encoding="utf-8")
         (root / "apps" / "analytics" / "bridge-contract.js").write_text(
-            "// @ts-check\n/** @typedef {{cmd: 'context'} | {cmd: 'listViews'}} BridgeCommand */\n"
+            "// @ts-check\nconst BRIDGE_PROTOCOL_V = 2;\n/** @typedef {{cmd: 'context'} | {cmd: 'listViews'}} BridgeCommand */\n"
             "function validateBridgeReply() {}", encoding="utf-8")
         (root / "apps" / "crm" / "content-bridge.js").write_text(
-            "if (msg?.cmd === 'context') {}\nif (msg?.cmd === 'listFunctions') {}", encoding="utf-8")
+            "const BRIDGE_PROTOCOL_V = 2;\nif (msg?.cmd === 'context') {}\nif (msg?.cmd === 'listFunctions') {}", encoding="utf-8")
         (root / "apps" / "analytics" / "content-bridge.js").write_text(
-            "if (msg?.cmd === 'context') {}\nif (msg?.cmd === 'listViews') {}", encoding="utf-8")
+            "const BRIDGE_PROTOCOL_V = 2;\nif (msg?.cmd === 'context') {}\nif (msg?.cmd === 'listViews') {}", encoding="utf-8")
         for app, names in {
             "crm": ["pull-lifecycle.js", "pull-controller.js", "pull-adapter.js", "crm-bootstrap.js"],
             "analytics": ["pull-lifecycle.js", "pull-usecase.js", "pull-adapter.js", "bootstrap.js", "filesystem-adapter.js", "analytics-mirror-writer.js", "analytics-view-model.js", "workbench.js"],

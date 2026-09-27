@@ -45,6 +45,7 @@
   // the re-injection that was supposed to replace it returned at this line. A guard that cannot tell
   // two builds apart is the boolean it was written to stop being.
   const BRIDGE_V = chrome.runtime.getManifest().version;
+  const BRIDGE_PROTOCOL_V = 2;
   if (window.__zoostAnalyticsBridge === BRIDGE_V) { return; }
   window.__zoostAnalyticsBridge = BRIDGE_V;
 
@@ -423,11 +424,11 @@
     let r;
     try { r = await p; }
     catch (e) {
-      send({ ok: false, error: String(e.message || e), status: (e && e.status) || 0,
+      send({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: false, error: String(e.message || e), status: (e && e.status) || 0,
              forbidden: !!(e && e.forbidden) });
       return;
     }
-    send({ ok: true, ...r });
+    send({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: true, ...r });
   }
 
   /** Does the page the command arrived at match the one the panel meant?
@@ -445,8 +446,12 @@
   }
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!IS_ANALYTICS) return false;
+    if (msg?.__zoostProtocol !== undefined && msg.__zoostProtocol !== BRIDGE_PROTOCOL_V) {
+      sendResponse({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: false, error: 'Unsupported bridge protocol', code: 'bridge-protocol' });
+      return;
+    }
     if (msg?.cmd !== 'context' && !expectedMatches(msg && msg.__zoostExpected, context())) {
-      sendResponse({ ok: false, error: 'The Zoho tab is not the one this workspace is bound to - the command was refused.' });
+      sendResponse({ __zoostProtocol: BRIDGE_PROTOCOL_V, ok: false, error: 'The Zoho tab is not the one this workspace is bound to - the command was refused.' });
       return;
     }
 
@@ -469,7 +474,7 @@
     // not after it.
     if (msg?.cmd === 'context') {
       const c = context();
-      if (/^https:\/\/analytics\.zoho/.test(c.origin || '') && c.workspace) sendResponse(c);
+      if (/^https:\/\/analytics\.zoho/.test(c.origin || '') && c.workspace) sendResponse({ __zoostProtocol: BRIDGE_PROTOCOL_V, ...c });
       return;
     }
     if (msg?.cmd === 'workspaceInfo') return reply(workspaceInfo());
