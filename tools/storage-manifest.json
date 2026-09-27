@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "apps": {
+    "crm": {
+      "local": {
+        "keys": {
+          "aicfg": {"owner": "ai.js", "lifecycle": "persistent"},
+          "chromeFolded": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "erDrawMax": {"owner": "graphview.js", "lifecycle": "persistent"},
+          "erParams": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "exportScope": {"owner": "export-scope.js", "lifecycle": "persistent"},
+          "previewH": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "previewW": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "rxShortcuts": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "sampleWs": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "settingsStamp": {"owner": "options.js", "lifecycle": "migration-marker"},
+          "tabAccessView": {"owner": "tabs.js", "lifecycle": "persistent"},
+          "tabPrefs": {"owner": "tabs.js", "lifecycle": "persistent"},
+          "zohoDc": {"owner": "options.js", "lifecycle": "persistent"},
+          "zoostWindowBounds": {"owner": "workbench.js", "lifecycle": "persistent"}
+        }
+      },
+      "session": {
+        "keys": {
+          "aikeys": {"owner": "keyvault.js", "lifecycle": "browser-session"},
+          "zoostPendingView": {"owner": "tabs.js", "lifecycle": "browser-session"},
+          "zoostWindowId": {"owner": "background.js", "lifecycle": "browser-session"}
+        }
+      }
+    },
+    "analytics": {
+      "local": {
+        "keys": {
+          "aicfg": {"owner": "ai.js", "lifecycle": "persistent"},
+          "chromeFolded": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "detailH": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "detailW": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "erDrawMax": {"owner": "graphview.js", "lifecycle": "persistent"},
+          "erParams": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "rxShortcuts": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "sampleWs": {"owner": "workbench.js", "lifecycle": "persistent"},
+          "zohoDc": {"owner": "options.js", "lifecycle": "persistent"},
+          "zoostWindowBounds": {"owner": "workbench.js", "lifecycle": "persistent"}
+        }
+      },
+      "session": {
+        "keys": {
+          "aikeys": {"owner": "keyvault.js", "lifecycle": "browser-session"},
+          "zoostPendingView": {"owner": "tabs.js", "lifecycle": "browser-session"},
+          "zoostWindowId": {"owner": "background.js", "lifecycle": "browser-session"}
+        }
+      }
+    }
+  }
+}
