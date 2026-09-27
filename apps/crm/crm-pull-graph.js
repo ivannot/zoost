@@ -122,7 +122,7 @@ async function pullAll(depth = {}) {
       if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
       if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) rmF.push(...pathsFromMeta(mm, p)); } catch (_) {} }
     }
-    // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
+    // Each removal, not the loop: `op.remove` resolves its path against the folder that is current
     // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
     // A missing or partial plan cannot silently turn the folder walk into a destructive action.
     // **The plan has to name the same files the walk finds, or the intersection deletes the wrong

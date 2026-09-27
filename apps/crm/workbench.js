@@ -691,11 +691,8 @@ const hasPerm = workspaceFilesystem.hasPermission;
 const requirePerm = workspaceFilesystem.requirePermission;
 const forgetDirs = workspaceFilesystem.forgetDirectories;
 const beginWorkspaceOp = workspaceFilesystem.beginOperation;
-const ensureDirectoryAt = workspaceFilesystem.ensureDirectoryAt;
 const writeFileAt = workspaceFilesystem.writeFileAt;
 const readFileAt = workspaceFilesystem.readFileAt;
-const removeFileAt = workspaceFilesystem.removeFileAt;
-const removeFile = (path) => removeFileAt(dir, path);
 
 /** Write one function in the shape Zoho serves it: one `.dg` for Deluge, every returned file below
  * `<name>.files/` for compiled runtimes. Metadata is written last, so a sidecar always describes

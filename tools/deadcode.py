@@ -15,11 +15,48 @@ carried one raw NUL byte, which makes a file binary to grep, which then skips it
 shipped code per product, invisible. The byte is gone and a case in `tests/tools_test.py` keeps it
 gone, but the lesson is in this file's method: read the bytes yourself.
 
+**Three readers, reported apart: the product, its markup, and the suite.** This counted them as one
+corpus and therefore answered one question - «does any file mention this name» - where there are two
+worth asking. A function called only by a test is alive in the suite and dead in the product: it is
+carried, shipped and read by whoever opens the file, and nothing a user does reaches it. Merged, it
+looked identical to a function the panel calls on every click.
+
+Measured the day the split was written: **0 candidates before, 14 after**, and twelve of the
+fourteen were the class that had been invisible. Two were dead outright - a `refreshBlueprints`
+wrapper whose only caller had been removed by the fix for «one click re-read the whole area», and a
+`removeFile` alias left behind when the writes moved onto `op.remove`. Removing the first exposed a
+third underneath it, `refreshBlueprintsNow`, reachable only through the wrapper; so a removal here is
+followed by another run, not by a commit.
+
+**And it stopped costing minutes.** The per-name search re-read the whole corpus once per
+declaration - **3m23s** on this tree. The corpus is tallied once now, into a counter per reader:
+**3.2s**, same semantics, same expression. A sweep nobody will wait for is a sweep nobody runs.
+
 **What it cannot see, said plainly rather than left to be discovered.** A name built at run time -
 `$('sc_' + area)`, `MSG.arrBadFile[reason]`, a class in a template literal - looks dead here and is
 not. Every finding is checked by hand before it is acted on; the sweep that produced this file threw
 away four "findings" of exactly that kind.
+
+**A name declared twice in one product is invisible here, however dead one of them is.** The tally
+is per app and not per file, which is right for classic scripts sharing one scope - a function
+declared in `workbench.js` and called from `automation.js` is alive - and it means a *shadowed* name
+scores the uses of its namesake. Met the day this split was written, by a reader and not by the
+tool: `const removeFileAt = workspaceFilesystem.removeFileAt;` in `workbench.js` had no consumer
+left, and `removeFileAt` still tallied four - all four being the `async function removeFileAt`
+declared and called inside `filesystem-adapter.js`'s factory, a different scope with the same name.
+`ensureDirectoryAt` beside it was dead the same way and had been for longer.
+
+There is no cheap fix: distinguishing them needs scope, and a scope-aware pass over 92 classic
+scripts is a different tool from this one. So it is stated instead, and the shape to watch for is
+narrow enough to carry - **an alias of a module's own export, named after it**. Those lines sit
+together at the top of both panels; read them when this sweep says nothing about them.
+
+A property access is deliberately not a reference: `obj.foo()` does not keep a declared `foo` alive,
+because it is almost never the same thing. That is right far more often than it is wrong, and when
+it is wrong the name shows up here and a reader spends ten seconds on it - the cheap direction. The
+expensive one would be a name quietly kept alive by an unrelated property somewhere in 92 files.
 """
+import collections
 import pathlib
 import re
 import sys
@@ -49,20 +86,48 @@ def read(p: pathlib.Path) -> str:
     return p.read_bytes().decode("utf-8", "replace")
 
 
+# An identifier, and never a property access: `obj.foo` is not a reference to a declared `foo`. The
+# same expression the per-name search used, hoisted so the corpus is read once instead of once per
+# declaration.
+IDENT = re.compile(r'(?<![\w$.])([A-Za-z_$][\w$]*)')
+
+
+def tally(text: str) -> collections.Counter:
+    return collections.Counter(m.group(1) for m in IDENT.finditer(text))
+
+
 def sweep(app: str) -> list:
     d = ROOT / "apps" / app
     js_files = sorted(d.glob("*.js"))
-    # The suite counts as a reader. A structural landmark can be held by a test and by nothing else -
-    # `#focusg` names the focus group in both diagram windows, and a test asserts it is in the header
-    # because that *is* the guarantee, not because any line of code looks it up. Sweeping without
-    # this removes it, the suite goes red, and the sweep has cost more than it found.
-    code = ("".join(strip_comments(read(p)) for p in js_files)
-            + "".join(read(p) for p in (ROOT / "tests").glob("*.mjs"))
-            + "".join(read(p) for p in (ROOT / "tests").glob("*.py")))
-    markup = "".join(read(p) for p in d.glob("*.html"))
+
+    # **Three readers, kept apart, because «used» is three different answers.**
+    #
+    # This counted the suite as part of one undifferentiated corpus, for a reason that is still
+    # right: a structural landmark can be held by a test and by nothing else - `#focusg` names the
+    # focus group in both diagram windows, and a test asserts it is in the header because that *is*
+    # the guarantee. Sweeping without the tests removes it, the suite goes red, and the sweep has
+    # cost more than it found.
+    #
+    # But merging them hides the finding this tool exists for. A function called only by a test is
+    # **alive in the suite and dead in the product**: it is carried, shipped, read by whoever opens
+    # the file, and nothing a user does reaches it. Under one corpus it is indistinguishable from a
+    # function the panel calls on every click. So the three are counted separately and the report
+    # says which one kept each name.
+    product = tally("".join(strip_comments(read(p)) for p in js_files))
+    markup_text = "".join(read(p) for p in d.glob("*.html"))
+    manifest = d / "manifest.json"
+    if manifest.exists():
+        markup_text += read(manifest)
+    markup = tally(markup_text)
+    suite = tally("".join(read(p) for p in (ROOT / "tests").glob("*.mjs"))
+                  + "".join(read(p) for p in (ROOT / "tests").glob("*.py"))
+                  + "".join(read(p) for p in (ROOT / "tools").glob("*.py"))
+                  + "".join(read(p) for p in (ROOT / "tools").glob("*.mjs")))
+    # Kept whole for the substring questions below, which are not about identifiers.
+    code = "".join(strip_comments(read(p)) for p in js_files)
     out = []
 
-    # 1. declarations nothing refers to. One hit is the declaration itself.
+    # 1. declarations, classified by who still reaches them. One hit is the declaration itself.
     for p in js_files:
         s = strip_comments(read(p))
         # **At the declaration's own indentation, not at column zero.** Both `content-bridge.js` files
@@ -77,9 +142,14 @@ def sweep(app: str) -> list:
         for kind, pat in (("function", r'^[ \t]*(?:async\s+)?function(?:\s*\*\s*|\s+)([A-Za-z_$][\w$]*)'),
                           ("const", r'^[ \t]*const\s+([A-Za-z_$][\w$]*)\s*=')):
             for name in sorted(set(re.findall(pat, s, re.M))):
-                seen = len(re.findall(r'(?<![\w$.])' + re.escape(name) + r'(?![\w$])', code))
-                if seen <= 1 and name not in markup:
-                    out.append(f"{app}/{p.name}: {kind} {name} - declared, referred to nowhere")
+                if product[name] > 1 or markup[name]:
+                    continue                      # the product reaches it; nothing to say
+                # **Alive in the suite and dead in the product.** Reported as its own class rather
+                # than dropped: it is not a deletion - a landmark held by a test is exactly what the
+                # paragraph above defends - but it is the one thing this sweep could never see
+                # before, and it is where carried-but-unreachable code hides.
+                where = "kept alive only by tests or tools" if suite[name] else "referred to nowhere"
+                out.append(f"{app}/{p.name}: {kind} {name} - declared, {where}")
 
     # 2. messages nothing says
     for p in js_files:

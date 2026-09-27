@@ -466,17 +466,6 @@ async function openBlueprintInZoho(id) {
   try { if (await goToZoho(`${ws.base}/crm/${ws.instance}/settings/blueprint/${id}`)) setStatus('Opened blueprint in Zoho.', 'ok'); }
   catch (e) { setStatus('Could not open: ' + e.message, 'warn'); }
 }
-async function refreshBlueprintsNow() {
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  setStatus('Refreshing blueprints…', 'busy');
-  // The pull owns the message, for the reason written out over `refreshSchedulesNow`: every early
-  // return in it sets its own line, so a count painted here would be the length of the list already
-  // in memory and would read as a refresh that happened when it did not.
-  await pullBlueprints();
-}
-async function refreshBlueprints() {
-  return runPullAction(refreshBlueprintsNow);
-}
 async function rebuildSchedules() {
   const op = beginWorkspaceOp();   // the workspace this rebuild is about
   if (!dir) return;

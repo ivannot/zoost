@@ -161,8 +161,11 @@ resync left the assistant holding the field list it had replaced; a workflows pu
 to "which rule fires this" and rebuilt nothing. Every one of them is invisible from the panel,
 because **the mirror on disk is right and only the memory over it is wrong** - there is nothing on
 screen to compare against. So `noteWrite(rel)` maps what was written to what must be forgotten, both
-panels have one, and it is reached from `writeFile` *and* `removeFile`, since a deletion is a write.
-A path that writes tomorrow inherits it without being told. The one thing it cannot do is rebuild:
+panels have one, and it is reached through `onWrite` from **inside** `writeFileAt` *and*
+`removeFileAt` - a deletion is a write, and both live in the adapter rather than in a panel-level
+wrapper. A path that writes tomorrow inherits it without being told, and without having to pick the
+right helper: this used to name `writeFile` and `removeFile`, which were shorthands over those two,
+and `removeFile` has since been deleted for having no caller while the guarantee stood untouched. The one thing it cannot do is rebuild:
 `actionFiredBy()` is called while a row is drawn and cannot read a file, so the workflows pull
 rebuilds that map itself - a map that is merely absent would be drawn as "no rule fires this", which
 is a stronger claim than the stale one it replaced.
@@ -467,7 +470,7 @@ file - three call sites remembered and two did not, and the three that were righ
 luck, since nothing would have said otherwise. The fix is the one this repository keeps arriving at
 from different directions: put the knowledge at the single point the event passes through.
 `noteWrite(rel)` in both panels now maps *what was written* to *what must be forgotten*, and it is
-reached from `writeFile` **and `removeFile`** - a deletion is a write, and the pull that prunes
+reached through `onWrite` from inside **`writeFileAt` and `removeFileAt`** - a deletion is a write, and the pull that prunes
 functions Zoho no longer has was the sixth path that had to remember. A write path added tomorrow
 inherits all of it without being told it exists.
 

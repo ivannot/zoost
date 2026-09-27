@@ -163,7 +163,7 @@ async function reconcileNow(op) {
     // Whatever a previous round could not finish removing, before anything else.
     // Try the removal again rather than asking whether the file is there: a read that fails for
     // any other reason would otherwise be taken for «already gone» and the entry dropped.
-    // `removeFile` on something absent throws NotFound, which *is* the answer we wanted.
+    // `op.remove` on something absent throws NotFound, which *is* the answer we wanted.
     for (const p of [...failedRemovals]) {
       if (!op.current()) return;
       try { await op.remove(p); failedRemovals.delete(p); }
