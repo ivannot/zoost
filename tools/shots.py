@@ -531,9 +531,15 @@ window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, version: {ver}, host_permissions: {hosts} }}), sendMessage: (m, cb) => cb && cb(null),
               onMessage: {{ addListener: () => {{}}, removeListener: () => {{}} }}, lastError: null, getURL: (p) => p,
               onInstalled: {{ addListener: () => {{}} }} }},
-  // `{stored}` is what `chrome.storage.local` answers, so a shot can photograph a *configured*
-  // install rather than an empty form - which is the whole point of the settings picture. Every
-  // other shot passes `{{}}` and is unaffected. The whole object comes back whatever is asked for,
+  // **The field name is escaped wherever it is named here, doubled braces included.** This comment
+  // is inside the format template, so an unescaped field is substituted *into the comment* - which
+  // was invisible while the value was the one-line `{{}}` every shot passed, and broke the file the
+  // day a scenario passed a multi-line store: the first line landed in the comment and the rest
+  // spilled out as code, for «Unexpected identifier 'chrome'» about a line nobody had written.
+  //
+  // What the field does: it is what `chrome.storage.local` answers, so a shot can photograph a
+  // *configured* install rather than an empty form - the whole point of the settings picture, and
+  // the seam the upgrade scenarios reach for. The whole object comes back whatever is asked for,
   // which is enough for every reader in the panel and in the settings form.
   storage: {{ local: {{ get: async () => ({stored}), set: async () => {{}},
                         onChanged: {{ addListener: () => {{}} }} }},
@@ -608,7 +614,13 @@ def render_panel(shot, expect_ok: bool = False):
     only the folder underneath it is in memory. See the header of that file for what the shim is and
     what it is not.
     """
-    key, app, ws, script = shot
+    # **A fifth element, and its default is what every scenario had before.** `stored` is what
+    # `chrome.storage.local` answers, and `render_panel` hard-coded it empty - so every panel the
+    # probe has ever driven was a *fresh install*, and the path a user actually takes to 2.0, which
+    # is an upgrade over a 1.x install, was driven by nothing at all. The settings renderer beside
+    # this one already had the seam; this one did not reach for it.
+    key, app, ws, script = shot[:4]
+    stored = shot[4] if len(shot) > 4 else "{}"
     src = ROOT / "apps" / app
     base = fixtures_for(key) / ws
     files = files_under(base, ("crm" if app == "crm" else "analytics") + "/" + base.name)
@@ -621,7 +633,7 @@ def render_panel(shot, expect_ok: bool = False):
         taburl, ctx = PANEL_CTX[app]
         (stage / "shot.js").write_text(
             PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=script,
-                              hosts=hosts_of(app), ver=version_of(app), stored="{}",
+                              hosts=hosts_of(app), ver=version_of(app), stored=stored,
                               taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
         page = stage / "workbench.html"

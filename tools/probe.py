@@ -3139,6 +3139,137 @@ CRM_LOCAL_UI = CRM.split('(async () => {')[0] + """(async () => {
 # the ones that cannot yet: **it should shrink, and a name added to it is a finding, not a note.**
 # Every scripted scenario now declares an explicit terminal title and is held to it by the capture
 # layer. Keep this ledger empty: adding an exception would make a partial browser run look green.
+# ---------------------------------------------------------------------------------------------
+# An install upgraded from 1.x, which is the path every existing user takes and the one nothing drove.
+#
+# `render_panel` answered `chrome.storage.local` with `{}` for every scenario it has ever run, so it
+# only ever started a **fresh install**. A user who updates from the Store starts from a store the
+# previous version wrote.
+#
+# **Every value below is the shape the named version actually wrote**, read out of `crm-v1.53.0` and
+# `analytics-v1.34.0` rather than imagined - and the first draft of this fixture got four of them
+# wrong in a way that mattered: `previewH` as a number where 1.x stored the CSS string from
+# `$('preview').style.height`, `detailH` the same, `rxShortcuts` as a boolean where 1.x wrote an
+# array of saved patterns, `tabAccessView` as a string where it wrote `{ws, access}`. A seed in a
+# shape no version produced exercises a branch no user can reach, and it does it while the comment
+# above it says «derived».
+#
+# It also carried `sidePanelMode`, described as «a key 2.0 reads nowhere, left in to prove an
+# obsolete value is ignored». **No version of this product ever wrote that key** - `git log -S` finds
+# it nowhere - so it was an invention with a measurement's wording on it, and the storage manifest
+# then recorded it as fact. It is gone. What stands in for it is `previewW`: the CRM wrote it,
+# Analytics never did, so an Analytics install carrying it is genuinely something 2.0 must ignore.
+#
+# **What this does not cover, said rather than implied:** `tools/fsshim.js` replaces `idbHandle`, so
+# no scenario here touches IndexedDB. The database that comes up without its object store is held by
+# four cases in `tests/panel.test.mjs` instead.
+UPGRADE_STORED = {
+    'crm': """{
+      aicfg: { engine: 'anthropic', model: 'claude-sonnet-5', protected: true },
+      erDrawMax: 'lots',
+      erParams: { current: 'grid', mode: 'all', kind: 'schema', depth: 2 },
+      exportScope: { functions: true, modules: true, code: false },
+      previewH: '320px',
+      rxShortcuts: [{ name: 'void rows', pattern: 'void' }],
+      sampleWs: 'crm/some-other-sample',
+      settingsStamp: 1750000000000,
+      tabAccessView: { ws: 'Sample org', access: {} },
+      tabPrefs: { order: ['functions', 'modules'], hidden: ['schedules'], nopull: [], recheck: [] },
+      zohoDc: 'zoho.eu'
+    }""",
+    'analytics': """{
+      aicfg: { engine: 'openai', model: 'gpt-5', protected: false },
+      erDrawMax: '',
+      erParams: { current: 'grid', mode: 'all' },
+      detailH: '280px',
+      previewW: '380px',
+      rxShortcuts: [],
+      sampleWs: 'analytics/some-other-sample',
+      zohoDc: 'zoho.eu'
+    }""",
+}
+
+# The half both products share. Each appends its own read-backs and its own ending.
+_UPGRADE_CORE = """
+  const sayUp = (m) => { throw new Error(m); };
+  // The two panels name their status line differently - `stxt` in CRM, `statustext` in Analytics -
+  // and one core drives both. Asserting on `stxt` alone would have made every line vacuous on
+  // Analytics, where the `until` would simply never have come true.
+  const statusLine = () => document.getElementById('stxt') || document.getElementById('statustext');
+
+  // 1. It opens at all. An upgrade that throws on a stored value never gets past this line.
+  await until(() => statusLine(), 'the workbench never drew its status line');
+
+  // 2. **The sample flag comes off the workspace, exactly as every pull scenario does it.** Without
+  //    this the fixture is a sample, a sample refuses every pull by design, and the «a pull is
+  //    possible» step below fails on correct behaviour - which it did, twice, and the first
+  //    diagnosis blamed the stored `sampleWs` key. It does not decide this: `isSample()` reads
+  //    `bound.sample` from the workspace's own config and never looks at storage.
+  // The shim is bound here rather than taken from the prelude: `fs` is a local of each pull
+  // scenario's own IIFE, and this core is spliced into two different preludes.
+  const fsUp = window.__fsshim;
+  const wsBase = document.getElementById('stxt') ? 'crm/sampleorg-1234567890/' : 'analytics/sample-workspace/';
+  const cfg0 = JSON.parse(fsUp.read(wsBase + '.zoost.json'));
+  const real0 = Object.assign({}, cfg0); delete real0.sample; delete real0.sampleAt;
+  fsUp.load({ [wsBase + '.zoost.json']: JSON.stringify(real0, null, 2) });
+  if (typeof restoreRoot === 'function') await restoreRoot();
+  if (typeof loadWorkspaces === 'function') await loadWorkspaces();
+  if (typeof refreshWorkspaces === 'function') await refreshWorkspaces();
+
+  // 3. The workspace the previous install was using is open, not lost. This is the one thing an
+  //    upgrade must never cost: the folder is the user's work.
+  await until(() => $('ws') && $('ws').options.length > 0, 'no workspace survived the upgrade');
+  if (!($('ws').value || '').trim()) sayUp('the upgraded install came up with no workspace selected');
+
+  // 4. **A preference 1.x wrote is read back off the panel.** Everything above passes just as well
+  //    over an empty store - which is what the first version of this scenario was, six checks a
+  //    *fresh* install also satisfies, dressed as an upgrade and proved vacuous by a control run.
+  //    `zohoDc` falls back to `zoho.com` when nothing is stored, so `zoho.eu` on screen can only
+  //    have come from the seeded state.
+  await until(() => $('opts') && getComputedStyle($('opts')).display !== 'none',
+              'Settings never became available, so nothing could be read back');
+  $('opts').click();
+  await until(() => $('settingsview').classList.contains('show'), 'Settings did not open');
+  await until(() => $('zohoDc') && $('zohoDc').options.length, 'the data centre list never drew');
+  await until(() => $('zohoDc').value === 'zoho.eu',
+              'the data centre stored by the previous version did not survive the upgrade');
+
+  // 5. And a value of the wrong *shape* falls back rather than breaking. `erDrawMax` is seeded as
+  //    the string 'lots' and as an empty string; the Diagram section reads it, and what it must
+  //    show is a number - its own default - and not the word.
+  //    Waited for, not sampled: the field is painted by an async loader, and reading it at a chosen
+  //    instant is a bet on that loader having finished. The bet won on CRM and lost on Analytics,
+  //    which is what «sometimes» looks like from here - so the condition is the assertion, and the
+  //    message names what never became true.
+  await until(() => $('pDrawMax') && /^[0-9]+$/.test(String($('pDrawMax').value || '')),
+              'a malformed stored erDrawMax never fell back to a number in the diagram settings');
+  $('settingsx').click();
+  await until(() => !$('settingsview').classList.contains('show'), 'Settings did not close');
+
+  // 6. A pull is possible: the control the whole product exists for is enabled after an upgrade.
+  await until(() => $('pull') && !$('pull').disabled, 'Pull all is disabled on an upgraded install');
+"""
+
+UPGRADE_CRM_ONLY = """
+  // 7. CRM only, because Analytics has no tab bar to hide anything from. `tabPrefs.hidden` named
+  //    Schedules, and a preference that survives an upgrade is one the reader can see surviving.
+  await until(() => $('modebar') && $('modebar').querySelectorAll('button').length,
+              'the tab bar never drew');
+  const labels = [...$('modebar').querySelectorAll('button')].map((b) => (b.textContent || '').trim());
+  if (labels.some((l) => /^Schedules$/i.test(l)))
+    sayUp(`a tab hidden by the previous version came back: ${labels.join(', ')}`);
+  // And the height 1.x stored as a CSS string is the height on screen.
+  if (($('preview').style.height || '') !== '320px')
+    sayUp(`the stored preview height did not survive: «${$('preview').style.height}»`);
+"""
+
+UPGRADE = {
+    'crm': PULL_CRM.split('(async () => {')[0] + "(async () => {" + _UPGRADE_CORE + UPGRADE_CRM_ONLY
+           + "\n  document.title = 'UPGRADE OK';\n})().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });\n",
+    'analytics': PULL_AN.split('(async () => {')[0] + "(async () => {" + _UPGRADE_CORE
+                 + "\n  document.title = 'UPGRADE OK';\n})().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });\n",
+}
+
 UNFINISHED = {}
 
 UNFINISHED_SEEN = set()
@@ -3184,7 +3315,9 @@ def main() -> int:
     print(f"  {'endpoint-analytics':18s} ok", flush=True)
     shots._browser_for(1280, 800, 1.0)
     try:
-        for key, app, ws, script in (("probe-crm", "crm", "crm/sampleorg-1234567890", CRM),
+        # The tuple is four long or five: the fifth is what `chrome.storage.local` answers, which
+        # every scenario but the two upgrades leaves at «a fresh install».
+        for key, app, ws, script, *stored in (("probe-crm", "crm", "crm/sampleorg-1234567890", CRM),
                                      ("probe-analytics", "analytics", "analytics/sample-workspace", AN),
                                      ("pull-analytics", "analytics", "analytics/sample-workspace", PULL_AN),
                                      ("pull-crm", "crm", "crm/sampleorg-1234567890", PULL_CRM),
@@ -3198,9 +3331,14 @@ def main() -> int:
                                      ("folder-analytics", "analytics", "analytics/sample-workspace", FOLDER),
                                      ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM),
                                      ("preview-nav-crm", "crm", "crm/sampleorg-1234567890", CRM_PREVIEW_NAV),
-                                     ("local-ui-crm", "crm", "crm/sampleorg-1234567890", CRM_LOCAL_UI)):
+                                     ("local-ui-crm", "crm", "crm/sampleorg-1234567890", CRM_LOCAL_UI),
+                                     ("upgrade-crm", "crm", "crm/sampleorg-1234567890", UPGRADE["crm"],
+                                      UPGRADE_STORED["crm"]),
+                                     ("upgrade-analytics", "analytics", "analytics/sample-workspace",
+                                      UPGRADE["analytics"], UPGRADE_STORED["analytics"])):
             print(f"  {key:18s} driving\u2026", flush=True)
-            dest = drive(key, lambda: shots.render_panel((key, app, ws, script), expect_ok=True))
+            shot = (key, app, ws, script, *stored)
+            dest = drive(key, lambda: shots.render_panel(shot, expect_ok=True))
             if dest:
                 dest.unlink(missing_ok=True)      # a probe is not a picture to publish
             print(f"  {key:18s} {'ok' if dest else 'did not reach its ending (recorded)'}", flush=True)

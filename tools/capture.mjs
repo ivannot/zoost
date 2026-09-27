@@ -81,9 +81,17 @@ if (arg2 === '--probe') {
     // With where, not only what: a rejected promise arrives as a message and nothing else, and
     // «Cannot read properties of undefined» without a frame is a sentence, not a finding. The top
     // frame of the stack is added when the protocol carries one.
+    // **The basename alone could not be checked against anything, and once it mattered.** A run
+    // reported «Cannot set properties of null (setting 'onclick') @ options.js:1485» for a file
+    // 1,483 lines long, and it did not reproduce - so the one question worth asking, «which
+    // options.js», had no answer in the report. Two path segments cost nothing and make the file
+    // identifiable; the line stays 1-based, which is what an editor shows.
     const where = (d) => {
       const f = (d?.stackTrace?.callFrames || [])[0];
-      return f ? ` @ ${String(f.url).split('/').pop()}:${f.lineNumber + 1}:${f.columnNumber} in ${f.functionName || '(top level)'}` : '';
+      if (!f) return '';
+      const parts = String(f.url).split('/');
+      const name = parts.slice(-2).join('/') || String(f.url);
+      return ` @ ${name}:${f.lineNumber + 1}:${f.columnNumber} in ${f.functionName || '(top level)'}`;
     };
     if (m.method === 'Runtime.exceptionThrown') {
       const d = m.params?.exceptionDetails || {};

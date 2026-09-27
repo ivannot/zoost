@@ -4,52 +4,164 @@
     "crm": {
       "local": {
         "keys": {
-          "aicfg": {"owner": "ai.js", "lifecycle": "persistent"},
-          "chromeFolded": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "erDrawMax": {"owner": "graphview.js", "lifecycle": "persistent"},
-          "erParams": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "exportScope": {"owner": "export-scope.js", "lifecycle": "persistent"},
-          "previewH": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "previewW": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "rxShortcuts": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "sampleWs": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "settingsStamp": {"owner": "options.js", "lifecycle": "migration-marker"},
-          "tabAccessView": {"owner": "tabs.js", "lifecycle": "persistent"},
-          "tabPrefs": {"owner": "tabs.js", "lifecycle": "persistent"},
-          "zohoDc": {"owner": "options.js", "lifecycle": "persistent"},
-          "zoostWindowBounds": {"owner": "workbench.js", "lifecycle": "persistent"}
+          "aicfg": {
+            "owner": "ai.js",
+            "lifecycle": "persistent"
+          },
+          "chromeFolded": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "erDrawMax": {
+            "owner": "graphview.js",
+            "lifecycle": "persistent"
+          },
+          "erParams": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "exportScope": {
+            "owner": "export-scope.js",
+            "lifecycle": "persistent"
+          },
+          "previewH": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "previewW": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "rxShortcuts": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "sampleWs": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "settingsStamp": {
+            "owner": "options.js",
+            "lifecycle": "migration-marker"
+          },
+          "tabAccessView": {
+            "owner": "tabs.js",
+            "lifecycle": "persistent"
+          },
+          "tabPrefs": {
+            "owner": "tabs.js",
+            "lifecycle": "persistent"
+          },
+          "zohoDc": {
+            "owner": "options.js",
+            "lifecycle": "persistent"
+          },
+          "zoostWindowBounds": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          }
         }
       },
       "session": {
         "keys": {
-          "aikeys": {"owner": "keyvault.js", "lifecycle": "browser-session"},
-          "zoostPendingView": {"owner": "tabs.js", "lifecycle": "browser-session"},
-          "zoostWindowId": {"owner": "background.js", "lifecycle": "browser-session"}
+          "aikeys": {
+            "owner": "keyvault.js",
+            "lifecycle": "browser-session"
+          },
+          "zoostPendingView": {
+            "owner": "tabs.js",
+            "lifecycle": "browser-session"
+          },
+          "zoostWindowId": {
+            "owner": "background.js",
+            "lifecycle": "browser-session"
+          }
         }
       }
     },
     "analytics": {
       "local": {
         "keys": {
-          "aicfg": {"owner": "ai.js", "lifecycle": "persistent"},
-          "chromeFolded": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "detailH": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "detailW": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "erDrawMax": {"owner": "graphview.js", "lifecycle": "persistent"},
-          "erParams": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "rxShortcuts": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "sampleWs": {"owner": "workbench.js", "lifecycle": "persistent"},
-          "zohoDc": {"owner": "options.js", "lifecycle": "persistent"},
-          "zoostWindowBounds": {"owner": "workbench.js", "lifecycle": "persistent"}
+          "aicfg": {
+            "owner": "ai.js",
+            "lifecycle": "persistent"
+          },
+          "chromeFolded": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "detailH": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "detailW": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "erDrawMax": {
+            "owner": "graphview.js",
+            "lifecycle": "persistent"
+          },
+          "erParams": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "rxShortcuts": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "sampleWs": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          },
+          "zohoDc": {
+            "owner": "options.js",
+            "lifecycle": "persistent"
+          },
+          "zoostWindowBounds": {
+            "owner": "workbench.js",
+            "lifecycle": "persistent"
+          }
         }
       },
       "session": {
         "keys": {
-          "aikeys": {"owner": "keyvault.js", "lifecycle": "browser-session"},
-          "zoostPendingView": {"owner": "tabs.js", "lifecycle": "browser-session"},
-          "zoostWindowId": {"owner": "background.js", "lifecycle": "browser-session"}
+          "aikeys": {
+            "owner": "keyvault.js",
+            "lifecycle": "browser-session"
+          },
+          "zoostPendingView": {
+            "owner": "tabs.js",
+            "lifecycle": "browser-session"
+          },
+          "zoostWindowId": {
+            "owner": "background.js",
+            "lifecycle": "browser-session"
+          }
         }
       }
+    }
+  },
+  "upgradedFrom": {
+    "note": "What an install upgraded from 1.x carries that 2.0 does not read, and what it lacks that 2.0 supplies for itself. Derived on 27 September 2026 by reading which keys the tagged trees crm-v1.53.0 and analytics-v1.34.0 actually wrote, and in which shapes. tools/probe.py drives both states through the shipped panel as upgrade-crm and upgrade-analytics. Nothing in this block is checked by a tool: storageaudit.py reads only the apps section, so read this as a record and not as a derivation.",
+    "ignored": {
+      "note": "Written by one product and read by neither, or written by 1.x and read by nothing in 2.0. Left in place: a key this version does not understand is not a key it should remove, and a user who downgrades would lose the setting for no gain. An earlier version of this block listed a `sidePanelMode` key with a plausible rationale - no version of this product ever wrote it, and it was invented while the note above said «derived». Every name here is one `git log -S` finds.",
+      "keys": {
+        "previewW": "written by the CRM panel and by no Analytics version; an Analytics install that carries it got it from nothing this product shipped, and 2.0 reads it only on the CRM side"
+      }
+    },
+    "suppliedByTwoPointZero": {
+      "note": "Absent from every upgraded install, because 1.x never wrote them. Each has a default in the panel, and the upgrade scenarios assert the panel comes up rather than that the key exists.",
+      "crm": [
+        "chromeFolded",
+        "previewW",
+        "zoostWindowBounds"
+      ],
+      "analytics": [
+        "chromeFolded",
+        "detailW",
+        "zoostWindowBounds"
+      ]
     }
   }
 }
