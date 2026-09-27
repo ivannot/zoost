@@ -7360,7 +7360,7 @@ class EveryPermissionIsJustifiedAndEveryJustificationIsAsked(unittest.TestCase):
     **The limits, stated.** It matches a section by its *title* - `## N. <name> justification` - so a
     justification written under a heading of another shape is invisible to it, which is why the count
     of what it matched is asserted rather than assumed. Host permissions are one section however many
-    hosts there are, by the decision recorded in CLAUDE.md: the field explains why the extension
+    hosts there are, by the decision recorded in docs/releases.md: the field explains why the extension
     reaches them at all, and the manifest inside the package is the list. And it says nothing about
     what a justification *says* - `dashcheck` is what compares the text against the dashboard.
     """

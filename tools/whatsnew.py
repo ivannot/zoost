@@ -93,7 +93,7 @@ def main() -> int:
     # and it silently destroys the output: Python's splitlines() treats \x1e, \x1c, \x1d, \x85,
     # \u2028 and \u2029 as line boundaries too, so every record broke in half and the tool reported
     # that nothing had changed — the worst possible answer from a release-notes tool, and a clean
-    # instance of the pattern already in CLAUDE.md: a value crossing a boundary and being read
+    # instance of the pattern `docs/traps.md` names: a value crossing a boundary and being read
     # differently on the other side.
     sep = '\t'
     log = git('log', '--reverse', f'--format=%h{sep}%s', rng, '--', f'apps/{args.app}/')

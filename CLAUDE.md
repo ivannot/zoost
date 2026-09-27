@@ -28,7 +28,7 @@ its file first.** A rule you did not read is a rule that gets broken and then re
 | [`docs/testing.md`](docs/testing.md) | before adding a test, changing one, or building a checker: what the lifters reach and what they cannot, why the panels are not restructured to be importable, and every trap met while proving a check |
 | [`docs/traps.md`](docs/traps.md) | when something does nothing and says nothing. Every entry in it failed silently once |
 | [`docs/naming.md`](docs/naming.md) | before writing anything a user or a reviewer can read: the product names, the site, the translations, and the checks that hold them |
-| [`docs/releases.md`](docs/releases.md) | when something in the chain misbehaves - Cloudflare, the Store API, the workflows, the attestations. The routine itself is below, in this file |
+| [`docs/releases.md`](docs/releases.md) | **before cutting a release**, and when a step misbehaves. What the chain rests on - reproducibility, why the zip is never kept, what each store field is for, how the notes are composed - plus Cloudflare, the Store API, the workflows and the attestations. The routine itself is below, in this file |
 | [`docs/ideas.md`](docs/ideas.md) | when something worth considering is raised and not decided - so it stops depending on somebody remembering it. Each entry carries its cost, because an idea whose price nobody has looked at cannot be compared with the work it would displace |
 
 **Before adding anything here, ask which of the two it is.** A rule that binds every change - a
@@ -59,8 +59,9 @@ everything.** It lives in [`docs/decisions.md`](docs/decisions.md) under «The s
 it is true about one area; what is always true stayed here: **for every fast path, write the test
 that tries to make it lie before you write the fast path** (`tools/probe.py` holds those tests), and
 **invalidation must derive from the event, never from the memory of whoever caused it** -
-`noteWrite(rel)` maps what was written to what must be forgotten, reached from `writeFile` and
-`removeFile` both, so a write path added tomorrow inherits it. `tests/panel.test.mjs` derives every
+`noteWrite(rel)` maps what was written to what must be forgotten, and it hangs off `onWrite`
+**inside** `writeFileAt` and `removeFileAt` in the filesystem adapter - not off a wrapper a caller
+has to remember to use - so a write path added tomorrow inherits it whichever way it writes. `tests/panel.test.mjs` derives every
 `*Cache` in the shipped scripts and fails when one is named by no test.
 
 **An intermittent defect is a sequence, so record the sequence - do not sample it and never deduce
@@ -406,10 +407,6 @@ coverage gaps, and let the user decide how to read it. We inform; we do not grad
 bash tests/run.sh          # unit tests, the three checkers, and both builds
 ```
 
-**No framework, no dependencies, no build step** — node's own runner and Python's `unittest`, both
-already present on any machine that can build this project. A suite needing `npm install` would be
-the first dependency in a repository whose pitch is that it has none.
-
 **Every case is a bug that actually happened**, and **a check worth running once is worth keeping**:
 the `node -e` throwaway that proved a fix is already a test, and it goes into `tests/` before the
 commit that fixes the thing. **Assert the behaviour on real values, never the expression** - a regex
@@ -551,54 +548,12 @@ Tags are per product — `crm-v1.8.1`, not `vX.Y.Z`: with two extensions a bare 
 about which one. The single legacy `v1.0.0` predates that and is left alone; moving a published ref
 is worse than an untidy one.
 
-**The build is reproducible, and that is load-bearing.** Publishing a SHA-256 is worth nothing if two
-builds of the same commit differ — a reviewer who rebuilds gets another number and can prove nothing
-either way. Ours did differ, because `zip` stores each file's mtime and walks the directory in
-filesystem order. `build.sh` now stamps every file with the commit's own date, sorts the file list
-before handing it to `zip`, and passes `-X`. Verify with three consecutive builds: same hash, or the
-guarantee is gone.
-
-**The zip is never committed** — it is a build artefact, reproducible from the tagged commit, and
-`dist/` is git-ignored. It lives as a Release attachment, nowhere else.
-
-**And it does not survive the check that made it.** `dist/` had grown to **72** local archives,
-one per version ever built here - eleven megabytes of the single file the routine above says must
-never be uploaded, any one of which could be dragged into the dashboard by mistake. `release.sh`
-removes the pair it built once the two hashes match (and keeps them when they do not, which is
-when you need to look at them), and `tests/run.sh` removes what its packaging check produced. The
-proof is the hash; the file is a means. `dist/` holds one thing between runs now: `store/`, in the
-fixed shape `store/<app>/images/1..5.png` and `store/<app>/texts/<box>.txt` - the set to upload and
-the dashboard fields beside it, see [`store/assets.md`](store/assets.md). `tools/shots.py` and `tools/siteimg.py` clear their
-1280x800 working renders after publishing - a folder of PNGs that look like something to upload
-and are not is the same hazard one directory over. A run for a single named shot keeps its file,
-because that is what it was asked for.
-
-**Record what cannot be verified, rather than omitting it.** `RELEASES.md` states that CRM 0.13.8 —
-the version on the Store — predates this repository and has no commit to point at, and that
-Analytics 1.0.0 was submitted before the build was deterministic so no hash is published for it. A
-verifiable record that quietly papered over its first entries would be worth less than none.
-
-**A justification says *why*, and the manifest says *what*.** The host justification enumerated every
-data centre - so adding one meant editing the manifest and then remembering a paragraph in the store
-copy, which is the duplication this file spends its length fighting, in the one place I had not
-looked. Google already has the list: it is in the manifest inside the package being reviewed. The
-field exists to explain *why the extension needs to reach them at all*, and that argument does not
-change when Zoho opens a region. Reported by the author, and both listings now name the families
-(`crm.*`, `crmsandbox.*`, `one.*`, the two AI hosts) and argue from there.
-
-**Every store field states its own ceiling, and `sitecheck.py` counts.** The CRM's storage
-justification had been over 1000 characters for an unknown length of time and nothing was measuring —
-it was found by counting while editing it, which is luck, not process. The limit lives in the section
-heading and the check reads it there, so a section added tomorrow is measured without anyone
-remembering and changing a limit means editing one place. A submission that stops at the dashboard
-form costs a round trip of two to three days.
-
-**Every host a manifest may reach is named in `privacy.html`, and `sitecheck.py` derives that from
-the manifests.** `one.zoho.*` was in the Zoho CRM manifest and missing from §5's opening paragraph
-through three separate readings, because the page *did* contain the fact — in a bullet further down —
-and the sentence a reader starts from did not. Deriving the list rather than reading the prose also
-found three nobody had reported: the Canadian `zohocloud.ca` data centres were reachable and declared
-nowhere, and they are a different family from `crm.zoho.*` however similar they look.
+**The whole argument behind the chain - why the build must be reproducible, why the zip is never
+kept, what each store field is for and what the release notes are - is in
+[`docs/releases.md`](docs/releases.md).** It was written here, under a heading that says «Tests», and
+grew until this file had 2,668 characters left of the 100,000 at which `notescheck` stops it. What
+stays here is what binds a change whatever it touches; what moved is what is true about publishing,
+read by whoever is publishing. **Read it before cutting a release**, not only when a step misbehaves.
 
 **«Fixed» means fixed where the user is looking, and `auditcheck` now refuses to pretend otherwise.**
 Four commits sat unpushed while the fix in them was reported as done — true of the working tree, false
@@ -609,16 +564,6 @@ still ended in «0 findings». It is a finding now, and `deploy_state()` reports
 uncommitted tree without needing the network — git knows. **Say "in the repository" until it is
 pushed, and "live" only after `auditcheck` has said so with the network on.**
 
-**A deploy does not land everywhere at once, and `auditcheck` cried wolf twice before that was
-written down.** Run within a minute of a push it reported `crm-preview.webp` once and `index.html`
-the next time - each byte-identical a moment later, each a PoP that had not caught up. The rule this
-file already states («a push is not a publication until `curl` says so») needed its other half:
-**a single file differing seconds after a deploy is propagation, not a stale deploy.** Neither
-answer was acceptable on its own - ignoring it would blind the one check that speaks about zoost.it,
-reporting it would make the release gate noisy - so a difference is now **fetched once more, ten
-seconds later**, and only what still differs is a finding. Nothing real is hidden: a file that is
-genuinely wrong is still wrong on the second fetch, which was proven by making one wrong on purpose.
-
 **An outside review is evidence, not a verdict — check every claim before acting on it.** One arrived
 saying the homepage and `llms.txt` served by zoost.it were still the pre-analysis versions, "not a
 part: all of it", and recommended an edge purge. All five pages were **byte-identical to the
@@ -627,38 +572,10 @@ their own caveat allowed. Two of the same review's smaller findings were exactly
 here. Take the findings, verify each one, and say which were real — agreeing with a confident report
 is as much a failure as ignoring it.
 
-**The short description is read under the item name, so it must not repeat it.** Both extensions
-opened theirs with a near-copy of their own name — 40 of 132 characters spent saying the line above
-again, visible in a Web Store search result and invisible in the dashboard. It keeps **"Independent,
-unofficial"**, because that is the disclaimer doing its job on the most-read sentence the project has,
-and it does **not** say "read-only": that is an absolute this project has already had to walk back
-once, and 132 characters have no room for the qualification the full description gives it.
-
-**«What's new» comes from the commits, not from memory: `python3 tools/whatsnew.py <app>`.** Two
-products come out of one history, so what changed in Zoho CRM is not the last N commits — it is the
-ones that touched `apps/crm/`, with a fortnight of site and other-product work sitting between them.
-The tool lists them since that app's newest tag, marks the ones that also touched the site, the store
-copy or the README (their wording exists already and should not be invented twice), and prints the
-manifest version at each end so a bump nobody made is visible before the tag exists. **It gathers; it
-does not write** — a commit subject is addressed to this repository and a "What's new" to somebody
-who has the extension installed and has never read one. What it guarantees is that nothing is
-missing, which is the part memory gets wrong.
-
-**And there is no "What's new" field on the Chrome Web Store**, which both this file and the tool
-asserted for months. The Store listing tab holds the detailed description, the category, the language,
-the graphic assets, the URLs and the content declaration, and nothing per version. It was believed on
-nobody's authority in particular, which is how a claim about another product's dashboard survives:
-nothing here can check it, so this is the class where reading the documentation remains the only
-method.
-
-**The consequence is that the GitHub Release is the only place the notes can be published**, and
-therefore that forgetting them is unrecoverable rather than untidy — nobody else can add them later.
-They live at **`store/<app>/whatsnew/<version>.md`**, `release.sh` refuses to tag without one, the
-workflow puts it at the top of the Release body and fails if it is missing, and `tools_test.py` holds
-every ledger row at or after the version each app adopted the convention.
-
-**And once a version is tagged, its notes are a record: they are never rewritten.** What
-`store/<app>/whatsnew/<version>.md` says must stay what it said when that tag published it - new work
+**Once a version is tagged, its notes are a record: they are never rewritten.** They live at
+`store/<app>/whatsnew/<version>.md`, `release.sh` refuses to tag without one, and the GitHub Release
+is the only place they can be published - so forgetting them is unrecoverable rather than untidy, and
+nobody else can add them later. What that file says must stay what it said when that tag published it - new work
 belongs in the *next* version's file. A case holds it, and the case exists because `1.47.0`'s notes
 had already been rewritten after its tag, describing the following version's work under the published
 one's number.
@@ -669,27 +586,6 @@ the file - is the forbidden one. **The rule is here now because a rule that live
 found by going red, which is after the decision has been made.** When a published note is wrong, the
 choices are to correct the *Release body* (what readers actually read), to say it in the next
 version's notes, or to leave it - and which of the three is his call, not a tidy-up.
-
-**The Release body has two readers, so it is composed for them.** The notes from
-`store/<app>/whatsnew/<version>.md` come first - more people want to know what changed than want
-to check a hash - then a rule, then `## Provenance` with the commit, the SHA-256 and the two
-verification commands. Mixed together each reader scans the other's half looking for their own.
-The footer link to them is called **Release notes** and not «Changelog», because that is the word
-GitHub puts on the page it lands on, and a link should say where it goes in the words used there.
-
-**What hid this for 69 commits is worth knowing, because the shape recurs: an automated artefact that
-looks finished.** The workflow already wrote a body — the hash, the commit, the two verification
-commands, the `RELEASES.md` row — so every Release *had* one and nothing looked absent. But that body
-answers "is this archive what it claims to be", and never answered "what am I getting"; two questions,
-one of them unasked. The routine below had seven steps and none of them said "write the notes", so it
-was not a lapse of memory - there was nothing to remember. **When a generated artefact stands where a
-written one should be, check which question it answers before reading it as done.**
-
-Its first version used `\x1e` as the field separator and reported that **nothing had changed** —
-Python's `splitlines()` treats `\x1e`, `\x1c`, `\x1d`, `\x85`, `\u2028` and `\u2029` as line
-boundaries, so every record broke in half. The worst possible answer from a release-notes tool, and
-another instance of the pattern already named here: a value crossing a boundary and being read
-differently on the other side. Split on `\n`, separate with a tab.
 
 **A release with user-visible change → store copy as well.** Regenerate whatever in
 `store/<app>/store-listing.md` no longer matches: description, single purpose, permission

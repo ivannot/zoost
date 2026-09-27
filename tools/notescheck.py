@@ -30,6 +30,7 @@ work by.
     python3 tools/notescheck.py
 """
 import pathlib
+import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -55,11 +56,60 @@ def main() -> int:
             findings.append(f'docs/{f.name} is empty - a note nobody can read is worse than no note, '
                             f'because the index promises it')
 
+    # **A rule written in two files is a rule that will be edited in one of them.**
+    #
+    # Splitting a topic out is the fix this check exists to ask for, and the way it goes wrong is
+    # copying rather than moving: the note gets the paragraph, the main file keeps it too, and a
+    # session later they say different things with nobody able to tell which is current. Found on
+    # the day the release chapter moved - «No framework, no dependencies, no build step» stood
+    # word for word in `CLAUDE.md` and in `docs/testing.md`, and neither knew about the other.
+    #
+    # The unit is the **bold lead** of a paragraph, because that is how a rule is recalled here and
+    # what a grep for it would find. Two paragraphs that merely share a word are not a finding; two
+    # that open with the same sentence are the same rule, whatever follows.
+    #
+    # **The span is bounded, and the first version was not.** `re.S` is load-bearing here - 53 of the
+    # leads in this tree are legitimately wrapped across two or more source lines - and with it
+    # unbounded, `.+?` walks past blank lines: one stray `*` closing a line early is enough for a
+    # lead to swallow the paragraphs after it, duplicate included, and the run then prints zero. A
+    # check that answers «nothing» when it has eaten the finding is worse than no check, and this one
+    # was demonstrated eating the very duplicate it had just been written for.
+    #
+    # So a lead may wrap, but not across a blank line: `(?:[^\n]|\n(?!\s*\n))+?` spans newlines and
+    # stops at the paragraph break. And it must start one - `(?:\A|\n\s*\n)` - because `^` under
+    # `re.M` fires on every line, so 33 mid-paragraph emphases in this tree were being read as rules.
+    #
+    # `docs/findings/` is deliberately outside the glob: its entries are *required* to repeat
+    # `**What broke.**`, `**The fix.**`, `**The rule.**`, and a check that called that convention a
+    # duplication would be arguing with another check. The same shape is why a short structural
+    # label repeated inside one file is not a finding - the key is the set of *files*.
+    LEAD = re.compile(r'(?:\A|\n[ \t]*\n)\*\*((?:[^\n]|\n(?![ \t]*\n))+?)\*\*')
+    leads, inspected = {}, 0
+    for f in [main_md] + notes:
+        rel = f.name if f.parent == ROOT else f'docs/{f.name}'
+        for m in LEAD.finditer(f.read_text(encoding='utf-8')):
+            inspected += 1
+            leads.setdefault(' '.join(m.group(1).split()), []).append(rel)
+    for lead, where in sorted(leads.items()):
+        places = sorted(set(where))
+        if len(places) > 1:
+            findings.append(f'«{lead[:70]}...» opens a paragraph in {" and ".join(places)}. One rule, '
+                            f'one place: move it to whichever file is read when it applies, and leave '
+                            f'a pointer rather than a copy.')
+
     for f in findings:
         print('  ' + f)
+    # **What was inspected, beside what exists.** This printed only the character counts, which say
+    # nothing about the leads it read - the shape this repository already names: a headline that
+    # measures something else and stops anyone looking. The crude denominator is every `**` at a
+    # line start, which is *more* than a lead because it counts mid-paragraph emphasis too; a
+    # careful count above it would mean the bound is eating paragraphs again.
+    crude = sum(len(re.findall(r'^\*\*', f.read_text(encoding='utf-8'), re.M))
+                for f in [main_md] + notes)
     print(f'\n{len(findings)} finding(s). CLAUDE.md {n:,} of {BUDGET:,} ({n * 100 // BUDGET}%), '
           f'{max(0, BUDGET - n):,} to spare; {len(notes)} note(s) beside it, {beside:,} chars read '
-          f'on demand.')
+          f'on demand; {inspected} paragraph lead(s) read of {crude} bold line-start(s) - the rest '
+          f'are emphasis inside a paragraph, not rules. docs/findings/ is out of scope on purpose.')
     return 1 if findings else 0
 
 

@@ -498,3 +498,123 @@ And the lesson that cost two wrong guesses: **a successful deploy says nothing a
 being live.** Request it and read the status code —
 `curl -s -o /dev/null -w '%{http_code}' https://zoost.it/api/versions` — and when something 404s,
 find out *what the platform actually is* before moving files around.
+
+## What the chain rests on, and why each part of it is the way it is
+
+<!-- Moved out of CLAUDE.md on 27 September 2026. It had been sitting under that file's «Tests»
+     heading, which is not what any of it is about, and that file had 2,668 characters of room left.
+     Nothing is cut; the rules that bind a change whatever it touches stayed there. `notescheck`
+     prints the margin on every run, which is the number to read rather than one typed in here. -->
+
+**The build is reproducible, and that is load-bearing.** Publishing a SHA-256 is worth nothing if two
+builds of the same commit differ — a reviewer who rebuilds gets another number and can prove nothing
+either way. Ours did differ, because `zip` stores each file's mtime and walks the directory in
+filesystem order. `build.sh` now stamps every file with the commit's own date, sorts the file list
+before handing it to `zip`, and passes `-X`. Verify with three consecutive builds: same hash, or the
+guarantee is gone.
+
+**The zip is never committed** — it is a build artefact, reproducible from the tagged commit, and
+`dist/` is git-ignored. It lives as a Release attachment, nowhere else.
+
+**And it does not survive the check that made it.** `dist/` had grown to **72** local archives,
+one per version ever built here - eleven megabytes of the single file `CLAUDE.md`'s release routine says must
+never be uploaded, any one of which could be dragged into the dashboard by mistake. `release.sh`
+removes the pair it built once the two hashes match (and keeps them when they do not, which is
+when you need to look at them), and `tests/run.sh` removes what its packaging check produced. The
+proof is the hash; the file is a means. `dist/` holds one thing between runs now: `store/`, in the
+fixed shape `store/<app>/images/1..5.png` and `store/<app>/texts/<box>.txt` - the set to upload and
+the dashboard fields beside it, see [`store/assets.md`](../store/assets.md). `tools/shots.py` and `tools/siteimg.py` clear their
+1280x800 working renders after publishing - a folder of PNGs that look like something to upload
+and are not is the same hazard one directory over. A run for a single named shot keeps its file,
+because that is what it was asked for.
+
+**Record what cannot be verified, rather than omitting it.** `RELEASES.md` states that CRM 0.13.8 —
+the version on the Store — predates this repository and has no commit to point at, and that
+Analytics 1.0.0 was submitted before the build was deterministic so no hash is published for it. A
+verifiable record that quietly papered over its first entries would be worth less than none.
+
+**A justification says *why*, and the manifest says *what*.** The host justification enumerated every
+data centre - so adding one meant editing the manifest and then remembering a paragraph in the store
+copy, which is the duplication `CLAUDE.md` spends its length fighting, in the one place I had not
+looked. Google already has the list: it is in the manifest inside the package being reviewed. The
+field exists to explain *why the extension needs to reach them at all*, and that argument does not
+change when Zoho opens a region. Reported by the author, and both listings now name the families
+(`crm.*`, `crmsandbox.*`, `one.*`, the two AI hosts) and argue from there.
+
+**Every store field states its own ceiling, and `sitecheck.py` counts.** The CRM's storage
+justification had been over 1000 characters for an unknown length of time and nothing was measuring —
+it was found by counting while editing it, which is luck, not process. The limit lives in the section
+heading and the check reads it there, so a section added tomorrow is measured without anyone
+remembering and changing a limit means editing one place. A submission that stops at the dashboard
+form costs a round trip of two to three days.
+
+**Every host a manifest may reach is named in `privacy.html`, and `sitecheck.py` derives that from
+the manifests.** `one.zoho.*` was in the Zoho CRM manifest and missing from §5's opening paragraph
+through three separate readings, because the page *did* contain the fact — in a bullet further down —
+and the sentence a reader starts from did not. Deriving the list rather than reading the prose also
+found three nobody had reported: the Canadian `zohocloud.ca` data centres were reachable and declared
+nowhere, and they are a different family from `crm.zoho.*` however similar they look.
+
+**A deploy does not land everywhere at once, and `auditcheck` cried wolf twice before that was
+written down.** Run within a minute of a push it reported `crm-preview.webp` once and `index.html`
+the next time - each byte-identical a moment later, each a PoP that had not caught up. The rule this
+file already states («a push is not a publication until `curl` says so») needed its other half:
+**a single file differing seconds after a deploy is propagation, not a stale deploy.** Neither
+answer was acceptable on its own - ignoring it would blind the one check that speaks about zoost.it,
+reporting it would make the release gate noisy - so a difference is now **fetched once more, ten
+seconds later**, and only what still differs is a finding. Nothing real is hidden: a file that is
+genuinely wrong is still wrong on the second fetch, which was proven by making one wrong on purpose.
+
+**The short description is read under the item name, so it must not repeat it.** Both extensions
+opened theirs with a near-copy of their own name — 40 of 132 characters spent saying the line above
+again, visible in a Web Store search result and invisible in the dashboard. It keeps **"Independent,
+unofficial"**, because that is the disclaimer doing its job on the most-read sentence the project has,
+and it does **not** say "read-only": that is an absolute this project has already had to walk back
+once, and 132 characters have no room for the qualification the full description gives it.
+
+**«What's new» comes from the commits, not from memory: `python3 tools/whatsnew.py <app>`.** Two
+products come out of one history, so what changed in Zoho CRM is not the last N commits — it is the
+ones that touched `apps/crm/`, with a fortnight of site and other-product work sitting between them.
+The tool lists them since that app's newest tag, marks the ones that also touched the site, the store
+copy or the README (their wording exists already and should not be invented twice), and prints the
+manifest version at each end so a bump nobody made is visible before the tag exists. **It gathers; it
+does not write** — a commit subject is addressed to this repository and a "What's new" to somebody
+who has the extension installed and has never read one. What it guarantees is that nothing is
+missing, which is the part memory gets wrong.
+
+**And there is no "What's new" field on the Chrome Web Store**, which both `CLAUDE.md` and the tool
+asserted for months. The Store listing tab holds the detailed description, the category, the language,
+the graphic assets, the URLs and the content declaration, and nothing per version. It was believed on
+nobody's authority in particular, which is how a claim about another product's dashboard survives:
+nothing here can check it, so this is the class where reading the documentation remains the only
+method.
+
+**Where the notes live and what enforces them is in `CLAUDE.md`, beside the routine that writes
+them; what belongs here is the mechanism.** The workflow puts
+`store/<app>/whatsnew/<version>.md` at the top of the Release body and fails if it is missing, and
+`tools_test.py` holds every `RELEASES.md` row at or after the version each app adopted the
+convention. This paragraph used to restate the whole rule, which made it the second copy of
+something `CLAUDE.md` already said - and `notescheck` did not catch it, because the two openings
+were worded differently. One rule, one place; the check reads leads, and a reader has to read
+meaning.
+
+**The Release body has two readers, so it is composed for them.** The notes from
+`store/<app>/whatsnew/<version>.md` come first - more people want to know what changed than want
+to check a hash - then a rule, then `## Provenance` with the commit, the SHA-256 and the two
+verification commands. Mixed together each reader scans the other's half looking for their own.
+The footer link to them is called **Release notes** and not «Changelog», because that is the word
+GitHub puts on the page it lands on, and a link should say where it goes in the words used there.
+
+**What hid this for 69 commits is worth knowing, because the shape recurs: an automated artefact that
+looks finished.** The workflow already wrote a body — the hash, the commit, the two verification
+commands, the `RELEASES.md` row — so every Release *had* one and nothing looked absent. But that body
+answers "is this archive what it claims to be", and never answered "what am I getting"; two questions,
+one of them unasked. The release routine had seven steps at the time and none of them said "write the notes", so it
+was not a lapse of memory - there was nothing to remember. **When a generated artefact stands where a
+written one should be, check which question it answers before reading it as done.**
+
+Its first version used `\x1e` as the field separator and reported that **nothing had changed** —
+Python's `splitlines()` treats `\x1e`, `\x1c`, `\x1d`, `\x85`, `\u2028` and `\u2029` as line
+boundaries, so every record broke in half. The worst possible answer from a release-notes tool, and
+another instance of a pattern `docs/traps.md` names: a value crossing a boundary and being read
+differently on the other side. Split on `\n`, separate with a tab.
