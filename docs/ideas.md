@@ -371,3 +371,52 @@ an hour. They are not alternatives in effort, they are alternatives in what is b
 
 **State:** open, and recommended against in its injected form - his call, not mine. The shortcut is
 worth doing on its own merits and is not blocked by this.
+
+## The folder prompt at every start, with the persistent permission already granted
+
+Reported on 27 September 2026, from the Mac: Zoost for Zoho Analytics asked once whether to allow
+the folder «never / this time / on every visit», that choice was made, and it has not asked since.
+Zoost for Zoho CRM still asks at every start. «Sarebbe utile eliminare quel fastidioso prompt ad
+ogni avvio dell'estensione.»
+
+**Two hypotheses, both measured, both dead.** They are kept here because what they cost was two
+confident wrong answers, and the next session will otherwise spend them again.
+
+- *«The two products differ in their permission code.»* They do not. `ensurePermission`, `hasPermission`,
+  `idb.js` and `regrantOnAnyClick` are word for word the same, and both store exactly one handle,
+  under the same key, in a database of the same name. `activeWs` holds a string id on both sides,
+  not a second handle.
+- *«CRM loses the grant through the folder picker its settings form has and Analytics has not.»*
+  Plausible - a handle fresh from `showDirectoryPicker()` is not the path that raises the three-way
+  prompt - and disproved by the settings page itself: expanded, **both extensions hold a persistent
+  grant on the same folder**, `Documents/Zoost`. Chrome's grants are per handle rather than per
+  origin, so that expansion is the answer and not the row above it.
+
+**What is documented, and what it leaves open.** Chrome's own article says the way to reach the new
+behaviour on a return visit is `requestPermission()` on a handle restored from IndexedDB, and that
+«there are no developer-facing changes to the File System Access API» - so what `queryPermission()`
+reports at load, for a handle whose grant is persistent but dormant, is **not stated anywhere**. Both
+panels check with `queryPermission()` at startup and draw the banner on anything but `granted`. If a
+dormant persistent grant reports `prompt`, that banner is drawn in both products whatever Chrome has
+recorded - which is not what is observed, so something here is still unknown.
+
+**So the next step is a measurement and not a change**, which is this project's standing order about
+probing a call before building on it. On the Mac, in each panel's console, on the stored handle:
+`queryPermission()` then `requestPermission()`. `prompt` followed by a silent `granted` says the
+grant is dormant and that asking is what wakes it; `granted` twice says the banner has another cause
+entirely and the defect is ours.
+
+**The change that would follow from the first answer** is small and contained: at startup, when the
+stored handle does not report `granted`, ask rather than only report - with a persistent grant that
+resolves silently and no banner is ever drawn, and without one it throws for want of a user gesture,
+which is caught and falls back to exactly today's behaviour. An hour, plus the case that proves both
+branches.
+
+**What no change here can do:** grant the permission itself. `requestPermission()` needs a gesture,
+and the persistence is Chrome's to offer.
+
+**Cost:** the measurement is two lines pasted into a console. The change is an hour, and it can only
+be checked on a profile that already holds a persistent grant - a fresh Chrome has nothing dormant
+to wake, so it cannot be measured here.
+
+**State:** open, waiting on the measurement. Nothing is worth writing until that comes back.
