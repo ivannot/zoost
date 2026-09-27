@@ -232,7 +232,7 @@ function detailsBehind(access) {
  *  says what it is about. `day` and `when` format a date; passed in so this stays a pure function. */
 const GAP_WORDS = { refused: (n) => `${n} refused by Zoho`, unread: (n) => `${n} not read`,
                     kinds: (n) => `${n} kind(s) not read`, languages: (n) => `${n} language(s) not listed` };
-function behindLabel(gap, day, when, clock = when) {
+function behindLabel(gap, day, when, clock = when, now = Date.now()) {
   if (gap.gap) {
     const parts = Object.keys(GAP_WORDS).filter((k) => Number(gap.gap[k]) > 0).map((k) => GAP_WORDS[k](gap.gap[k]));
     return { text: `◐ ${parts.join(', ')}`,
@@ -247,7 +247,19 @@ function behindLabel(gap, day, when, clock = when) {
   // sees a badge naming today and concludes it is describing a download they did not do. Reported
   // exactly that way. Inside the same day the chip says the time, which is the part that differs;
   // the tooltip has always carried both in full.
-  const sameDay = gap.detailsAt && day(gap.detailsAt) === day(gap.listAt);
+  //
+  // **«The same day» is the reader's day, not the list's.** That first fix asked whether the details
+  // and the list fell on one day, which is true of every pull that ran yesterday afternoon and left
+  // the chip saying «details from 04:55 PM» on a screen reading 01:29 PM: «e' una lettura fatta nel
+  // futuro? oppure semplicemente e' di ieri e manca la data?». It was the second. A bare time is a
+  // claim about today, because today is what the reader compares it against - so the clock is shown
+  // only when the reading *is* from today, which still satisfies the case above and no longer
+  // depends on when the list happened to be pulled. `now` is a parameter so this stays pure.
+  //
+  // `toDateString()` rather than the display formatter: `day` is «26 Sep» here, with no year in it,
+  // so two readings twelve months apart compared equal.
+  const dayKey = (x) => new Date(x).toDateString();
+  const sameDay = gap.detailsAt && dayKey(gap.detailsAt) === dayKey(now);
   return { text: gap.detailsAt ? `◐ details from ${sameDay ? clock(gap.detailsAt) : day(gap.detailsAt)}`
     : gap.never ? '◐ details not read' : '◐ details older than the list',
     title: `The list was pulled on ${when(gap.listAt)}; `

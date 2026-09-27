@@ -23675,14 +23675,34 @@ test('a full pull that came up short is partial, counted, cleared by a complete 
   // una funzione». Inside one day the chip says the time; across days it says the day.
   const dayOf = (iso) => iso.slice(0, 10);
   const clock = (iso) => iso.slice(11, 16);
+  const today = Date.parse('2026-09-26T18:00:00Z');
   const sameDay = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-26T09:00:00Z' }),
-                              dayOf, (x) => x, clock);
+                              dayOf, (x) => x, clock, today);
   assert.equal(sameDay.text, '\u25d0 details from 09:00',
                `a gap of hours is reported as a date: ${sameDay.text}`);
   const otherDay = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-21T09:00:00Z' }),
-                               dayOf, (x) => x, clock);
+                               dayOf, (x) => x, clock, today);
   assert.equal(otherDay.text, '\u25d0 details from 2026-09-21',
                `a gap of days is reported as a time: ${otherDay.text}`);
+
+  // **And «the same day» is the reader's day, not the list's.** Both pulls ran yesterday afternoon,
+  // so they agree with each other and with nothing the reader can see: the chip said «details from
+  // 04:55 PM» on a screen reading 01:29 PM, which reads as a download made in the future. Reported
+  // as exactly that question - «e' una lettura fatta nel futuro? oppure semplicemente e' di ieri e
+  // manca la data?» - and it was the second. A bare time is a claim about today.
+  const yesterday = behindLabel(detailsBehind({ listAt: '2026-09-26T17:10:00Z', detailsAt: '2026-09-26T16:55:00Z' }),
+                                dayOf, (x) => x, clock, Date.parse('2026-09-27T13:29:00Z'));
+  assert.equal(yesterday.text, '\u25d0 details from 2026-09-26',
+               `a reading from another day is shown as a bare time: ${yesterday.text}`);
+
+  // A year apart, formatted the way the panel formats it - «26 Sep» carries no year, so the two
+  // compared equal and a reading twelve months old was shown as a time.
+  const lastYear = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2025-09-26T09:00:00Z' }),
+                               // Year-less, like the panel's «26 Sep», and without a locale to drift.
+                               (iso) => iso.slice(5, 10),
+                               (x) => x, clock, today);
+  assert.equal(lastYear.text, '\u25d0 details from 09-26',
+               `a reading a year old was shown as a time: ${lastYear.text}`);
   const label = behindLabel(detailsBehind({ listAt: 'x', detailsGap: { refused: 27, unread: 2, at: 'x' } }), (x) => x, (x) => x);
   assert.equal(label.text, '◐ 27 refused by Zoho, 2 not read', 'the notice does not count what it is about');
   assert.match(label.title, /pulling again will not change it/, 'the tooltip does not say a refusal is final');
