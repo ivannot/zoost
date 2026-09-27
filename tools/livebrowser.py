@@ -79,18 +79,34 @@ TITLE = {'crm': 'Zoho CRM', 'analytics': 'Zoho Analytics'}
 # origins and different responsibilities, and the separation is the boundary made mechanical rather
 # than promised.
 # The stored working-folder handle, read out of the panel's own IndexedDB the way the panel reads
-# it - `zoost`, store `kv`, key `rootDir`, which both products share because each extension is its
-# own origin. Wrapped so that a browser with nothing stored, or a database that will not open,
-# answers a sentence instead of throwing across the websocket.
+# it - `zoost`, store `kv`, key `rootDir`, which both products use because each extension is its own
+# origin.
+#
+# **It opens nothing that is not already there, and that is not fastidiousness.** The first version
+# called `indexedDB.open('zoost', 1)` straight away, which *creates* the database when it is absent -
+# and with no `onupgradeneeded` of its own it creates one with no object stores at all. Handed over
+# as a console line to paste, it answered «One of the specified object stores was not found», which
+# is the sound of a probe reporting on the damage it had just done: on the wrong origin it makes an
+# empty `zoost`, and on the right one a database in that state breaks the panel, because
+# `db.transaction('kv')` throws and two of the four callers do not guard it.
+#
+# So it asks `databases()` first and opens nothing when the name is not listed, and it says which
+# stores exist rather than failing on their absence. It also reports `location.href` on **every**
+# path including the failure - the first version put it in the answer and dropped it in the catch,
+# so the one field that says where a reading came from went missing exactly when it was needed.
 HANDLE_TEMPLATE = (
-    "(async () => {{ try {{"
-    " const db = await new Promise((res, rej) => {{ const q = indexedDB.open('zoost', 1);"
+    "(async () => {{ const where = location.href; try {{"
+    " const names = (await indexedDB.databases()).map((d) => d.name);"
+    " if (!names.includes('zoost')) return [where, 'no zoost database on this origin', names];"
+    " const db = await new Promise((res, rej) => {{ const q = indexedDB.open('zoost');"
     " q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }});"
+    " if (!db.objectStoreNames.contains('kv'))"
+    " return [where, 'the zoost database has no kv store', [...db.objectStoreNames]];"
     " const h = await new Promise((res, rej) => {{"
     " const t = db.transaction('kv').objectStore('kv').get('rootDir');"
     " t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }});"
-    " return {answer};"
-    " }} catch (e) {{ return 'unreadable: ' + ((e && e.message) || e); }} }})()"
+    " return [where, {answer}];"
+    " }} catch (e) {{ return [where, 'unreadable: ' + ((e && e.message) || e)]; }} }})()"
 )
 
 READS = {

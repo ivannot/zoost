@@ -5642,6 +5642,80 @@ test('a role refusal does not point at /emergency', async () => {
   assert.equal(reported.at(-1), true, 'a contract change stopped being reportable');
 });
 
+// ---------------------------------------------------------------------------------------------
+// The handle store repairs itself, because a panel that cannot read its own storage is dead.
+//
+// `idb.js` opened `zoost` at version 1 and made `kv` from `onupgradeneeded`, which is right for a
+// database that does not exist and wrong for one that exists at version 1 *without* the store - no
+// upgrade fires, `db.transaction('kv')` throws synchronously, and `loadWorkspaces` and the settings
+// reload do not guard it. The panel then has no working folder and no way back, because the only
+// path that would recreate the store is the one that just threw.
+//
+// Met for real: an extension page shares its origin with its service worker's console, and a console
+// that opens `zoost` without an upgrade handler of its own leaves exactly that. The whole file is
+// executed here rather than lifted - it is twenty lines, it declares one const and assigns one
+// object, and what is under test is the sequence of opens it performs against a fake that behaves
+// the way IndexedDB does about versions.
+function fakeIndexedDB(existing) {
+  // `existing` is null for «no such database», or {version, stores}. It models the one rule this
+  // repair turns on: `onupgradeneeded` fires when the database is new, or when the version asked
+  // for is higher than the one on disk - and never merely because a store is missing.
+  const opened = [];
+  let db = existing && { version: existing.version, stores: new Set(existing.stores) };
+  const handleOf = () => ({
+    get version() { return db.version; },
+    objectStoreNames: { contains: (n) => db.stores.has(n) },
+    close() {},
+    createObjectStore(n) { db.stores.add(n); },
+  });
+  return {
+    opened,
+    indexedDB: {
+      open(name, version) {
+        opened.push(version === undefined ? 'current' : version);
+        const rq = { onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null, result: null };
+        setTimeout(() => {
+          const was = db ? db.version : 0;
+          const target = version === undefined ? (was || 1) : version;
+          const upgrading = !db || target > was;
+          if (!db) db = { version: target, stores: new Set() };
+          else db.version = target > was ? target : was;
+          rq.result = handleOf();
+          if (upgrading && rq.onupgradeneeded) rq.onupgradeneeded();
+          if (rq.onsuccess) rq.onsuccess();
+        }, 0);
+        return rq;
+      },
+    },
+    stores: () => (db ? [...db.stores] : null),
+  };
+}
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a handle store whose object store is missing is repaired, not thrown at`, async () => {
+    const fake = fakeIndexedDB({ version: 1, stores: [] });
+    const ctx = { window: {}, indexedDB: fake.indexedDB, Promise, Error, Set, Object, queueMicrotask };
+    vm.createContext(ctx);
+    vm.runInContext(read(`apps/${app}/idb.js`), ctx);
+    await vm.runInContext('window.idbHandle._db()', ctx);
+    assert.deepEqual(fake.stores(), ['kv'],
+                     'the database was left without its object store, so every read and write throws');
+    assert.deepEqual(fake.opened, ['current', 2],
+                     'the repair did not reopen one version up, so no upgrade could create the store');
+  });
+
+  test(`${app}: a database that does not exist yet is made with its object store in one open`, async () => {
+    // The other half, and the one the old code got right: a repair that only worked on the broken
+    // case would have traded one dead panel for another on every first run.
+    const fake = fakeIndexedDB(null);
+    const ctx = { window: {}, indexedDB: fake.indexedDB, Promise, Error, Set, Object, queueMicrotask };
+    vm.createContext(ctx);
+    vm.runInContext(read(`apps/${app}/idb.js`), ctx);
+    await vm.runInContext('window.idbHandle._db()', ctx);
+    assert.deepEqual(fake.stores(), ['kv'], 'a fresh database came up without its object store');
+    assert.equal(fake.opened.length, 1, 'a fresh database was opened twice for no reason');
+  });
+}
+
 test('byField() sorts exactly as the arrow it replaced did', () => {
   // Twelve sites carried `(a.name || '').localeCompare(b.name || '')`. The `|| ''` is not decoration:
   // a missing field is common in a partially pulled workspace, and String() would have been a fix

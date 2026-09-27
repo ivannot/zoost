@@ -405,21 +405,28 @@ three-way prompt on its own - the banner behind it reading «Folder access is no
 access above - or simply click anywhere in this panel», which is the stored-handle path Chrome
 documents. «Allow on every visit», then closed and reopened: «non mi ha chiesto piu' il permesso».
 
-**And the dormancy question is answered too, by measuring it rather than reasoning about it.** With
-the grant active, both panels were read through `tools/livebrowser.py`: the stored handle is
+**A measurement on the wrong machine is not a measurement of the question.** With the grant active
+on the Windows PC, both panels were read through `tools/livebrowser.py`: the stored handle is
 `zoost` and `queryPermission({mode:'readwrite'})` answers **`granted`** at page load, on both
-products. Nothing is dormant and nothing needs waking, so the startup check the panels already make
-is the right one and is sufficient. What was happening on the Mac is that the grant was not active
-there, whatever the settings row showed.
+products. That was written up here as the end of the dormancy question, and it is not: **Windows is
+the machine where the problem had just been fixed.** The reading confirms what he had already said
+about that machine and says nothing about the Mac, which is where the discrepancy lives - Analytics
+starting silently on a grant answered «always», CRM asking at every start, and the settings page
+listing both against the same folder. He pointed this out; the entry had been closed on it.
 
-**So there is nothing here to build.** The prompt was reachable on both products all along and no
-code blocked it; what differed was which of the three buttons had been pressed, and that is Chrome
-asking the owner of a disk a question it is right to ask.
+What the Windows reading does establish, and it is worth keeping: a persistent grant that is
+**active** reports `granted` from `queryPermission()` at page load, with no waking call. So the
+startup check both panels make is the right shape. What is still unknown is why the Mac's CRM does
+not get that answer while its origin is listed as allowed.
 
-**What is worth keeping** is the shape of the two dead hypotheses, which is why they are still
-written above: a difference between two products that turned out to be a difference between two
-answers a person gave.
+**The one thing that would settle it** is the same pair of values read on the Mac's CRM panel: the
+name of the stored handle and what `queryPermission()` says about it. `prompt` with a handle whose
+name is not the granted folder says the settings row is for a different path; `granted` says the
+banner has another cause and the defect is ours. The Mac is not reachable from here - Chrome binds
+its debugging port to loopback and only the Windows browser is exposed - so this one needs him, or
+it needs a tunnel from the Mac, which is half an hour once and would retire the whole class.
 
-**Cost:** none taken.
+**Cost:** the measurement is one paste. Whatever follows it is unknown until it comes back, which is
+the point of not having closed this already.
 
-**State:** closed, without a change.
+**State:** open. Closed once on the wrong machine's data, and reopened the same day.
