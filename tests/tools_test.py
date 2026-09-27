@@ -5035,6 +5035,14 @@ class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
         guard = src.find("list-units 'zoost-prepush-*'")
         self.assertLess(guard, src.find('is-active --quiet "$UNIT.service"'),
                         'the other-commit guard runs after the join, so a race is entered before it is checked')
+        # **And the guard must survive finding nothing, which is the ordinary case.** The script is
+        # `set -euo pipefail` and `grep -v` exits 1 when it matches nothing - so without `|| true`
+        # the assignment fails, the hook dies, and git refuses the push having printed not one word.
+        # Written that way and met on the first run: a silent refusal, from the gate whose whole job
+        # is to say what is wrong.
+        line = next(l for l in src.splitlines() if 'head -1' in l and 'zoost-prepush' not in l)
+        self.assertIn('|| true', line,
+                      'the no-other-battery case kills the hook under set -e, silently')
 
     def test_a_dirty_tree_is_refused_before_anything_is_recorded(self):
         """A verdict is about a tree, not only about a commit.

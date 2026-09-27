@@ -73,8 +73,12 @@ else
     # - a push was refused for «the battery left changes behind» naming five files that were clean a
     # second later, because the other run was mid-write when this one looked. Neither answer was
     # about the tree either of them was judging.
+    # `|| true` is load-bearing under `set -euo pipefail`: `grep -v` exits 1 when it matches nothing,
+    # which is the *ordinary* case here - no other battery running - and without it the assignment
+    # fails, the script dies, and git refuses the push having printed not one word. Written that way
+    # and met immediately: a silent refusal from the gate whose whole job is to say what is wrong.
     OTHER=$(systemctl --user list-units 'zoost-prepush-*' --state=active --no-legend 2>/dev/null \
-            | awk '{print $1}' | grep -v "^$UNIT.service$" | head -1)
+            | awk '{print $1}' | grep -v "^$UNIT.service$" | head -1 || true)
     if [ -n "$OTHER" ]; then
       echo
       echo "pre-push: REFUSED - a battery for another commit is running here ($OTHER)."
