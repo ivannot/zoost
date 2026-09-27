@@ -20,6 +20,7 @@ ANALYTICS_BOUNDARY=(
   analytics-sql.js analytics-mirror-writer.js analytics-view-model.js bootstrap.js bridge-contract.js
   content-bridge.js error-model.js filesystem-adapter.js idb.js keyvault.js list-model.js mirror-plan.js
   navigation.js pull-adapter.js pull-lifecycle.js pull-usecase.js search-state.js workspace.js
+  zoho-navigation.js
 )
 ANALYTICS_DOM_ONLY=(
   ai.js background.js export.js graphlogic.js graphview.js health.js highlight.js options.js
