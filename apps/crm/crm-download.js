@@ -242,25 +242,12 @@ function behindLabel(gap, day, when, clock = when, now = Date.now()) {
   }
   // `never` is an area whose first pull was a list pull: nothing was ever read, which is neither a date
   // nor «older». Found by review, on a new workspace.
-  // **A date, when the gap is hours, reads as wrong.** Pull all in the morning and Pull list in the
-  // afternoon, and the chip said «details from Sep 26» on the day it was still Sep 26 - the reader
-  // sees a badge naming today and concludes it is describing a download they did not do. Reported
-  // exactly that way. Inside the same day the chip says the time, which is the part that differs;
-  // the tooltip has always carried both in full.
-  //
-  // **«The same day» is the reader's day, not the list's.** That first fix asked whether the details
-  // and the list fell on one day, which is true of every pull that ran yesterday afternoon and left
-  // the chip saying «details from 04:55 PM» on a screen reading 01:29 PM: «e' una lettura fatta nel
-  // futuro? oppure semplicemente e' di ieri e manca la data?». It was the second. A bare time is a
-  // claim about today, because today is what the reader compares it against - so the clock is shown
-  // only when the reading *is* from today, which still satisfies the case above and no longer
-  // depends on when the list happened to be pulled. `now` is a parameter so this stays pure.
-  //
-  // `toDateString()` rather than the display formatter: `day` is «26 Sep» here, with no year in it,
-  // so two readings twelve months apart compared equal.
-  const dayKey = (x) => new Date(x).toDateString();
-  const sameDay = gap.detailsAt && dayKey(gap.detailsAt) === dayKey(now);
-  return { text: gap.detailsAt ? `◐ details from ${sameDay ? clock(gap.detailsAt) : day(gap.detailsAt)}`
+  // **Both, always.** This showed the day or the clock and never the two together, first by
+  // comparing the details against the list and then against today, and each version left a reader
+  // holding half of what they had asked for: «details from 04:55 PM» is a time with no day, and
+  // «details from Sep 26» is a day with no time. Asked for directly, twice - «ma e' cosi'
+  // complicato mostrare data e ora?» - and there is no case where the shorter one is better.
+  return { text: gap.detailsAt ? `◐ details from ${day(gap.detailsAt)}, ${clock(gap.detailsAt)}`
     : gap.never ? '◐ details not read' : '◐ details older than the list',
     title: `The list was pulled on ${when(gap.listAt)}; `
       + (gap.detailsAt ? `each item was last read on ${when(gap.detailsAt)}`

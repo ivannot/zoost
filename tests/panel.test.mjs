@@ -23669,40 +23669,21 @@ test('a full pull that came up short is partial, counted, cleared by a complete 
   assert.equal(detailsBehind(complete), null);
   const gap = detailsBehind({ ...first, listAt: '2026-09-15T10:00:00.000Z', detailsAt: '2026-09-15T11:00:00.000Z' });
   assert.ok(gap && gap.gap, 'a partial pull newer than its details is not behind');
-  // **A date, when the gap is hours, reads as a claim about a day the reader did not spend pulling.**
-  // Pull all in the morning, Pull list in the afternoon, and the chip said «details from Sep 26» on
-  // a screen where it was still Sep 26 - reported as «questa frase è sbagliata, ho scaricato solo
-  // una funzione». Inside one day the chip says the time; across days it says the day.
+  // **The chip says the day and the time, always.** It showed one or the other - first by comparing
+  // the details against the list, then against today - and each version handed a reader half of
+  // what they had asked for: «details from 04:55 PM» is a time with no day, «details from Sep 26»
+  // a day with no time. Asked for directly, twice: «ma e' cosi' complicato mostrare data e ora?»
   const dayOf = (iso) => iso.slice(0, 10);
   const clock = (iso) => iso.slice(11, 16);
-  const today = Date.parse('2026-09-26T18:00:00Z');
-  const sameDay = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-26T09:00:00Z' }),
-                              dayOf, (x) => x, clock, today);
-  assert.equal(sameDay.text, '\u25d0 details from 09:00',
-               `a gap of hours is reported as a date: ${sameDay.text}`);
-  const otherDay = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-21T09:00:00Z' }),
-                               dayOf, (x) => x, clock, today);
-  assert.equal(otherDay.text, '\u25d0 details from 2026-09-21',
-               `a gap of days is reported as a time: ${otherDay.text}`);
+  const hours = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-26T09:00:00Z' }),
+                            dayOf, (x) => x, clock);
+  assert.equal(hours.text, '\u25d0 details from 2026-09-26, 09:00',
+               `a reading hours old lost its day: ${hours.text}`);
+  const days = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2026-09-21T09:00:00Z' }),
+                           dayOf, (x) => x, clock);
+  assert.equal(days.text, '\u25d0 details from 2026-09-21, 09:00',
+               `a reading days old lost its time: ${days.text}`);
 
-  // **And «the same day» is the reader's day, not the list's.** Both pulls ran yesterday afternoon,
-  // so they agree with each other and with nothing the reader can see: the chip said «details from
-  // 04:55 PM» on a screen reading 01:29 PM, which reads as a download made in the future. Reported
-  // as exactly that question - «e' una lettura fatta nel futuro? oppure semplicemente e' di ieri e
-  // manca la data?» - and it was the second. A bare time is a claim about today.
-  const yesterday = behindLabel(detailsBehind({ listAt: '2026-09-26T17:10:00Z', detailsAt: '2026-09-26T16:55:00Z' }),
-                                dayOf, (x) => x, clock, Date.parse('2026-09-27T13:29:00Z'));
-  assert.equal(yesterday.text, '\u25d0 details from 2026-09-26',
-               `a reading from another day is shown as a bare time: ${yesterday.text}`);
-
-  // A year apart, formatted the way the panel formats it - «26 Sep» carries no year, so the two
-  // compared equal and a reading twelve months old was shown as a time.
-  const lastYear = behindLabel(detailsBehind({ listAt: '2026-09-26T16:00:00Z', detailsAt: '2025-09-26T09:00:00Z' }),
-                               // Year-less, like the panel's «26 Sep», and without a locale to drift.
-                               (iso) => iso.slice(5, 10),
-                               (x) => x, clock, today);
-  assert.equal(lastYear.text, '\u25d0 details from 09-26',
-               `a reading a year old was shown as a time: ${lastYear.text}`);
   const label = behindLabel(detailsBehind({ listAt: 'x', detailsGap: { refused: 27, unread: 2, at: 'x' } }), (x) => x, (x) => x);
   assert.equal(label.text, '◐ 27 refused by Zoho, 2 not read', 'the notice does not count what it is about');
   assert.match(label.title, /pulling again will not change it/, 'the tooltip does not say a refusal is final');
