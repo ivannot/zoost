@@ -3163,31 +3163,66 @@ CRM_LOCAL_UI = CRM.split('(async () => {')[0] + """(async () => {
 # **What this does not cover, said rather than implied:** `tools/fsshim.js` replaces `idbHandle`, so
 # no scenario here touches IndexedDB. The database that comes up without its object store is held by
 # four cases in `tests/panel.test.mjs` instead.
-UPGRADE_STORED = {
-    'crm': """{
-      aicfg: { engine: 'anthropic', model: 'claude-sonnet-5', protected: true },
-      erDrawMax: 'lots',
-      erParams: { current: 'grid', mode: 'all', kind: 'schema', depth: 2 },
-      exportScope: { functions: true, modules: true, code: false },
-      previewH: '320px',
-      rxShortcuts: [{ name: 'void rows', pattern: 'void' }],
-      sampleWs: 'crm/some-other-sample',
-      settingsStamp: 1750000000000,
-      tabAccessView: { ws: 'Sample org', access: {} },
-      tabPrefs: { order: ['functions', 'modules'], hidden: ['schedules'], nopull: [], recheck: [] },
-      zohoDc: 'zoho.eu'
-    }""",
-    'analytics': """{
-      aicfg: { engine: 'openai', model: 'gpt-5', protected: false },
-      erDrawMax: '',
-      erParams: { current: 'grid', mode: 'all' },
-      detailH: '280px',
-      previewW: '380px',
-      rxShortcuts: [],
-      sampleWs: 'analytics/some-other-sample',
-      zohoDc: 'zoho.eu'
-    }""",
-}
+# **One table, read by the scenarios and checked against the manifest.** Provenance, key, the value
+# in the shape that version wrote it, the product that wrote it, and what 2.0 must do with it. The
+# fixture used to be two hand-written JS literals and the manifest a third list of the same names;
+# three copies of one fact is how the first version came to carry a key no version had ever written
+# while calling itself derived.
+#
+# `class` is the distinction that was missing. A state a user can actually arrive at is **real**;
+# a malformed or impossible value is **synthetic** and belongs to a different question. Mixing them
+# is what made «every value here is what 1.x wrote» false while it was written down as true.
+UPGRADE_KEYS = (
+    # app, key, value as JS, written by, what 2.0 does with it, class
+    ('crm', 'aicfg', "{ engine: 'anthropic', model: 'claude-sonnet-5', protected: true }",
+     'crm-v1.53.0', 'kept', 'real'),
+    ('crm', 'erDrawMax', '900', 'crm-v1.53.0', 'kept - the diagram ceiling the reader chose', 'real'),
+    ('crm', 'erParams', "{ current: 'grid', mode: 'all', kind: 'schema', depth: 2 }",
+     'crm-v1.53.0', 'kept', 'real'),
+    ('crm', 'exportScope', '{ functions: true, modules: true, code: false }', 'crm-v1.53.0',
+     'migrated - 2.0 stamps it with a scope version', 'real'),
+    ('crm', 'previewH', "'320px'", 'crm-v1.53.0', 'kept - a CSS string, which is what it stored', 'real'),
+    ('crm', 'rxShortcuts', "[{ name: 'void rows', pattern: 'void' }]", 'crm-v1.53.0', 'kept', 'real'),
+    ('crm', 'sampleWs', "'crm/some-other-sample'", 'crm-v1.53.0', 'kept', 'real'),
+    ('crm', 'settingsStamp', '1750000000000', 'crm-v1.53.0', 'kept', 'real'),
+    ('crm', 'tabAccessView', "{ ws: 'Sample org', access: {} }", 'crm-v1.53.0', 'kept', 'real'),
+    ('crm', 'tabPrefs', "{ order: ['functions', 'modules'], hidden: ['schedules'], nopull: [], recheck: [] }",
+     'crm-v1.53.0', 'kept - a tab hidden then is hidden now', 'real'),
+    ('crm', 'zohoDc', "'zoho.eu'", 'crm-v1.53.0', 'kept', 'real'),
+
+    ('analytics', 'aicfg', "{ engine: 'openai', model: 'gpt-5', protected: false }",
+     'analytics-v1.34.0', 'kept', 'real'),
+    ('analytics', 'detailH', "'280px'", 'analytics-v1.34.0', 'kept - a CSS string', 'real'),
+    ('analytics', 'erDrawMax', '650', 'analytics-v1.34.0', 'kept', 'real'),
+    ('analytics', 'erParams', "{ current: 'grid', mode: 'all' }", 'analytics-v1.34.0', 'kept', 'real'),
+    ('analytics', 'rxShortcuts', '[]', 'analytics-v1.34.0', 'kept', 'real'),
+    ('analytics', 'sampleWs', "'analytics/some-other-sample'", 'analytics-v1.34.0', 'kept', 'real'),
+    ('analytics', 'zohoDc', "'zoho.eu'", 'analytics-v1.34.0', 'kept', 'real'),
+
+    # Synthetic: no version wrote these, and they are here to be survived rather than kept.
+    ('crm', 'erDrawMax', "'lots'", 'no version - a hand-edited or half-written value',
+     'ignored: the form falls back to the built-in ceiling', 'synthetic'),
+    ('analytics', 'erDrawMax', "''", 'no version - a hand-edited or half-written value',
+     'ignored: the form falls back to the built-in ceiling', 'synthetic'),
+    ('analytics', 'previewW', "'380px'", 'the CRM panel only - the two extensions have separate '
+     'storage, so this cannot arrive here by upgrading', 'ignored', 'synthetic'),
+    ('crm', 'sidePanelMode', "'docked'", 'no version - this key has never existed in this product',
+     'ignored', 'synthetic'),
+)
+
+
+def _stored(app: str, *classes: str) -> str:
+    """The JS object literal `chrome.storage.local` answers, built from the table above.
+
+    Later rows win, so a synthetic value deliberately overwrites the real one of the same name -
+    which is the whole point of the corruption scenario: the same install, one value spoiled.
+    """
+    rows = {k: v for a, k, v, _tag, _does, c in UPGRADE_KEYS if a == app and c in classes}
+    return '{\n' + ',\n'.join(f'      {k}: {v}' for k, v in rows.items()) + '\n    }'
+
+
+UPGRADE_STORED = {app: _stored(app, 'real') for app in ('crm', 'analytics')}
+CORRUPT_STORED = {app: _stored(app, 'real', 'synthetic') for app in ('crm', 'analytics')}
 
 # The half both products share. Each appends its own read-backs and its own ending.
 _UPGRADE_CORE = """
@@ -3234,15 +3269,16 @@ _UPGRADE_CORE = """
   await until(() => $('zohoDc').value === 'zoho.eu',
               'the data centre stored by the previous version did not survive the upgrade');
 
-  // 5. And a value of the wrong *shape* falls back rather than breaking. `erDrawMax` is seeded as
-  //    the string 'lots' and as an empty string; the Diagram section reads it, and what it must
-  //    show is a number - its own default - and not the word.
+  // 5. The diagram ceiling the previous version stored is the one on screen - or, in the corruption
+  //    scenario, the built-in default, because the seeded value is one no version wrote.
   //    Waited for, not sampled: the field is painted by an async loader, and reading it at a chosen
   //    instant is a bet on that loader having finished. The bet won on CRM and lost on Analytics,
   //    which is what «sometimes» looks like from here - so the condition is the assertion, and the
   //    message names what never became true.
   await until(() => $('pDrawMax') && /^[0-9]+$/.test(String($('pDrawMax').value || '')),
-              'a malformed stored erDrawMax never fell back to a number in the diagram settings');
+              'the diagram ceiling never became a number');
+  if (String($('pDrawMax').value) !== String(DRAW_MAX_WANTED))
+    sayUp(`the diagram ceiling is «${$('pDrawMax').value}», expected «${DRAW_MAX_WANTED}»`);
   $('settingsx').click();
   await until(() => !$('settingsview').classList.contains('show'), 'Settings did not close');
 
@@ -3263,11 +3299,33 @@ UPGRADE_CRM_ONLY = """
     sayUp(`the stored preview height did not survive: «${$('preview').style.height}»`);
 """
 
+def _scenario(app: str, want: int, extra: str = '') -> str:
+    """One core, two questions, two products.
+
+    The ceiling the run expects is passed in rather than written into the core: in the upgrade
+    scenario it is the number 1.x stored, and in the corruption scenario it is the built-in default,
+    because the seeded value is one no version wrote. Same assertion, opposite evidence.
+    """
+    prelude = (PULL_CRM if app == 'crm' else PULL_AN).split('(async () => {')[0]
+    return (prelude + "(async () => {\n  const DRAW_MAX_WANTED = " + str(want) + ";"
+            + _UPGRADE_CORE + extra
+            + "\n  document.title = 'UPGRADE OK';"
+            + "\n})().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });\n")
+
+
+# The built-in ceiling both products fall back to when nothing usable is stored. Written here
+# rather than imported because the probe cannot load a browser script, and held against both
+# `options.js` files by a case, so a change in one of them cannot leave this behind.
+DRAW_MAX_DEFAULT = 800
 UPGRADE = {
-    'crm': PULL_CRM.split('(async () => {')[0] + "(async () => {" + _UPGRADE_CORE + UPGRADE_CRM_ONLY
-           + "\n  document.title = 'UPGRADE OK';\n})().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });\n",
-    'analytics': PULL_AN.split('(async () => {')[0] + "(async () => {" + _UPGRADE_CORE
-                 + "\n  document.title = 'UPGRADE OK';\n})().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });\n",
+    'crm': _scenario('crm', 900, UPGRADE_CRM_ONLY),
+    'analytics': _scenario('analytics', 650),
+}
+# The same panel, the same install, one value spoiled. What it proves is that a stored value nothing
+# could have written is survived - not that an upgrade works, which is the scenario above.
+CORRUPTION = {
+    'crm': _scenario('crm', DRAW_MAX_DEFAULT, UPGRADE_CRM_ONLY),
+    'analytics': _scenario('analytics', DRAW_MAX_DEFAULT),
 }
 
 UNFINISHED = {}
@@ -3335,7 +3393,11 @@ def main() -> int:
                                      ("upgrade-crm", "crm", "crm/sampleorg-1234567890", UPGRADE["crm"],
                                       UPGRADE_STORED["crm"]),
                                      ("upgrade-analytics", "analytics", "analytics/sample-workspace",
-                                      UPGRADE["analytics"], UPGRADE_STORED["analytics"])):
+                                      UPGRADE["analytics"], UPGRADE_STORED["analytics"]),
+                                     ("corrupt-crm", "crm", "crm/sampleorg-1234567890", CORRUPTION["crm"],
+                                      CORRUPT_STORED["crm"]),
+                                     ("corrupt-analytics", "analytics", "analytics/sample-workspace",
+                                      CORRUPTION["analytics"], CORRUPT_STORED["analytics"])):
             print(f"  {key:18s} driving\u2026", flush=True)
             shot = (key, app, ws, script, *stored)
             dest = drive(key, lambda: shots.render_panel(shot, expect_ok=True))

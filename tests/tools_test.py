@@ -8086,6 +8086,140 @@ class JavaScriptCommentsAreScannedNotMatched(unittest.TestCase):
     the line has to say so.
     """
 
+    def test_the_upgrade_table_and_the_storage_manifest_agree(self):
+        """One fact, one place - and a pointer rather than a second copy.
+
+        The upgrade fixture began as two hand-written JS literals with the storage manifest carrying
+        a third list of the same names, and three copies is how it came to hold a key no version had
+        ever written while describing itself as derived. The keys live in `UPGRADE_KEYS` now and the
+        manifest names that table; this holds the pointer, the classes, and the one property the
+        table must have to be worth trusting - that every row says which tag wrote it, and that a
+        row claiming a tag is a row whose class is `real`.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('pr', ROOT / 'tools' / 'probe.py')
+        pr = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pr)
+        manifest = json.loads((ROOT / 'tools' / 'storage-manifest.json').read_text(encoding='utf-8'))
+        block = manifest.get('upgradedFrom', {})
+
+        self.assertEqual(block.get('source'), 'tools/probe.py: UPGRADE_KEYS',
+                         'the manifest no longer names where the keys actually live')
+        self.assertEqual(sorted(block.get('classes', {})), ['real', 'synthetic'],
+                         'the manifest describes classes the table does not use')
+        for name in block.get('drivenBy', []):
+            self.assertIn(name.split('-')[0], ('upgrade', 'corrupt'),
+                          f'{name}: the manifest claims a scenario shape that does not exist')
+
+        tags = {'crm': 'crm-v1.53.0', 'analytics': 'analytics-v1.34.0'}
+        for app, key, value, wrote, does, cls in pr.UPGRADE_KEYS:
+            self.assertIn(app, tags, f'{key}: a product the tags do not cover')
+            self.assertIn(cls, ('real', 'synthetic'), f'{key}: {cls} is not a class')
+            self.assertTrue(value.strip(), f'{key}: no value, so the fixture seeds nothing')
+            if cls == 'real':
+                # **A row that names a tag is checked against that tag, not against itself.**
+                # The first version of this compared the row's provenance with the product's tag and
+                # its class with its provenance - both of which a fabricated row satisfies, as the
+                # `sidePanelMode` entry did. Planting it back proved the check blind. The only
+                # ground truth is the tree that version shipped, so the tree is what is asked.
+                self.assertEqual(wrote, tags[app],
+                                 f'{key}: claims {wrote}, which is not the tag this product is '
+                                 f'derived from - a real row names the version that wrote it')
+                found = subprocess.run(['git', 'grep', '-l', key, tags[app], '--', f'apps/{app}'],
+                                       capture_output=True, text=True, cwd=ROOT)
+                if found.returncode == 128:
+                    self.skipTest('a tag this table names is not in this checkout - a shallow clone '
+                                  'has no tags, and a provenance claim cannot be checked without the '
+                                  'tree that made it. Declared, not assumed away. Missing: '
+                                  + tags[app])
+                self.assertEqual(found.returncode, 0,
+                                 f'{key}: not one file of {tags[app]} mentions it, so «written by '
+                                 f'{wrote}» is a claim that version does not support')
+            else:
+                self.assertNotIn('-v', wrote,
+                                 f'{key}: a synthetic row names a tag, which reads as history')
+            self.assertTrue(does.strip(), f'{key}: nothing says what 2.0 does with it')
+
+        # And the two fixtures differ by exactly the synthetic rows, or the split is decorative.
+        for app in tags:
+            real = {k for a, k, _v, _w, _d, c in pr.UPGRADE_KEYS if a == app and c == 'real'}
+            synth = {k for a, k, _v, _w, _d, c in pr.UPGRADE_KEYS if a == app and c == 'synthetic'}
+            self.assertTrue(synth, f'{app}: the corruption scenario seeds nothing the upgrade does not')
+            for key in real:
+                self.assertIn(f'{key}:', pr.UPGRADE_STORED[app], f'{app}: {key} is not in the upgrade fixture')
+            for key in synth - real:
+                self.assertNotIn(f'{key}:', pr.UPGRADE_STORED[app],
+                                 f'{app}: {key} was never written by any version and is in the '
+                                 f'fixture that calls itself an upgrade')
+                self.assertIn(f'{key}:', pr.CORRUPT_STORED[app], f'{app}: {key} is in neither fixture')
+
+    def test_the_probe_knows_the_ceiling_both_panels_fall_back_to(self):
+        """A number the probe asserts against and cannot import.
+
+        The corruption scenario checks that a value no version wrote leaves the built-in ceiling on
+        screen, which means the probe has to hold that number - it cannot load a browser script to
+        ask. A copy is a copy, so it is held against both `options.js` files here: if either moves
+        its default, this goes red rather than the scenario quietly asserting yesterday's figure.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('pr', ROOT / 'tools' / 'probe.py')
+        pr = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pr)
+        for app in ('crm', 'analytics'):
+            src = (ROOT / 'apps' / app / 'options.js').read_text(encoding='utf-8')
+            found = re.search(r'const DRAW_MAX_DEFAULT = (\d+);', src)
+            self.assertTrue(found, f'{app}: no DRAW_MAX_DEFAULT to compare against')
+            self.assertEqual(int(found.group(1)), pr.DRAW_MAX_DEFAULT,
+                             f'{app}: the panel falls back to {found.group(1)} and the probe asserts '
+                             f'{pr.DRAW_MAX_DEFAULT}')
+
+    def test_a_spread_is_a_reference_and_a_property_is_not(self):
+        """The dangerous direction, twice in one expression.
+
+        `deadcode.py` excluded every identifier preceded by a dot, so that `obj.foo` would not keep a
+        declared `foo` alive - right, and it also excluded `...foo`, because the third dot of a
+        spread is a dot. Five shipped files call `pullDepth` that way and no other, so the function
+        scored nothing and was reported as kept alive only by tests. A list whose purpose is to say
+        what to delete must not carry a name the product calls.
+
+        The three cases are held together because the fix is one decision about two characters, and
+        getting either half wrong is silent: too strict and a live function is offered for deletion,
+        too loose and a dead one is hidden behind an unrelated property of the same name.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('dc', ROOT / 'tools' / 'deadcode.py')
+        dc = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(dc)
+
+        tally = dc.tally('...spreadCall(a); plain.spreadCall(); spreadCall(); lone.only; ...alsoSpread;')
+        self.assertEqual(tally['spreadCall'], 2,
+                         'a spread and a bare call are two references; a property access is none')
+        self.assertEqual(tally['alsoSpread'], 1, 'a spread on its own is a reference')
+        self.assertEqual(tally['only'], 0, 'a property access was counted as a reference to a declaration')
+        self.assertEqual(tally['plain'], 1, 'the object a property hangs off is itself a reference')
+        # And nothing inside a longer name: `pullDepthy` is not `pullDepth`.
+        self.assertEqual(dc.tally('pullDepthy()')['pullDepth'], 0)
+
+    def test_a_name_declared_twice_in_one_product_is_ambiguous_not_dead(self):
+        """The limit this tool cannot resolve, given its own third verdict.
+
+        The tally is per app, so two declarations of one name share a count: a dead alias scores its
+        namesake's uses, and a live one can be scored by a dead namesake. `removeFileAt` was both -
+        an alias in the panel with no consumer, and a function declared inside the adapter's factory
+        with four. Neither answer is about the declaration being reported, so the sweep says so
+        instead of proposing a deletion it cannot justify.
+        """
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'deadcode.py')],
+                             capture_output=True, text=True, cwd=ROOT)
+        self.assertEqual(out.returncode, 0, out.stdout)
+        # `pullDepth` is the regression this pair exists for: five shipped call sites, all spread.
+        self.assertNotIn('pullDepth', out.stdout,
+                         'a function five shipped files call is still offered as a candidate')
+        for line in out.stdout.splitlines():
+            if ' - ambiguous:' in line:
+                self.assertIn('do not delete on this line', line,
+                              'an ambiguous candidate reads like a deletion')
+
     def test_no_tool_strips_js_comments_with_a_regex(self):
         # One backslash or two: `architecturecheck.py` carried the doubled form - the signature of an
         # edit applied through a script - and this guard, written for the single one, reported nothing

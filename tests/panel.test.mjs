@@ -5308,8 +5308,8 @@ const countOf = (s, lit) => s.split(lit).length - 1;
 
 test('the sample refusal is written once per panel', () => {
   // Eight sites in the CRM and two in Analytics, seven of the CRM's carrying the same three-line
-  // comment as well. One of them returns null rather than undefined - openTargetZoho hands its
-  // caller a tab id - and that is preserved at the call site, not folded into the helper.
+  // comment as well. One of them used to return null rather than undefined, because its caller read
+  // the value as a tab id; that function has since been deleted for having no caller.
   const msg = {
     crm: 'This is the sample workspace - there is no Zoho org to open.',
     analytics: 'This is the sample workspace - there is no Zoho Analytics workspace to open.',
@@ -5324,9 +5324,11 @@ test('the sample refusal is written once per panel', () => {
     assert.ok(/if \(!isSample\(\)\) return false;/.test(body), `${app}: sampleRefuse() does not let a real workspace through`);
     assert.ok(/return true;/.test(body), `${app}: sampleRefuse() never answers true, so every caller carries on`);
   }
-  // the CRM's one null-returning site keeps its null
-  assert.ok(/if \(sampleRefuse\(\)\) return null;/.test(panelBody('crm')),
-    'openTargetZoho returns undefined where it used to return null - its callers test the id');
+  // **The null-returning site is gone with the function that had it.** `openTargetZoho` returned
+  // `null` rather than `undefined` because its callers read the value as a tab id - and it had no
+  // callers left, so it was deleted and this assertion lost its subject. Removed rather than
+  // relaxed: a line that greps for a spelling no file contains passes for ever and guards nothing,
+  // which is the shape this repository refuses more firmly than a missing check.
 });
 
 test('the folder-access guard throws from one place per panel', () => {
@@ -17408,7 +17410,9 @@ test('crm: the frame lookup remembers where the CRM is, never that it could not 
 // ---------------------------------------------------------------------------------------------
 // The panel injects into a Zoho CRM frame, or into nothing.
 //
-// `ZOHO_HOST_RE` accepts `one.zoho.*` so the panel can tell which Zoho One org a tab belongs to.
+// The panel admits `one.zoho.*` so it can tell which Zoho One org a tab belongs to - through
+// `ZOHO_MATCHES`, built from the manifest; a hand-written `ZOHO_HOST_RE` beside it said the same
+// thing and was used by nothing, and is gone.
 // The frame search then looked for a CRM document among that tab's frames and, finding none, fell
 // back to **frame 0** - the Zoho One page itself - into which `ensureBridge` injected `hook.js`,
 // which replaces `fetch` and `XMLHttpRequest` in that page's MAIN world.
@@ -23302,6 +23306,89 @@ test('crm: a function deleted between census and download is «not found», not 
       assert.ok(typeof why === 'string' && why.length > 40,
                 `${cmd} is exempt with no reason worth reading, which is the same as being forgotten`);
     }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Each preference the upgrade promises to keep, proved one at a time.
+//
+// The browser scenario drives all of them at once, which is the right shape for wiring and the
+// wrong shape for evidence: run against an empty store it stops at the *first* assertion, so
+// everything after it is carried rather than checked. A control that fails on one line says
+// nothing about the others, and «the rest would obviously fail too» is the reasoning that put a
+// decoration in the tree in the first place.
+//
+// So each promise gets its own pair here: the loader the product actually runs, once over the value
+// 1.x stored and once over an empty store, asserting the two differ. Removing that one key turns
+// exactly one of these red, which is what «this preference survives the upgrade» has to mean.
+{
+  const storeOf = (data) => ({
+    storage: { local: { get: async () => data, set: async () => {}, onChanged: { addListener: () => {} } },
+               session: { get: async () => ({}), set: async () => {} },
+               onChanged: { addListener: () => {} } },
+    runtime: { getManifest: () => ({ host_permissions: ['https://crm.zoho.eu/*', 'https://crm.zoho.com/*',
+                                                        'https://analytics.zoho.eu/*', 'https://analytics.zoho.com/*'] }) },
+  });
+
+  test('crm: the data centre the previous version stored is the one in force', async () => {
+    // `loadZohoDc` and not `loadDc`: the settings form has its own reader of the same key that
+    // paints a select, and `sliceApp` takes the first file in page order - so asking for the wrong
+    // name lifts the form's and the case fails on `$ is not defined`, which says nothing about the
+    // preference. The panel's reader is the one every navigation asks.
+    const run = async (data) => {
+      const ctx = { chrome: storeOf(data), zohoDc: 'zoho.com', Object, Array, Promise };
+      vm.createContext(ctx);
+      vm.runInContext(sliceApp('crm', 'loadZohoDc'), ctx);
+      await vm.runInContext('loadZohoDc()', ctx);
+      return ctx.zohoDc;
+    };
+    assert.equal(await run({ zohoDc: 'zoho.eu' }), 'zoho.eu', 'the stored data centre did not survive');
+    assert.equal(await run({}), 'zoho.com', 'an empty store produces the same answer, so this proves nothing');
+  });
+
+  test('crm: a tab the previous version hid is still hidden', async () => {
+    const run = async (data) => {
+      const ctx = { chrome: storeOf(data), tabPrefs: { order: [], hidden: [], nopull: [], recheck: [] },
+                    TAB: { functions: {}, modules: {}, schedules: {}, workflows: {} }, Object, Array, Promise };
+      vm.createContext(ctx);
+      vm.runInContext(sliceApp('crm', 'loadTabPrefs'), ctx);
+      await vm.runInContext('loadTabPrefs()', ctx);
+      // **Re-made in this realm before it is compared.** A `[]` literal evaluated inside the vm has
+      // that context's `Array.prototype`, and strict `deepEqual` compares prototypes - so an empty
+      // array the reader built correctly was refused, and the message accused the product of
+      // reading old preferences as «skip the pull». The defect was in the assertion.
+      const out = ctx.tabPrefs;
+      return { order: [...out.order], hidden: [...out.hidden],
+               nopull: [...out.nopull], recheck: [...out.recheck] };
+    };
+    const kept = await run({ tabPrefs: { order: ['functions', 'modules'], hidden: ['schedules'],
+                                         nopull: [], recheck: [] } });
+    assert.deepEqual(kept.hidden, ['schedules'], 'a tab hidden by the previous version came back');
+    assert.deepEqual(kept.order, ['functions', 'modules'], 'the stored tab order was not kept');
+    const fresh = await run({});
+    assert.deepEqual(fresh.hidden, [], 'an empty store hides a tab, so this proves nothing');
+    // And the two keys 1.x never wrote arrive as «pull everything», not as «skip what is hidden».
+    const older = await run({ tabPrefs: { order: ['functions'], hidden: ['schedules'] } });
+    assert.deepEqual(older.nopull, [], 'preferences saved before nopull existed were read as opting out of a pull');
+    assert.deepEqual(older.recheck, []);
+  });
+
+  test('crm: the preview height the previous version stored is applied, as the string it stored', async () => {
+    // 1.x wrote `$('preview').style.height`, which is a CSS string. A number here sets nothing at
+    // all - silently - which is why the fixture carries `'320px'` and not `320`.
+    const run = async (data) => {
+      const el = { style: { height: '', setProperty() {} } };
+      const ctx = { chrome: storeOf(data), $: () => el, clampSplit: () => {}, Object, Promise };
+      vm.createContext(ctx);
+      vm.runInContext(sliceApp('crm', 'restorePreviewHeight'), ctx);
+      await vm.runInContext('restorePreviewHeight()', ctx);
+      return el.style.height;
+    };
+    assert.equal(await run({ previewH: '320px' }), '320px', 'the stored preview height did not survive');
+    assert.equal(await run({}), '', 'an empty store sets a height, so this proves nothing');
+    assert.equal(await run({ previewH: 320 }), 320,
+                 'a number is passed through as it always was - the fixture is what keeps this honest, '
+                 + 'not a coercion the product does not do');
   });
 }
 
