@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">2.0.0</span> · updated <span class="dd" data-stamp="updated">26 September 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">2.0.0</span> · updated <span class="dd" data-stamp="updated">27 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -870,10 +870,10 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k" data-label="Symptom">Diagram is unreadable</td><td data-label="Cause and fix">Lower the depth, or open <b class="ui">Layout <svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.6"/><circle cx="8" cy="8" r="1.7"/><path d="M8 1.5v1.9M8 12.6v1.9M14.5 8h-1.9M3.4 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7 3.4 3.4"/></svg></b> and raise box spacing. For a crowded area, click the arc you care about to isolate it.</td></tr>
       <tr><td class="k" data-label="Symptom">Pull is slow</td><td data-label="Cause and fix">Normal on large orgs: one call per module for fields, layouts and related lists, deliberately paced to stay friendly to Zoho's API.</td></tr>
       <tr><td class="k" data-label="Symptom">A read fails and <b class="ui">A fix may already be released ↗</b> appears beside the message</td>
-        <td data-label="Cause and fix">Zoost runs on interfaces Zoho does not document, so a change at their end can stop a read working. The link opens <a href="/emergency">In case of emergency</a>, which says whether a fix has been released and is still waiting in the Store's review queue, and how to run it in the meantime. It stays hidden when the failure is your Zoho role refusing an area, because no release changes that.</td></tr>
+        <td data-label="Cause and fix">Zoost runs on interfaces Zoho does not document, so a change at their end can stop a read working. The link opens <a href="/emergency">In case of emergency</a>, which says whether a fix has been released and is still waiting in the Store's review queue, and how to run it in the meantime. It stays hidden whenever the panel can already name what happened in the platform's own terms - your Zoho role refusing an area, Zoho rate-limiting the requests, a session it rejected, an outage - because no release changes any of those, and the message above it has already said what to do.</td></tr>
     </tbody>
   </table>
-  <p>Still stuck, or found a bug? When something fails, the panel offers <b class="ui">Report this problem</b>:
+  <p>Still stuck, or found a bug? When something fails in a way the panel cannot account for, it offers <b class="ui">Report this problem</b>:
     it builds a short report - versions, the error, the last few status lines, counters - and opens
     <a href="/report">a page</a> with it, in a window of its own. Nothing has been sent at that point:
     the text is in front of you, and <b class="ui">Send as a public issue</b> is yours to press or not.

@@ -108,6 +108,21 @@ wrong and silent. A comparator written `const cmpVer = (a, b) => {…}` in `site
 after one line, and the red mark landed three tests away, on `pickLatestTag`, which sorts with it. A
 shared helper that a test will lift is a `function`; one-line arrows are fine as they are.
 
+**And a lifted scope decides which branch of the function runs, so leaving a collaborator out picks
+one silently.** `notePullFailure` asks `typeof classifyZoostError === 'function'` before classifying
+the failure it is about to announce. Three cases lifted the function and its `lastThrown`, stubbed
+`noteAccess` and `setStatus`, and never lifted the classifier - so the guard was false, every case
+ran the unclassified branch, and the branch a real pull takes had no cover at all. They passed for
+as long as they existed, on code the product does not execute, and the defect they were supposed to
+be watching shipped underneath them.
+
+Nothing throws here, which is what separates this from the two traps above: the absent name is not
+looked up, it is *tested for*, and a `typeof` guard reads an empty scope as «that feature is not
+present». So the rule is about the guard rather than about the lifter: **when the function under
+test asks whether a collaborator exists, lift the collaborator - or the case is about the answer
+«no».** Where the collaborator is genuinely optional in the product, write both cases and say which
+is which.
+
 **A test appended below `unittest.main()` never runs, and the suite still says OK.** Six cases were
 added to the end of `tests/tools_test.py` and `tests/run.sh` reported 78 passing while ignoring them;
 `unittest discover` found 84. Nothing is wrong on screen — a number changes, and a number nobody

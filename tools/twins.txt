@@ -2,6 +2,7 @@
 # Every function name both products define, with a hash of each side's body. A one-sided
 # change is a fix that landed on one twin and not the other, which is what this catches.
 # name	crm	analytics	state
+accountedFor	75d8becbae3d	75d8becbae3d	identical
 addSampleWorkspace	655413012a3d	0646737879c4	divergent
 addWorkspaceView	2a8a459ba4f6	93458982cadb	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
@@ -237,7 +238,7 @@ pickRoot	47616b97252d	fd5c0127dff5	divergent
 placeWindow	166f9f12b4b9	166f9f12b4b9	identical
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4eec049f5c18	ee48c58eab5b	divergent
-pullAll	44136fa355b3	1d67081cbf83	divergent
+pullAll	44136fa355b3	be2861d2f32e	divergent
 raiseOrOpen	990f780cebb4	990f780cebb4	identical
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
@@ -294,7 +295,7 @@ setReportFallback	6591e04c1df4	6591e04c1df4	identical
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	38fd8a238839	0c5e6905c140	divergent
-showEmergency	74ef503d9c25	cfdb73138aab	divergent
+showEmergency	74ef503d9c25	74ef503d9c25	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 snapshotOf	6d7095523636	6d7095523636	identical

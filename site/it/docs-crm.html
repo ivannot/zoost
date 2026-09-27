@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:93c3969bf8e4dd31 -->
+<!-- translated-from: site/docs-crm.html sha256:021a6d2927f4f8e1 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">2.0.0</span> · aggiornata il <span class="dd" data-stamp="updated">26 settembre 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">2.0.0</span> · aggiornata il <span class="dd" data-stamp="updated">27 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -951,10 +951,10 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k" data-label="Sintomo">Il diagramma è illeggibile</td><td data-label="Causa e rimedio">Abbassa la profondità, o apri <b class="ui">Layout <svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.6"/><circle cx="8" cy="8" r="1.7"/><path d="M8 1.5v1.9M8 12.6v1.9M14.5 8h-1.9M3.4 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7 3.4 3.4"/></svg></b> e alza la spaziatura dei riquadri. Per una zona affollata, clicca l'arco che ti interessa per isolarlo.</td></tr>
       <tr><td class="k" data-label="Sintomo">Il pull è lento</td><td data-label="Causa e rimedio">Normale su org grandi: una chiamata per ogni modulo per campi, layout e related list, deliberatamente cadenzata per restare gentile con l'API di Zoho.</td></tr>
       <tr><td class="k" data-label="Sintomo">Una lettura fallisce e accanto al messaggio compare <b class="ui">A fix may already be released ↗</b></td>
-        <td data-label="Causa e rimedio">Zoost si appoggia a interfacce che Zoho non documenta, quindi un cambiamento dalla loro parte può far smettere di funzionare una lettura. Il link apre <a href="/it/emergency">In caso di emergenza</a>, che dice se una fix è già stata rilasciata ed è ancora in coda di revisione allo Store, e come usarla nel frattempo. Non compare quando il fallimento è il tuo ruolo Zoho che rifiuta un'area, perché nessuna release cambia quello.</td></tr>
+        <td data-label="Causa e rimedio">Zoost si appoggia a interfacce che Zoho non documenta, quindi un cambiamento dalla loro parte può far smettere di funzionare una lettura. Il link apre <a href="/it/emergency">In caso di emergenza</a>, che dice se una fix è già stata rilasciata ed è ancora in coda di revisione allo Store, e come usarla nel frattempo. Non compare quando il pannello sa già dire cos'è successo nei termini della piattaforma - il tuo ruolo Zoho che rifiuta un'area, Zoho che limita la frequenza delle richieste, una sessione rifiutata, un disservizio - perché nessuna release cambia quelle cose, e il messaggio sopra ha già detto cosa fare.</td></tr>
     </tbody>
   </table>
-  <p>Ancora bloccato, o hai trovato un bug? Quando qualcosa fallisce, il pannello offre
+  <p>Ancora bloccato, o hai trovato un bug? Quando qualcosa fallisce in un modo che il pannello non sa spiegare, offre
     <b class="ui">Report this problem</b>: prepara una segnalazione breve - versioni, l'errore, le ultime righe
     di stato, dei contatori - e apre <a href="/report" hreflang="en">una pagina</a> (in inglese) con dentro il testo, in una finestra a parte. A quel punto non è stato mandato niente: il testo ce l'hai davanti, e <b class="ui">Send as a public issue</b> lo premi tu o no. Diventa una issue
     pubblica. Il trace è bloccato, perché quello che permette di risolvere un problema è che sia esattamente quello che ha prodotto il tuo browser; <b class="ui">Edit it anyway</b> lo sblocca, e la segnalazione dichiara allora di essere stata modificata. Una seconda casella è tua per quello che vuoi aggiungere. Non porta alcun codice e alcuna chiave, e nomi, percorsi e id vengono tolti ovunque siano

@@ -405,9 +405,23 @@ async function notePullFailure(area, e, op) {
   // panel can explain in Zoho's terms is not one a release changes; what stays pointed at /emergency
   // is what nothing here can account for, which is the case that button was written for.
   // The link only where a release could be the answer; the report button wherever there is something
-  // to report, which is every failure. A role refusal keeps neither: Zoho stated it, no release
-  // changes it, and there is nothing here for anybody to look at.
-  showEmergency(!(e && (e.forbidden || e.note)), !(e && e.forbidden));
+  // to report. A role refusal keeps neither: Zoho stated it, no release changes it, and there is
+  // nothing here for anybody to look at.
+  //
+  // **And `forbidden` is not the whole of that either - `accountedFor` is.** The rule above was
+  // right and was being asked of two ad-hoc marks, so every condition Zoho states in some third way
+  // fell through it: a rate-limited pull said «wait a moment, then try again» and offered both
+  // affordances under it, on a real org, which is the reader's objection twice over. The
+  // classification already divides these and is what decides now; see `accountedFor`.
+  //
+  // Two questions, decided separately, which is what the second argument is for. «A fix may already
+  // be released» answers «has a release fixed this»; «Report this problem» answers «is there
+  // anything here for anybody to look at». A `note` is the one stated failure where the second
+  // answer is still yes - it is Zoho's refusal in words this product did not write, repeated hedged
+  // where the knowledge stops - and a role refusal is the one where it is no whatever else is true.
+  const stated = !!(e && e.note) || accountedFor(e);
+  const worthReporting = !accountedFor(e) || (!!(e && e.note) && !e.forbidden);
+  showEmergency(!stated, worthReporting);
 }
 
 // After a full pull: one line naming the areas that were refused. Said once, plainly, rather than

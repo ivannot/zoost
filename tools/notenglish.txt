@@ -6,9 +6,11 @@
 # not prose. Added 23 August 2026, with the widening that reads a sentence whose subject is not a
 # product name.
 a02c21d570967e2d  CLAUDE.md: entrambe le app mi aspetto che esegui la preparazione di tutto quanto, altrimenti devo aspettare 2
+2a6e0136cdaa0b04  apps/analytics/error-model.js: *  perchè dire di riportare il problema o che potrebbe già esserci una fix?». Nothing was wrong
 ac1302737218f94b  apps/analytics/workbench.html: ancora meglio, metterei dei bordi esterni». -->
 c4c873f64fc87db5  apps/analytics/workbench.js: *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
 69f39e2a5bd6503a  apps/crm/crm-context.js: *  «tutti ammassati e non hanno una logica», and the reader had to work out which was which.
+5273143c866d5df9  apps/crm/error-model.js: *  perchè dire di riportare il problema o che potrebbe già esserci una fix?». Nothing was wrong
 e6c2fd3e6f626ec3  apps/crm/workbench.html: three, unusable for a project with a `node_modules` in it - «se ci sono tanti file il
 aaa0bf5e7d9e2468  apps/crm/workbench.html: ancora meglio, metterei dei bordi esterni». -->
 986d885e376ec51c  docs/findings/2026-08-24-one-value-for-everything-it-stands-for.md: un controllo. ne basta 1», and then: «scolpiscilo sulla pietra».
@@ -42,9 +44,11 @@ e93d2db5cc787f76  site/site.js: cantAsk: 'Non è stato possibile interrogare lo 
 2536222a76bde5c2  site/site.js: queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
 3c38f6d035f1fc8e  site/site.js: askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
 c64a86d874d87a5b  site/site.js: storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google è programmato ogni mezz\'ora e di solito arriva ogni poche or
+0994a80fe1bda777  tests/panel.test.mjs: // problema di rate limit, perchè dire di riportare il problema o che potrebbe già esserci una
 fea522c04ade3dfc  tests/panel.test.mjs: // apart. Reported: «le funzioni non deluge hanno uno stato di pubblicazione che può essere bozza o
 03bc5bd90eed853d  tests/panel.test.mjs: // «Questo e' un ipertesto e tutto cio' che e' linkato deve essere navigabile.» The Reads, Writes and
 c662ef0bf8dc5dcb  tests/panel.test.mjs: // a screen where it was still Sep 26 - reported as «questa frase è sbagliata, ho scaricato solo
+dd88c52ff6ffdf69  tests/panel.test.mjs: // exist. «La response di zoho è questa … quindi il messaggio non c'entra proprio nulla».
 8e7c9385900ab84a  tests/tools_test.py: wrapping went straight into the Chrome Web Store boxes - «ci sono degli a capo in mezzo alla
 60880558715ce09f  tests/tools_test.py: frase ... l'ultimo carattere del testo non deve essere un a capo». Nothing was measuring it, so
 048b0386151a0f04  tests/tools_test.py: word; the Italian pages said eleven of them differently — «leggi ciò che viene spedito» against

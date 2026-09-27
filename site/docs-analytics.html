@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">2.0.0</span> · updated <span class="dd" data-stamp="updated">26 September 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">2.0.0</span> · updated <span class="dd" data-stamp="updated">27 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -569,12 +569,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td data-label="Cause and fix">Only tables and query tables have columns of their own. If Zoost cannot reach a data-bearing
           view through what the report is built on, it says so rather than showing an empty table.</td></tr>
       <tr><td class="k" data-label="Symptom">A read fails and <b class="ui">A fix may already be released ↗</b> appears beside the message</td>
-        <td data-label="Cause and fix">Zoost runs on interfaces Zoho does not document, so a change at their end can stop a read working. The link opens <a href="/emergency">In case of emergency</a>, which says whether a fix has been released and is still waiting in the Store's review queue, and how to run it in the meantime. It stays hidden when the failure is your Zoho role refusing an area, because no release changes that.</td></tr>
+        <td data-label="Cause and fix">Zoost runs on interfaces Zoho does not document, so a change at their end can stop a read working. The link opens <a href="/emergency">In case of emergency</a>, which says whether a fix has been released and is still waiting in the Store's review queue, and how to run it in the meantime. It stays hidden whenever the panel can already name what happened in the platform's own terms - your Zoho role refusing an area, Zoho rate-limiting the requests, a session it rejected, an outage - because no release changes any of those, and the message above it has already said what to do.</td></tr>
     </tbody>
   </table>
   <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and
-    maintained in spare time - best effort, no guaranteed response time. When something fails, the panel offers
-    <b class="ui">Report this problem</b>: a short report - versions, the error, the last few status lines,
+    maintained in spare time - best effort, no guaranteed response time. When something fails in a way the panel cannot
+    account for, it offers <b class="ui">Report this problem</b>: a short report - versions, the error, the last few status lines,
     counters - opened on <a href="/report">a page</a> in a window of its own. Nothing has been sent at that point: the text is in front of you, and <b class="ui">Send as a public issue</b> is yours to press or not. The trace is locked, because what fixes a problem is that it is exactly what your browser produced; <b class="ui">Edit it anyway</b> unlocks it and the report then travels marked as altered. A second box is yours for anything you want to add. It carries no SQL and no key at all, and names, paths and ids are stripped wherever they can be recognised. A
     <b>security</b> problem goes to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a> instead, which is private.</p>
 

@@ -282,7 +282,13 @@ function status(text, kind) { noteStep(text); $('statustext').textContent = text
 //
 // Cleared by every status write and set again by the one failure path that should carry it, so it
 // cannot linger over a later success. One place to clear, one place to set.
-function showEmergency(on) { for (const id of ['emerg', 'repopen', 'repdismiss']) { const e = $(id); if (e) e.classList.toggle('on', !!on); } }
+// Two arguments, like the CRM's: the pointer at /emergency and the report button answer different
+// questions, and folding them into one flag meant a failure Zoho had already explained either kept
+// «A fix may already be released» or lost the button that is the only way to tell anybody about it.
+function showEmergency(link, report = link) {
+  const on = { emerg: !!link, repopen: !!report, repdismiss: !!report };
+  for (const id of Object.keys(on)) { const e = $(id); if (e) e.classList.toggle('on', on[id]); }
+}
 /** The file an export has just written, one click away. The CRM panel's `offerExportOpen`, word for
  *  word: the status line writes `textContent` and the filesystem API hands back a handle rather than
  *  a path, so what can be offered is the content through a Blob - and a browser that will not open
@@ -1903,7 +1909,8 @@ async function pullAll() {
       : 'Pull failed: ' + friendlyError(e));
     $('status').className = 'bad';
     if (op.current()) pullLifecycle.fail();
-    showEmergency(!(e && e.forbidden));
+    showEmergency(!(!!(e && e.note) || accountedFor(e)),
+                  !accountedFor(e) || (!!(e && e.note) && !e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally {
     chrome.runtime.onMessage.removeListener(onProgress);
@@ -1970,7 +1977,8 @@ async function pullOne(id) {
       : `Could not re-read «${v.name}»: ` + friendlyError(e));
     $('status').className = 'bad';
     if (op.current()) pullLifecycle.fail();
-    showEmergency(!(e && e.forbidden));
+    showEmergency(!(!!(e && e.note) || accountedFor(e)),
+                  !accountedFor(e) || (!!(e && e.note) && !e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { setPullBusy(false); }
 }
@@ -2024,7 +2032,8 @@ async function retryFailed() {
       ? 'Retry could not finish writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
       : 'Retry failed: ' + friendlyError(e)); $('status').className = 'bad';
     if (op.current()) pullLifecycle.fail();
-    showEmergency(!(e && e.forbidden));
+    showEmergency(!(!!(e && e.note) || accountedFor(e)),
+                  !accountedFor(e) || (!!(e && e.note) && !e.forbidden));
     noteThrown(e);   // what the report will be about, if they press the button it just showed
   } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
 }

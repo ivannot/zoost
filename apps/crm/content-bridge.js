@@ -251,23 +251,36 @@
   // most a short body, and only to quote it - nothing here branches on its contents.
   async function errorDetail(res) {
     try {
-      // **A throttled reply is HTML, and silence about that is what made it look like a bad
-      // request.** Measured on two runs of the same org: the 101st call to an internal endpoint
-      // answers 400 with Zoho's own error *page* - `text/html`, no JSON anywhere - so the reader
-      // below finds nothing and the caller cannot tell «you are going too fast» from «you asked
-      // wrongly». The content type is the only honest marker here: the page's wording is Zoho's and
-      // localised, and matching on it would be the kind of guess this project refuses.
+      // **The body first, and the content type only when the body says nothing.**
+      //
+      // A throttled reply is Zoho's own error *page* - measured on two runs of the same org: the
+      // 101st call to an internal endpoint answers 400 with `text/html` and no JSON anywhere, so a
+      // reader looking for a reason finds none and the caller cannot tell «you are going too fast»
+      // from «you asked wrongly». That was read as «the content type is the only honest marker
+      // here», and it is not one: **Zoho serves JSON bodies with `text/html` too.** Measured on a
+      // real org - a connections pull answered
+      // `{"CODE":3028,"errorMessage":"INVALID_CSRF_TOKEN","status":"Failure"}` under a `text/html`
+      // content type, and this told the reader to wait for a rate limit that did not exist, about a
+      // token that waiting does not renew. Reported with the body in hand.
+      //
+      // So the order is turned round. The body is read and, if it names a reason, that reason is the
+      // answer whatever the header says; the throttle reading is what is left when there is nothing
+      // to read. A marker that can be wrong is fine as a last resort and wrong as a first test.
       const ct = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
-      if (res.status === 400 && /text\/html/i.test(ct)) {
-        return { message: 'Zoho answered with an error page rather than data - too many requests in a short time.', code: 'THROTTLED_HTML' };
-      }
       const t = (await res.text()).slice(0, 400);
       const m = t.match(/"(?:errorMessage|message|error)"\s*:\s*"([^"]{1,120})"/);
       // `code` is read separately rather than added to the alternation above: it appears *first* in
       // a CRM error body, so folding it in would have made the regex return INVALID_MODULE and lose
       // the sentence - and `api()` compares this value against INVALID_CSRF_TOKEN.
       const c = t.match(/"code"\s*:\s*"([A-Z0-9_]{1,60})"/);
-      return { message: m ? m[1] : null, code: c ? c[1] : null };
+      if (m || c) return { message: m ? m[1] : null, code: c ? c[1] : null };
+      // Nothing machine-readable in it. *Now* the content type is worth something: a 400 whose body
+      // is a page rather than data is Zoho refusing the pace, and saying so is better than quoting
+      // four hundred characters of markup at somebody.
+      if (res.status === 400 && /text\/html/i.test(ct)) {
+        return { message: 'Zoho answered with an error page rather than data - too many requests in a short time.', code: 'THROTTLED_HTML' };
+      }
+      return { message: null, code: null };
     } catch (_) { return { message: null, code: null }; }
   }
   // Right after login the deluge runtime can reject the first Connections read even though that

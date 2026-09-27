@@ -5541,6 +5541,8 @@ test('notePullFailure() records the verdict before it says anything', async () =
   // the error a problem report describes. Stubbing it would hide whether that still happens.
   const { notePullFailure } = load([sliceConst('apps/crm/workbench.js', 'lastThrown'),
                                     sliceFn('apps/crm/workbench.js', 'noteThrown'),
+                                    sliceConst('apps/crm/error-model.js', 'ACCOUNTED_FOR'),
+                                    sliceFn('apps/crm/error-model.js', 'accountedFor'),
                                     sliceFn('apps/crm/workbench.js', 'notePullFailure')], {
     noteAccess: async (a, e) => { await null; order.push(['noteAccess', a, e.message]); },
     pullFailMessage: (a, e) => `${a} pull error: ${e.message}`,
@@ -5577,16 +5579,28 @@ test('a role refusal does not point at /emergency', async () => {
   // does not grant an area the answer is no and always will be. Offering it there would send someone
   // to a page that cannot help, which is the «wrong missing thing» this project already has a rule
   // about. Every other failure is «Zoho did not answer the way this expects», and that is its case.
-  const seen = [];
+  const seen = [], reported = [];
   // `noteThrown` too: a handled failure is the only kind this panel has, and it is where one becomes
   // the error a problem report describes. Stubbing it would hide whether that still happens.
   const { notePullFailure } = load([sliceConst('apps/crm/workbench.js', 'lastThrown'),
                                     sliceFn('apps/crm/workbench.js', 'noteThrown'),
+                                    sliceConst('apps/crm/error-model.js', 'ACCOUNTED_FOR'),
+                                    sliceFn('apps/crm/error-model.js', 'accountedFor'),
+                                    // **The classification, not a stub of it.** Without these two the
+                                    // `typeof classifyZoostError === 'function'` guard inside
+                                    // `notePullFailure` was false, so every case here ran the branch
+                                    // where nothing is classified - which is not the branch a pull
+                                    // takes, and it is the one the affordances are decided on.
+                                    sliceFn('apps/crm/error-model.js', 'createZoostError'),
+                                    sliceFn('apps/crm/error-model.js', 'classifyZoostError'),
                                     sliceFn('apps/crm/workbench.js', 'notePullFailure')], {
     noteAccess: async () => { await null; },
     pullFailMessage: () => 'refused',
+    Error, String, Object, RegExp,
     setStatus: () => {},
-    showEmergency: (on) => seen.push(on),
+    // Both flags, because the two affordances are decided separately and the second one had no
+    // witness at all: every case here read the link and the report button went unwatched.
+    showEmergency: (on, report = on) => { seen.push(on); reported.push(report); },
   });
   const refusal = Object.assign(new Error('403'), { forbidden: true, status: 403 });
   await notePullFailure('workflows', refusal);
@@ -5605,6 +5619,27 @@ test('a role refusal does not point at /emergency', async () => {
   assert.deepEqual(seen, [false, true, false],
                    'a refusal the panel has just explained still offers /emergency and the report '
                    + 'button, so the reader is told two different things about one failure');
+  // A note hedges - it is Zoho's refusal in words this product did not write - so the button stays
+  // even though the link goes. That asymmetry is deliberate and had nothing holding it.
+  assert.deepEqual(reported, [false, true, true],
+                   'the report button no longer follows the link independently');
+
+  // **And the two marks above are not the whole of «the panel accounts for this».** Every condition
+  // Zoho states in some third way fell through them - measured on a real org, where a rate-limited
+  // pull said «wait a moment, then try again» and put both affordances underneath it: «se è un
+  // problema di rate limit, perchè dire di riportare il problema o che potrebbe già esserci una
+  // fix?». There is nothing to release and nothing for anyone to look at; it is Zoho's answer about
+  // pace. Asked of the classification, which is what divides these.
+  await notePullFailure('connections', Object.assign(new Error('429 on /crm/v8/connections'), { status: 429 }));
+  assert.equal(seen.at(-1), false, 'a rate limit was offered a fix that no release can contain');
+  assert.equal(reported.at(-1), false, 'a rate limit was offered a problem report about nothing');
+
+  // The other side of the same predicate, and the reason it is a list of names rather than «not
+  // internal»: Zoho answering in a shape this version does not understand is exactly what a release
+  // fixes, so that one keeps both.
+  await notePullFailure('connections', Object.assign(new Error('unexpected response'), { upstreamContract: true }));
+  assert.equal(seen.at(-1), true, 'a contract change stopped pointing at the one page that can help');
+  assert.equal(reported.at(-1), true, 'a contract change stopped being reportable');
 });
 
 test('byField() sorts exactly as the arrow it replaced did', () => {
@@ -23797,6 +23832,26 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       const d = await errorDetail(res(400, 'application/json', '{"code":"INVALID_CSRF_TOKEN","message":"bad token"}'));
       assert.equal(d.code, 'INVALID_CSRF_TOKEN');
       assert.equal(d.message, 'bad token');
+    });
+
+    // The third combination, and the one that had no case: **JSON under a `text/html` header.** The
+    // two above are the clean corners - a page that is a page, data that says it is data - and the
+    // branch order between them was settled on the belief that the content type separated them.
+    // Measured on a real org, reported with the body in hand: a connections pull answered
+    // `{"CODE":3028,"errorMessage":"INVALID_CSRF_TOKEN","status":"Failure"}` with `text/html`, so the
+    // reader returned THROTTLED_HTML and the panel told him to wait out a rate limit that did not
+    // exist. «La response di zoho è questa … quindi il messaggio non c'entra proprio nulla».
+    //
+    // What it costs is more than the wording: `api()` recovers from this exact message by priming
+    // the deluge token and retrying once, and that branch compares against what this returns - so
+    // for as long as the header decided, **the recovery that already existed could never fire.**
+    test('crm: a machine-readable reason wins over the content type that carries it', async () => {
+      const zoho = '{"CODE":3028,"code":3028,"errorMessage":"INVALID_CSRF_TOKEN","status":"Failure"}';
+      const d = await errorDetail(res(400, 'text/html; charset=UTF-8', zoho));
+      assert.equal(d.message, 'INVALID_CSRF_TOKEN',
+                   'the body named the reason and the header was believed instead');
+      assert.notEqual(d.code, 'THROTTLED_HTML',
+                      'a reply that says why it failed was reported as going too fast');
     });
   }
 
