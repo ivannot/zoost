@@ -1668,7 +1668,6 @@ function erRender() {
     const jo = (N[a].joins || []).filter((r) => r.direction === 'out' && r.other === b);
     const fld = jo.length ? { api_name: jo[0].column } : null;
     const full = [...new Set(jo.map((r) => r.otherColumn).filter(Boolean))].join(' / ');
-    const rl = jo;                       // same shape downstream: "is there a named relation here"
     const cy = (y1 + y2) / 2;
     if (!jo.length) return;
 

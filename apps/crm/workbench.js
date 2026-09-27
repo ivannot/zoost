@@ -11,7 +11,6 @@
 // frames; everything after that happens in the CRM document, as it does on a plain CRM tab.
 const ZOHO_MATCHES = (chrome.runtime.getManifest().host_permissions || [])
   .filter((h) => /^https:\/\/(crm|crmsandbox|crmplus|one)\./.test(h));
-const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox|plus)?|one)\.zoho/;
 // **The other product's tab, and only where the answer is not ambiguous.** A user who clicks the
 // wrong icon lands on «Not on a Zoho CRM tab», which is true and useless: it says nothing about
 // where they are. This says it - but `one.zoho.*` and `crmplus.zoho.*` are in *both* manifests and

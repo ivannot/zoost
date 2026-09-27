@@ -355,7 +355,6 @@ const ensurePerm = workspaceFilesystem.ensurePermission;
 const hasPerm = workspaceFilesystem.hasPermission;
 const requirePerm = workspaceFilesystem.requirePermission;
 const forgetDirs = workspaceFilesystem.forgetDirectories;
-const dirFor = workspaceFilesystem.directoryFor;
 const beginWorkspaceOp = workspaceFilesystem.beginOperation;
 const writeFileAt = workspaceFilesystem.writeFileAt;
 const readFileAt = workspaceFilesystem.readFileAt;

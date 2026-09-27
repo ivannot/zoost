@@ -44,7 +44,7 @@ bridgeCommand	996fdc5bdf4c	996fdc5bdf4c	identical
 bridgeContext	cbc81b25d2df	cbc81b25d2df	identical
 bridgeResponseError	2675476e3c3f	2675476e3c3f	identical
 buildChips	8a88fe99de94	8a88fe99de94	identical
-buildExportHtml	6aa8a4163c43	e1a5052dd09d	divergent
+buildExportHtml	c36f1af06d9c	e1a5052dd09d	divergent
 buildExportMarkdown	098b0dca7436	f5d0fbdf2c0e	divergent
 buildMirrorPlan	44136fa355b3	44136fa355b3	identical
 buildRelChips	2ee742ded057	55c2bea08b1a	divergent
@@ -118,7 +118,7 @@ erPick	1abe2d6a2c51	1abe2d6a2c51	identical
 erPickCard	028ac96fbeae	e85824cbdd66	divergent
 erPinnedNow	25cc3096d8fd	25cc3096d8fd	identical
 erReach	f5456fd28a60	f5456fd28a60	identical
-erRender	03b4f8c55562	d88a1d22468c	divergent
+erRender	03b4f8c55562	c1e35d244d5a	divergent
 erResize	772c4f787802	772c4f787802	identical
 erSaveParams	1e7bbd6e4b26	c7d049ed3cc9	divergent
 erShow	a05e309f45e6	b12a2bc16b4d	divergent

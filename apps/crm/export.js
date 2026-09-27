@@ -619,15 +619,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     ;
   const healthTotal = H.total;
 
-  // Contents index: informative tables (one row per item) for functions and modules
-  Object.keys(byNs).sort().forEach((ns) => {
-    byNs[ns].slice().sort(byField('api_name')).forEach((f) => {
-      const n = nodeByKey[fnKey(f)];
-    });
-  });
-  ['Standard', 'Custom'].forEach((k) => groups[k].slice().sort(byField('api_name')).forEach((m) => {
-    const rb = (modRefs && modRefs[m.api_name]) ? modRefs[m.api_name].length : 0;
-  }));
+  // **Two loops that built nothing are gone.** They walked every function and every module - a
+  // `.slice().sort()` per namespace and per group, on every export - to compute one local each and
+  // discard it. The comment above them promised «informative tables (one row per item) for
+  // functions and modules», and the tables they used to build had already moved into the chapters
+  // below; what survived the move was the traversal. Nothing observed either local, and neither
+  // `byField` nor the `nodeByKey` lookup has a side effect, so the report is byte-identical.
   // Connections: catalogue + which functions use each
   const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || byField('name')(a, b)).map((c) => {
     const usesLinks = c.uses.length ? c.uses.map(linkByName).join(', ') : '<span class="none">none</span>';

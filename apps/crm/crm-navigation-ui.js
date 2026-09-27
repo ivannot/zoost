@@ -142,16 +142,10 @@ async function switchTab() {
   const t = await chrome.tabs.create({ url, active: true });
   try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
 }
-async function openTargetZoho() {
-  if (sampleRefuse()) return null;   // null, not undefined: the caller reads it as "no tab id"
-  const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
-  if (!url) { setStatus(MSG.noTarget, 'warn'); return null; }
-  return goToZoho(url);
-}
 /** The Zoho page for the tab being looked at.
  *
- *  A sibling of `openTargetZoho` rather than a widening of it: that one is what the reveal flow
- *  opens, and it means the functions page specifically - its callers read the tab id it returns.
+ *  It was a sibling of the reveal flow's own opener rather than a widening of it: that one meant
+ *  the functions page specifically, and its callers read the tab id it returned.
  *  Functions keeps its own builder because it lands on `myFunctions`; the rest come from the map in
  *  `zoho-navigation.js`, and a tab with no row there is not offered the control at all. */
 async function openTabZoho(how) {
@@ -205,13 +199,14 @@ async function reveal(fn) {
   const one = functionUrl(fn.uiId);
   const url = one || functionsUrl();
   if (!url) { setStatus(MSG.noTarget, 'warn'); return; }
-  // **One navigation, not two.** `openTargetZoho` *is* `goToZoho(functionsUrl())`, so the second
+  // **One navigation, not two.** This used to call a wrapper - `openTargetZoho`, since deleted for
+  // having no caller left - which *was* `goToZoho(functionsUrl())`, so the second
   // call was redundant on the branch where a tab existed and worse on the branch where none did:
   // `chrome.tabs.create` resolves before the navigation commits, so the fresh tab's `url` is still
   // empty, `zohoTabId()` fails all three of its tests, and `goToZoho` opens a *second* tab. One
   // click on «Functions in Zoho» with no CRM tab open left two identical tabs.
   setStatus(MSG.openingFns, 'busy');
-  // `goToZoho` already creates a tab when none exists. Going through `openTargetZoho` on that branch
+  // `goToZoho` already creates a tab when none exists. Going through that wrapper on this branch
   // rebuilt the old list URL and silently discarded `one`, then announced that the function itself
   // was open. One destination, handed to the one navigator on both branches.
   const at = await goToZoho(url);
