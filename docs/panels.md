@@ -50,12 +50,19 @@ scripts loaded before `workbench.js`: AI, export and Health keep their product-s
 side. `overview-view.js` turns the Overview model into DOM and delegates every action back to the
 panel; it reads no workspace or Chrome state. CRM's `pull-plan.js` freezes which areas one Pull all
 will ask before its first await, including explicit permission rechecks; `pull-controller.js` owns
-the nested pull lock, runs that plan and releases the lock on every exit. The identical
+the nested pull lock, runs that plan and releases the lock on every exit. The
 `bridge-contract.js` modules preserve the bound workspace identity and error facts across Chrome's
-plain-object message channel. `filesystem-adapter.js` owns permission, path resolution, handle
+plain-object message channel; they are no longer identical, because the CRM's now declares, per
+command, the fields its positive reply must carry - the three that authorise a prune of the mirror
+among them - while the Analytics one validates its payloads where it already did. `filesystem-adapter.js` owns permission, path resolution, handle
 caching and workspace-scoped I/O in both products. In CRM, `zoho-bridge.js` owns tab/frame discovery
 and message transport, while `zoho-navigation.js` owns destination construction, host admission and
-frame-aware navigation. CRM's `workspace-controller.js` owns the working-folder and workspace
+navigation. **Analytics has a `zoho-navigation.js` of its own since 27 September 2026**, holding the
+same navigator built from explicit options - hosts, a `chrome`, and one callback for the refusal
+sentence - and the workbench keeps hoisted one-line delegations so no call site moved. It was
+extracted because the churn said so, not because the file was long: over four months the functions
+that moved most in `analytics/workbench.js` were the navigation and context cluster, and the twin
+already had the module this side did not. CRM's `workspace-controller.js` owns the working-folder and workspace
 lifecycle, while `live-sync.js` owns page notices, single-flight reconciliation and mirror updates.
 CRM's `preview-model.js` owns the pure projection from a function row to its local files and folders;
 `preview-controller.js` owns the detail pane, project tree and selection, while

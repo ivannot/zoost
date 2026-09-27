@@ -204,7 +204,11 @@ CHECKS = [
                'Open the history menu and clear it.'],
         'pass': ('Back and forward open the expected item; a new turn drops the old forward tail; '
                  'the menu lists the same walk; Clear keeps only what is currently open.'),
-        'covers': ['apps/*/navigation.js', 'apps/crm/zoho-navigation.js', 'apps/*/workbench.js',
+        # The twin was named file by file, so the day Analytics grew a `zoho-navigation.js` of its
+        # own it was covered by nothing and `release.sh analytics` would have refused to tag - a
+        # gate firing correctly, at the worst possible moment, about a file that had been in the
+        # tree for an hour. A glob names both, and a third product would inherit it.
+        'covers': ['apps/*/navigation.js', 'apps/*/zoho-navigation.js', 'apps/*/workbench.js',
                    'apps/crm/history-controller.js'],
     },
     {

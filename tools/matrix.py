@@ -105,7 +105,7 @@ SURFACE_FILES = {
                    "apps/crm/workbench.html"],
     "crm-ai":     ["apps/crm/ai.js", "apps/crm/keyvault.js", "apps/crm/product-help.js"],
     "crm-export": ["apps/crm/export-scope.js", "apps/crm/export.js", "apps/crm/reportshell.js"],
-    "an-panel":   ["apps/analytics/workbench.js", "apps/analytics/report.js", "apps/analytics/overview-view.js", "apps/analytics/bridge-contract.js", "apps/analytics/pull-lifecycle.js", "apps/analytics/pull-usecase.js", "apps/analytics/pull-adapter.js", "apps/analytics/mirror-plan.js", "apps/analytics/error-model.js", "apps/analytics/ai.js",
+    "an-panel":   ["apps/analytics/workbench.js", "apps/analytics/zoho-navigation.js", "apps/analytics/report.js", "apps/analytics/overview-view.js", "apps/analytics/bridge-contract.js", "apps/analytics/pull-lifecycle.js", "apps/analytics/pull-usecase.js", "apps/analytics/pull-adapter.js", "apps/analytics/mirror-plan.js", "apps/analytics/error-model.js", "apps/analytics/ai.js",
                    "apps/analytics/export.js", "apps/analytics/health.js",
                    "apps/analytics/analytics-view-model.js", "apps/analytics/analytics-mirror-writer.js",
                    "apps/analytics/filesystem-adapter.js", "apps/analytics/idb.js",

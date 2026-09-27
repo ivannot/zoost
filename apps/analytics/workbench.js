@@ -359,7 +359,6 @@ const dirFor = workspaceFilesystem.directoryFor;
 const beginWorkspaceOp = workspaceFilesystem.beginOperation;
 const writeFileAt = workspaceFilesystem.writeFileAt;
 const readFileAt = workspaceFilesystem.readFileAt;
-const removeFileAt = workspaceFilesystem.removeFileAt;
 // The shorthands every render path uses: they read and write the workspace on screen, which is the
 // one they mean. A path that survives an await must take an op instead.
 const writeFile = (rel, content) => writeFileAt(dir, rel, content);
@@ -1067,13 +1066,10 @@ function offerTwin(twin) {
  *  Zoost lived in a side panel - the panel is *in* that window - and with Zoost in a window of its
  *  own it meant «Open in Zoho» selecting a tab nobody could see.
  */
-async function focusTab(tabId, props) {
-  const tab = await chrome.tabs.update(tabId, props);
-  try {
-    if (tab && tab.windowId != null) await chrome.windows.update(tab.windowId, { focused: true });
-  } catch (_) { /* the window refused focus; the tab is still the current one in it */ }
-  return tab;
-}
+// Delegated rather than deleted: every call site keeps the name it had, and a `function` keeps the
+// hoisting it had too - a `const` here would be the «arrow used above its declaration» defect this
+// repository has already paid for twice.
+async function focusTab(tabId, props) { return analyticsNavigator.focusTab(tabId, props); }
 
 /** When something was pulled, in the reader's own time. See the note at its one caller. */
 function pulledWhen(value) {
@@ -1603,18 +1599,17 @@ const workspaceUrl = () => (bound && bound.origin && bound.workspace
 //
 // The check is here and not at the call sites, so one added tomorrow inherits it. `APP_HOST_RE` is
 // the application's own origin: a workspace URL that is not on it is not a workspace URL.
-// The application's own hosts, exactly, out of `host_permissions` - not a prefix. A prefix test lets
-// `https://analytics.zoho.eu.evil.com/` through, which is the whole point of the check.
-const APP_HOSTS = new Set((chrome.runtime.getManifest().host_permissions || [])
-  .filter((h) => /^https:\/\/analytics\./.test(h))
-  .map((h) => { try { return new URL(h.replace(/\*$/, '')).host; } catch (_) { return null; } })
-  .filter(Boolean));
-function zohoUrlOk(url) {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' && APP_HOSTS.has(u.host);
-  } catch (_) { return false; }
-}
+// **The navigator, built once from what it needs and nothing else.** Hosts out of the manifest, a
+// `chrome` to act through, and one callback for the sentence a refusal shows - see
+// `zoho-navigation.js` for why this moved and what it deliberately left behind.
+const analyticsNavigator = createAnalyticsZohoNavigator({
+  hostPatterns: chrome.runtime.getManifest().host_permissions || [],
+  chromeApi: chrome,
+  refused: (url) => status('This workspace points at '
+    + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
+    + ', which is not a Zoho Analytics address. Nothing was opened - check where this workspace '
+    + 'folder came from.', 'bad'),
+});
 /** Where the reader asked for it to open, from the modifiers the whole web already teaches.
  *
  *  Word for word the twin's: Ctrl or Cmd is a new tab in the background, Shift is a new window that
@@ -1622,40 +1617,10 @@ function zohoUrlOk(url) {
  *  override would not be. It matters since Zoost left the side panel: on two screens, «open this in
  *  a second Zoho window» is a thing somebody actually wants.
  */
-function howFrom(ev) {
-  if (!ev) return null;
-  if (ev.shiftKey) return 'window';
-  return (ev.ctrlKey || ev.metaKey) ? 'tab' : null;
-}
-async function openElsewhere(url, how) {
-  if (how === 'window') { await chrome.windows.create({ url, focused: true }); return true; }
-  await chrome.tabs.create({ url, active: false });
-  return true;
-}
+function howFrom(ev) { return analyticsNavigator.howFrom(ev); }
+async function openElsewhere(url, how) { return analyticsNavigator.openElsewhere(url, how); }
 
-async function goToZoho(url, how) {
-  if (!zohoUrlOk(url)) {
-    status('This workspace points at ' + (((url || '').match(/^https?:\/\/[^/]+/) || [])[0] || 'somewhere')
-      + ', which is not a Zoho Analytics address. Nothing was opened - check where this workspace folder came from.', 'bad');
-    return null;
-  }
-  // A modifier means «not here», so the tab-reuse below is skipped: asking for a new window is not
-  // asking to navigate the one you have. The host check above still runs first.
-  if (how) return await openElsewhere(url, how) ? true : null;
-  // **A tab of its own, unless that page is already open** - see the twin, which met this first.
-  // It navigated the Analytics tab the reader already had, which was right while Zoost lived inside
-  // the browser window and is not from a window of its own: the tab it takes over is one of the
-  // reader's others, and «Go to» on a view they are half-way through editing threw the edit away.
-  // What is given up is the suite shell, and that is the smaller loss - a shell to come back to
-  // costs a click. Already open is focused rather than opened twice, the way every outward link in
-  // this panel is; a lookup that cannot answer still gets its tab.
-  let already = [];
-  try { already = await chrome.tabs.query({ url: new URL(url).href }); } catch (_) { already = []; }
-  if (already && already[0]) { await focusTab(already[0].id, { active: true }); return already[0].id; }
-  const t = await chrome.tabs.create({ url, active: true });
-  try { if (t && t.windowId != null) await chrome.windows.update(t.windowId, { focused: true }); } catch (_) {}
-  return t.id;
-}
+async function goToZoho(url, how) { return analyticsNavigator.open(url, how); }
 async function switchTab() {
   if (sampleRefuse()) return;
   await goToZoho(workspaceUrl());

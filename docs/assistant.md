@@ -57,9 +57,13 @@ something that was never there. Workflows read their **file**, not the index ent
 conditions and actions are what the question is about — and when only the index is on disk the
 prompt says so instead of looking complete.
 
-**AI configuration lives in the options page**, not the side panel. The panel is ~400px wide and
-those are set-once fields. The panel picks changes up via `chrome.storage.onChanged` plus a
-`window.focus` re-read. A selector that changes a *mode* saves on change, not behind a Save button.
+**AI configuration lives in the options page**, not the workbench. The reason was width - the
+workbench was a ~400px side panel through 1.x, and these are set-once fields - and in 2.0 it is a
+window that opens at 1200x900, so the reason has gone and the arrangement has not. What keeps it
+there now is that the settings are a *view* of the workbench and this is the one form that is still
+reached from Chrome's own extensions page, which is where somebody goes when the window will not
+open. The workbench picks changes up via `chrome.storage.onChanged` plus a `window.focus` re-read.
+A selector that changes a *mode* saves on change, not behind a Save button.
 
 **The API key is stored in clear text by default, and the passphrase that changes that is opt-in.**
 Chrome gives extensions no encryption at rest and no credential store, so anything the extension can

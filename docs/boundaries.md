@@ -29,7 +29,7 @@ in the code is one nobody can review.
                                └────────┬─────────┘
                                         ▼
                               ┌────────────────────┐
-                              │     side panel     │
+                              │  workbench window  │
                               │  the only writer   │
                               └───┬────────────┬───┘
                                   │            │
@@ -40,6 +40,14 @@ in the code is one nobody can review.
                      granted, per app)       user supplied)
 ```
 
+**It is a window, not a side panel, and this document said otherwise until 27 September 2026.**
+The central component was Chrome's side panel through 1.x and is a window of its own in 2.0 -
+`workbench.html`, opened by the toolbar action, with its own bounds remembered in
+`zoostWindowBounds`. Nothing about the boundaries changed with it: the same page, the same single
+writer, the same messaging. What changed is the word, and a document that describes the shipped
+product in the previous product's terms sends a reader looking for a component that is not there.
+Where «side panel» still appears below, it is naming the 1.x arrangement on purpose and says so.
+
 ## What each side is trusted for
 
 | Boundary | Trusted for | Not trusted for |
@@ -47,7 +55,7 @@ in the code is one nobody can review.
 | **Zoho's page (MAIN world)** | nothing. Any script on that page can run in it | anything at all: what arrives is a hint |
 | **`hook.js`** | noticing that the editor issued a `PUT` on a function and saying so | it holds no data, reads no response body, and cannot act |
 | **`content-bridge.js` (ISOLATED)** | reaching Zoho's APIs with the user's own session, and deciding whether an answer is the shape it reads | deciding what to keep: it returns, it never writes |
-| **the side panel** | every decision - what to pull, what to write, what to show, what to send to a model | nothing arrives here with authority attached; a bridge reply is data |
+| **the workbench window** | every decision - what to pull, what to write, what to show, what to send to a model | nothing arrives here with authority attached; a bridge reply is data |
 | **the mirror on disk** | being what the user granted, per app, and the only place anything is written | it is *read back* as untrusted content: it is text a workspace author wrote |
 | **the AI provider** | answering | its answer is text. It names tools; it cannot invent one, and it reaches nothing outside the list |
 
@@ -220,7 +228,7 @@ hook.js        → nothing (it posts one message and holds no state)
 content-bridge → Zoho HTTP and the page. Never the filesystem, never the model
 Zoho adapter   → tabs, frames and the content bridge. Never the filesystem or model
 FS adapter     → the granted workspace handle. Never Zoho, Chrome storage or the model
-side panel     → the adapters, the model and the exports; it supplies state and policy
+workbench      → the adapters, the model and the exports; it supplies state and policy
 graphlogic.js  → nothing: no DOM, no chrome.*, no network. That is the criterion it was extracted by
 ```
 

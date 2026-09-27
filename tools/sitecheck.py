@@ -364,6 +364,7 @@ NUM = {8: ('eight', 'otto'), 9: ('nine', 'nove'), 10: ('ten', 'dieci'), 11: ('el
        27: ('twenty-seven', 'ventisette'), 28: ('twenty-eight', 'ventotto'),
        29: ('twenty-nine', 'ventinove'), 30: ('thirty', 'trenta'),
        32: ('thirty-two', 'trentadue'), 33: ('thirty-three', 'trentatré'),
+       34: ('thirty-four', 'trentaquattro'), 35: ('thirty-five', 'trentacinque'),
        58: ('fifty-eight', 'cinquantotto'), 59: ('fifty-nine', 'cinquantanove')}
 
 
@@ -432,8 +433,15 @@ def file_count_is_derived(findings: list) -> None:
         if not page.exists():
             continue
         lang = 1 if rel.startswith('it/') else 0
+        # **Digits as well as words, because the English half of the site writes them as digits.**
+        # This matched `NUM` alone - «thirty-three», «trentatré» - so it read the Italian pages and
+        # was blind to `site/index.html` and `site/nerd.html`, where the same claim is «59 files of
+        # plain JavaScript for Zoho CRM, 33 for Zoho Analytics». Measured the day a file was added:
+        # the check reported four findings and three more stale counts sat on the English pages,
+        # unreported, in the sentence an approver is most likely to test. The word list stays - it
+        # is what the Italian prose uses - and a bare integer is now a claim too.
         value = {names[lang]: n for n, names in NUM.items()}
-        words = re.compile(r'\b(' + '|'.join(sorted(value, key=len, reverse=True)) + r')\b', re.I)
+        words = re.compile(r'\b(' + '|'.join(sorted(value, key=len, reverse=True)) + r'|[0-9]{1,4})\b', re.I)
         seen = set()
         for block in BLOCK.split(page.read_text(encoding='utf-8')):
             # A number is about files only if its block is. Without this the check reads «nine tools»
@@ -442,6 +450,14 @@ def file_count_is_derived(findings: list) -> None:
                 continue
             for m in words.finditer(block):
                 word = m.group(1).lower()
+                if word.isdigit():
+                    # A bare integer is only a claim in the two shapes these sentences use - «59
+                    # files …» and «… 33 for Zoho Analytics». Without this gate the first run read a
+                    # «0» out of an unrelated sentence and reported it as a file count, which is the
+                    # direction that teaches a reader to skim the list.
+                    if not re.match(r'\s*(files?\b|for Zoho\b)', block[m.end():m.end() + 40], re.I):
+                        continue
+                    value.setdefault(word, int(word))
                 after = block[m.end():]
                 named = [(after.index(p), app) for p, app in products.items() if p in after]
                 if not named:
@@ -449,7 +465,8 @@ def file_count_is_derived(findings: list) -> None:
                 app = min(named)[1]
                 if value[word] != counts[app] and (word, app) not in seen:
                     seen.add((word, app))
-                    right = NUM.get(counts[app], (str(counts[app]),) * 2)[lang]
+                    right = (str(counts[app]) if word.isdigit()
+                             else NUM.get(counts[app], (str(counts[app]),) * 2)[lang])
                     name = [p for p, a in products.items() if a == app][0]
                     findings.append(f'site/{rel}: «{word} ... {name}» - {app} ships {counts[app]} .js '
                                     f'files, so that number is «{right}». A count in prose is a claim, '

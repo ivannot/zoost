@@ -113,6 +113,19 @@ function crmBridgeFor(chromeApi, overrides = {}) {
   });
 }
 
+// Its Analytics counterpart, now that this side has the same module. Same shape, fewer options:
+// there is no suite shell to reach an Analytics workspace through, which is why `goToZoho` there
+// never had shell support and this factory has no `shell`.
+function analyticsNavigatorFor(chromeApi, overrides = {}) {
+  const { createAnalyticsZohoNavigator } = load([
+    sliceFn('apps/analytics/zoho-navigation.js', 'createAnalyticsZohoNavigator'),
+  ], { Set, URL, String, Boolean, Promise });
+  return createAnalyticsZohoNavigator({
+    chromeApi,
+    hostPatterns: overrides.hostPatterns || ['https://analytics.zoho.eu/*'],
+    refused: overrides.refused || (() => {}),
+  });
+}
 function crmNavigatorFor(chromeApi, overrides = {}) {
   const { createCrmZohoNavigator } = load([
     sliceFn('apps/crm/zoho-navigation.js', 'createCrmZohoNavigator'),
@@ -16983,12 +16996,6 @@ test('the About dialog names every destination the panel can reach', () => {
 test('a workspace can only send you to a host the manifest names', () => {
   const man = { host_permissions: ['https://crm.zoho.eu/*', 'https://crmsandbox.zoho.com/*',
                                    'https://one.zoho.eu/*', 'https://analytics.zoho.eu/*'] };
-  const cases = {
-    analytics: { pieces: [sliceAppConst('analytics', 'APP_HOSTS'),
-                          sliceApp('analytics', 'zohoUrlOk')],
-                 globals: { chrome: { runtime: { getManifest: () => man } }, URL },
-                 good: ['https://analytics.zoho.eu/workspace/1/view/2'] },
-  };
   const crmHosts = man.host_permissions.filter((host) => !/analytics/.test(host));
   const crm = crmNavigatorFor({}, { hostPatterns: crmHosts });
   const crmGood = ['https://crm.zoho.eu/crm/inst/tab/Contacts', 'https://one.zoho.eu/x'];
@@ -16999,17 +17006,20 @@ test('a workspace can only send you to a host the manifest names', () => {
   for (const url of refused) assert.equal(crm.allows(url), false, `crm: would navigate to ${url}`);
   assert.equal(crmNavigatorFor({}, { hostPatterns: [] }).allows(crmGood[0]), false,
     'crm: says yes with no hosts granted - the list is not coming from the manifest');
-  for (const [app, c] of Object.entries(cases)) {
-    const { zohoUrlOk } = load(c.pieces, c.globals);
-    for (const u of c.good) assert.ok(zohoUrlOk(u), `${app}: refuses ${u}, which the manifest grants`);
-    for (const u of refused)
-      assert.equal(zohoUrlOk(u), false, `${app}: would navigate to ${u}`);
-    // If a manifest with no hosts still says yes to something, the derivation is not deriving.
-    const empty = load(c.pieces,
-      { chrome: { runtime: { getManifest: () => ({ host_permissions: [] }) } }, URL });
-    assert.equal(empty.zohoUrlOk(c.good[0]), false,
-                 `${app}: says yes with no hosts granted - the list is not coming from the manifest`);
-  }
+  // **And the same question of the other product, asked of the same kind of thing.** This used to
+  // lift `APP_HOSTS` and `zohoUrlOk` out of the Analytics workbench by name, which tied the case to
+  // where those two lines happened to live; the navigator moved into a module of its own and the
+  // case went red on a rename rather than on a defect. It is built now, like the CRM one beside it.
+  const an = analyticsNavigatorFor({}, { hostPatterns: man.host_permissions });
+  assert.ok(an.allowed('https://analytics.zoho.eu/workspace/1/view/2'),
+            'analytics: refuses an address the manifest grants');
+  for (const url of refused) assert.equal(an.allowed(url), false, `analytics: would navigate to ${url}`);
+  assert.equal(analyticsNavigatorFor({}, { hostPatterns: [] }).allowed('https://analytics.zoho.eu/w/1'), false,
+               'analytics: says yes with no hosts granted - the list is not coming from the manifest');
+  // The CRM's own hosts are not this product's: a manifest granting both must not let one panel
+  // navigate into the other's application.
+  assert.equal(an.allowed('https://crm.zoho.eu/crm/inst/tab/Contacts'), false,
+               'analytics: would open a CRM address, which its manifest grants for other reasons');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -17165,10 +17175,13 @@ test('the two reports are the same shape', () => {
 // alternative to a derivation that would have to encode it.
 test('both panels reach a Zoho page through one function, and the detail button uses it', () => {
   for (const app of ['crm', 'analytics']) {
-    const js = app === 'crm' ? read('apps/crm/zoho-navigation.js') : read('apps/analytics/workbench.js');
-    const fn = app === 'crm'
-      ? sliceFn('apps/crm/zoho-navigation.js', 'createCrmZohoNavigator')
-      : sliceFn('apps/analytics/workbench.js', 'goToZoho');
+    // Both sides read the same kind of file now: the navigator module, not one module and one
+    // panel. The Analytics half was `workbench.js` until that logic moved into its own file beside
+    // the twin's, and reading the panel for it afterwards found a one-line delegation and reported
+    // «goToZoho does not look for the page already being open» about a function that does.
+    const js = read(`apps/${app}/zoho-navigation.js`);
+    const fn = sliceFn(`apps/${app}/zoho-navigation.js`,
+                       app === 'crm' ? 'createCrmZohoNavigator' : 'createAnalyticsZohoNavigator');
     // **What is asserted here turned over, and the reason it did is written in both functions.**
     // It used to be «one function navigates the CRM or Analytics *frame*, so a reader inside Zoho
     // One keeps the shell». That was the right policy while Zoost lived in the browser window and
@@ -23182,7 +23195,9 @@ test('crm: the button opener waits for the pane it is going to open', async () =
 // a function that is gone.
 test('crm: a function deleted between census and download is «not found», not a broken envelope', () => {
   const REL = 'apps/crm/bridge-contract.js';
-  const { validateBridgeReply } = load([sliceFn(REL, 'validateBridgeReply')], { Error, Array, String, Object, JSON });
+  const { validateBridgeReply } = load([sliceConst(REL, 'CRM_REPLY_SHAPES'),
+                                        sliceFn(REL, 'bridgeShapeOk'),
+                                        sliceFn(REL, 'validateBridgeReply')], { Error, Array, String, Object, JSON });
   // The command is the message the panel sent, not its name - which is how the shipped caller calls it.
   const ask = { cmd: 'fetchOne', id: 'fn-1', language: 'deluge' };
   assert.doesNotThrow(() => validateBridgeReply(ask, { ok: true, file: null }),
@@ -23193,6 +23208,102 @@ test('crm: a function deleted between census and download is «not found», not 
       `a file of ${JSON.stringify(bad) ?? 'undefined'} is not a shape anything sends`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// Every CRM command declares what its positive reply must carry, or says why the envelope is enough.
+//
+// The envelope was versioned and checked, and six commands past it validated nothing - among them
+// the three that authorise a *destructive* act on the mirror. `listBlueprints` builds the set of
+// live ids from `entries` and deletes every blueprint file outside it, so `{ok: true}` and nothing
+// else empties the folder; `pullConnections` writes `connections/index.json` from `connections`;
+// `pullModules` reads `modules.length` with no guard and throws a TypeError carrying no area. That
+// is the question this repository already asks of every pull - «does partial data authorise a
+// destructive act?» - asked at the boundary instead of at each call site.
+{
+  const REL = 'apps/crm/bridge-contract.js';
+  const lift = () => load([sliceConst(REL, 'CRM_REPLY_SHAPES'), sliceConst(REL, 'CRM_REPLY_ENVELOPE_ONLY'),
+                           sliceFn(REL, 'bridgeShapeOk'), sliceFn(REL, 'validateBridgeReply')],
+                          { Error, Array, String, Object, JSON });
+
+  test('crm: a reply that would prune the mirror is refused before it can', () => {
+    const { validateBridgeReply } = lift();
+    // One positive and one negative per family, and the negative is the reply that does the damage:
+    // an `ok` with the container missing altogether, which is what a bridge from a reloaded tab or
+    // a future protocol would look like from here.
+    const families = [
+      ['listBlueprints', { entries: [{ id: '1' }] }, { entries: undefined }, /invalid entries/],
+      ['pullConnections', { connections: [{ id: '2' }] }, {}, /invalid connections/],
+      ['pullModules', { modules: [{ api_name: 'Contacts' }] }, {}, /invalid modules/],
+      ['listModules', { modules: [] }, { modules: 'all' }, /invalid modules/],
+      ['pullActions', { actions: [], sv: 3 }, { sv: 3 }, /invalid actions/],
+      ['pullFailures', { failures: [] }, { failures: null }, /invalid failures/],
+    ];
+    // **`sv` is not among them, and the first version of this case locked in the opposite.** The
+    // panel answers a reply with no `sv` by name - «The Zoho tab is still running an older copy of
+    // this extension - reload that tab, then pull again» - and requiring the key here threw before
+    // that branch, replacing a remedy with «bridge pullActions response has invalid sv» and
+    // writing a «failed» verdict for an area Zoho never refused.
+    assert.doesNotThrow(() => validateBridgeReply({ cmd: 'pullActions' }, { ok: true, actions: [] }),
+                        'a bridge too old to send sv is refused at the boundary, where the panel has '
+                        + 'a sentence for it');
+    for (const [cmd, good, bad, message] of families) {
+      assert.doesNotThrow(() => validateBridgeReply({ cmd }, { ok: true, ...good }),
+                          `${cmd}: the shape the bridge actually returns is refused`);
+      assert.throws(() => validateBridgeReply({ cmd }, { ok: true, ...bad }), message,
+                    `${cmd}: a reply with no usable container was let through to the mirror`);
+    }
+  });
+
+  test('crm: a list of things that are not objects never reaches an index file', () => {
+    const { validateBridgeReply } = lift();
+    // The item check matters where the array is serialised: a list of strings would be written into
+    // an index every later read then has to survive.
+    for (const cmd of ['listBlueprints', 'pullConnections', 'pullModules', 'listModules']) {
+      const key = cmd.endsWith('Connections') ? 'connections' : cmd.endsWith('Blueprints') ? 'entries' : 'modules';
+      assert.throws(() => validateBridgeReply({ cmd }, { ok: true, [key]: ['a', 'b'], sv: 3 }),
+                    new RegExp(`invalid ${key} item`), `${cmd}: strings were accepted as rows`);
+    }
+  });
+
+  test('crm: fetching one thing keeps «not found» as the caller\'s word', () => {
+    const { validateBridgeReply } = lift();
+    // These five read an absent key as «Zoho no longer has this», and that sentence is the one the
+    // row shows and the retry logic understands. Requiring the key here would replace it with an
+    // envelope complaint about the same condition - the trade that had to be undone once already
+    // for `fetchOne`. What is still refused is a shape nobody sends.
+    for (const [cmd, key] of [['fetchWorkflow', 'rule'], ['fetchBlueprint', 'blueprint'],
+                              ['fetchBlueprintInternal', 'blueprint'], ['fetchTransition', 'transition'],
+                              ['fetchFunctionAction', 'action']]) {
+      assert.doesNotThrow(() => validateBridgeReply({ cmd }, { ok: true }),
+                          `${cmd}: an absent detail became an envelope error instead of «not found»`);
+      assert.doesNotThrow(() => validateBridgeReply({ cmd }, { ok: true, [key]: null }),
+                          `${cmd}: an explicit null was refused`);
+      assert.doesNotThrow(() => validateBridgeReply({ cmd }, { ok: true, [key]: { id: '1' } }));
+      assert.throws(() => validateBridgeReply({ cmd }, { ok: true, [key]: ['x'] }),
+                    new RegExp(`invalid ${key}`), `${cmd}: an array was accepted where an object belongs`);
+    }
+  });
+
+  // **A command added tomorrow and forgotten is a silence, and this is what turns it into a
+  // finding.** The list is derived from the typedef rather than typed out beside the tables, so it
+  // cannot fall behind the commands the panel can actually send.
+  test('crm: every command the panel can send is declared or exempt, with its reason', () => {
+    const { CRM_REPLY_SHAPES, CRM_REPLY_ENVELOPE_ONLY } = lift();
+    const src = read(REL);
+    const typedef = src.slice(src.indexOf('BridgeIdentity, __zoostProtocol?: number}'), src.indexOf('} BridgeCommand */'));
+    const commands = [...new Set([...typedef.matchAll(/cmd:\s*"([A-Za-z]+)"/g)].map((m) => m[1]))];
+    assert.ok(commands.length > 15, `the command list did not parse - found ${commands.length}`);
+    const undeclared = commands.filter((c) => !(c in CRM_REPLY_SHAPES) && !(c in CRM_REPLY_ENVELOPE_ONLY));
+    assert.deepEqual(undeclared, [],
+                     `${undeclared.length} command(s) validate nothing beyond the envelope and say `
+                     + 'nowhere why that is enough - declare a shape, or name it in the exempt table '
+                     + 'with the reason');
+    for (const [cmd, why] of Object.entries(CRM_REPLY_ENVELOPE_ONLY)) {
+      assert.ok(typeof why === 'string' && why.length > 40,
+                `${cmd} is exempt with no reason worth reading, which is the same as being forgotten`);
+    }
+  });
+}
 
 // ---- which workflow rules a field makes fire ----
 // Asked for on a real org, where Zoho states a rule's trigger inside the rule and nowhere else. The
