@@ -27,6 +27,32 @@ const BLAST_RADIUS = 'Zoost will hold read and write access to everything inside
   + 'Documents.';
 
 let root = null, rootGranted = false;
+// Startup restores the stored handle asynchronously.  Keep one promise for that read so a click
+// arriving before the first enumeration cannot mistake "not restored yet" for "no folder" and
+// open the picker again.  The picker is only for a genuinely new folder; a stored handle must go
+// through requestPermission(), which is the path on which Chrome can offer a persistent grant.
+let rootRestorePromise = null, rootRestorePending = null;
+async function readRememberedRoot() {
+  try {
+    root = await window.idbHandle.get('rootDir');
+    if (root) {
+      try { rootGranted = await hasPerm(root); } catch (_) { rootGranted = false; }
+    }
+  } catch (_) {
+    root = null;
+    rootGranted = false;
+  }
+}
+async function restoreRoot() {
+  if (root) { rootRestorePending = false; return; }
+  if (!rootRestorePromise) {
+    rootRestorePromise = readRememberedRoot();
+  }
+  try { await rootRestorePromise; } finally {
+    rootRestorePending = false;
+    rootRestorePromise = null;
+  }
+}
 // True when the workspace on screen still has the pre-1.13 folders. Nothing reads them - it is
 // there so the empty state can name the real reason instead of saying «nothing pulled yet» about
 // a folder that is visibly full.
@@ -164,6 +190,10 @@ function sayWhyDisabled() {
 // Re-granting access to a folder we already know must NOT reopen the file picker: a lapsed
 // permission is not a request to choose a different folder. This is one click, no OS dialog.
 async function grantRoot() {
+  // The first click can race the asynchronous startup read.  Wait for that read before deciding
+  // that the user needs a new folder; otherwise Chrome shows the initial two-button picker instead
+  // of the re-grant prompt for the already remembered folder.
+  await restoreRoot();
   if (!root) { await pickRoot(); return; }
   try {
     if (!(await ensurePerm(root))) { setStatus('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
@@ -256,7 +286,7 @@ function updateSampleButtons() {
   const sb = $('wssample');
   if (sb) {
     sb.hidden = false;
-    sb.disabled = view.disabled;
+    sb.disabled = (typeof rootRestorePending !== 'undefined' && rootRestorePending === null) || view.disabled;
     sb.textContent = view.buttonLabel;
     sb.title = view.title;
   }
@@ -264,7 +294,7 @@ function updateSampleButtons() {
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
   if (ob) {
-    ob.disabled = view.disabled;
+    ob.disabled = (typeof rootRestorePending !== 'undefined' && rootRestorePending === null) || view.disabled;
     // Three states, because «+» and «Open» are both claims and there is a moment when neither can be
     // made. `+` says «there is none» and `Open` says «there is one»; with the folder unread the
     // honest label asserts nothing and the tooltip says the click will find out. This project does
@@ -299,6 +329,7 @@ async function createSampleWorkspace() {
 }
 async function addSampleWorkspace() {
   if (sampleBusy) return;
+  await restoreRoot();
   return runWorkspaceEntry({
     refuse: workspaceChangeRefuse,
     root: () => root,
@@ -381,6 +412,7 @@ async function crmWorkspaceContextForEntry() {
   return lastCtx && lastCtx.org ? lastCtx : getContext();
 }
 async function addWorkspaceForTab() {
+  await restoreRoot();
   return runWorkspaceEntry({
     refuse: workspaceChangeRefuse,
     root: () => root,
@@ -715,6 +747,7 @@ function updateWsButtons() {
   const add = $('wsadd'), rt = $('wsroot');
   $('ws').disabled = pullBusy;
   rt.disabled = pullBusy;
+  if (typeof rootRestorePending !== 'undefined' && rootRestorePending === null) rt.disabled = true;
   // Both are temporarily unavailable, never permanently: pick a workspace and they work. Analytics
   // has disabled its Remove this way from the start; this side never did, and the two buttons sat
   // beside each other behaving differently.
@@ -755,7 +788,7 @@ function updateWsButtons() {
   add.hidden = view.hidden;
   // The handler grants first, refreshes the workspace list and only then decides whether it needs to
   // create or merely open the org. That makes the first click useful without trusting an unread list.
-  add.disabled = view.disabled;
+  add.disabled = (typeof rootRestorePending !== 'undefined' && rootRestorePending === null) || view.disabled;
   add.textContent = view.label;
   add.title = view.title;
   // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
@@ -782,7 +815,7 @@ function selPlaceholder(sel, text) {
 }
 
 async function loadWorkspaces() {
-  if (!root) root = await window.idbHandle.get('rootDir');
+  await restoreRoot();
   const sel = $('ws'); sel.innerHTML = '';
   wsList = [];
   if (!root) {

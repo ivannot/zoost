@@ -1,6 +1,13 @@
 // CRM panel bootstrap and runtime wiring.
 // ---------- boot + tab reactivity ----------
-$('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
+// Await restoration before choosing between re-grant and a new folder.  Without this guard, a
+// fast click while IndexedDB is still being read saw root === null and opened the initial picker,
+// which has only Allow/Don't Allow and cannot offer Chrome's persistent-grant choice.
+async function onRootButtonClick() {
+  await restoreRoot();
+  return (root && !rootGranted) ? grantRoot() : pickRoot();
+}
+$('wsroot').onclick = onRootButtonClick;
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = () => addWorkspaceForTab();
 $('wssample').onclick = () => addSampleWorkspace();
@@ -320,7 +327,7 @@ void placeWindow().then(restoreChromeFold);
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_t, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
-loadWorkspaces();
+void loadWorkspaces();
 setInterval(refreshContext, 5000);
 
 // What the report is allowed to know, gathered in one place so a reader can see the whole of it at

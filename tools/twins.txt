@@ -3,7 +3,7 @@
 # change is a fix that landed on one twin and not the other, which is what this catches.
 # name	crm	analytics	state
 accountedFor	75d8becbae3d	75d8becbae3d	identical
-addSampleWorkspace	655413012a3d	0646737879c4	divergent
+addSampleWorkspace	ecdba98d6915	0646737879c4	divergent
 addWorkspaceView	2a8a459ba4f6	93458982cadb	divergent
 aiActiveReady	a8afde9cdb31	a8afde9cdb31	identical
 aiBuildSeed	ad5d3aba57c2	ea3877885a9f	divergent
@@ -149,7 +149,7 @@ fitFindFilter	e9a480e21d5c	e9a480e21d5c	identical
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 forgetWindow	c1c318120174	c1c318120174	identical
 friendlyError	edab5c06776e	edab5c06776e	identical
-grantRoot	1e1447674d2d	50f056678e38	divergent
+grantRoot	46107633412e	50f056678e38	divergent
 graphForWindow	50e566ea6668	9db12f0021b7	divergent
 graphStat	1d87798be903	0fc8a3fd40ae	divergent
 halfTheScreen	6d734256a0ee	6d734256a0ee	identical
@@ -271,6 +271,7 @@ reportToc	bffb45a529c6	bffb45a529c6	identical
 resetGraphState	1840f684953d	f4032c7cbdc5	divergent
 resetView	6dc964329195	e122c2b6b701	divergent
 restoreChromeFold	95867d4b4832	95867d4b4832	identical
+restoreRoot	d81c490780b4	8f4172ea0e8a	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 runWorkspaceEntry	21263fa94191	21263fa94191	identical
@@ -321,7 +322,7 @@ twinTab	ce3d8e21cc23	ce3d8e21cc23	identical
 updateDepthUI	77a910d07585	77a910d07585	identical
 updateNav	1df907325749	65c4b176f754	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
-updateSampleButtons	f145c59c6c01	f145c59c6c01	identical
+updateSampleButtons	5add5baedcdf	f145c59c6c01	divergent
 updateScopeUI	fb2e5760e9e9	ff54308a4864	divergent
 validateBridgeReply	b1d869a730eb	1455070803e1	divergent
 validateMirrorPlan	1e1eb19c46d0	1e1eb19c46d0	identical

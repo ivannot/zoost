@@ -5067,6 +5067,7 @@ test('choosing the folder from the sample button continues into the sample in th
     const calls = [];
     const globals = {
       root: null, rootGranted: false, sampleBusy: false, wsList: [],
+      restoreRoot: async () => {},
       workspaceChangeRefuse: () => false,
       ensurePerm: async () => true,
       loadWorkspaces: async () => {}, refreshWorkspaces: async () => {},
@@ -5101,6 +5102,7 @@ test('choosing the folder from + Workspace continues into the real workspace in 
     };
     const globals = {
       root: null, rootGranted: false, wsList: [],
+      restoreRoot: async () => {},
       lastCtx: { org: '44', origin: 'https://crm.zoho.eu', instance: 'Acme' },
       workspaceChangeRefuse: () => false,
       ensurePerm: async () => true,
@@ -5164,6 +5166,7 @@ test('restoring folder access opens the workspace it finds instead of recreating
     const existing = { id: 'org:44', binding: { org: '44' } };
     const globals = {
       root: { name: 'Zoost' }, rootGranted: false, wsList: [],
+      restoreRoot: async () => {},
       lastCtx: { org: '44', origin: 'https://crm.zoho.eu', instance: 'Acme' },
       workspaceChangeRefuse: () => false, ensurePerm: async () => true,
       pickRoot: async () => { throw new Error('CRM asked for a folder it already remembered'); },
@@ -16541,6 +16544,7 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
       console, Object, Promise, Set, JSON,
       root: { name: 'sample', values: async function* () { throw new Error('NotFoundError'); } },
       rootGranted: granted, wsList: [], APP_DIR: 'crm', APP_DIRS: ['crm', 'analytics'], CFG: '.zoost.json',
+      restoreRoot: async () => {},
       $: () => ({}), sel: {}, selPlaceholder: () => {}, switchDirtyWorkspace: () => {}, forgetDirs: () => {},
       setEnabled: () => {}, updateWsButtons: () => {}, byWsLabel: () => 0, readJsonIn: async () => null,
       setStatus: (t, c) => said.push([String(t), c]), dir: null,
@@ -16568,6 +16572,32 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
   const notGranted = await drive(false);
   assert.match(notGranted[notGranted.length - 1][0], /Grant access/,
                'a folder whose permission has lapsed is not told to create a workspace');
+});
+
+// The first click must not outrun the IndexedDB restore.  `showDirectoryPicker()` is the initial
+// selection path and therefore has only Allow/Don't Allow; a remembered handle must instead reach
+// requestPermission(), where Chrome can offer the persistent grant.  Two callers (startup and the
+// click handler) share one read so a slow IndexedDB open cannot send CRM down the wrong path.
+test('crm: startup and folder clicks share the remembered-root restore', async () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const handle = { name: 'Zoost' };
+  let reads = 0;
+  const g = {
+    root: null, rootGranted: false, rootRestorePromise: null, rootRestorePending: null,
+    window: { idbHandle: { get: async () => { reads++; await gate; return handle; } } },
+    hasPerm: async () => false,
+  };
+  const { restoreRoot } = load([sliceFileFn('apps/crm/workspace-controller.js', 'readRememberedRoot'),
+                               sliceFileFn('apps/crm/workspace-controller.js', 'restoreRoot')], g);
+  const first = restoreRoot();
+  const second = restoreRoot();
+  assert.equal(reads, 1, 'a click during startup opened a second IndexedDB read');
+  release();
+  await Promise.all([first, second]);
+  assert.equal(g.root, handle, 'the remembered folder was not restored before the click decision');
+  assert.equal(g.rootGranted, false, 'permission state was not read from the restored handle');
+  assert.equal(g.rootRestorePending, false, 'workspace controls were not released after restoration');
 });
 
 // ---------------------------------------------------------------------------------------------

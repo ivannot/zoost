@@ -166,13 +166,16 @@ apps/crm/workbench.js	takeRecheck	tabPrefs
 apps/crm/workspace-controller.js	createSampleWorkspace	sampleBusy
 apps/crm/workspace-controller.js	grantRoot	rootGranted
 apps/crm/workspace-controller.js	loadWorkspaces	dir
-apps/crm/workspace-controller.js	loadWorkspaces	root
 apps/crm/workspace-controller.js	loadWorkspaces	rootGranted
 apps/crm/workspace-controller.js	loadWorkspaces	sel
 apps/crm/workspace-controller.js	loadWorkspaces	wsList
 apps/crm/workspace-controller.js	onWsdel	currentPath
 apps/crm/workspace-controller.js	pickRoot	root
 apps/crm/workspace-controller.js	pickRoot	rootGranted
+apps/crm/workspace-controller.js	readRememberedRoot	root
+apps/crm/workspace-controller.js	readRememberedRoot	rootGranted
 apps/crm/workspace-controller.js	readRememberedSample	sampleWsKnown
+apps/crm/workspace-controller.js	restoreRoot	rootRestorePromise
+apps/crm/workspace-controller.js	restoreRoot	rootRestorePending
 apps/crm/zoho-bridge.js	createCrmZohoBridge	bound
 apps/crm/zoho-bridge.js	createCrmZohoBridge	ids
