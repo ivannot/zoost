@@ -430,3 +430,46 @@ it needs a tunnel from the Mac, which is half an hour once and would retire the 
 the point of not having closed this already.
 
 **State:** open. Closed once on the wrong machine's data, and reopened the same day.
+
+## The folder prompt on one machine and not the other, with everything measurable identical
+
+Reopened on 28 September 2026, after being closed twice on answers that did not survive.
+
+**What the panel does is right, and that is measured rather than argued.** On the Mac, before the
+reader touches anything: `root` is the stored handle (`Zoost`), `rootGranted` is `false`, and the
+database behind it is healthy - `zoost` v1, store `kv`, `rootDir` present. From that state the
+folder button can only reach `grantRoot()` -> `ensurePerm(root)` -> `requestPermission()` **on the
+stored handle**, which is the one path Chrome documents as raising the three-way prompt. Chrome
+answers with the two-button one.
+
+**Everything that could differ between the two machines was compared and does not.**
+
+| | Windows PC | Mac |
+|---|---|---|
+| Chrome | 153.0.8010.53 | 153.0.8010.53 |
+| `chrome://policy` | identical | identical |
+| build | 2.0.1, unpacked | 2.0.1, unpacked |
+| stored handle | present | present |
+| state before the click | - | `['object', 'Zoost', false]` |
+| prompt | three buttons | two buttons |
+
+**Two answers were given and neither held.** First, «Chrome decides this per origin and we cannot
+force it» - abandoned when a startup race turned up that could genuinely send the panel down the
+picker path, which never offers persistence. Then that race was fixed on both products and by both
+routes, and the symptom did not move. The race was a real defect and is worth shipping on its own
+merits; it is not the cause of this.
+
+**What is not known.** Why Chrome offers the persistent choice on one profile and not the other,
+with the same version, the same policies and the same call. That is a question about somebody else's
+product that nothing here can read, which is the class this project already names as the one where
+reading the documentation is the only method - and the documentation says only that the three-way
+prompt is raised on a restored handle, which is what happens.
+
+**What the reader has meanwhile**, and it is not nothing: a click anywhere in the panel re-grants
+the folder, without the folder picker. The empty state says so. It costs one click per session.
+
+**Cost:** unknown, because there is no hypothesis left to price. Anything further is either a
+Chromium source reading or a bug report to Google with the two profiles side by side.
+
+**State:** open, and deliberately not guessed at. The table above is the point of the entry: the
+next session starts from what was ruled out rather than repeating it.
