@@ -33,6 +33,7 @@ f2fe621e3e0470ee  docs/naming.md: *sono* le chiavi esterne»; «quello che *serv
 7f4475919d1372cb  site/404.html: <p class="note">Questa pagina non esiste. <a href="/it/">La versione italiana del sito</a> e
 358518614d6e4a89  site/404.html: <a href="/it/try">la pagina per provarlo</a> sono qui.</p>
 2fbe9668f0f562c5  site/site.css: «"Cosa si rompe se cambio questo?", seguito su tutta l'org» ran across the answer next to it.
+8c44ee6e12b60b93  site/site.css: every row. Reported that way: «la colonna di sinistra dovrebbe andare a capo, quella di destra
 72b90cad71726037  site/site.js: rejected: 'Rifiutata', staged: 'Approvata, non ancora pubblicata',
 d0c88c4c2c1e3f3c  site/site.js: awaiting: 'in attesa di revisione', notSubmitted: 'non ancora inviata',
 12444db0f7d12bf4  site/site.js: none: 'nessuna', unknown: 'sconosciuta',

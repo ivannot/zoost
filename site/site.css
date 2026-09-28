@@ -397,6 +397,15 @@ footer .legal{line-height:1.65;margin:10px 0 0}
      first column averages more than forty characters, which is a sentence and not a key. */
   main table[data-prose]{table-layout:fixed}
   main table[data-prose] th:first-child,main table[data-prose] td:first-child{width:46%}
+  /* Two columns of prose are not always two columns of *equal* prose. The troubleshooting tables
+     are a symptom against its answer: measured, their first column averages 35 and 30 characters
+     against the 57 of the table the 46% was tuned on - so by this file's own criterion they are not
+     that case, and 46% gives half the width to a label. What makes them look like it is a handful
+     of outliers at 75 characters, and with `td.k`'s nowrap one of those sets the column width for
+     every row. Reported that way: «la colonna di sinistra dovrebbe andare a capo, quella di destra
+     dovrebbe avere più spazio, visto che lì c'è il contenuto». So the label wraps and is capped,
+     and the remainder goes to what the reader came for. */
+  main table[data-prose="label"] th:first-child,main table[data-prose="label"] td:first-child{width:26%}
 }
 
 /* Wide content scrolls inside its own box; the page never scrolls sideways. Measured at 375px: the
