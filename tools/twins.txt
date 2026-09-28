@@ -201,6 +201,7 @@ onAiengine	734a3f4ba921	7a1133599503	divergent
 onErArrLoad	b889c621d2a0	b889c621d2a0	identical
 onErArrSave	6f8b57beadbd	6f8b57beadbd	identical
 onRepopen	2e71054f4b03	2e71054f4b03	identical
+onRootButtonClick	cc3ca05401df	bad3869c4976	divergent
 onSaveLay	1e803c66e5ad	3057f5c33143	divergent
 onSaveRx	65bb681487a1	65bb681487a1	identical
 onWs	e6fd15f09441	1b6cbe6b5beb	divergent
@@ -249,7 +250,7 @@ redrawOpenViews	cf2e0a34bf88	5a6c69136e78	divergent
 refRow	854405aca965	71aac84ad447	divergent
 refreshContext	f4b864f9e1ed	2b427813d014	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
-regrantOnAnyClick	3613d72cf780	5b008a36f66e	divergent
+regrantOnAnyClick	a9a0b0e25a08	88e0cd9d72f9	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	0071c4d7707f	divergent
 rememberActive	74f9a0e0cbc6	74f9a0e0cbc6	identical

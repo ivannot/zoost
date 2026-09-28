@@ -23422,6 +23422,74 @@ test('crm: a function deleted between census and download is «not found», not 
   });
 }
 
+// ---------------------------------------------------------------------------------------------
+// The first click of a session reaches the remembered folder, on both products and by both routes.
+//
+// The startup read is asynchronous and both entry points are live before it finishes: the folder
+// button is wired at load, and the capture-phase listener that re-grants from *any* click is added
+// at load too. A click inside that window used to find `root === null` and read it as «no folder».
+//
+// The two failures that produced are different and both silent. The button opened
+// `showDirectoryPicker()` - the initial-selection path, which has only Allow/Don't Allow, so Chrome
+// could never offer «Allow on every visit»; the reader then re-granted on every start for ever, and
+// from outside that looks exactly like a decision Chrome had made. The listener simply returned and
+// did nothing, for the one click the empty state advertises: «or simply click anywhere in this
+// panel». The fix for the button shipped for one product; these hold both routes on both.
+for (const [app, loader] of [['crm', 'loadWorkspaces'], ['analytics', 'refreshWorkspaces']]) {
+  test(`${app}: a click anywhere waits for the remembered folder instead of dropping it`, async () => {
+    const calls = [];
+    const g = {
+      root: null, rootGranted: false,
+      restoreRoot: async () => { calls.push('restoreRoot'); g.root = { name: 'Zoost' }; },
+      ensurePerm: async () => { calls.push('ensurePerm'); return true; },
+      [loader]: async () => { calls.push(loader); },
+      Promise,
+    };
+    const { regrantOnAnyClick } = load([sliceApp(app, 'regrantOnAnyClick')], g);
+    // A click on nothing in particular - `closest` answers null, which is every ordinary click in
+    // the panel and the case the shortcut exists for.
+    await regrantOnAnyClick({ target: { closest: () => null } });
+    assert.deepEqual(calls, ['restoreRoot', 'ensurePerm', loader],
+                     `${app}: the first click of a session did nothing and said nothing`);
+    assert.equal(g.rootGranted, true, `${app}: the folder was not marked granted`);
+  });
+
+  test(`${app}: a granted folder costs no restore on every click`, async () => {
+    // The other direction, and it is not decoration: this listener fires on *every* click while the
+    // folder is ungranted, and the Analytics restore is not memoised - it re-reads the permission
+    // and refreshes the workspace list. Closing the race must not buy it with that, per click.
+    const calls = [];
+    const g = {
+      root: { name: 'Zoost' }, rootGranted: false,
+      restoreRoot: async () => { calls.push('restoreRoot'); },
+      ensurePerm: async () => { calls.push('ensurePerm'); return true; },
+      [loader]: async () => {},
+      Promise,
+    };
+    const { regrantOnAnyClick } = load([sliceApp(app, 'regrantOnAnyClick')], g);
+    await regrantOnAnyClick({ target: { closest: () => null } });
+    assert.ok(!calls.includes('restoreRoot'),
+              `${app}: a handle already in hand was read again, on a listener that runs per click`);
+    assert.ok(calls.includes('ensurePerm'), `${app}: the click did not reach the permission`);
+  });
+
+  test(`${app}: the folder button asks for the remembered handle, never the picker`, async () => {
+    const calls = [];
+    const g = {
+      root: null, rootGranted: false,
+      restoreRoot: async () => { calls.push('restoreRoot'); g.root = { name: 'Zoost' }; },
+      grantRoot: async () => { calls.push('grantRoot'); },
+      pickRoot: async () => { calls.push('pickRoot'); },
+      Promise,
+    };
+    const { onRootButtonClick } = load([sliceApp(app, 'onRootButtonClick')], g);
+    await onRootButtonClick();
+    assert.deepEqual(calls, ['restoreRoot', 'grantRoot'],
+                     `${app}: the button opened the picker for a folder the browser remembers, and `
+                     + 'that path cannot offer a permanent grant');
+  });
+}
+
 // ---- which workflow rules a field makes fire ----
 // Asked for on a real org, where Zoho states a rule's trigger inside the rule and nowhere else. The
 // shapes are the ones measured there - one `${ANYVALUE}` leaf, OR groups nested four deep, a date

@@ -105,6 +105,7 @@ apps/analytics/workbench.js	refreshWorkspaces	sqls
 apps/analytics/workbench.js	refreshWorkspaces	views
 apps/analytics/workbench.js	refreshWorkspaces	viewsPulledAt
 apps/analytics/workbench.js	refreshWorkspaces	wsList
+apps/analytics/workbench.js	regrantOnAnyClick	rootGranted
 apps/analytics/workbench.js	restoreRoot	root
 apps/analytics/workbench.js	restoreRoot	rootGranted
 apps/analytics/workbench.js	writeToDisk	total
@@ -175,7 +176,8 @@ apps/crm/workspace-controller.js	pickRoot	rootGranted
 apps/crm/workspace-controller.js	readRememberedRoot	root
 apps/crm/workspace-controller.js	readRememberedRoot	rootGranted
 apps/crm/workspace-controller.js	readRememberedSample	sampleWsKnown
-apps/crm/workspace-controller.js	restoreRoot	rootRestorePromise
+apps/crm/workspace-controller.js	regrantOnAnyClick	rootGranted
 apps/crm/workspace-controller.js	restoreRoot	rootRestorePending
+apps/crm/workspace-controller.js	restoreRoot	rootRestorePromise
 apps/crm/zoho-bridge.js	createCrmZohoBridge	bound
 apps/crm/zoho-bridge.js	createCrmZohoBridge	ids

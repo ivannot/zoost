@@ -922,7 +922,7 @@ function noteFolderAccessLost() {
   setStatus(MSG.folder, 'warn');
 }
 async function regrantOnAnyClick(e) {
-  if (!root || rootGranted) return;
+  if (rootGranted) return;
   const t = e.target;
   // **And the two full-window views.** This re-grants the stored folder from any click, which is
   // right in the panel and wrong inside the settings: that form has its own «Choose folder…», and
@@ -932,6 +932,19 @@ async function regrantOnAnyClick(e) {
   // a box in a drawing is not a request to re-grant anything.
   if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview')
                     || t.closest('#offoverlay') || t.closest('#settingsview') || t.closest('#graphview'))) return;
+  // **The remembered handle first, or the first click of a session is swallowed.** This opened with
+  // `if (!root || rootGranted) return;` and the listener is armed at load, while the handle is still
+  // being read out of IndexedDB - so a click arriving in that window found `root` null, returned,
+  // and did nothing at all. Silently: the one shortcut the empty state advertises - «or simply click
+  // anywhere in this panel» - was dead for exactly the click it was written to catch, which is the
+  // first one a returning reader makes. The same race the folder button had; the fix for that one
+  // stopped at that one.
+  // Only when the handle is not in hand yet: the Analytics restore is not memoised - it re-reads the
+  // permission and refreshes the workspace list on every call - and this listener fires on *every*
+  // click while the folder is ungranted. Closing the race must not buy it with a workspace refresh
+  // per click.
+  if (!root) await restoreRoot();
+  if (!root || rootGranted) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
 }
 /** What the workspace list shows, and what it must never stop showing.

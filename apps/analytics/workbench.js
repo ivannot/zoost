@@ -3148,7 +3148,23 @@ function showAbout() {
 function closeAbout() { $('scrim').classList.remove('on'); panelInert(false); $('aboutdlg').classList.remove('on'); }
 
 // ---------- wiring ----------
-$('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
+/** The folder button, after the remembered handle has been read and not before.
+ *
+ *  **The twin's defect, in the same line, and the sibling walk stopped at the twin.** A click that
+ *  arrives while IndexedDB is still being read sees `root === null` and takes it for «no folder», so
+ *  it opens `showDirectoryPicker()` - the two-button picker, which is the one path on which Chrome
+ *  cannot offer «Allow on every visit», because that offer belongs to `requestPermission()` on a
+ *  *stored* handle. The reader then re-grants on every start for ever, which is what it looked like
+ *  from the outside and was read for a day as a choice Chrome had made.
+ *
+ *  `restoreRoot()` here is cheap when the handle is already in hand - its first line returns - and
+ *  the await is the same class the branch below already pays.
+ */
+async function onRootButtonClick() {
+  if (!root) await restoreRoot();
+  return (root && !rootGranted) ? grantRoot() : pickRoot();
+}
+$('wsroot').onclick = onRootButtonClick;
 /** What the workspace list shows, and what it must never stop showing.
  *
  * The label is a convenience; the identity is the org or workspace id. So the label is displayed and
@@ -3848,7 +3864,7 @@ async function showDetailTab(b) {
 // Named, like every async scope this project ships: `tools/asynccheck.py` reads function
 // declarations, so an inline callback is a scope nothing looks inside.
 async function regrantOnAnyClick(e) {
-  if (!root || rootGranted) return;
+  if (rootGranted) return;
   const t = e.target;
   // **And the two full-window views.** This re-grants the stored folder from any click, which is
   // right in the panel and wrong inside the settings: that form has its own «Choose folder…», and
@@ -3858,6 +3874,19 @@ async function regrantOnAnyClick(e) {
   // a box in a drawing is not a request to re-grant anything.
   if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview')
                     || t.closest('#offoverlay') || t.closest('#settingsview') || t.closest('#graphview'))) return;
+  // **The remembered handle first, or the first click of a session is swallowed.** This opened with
+  // `if (!root || rootGranted) return;` and the listener is armed at load, while the handle is still
+  // being read out of IndexedDB - so a click arriving in that window found `root` null, returned,
+  // and did nothing at all. Silently: the one shortcut the empty state advertises - «or simply click
+  // anywhere in this panel» - was dead for exactly the click it was written to catch, which is the
+  // first one a returning reader makes. The same race the folder button had; the fix for that one
+  // stopped at that one.
+  // Only when the handle is not in hand yet: the Analytics restore is not memoised - it re-reads the
+  // permission and refreshes the workspace list on every call - and this listener fires on *every*
+  // click while the folder is ungranted. Closing the race must not buy it with a workspace refresh
+  // per click.
+  if (!root) await restoreRoot();
+  if (!root || rootGranted) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }
 document.addEventListener('click', regrantOnAnyClick, true);
