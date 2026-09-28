@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">2.0.1</span> · updated <span class="dd" data-stamp="updated">27 September 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">2.0.1</span> · updated <span class="dd" data-stamp="updated">28 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -142,8 +142,14 @@
 <p class="note">Three toolbar controls are drawn as marks rather than words - <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and the diagram button, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> in Functions mode and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in Modules. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
   </div>
   <p class="note"><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx=".8"/><rect x="9.5" y="1.5" width="5" height="5" rx=".8"/><rect x="1.5" y="9.5" width="5" height="5" rx=".8"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/></svg> Workspace overview</b> opens the local coverage summary and the main next actions. A new workspace opens here automatically with a three-step path and one highlighted next action; the sample starts at Browse because its invented mirror is already local. Reopening an existing workspace does not interrupt where you were.</p>
-  <p>Chrome does not keep file-system permissions between sessions: this is how the browser's
-    File System Access API works for extensions, not a bug. Zoost restores it on your first click anywhere
+  <p><b>Chrome asks about the working folder, and how often it asks is the browser's choice, not
+    Zoost's.</b> There are two possibilities and it is worth knowing which one you are in. When the
+    dialog offers <b>Allow on every visit</b>, choose it: Chrome remembers the folder and stops
+    asking. When it offers only <b>Allow</b>, the permission lasts that session and you will be asked
+    again next time - which is how the File System Access API has always worked for extensions, and
+    not a bug. Whether the permanent choice is offered at all is decided by Chrome per browser
+    profile; we have seen the same version of Chrome offer it on one machine and not on another, and
+    we cannot make it appear. Zoost restores the permission on your first click anywhere
     in the panel, so normally you will not notice. If it needs you, the folder button turns amber and reads
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.2" y="7.4" width="9" height="6.6" rx="1.2"/><path d="M6 7.4V4.9a2.8 2.8 0 0 1 5.6 0v1.2"/></svg> Grant access</b> - one click, and no file picker opens.</p>
 

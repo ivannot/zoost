@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:cee1710e5f4b8b48 -->
+<!-- translated-from: site/docs-analytics.html sha256:10e6905c65895950 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -54,7 +54,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">2.0.1</span> · aggiornata il <span class="dd" data-stamp="updated">27 settembre 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">2.0.1</span> · aggiornata il <span class="dd" data-stamp="updated">28 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -617,9 +617,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td data-label="Causa e rimedio">Sei su Zoho Analytics ma non dentro un workspace. Aprine uno - l'URL deve contenere
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
       <tr><td class="k" data-label="Sintomo">Il pulsante della cartella è ambra</td>
-        <td data-label="Causa e rimedio">Il browser ha lasciato scadere il permesso, cosa che fa fra una sessione e l'altra. Clicca in un
-          punto qualsiasi del pannello per ripristinarlo; cliccare il pulsante stesso chiede
-          l'autorizzazione, non di nuovo la cartella.</td></tr>
+        <td data-label="Causa e rimedio">Il browser ha lasciato scadere il permesso, cosa che fa fra una sessione e l'altra a meno che tu
+          non gli abbia detto altrimenti. Clicca in un punto qualsiasi del pannello per ripristinarlo; cliccare il pulsante stesso
+          chiede l'autorizzazione, non di nuovo la cartella. <b>Le possibilità sono due, e sceglie il browser:</b> se il dialogo di
+          Chrome offre <b>Allow on every visit</b>, scegli quella e smette di chiedere; se offre solo <b>Allow</b>, il permesso vale
+          per quella sessione. Se la scelta permanente compaia o no lo decide Chrome per profilo del browser - abbiamo visto la
+          stessa versione offrirla su una macchina e non su un'altra - e Zoost non può farla comparire.</td></tr>
       <tr><td class="k" data-label="Sintomo">«CSRF token not found»</td>
         <td data-label="Causa e rimedio">Su quella scheda la sessione non è autenticata. Ricarica la pagina di Zoho Analytics e
           riprova.</td></tr>

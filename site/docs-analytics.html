@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">2.0.1</span> · updated <span class="dd" data-stamp="updated">27 September 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">2.0.1</span> · updated <span class="dd" data-stamp="updated">28 September 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -558,8 +558,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td data-label="Cause and fix">You are on Zoho Analytics but not inside a workspace. Open one - the URL must contain
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
       <tr><td class="k" data-label="Symptom">The folder button is amber</td>
-        <td data-label="Cause and fix">The browser dropped the permission, which it does between sessions. Click anywhere in the panel
-          to restore it; clicking the button itself asks for authorisation, not for the folder again.</td></tr>
+        <td data-label="Cause and fix">The browser dropped the permission, which it does between sessions unless you told it
+          otherwise. Click anywhere in the panel to restore it; clicking the button itself asks for authorisation, not for the
+          folder again. <b>Two possibilities, and the browser picks:</b> when Chrome's dialog offers <b>Allow on every visit</b>,
+          choose it and it stops asking; when it offers only <b>Allow</b>, the permission lasts that session. Whether the
+          permanent choice appears at all is Chrome's decision per browser profile - we have seen the same version offer it on
+          one machine and not another - and Zoost cannot make it appear.</td></tr>
       <tr><td class="k" data-label="Symptom">"CSRF token not found"</td>
         <td data-label="Cause and fix">The session is not signed in on that tab. Reload the Zoho Analytics page and try again.</td></tr>
       <tr><td class="k" data-label="Symptom">N items could not be read</td>
