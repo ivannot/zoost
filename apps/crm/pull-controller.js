@@ -169,7 +169,7 @@ function createCrmPullController(options) {
       for (const area of planned.areas) {
         if (!operation.current()) return;
         lifecycle?.progress({ stage: 'reading', done, total: planned.areas.length });
-        operation.say(`${options.tabLabel(area.id)}: ${done + 1} of ${planned.areas.length}\u2026`, 'busy');
+        operation.say(`${options.tabLabel(area.id)}, step ${done + 1} of ${planned.areas.length}\u2026`, 'busy');
         try { await runners[area.id](); }
         catch (_) { /* every runner records its own verdict and states its own message */ }
         done++;

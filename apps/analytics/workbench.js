@@ -1813,7 +1813,7 @@ async function pullAll() {
   if (pullBusy) return;
   const op = beginWorkspaceOp();   // the workspace this pull belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
-  const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Pulling ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
+  const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Pulling ${m.stage} ${m.done}/${m.total}…`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
   setPullBusy(true);
   setBusy(true, 'Pulling…');
@@ -1953,7 +1953,7 @@ async function retryFailed() {
   if (mismatchRefuse()) return;
   const ids = [...new Set(pullFailed.map((f) => f.id))];
   if (!ids.length) return;
-  const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Retrying ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
+  const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Retrying ${m.stage} ${m.done}/${m.total}…`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
   setPullBusy(true);
   setBusy(true, `Retrying ${ids.length} item(s)…`);
@@ -2148,7 +2148,7 @@ async function writeToDisk(info, op, next) {
       const stem = stemOf(v ? v.name : id, id);
       await op.write(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
       index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
-      if (++written % 10 === 0 || written === total) op.say(`Writing SQL files\u2026 ${written} / ${total}`, 'busy');
+      if (++written % 10 === 0 || written === total) op.say(`Writing SQL files ${written}/${total}\u2026`, 'busy');
     }
     await writeJson('sql/index.json', index, op);
     op.say('Removing what the workspace no longer has\u2026', 'busy');

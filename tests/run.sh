@@ -330,6 +330,8 @@ python3 tools/architecturecheck.py --self-test
 python3 tools/architecturecheck.py | tail -1
 python3 tools/configcheck.py --self-test
 python3 tools/configcheck.py | tail -1
+python3 tools/progresscheck.py --self-test
+python3 tools/progresscheck.py | tail -1
 python3 tools/entrypointcheck.py --self-test
 python3 tools/entrypointcheck.py | tail -1
 python3 tools/storageaudit.py --self-test

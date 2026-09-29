@@ -151,7 +151,7 @@ async function downloadMissing(recheck, all = false) {
     for (let i = 0; i < pending.length; i++) {
       if (!op.current()) return;
       const e = pending[i];
-      op.say(`Downloading ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
+      op.say(`Downloading function ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
       let done = await downloadOne(e);
       if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
       done ? ok++ : fail++;

@@ -362,6 +362,23 @@ not block-scoped, it reads *calls* and not every free variable, and the globals 
 - so a platform API nobody here has used yet is a false finding and one line to add. It reports zero
 on this tree, which is what makes it a gate rather than a ledger.
 
+**And a fifth, for the one line both panels share: the status line.** Pressing Pull in Functions put
+«Downloading 179/293...» on it; the reader moved to another tab and the line said the same thing, so
+there was nothing on screen to say what those 293 were. Two of the three item pulls beside it already
+said «Downloading workflow 12/40...» - the subject had been missing from that one since it was
+written, and no test could see it because every case asserted the number.
+
+```bash
+python3 tools/progresscheck.py       # a count in a progress line names what it counts, in one shape
+```
+
+The rule is the class and not the incident, which is why it catches two more things the report did not
+mention: «Functions: 3 of 7...» during Pull all, where the count belongs to the *areas* and every
+reader takes it for functions, and the three ways the two panels wrote the same count (`12/40`,
+`12 / 40`, `3 of 7`). Its subject is the `'busy'` kind, its denominator is every `'busy'` the raw
+text can see - 62 of 62 - and what it cannot do is in its docstring: it knows a subject by exclusion,
+so it is a net for the defect that happened rather than a proof of good prose.
+
 **The duplication between the two products is not removed, it is held - `tools/twins.txt`.** 66 of
 the 138 function names both apps define are **byte-identical**, 26,247 characters of deliberate copy:
 `settle()`, `erLayout`, `aiStreamAnthropic`, `wireAsideFold`, `mergeKeys`, `syncLockRow`. The decision

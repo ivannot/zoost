@@ -2021,7 +2021,7 @@ test('Analytics counts the SQL files it writes, and says so before the first one
   const body = src.slice(src.indexOf('async function writeToDisk'));
   assert.ok(body.indexOf('Writing the mirror') < body.indexOf("op.write(PULL_STATE"),
     'the disk stage must be announced before it starts, not once it is over');
-  assert.match(body, /Writing SQL files\\u2026 \$\{written\} \/ \$\{total\}/,
+  assert.match(body, /Writing SQL files \$\{written\}\/\$\{total\}\\u2026/,
     'one file per query table is the longest thing this does and it has to count');
   // `pruneSql(index, op, ...)` now takes the census as a third argument, so the call is matched by
   // its name rather than by an exact argument list - a test pinned to a signature reports a refactor
@@ -21683,8 +21683,10 @@ test('what the button counts is what pressing it asks, and only this run is repo
                `the button said «Complete missing (2)» and asked Zoho ${asked.length} times - it walks `
                + 'a different set from the one it counts, so every refusal is re-asked at a request and '
                + '140ms each, and the closing line reports refusals nobody asked about');
-  assert.ok(btn.said.some(([t]) => /Downloading 1\/2…/.test(t)),
-            `the progress line contradicts the button: ${JSON.stringify(btn.said.map((s) => s[0]))}`);
+  assert.ok(btn.said.some(([t]) => /Downloading function 1\/2…/.test(t)),
+            'the progress line contradicts the button, or says «Downloading n/m» without naming what '
+            + 'it is downloading - the status line is shared by every tab, so a reader who moved to '
+            + `Modules cannot tell which pull is running: ${JSON.stringify(btn.said.map((s) => s[0]))}`);
 
   // A pull is the re-check both the row and the settings page promise, so it asks all 18. Without
   // this the record could never clear and a role granted since would stay refused for ever.

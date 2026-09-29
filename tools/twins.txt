@@ -239,7 +239,7 @@ pickRoot	47616b97252d	fd5c0127dff5	divergent
 placeWindow	166f9f12b4b9	166f9f12b4b9	identical
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4eec049f5c18	ee48c58eab5b	divergent
-pullAll	44136fa355b3	be2861d2f32e	divergent
+pullAll	44136fa355b3	befe77f806c2	divergent
 raiseOrOpen	990f780cebb4	990f780cebb4	identical
 readCfgForWrite	94cf912efa0c	94cf912efa0c	identical
 readRememberedSample	0b2049c2f6b0	0b2049c2f6b0	identical
