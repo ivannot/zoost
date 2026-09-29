@@ -241,6 +241,7 @@ aeaf04ab914655cf  site/docs-analytics.html: The worst it can do to your workspac
 31c35d662b06b969  site/docs-analytics.html: There is nothing to pick and nothing to pick wrong.
 437c99bb6ae6d161  site/docs-analytics.html: These two are the only providers supported, because they are the two that are tested and the only two the extension may reach.
 6a6bef4d00e9e8a7  site/docs-analytics.html: They are the only thing in Zoho Analytics that is genuinely source somebody wrote, and one file each is what lets git diff answer what changed in this workspace last month - a question Zoho Analytics cannot answer at all.
+8a13748a4b34c994  site/docs-analytics.html: Two possibilities, and the browser picks: when Chrome's dialog offers Allow on every visit , choose it and it stops asking; when it offers only Allow , the permission lasts that session.
 6414ce3bc931368c  site/docs-analytics.html: What it writes is a draft for you to paste, never something Zoost has checked.
 f3d9bb4356cf7ee0  site/docs-analytics.html: What nothing depends on 10.
 0d455a8a5218c19f  site/docs-analytics.html: What nothing depends on The pull asks Zoho Analytics its own dependency question for every view.
@@ -248,6 +249,7 @@ f3d9bb4356cf7ee0  site/docs-analytics.html: What nothing depends on 10.
 63b37067695ba792  site/docs-analytics.html: When a workspace is too large to describe in full, what gets dropped is decided rather than arbitrary: tables and query tables are never dropped, because they are the vocabulary needed to write a query or follow a foreign key, and reports go first because the assistant can still find those by name.
 47105d51c7976daa  site/docs-analytics.html: When something fails in a way the panel cannot account for, it offers Report this problem : a short report - versions, the error, the last few status lines, counters - opened on a page in a window of its own.
 007926a268f78735  site/docs-analytics.html: When you load one onto a diagram the mirror has moved on, the diagram of today wins and every loss is counted : a table that is gone drops its position, a table that is new is placed by the layout around what was kept, and a table that was renamed loses its position rather than inheriting a stranger's - a box sitting where a different one used to sit would misstate the shape you built.
+6fe1edb3547b8673  site/docs-analytics.html: Whether the permanent choice appears at all is Chrome's decision per browser profile - we have seen the same version offer it on one machine and not another - and Zoost cannot make it appear.
 d7ec42cad6a53999  site/docs-analytics.html: Workspace index is how much of the workspace is described to the assistant with every message - bigger means it knows more names, and it is billed each time.
 45ec1e855ad024e5  site/docs-analytics.html: Zoho Analytics only knows what its own views read from each other.
 1efb6928aad4b85e  site/docs-analytics.html: Zoost never runs, validates or deploys SQL.
@@ -367,8 +369,11 @@ b8fa0fa990762a5e  site/docs-crm.html: What is actually failing The health audit 
 395f32640a247a4a  site/docs-crm.html: Whatever is left out is named as left out - so it never concludes something does not exist because it was not shown it.
 c584b339e59b4cf4  site/docs-crm.html: When a filter changes, boxes you moved keep their positions and only new boxes are placed automatically.
 dd49702b8c25eb0a  site/docs-crm.html: When an org is too large to describe in full, what gets dropped is decided rather than arbitrary: the function list is never dropped, because it is the vocabulary everything else refers to, and module and connection names go first because the assistant can still fetch those by name.
+c83ff7a5f094da5f  site/docs-crm.html: When it offers only Allow , the permission lasts that session and you will be asked again next time - that is what the permission means without the permanent choice, and not a defect in Zoost.
 7817ec2734f008bb  site/docs-crm.html: When something fails in a way the panel cannot account for, it offers Report this problem : it builds a short report - versions, the error, the last few status lines, counters - and opens a page with it, in a window of its own.
+89e552c007fd434c  site/docs-crm.html: When the dialog offers Allow on every visit , choose it: Chrome remembers the folder and stops asking.
 14380ab2476fa47d  site/docs-crm.html: When you load one onto a diagram the mirror has moved on, the diagram of today wins and every loss is counted : a box that is gone drops its position, a box that is new is placed by the layout around what was kept, and a box that was renamed loses its position rather than inheriting a stranger's - a box sitting where a different one used to sit would misstate the shape you built.
+c33c1dd232c5008a  site/docs-crm.html: Whether the permanent choice is offered at all is decided by Chrome per browser profile; we have seen the same version of Chrome offer it on one machine and not on another, and we cannot make it appear.
 a574518fd5886dde  site/docs-crm.html: Which one to choose Anthropic (Claude) OpenAI (ChatGPT) Mode Agent with read-only tools Single pass What it sees Whatever it decides to open: any function, module, workflow or connection, plus code search The org index and the function currently open Progress Each tool call appears in the chat as it happens A "thinking…" indicator until the answer arrives Best for "What breaks if I change this?", tracing behaviour across the org Focused questions about the function in front of you The engine in use is shown as a badge in the chat header, so you always know which behaviour to expect.
 e3daeb6a89d4aaad  site/docs-crm.html: Wiring is not only functions , which is why it is not called that.
 4842eb3809f5c858  site/docs-crm.html: With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers, reads schemas, looks up a connection and who uses it, and searches code by itself.
@@ -548,6 +553,7 @@ e7a47c2471751917  site/it/docs-analytics.html: Il modello mentale Tre concetti s
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
 a68b09b3d913dd3a  site/it/docs-analytics.html: Le chip sopra le schede sono insieme il filtro e la legenda dei colori, raggruppate per la domanda che pongono: Views è quali tipi sono a schermo e partono tutti accesi, quindi spegnerne uno lo toglie; Only restringe alle tabelle che sono anche hub, orfane o di sistema, e parte vuoto.
 0e81e5cba54b772e  site/it/docs-analytics.html: Le due righe che dichiarano qualcosa - su quale workspace è la scheda, e l'avviso quando scheda e workspace non coincidono - non si ripiegano mai.
+b42d13ff26f8f759  site/it/docs-analytics.html: Le possibilità sono due, e sceglie il browser: se il dialogo di Chrome offre Allow on every visit , scegli quella e smette di chiedere; se offre solo Allow , il permesso vale per quella sessione.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
 2da2f1024d05dfb5  site/it/docs-analytics.html: Lineage: per ogni query table, quali colonne legge e da quale vista.
 6ff01eeb54cbeeac  site/it/docs-analytics.html: Lo dichiariamo qui per evitare che sembri una contraddizione con la sola lettura.
@@ -608,6 +614,7 @@ caae116ac8dc8732  site/it/docs-crm.html: Capitolo 10: candidati da guardare, mai
 7d900478a5ad7a85  site/it/docs-crm.html: Capitolo 9: il catalogo, e quali funzioni usano ogni connessione - così quella che non usa nessuno si vede.
 8be531fc84b86ae9  site/it/docs-crm.html: Cartella di lavoro Una cartella sul tuo disco, scelta una volta sola, che raccoglie tutti i file scritti da Zoost.
 cc458a7d5cde6744  site/it/docs-crm.html: Chiedigli «come esporto questo?», «cosa succede se premo Health?» oppure «può cambiare qualcosa dentro Zoho CRM?» e risponde dal pannello, senza mandarti da nessuna parte.
+c2d5334de1d82181  site/it/docs-crm.html: Chrome chiede della cartella di lavoro, e ogni quanto lo chieda lo decide il browser, non Zoost.
 885f1eba51027648  site/it/docs-crm.html: Cifrarla con un segreto tenuto lì accanto sembrerebbe protezione e non ne offrirebbe nessuna.
 508eeb9f3218d23a  site/it/docs-crm.html: Clicca Refresh outdated nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.
 770464cd05b35aff  site/it/docs-crm.html: Clicca un arco per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.
@@ -723,6 +730,7 @@ e323c43d02373e0a  site/it/docs-crm.html: Quello che resta fuori viene dichiarato
 b994eab6ec484960  site/it/docs-crm.html: Sample è l'altra via d'ingresso e non richiede nessun tab Zoho: scrive nella cartella di lavoro un workspace di dati inventati, così puoi aprire l'albero, il grafo e gli export prima di puntare Zoost su qualcosa di tuo.
 04fca40c5ce908ed  site/it/docs-crm.html: Se Zoho rifiuta un'area, il pull lo dice a parole invece di mostrare un codice di stato, per quell'area non viene scritto niente, e la sua scheda sparisce invece di restarsene lì disattivata.
 1a73785a21e943a3  site/it/docs-crm.html: Se combacia ancora tutto ma le relazioni sono cambiate, dice anche quello, perché altrimenti l'unica cosa che ti verrebbe detta è un caricamento all'apparenza pulito.
+89d7620bb989706b  site/it/docs-crm.html: Se il dialogo offre Allow on every visit , scegli quella: Chrome ricorda la cartella e smette di chiedere.
 faca81db2d7500b1  site/it/docs-crm.html: Se la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho e mostra una barra che ti offre di cambiare scheda o cambiare workspace.
 e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consente, lascialo spento: tutto il resto funziona esattamente allo stesso modo.
 71d19bc2fd33151d  site/it/docs-crm.html: Se non c'è nessuna scheda Zoho CRM il pannello lo dice sopra tutto il workbench e offre Go to Zoho CRM ↗ , che apre la home del tuo Zoho CRM - quella dell'account, non di un'org in particolare - il tasto giusto dopo essere usciti da un'org per entrare in un'altra.
