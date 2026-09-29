@@ -70,6 +70,9 @@ async function openWorkflowById(id) {
 async function openWorkflow(e) {
   const mine = ++previewLoad;
   const op = beginWorkspaceOp();
+  // The pane is reading, and until this existed the reader's click changed nothing on screen while
+  // it did. Cleared by `showPreview`, where every opener ends.
+  pvLoading(true);
   if (!e.downloaded) {
     const ok = await downloadOneWf(e);
     if (!previewCurrent(mine, op)) return;
@@ -234,23 +237,10 @@ async function openFunctionFromWorkflow(id, name) {
   // know». Only when the tree holds nothing at all, so a function that is genuinely absent still
   // answers at once instead of paying for a rebuild.
   if (!ent && !treeData.length) { await rebuildTree(); ent = find(); }
-  if (!ent) { setStatus(`Function "${name}" not in workspace - pull functions first.`, 'warn'); return; }
-  if (!tabReachable('functions')) return;
-  // **Arriving at a row is not the same as opening a file.** This asked «is it in `treeData`» and
-  // then opened its path unconditionally - so a function this mirror has no source for closed the
-  // pane the reader was looking at, flashed `Read failed: NotFoundError`, had that overwritten in
-  // the same tick by the tree count, and recorded a step in the history that Back/Forward replays
-  // for ever. The tree row two functions over has answered this properly since it was written; every
-  // *link* to the same row went round it.
-  setMode('functions');
-  selectRow(ent.path);
-  if (ent.mirrored === false) { setStatus(MSG.notMirrored(langLabel(ent.language)), 'warn'); return; }
-  if (!ent.downloaded) { void fetchThenRedrawRow(ent); return; }
-  // **Not `openFromTree`.** That one means «a click started on this row», and it suppresses the
-  // reveal on purpose - scrolling after your own finger is the panel arguing with you. Arriving here
-  // is the opposite: a chip in the blueprint or workflow pane, from another tab, where the row has to
-  // be found for the reader. It opened the function and left it below the fold. Reported.
-  openFile(ent.path);
+  // **Arriving at a row is not the same as opening a file**, and the four questions that says are
+  // now asked in one place - `openFunctionFound` in the preview controller - because two other links
+  // to the same row were still going round them. What they cost is recorded there.
+  return openFunctionFound(ent, name);
 }
 
 

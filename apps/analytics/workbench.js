@@ -122,7 +122,10 @@ const MSG = {
   twinInstalled: (t) => `A ${t.name} tab is open. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `A ${t.name} tab is open. ${t.product} reads it.`,
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
-  folder: 'Folder access needs re-granting - click ↻ Refresh.',
+  // Names the remedy that always works, and it is the fastest of the three: the folder button and
+  // ↻ Refresh both re-grant, and both are disabled while no workspace is open - so this sentence
+  // used to point the reader at a grey control. A click anywhere in the panel does it.
+  folder: 'Folder access is not granted - click anywhere in this panel to restore it.',
   narrow: 'Use a longer substring to narrow.',
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   copyFailed: 'Could not copy: ',
@@ -245,6 +248,10 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 // ---------- state ----------
 let root = null;            // the working folder handle
 let rootGranted = false;
+/** A folder is remembered and the browser has not been asked for it again yet - a third state,
+ *  which `!dir` does not distinguish from «there is nothing here». See the note on the overlay
+ *  below; the CRM panel met this first, reported from a real org. */
+const folderNeedsGrant = () => !!root && !rootGranted;
 let dir = null;             // the active workspace folder handle
 let bound = null;           // { workspace, name, origin } of the active workspace, from its .zoost.json
 let ctx = null;             // { origin, workspace, view } of the active tab
@@ -537,7 +544,7 @@ const MK_UNLOCK = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect 
  */
 function paintFolderButton() {
   const rt = $('wsroot');
-  const needsGrant = !!root && !rootGranted;
+  const needsGrant = folderNeedsGrant();
   rt.classList.toggle('needgrant', needsGrant);
   // `innerHTML`, because the mark is drawn: the folder name is escaped on the way in, the way
   // every other name this panel writes into markup is.
@@ -1394,7 +1401,12 @@ async function refreshContext() {
     // is local files, and the sample exception already carried the whole argument: a workspace on
     // disk owes Zoho nothing, so a Zoho tab is not a precondition for reading it. What is left for
     // the overlay is the case it was written for - a panel with nothing in it.
-    $('offoverlay').classList.toggle('show', !dir && !sampleBusy);
+    // **And not while a remembered folder is waiting to be asked for again.** `!dir` is true of two
+    // different states - «nothing here» and «a workspace is here and Chrome dropped the permission».
+    // Covering the second one hides both the reason, which the list's own empty state names, and the
+    // remedy, since one click anywhere re-grants the folder and this overlay is excluded from that
+    // click. Reported on the CRM side from a real org; the condition was identical here.
+    $('offoverlay').classList.toggle('show', !dir && !sampleBusy && !folderNeedsGrant());
     $('mmbar').classList.remove('show');
     // The twin's tab, named - see the note in the CRM panel, which met this first. It is asked above
     // now, on every pass, because it answers a question about the tab in front rather than about
@@ -2786,6 +2798,14 @@ function detailZohoControls() {
         : MSG.noTab);
 }
 
+/** The pane is reading something. Shown by `openDetail`, taken down by `renderDetail`, which is
+ *  where the pane's content is actually written - so a read that is overtaken leaves the spinner to
+ *  the read that overtook it rather than clearing it over stale content. The CRM twin has the same
+ *  pair of calls in the same two places. */
+function pvLoading(on) {
+  const el = $('pvload');
+  if (el) el.classList.toggle('show', !!on);
+}
 async function openDetail(id) {
   const mine = ++detailLoad;
   const op = beginWorkspaceOp();
@@ -2795,6 +2815,9 @@ async function openDetail(id) {
   // so this is a trap rather than a live defect; it costs one line not to leave it armed.
   const v = viewById().get(id);
   if (!v) return;
+  // After the guard that can refuse the id, never before it: an unknown id would otherwise leave a
+  // spinner standing over the previous item for ever.
+  pvLoading(true);
   selectedId = id;
   // Every way in passes through here - a row click, an arrow key, a foreign key, a lineage entry -
   // so the history is complete without any of them knowing it exists. The kind is carried too, so
@@ -2881,6 +2904,7 @@ async function openDetail(id) {
 
 async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
   const body = $('dbody');
+  pvLoading(false);
   const m = viewById();
   // Off unless this tab is showing code, decided once here rather than in each branch: it lingered
   // over the columns because only the SQL branch had an opinion about it - a control that is turned

@@ -166,10 +166,78 @@ function syncTreeTo(path) {
 // from anywhere else - a link, a health row, a step of the history - is the opposite: there the row
 // has to be found for you. One flag tells the two apart, set by the only place a click starts.
 function openFromTree(path) { openFile(path, null, true); }
+/** Arriving at a function from a link, with the four questions that have to be asked first.
+ *
+ *  `openFile()` reads a path and draws what came back. It is the right thing for the tree row, which
+ *  only exists because the row exists - and the wrong thing for a *link*, which may name a function
+ *  this tab has never drawn, that this mirror has no source for, or that is not downloaded yet.
+ *  `openFunctionFromWorkflow` has asked all four since a reader lost his open pane to a
+ *  `Read failed: NotFoundError` that was overwritten in the same tick; its own comment says «every
+ *  link to the same row went round it», and two of them still did: the chip in a connection's detail
+ *  and the chip in the Modules pane both called `setMode('functions'); openFile(path)`.
+ *
+ *  What that cost, reported from a real org: from a connection, clicking one of the functions that
+ *  use it moved the panel to Functions and then opened the detail sometimes, «after a while»
+ *  sometimes, and sometimes not at all. Three outcomes, because `setMode` starts a rebuild nobody
+ *  awaits and `openFile` cancels itself in silence when anything else opens something during its
+ *  first await - and a silent cancel is indistinguishable from a panel that is thinking about it.
+ *
+ *  So there is one way in, and it is this one. */
+async function openFunctionFound(ent, label) {
+  if (!ent) { setStatus(`Function "${label}" not in workspace - pull functions first.`, 'warn'); return; }
+  if (!tabReachable('functions')) return;
+  setMode('functions');
+  selectRow(ent.path);
+  if (ent.mirrored === false) { setStatus(MSG.notMirrored(langLabel(ent.language)), 'warn'); return; }
+  if (!ent.downloaded) { void fetchThenRedrawRow(ent); return; }
+  // Not `openFromTree`: no click started on that row, so it has to be revealed rather than left
+  // wherever the list happened to be.
+  await openFile(ent.path);
+}
+/** The same arrival, for a link that carries a path rather than an id and a name - the function
+ *  chips, whose `data-file` is what the call graph recorded. */
+async function openFunctionByPath(path) {
+  const find = () => functionRowForPath(path);
+  let ent = find();
+  // `treeData` is «what the Functions tab last drew», so a panel opened on another tab holds none of
+  // it. Only when it holds nothing at all: a function that is genuinely absent must still answer at
+  // once rather than pay for a rebuild.
+  if (!ent && !treeData.length) { await rebuildTree(); ent = find(); }
+  return openFunctionFound(ent, (path || '').split('/').pop());
+}
+/** The stages of an open, in order, with the time each one took.
+ *
+ *  «I click one function, then another, and the detail takes a few seconds» cannot be answered by
+ *  reading this file: the stages are a permission query, a file read and a draw, any of which can be
+ *  the slow one, and which it is decides whether the answer is about Chrome, about the disk or about
+ *  us. The reported case is a browser with every other window closed, which is a state no headless
+ *  harness reproduces - so the panel records it and `tools/livebrowser.py --read crm opens` asks the
+ *  browser that has it.
+ *
+ *  Same shape as `treeTrace`: console for the reader, a capped array so a harness can assert on it,
+ *  and no travel - a path is the reader's own name for their own code and the problem report strips
+ *  what it can recognise. */
+const OPEN_KEEP = 40;
+function openTrace(what, t0) {
+  const line = `${what} ${Math.round(performance.now() - t0)}ms`;
+  try { console.info(`[zoost] open ${line}`); } catch (_) {}
+  try {
+    const buf = (window.__zoostOpenTrace || (window.__zoostOpenTrace = []));
+    buf.push(line);
+    if (buf.length > OPEN_KEEP) buf.splice(0, buf.length - OPEN_KEEP);
+  } catch (_) {}
+}
 async function openFile(path, line = null, byClick = false) {
   const mine = ++previewLoad;
   const op = beginWorkspaceOp();
-  if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
+  const _t0 = performance.now();
+  // Before the first await, because the reader's click is what has to be answered: until this
+  // existed the pane went on showing the previous item while four reads happened, so a click looked
+  // like nothing at all. Asked for that way - «I would rather see a spinner on an overlay inside the
+  // detail pane, at least that invalidates the previous content».
+  pvLoading(true);
+  if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) { pvLoading(false); setStatus('File access denied - click Refresh to grant.', 'bad'); } return; }
+  openTrace('permission', _t0);
   if (!previewCurrent(mine, op)) return;
   // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
   // something each caller decides - every arrival is a step, which is what made the old one useless
@@ -193,12 +261,18 @@ async function openFile(path, line = null, byClick = false) {
   // before this one - which is the stale-projection defect this panel keeps meeting.
   showProjectFiles(trow, path);
   pvTabsFor('function');
-  let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
-  if (!previewCurrent(mine, op)) return;
+  let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) { pvLoading(false); setStatus(MSG.readFailed + e.message, 'bad'); } return; }
+  openTrace('read', _t0);
+  if (!previewCurrent(mine, op)) { openTrace('overtaken', _t0); return; }
   const lines = code.split('\n').length;
   $('pvgutter').textContent = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
   const _g = await ensureGraph(op).catch(() => null);
-  if (!previewCurrent(mine, op)) return;
+  // The call graph, the module index and the related-list files are three more reads between the
+  // source arriving and the pane being drawn, and any of them can be the slow one - the graph walks
+  // the whole org. Timed separately for that reason: «the detail takes a few seconds» is a different
+  // defect depending on which of these it is.
+  openTrace('graph', _t0);
+  if (!previewCurrent(mine, op)) { openTrace('overtaken', _t0); return; }
   const _resolve = _g ? makeCallResolver(_g) : null;
   // The module named inside a call is a link too, on the same principle as the call itself: a name
   // that identifies something this panel can show is hypertext. Resolved against the module index,
@@ -210,7 +284,8 @@ async function openFile(path, line = null, byClick = false) {
   // lists, where Zoost already holds `api_name` beside the module it points at. The same name can
   // exist on two modules, which is why the parent is part of the question and not a guess.
   const _mfiles = (await loadModuleFiles(op).catch(() => null)) || {};
-  if (!previewCurrent(mine, op)) return;
+  openTrace('modules', _t0);
+  if (!previewCurrent(mine, op)) { openTrace('overtaken', _t0); return; }
   const _linkFor = (name, kind, parent) => {
     if (kind === 'mod') return _known.has(name) ? name : null;
     const p = parent && _mfiles[parent];
@@ -232,6 +307,7 @@ async function openFile(path, line = null, byClick = false) {
   $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });
   paintFindMarks($('pvcode'), findMarkRe());
   showPreview(byClick);
+  openTrace('drawn ' + path, _t0);
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path, mine, op);
 }
@@ -473,7 +549,7 @@ async function showModuleUsage(api, path, mine, op) {
     // jump here makes, rather than a second way of doing it.
     // The sibling of the same defect: a chip in the Modules pane is a link, not a click on the tree
     // row, so the row it opens has to be revealed rather than left wherever the list happened to be.
-    wireFnChips(box, (a) => { setMode('functions'); openFile(a.dataset.file); });
+    wireFnChips(box, (a) => void openFunctionByPath(a.dataset.file));
   } catch (_) { box.className = ''; }
 }
 async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
@@ -741,7 +817,15 @@ function applySelection(byClick) {
 
 /** Open the detail pane - one function, because opening it is what shrinks the list, and the six
  *  places that used to do it by hand each left the selected row wherever it happened to be. */
+/** The pane is reading something. Shown by the openers that have awaits in them, and taken down by
+ *  `showPreview`, which is the one line every opener ends at - so an opener added tomorrow cannot
+ *  leave a spinner standing over content it has already drawn. */
+function pvLoading(on) {
+  const el = $('pvload');
+  if (el) el.classList.toggle('show', !!on);
+}
 function showPreview(byClick) {
+  pvLoading(false);
   $('preview').classList.add('show');
   $('resizer').classList.add('show');
   resetPreviewScroll();

@@ -27,6 +27,18 @@ const BLAST_RADIUS = 'Zoost will hold read and write access to everything inside
   + 'Documents.';
 
 let root = null, rootGranted = false;
+/** A folder is remembered and the browser has not been asked for it again yet.
+ *
+ *  This is a *third* state, and conflating it with «there is nothing here» is what put the
+ *  full-window «Not on a Zoho CRM tab» over a panel with 293 functions in it: the overlay's
+ *  condition was `!dir`, and `dir` is null for both of them. Reported from a real org - the two ways
+ *  out it offered, go to Zoho or write a sample, were both wrong for a reader whose only missing
+ *  thing was one click, and `regrantOnAnyClick` deliberately excludes the overlay, so the shortcut
+ *  the empty state advertises could not reach the screen that was covering it.
+ *
+ *  `emptyReason()` above has always had the right sentence for this state. The fix is to let the
+ *  panel show it. */
+const folderNeedsGrant = () => !!root && !rootGranted;
 // Startup restores the stored handle asynchronously.  Keep one promise for that read so a click
 // arriving before the first enumeration cannot mistake "not restored yet" for "no folder" and
 // open the picker again.  The picker is only for a genuinely new folder; a stored handle must go
@@ -768,7 +780,7 @@ function updateWsButtons() {
     : `Cannot remove a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
   $('wsrename').title = !$('wsrename').disabled ? 'Give this workspace a name of your own'
     : `Cannot name a workspace: ${pullBusy ? 'a pull is running' : 'none is selected'}`;
-  const needsGrant = !!root && !rootGranted;
+  const needsGrant = folderNeedsGrant();
   rt.classList.toggle('needgrant', needsGrant);
   // `innerHTML`, because the mark is drawn: the folder name is escaped on the way in, the way
   // every other name this panel writes into markup is.

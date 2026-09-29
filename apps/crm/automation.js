@@ -241,6 +241,9 @@ async function openBlueprint(e) {
   // either another blueprint being opened or the workspace changing under it. `previewCurrent`
   // answers both in one question, which is why it exists.
   const mine = ++previewLoad, op = beginWorkspaceOp();
+  // The pane is reading, and until this existed the reader's click changed nothing on screen while
+  // it did. Cleared by `showPreview`, where every opener ends.
+  pvLoading(true);
   currentPath = e.path; navHere(e.name); clearItemStatus();
   selectRow(e.path);
   setPvName(e.name, e.path);

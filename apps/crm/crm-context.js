@@ -130,7 +130,13 @@ async function refreshContext() {
     // a five-second poll, so anything set imperatively on top of that is undone by the next tick -
     // reported as the overlay coming back in the middle of writing the sample and then leaving
     // again. A state that has to hold across time is a term in the condition, never an assignment.
-    $('offoverlay').classList.toggle('show', !dir && !sampleBusy);
+    // **And not while a remembered folder is waiting to be asked for again.** `!dir` is true of two
+    // different states - «nothing here» and «a workspace is here and Chrome dropped the permission» -
+    // and covering the second one told a reader with 293 functions on disk that his two ways on were
+    // Zoho or a sample. The list's own empty state names that case exactly, and one click anywhere
+    // fixes it; this overlay is excluded from that click, so showing it here hid the remedy as well
+    // as the reason. Reported from a real org.
+    $('offoverlay').classList.toggle('show', !dir && !sampleBusy && !folderNeedsGrant());
     // **It says which platform, because the reader may well be on a Zoho tab.** Reported: someone
     // opened this panel from a Zoho Analytics tab and was told «Not on a Zoho tab», which is false
     // about where they were standing and silent about what is needed. The overlay two files away has

@@ -5291,8 +5291,13 @@ test('the panel does not claim what it has not looked at, and a poll does not un
     ]);
     assert.equal(sampleWorkspaceView(null, false, false).overlayLabel, 'Sample workspace',
       `${app}: the button still says «+ Sample workspace» when it cannot tell`);
-    assert.ok(/toggle\('show', !dir && !sampleBusy\)/.test(js),
-      `${app}: the overlay is derived without knowing a sample is being written, so the poll brings it back`);
+    // A third term, for the third state: a remembered folder whose permission Chrome has dropped is
+    // not «nothing here», and covering it hid both the reason and the one-click remedy. Reported
+    // from a real org. The rule this case holds is unchanged - every state that has to survive the
+    // five-second poll is a term in the condition, never an assignment on top of it.
+    assert.ok(/toggle\('show', !dir && !sampleBusy && !folderNeedsGrant\(\)\)/.test(js),
+      `${app}: the overlay is derived without knowing a sample is being written or that a folder is `
+      + 'waiting for one click, so the poll brings it back');
   }
 });
 
@@ -6044,7 +6049,16 @@ test('both panels report a lapsed folder permission in the same words', () => {
   });
   assert.ok(wording[0], 'id=crm has no MSG.folder to compare');
   assert.equal(wording[0], wording[1], 'the two panels word the lapsed folder permission differently');
-  assert.ok(wording[0].includes('↻'), 'MSG.folder no longer names the ↻ Refresh button that fixes it');
+  // **It used to name ↻ Refresh, and Refresh is in `LOCAL_BTNS`** - disabled by `setEnabled(false)`
+  // whenever no workspace folder is open, which is exactly the state this sentence appears in when a
+  // remembered folder is waiting to be re-granted. So the one remedy it named was a grey control.
+  // A click anywhere in the panel re-grants in every state this message can appear in, and it is
+  // also the fastest of the three, so that is what it names. Reported from a real org, where the
+  // full-window overlay was covering this sentence as well.
+  assert.match(wording[0], /click anywhere in this panel/,
+    'MSG.folder does not name the remedy that works in the state it appears in');
+  assert.doesNotMatch(wording[0], /Refresh/,
+    'MSG.folder points at \u21bb Refresh, which is disabled while no workspace folder is open');
 });
 
 // The environment guard disables every Zoho-bound control, not the first one somebody remembered.
@@ -16457,6 +16471,7 @@ test('analytics: a folder that cannot be read leaves nothing of it on screen', a
   // rename breaks this honestly instead of the harness carrying a copy of the drawing.
   const { refreshWorkspaces } = load([sliceAppConst('analytics', 'MK_FOLDER'),
                                       sliceAppConst('analytics', 'MK_UNLOCK'),
+                                      sliceAppConst('analytics', 'folderNeedsGrant'),
                                       sliceApp('analytics', 'paintFolderButton'),
                                       sliceApp('analytics', 'refreshWorkspaces')], g);
   await refreshWorkspaces();
@@ -22312,20 +22327,24 @@ test('a link to a function with no source here says which absence it is', () => 
               isDeluge: (l) => !l || /^deluge/i.test(String(l)),
               langLabel: (l) => (!l || /^deluge/i.test(String(l)) ? 'Deluge' : String(l).replace(/_/g, ' ')),
               MSG: { notMirrored: (lang) => `${lang} function - Zoost lists it and does not read this kind of code yet.` } };
-  const m = load([sliceFn(rel, 'openFunctionFromWorkflow')], g);
+  // Both halves: the four questions moved into `openFunctionFound`, which is where every link to a
+  // function now goes, so a case that lifts only the caller is asserting against a context where
+  // the answering half does not exist.
+  const m = load([sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
+                  sliceFn(rel, 'openFunctionFromWorkflow')], g);
 
-  m.openFunctionFromWorkflow('j1', 'syncLedger');
+  void m.openFunctionFromWorkflow('j1', 'syncLedger');
   assert.deepEqual(opened, [],
                    'the link opened a file that is not on disk - the pane closes, a read error flashes '
                    + 'and is overwritten, and a dead step goes into the history');
   assert.match(String((said[0] || [])[0]), /java17/, 'and it did not say why there is nothing to open');
   assert.equal((said[0] || [])[1], 'warn', 'it announced the refusal as though it were fine');
 
-  m.openFunctionFromWorkflow('d9', 'notPulled');
+  void m.openFunctionFromWorkflow('d9', 'notPulled');
   assert.deepEqual(fetched, ['d9'],
                    'a Deluge function that has not downloaded yet was opened rather than fetched - the '
                    + 'state of any workspace showing «Complete missing»');
-  m.openFunctionFromWorkflow('d1', 'here');
+  void m.openFunctionFromWorkflow('d1', 'here');
   assert.deepEqual(opened, ['functions/automation/here.dg'], 'a function that is here stopped opening');
   assert.deepEqual(clicked, [],
                    'a link went through the door that means «you clicked this row», which suppresses the '
@@ -22995,6 +23014,7 @@ test('the Remove tooltip describes the state the button is actually in', () => {
   // `esc` is what the folder name goes through on the way into that markup.
   const { updateWsButtons } = load([sliceAppConst('crm', 'MK_FOLDER'),
                                     sliceAppConst('crm', 'MK_UNLOCK'),
+                                    sliceAppConst('crm', 'folderNeedsGrant'),
                                     sliceApp('crm', 'updateWsButtons')], g);
 
   const seen = () => ({ off: nodes.wsdel.disabled, says: nodes.wsdel.title });
@@ -23170,7 +23190,9 @@ test('crm: a function chip opens from a tab that has never drawn the tree', asyn
                 openFile: (p) => seen.push('open:' + p), fetchThenRedrawRow: () => seen.push('fetch'),
                 langLabel: (l) => l, MSG: { notMirrored: () => 'not mirrored' }, String, Promise };
     g.rebuildTree = async () => { rebuilds++; g.treeData = found; };
-    const { openFunctionFromWorkflow } = load([sliceFn(REL, 'openFunctionFromWorkflow')], g);
+    const { openFunctionFromWorkflow } =
+      load([sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
+            sliceFn(REL, 'openFunctionFromWorkflow')], g);
     await openFunctionFromWorkflow(id, name);
     return { seen, rebuilds };
   };
@@ -24559,11 +24581,17 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
       fetchThenRedrawRow: () => calls.push('fetchThenRedrawRow'),
       setStatus: () => {}, langLabel: () => 'Deluge', MSG: { notMirrored: () => '' },
     };
+    // Both halves, because the second one is where the four questions now live: a link from another
+    // tab asks whether the list has been drawn, whether the function is in the workspace, whether
+    // the mirror has a source for it and whether it is downloaded. Lifting only the caller left
+    // `openFunctionFound` undefined in the context, which is a case that passes or fails on what the
+    // slice happens to contain rather than on what the product does.
     const { openFunctionFromWorkflow } =
-      load([sliceFn('apps/crm/crm-workflow-ui.js', 'openFunctionFromWorkflow')], g);
+      load([sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
+            sliceFn('apps/crm/crm-workflow-ui.js', 'openFunctionFromWorkflow')], g);
 
     test('crm: a function opened from a pane link is revealed, not left below the fold', () => {
-      openFunctionFromWorkflow('9000', 'A');
+      void openFunctionFromWorkflow('9000', 'A');
       assert.ok(calls.includes('openFile:functions/ns/a.dg'),
                 'the link opens the row the way a click does, and a click deliberately does not scroll');
       assert.ok(!calls.some((c) => c.startsWith('openFromTree')),

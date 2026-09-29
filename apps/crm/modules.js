@@ -757,6 +757,9 @@ function renderLayoutView(layout) {
 async function openModule(path, layoutId) {
   const mine = ++previewLoad;
   const op = beginWorkspaceOp();
+  // The pane is reading, and until this existed the reader's click changed nothing on screen while
+  // it did. Cleared by `showPreview`, where every opener ends.
+  pvLoading(true);
   if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) setStatus('File access denied - click Refresh.', 'bad'); return; }
   if (!previewCurrent(mine, op)) return;
   currentPath = path; navHere(); clearItemStatus();

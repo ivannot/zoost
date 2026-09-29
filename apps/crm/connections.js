@@ -108,7 +108,11 @@ function openConnection(c) {
   if (c.scopes && c.scopes.length) h += `<details class="wfraw"><summary>Scopes (${c.scopes.length})</summary><pre>${escHtml(c.scopes.join('\n'))}</pre></details>`;
   h += '</div>';
   $('pvtable').innerHTML = h;
-  wireFnChips($('pvtable'), (a) => { setMode('functions'); openFile(a.dataset.file); });
+  // One way in to a function from a link, which asks whether the tab has drawn its list, whether
+  // this function is in the workspace at all, whether the mirror has a source for it and whether it
+  // has been downloaded - four questions `openFile` alone answers by drawing nothing. Reported: the
+  // detail of the function clicked here opened, or opened late, or never.
+  wireFnChips($('pvtable'), (a) => void openFunctionByPath(a.dataset.file));
   showPreview();
   pvDiagram(`conn:${c.name}`, 'connection');
 }

@@ -745,6 +745,12 @@
      function links beside it - one rule for «this name goes somewhere», not two. */
   .c-mod{text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
   /* off-zoho overlay */
+  /* Inside the detail pane, over whatever it was showing. `pointer-events:none` on purpose: this
+     invalidates the content, it does not take the pane away - the header's Close and history arrows
+     stay reachable while a read is in flight. */
+  #pvload{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;gap:8px;background:var(--surface);color:var(--muted);font-size:12px;pointer-events:none}
+  #pvload.show{display:flex}
+  #pvload .spin{display:inline-block;width:14px;height:14px}
   #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:26px;z-index:70;text-align:center;padding:20px}
   #offoverlay.show{display:flex}
   #offoverlay .offgrp{display:flex;flex-direction:column;align-items:center;gap:8px}

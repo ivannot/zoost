@@ -127,6 +127,11 @@
       <button id="codecopy" class="lbtn icon" style="display:none" title="Copy this code to the clipboard" aria-label="Copy code"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg></button>
     </div>
     <div class="dbody" id="dbody"></div>
+    <!-- Reading an item is not instant, and until this existed the pane went on showing the previous
+         one while it happened - a click that changed nothing. The CRM panel met it first, reported
+         from a real org; same id, same class, same words. It takes no clicks, so Close and the
+         history arrows stay usable while a read is in flight. -->
+    <div id="pvload"><span class="spin"></span><span>Reading…</span></div>
   </div>
   </div>
 </div>

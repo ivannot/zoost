@@ -168,6 +168,13 @@
       <div id="pvfiles" role="tree" aria-label="Project files"></div>
       <div id="pvbody"><pre id="pvgutter"></pre><pre id="pvcode"></pre></div>
       <div id="pvtable"></div>
+      <!-- Reading an item is not instant - the source, the call graph, the module index and the
+           related-list files are four reads - and until this existed the pane went on showing the
+           *previous* item while they happened: you clicked, nothing changed, and there was nothing
+           to say that anything was coming. Reported. It covers the pane rather than sitting beside
+           the spinner in the status line, because invalidating the content is the point; it takes no
+           clicks, so Close and the arrows in the header stay usable through it. -->
+      <div id="pvload"><span class="spin"></span><span>Reading…</span></div>
     </div>
   </div>
   </div>

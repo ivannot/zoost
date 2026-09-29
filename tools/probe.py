@@ -1541,6 +1541,11 @@ AN = """
     if (link) {
       const target = link.dataset.go;
       link.click(); await settle();
+      // The reading overlay, which the CRM twin met first: shown at the door of an open so the click
+      // is answered on screen, and down again once the pane has been written. Both states, because a
+      // spinner that never appears and one left standing over drawn content are two defects.
+      if ($('pvload') && $('pvload').classList.contains('show'))
+        say('the reading overlay is still up over a detail that has been drawn');
       if (String(selectedId) !== String(target)) say('a lineage link did not open its view');
       if (navState().entries.length !== 2 || navState().position !== 1) say('the forward tail was not dropped: ' + navState().entries.length + '@' + navState().position);
       if (String(navState().entries[0].id) !== String(a)) say('the step behind is not the view we came from');
@@ -3072,6 +3077,221 @@ CRM_PREVIEW_NAV = PULL_CRM.split('(async () => {')[0] + """(async () => {
 # the assertions exercise the real click wiring without manufacturing a bridge response.  No
 # provider prompt is sent, no report is written, and the only diagram action is opening/closing a
 # local menu.
+# **A chip that links to a function, from the tab that is not Functions.** Reported from a real
+# org: from a connection's detail, clicking one of the functions that use it moved the panel to
+# Functions and then sometimes opened the detail, sometimes opened it «after a while», and sometimes
+# never. «Sometimes» is a sequence, so this records one - every step, in order, in the message it
+# fails with - rather than asserting the end state and leaving the middle to be guessed at.
+# **A remembered folder waiting for one click is not «nothing here».** Reported from a real org:
+# opening the panel with no Zoho tab put the full-window «Not on a Zoho CRM tab» over a workspace of
+# 293 functions, and offered the two ways out that were both wrong - go to Zoho, or write a sample -
+# while the only thing missing was the folder permission. The overlay is also excluded from the
+# click-anywhere re-grant on purpose, so showing it hid the remedy as well as the reason. Both
+# products had the identical condition, so this drives both.
+OFFTAB = PULL_CRM.split('(async () => {')[0] + """(async () => {
+  const shown = () => $('offoverlay').classList.contains('show');
+  const emptyText = () => (($('tree') || {}).textContent || '') + (($('list') || {}).textContent || '');
+  // Asked over and over, each call awaited to the end. A single `await refreshContext()` proves
+  // nothing here: the panel supersedes an in-flight refresh with `contextLoad`, so a call overtaken
+  // by the five-second poll returns before it decides anything about the overlay - and the overlay's
+  // class was then measured as «not shown» because nothing had touched it at all. Recorded with a
+  // MutationObserver on that class, which stayed silent for the whole window.
+  const stays = async (what, ms = 1400) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      await refreshContext();
+      if ($('offoverlay').classList.contains('show')) say(what);
+      // The polling yield, spelled the way the watcher spells it - a condition is checked on every
+      // turn of this loop, so it is not a bet on a duration, and the counter reads it as what it is.
+      await wait(25);
+    }
+  };
+  // No Zoho tab anywhere. The panel resolves its tab through `chrome.tabs.query`, so that is what
+  // answers nothing - the bridge is asked only once a tab has been resolved.
+  chrome.tabs.query = async () => [];
+  // Each panel names its own resolver - `zohoTabId` on the CRM side, `anyAnalyticsTabId` on the
+  // twin's - and both memoise for two seconds, one pull asking per item. Waited out rather than
+  // slept through: the first version of this read the state inside that window and measured a panel
+  // that still had a tab, which is a different branch entirely.
+  const resolveTab = typeof zohoTabId === 'function' ? zohoTabId : anyAnalyticsTabId;
+  await until(async () => (await resolveTab()) === null, 'the panel still resolved a Zoho tab', 4000);
+
+  // The state a returning reader is in: the handle is remembered, Chrome has dropped the permission
+  // for it, and no workspace folder is open because nothing can be read until it is re-granted.
+  // Nothing has been drawn either, which is what a *start* in this state looks like - a list left
+  // over from a granted session is a different state and would answer this for the wrong reason.
+  const remembered = await window.idbHandle.get('rootDir');
+  if (!remembered) say('the harness stored no folder handle - this scenario would prove nothing');
+  // **The browser is made to answer «prompt», rather than the variables being set to look like it.**
+  // Assigning `rootGranted = false` lasts until the next five-second poll, which calls `restoreRoot`,
+  // asks this handle again, is told «granted» by the harness and puts the whole state back - so the
+  // scenario measured a state that had already gone, and passed against the defect. What a returning
+  // reader has is a stored handle whose permission Chrome has dropped, so that is what this is.
+  remembered.queryPermission = async () => 'prompt';
+  // Nothing in this scenario clicks, and a silent grant would undo the state it is about.
+  remembered.requestPermission = async () => 'prompt';
+  root = null; rootGranted = false; dir = null;
+  await restoreRoot();
+  await until(() => typeof folderNeedsGrant === 'function' && folderNeedsGrant(),
+              'the panel never reached «a folder is remembered and not granted»');
+  // Asked of whichever panel this is: the CRM keeps what its Functions tab drew in `treeData` and
+  // redraws through `rebuildActive`, Analytics keeps its own and redraws through `render`.
+  if (typeof treeData !== 'undefined') treeData.length = 0;
+  if (typeof views !== 'undefined') views.length = 0;
+  if ($('tree')) $('tree').innerHTML = '';
+  if ($('list')) $('list').innerHTML = '';
+  await refreshContext();
+  if (typeof rebuildActive === 'function') await rebuildActive();
+  else if (typeof render === 'function') await render();
+  // Asserted over time rather than at one instant: this panel re-derives its whole state on a
+  // five-second poll, so a read taken straight after one refresh says nothing about what the next
+  // tick does - which is how the overlay was reported «coming back by itself» once before.
+  // **The precondition is asserted, not assumed.** Both halves of this scenario passed against the
+  // code that has the defect, because `restoreRoot()` runs inside the very refresh below and puts
+  // back the handle *and* its permission - the harness grants it - so by the time the overlay's
+  // condition was read the panel was in a fourth state and the assertion was true for the wrong
+  // reason. A scenario that cannot fail is decoration, and this is what catches it: if the state
+  // under test is not the state on screen, that is the finding.
+  if (!(!dir && typeof folderNeedsGrant === 'function' && folderNeedsGrant()))
+    say('this scenario is not in the state it is about: dir=' + dir + ' root=' + (root && root.name)
+        + ' granted=' + rootGranted + ' - it would pass whatever the panel did');
+  await stays('a remembered folder waiting for one click was covered by the «nothing here» overlay');
+  const seen = emptyText() + ' | ' + ((($('stxt') || $('statustext')) || {}).textContent || '');
+  if (!/folder access is not granted|grant access/i.test(seen))
+    say('the panel showed no reason at all: ' + JSON.stringify(seen.slice(0, 200)));
+
+  // And the case the overlay *was* written for is still its case: nothing remembered, nothing open.
+  // The stored handle goes too - `restoreRoot()` re-reads it inside every refresh, so nulling the
+  // variable alone measures the state it was just asked to leave. This half is the control: without
+  // it, a scenario in which the overlay never appears at all passes the assertion above by accident.
+  await window.idbHandle.del('rootDir');
+  root = null; rootGranted = false; dir = null;
+  await until(() => { void refreshContext(); return shown(); },
+              'with no folder at all the overlay never appeared - the fix took away the state it was'
+              + ' written for, or this scenario cannot produce it', 6000);
+  document.title = 'OFFTAB OK';
+})();
+"""
+
+CRM_CHIP = CRM.split('(async () => {')[0] + """(async () => {
+  const log = [];
+  const note = (m) => log.push(m);
+  const bail = (m) => say(m + ' | sequence: ' + JSON.stringify(log));
+  const rows = () => $('tree').querySelectorAll('.f').length;
+
+  const seg = [...$('modebar').querySelectorAll('.seg')].find((b) => b.dataset.tab === 'connections');
+  if (!seg) bail('the panel has no Connections segment');
+  seg.click();
+  // Waiting for `viewMode` is not waiting for the list: the flag flips inside the click and the
+  // rebuild that fills `connectionData` is asynchronous, so the first version of this read the
+  // *functions* list - 123 rows - and concluded the sample had no used connection. The list is what
+  // is being waited for, so the list is what the condition names.
+  await until(() => viewMode === 'connections' && typeof connectionData !== 'undefined'
+                    && connectionData.length && rows(), 'the connections list never drew');
+  note('connections rows=' + rows() + ' catalogue=' + connectionData.length);
+
+  const used = (typeof connectionData !== 'undefined' ? connectionData : []).find((c) => c.uses.length);
+  if (!used) bail('no connection in the sample is used by a function - this scenario proves nothing');
+  const crow = [...$('tree').querySelectorAll('.f')].find((r) => r.dataset.path === used.path);
+  if (!crow) bail('the connection ' + used.name + ' has no row');
+  crow.click();
+  await until(() => $('pvtable').querySelector('.wf-fn'), 'the connection detail never drew its function chips');
+  const chip = $('pvtable').querySelector('.wf-fn');
+  const want = chip.dataset.file;
+  note('chip file=' + want + ' previewLoad=' + previewLoad + ' treeData=' + treeData.length);
+
+  // The reader's own state: the panel was opened on another tab, so the Functions list has never
+  // been drawn and `treeData` is what that tab last drew - nothing.
+  treeData.length = 0;
+  chip.click();
+  await until(() => viewMode === 'functions', 'the chip did not move the panel to Functions');
+  note('after the click: mode=functions previewLoad=' + previewLoad + ' currentPath=' + currentPath);
+  try {
+    await until(() => currentPath === want && $('preview').classList.contains('show')
+                      && ($('pvname').textContent || '').trim(), 'x', 4000);
+  } catch (_) {
+    note('waited 4s: currentPath=' + currentPath + ' shown=' + $('preview').classList.contains('show')
+         + ' name=' + JSON.stringify(($('pvname').textContent || '').trim())
+         + ' status=' + JSON.stringify((($('stxt') || $('statustext')).textContent || '').trim())
+         + ' treeData=' + treeData.length);
+    bail('the function the reader clicked never opened');
+  }
+  note('opened ' + currentPath);
+  if (!$('pvbody') || getComputedStyle($('pvbody')).display === 'none')
+    bail('the pane opened without the source it was asked for');
+  // **What the reader sees while those four reads happen, and what they must not see afterwards.**
+  // Reported: «you click and there is no perception that you have to wait» - the pane went on showing
+  // the previous item. The spinner is asked of the page rather than of the source, and both states
+  // are asserted: a spinner that never appears is the defect, and one left standing over drawn
+  // content is a worse one.
+  if ($('pvload').classList.contains('show'))
+    bail('the reading overlay is still up over an item that has been drawn');
+  const stages = (window.__zoostOpenTrace || []).join(' | ');
+  for (const stage of ['permission', 'read', 'graph', 'modules', 'drawn'])
+    if (stages.indexOf(stage) < 0)
+      bail('the open recorded no «' + stage + '» stage, so «the detail takes a few seconds» cannot be '
+           + 'answered from a real browser: ' + JSON.stringify(stages));
+  note('stages ' + stages);
+  // Shown again for the next open, and this is the half a static read cannot see: `pvLoading(true)`
+  // has to run before the first await, not after it.
+  const second = treeData.find((r) => r.downloaded && r.path !== currentPath);
+  if (!second) bail('the sample has no second downloaded function to open');
+  const rowEl = [...$('tree').querySelectorAll('.f')].find((r) => r.dataset.path === second.path);
+  if (!rowEl) bail('the second function has no row to click');
+  rowEl.click();
+  if (!$('pvload').classList.contains('show'))
+    bail('the pane read a second item with nothing on screen to say so - a click that changes '
+         + 'nothing is the defect this was written for');
+  await until(() => currentPath === second.path && !$('pvload').classList.contains('show'),
+              'the reading overlay never came down for the second item', 5000);
+
+  // **And a tab change while a read is in flight.** Reported with a picture: the Modules list on the
+  // left and a function's code on the right, not going away. Changing tab closes the pane, but the
+  // open that was already running finished afterwards and called `showPreview()` - so the detail of
+  // an item from another tab came back and stayed. The race is real and not simulated: an open is
+  // four awaits long, so a click on the tab strip in the same turn of the loop always lands inside
+  // it.
+  const third = [...$('tree').querySelectorAll('.f')].find((r) => r.dataset.path !== currentPath);
+  if (!third) bail('the functions list has no other row to open');
+  third.click();
+  const modseg = [...$('modebar').querySelectorAll('.seg')].find((b) => b.dataset.tab === 'modules');
+  if (!modseg) bail('the panel has no Modules segment');
+  modseg.click();
+  await settle('the panel never settled after the tab change');
+  if ($('preview').classList.contains('show'))
+    bail('a detail from the previous tab came back over the ' + viewMode + ' list: ' + currentPath);
+  if ($('pvload').classList.contains('show'))
+    bail('the reading overlay was left standing after the tab changed');
+
+  // **And a chip that names something this mirror does not have.** The sample's functions are all
+  // present, Deluge and downloaded, so the happy path above passes with or without the four
+  // questions - which makes it a scenario that cannot fail. This half is the one that can: a
+  // renamed or deleted function is still named by the call graph, and `openFile` alone answered it
+  // by closing the pane the reader was looking at and flashing a read failure that the next status
+  // line overwrote in the same tick.
+  seg.click();
+  // The row, not the row count: both lists live in `#tree`, so «there are rows» is true of the one
+  // being left as well as the one arriving - the trap this scenario has already met once.
+  await until(() => viewMode === 'connections'
+                    && [...$('tree').querySelectorAll('.f')].some((r) => r.dataset.path === used.path),
+              'the panel did not go back to the connection it came from');
+  const back = [...$('tree').querySelectorAll('.f')].find((r) => r.dataset.path === used.path);
+  back.click();
+  await until(() => $('pvtable').querySelector('.wf-fn'), 'the connection detail never came back');
+  const wasPath = currentPath;
+  const ghostChip = $('pvtable').querySelector('.wf-fn');
+  ghostChip.dataset.file = 'functions/ghost/renamed_In_Zoho.dg';
+  ghostChip.click();
+  await until(() => /not in workspace/i.test((($('stxt') || $('statustext')) || {}).textContent || ''),
+              'a chip naming a function this mirror does not have said nothing about it', 4000);
+  if (currentPath === 'functions/ghost/renamed_In_Zoho.dg')
+    bail('the pane was replaced by a function the mirror does not have: ' + currentPath);
+  if (currentPath !== wasPath)
+    bail('the reader lost the item they were looking at: was ' + wasPath + ', now ' + currentPath);
+  document.title = 'CHIP OK';
+})();
+"""
+
 CRM_LOCAL_UI = CRM.split('(async () => {')[0] + """(async () => {
   const sayLocal = (m) => { throw new Error(m); };
   const realFetch = window.fetch; let network = 0;
@@ -3390,6 +3610,9 @@ def main() -> int:
                                      ("workspace-crm", "crm", "crm/sampleorg-1234567890", WORKSPACE_CRM),
                                      ("preview-nav-crm", "crm", "crm/sampleorg-1234567890", CRM_PREVIEW_NAV),
                                      ("local-ui-crm", "crm", "crm/sampleorg-1234567890", CRM_LOCAL_UI),
+                                     ("chip-crm", "crm", "crm/sampleorg-1234567890", CRM_CHIP),
+                                     ("offtab-crm", "crm", "crm/sampleorg-1234567890", OFFTAB),
+                                     ("offtab-analytics", "analytics", "analytics/sample-workspace", OFFTAB),
                                      ("upgrade-crm", "crm", "crm/sampleorg-1234567890", UPGRADE["crm"],
                                       UPGRADE_STORED["crm"]),
                                      ("upgrade-analytics", "analytics", "analytics/sample-workspace",

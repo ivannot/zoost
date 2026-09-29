@@ -281,7 +281,10 @@ const MSG = {
   // The same fact when a Zoho tab *is* open somewhere and it is not this workspace's: what the
   twinInstalled: (t) => `A ${t.name} tab is open. ${t.product} reads it - open it from the toolbar.`,
   twinMissing: (t) => `A ${t.name} tab is open. ${t.product} reads it.`,
-  folder: 'Folder access needs re-granting - click ↻ Refresh.',
+  // Names the remedy that always works, and it is the fastest of the three: the folder button and
+  // ↻ Refresh both re-grant, and both are disabled while no workspace is open - so this sentence
+  // used to point the reader at a grey control. A click anywhere in the panel does it.
+  folder: 'Folder access is not granted - click anywhere in this panel to restore it.',
   rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
   // Settings is a separate tab and nothing disables it while a pull runs - it was believed to be
   // disabled, and it is not. A pull is one act, decided when it starts, so a preference saved
@@ -1077,6 +1080,17 @@ function setMode(mode) {
   $('nameToggle').textContent = MSG.namePrefix + (mode === 'functions' ? nameMode : moduleNameMode);
   // Changing tab closes the pane and keeps the chain: the whole point of a history that spans the
   // tabs is that a workflow reached from a function is one step away from it, not a fresh start.
+  // **And it overtakes whatever was being opened.** Closing the pane is not enough: an open is four
+  // awaits long - the source, the call graph, the module index, the related-list files - and the one
+  // in flight went on to call `showPreview()` when it finished, so a function's detail reappeared
+  // over the Modules list and stayed there. Reported from a real org, with the picture. `previewLoad`
+  // is the panel's own «this open has been superseded» counter and every opener already asks it, so
+  // the tab change raises it rather than a second mechanism being invented beside it.
+  previewLoad++;
+  // And the «reading» overlay with it: the pane it lives in is hidden, so a leftover `show` is
+  // invisible - which is exactly why it would have survived to the next open. Caught by the probe
+  // driving this sequence, not by reading it.
+  pvLoading(false);
   currentPath = null; updateNav(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   // Whose button this is, decided here rather than left to whoever draws the list. It was the
   // renderers that set it, and only two of the six call it - so leaving Functions with «Refresh 1
@@ -1213,7 +1227,25 @@ const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
 const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
   && p !== 'modules/layouts/index.json';
 
-async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'blueprints' ? rebuildBlueprints() : viewMode === 'actions' ? rebuildActions() : rebuildConnections(); }
+/** The panel has no workspace folder open, so every list rebuild below bails - and said nothing.
+ *
+ *  Measured, on the state a returning reader lands in: a remembered folder whose permission Chrome
+ *  has dropped. Each rebuild opens with `if (!dir) return`, so the list stayed empty and the status
+ *  line went on describing the workspace it had read before - «123 functions (123 downloaded)» over
+ *  nothing. It was invisible because the full-window overlay used to cover it, and that overlay has
+ *  stopped claiming this state: a remembered folder waiting for one click is not «nothing here».
+ *
+ *  `emptyReason()` decides which of the blocking states it actually is; null means the blocker is
+ *  «nothing pulled yet», which is not this branch's business and is left to the tab that knows. */
+function drawNoWorkspace() {
+  const why = emptyReason();
+  if (!why) return;
+  $('tree').innerHTML = `<div class="empty">${why}</div>`;
+  // The short form of the same sentence, because a control and the empty state under it must not
+  // name different blockers - the rule this panel already applies to its disabled buttons.
+  if (folderNeedsGrant()) setStatus(MSG.folder, 'warn');
+}
+async function rebuildActive() { if (!dir) { drawNoWorkspace(); return; } return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'blueprints' ? rebuildBlueprints() : viewMode === 'actions' ? rebuildActions() : rebuildConnections(); }
 function consumePullPreferenceChange() {
   const changed = prefsSavedDuringPull;
   prefsSavedDuringPull = false;
