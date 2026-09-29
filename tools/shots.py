@@ -892,6 +892,28 @@ def stamp_file(app: str) -> pathlib.Path:
     return ROOT / "dist" / "store" / ".stamps" / f"{app}.json"
 
 
+def pixel_digests(files) -> dict:
+    """`{name: digest of the decoded pixels}` - what a picture *is*, rather than how it was encoded.
+
+    `tools/pngsame.py` already undoes the row filters to answer «is this the same picture», and this
+    is that answer written down: stable across renders, where the file bytes are not, and blind to
+    everything a render reads that does not reach a pixel, where the source digests are not."""
+    import hashlib
+    sys.path.insert(0, str(ROOT / "tools"))
+    try:
+        from pngsame import pixels
+    except Exception:                                    # noqa: BLE001 - say so rather than guess
+        return {}
+    out = {}
+    for f in files:
+        try:
+            w, hgt, c, raw = pixels(pathlib.Path(f))
+            out[f.name] = hashlib.sha256(f"{w}x{hgt}x{c}".encode() + bytes(raw)).hexdigest()[:16]
+        except Exception:                                # noqa: BLE001 - one unreadable file is not a verdict
+            return {}
+    return out
+
+
 def store_images(app: str) -> pathlib.Path:
     """Where a product's five uploadable pictures live. Here rather than spelled out by each
     caller, because it has already drifted: `submitted.py` went on globbing the folder *above* this
@@ -985,6 +1007,7 @@ def against_listing(app: str, keys) -> str:
     for p_ in files:
         h.update(p_.read_bytes())
     digest = h.hexdigest()[:16]
+    pix = pixel_digests(files)
     ledger = ROOT / "store" / app / "screenshots.json"
     was = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
     # The verdict comes from what the pictures are *of*, never from their bytes. A capture is not
@@ -1002,17 +1025,32 @@ def against_listing(app: str, keys) -> str:
         now = json.loads(stamp_file(app).read_text(encoding="utf-8"))
     except Exception:                                    # noqa: BLE001 - absent is a fact, not a crash
         now = None
-    recorded = was.get("sources")
-    if recorded is None:
-        state = ("recorded for " + was.get("version", "?") + " before the sources were - "
+    # **And the pictures decide, not their inputs.** The sources answer «was any file that this
+    # render reads different», which is true of a comment, a renamed variable and a string the shot
+    # never displays - so every release that touched the panel said «upload all five again» over
+    # five images nobody could tell apart. Measured on 2.0.2: all ten byte-compared, nine identical
+    # and the tenth the same picture by `tools/pngsame.py`, while the sources had all moved.
+    #
+    # The pixels are the exact answer and, unlike the bytes, a stable one - a capture is not
+    # bit-exact, which is why the byte digest was abandoned in the first place. So: pixels when the
+    # record has them, sources when it does not, and the sentence says which was asked.
+    recorded_pix, recorded = was.get("pixels"), was.get("sources")
+    version = was.get("version", "?")
+    if recorded_pix and pix:
+        same = recorded_pix == pix
+        state = (("unchanged since the set uploaded for " + version + " - same pictures")
+                 if same else ("CHANGED since " + version + " - upload all five again, in this order"))
+    elif recorded is None:
+        state = ("recorded for " + version + " before the sources were - "
                  "cannot tell if these are the same pictures; tools/submitted.py records it next time")
     elif now is None:
         state = "no render stamp beside these files - run tools/shots.py --force"
     elif recorded == now:
-        state = "unchanged since the set uploaded for " + was.get("version", "?")
+        state = "unchanged since the set uploaded for " + version
     else:
-        state = ("CHANGED since " + was.get("version", "the last upload")
-                 + " - upload all five again, in this order")
+        state = ("CHANGED since " + version + " - upload all five again, in this order. The record "
+                 "has no pixel digests yet, so this compares what the render read, which moves for a "
+                 "comment as readily as for a pixel; tools/submitted.py records the pictures next time")
     return f"  {app}: dist/store/{app}/images/1..{len(keys)}.png  [{digest}] {state}"
 
 

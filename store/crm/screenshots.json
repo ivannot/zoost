@@ -16,5 +16,12 @@
     "4.png",
     "5.png"
   ],
-  "folder": "dist/store/crm/images/"
+  "folder": "dist/store/crm/images/",
+  "pixels": {
+    "1.png": "d4699dbb9f2457d3",
+    "2.png": "9e4c1075cdd62ca2",
+    "3.png": "99569f084dadfdd1",
+    "4.png": "ae61348ccc6c4135",
+    "5.png": "5e5a6b7cb63c8bdc"
+  }
 }

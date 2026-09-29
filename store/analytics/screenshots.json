@@ -16,5 +16,12 @@
     "4.png",
     "5.png"
   ],
-  "folder": "dist/store/analytics/images/"
+  "folder": "dist/store/analytics/images/",
+  "pixels": {
+    "1.png": "f30a4abb11e1bc57",
+    "2.png": "1401b5026d7feebc",
+    "3.png": "0018617c1f2412ae",
+    "4.png": "7805a4ca4a626198",
+    "5.png": "58e679422226db0f"
+  }
 }

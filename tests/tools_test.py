@@ -2872,6 +2872,65 @@ class TheGateOnTheTagCanBePassed(unittest.TestCase):
                          'release.sh is back on the mode that refuses over the skip itself')
 
 
+class TheScreenshotVerdictIsAboutThePictures(unittest.TestCase):
+    """«CHANGED - upload all five again» was true of the *inputs*, not of the pictures.
+
+    The verdict compared the per-shot source digests: every file a render reads. That moves for a
+    comment, a renamed local and a string the shot never displays - so every release that touched the
+    panel told him to re-upload ten images. Measured on the 2.0.2 set: all ten byte-compared against
+    the ones already uploaded, nine identical and the tenth the same picture by `tools/pngsame.py`,
+    while every source digest had moved.
+
+    The bytes cannot decide either - a capture is not bit-exact, which is why they were abandoned -
+    so the decoded pixels do. They are exact and stable, and this holds the rule in both directions:
+    the same pictures must read «unchanged» even when the sources have all moved.
+    """
+
+    def verdict(self, root, pixels_in_record, sources_in_record=None):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import shots
+        was = shots.ROOT
+        try:
+            shots.ROOT = root
+            led = root / 'store' / 'crm' / 'screenshots.json'
+            led.parent.mkdir(parents=True, exist_ok=True)
+            led.write_text(json.dumps({'version': '9.9.9', 'pixels': pixels_in_record,
+                                       'sources': sources_in_record or {'crm-panel': 'aaaa'}}),
+                           encoding='utf-8')
+            return shots.against_listing('crm', shots.STORE['crm'])
+        finally:
+            shots.ROOT = was
+
+    def test_same_pictures_read_as_unchanged_however_the_sources_moved(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import shots
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / 'dist' / 'store' / 'crm' / 'images'
+            folder.mkdir(parents=True)
+            source = ROOT / 'apps' / 'crm' / 'icons' / 'twin-48.png'
+            files = []
+            for n in range(1, len(shots.STORE['crm']) + 1):
+                dest = folder / f'{n}.png'
+                shutil.copyfile(source, dest)
+                files.append(dest)
+            pix = shots.pixel_digests(files)
+            self.assertEqual(len(pix), len(files), 'the pixels of a real PNG could not be read')
+
+            # The stamp beside the render says the inputs moved; the pictures did not.
+            stamp = root / 'dist' / 'store' / '.stamps' / 'crm.json'
+            stamp.parent.mkdir(parents=True, exist_ok=True)
+            stamp.write_text(json.dumps({'crm-panel': 'bbbb'}), encoding='utf-8')
+
+            said = self.verdict(root, pix)
+            self.assertIn('same pictures', said,
+                          'a set nobody can tell apart is still reported as needing ten uploads: ' + said)
+
+            moved = {k: 'deadbeefdeadbeef' for k in pix}
+            said = self.verdict(root, moved)
+            self.assertIn('CHANGED', said, 'a set whose pixels differ is reported as unchanged: ' + said)
+
+
 class TheHandoverFolderHasOneShape(unittest.TestCase):
     """`shots.py` writes the five uploadable pictures; `submitted.py` records which ones the listing
     carries. Both spelled the path out, and when the shape was fixed - a folder per product with

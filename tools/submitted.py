@@ -86,6 +86,10 @@ def shots_ledger(app: str, version: str) -> str:
         # exactly that and written it down; this tool, one directory over, was doing the thing that
         # docstring forbids.
         'sources': shots_sources(app),
+        # What the pictures *are*, so the next release can say «same pictures» instead of «upload all
+        # five again» whenever any file the render reads has moved - which is every release that
+        # touches the panel, and which taught the reader to ignore the line.
+        'pixels': _shots().pixel_digests(pngs),
         'files': [f.name for f in pngs], 'folder': f'dist/store/{app}/images/',
     }, indent=2) + '\n', encoding='utf-8')
     return f'  screenshots: {len(pngs)} file(s), digest {digest}, recorded for {version}'
