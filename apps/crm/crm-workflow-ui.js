@@ -221,6 +221,9 @@ function renderUsage(u) {
   return h + `</div>`;
 }
 async function openFunctionFromWorkflow(id, name) {
+  // From the click, not from four awaits later: when this tab has never drawn the functions list the
+  // rebuild below is the longest part of the wait. The twin of this line is in `openFunctionByPath`.
+  pvLoading(true);
   const nid = String(id || ''); const nm = (name || '').toLowerCase();
   const find = () => treeData.find((x) => x.id === nid) || treeData.find((x) => (x.display_name || '').toLowerCase() === nm || (x.api_name || '').toLowerCase() === nm);
   let ent = find();

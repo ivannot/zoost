@@ -2805,6 +2805,11 @@ function detailZohoControls() {
 function pvLoading(on) {
   const el = $('pvload');
   if (el) el.classList.toggle('show', !!on);
+  // The pane comes with it, the way it does in the twin - there for a link that arrives from another
+  // tab, where the tab change closes the pane and the longest part of the wait happens after it.
+  // `openDetail` already opens the pane before it reads, so this changes nothing today and stops the
+  // two panels differing by an accident of which opener happens to call this first.
+  if (on) { $('detail').classList.add('show'); $('resizer').classList.add('show'); }
 }
 async function openDetail(id) {
   const mine = ++detailLoad;

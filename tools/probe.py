@@ -3219,6 +3219,11 @@ CRM_CHIP = CRM.split('(async () => {')[0] + """(async () => {
   // been drawn and `treeData` is what that tab last drew - nothing.
   treeData.length = 0;
   chip.click();
+  // Synchronously, in the same turn as the click: the whole point is that the answer comes before
+  // the first await, and the rebuild this tab has to do first is seconds on a real org. Reported -
+  // «it also takes time before it opens the Functions tab and lands on the one selected».
+  if (!$('pvload').classList.contains('show'))
+    bail('the click on a function chip said nothing on screen while the tab rebuilt its list');
   await until(() => viewMode === 'functions', 'the chip did not move the panel to Functions');
   note('after the click: mode=functions previewLoad=' + previewLoad + ' currentPath=' + currentPath);
   try {

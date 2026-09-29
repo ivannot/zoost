@@ -184,8 +184,8 @@ function openFromTree(path) { openFile(path, null, true); }
  *
  *  So there is one way in, and it is this one. */
 async function openFunctionFound(ent, label) {
-  if (!ent) { setStatus(`Function "${label}" not in workspace - pull functions first.`, 'warn'); return; }
-  if (!tabReachable('functions')) return;
+  if (!ent) { pvLoading(false); setStatus(`Function "${label}" not in workspace - pull functions first.`, 'warn'); return; }
+  if (!tabReachable('functions')) { pvLoading(false); return; }
   setMode('functions');
   selectRow(ent.path);
   if (ent.mirrored === false) { setStatus(MSG.notMirrored(langLabel(ent.language)), 'warn'); return; }
@@ -197,6 +197,11 @@ async function openFunctionFound(ent, label) {
 /** The same arrival, for a link that carries a path rather than an id and a name - the function
  *  chips, whose `data-file` is what the call graph recorded. */
 async function openFunctionByPath(path) {
+  // Before the rebuild, not after it: on a tab that has never drawn its list this walks the whole
+  // functions index and reconciles it against the folder, which on a real org is seconds - and it
+  // happens before `openFile` is even reached, so the spinner inside `openFile` was arriving far too
+  // late to answer the click.
+  pvLoading(true);
   const find = () => functionRowForPath(path);
   let ent = find();
   // `treeData` is «what the Functions tab last drew», so a panel opened on another tab holds none of
@@ -231,12 +236,15 @@ async function openFile(path, line = null, byClick = false) {
   const mine = ++previewLoad;
   const op = beginWorkspaceOp();
   const _t0 = performance.now();
+  // If this open ends in a refusal rather than a drawing, the panel goes back to what it was: an
+  // empty pane held open over a message is a worse answer than no pane.
+  const _wasOpen = $('preview').classList.contains('show');
   // Before the first await, because the reader's click is what has to be answered: until this
   // existed the pane went on showing the previous item while four reads happened, so a click looked
   // like nothing at all. Asked for that way - «I would rather see a spinner on an overlay inside the
   // detail pane, at least that invalidates the previous content».
   pvLoading(true);
-  if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) { pvLoading(false); setStatus('File access denied - click Refresh to grant.', 'bad'); } return; }
+  if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) { pvGaveUp(_wasOpen); setStatus('File access denied - click Refresh to grant.', 'bad'); } return; }
   openTrace('permission', _t0);
   if (!previewCurrent(mine, op)) return;
   // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
@@ -261,7 +269,7 @@ async function openFile(path, line = null, byClick = false) {
   // before this one - which is the stale-projection defect this panel keeps meeting.
   showProjectFiles(trow, path);
   pvTabsFor('function');
-  let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) { pvLoading(false); setStatus(MSG.readFailed + e.message, 'bad'); } return; }
+  let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) { pvGaveUp(_wasOpen); setStatus(MSG.readFailed + e.message, 'bad'); } return; }
   openTrace('read', _t0);
   if (!previewCurrent(mine, op)) { openTrace('overtaken', _t0); return; }
   const lines = code.split('\n').length;
@@ -817,12 +825,24 @@ function applySelection(byClick) {
 
 /** Open the detail pane - one function, because opening it is what shrinks the list, and the six
  *  places that used to do it by hand each left the selected row wherever it happened to be. */
+/** An open that ends in a message rather than a drawing: the spinner goes, and so does the pane if
+ *  this open is what put it there. */
+function pvGaveUp(wasOpen) {
+  pvLoading(false);
+  if (!wasOpen) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); }
+}
 /** The pane is reading something. Shown by the openers that have awaits in them, and taken down by
  *  `showPreview`, which is the one line every opener ends at - so an opener added tomorrow cannot
  *  leave a spinner standing over content it has already drawn. */
 function pvLoading(on) {
   const el = $('pvload');
   if (el) el.classList.toggle('show', !!on);
+  // **The pane comes with it.** A link from another tab is the case that made this necessary: the
+  // tab change closes the pane, and the read that follows is the longest part of the wait - so the
+  // spinner was being drawn inside something that was not on screen, and the reader watched an empty
+  // panel instead. Reported: «clicking one of the functions listed in a connection also takes time
+  // before it opens the Functions tab and lands on the one selected».
+  if (on) { $('preview').classList.add('show'); $('resizer').classList.add('show'); }
 }
 function showPreview(byClick) {
   pvLoading(false);

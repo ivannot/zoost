@@ -22330,7 +22330,12 @@ test('a link to a function with no source here says which absence it is', () => 
   // Both halves: the four questions moved into `openFunctionFound`, which is where every link to a
   // function now goes, so a case that lifts only the caller is asserting against a context where
   // the answering half does not exist.
-  const m = load([sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
+  // The openers say «the pane is reading» before their first await now, so the real `pvLoading` is
+  // lifted with them - a stub here would keep passing after a rename. It touches two elements and
+  // nothing else, so two elements are what the context has.
+  g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} }, id });
+  const m = load([sliceFn('apps/crm/preview-controller.js', 'pvLoading'),
+                  sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
                   sliceFn(rel, 'openFunctionFromWorkflow')], g);
 
   void m.openFunctionFromWorkflow('j1', 'syncLedger');
@@ -23190,8 +23195,10 @@ test('crm: a function chip opens from a tab that has never drawn the tree', asyn
                 openFile: (p) => seen.push('open:' + p), fetchThenRedrawRow: () => seen.push('fetch'),
                 langLabel: (l) => l, MSG: { notMirrored: () => 'not mirrored' }, String, Promise };
     g.rebuildTree = async () => { rebuilds++; g.treeData = found; };
+    g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} }, id });
     const { openFunctionFromWorkflow } =
-      load([sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
+      load([sliceFn('apps/crm/preview-controller.js', 'pvLoading'),
+            sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
             sliceFn(REL, 'openFunctionFromWorkflow')], g);
     await openFunctionFromWorkflow(id, name);
     return { seen, rebuilds };
@@ -24586,8 +24593,10 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     // the mirror has a source for it and whether it is downloaded. Lifting only the caller left
     // `openFunctionFound` undefined in the context, which is a case that passes or fails on what the
     // slice happens to contain rather than on what the product does.
+    g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} }, id });
     const { openFunctionFromWorkflow } =
-      load([sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
+      load([sliceFn('apps/crm/preview-controller.js', 'pvLoading'),
+            sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
             sliceFn('apps/crm/crm-workflow-ui.js', 'openFunctionFromWorkflow')], g);
 
     test('crm: a function opened from a pane link is revealed, not left below the fold', () => {
