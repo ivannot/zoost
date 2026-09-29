@@ -892,6 +892,17 @@ def stamp_file(app: str) -> pathlib.Path:
     return ROOT / "dist" / "store" / ".stamps" / f"{app}.json"
 
 
+def store_images(app: str) -> pathlib.Path:
+    """Where a product's five uploadable pictures live. Here rather than spelled out by each
+    caller, because it has already drifted: `submitted.py` went on globbing the folder *above* this
+    one after the shape was fixed, found no files, printed «run shots.py if you uploaded new ones»
+    and never wrote the record - so the listing's screenshots stayed recorded at the version before
+    last, and every release since told him to upload all five again whether they had moved or not.
+    The writer is the authority; a reader that spells the path itself is a copy waiting to go
+    stale."""
+    return ROOT / "dist" / "store" / app / "images"
+
+
 def publish_store_set(rendered: dict) -> None:
     """Copy the published subset to dist/store/<app>/images/<n>.png, in the declared order.
 
@@ -911,7 +922,7 @@ def publish_store_set(rendered: dict) -> None:
         # **The shape is fixed and it is his**, asked for on 21 September 2026 after three handovers
         # invented three layouts: `store/<app>/images` for these and `store/<app>/texts` for the
         # dashboard fields, which `storecopy.py` writes into the same tree so one sync carries both.
-        dest = ROOT / "dist" / "store" / app / "images"
+        dest = store_images(app)
         dest.mkdir(parents=True, exist_ok=True)
         for stale in dest.glob("*.png"):
             stale.unlink()

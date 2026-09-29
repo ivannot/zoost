@@ -22,6 +22,19 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 REPO = 'ivannot/zoost'
 
 
+def _shots():
+    """The module that *writes* the handover folder, asked where it put things.
+
+    Both paths below used to be spelled out here, and one of them drifted: the images moved into
+    `dist/store/<app>/images/` when the shape was fixed, this file went on globbing the folder above
+    it, and the only symptom was a note saying the folder was empty - so the screenshot record kept
+    naming the version before last for four releases. A reader that spells a writer's path itself is
+    a copy waiting to go stale."""
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import shots
+    return shots
+
+
 def release_row(app: str, version: str) -> str:
     url = f'https://api.github.com/repos/{REPO}/releases/tags/{app}-v{version}'
     try:
@@ -42,7 +55,7 @@ def shots_sources(app: str):
     Read from the stamp `shots.py` writes next to the set rather than recomputed, so this records
     the state the *rendered* files belong to and not the tree as it is at the moment of recording.
     """
-    stamp = ROOT / 'dist' / 'store' / '.stamps' / f'{app}.json'
+    stamp = _shots().stamp_file(app)
     try:
         return json.loads(stamp.read_text(encoding='utf-8'))
     except Exception:                                   # noqa: BLE001 - absent is a fact, not a crash
@@ -50,7 +63,7 @@ def shots_sources(app: str):
 
 
 def shots_ledger(app: str, version: str) -> str:
-    folder = ROOT / 'dist' / 'store' / app
+    folder = _shots().store_images(app)
     pngs = sorted(folder.glob('*.png'), key=lambda f: int(f.stem))
     if not pngs:
         return f'  {folder.relative_to(ROOT)} is empty - run tools/shots.py if you uploaded new ones'

@@ -2872,6 +2872,48 @@ class TheGateOnTheTagCanBePassed(unittest.TestCase):
                          'release.sh is back on the mode that refuses over the skip itself')
 
 
+class TheHandoverFolderHasOneShape(unittest.TestCase):
+    """`shots.py` writes the five uploadable pictures; `submitted.py` records which ones the listing
+    carries. Both spelled the path out, and when the shape was fixed - a folder per product with
+    `images/` inside it - only the writer moved. The reader went on globbing the folder above, found
+    no files, and printed «is empty - run tools/shots.py if you uploaded new ones» as a *note*: so
+    the record kept naming the version before last, and `shots.py`, which takes its verdict from that
+    record, told him to upload all five again at every release whether a pixel had moved or not.
+    Neither tool was ever red. The path is the writer's now, and this holds the two together.
+    """
+
+    def test_the_record_is_written_from_the_folder_shots_writes(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import shots, submitted
+        was = (shots.ROOT, submitted.ROOT)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                shots.ROOT = submitted.ROOT = root
+                folder = shots.store_images('crm')
+                folder.mkdir(parents=True)
+                for n in range(1, 6):
+                    (folder / f'{n}.png').write_bytes(b'not really a png ' + bytes([n]))
+                stamp = shots.stamp_file('crm')
+                stamp.parent.mkdir(parents=True, exist_ok=True)
+                stamp.write_text(json.dumps({'crm-panel': 'abc123'}), encoding='utf-8')
+                led = root / 'store' / 'crm' / 'screenshots.json'
+                led.parent.mkdir(parents=True)
+                led.write_text(json.dumps({'version': '1.53.0', 'digest': 'old'}), encoding='utf-8')
+
+                out = submitted.shots_ledger('crm', '2.0.1')
+
+                self.assertIn('screenshots: 5 file(s)', out,
+                              'the reader is looking somewhere the writer does not write: ' + out)
+                got = json.loads(led.read_text(encoding='utf-8'))
+                self.assertEqual(got['version'], '2.0.1')
+                self.assertEqual(got['files'], [f'{n}.png' for n in range(1, 6)])
+                self.assertEqual(got['sources'], {'crm-panel': 'abc123'},
+                                 'what the pictures are of is read from the stamp beside them')
+        finally:
+            shots.ROOT, submitted.ROOT = was
+
+
 class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
     """`submitted.py` records what is in the repository when it runs and takes the click on trust.
     That is honest about what it can observe, and blind to the one thing that matters: whether the
