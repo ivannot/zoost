@@ -6483,6 +6483,32 @@ class TheProbeSaysHowMuchOfItIsGuessing(unittest.TestCase):
                          'the counter counts prose about waiting as waiting, so its number says '
                          'nothing about what the probe actually does')
 
+    def test_a_scenario_built_by_concatenation_is_read_like_any_other(self):
+        """**The ledger said «0 unconditioned sleeps» about two thirds of its subject.**
+
+        A scenario was recognised as a module-level assignment of a literal string, and most of them
+        are built as `PULL_CRM.split(...)[0] + \"\"\"...\"\"\"` - so the folder, sample, settings,
+        navigation, upgrade and corruption scenarios were read by nobody, and a bare sleep added to
+        any of them would have been counted as zero. Found by adding two scenarios and noticing the
+        printed count had not moved.
+
+        Held the only way that means anything: a bare sleep is planted inside a composed scenario,
+        and the count has to move.
+        """
+        src = (ROOT / 'tools' / 'probe.py')
+        keep = src.read_text(encoding='utf-8')
+        planted = keep.replace("  const shown = () => $('offoverlay').classList.contains('show');",
+                               "  const shown = () => $('offoverlay').classList.contains('show');\n"
+                               "  await wait(999);", 1)
+        self.assertNotEqual(planted, keep, 'the composed scenario this plants into has been renamed')
+        try:
+            src.write_text(planted, encoding='utf-8')
+            bare, _ = self.waits()
+        finally:
+            src.write_text(keep, encoding='utf-8')
+        self.assertEqual(bare, 1, 'a bare sleep inside a scenario built by concatenation is invisible '
+                                  'to the counter, so its 0 says nothing about those scenarios')
+
     def probe(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location('probe_ready', ROOT / 'tools' / 'probe.py')

@@ -2665,32 +2665,47 @@ def waits() -> tuple:
     """(unconditioned sleeps, condition waits) across every scenario in this file.
 
     Derived from this file's own text rather than from a number typed beside it, so the two move
-    when the scenarios do. It reads `await wait(` and `await until(`, which is the whole vocabulary;
-    a third way of waiting introduced tomorrow is invisible here and would need this widened - said
-    rather than left as a silence, because a count under an unstated blind spot is the number that
-    gets quoted as evidence.
+    when the scenarios do. It reads `await wait(`, `await until(` and `await settle(`, which is the
+    whole vocabulary; a fourth way of waiting introduced tomorrow is invisible here and would need
+    this widened - said rather than left as a silence, because a count under an unstated blind spot
+    is the number that gets quoted as evidence.
+
+    **And it had one of those blind spots for as long as it existed.** A scenario was recognised as
+    a module-level assignment of a *literal* string, so the dozen built by concatenation -
+    `FOLDER = PULL_CRM.split(...)[0] + \"\"\"...\"\"\"`, which is most of them - were read by nobody:
+    the headline said «272 waits, 0 unconditioned sleeps» about two thirds of its subject, and a bare
+    sleep added to any of them would have been counted as zero. It reads 374 now, over 17 scenario
+    strings. Found while adding two scenarios and noticing the count had not moved.
+
+    A scenario body is identified by what it *is* - page code with a wait in it, `$('` and `await ` -
+    rather than by where it sits, which is what tied the old reading to one spelling. That also keeps
+    it off its own prose: the literals in this function say `await wait(` and touch no element, which
+    is the defect this repository has met three times in checkers and a case downstairs holds.
     """
     import ast
-    tree = ast.parse(pathlib.Path(__file__).read_text(encoding="utf-8"))
     bare = cond = 0
-    for node in tree.body:
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+    tree = ast.parse(pathlib.Path(__file__).read_text(encoding="utf-8"))
+    for top in tree.body:
+        if not isinstance(top, ast.Assign):
             continue
-        body = node.value.value
-        # A scenario is a module-level string that defines its own `wait`. Derived, so a sixth one
-        # added tomorrow is counted; naming them would be a list to keep in step by hand.
-        if not isinstance(body, str) or "const wait =" not in body:
-            continue
-        # `settle` is `until` wearing a shorter name - it waits for the document to stop
-        # changing - so counting it as a bet would report the opposite of what it is.
-        # The 25ms yield inside until() is the polling mechanism of a condition, not a test
-        # decision to sleep for a guessed duration. Count it with the condition so the headline
-        # measures actual bets rather than implementation details of the watcher.
-        polling = body.count("await wait(25)")
-        bare += body.count("await wait(") - polling
-        cond += body.count("await settle(")
-        cond += body.count("await until(")
-        cond += polling
+        # Every string literal inside the assigned expression, so a scenario built by concatenation
+        # or held in a dict is read the same as one written as a single literal. A module-level
+        # assignment is also what keeps this off its own docstring, which quotes the vocabulary.
+        for node in ast.walk(top.value):
+            if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+                continue
+            body = node.value
+            if "$('" not in body or "await " not in body:
+                continue
+            # `settle` is `until` wearing a shorter name - it waits for the document to stop
+            # changing - so counting it as a bet would report the opposite of what it is. The 25ms
+            # yield inside until() is the polling mechanism of a condition, not a decision to sleep
+            # for a guessed duration, so it is counted with the condition it serves.
+            polling = body.count("await wait(25)")
+            bare += body.count("await wait(") - polling
+            cond += body.count("await settle(")
+            cond += body.count("await until(")
+            cond += polling
     return (bare, cond)
 
 
