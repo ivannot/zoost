@@ -129,6 +129,18 @@ READS = {
     # `requestPermission()` is deliberately absent and must stay absent. It is not a read: it can
     # raise a browser dialog, it needs a gesture this tool does not have, and it *changes* the
     # grant. A table whose entries have effects is not a vocabulary of questions any more.
+    # **Where the time goes when an item is opened**, which is the one question about this product
+    # that a headless harness cannot answer: the state it was reported in - a real org, a real
+    # File System Access handle, every other browser window closed - is a browser's, not a fixture's.
+    # The panel records the stages with their elapsed time (`openTrace`), and this reads the last few
+    # back. A reading, like every other entry here: it takes nothing and changes nothing.
+    'opens': "(window.__zoostOpenTrace || []).slice(-14).join(' | ') || 'no open recorded yet'",
+    # Which build is actually loaded in front of the reader - asked before believing what `opens`
+    # says, because «nothing recorded» reads identically whether the panel has not been used or the
+    # window is still running the copy from before the instrument existed. An unpacked extension
+    # keeps running its old code until it is reloaded, and that is not observable from here.
+    'build': ("chrome.runtime.getManifest().version + ' | openTrace:' + (typeof openTrace)"
+              " + ' | pvload:' + (document.getElementById('pvload') ? 'yes' : 'no')"),
     'handle': HANDLE_TEMPLATE.format(answer="h ? h.name : 'no handle stored'"),
     'permission': HANDLE_TEMPLATE.format(
         answer="h ? await h.queryPermission({ mode: 'readwrite' }) : 'no handle stored'"),

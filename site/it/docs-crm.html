@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:de36c6d20bc4bba3 -->
+<!-- translated-from: site/docs-crm.html sha256:d88c93c2d6b3fe0a -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -148,6 +148,15 @@
       file di index e di lock mentre un'operazione è in corso. Anche i file «su richiesta» (segnaposto)
       rompono la ricerca full-text. Usa una cartella locale e fai push su un remote Git privato se vuoi una
       copia fuori dalla macchina.</p>
+    <p><b>Si sente come lentezza del pannello, ed è il motivo per cui vale la pena dirlo.</b> Una
+      cartella i cui contenuti il servizio di sincronizzazione tiene nel cloud deve scaricare il file
+      la prima volta che lo apri, e il pannello aspetta quella lettura come qualsiasi altra. Misurato
+      su un'org reale, con lo stesso pannello: <b>1,9s</b> per aprire una funzione la prima volta e
+      <b>17ms</b> per una il cui file era già sul disco. Quella prima lettura è il servizio di sincronizzazione che
+      scarica il file, e il pannello la aspetta esattamente come farebbe qualunque editor aprendo
+      lo stesso file.
+      Se la cartella deve restare dov'è, segnala che i file vanno tenuti davvero sulla macchina -
+      iCloud Drive lo chiama <b>Keep Downloaded</b>, gli altri servizi hanno un'opzione equivalente.</p>
     <p class="note">Tre comandi della toolbar sono disegnati come simboli invece che a parole -
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> e il pulsante del diagramma,
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> in modalità Functions e <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in

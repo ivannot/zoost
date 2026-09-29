@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:a815ae3d1b60b2c3 -->
+<!-- translated-from: site/docs-analytics.html sha256:de5df02fb427806d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -54,7 +54,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">2.0.1</span> · aggiornata il <span class="dd" data-stamp="updated">28 settembre 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">2.0.1</span> · aggiornata il <span class="dd" data-stamp="updated">29 settembre 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, come nell'estensione, così
     nel pannello ritrovi esattamente le parole usate in questa guida. La
@@ -127,6 +127,22 @@
       crea la cartella del workspace e ne legge il nome da Zoho Analytics; in seguito puoi cambiare
       la cartella principale con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 12.7V4.2a.9.9 0 0 1 .9-.9h3.2l1.5 1.7h6.3a.9.9 0 0 1 .9.9v6.8a.9.9 0 0 1-.9.9H2.5a.9.9 0 0 1-.9-.9Z"/></svg> Set working folder…</b>.</li>
   </ol>
+  <div class="box warn">
+    <p><b>Non mettere la cartella di lavoro su OneDrive, Dropbox o iCloud Drive.</b> Potresti crearci
+      dentro dei repository Git, e i servizi di sincronizzazione corrompono le cartelle
+      <code>.git</code> toccando i file di index e di lock mentre un'operazione è in corso. Anche i
+      file «su richiesta» (segnaposto) rompono la ricerca full-text. Usa una cartella locale e fai
+      push su un remote Git privato se vuoi una copia fuori dalla macchina.</p>
+    <p><b>Si sente come lentezza del pannello, ed è il motivo per cui vale la pena dirlo.</b> Una
+      cartella i cui contenuti il servizio di sincronizzazione tiene nel cloud deve scaricare il file
+      la prima volta che lo apri, e il pannello aspetta quella lettura come qualsiasi altra. Misurato
+      su un'org reale, con lo stesso pannello: <b>1,9s</b> per aprire un elemento la prima volta e
+      <b>17ms</b> per uno il cui file era già sul disco. Quella prima lettura è il servizio di sincronizzazione che
+      scarica il file, e il pannello la aspetta esattamente come farebbe qualunque editor aprendo
+      lo stesso file. Se
+      la cartella deve restare dov'è, segnala che i file vanno tenuti davvero sulla macchina - iCloud
+      Drive lo chiama <b>Keep Downloaded</b>, gli altri servizi hanno un'opzione equivalente.</p>
+  </div>
   <p><b class="ui">Sample</b> è l'altra via d'ingresso e non richiede nessun tab di Zoho Analytics:
     scrive nella cartella di lavoro un workspace di dati inventati, così puoi aprire l'elenco delle
     viste, il diagramma ER e gli export prima di puntare Zoost su qualcosa di tuo. È generato, non

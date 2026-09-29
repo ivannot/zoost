@@ -473,3 +473,26 @@ Chromium source reading or a bug report to Google with the two profiles side by 
 
 **State:** open, and deliberately not guessed at. The table above is the point of the entry: the
 next session starts from what was ruled out rather than repeating it.
+
+## The panel could name a read that took a second and a half
+
+**What happened.** «Clicking a function takes a few seconds» was reported, measured with the new
+per-stage trace, and turned out to be nothing of ours: permission, call graph, module index and draw
+cost 2-3ms together, and the whole wait was one `getFile()` - 1.9s for a file the sync service had
+kept in the cloud, 17ms for the same read once the file was materialised. The folder was inside
+`~/Documents` with iCloud Drive on; marking the tree «Keep Downloaded» made it instant.
+
+**The idea.** The panel already times the stages. It could say so when a read crosses, say, a second:
+«that read took 1.9s - a working folder kept in the cloud fetches a file the first time it is
+opened». Today the reader has no way to reach that conclusion from inside the product, and the guide
+is only read by somebody who suspects the folder in the first place.
+
+**The cost, and why it is not done.** It is an interpretation, and this project exposes numbers
+rather than grading them - the same rule that keeps «too big» off a function's size. A slow read has
+other causes (a large file, a busy disk, a network volume) and a sentence naming the cloud would be
+wrong for those, which is exactly the «saying the wrong missing thing» failure the empty states are
+built to avoid. It would also need a threshold nobody has measured on more than one machine.
+
+What shipped instead is the spinner over the detail pane, which answers the reader's actual
+complaint - «you click and there is no perception that you have to wait» - without claiming to know
+why, and the guides now name the symptom with both numbers beside it.
