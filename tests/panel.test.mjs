@@ -21951,7 +21951,10 @@ test('the export loader keeps a function identity and its language', async () =>
     'functions/standalone/runIt.files/config.json': '{"runtime":"nodejs"}',
   };
   const g = { console, Object, Map, Set, Array, JSON, String, Number, Promise, RegExp,
-              beginWorkspaceOp: () => ({ root: {}, current: () => true,
+              // `say` because the gather reports how far it has got now - it reads every function in
+              // the org, and one static «Building HTML export…» over minutes of that is the shape
+              // this repository refuses in its own tools.
+              beginWorkspaceOp: () => ({ root: {}, current: () => true, say: () => {},
                 read: async (p) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; } }),
               walk: async function* () { for (const k of Object.keys(files)) yield k; },
               moduleNames: () => [], isModuleFile: () => false, sanitize: (x) => x, fnStats: () => null,
@@ -22333,7 +22336,11 @@ test('a link to a function with no source here says which absence it is', () => 
   // The openers say «the pane is reading» before their first await now, so the real `pvLoading` is
   // lifted with them - a stub here would keep passing after a rename. It touches two elements and
   // nothing else, so two elements are what the context has.
-  g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} }, id });
+  g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} },
+                     querySelector: () => ({ textContent: '' }), id });
+    // The overlay counts the seconds while it is up, so the context has a clock and a timer. A
+    // context that lacks them is not a smaller page, it is a page the product would crash on.
+    g.setInterval = () => 0; g.clearInterval = () => {}; g.Date = Date;
   const m = load([sliceFn('apps/crm/preview-controller.js', 'pvLoading'),
                   sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
                   sliceFn(rel, 'openFunctionFromWorkflow')], g);
@@ -23195,7 +23202,11 @@ test('crm: a function chip opens from a tab that has never drawn the tree', asyn
                 openFile: (p) => seen.push('open:' + p), fetchThenRedrawRow: () => seen.push('fetch'),
                 langLabel: (l) => l, MSG: { notMirrored: () => 'not mirrored' }, String, Promise };
     g.rebuildTree = async () => { rebuilds++; g.treeData = found; };
-    g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} }, id });
+    g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} },
+                     querySelector: () => ({ textContent: '' }), id });
+    // The overlay counts the seconds while it is up, so the context has a clock and a timer. A
+    // context that lacks them is not a smaller page, it is a page the product would crash on.
+    g.setInterval = () => 0; g.clearInterval = () => {}; g.Date = Date;
     const { openFunctionFromWorkflow } =
       load([sliceFn('apps/crm/preview-controller.js', 'pvLoading'),
             sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),
@@ -24593,7 +24604,11 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
     // the mirror has a source for it and whether it is downloaded. Lifting only the caller left
     // `openFunctionFound` undefined in the context, which is a case that passes or fails on what the
     // slice happens to contain rather than on what the product does.
-    g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} }, id });
+    g.$ = (id) => ({ classList: { toggle() {}, add() {}, remove() {} },
+                     querySelector: () => ({ textContent: '' }), id });
+    // The overlay counts the seconds while it is up, so the context has a clock and a timer. A
+    // context that lacks them is not a smaller page, it is a page the product would crash on.
+    g.setInterval = () => 0; g.clearInterval = () => {}; g.Date = Date;
     const { openFunctionFromWorkflow } =
       load([sliceFn('apps/crm/preview-controller.js', 'pvLoading'),
             sliceFn('apps/crm/preview-controller.js', 'openFunctionFound'),

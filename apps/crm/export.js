@@ -791,7 +791,13 @@ async function loadExportData(op = beginWorkspaceOp()) {
   let denied = null; try { denied = refusalsIn(JSON.parse(await op.read(CFG))); } catch (_) {}
   const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, name: v.meta.name, language: v.meta.language, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
   const fns = [];
+  // The second half of the gather, and the one with a total: every function's source is read here.
+  // «Building HTML export…» was one line for the whole of it - minutes on a folder that fetches its
+  // files on demand, with nothing on screen to say it was moving.
+  let _readFns = 0;
   for (const e of entries) {
+    if (++_readFns % 20 === 0 || _readFns === entries.length)
+      op.say(`Building the report - ${_readFns}/${entries.length} functions read\u2026`, 'busy');
     // `null` and not `''`: a source that could not be read is not an empty one, and `fnStats`
     // tells the two apart now - so a function whose fetch failed no longer reports «0 lines, 0
     // outbound calls» in a report somebody reads without the extension.

@@ -2804,12 +2804,30 @@ function detailZohoControls() {
  *  pair of calls in the same two places. */
 function pvLoading(on) {
   const el = $('pvload');
-  if (el) el.classList.toggle('show', !!on);
-  // The pane comes with it, the way it does in the twin - there for a link that arrives from another
-  // tab, where the tab change closes the pane and the longest part of the wait happens after it.
-  // `openDetail` already opens the pane before it reads, so this changes nothing today and stops the
-  // two panels differing by an accident of which opener happens to call this first.
-  if (on) { $('detail').classList.add('show'); $('resizer').classList.add('show'); }
+  if (!el) return;
+  el.classList.toggle('show', !!on);
+  // **How long it has been reading, which is a number and not a verdict.** A read that will never
+  // return and one that is merely slow look the same behind a spinner, and the reader has no way to
+  // tell «this is taking a moment» from «this is stuck». The seconds appear only after two of them,
+  // so an ordinary open - milliseconds - never shows one. What it must not do is explain itself: a
+  // slow read has several causes and naming the wrong one is the failure every empty state here is
+  // built to avoid, so it says the number and stops there.
+  //
+  // The timer hangs off the element it writes into rather than off a module-level variable: there is
+  // one overlay, it is the thing being updated, and a second opener cannot then leave a first one's
+  // interval running behind it.
+  if (el._tick) { clearInterval(el._tick); el._tick = null; }
+  const secs = el.querySelector('.pvsec');
+  if (secs) secs.textContent = '';
+  if (!on) return;
+  // The pane comes with it: a link from another tab closes the pane before the longest part of the
+  // wait, so the spinner was being drawn inside something that was not on screen.
+  $('detail').classList.add('show'); $('resizer').classList.add('show');
+  const t0 = Date.now();
+  el._tick = setInterval(() => {
+    const n = Math.floor((Date.now() - t0) / 1000);
+    if (secs) secs.textContent = n >= 2 ? ` ${n}s` : '';
+  }, 500);
 }
 async function openDetail(id) {
   const mine = ++detailLoad;

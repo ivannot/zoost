@@ -88,6 +88,13 @@ async function loadGraph(op = beginWorkspaceOp()) {
       continue;
     }
     read++;
+    // **A line that moves.** This is the read that costs, and it is silent: on a first open in a
+    // workspace it walks every function in the org, and on a working folder whose files are fetched
+    // on demand that is seconds each. A static «busy» and a hung panel look identical from outside -
+    // the rule this repository already applies to its own tools, applied to the product. No total:
+    // the walk is a stream and does not know one, and inventing a denominator would be worse than
+    // having none.
+    if (read % 20 === 0) op.say(`Reading function sources - ${read} so far\u2026`, 'busy');
     const dg = await op.read(p); let meta = {}; try { meta = JSON.parse(await op.read(p.replace(/\.dg$/, '.meta.json'))); } catch {}
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }

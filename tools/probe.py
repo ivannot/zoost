@@ -1161,6 +1161,16 @@ CRM = """
     // contains, and what it *remembers* is the part nothing had ever exercised: a tick that does not
     // survive being reopened is a choice silently discarded.
     const fsx = window.__fsshim;
+    // **Every line the panel says while it builds.** «Building HTML export…» was one sentence for an
+    // operation that reads every function in the org - minutes on a folder whose files are fetched
+    // on demand, with nothing moving. Captured rather than sampled: the lines go by too fast to read
+    // at a chosen instant, which is the mistake this file already records.
+    // Read off the element the reader reads, not by wrapping `setStatus` - which is a `const` here,
+    // and a driver that has to rewrite the product to watch it is measuring something else anyway.
+    const exportSaid = [];
+    const statusEl = $('stxt') || $('statustext');
+    const exportWatch = new MutationObserver(() => exportSaid.push(String(statusEl.textContent || '')));
+    exportWatch.observe(statusEl, { childList: true, characterData: true, subtree: true });
     $('export').click(); await settle('the export dialog never opened');
     if (!$('expscope').classList.contains('on')) say('the export dialog did not open');
     const wasHealth = $('sc_health').checked;
@@ -1177,6 +1187,12 @@ CRM = """
     $('sc_health').checked = wasHealth; $('sc_health').dispatchEvent(new Event('change'));
     $('expcancel').click(); await settle('Cancel never closed the dialog');
     if ($('expscope').classList.contains('on')) say('Cancel left the dialog open');
+    exportWatch.disconnect();
+    // `indexOf` rather than a regex: these scenarios are Python strings, and a backslash-d in one
+    // is an invalid escape that Python warns about today and will refuse tomorrow.
+    if (!exportSaid.some((line) => line.indexOf(' functions read') >= 0))
+      say('the export never said how far it had got - one static line for the whole build: '
+          + JSON.stringify(exportSaid.slice(-6)));
 
     // ---- landing on a row brings its column names with it ----
     //
@@ -3246,6 +3262,13 @@ CRM_CHIP = CRM.split('(async () => {')[0] + """(async () => {
   // content is a worse one.
   if ($('pvload').classList.contains('show'))
     bail('the reading overlay is still up over an item that has been drawn');
+  // The seconds are for a read that is *taking* time; an ordinary open is milliseconds and must show
+  // no counter at all. A «0s» on every click would be noise, and noise is what makes a real one
+  // invisible.
+  const secs = $('pvload').querySelector('.pvsec');
+  if (!secs) bail('the reading overlay has nowhere to say how long it has been reading');
+  if ((secs.textContent || '').trim())
+    bail('a read of a few milliseconds put a duration on screen: ' + JSON.stringify(secs.textContent));
   const stages = (window.__zoostOpenTrace || []).join(' | ');
   for (const stage of ['permission', 'read', 'graph', 'modules', 'drawn'])
     if (stages.indexOf(stage) < 0)

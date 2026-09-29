@@ -836,13 +836,30 @@ function pvGaveUp(wasOpen) {
  *  leave a spinner standing over content it has already drawn. */
 function pvLoading(on) {
   const el = $('pvload');
-  if (el) el.classList.toggle('show', !!on);
-  // **The pane comes with it.** A link from another tab is the case that made this necessary: the
-  // tab change closes the pane, and the read that follows is the longest part of the wait - so the
-  // spinner was being drawn inside something that was not on screen, and the reader watched an empty
-  // panel instead. Reported: «clicking one of the functions listed in a connection also takes time
-  // before it opens the Functions tab and lands on the one selected».
-  if (on) { $('preview').classList.add('show'); $('resizer').classList.add('show'); }
+  if (!el) return;
+  el.classList.toggle('show', !!on);
+  // **How long it has been reading, which is a number and not a verdict.** A read that will never
+  // return and one that is merely slow look the same behind a spinner, and the reader has no way to
+  // tell «this is taking a moment» from «this is stuck». The seconds appear only after two of them,
+  // so an ordinary open - milliseconds - never shows one. What it must not do is explain itself: a
+  // slow read has several causes and naming the wrong one is the failure every empty state here is
+  // built to avoid, so it says the number and stops there.
+  //
+  // The timer hangs off the element it writes into rather than off a module-level variable: there is
+  // one overlay, it is the thing being updated, and a second opener cannot then leave a first one's
+  // interval running behind it.
+  if (el._tick) { clearInterval(el._tick); el._tick = null; }
+  const secs = el.querySelector('.pvsec');
+  if (secs) secs.textContent = '';
+  if (!on) return;
+  // The pane comes with it: a link from another tab closes the pane before the longest part of the
+  // wait, so the spinner was being drawn inside something that was not on screen.
+  $('preview').classList.add('show'); $('resizer').classList.add('show');
+  const t0 = Date.now();
+  el._tick = setInterval(() => {
+    const n = Math.floor((Date.now() - t0) / 1000);
+    if (secs) secs.textContent = n >= 2 ? ` ${n}s` : '';
+  }, 500);
 }
 function showPreview(byClick) {
   pvLoading(false);

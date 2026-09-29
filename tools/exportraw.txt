@@ -99,6 +99,7 @@ apps/crm/export.js	_mdCell(wfCrit(rel.criteria))
 apps/crm/export.js	_mdCell(what)
 apps/crm/export.js	_pick(f.picklist, 12, _mdCell)
 apps/crm/export.js	_pick(fl.picklist, 12, esc)
+apps/crm/export.js	_readFns
 apps/crm/export.js	a.field_label || a.field
 apps/crm/export.js	a.field_type ? ' (' + a.field_type + ')' : ''
 apps/crm/export.js	a.function_api_name || a.name || ''
