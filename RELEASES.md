@@ -71,6 +71,7 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | crm | 2.0.0 | `crm-v2.0.0` | `93060644b14fd6f66eb5742b6b8beb90a83d531f` | `01e686f6b1b85631e4fca75a6486bbe0678522473fe4a6c00070f4279e8ab72a` |
 | analytics | 2.0.0 | `analytics-v2.0.0` | `77b87570f19de737c3890d743c12a1a8aac21ce6` | `0d909d02a542a2f527359a410abadcd94859679e68fba6230f46855437775ccf` |
 | analytics | 2.0.1 | `analytics-v2.0.1` | `d80e1c142d55a9c51bb43520857597122bfae125` | `06bba044eb3330070b2775fb21e10b86585ed7bd4540dc57b1fa61cd4b4060b2` |
+| crm | 2.0.1 | `crm-v2.0.1` | `965e532df5215340172cc16a029f588c9442a50e` | `497cfa16a6a3c897eb7c982f8cd47ace0813db272a36fe62b3fd2670d951a399` |
 
 ## What this table cannot tell you, and why
 
