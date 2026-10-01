@@ -1,13 +1,20 @@
 {
   "_": "What is on the Store listing right now. Written by hand at submission, like the RELEASES.md row - the upload is a manual step and nothing here can observe it. `python3 tools/shots.py` prints the digest of the current set and says whether it still matches this one.",
-  "version": "2.0.1",
-  "digest": "02d4a8211bd7e201",
+  "version": "2.0.2",
+  "digest": "982bdb472b200d0a",
   "sources": {
-    "analytics-panel": "0ed8cc98ff78f358",
-    "analytics-columns": "a0300d31a678c063",
-    "analytics-lineage": "69633ccb4f218308",
-    "analytics-er": "1718ea4176a86283",
-    "analytics-health": "9556d786bf34ddc5"
+    "analytics-panel": "42c1a9b09dae47cc",
+    "analytics-columns": "112a98e02787d059",
+    "analytics-lineage": "47abe7237745b9bd",
+    "analytics-er": "0861c90da7ea7f42",
+    "analytics-health": "94dda55b6bc75a65"
+  },
+  "pixels": {
+    "1.png": "f30a4abb11e1bc57",
+    "2.png": "1401b5026d7feebc",
+    "3.png": "0018617c1f2412ae",
+    "4.png": "7805a4ca4a626198",
+    "5.png": "58e679422226db0f"
   },
   "files": [
     "1.png",
@@ -16,12 +23,5 @@
     "4.png",
     "5.png"
   ],
-  "folder": "dist/store/analytics/images/",
-  "pixels": {
-    "1.png": "f30a4abb11e1bc57",
-    "2.png": "1401b5026d7feebc",
-    "3.png": "0018617c1f2412ae",
-    "4.png": "7805a4ca4a626198",
-    "5.png": "58e679422226db0f"
-  }
+  "folder": "dist/store/analytics/images/"
 }
