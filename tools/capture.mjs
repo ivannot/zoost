@@ -66,6 +66,15 @@ const evaluate = async (expression) => (await to('Runtime.evaluate', {
 if (arg2 === '--probe') {
   process.stdout.write((await evaluate('[innerWidth, innerHeight]')).join('x'));
 } else {
+  // **The page is told it has the focus, because in this harness it does not.** A target created
+  // through `Target.createTarget` is not the browser's focused document, and Chrome withholds the
+  // keyboard-focus state from a document that is not focused: `el.focus({ focusVisible: true })`
+  // leaves `document.activeElement` on the element and `:focus-visible` matching nothing. So the
+  // probe's focus-ring case could not reach the state it measures, and failed saying the ring could
+  // not be measured - a sentence about the product, caused by the driver. Measured rather than
+  // argued: the same call on a page loaded directly answers `true`, and the panel answered
+  // `documentHasFocus=false`.
+  await to('Emulation.setFocusEmulationEnabled', { enabled: true });
   await to('Page.enable');
   // What the page says about itself while it draws. Two things are collected and neither used to be:
   // an uncaught exception, and the title the stubs write when their click script throws

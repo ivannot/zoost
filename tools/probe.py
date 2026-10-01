@@ -1297,10 +1297,26 @@ CRM = """
     // background, the CRM accent 5.10:1 and the Analytics accent 4.19:1. The bar is the 3:1 asked of
     // a non-text indicator, which refuses the default and passes both products.
     {
-      const el = document.querySelector('button:not(:disabled)');
-      if (!el) say('no enabled control to focus - the panel is not in the state this case assumes');
+      // **The first enabled button in the document is not necessarily one on screen**, and focus does
+      // not go to an element that is not. This picked whichever button came first in the markup, so
+      // the day one of the hidden views' controls got there first the step failed saying the ring
+      // could not be measured - a sentence about the product, describing the driver sampling instead
+      // of asking. The panel is asked which controls are actually drawn, the way the click guard at
+      // the top of this file asks it.
+      const onScreen = (b) => {
+        const cs = getComputedStyle(b);
+        return b.getClientRects().length && cs.visibility !== 'hidden' && cs.display !== 'none';
+      };
+      const el = [...document.querySelectorAll('button:not(:disabled)')].find(onScreen);
+      if (!el) say('no enabled control is on screen to focus - the panel is not in the state this case assumes');
+      // Blurred first: `focus()` on the element that already has focus is a no-op in some browsers,
+      // and the hint goes with it.
+      el.blur();
       el.focus({ focusVisible: true });
-      if (!el.matches(':focus-visible')) say('a focused control does not match :focus-visible, so no ring can be measured');
+      if (!el.matches(':focus-visible'))
+        say('a focused control does not match :focus-visible, so no ring can be measured: '
+            + (el.id || el.className || el.tagName) + ', active=' + (document.activeElement === el)
+            + ', documentHasFocus=' + document.hasFocus());
       const rgb = (s) => (String(s).match(/\\d+(\\.\\d+)?/g) || []).slice(0, 3).map(Number);
       const lum = (c) => {
         const f = c.map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
@@ -1749,10 +1765,26 @@ AN = """
     // This product's accent is the pink one and reads 4.19:1 where the CRM's blue reads 5.10:1 -
     // both above the 3:1 a non-text indicator is asked for, and the browser default is 1.02:1.
     {
-      const el = document.querySelector('button:not(:disabled)');
-      if (!el) say('no enabled control to focus - the panel is not in the state this case assumes');
+      // **The first enabled button in the document is not necessarily one on screen**, and focus does
+      // not go to an element that is not. This picked whichever button came first in the markup, so
+      // the day one of the hidden views' controls got there first the step failed saying the ring
+      // could not be measured - a sentence about the product, describing the driver sampling instead
+      // of asking. The panel is asked which controls are actually drawn, the way the click guard at
+      // the top of this file asks it.
+      const onScreen = (b) => {
+        const cs = getComputedStyle(b);
+        return b.getClientRects().length && cs.visibility !== 'hidden' && cs.display !== 'none';
+      };
+      const el = [...document.querySelectorAll('button:not(:disabled)')].find(onScreen);
+      if (!el) say('no enabled control is on screen to focus - the panel is not in the state this case assumes');
+      // Blurred first: `focus()` on the element that already has focus is a no-op in some browsers,
+      // and the hint goes with it.
+      el.blur();
       el.focus({ focusVisible: true });
-      if (!el.matches(':focus-visible')) say('a focused control does not match :focus-visible, so no ring can be measured');
+      if (!el.matches(':focus-visible'))
+        say('a focused control does not match :focus-visible, so no ring can be measured: '
+            + (el.id || el.className || el.tagName) + ', active=' + (document.activeElement === el)
+            + ', documentHasFocus=' + document.hasFocus());
       const rgb = (s) => (String(s).match(/\\d+(\\.\\d+)?/g) || []).slice(0, 3).map(Number);
       const lum = (c) => {
         const f = c.map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
