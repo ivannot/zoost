@@ -68,6 +68,29 @@ async function loadGraph(op = beginWorkspaceOp()) {
   try { summary = JSON.parse(await op.read(META_INDEX)); } catch (_) {}
   const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   let read = 0;
+  // **A line this function writes is a line this function takes down.** The progress below is said
+  // into the status bar, which belongs to whoever called - and one caller writes no closing line at
+  // all: `attachFnStats()` enriches the Functions rows and ends in `catch (_) {}`, by design, because
+  // the stats are an enrichment and the tree works without them. Silence there was fine while this
+  // walk was silent too; the moment it spoke, «Reading function sources - 40 so far…» stayed on
+  // screen with its spinner turning, for ever, and the panel read as busy with nothing happening.
+  // Reported with the picture, and the reader's own diagnosis was exactly right: nothing was
+  // happening, it was the sentence that would not leave.
+  //
+  // So the line is undone against what was on screen before it: restored only when the status is
+  // still the last thing *this* walk said, which is what proves nobody else has written since. Not
+  // through `op.say`, because the workspace may have moved - that is the case where the stale line
+  // most needs clearing, and `say` is silent exactly then.
+  let said = null, before = null;
+  // `stxt` and nothing else: the two products name this element differently, and the defensive pair
+  // belongs to the driver that reads both. Here it reached for an id this app does not have - which
+  // is the class `callcheck` and the id case exist for, and which they caught on the first run.
+  const statusNow = () => (($('stxt') || {}).textContent || '');
+  const undoProgress = () => {
+    if (said !== null && statusNow() === said && before) setStatus(before.text, before.kind);
+    said = null;
+  };
+  try {
   for await (const p of walk(op.root)) {
     if (!op.current()) throw new Error(WS_MOVED);
     if (!p.endsWith('.dg')) continue;
@@ -94,10 +117,15 @@ async function loadGraph(op = beginWorkspaceOp()) {
     // the rule this repository already applies to its own tools, applied to the product. No total:
     // the walk is a stream and does not know one, and inventing a denominator would be worse than
     // having none.
-    if (read % 20 === 0) op.say(`Reading function sources - ${read} so far\u2026`, 'busy');
+    if (read % 20 === 0) {
+      if (said === null) before = { text: statusNow(), kind: ($('status') || {}).className || '' };
+      said = `Reading function sources - ${read} so far\u2026`;
+      op.say(said, 'busy');
+    }
     const dg = await op.read(p); let meta = {}; try { meta = JSON.parse(await op.read(p.replace(/\.dg$/, '.meta.json'))); } catch {}
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }
+  } finally { undoProgress(); }
   const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs, _modules: n._modules } : n)));
   // **How much of the org this drawing is of.** The graph is built from the `.dg` files on disk, and
   // a function that never downloaded - the ones in `failures/` - is not a node at all. So it makes

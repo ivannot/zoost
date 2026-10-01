@@ -3338,6 +3338,24 @@ CRM_CHIP = CRM.split('(async () => {')[0] + """(async () => {
   if ($('pvload').classList.contains('show'))
     bail('the reading overlay was left standing after the tab changed');
 
+  // **A line the panel writes is a line the panel takes down.** The graph walk reports how far it
+  // has got, and one of its callers - the Functions rows' stats - ends in `catch (_) {}` and writes
+  // no closing line, by design. So «Reading function sources - 40 so far…» stayed on screen with its
+  // spinner turning, for ever: reported with a picture, and «the feeling is that nothing is
+  // happening and it is just the sentence that will not go» was the right diagnosis.
+  //
+  // The sample's summary covers every function, so the walk reads nothing and says nothing - which
+  // is why no scenario had ever seen this. `distrustSummary` is what the product sets when a pull
+  // has moved files under it, and it is what makes this walk actually read.
+  const statusText = () => (($('stxt') || $('statustext')) || {}).textContent || '';
+  distrustSummary = true;
+  graphCache = null;
+  await ensureGraph(beginWorkspaceOp());
+  await settle('the graph build never settled');
+  if (/so far/.test(statusText()) || $('status').className === 'busy')
+    bail('the graph build left its own progress line standing: ' + JSON.stringify(statusText())
+         + ' kind=' + $('status').className);
+
   // **And a chip that names something this mirror does not have.** The sample's functions are all
   // present, Deluge and downloaded, so the happy path above passes with or without the four
   // questions - which makes it a scenario that cannot fail. This half is the one that can: a
