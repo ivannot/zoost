@@ -285,6 +285,13 @@ const MSG = {
   // ↻ Refresh both re-grant, and both are disabled while no workspace is open - so this sentence
   // used to point the reader at a grey control. A click anywhere in the panel does it.
   folder: 'Folder access is not granted - click anywhere in this panel to restore it.',
+  // **A wait that looks like a freeze.** Chrome's permission dialog is anchored to a window of its
+  // own choosing, and Zoost is a detached popup: reported from a real machine, the prompt opened
+  // *behind* the panel, which sat there answering nothing while the reader clicked it again and
+  // again. Nothing in the page can see that dialog - there is no API for «a prompt is open», let
+  // alone for where it is - but the panel knows it has asked and has not been answered, and saying
+  // that is the whole of what can honestly be said.
+  grantPending: 'Chrome is asking about the working folder - if you cannot see the dialog, look behind this window.',
   rootLater: 'The working folder changed in Settings - this panel will move to it when the pull finishes.',
   // Settings is a separate tab and nothing disables it while a pull runs - it was believed to be
   // disabled, and it is not. A pull is one act, decided when it starts, so a preference saved

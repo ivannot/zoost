@@ -73,6 +73,7 @@ apps/analytics/options.js	saveKeys	dirty
 apps/analytics/options.js	saveKeys	ownWrite
 apps/analytics/workbench.js	analyticsFrameId	_afCandidates
 apps/analytics/workbench.js	analyticsFrameId	_afFrame
+apps/analytics/workbench.js	askForGrant	grantInFlight
 apps/analytics/workbench.js	createSampleWorkspace	sampleBusy
 apps/analytics/workbench.js	createWorkspaceForContext	dir
 apps/analytics/workbench.js	delWorkspace	bound
@@ -164,12 +165,11 @@ apps/crm/workbench.js	applySettingsChange	prefsSavedDuringPull
 apps/crm/workbench.js	applySettingsChange	root
 apps/crm/workbench.js	applySettingsChange	zohoDc
 apps/crm/workbench.js	takeRecheck	tabPrefs
+apps/crm/workspace-controller.js	askForGrant	grantInFlight
 apps/crm/workspace-controller.js	createSampleWorkspace	sampleBusy
 apps/crm/workspace-controller.js	grantRoot	rootGranted
 apps/crm/workspace-controller.js	loadWorkspaces	dir
 apps/crm/workspace-controller.js	loadWorkspaces	rootGranted
-apps/crm/workspace-controller.js	loadWorkspaces	sel
-apps/crm/workspace-controller.js	loadWorkspaces	wsList
 apps/crm/workspace-controller.js	onWsdel	currentPath
 apps/crm/workspace-controller.js	pickRoot	root
 apps/crm/workspace-controller.js	pickRoot	rootGranted

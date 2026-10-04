@@ -135,6 +135,13 @@ READS = {
     # The panel records the stages with their elapsed time (`openTrace`), and this reads the last few
     # back. A reading, like every other entry here: it takes nothing and changes nothing.
     'opens': "(window.__zoostOpenTrace || []).slice(-14).join(' | ') || 'no open recorded yet'",
+    # **Where Chrome's permission dialog went.** It opened behind the Zoost window on a real machine,
+    # and nothing in a page can see that prompt - but while `requestPermission()` is pending the panel
+    # samples whether this document still has the focus, and that is the one signal that would let the
+    # sentence say «it opened in another window» rather than «look behind this one». Read back here so
+    # the next report comes with a measurement instead of a guess.
+    'grant': ("(window.__zoostGrantFocus || []).slice(-3).join(' | ')"
+              " || 'no permission request recorded yet'"),
     # Which build is actually loaded in front of the reader - asked before believing what `opens`
     # says, because «nothing recorded» reads identically whether the panel has not been used or the
     # window is still running the copy from before the instrument existed. An unpacked extension

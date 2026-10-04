@@ -201,6 +201,43 @@ function sayWhyDisabled() {
 
 // Re-granting access to a folder we already know must NOT reopen the file picker: a lapsed
 // permission is not a request to choose a different folder. This is one click, no OS dialog.
+/** The one grant in flight, shared by everybody who asks while it is.
+ *
+ *  Reported with a picture: the Chrome permission prompt opened *behind* the Zoost window, the panel
+ *  looked frozen, and every further click started another grant. They all waited on the same dialog,
+ *  so the moment «Allow on every visit» was pressed they all resolved at once - and each one went on
+ *  to reload the workspace list, which is how the org dropdown came back with as many copies of every
+ *  workspace as there had been clicks. His own count: «the number of duplicates matches the number of
+ *  times I clicked».
+ *
+ *  Both halves of that are fixed, and this is the first: one request, one continuation, however many
+ *  clicks arrive while the dialog is up. The second is the ordering token on `loadWorkspaces`, which
+ *  is what makes the list immune to a second caller whoever it turns out to be. */
+let grantInFlight = null;
+async function askForGrant() {
+  // Said only if the dialog is actually keeping us waiting: an answered-at-once grant - the ordinary
+  // case - must put nothing on screen, the same rule the reading overlay follows with its seconds.
+  const slow = setTimeout(() => setStatus(MSG.grantPending, 'busy'), 1200);
+  // While it is pending, whether this document still has the focus is sampled: if Chrome anchors the
+  // prompt elsewhere the answer flips, and that would let the sentence above say «it opened in
+  // another window» instead of «look behind». Recorded rather than assumed - `tools/livebrowser.py`
+  // reads it back - because nobody has measured yet what the real prompt does to it.
+  const focus = [];
+  const watch = setInterval(() => focus.push(document.hasFocus() ? 'focused' : 'elsewhere'), 250);
+  try { return await ensurePerm(root); }
+  finally {
+    clearTimeout(slow); clearInterval(watch); grantInFlight = null;
+    try {
+      const buf = (window.__zoostGrantFocus || (window.__zoostGrantFocus = []));
+      buf.push(focus.join(',') || 'answered before the first sample');
+      if (buf.length > 10) buf.splice(0, buf.length - 10);
+    } catch (_) {}
+  }
+}
+function grantOnce() {
+  if (!grantInFlight) grantInFlight = askForGrant();
+  return grantInFlight;
+}
 async function grantRoot() {
   // The first click can race the asynchronous startup read.  Wait for that read before deciding
   // that the user needs a new folder; otherwise Chrome shows the initial two-button picker instead
@@ -208,10 +245,11 @@ async function grantRoot() {
   await restoreRoot();
   if (!root) { await pickRoot(); return; }
   try {
-    if (!(await ensurePerm(root))) { setStatus('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
+    if (!(await grantOnce())) { setStatus('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
+    const first = !rootGranted;   // a click elsewhere may have been woken by the same dialog
     rootGranted = true;
     setStatus(`Access granted to \u00ab${root.name}\u00bb.`, 'ok');
-    await loadWorkspaces();
+    if (first) await loadWorkspaces();
   } catch (e) { setStatus('Grant failed: ' + e.message, 'bad'); }
 }
 async function pickRoot() {
@@ -826,8 +864,22 @@ function selPlaceholder(sel, text) {
   sel.replaceChildren(o);
 }
 
+/** Which load owns the list. Every other long read in this panel has one of these - the tree, the
+ *  preview, the workspace activation - and this one had none, which is the whole of the duplicate
+ *  dropdown: `wsList` is a module-level array written after four awaits, so two runs enumerate into
+ *  whichever array is current and each then appends an option for everything it saw. The question
+ *  this repository asks first of any change - what global is written after an await - asked at last
+ *  of the function that had never been asked it.
+ *
+ *  Reported with a picture: the Chrome permission prompt opened behind the Zoost window, the panel
+ *  looked frozen, and every further click started another grant and another load. «The number of
+ *  duplicates matches the number of times I clicked.» */
+let wsLoad = 0;
 async function loadWorkspaces() {
+  const mine = ++wsLoad;
+  const current = () => mine === wsLoad;
   await restoreRoot();
+  if (!current()) return;
   const sel = $('ws'); sel.innerHTML = '';
   wsList = [];
   if (!root) {
@@ -837,6 +889,7 @@ async function loadWorkspaces() {
     renderBlocked(); await refreshContext(); return;
   }
   rootGranted = await hasPerm(root);
+  if (!current()) return;
   if (!rootGranted) {
     selPlaceholder(sel, `${root.name} - access not granted`);
     switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
@@ -844,6 +897,7 @@ async function loadWorkspaces() {
     renderBlocked(); await refreshContext(); return;
   }
   const base = await appRoot(false);
+  if (!current()) return;
   // The enumeration itself can fail - a handle whose permission lapsed, a folder moved or removed
   // since the browser stored it. Unguarded, that threw out of here and left the panel with no
   // workspace list and no explanation. A folder we cannot read is a state to report, not a crash.
@@ -853,6 +907,8 @@ async function loadWorkspaces() {
         if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
         let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
         if (!cfg || !cfg.org) continue;
+        // Overtaken mid-enumeration: the array being filled is not ours any more.
+        if (!current()) return;
         wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, cfg, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance, sample: !!cfg.sample } });
       }
     } catch (e) {
@@ -895,6 +951,10 @@ async function loadWorkspaces() {
   // which is how deleting the sample stops the button offering to open one that is gone.
   noteSampleWs((wsList.find((w) => w.binding && w.binding.sample) || {}).id || null);
   const active = await window.idbHandle.get('activeWs');
+  if (!current()) return;
+  // Written in one go, after the last await: the options are the one thing a reader sees, and
+  // an overtaken run that has already appended half of them is what a duplicate list is made of.
+  sel.innerHTML = '';
   wsList.forEach((w) => {
     const o = document.createElement('option');
     o.value = w.id; o.textContent = wsOptionText(w); o.title = wsOptionTitle(w);
@@ -957,7 +1017,10 @@ async function regrantOnAnyClick(e) {
   // per click.
   if (!root) await restoreRoot();
   if (!root || rootGranted) return;
-  try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
+  // **And only the first of them reloads.** They were all woken by the same dialog, so without this
+  // the one grant still became one workspace reload per click - which is the half of the defect the
+  // reader actually saw. Asked again after the await, because that is where the answer changed.
+  try { if (await grantOnce() && !rootGranted) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
 }
 /** What the workspace list shows, and what it must never stop showing.
  *

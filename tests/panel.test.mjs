@@ -167,6 +167,15 @@ function sliceAppConst(app, name) {
 // A historical call site may still name workbench.js while its subject has moved into a shipped
 // panel slice. Keep those tests about the composed application, not about yesterday's file layout;
 // a subject missing from every loaded script still throws through sliceApp/sliceAppConst.
+// The page furniture a grant now touches: it starts a timer so a slow dialog can be announced, and
+// samples `document.hasFocus()` while it waits. A context without these is not a smaller panel - it
+// is one the product throws in, and the throw lands in a `catch (_) {}` where it looks like «nothing
+// happened». That is what turned four of these cases red the first time.
+const grantPageBits = () => ({
+  setTimeout: () => 0, clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {},
+  document: { hasFocus: () => true }, window: {}, MSG: { grantPending: 'asking' },
+  setStatus: () => {}, status: () => {},
+});
 function sliceFn(rel, name) {
   const panel = /^apps\/(crm|analytics)\/workbench\.js$/.exec(rel);
   return panel ? sliceApp(panel[1], name) : sliceFileFn(rel, name);
@@ -16569,7 +16578,11 @@ test('crm: a folder that cannot be read says so, and nothing writes over it', as
       window: { idbHandle: { get: async () => null, set: async () => {} } },
       emptyReason: () => '', renderTree: () => {}, refreshContext: async () => {},
     };
-    const { loadWorkspaces } = load([sliceFn('apps/crm/workbench.js', 'loadWorkspaces')], g);
+    // The load owns an ordering token now - a superseded run must write nothing - so the token is
+    // lifted with it rather than handed in: a `wsLoad: 0` from the harness would keep this case
+    // green over a function that had stopped having one.
+    const { loadWorkspaces } = load([sliceConst('apps/crm/workbench.js', 'wsLoad'),
+                                     sliceFn('apps/crm/workbench.js', 'loadWorkspaces')], g);
     try { await loadWorkspaces(); } catch (_) { /* the stub is not a panel; what is asserted is what it said */ }
     return said;
   };
@@ -23481,13 +23494,20 @@ for (const [app, loader] of [['crm', 'loadWorkspaces'], ['analytics', 'refreshWo
   test(`${app}: a click anywhere waits for the remembered folder instead of dropping it`, async () => {
     const calls = [];
     const g = {
+      ...grantPageBits(),
       root: null, rootGranted: false,
       restoreRoot: async () => { calls.push('restoreRoot'); g.root = { name: 'Zoost' }; },
       ensurePerm: async () => { calls.push('ensurePerm'); return true; },
       [loader]: async () => { calls.push(loader); },
       Promise,
     };
-    const { regrantOnAnyClick } = load([sliceApp(app, 'regrantOnAnyClick')], g);
+    // The grant goes through the shared one now - one request for however many clicks arrive while
+    // Chrome's dialog is up - so the real `grantOnce` and the promise it holds are lifted with the
+    // handler. Stubbing them here would leave this case green over a panel that had stopped sharing.
+    const { regrantOnAnyClick } = load([sliceAppConst(app, 'grantInFlight'),
+                                        sliceApp(app, 'askForGrant'),
+                                        sliceApp(app, 'grantOnce'),
+                                        sliceApp(app, 'regrantOnAnyClick')], g);
     // A click on nothing in particular - `closest` answers null, which is every ordinary click in
     // the panel and the case the shortcut exists for.
     await regrantOnAnyClick({ target: { closest: () => null } });
@@ -23502,13 +23522,20 @@ for (const [app, loader] of [['crm', 'loadWorkspaces'], ['analytics', 'refreshWo
     // and refreshes the workspace list. Closing the race must not buy it with that, per click.
     const calls = [];
     const g = {
+      ...grantPageBits(),
       root: { name: 'Zoost' }, rootGranted: false,
       restoreRoot: async () => { calls.push('restoreRoot'); },
       ensurePerm: async () => { calls.push('ensurePerm'); return true; },
       [loader]: async () => {},
       Promise,
     };
-    const { regrantOnAnyClick } = load([sliceApp(app, 'regrantOnAnyClick')], g);
+    // The grant goes through the shared one now - one request for however many clicks arrive while
+    // Chrome's dialog is up - so the real `grantOnce` and the promise it holds are lifted with the
+    // handler. Stubbing them here would leave this case green over a panel that had stopped sharing.
+    const { regrantOnAnyClick } = load([sliceAppConst(app, 'grantInFlight'),
+                                        sliceApp(app, 'askForGrant'),
+                                        sliceApp(app, 'grantOnce'),
+                                        sliceApp(app, 'regrantOnAnyClick')], g);
     await regrantOnAnyClick({ target: { closest: () => null } });
     assert.ok(!calls.includes('restoreRoot'),
               `${app}: a handle already in hand was read again, on a listener that runs per click`);
@@ -23518,6 +23545,7 @@ for (const [app, loader] of [['crm', 'loadWorkspaces'], ['analytics', 'refreshWo
   test(`${app}: the folder button asks for the remembered handle, never the picker`, async () => {
     const calls = [];
     const g = {
+      ...grantPageBits(),
       root: null, rootGranted: false,
       restoreRoot: async () => { calls.push('restoreRoot'); g.root = { name: 'Zoost' }; },
       grantRoot: async () => { calls.push('grantRoot'); },
@@ -24705,3 +24733,91 @@ test('the bridge asks for pipelines only where a module has stages, and a pull t
   }
 
 }
+
+// ---------------------------------------------------------------------------------------------
+// Clicks that arrive while Chrome's permission dialog is open are one grant, not one each.
+//
+// Reported with a picture. The prompt opened *behind* the Zoost window - the first time this user
+// had ever been offered «Allow on every visit» - so the panel looked frozen and he clicked again,
+// and again. Every click started its own `requestPermission()`, they all waited on that one dialog,
+// and the moment he answered they all resolved together: each then reloaded the workspace list, and
+// the org dropdown came back carrying every workspace as many times as he had clicked. His own
+// count, and it is the measurement that named the cause: «the number of duplicates matches the
+// number of times I clicked».
+test('crm: every click during one permission dialog is one grant and one reload', async () => {
+  const rel = 'apps/crm/workspace-controller.js';
+  let asked = 0, loads = 0, release = null;
+  const g = {
+    ...grantPageBits(),
+    console, Promise, Boolean,
+    root: { name: 'zoost' }, rootGranted: false,
+    restoreRoot: async () => {},
+    // The dialog: one promise, held open, exactly as Chrome holds the panel while the prompt is up.
+    ensurePerm: () => { asked++; return new Promise((r) => { release = r; }); },
+    loadWorkspaces: async () => { loads++; },
+  };
+  // The in-flight promise is lifted with them, not stubbed: it *is* the mechanism under test, and a
+  // `grantInFlight: null` handed in by the harness would keep this case passing after the product
+  // stopped having one.
+  const m = load([sliceConst(rel, 'grantInFlight'), sliceFn(rel, 'askForGrant'),
+                  sliceFn(rel, 'grantOnce'), sliceFn(rel, 'regrantOnAnyClick')], g);
+  const click = { target: { closest: () => null } };
+
+  const three = [m.regrantOnAnyClick(click), m.regrantOnAnyClick(click), m.regrantOnAnyClick(click)];
+  assert.equal(asked, 1,
+               `three clicks raised ${asked} permission requests - they all wait on the same dialog, `
+               + 'so they all come back together and each one reloads the list');
+  release(true);
+  await Promise.all(three);
+  assert.equal(loads, 1,
+               `the workspace list was reloaded ${loads} times for one grant - which is how it came `
+               + 'back with every workspace duplicated once per click');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Two loads of the workspace list leave one list, not two.
+//
+// The other half of the duplicate dropdown. `wsList` is a module-level array written after four
+// awaits and the options were appended as they were found, so two runs enumerated into whichever
+// array was current and each then appended an option for everything it had seen. The shared grant
+// stops the *reported* way of starting two; this stops a second one from whatever starts it next -
+// the five-second poll, a folder change, a reload after a pull.
+test('crm: two workspace loads at once leave one list', async () => {
+  const folders = ['alpha', 'beta', 'gamma'];
+  const options = [];
+  const sel = {
+    set innerHTML(v) { if (v === '') options.length = 0; },
+    get innerHTML() { return ''; },
+    appendChild: (o) => options.push(o.value),
+  };
+  const g = {
+    console, Object, Promise, Set, JSON, document: { createElement: () => ({}) },
+    root: { name: 'sample', values: async function* () {} },
+    rootGranted: true, wsList: [], APP_DIR: 'crm', APP_DIRS: ['crm', 'analytics'], CFG: '.zoost.json',
+    restoreRoot: async () => {},
+    $: () => sel, selPlaceholder: () => {}, switchDirtyWorkspace: () => {}, forgetDirs: () => {},
+    setEnabled: () => {}, updateWsButtons: () => {}, byWsLabel: () => 0,
+    readJsonIn: async (e) => ({ org: e.name, base: 'https://crm.zoho.eu', instance: e.name }),
+    setStatus: () => {}, dir: null, hasPerm: async () => true, ensurePerm: async () => true,
+    renderBlocked: () => {}, noteSampleWs: () => {},
+    wsOptionText: (w) => w.id, wsOptionTitle: () => '',
+    // Every entry is a yield and an await, which is where two runs interleave.
+    appRoot: async () => ({ values: async function* () {
+      for (const name of folders) { await Promise.resolve(); yield { kind: 'directory', name }; }
+    } }),
+    dropWorkspaceState: () => {}, renderTabPrefs: () => {}, activate: async () => {},
+    window: { idbHandle: { get: async () => null, set: async () => {} } },
+    emptyReason: () => '', renderTree: () => {}, refreshContext: async () => {},
+  };
+  const { loadWorkspaces } = load([sliceConst('apps/crm/workbench.js', 'wsLoad'),
+                                   sliceFn('apps/crm/workbench.js', 'loadWorkspaces')], g);
+
+  await Promise.all([loadWorkspaces(), loadWorkspaces()]);
+
+  assert.deepEqual(options, folders.map((f) => 'org:' + f),
+                   `two loads at once left ${options.length} options for ${folders.length} workspaces: `
+                   + JSON.stringify(options));
+  assert.equal(g.wsList.length, folders.length,
+               `the list the rest of the panel reads holds ${g.wsList.length} entries for `
+               + `${folders.length} workspaces`);
+});

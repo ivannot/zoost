@@ -36,6 +36,7 @@ applyFilter	304d49fb4554	304d49fb4554	identical
 applyGraph	c75b1a8f46c0	55a0fdd36291	divergent
 applySizeFloor	cb5441fad7d2	cb5441fad7d2	identical
 asideWidth	e38e10836248	e38e10836248	identical
+askForGrant	adfd3de5716f	99fc49082685	divergent
 askScope	d27f77a79c58	5a0012715e71	divergent
 askTwin	cf520e4a0d60	cf520e4a0d60	identical
 beginLoad	b73bd5f5ce9c	b73bd5f5ce9c	identical
@@ -149,7 +150,8 @@ fitFindFilter	e9a480e21d5c	e9a480e21d5c	identical
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 forgetWindow	c1c318120174	c1c318120174	identical
 friendlyError	edab5c06776e	edab5c06776e	identical
-grantRoot	46107633412e	50f056678e38	divergent
+grantOnce	ac62295ea7bd	ac62295ea7bd	identical
+grantRoot	4e77676afb41	e1fdda68c3d1	divergent
 graphForWindow	50e566ea6668	9db12f0021b7	divergent
 graphStat	1d87798be903	0fc8a3fd40ae	divergent
 halfTheScreen	6d734256a0ee	6d734256a0ee	identical
@@ -251,7 +253,7 @@ redrawOpenViews	cf2e0a34bf88	5a6c69136e78	divergent
 refRow	854405aca965	71aac84ad447	divergent
 refreshContext	0e8262186e8a	6402002231a1	divergent
 refreshWorkspaceEntryAfterGrant	586dfc758777	0f2d6f63a189	divergent
-regrantOnAnyClick	a9a0b0e25a08	88e0cd9d72f9	divergent
+regrantOnAnyClick	1cca843a4bd9	edebbe516ea0	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	8c0a3634bad0	0071c4d7707f	divergent
 rememberActive	74f9a0e0cbc6	74f9a0e0cbc6	identical

@@ -126,6 +126,13 @@ const MSG = {
   // ↻ Refresh both re-grant, and both are disabled while no workspace is open - so this sentence
   // used to point the reader at a grey control. A click anywhere in the panel does it.
   folder: 'Folder access is not granted - click anywhere in this panel to restore it.',
+  // **A wait that looks like a freeze.** Chrome's permission dialog is anchored to a window of its
+  // own choosing, and Zoost is a detached popup: reported from a real machine, the prompt opened
+  // *behind* the panel, which sat there answering nothing while the reader clicked it again and
+  // again. Nothing in the page can see that dialog - there is no API for «a prompt is open», let
+  // alone for where it is - but the panel knows it has asked and has not been answered, and saying
+  // that is the whole of what can honestly be said.
+  grantPending: 'Chrome is asking about the working folder - if you cannot see the dialog, look behind this window.',
   narrow: 'Use a longer substring to narrow.',
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   copyFailed: 'Could not copy: ',
@@ -477,13 +484,47 @@ async function pickRoot() {
 // A stored handle whose permission lapsed needs *authorisation*, not re-selection. Asking for the
 // folder again is what made this panel more annoying than the CRM one: showDirectoryPicker() makes
 // the user navigate the filesystem, requestPermission() is a one-click prompt.
+/** The one grant in flight, shared by everybody who asks while it is - the twin's, word for word.
+ *
+ *  Reported on the Zoho CRM side with a picture: Chrome's permission prompt opened *behind* the
+ *  Zoost window, the panel looked frozen, and every further click started another grant. They all
+ *  waited on the same dialog and all resolved together the moment it was answered. There it also
+ *  duplicated the workspace dropdown; here it does not, because this panel writes its options in one
+ *  assignment rather than appending them - but N prompts and N workspace refreshes for one click is
+ *  the same defect with a milder symptom, and the twin rule is about the cause. */
+let grantInFlight = null;
+async function askForGrant() {
+  // Said only if the dialog is actually keeping us waiting: an answered-at-once grant - the ordinary
+  // case - must put nothing on screen, the same rule the reading overlay follows with its seconds.
+  const slow = setTimeout(() => status(MSG.grantPending, 'busy'), 1200);
+  // While it is pending, whether this document still has the focus is sampled: if Chrome anchors the
+  // prompt elsewhere the answer flips, and that would let the sentence above say «it opened in
+  // another window» instead of «look behind». Recorded rather than assumed - `tools/livebrowser.py`
+  // reads it back - because nobody has measured yet what the real prompt does to it.
+  const focus = [];
+  const watch = setInterval(() => focus.push(document.hasFocus() ? 'focused' : 'elsewhere'), 250);
+  try { return await ensurePerm(root); }
+  finally {
+    clearTimeout(slow); clearInterval(watch); grantInFlight = null;
+    try {
+      const buf = (window.__zoostGrantFocus || (window.__zoostGrantFocus = []));
+      buf.push(focus.join(',') || 'answered before the first sample');
+      if (buf.length > 10) buf.splice(0, buf.length - 10);
+    } catch (_) {}
+  }
+}
+function grantOnce() {
+  if (!grantInFlight) grantInFlight = askForGrant();
+  return grantInFlight;
+}
 async function grantRoot() {
   if (!root) { await pickRoot(); return; }
   try {
-    if (!(await ensurePerm(root))) { status('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
+    if (!(await grantOnce())) { status('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
+    const first = !rootGranted;   // a click elsewhere may have been woken by the same dialog
     rootGranted = true;
     status(`Access granted to \u00ab${root.name}\u00bb.`, 'ok');
-    await refreshWorkspaces();
+    if (first) await refreshWorkspaces();
   } catch (e) { status('Grant failed: ' + (e.message || e), 'bad'); }
 }
 async function restoreRoot() {
@@ -3934,7 +3975,10 @@ async function regrantOnAnyClick(e) {
   // per click.
   if (!root) await restoreRoot();
   if (!root || rootGranted) return;
-  try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
+  // **And only the first of them reloads.** They were all woken by the same dialog, so without this
+  // the one grant still became one workspace reload per click - which is the half of the defect the
+  // reader actually saw. Asked again after the await, because that is where the answer changed.
+  try { if (await grantOnce() && !rootGranted) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }
 document.addEventListener('click', regrantOnAnyClick, true);
 // **Any click puts the export offer away, and the line that carried it with it.** The CRM panel's
