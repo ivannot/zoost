@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">2.0.2</span> · updated <span class="dd" data-stamp="updated">1 October 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">2.0.3</span> · updated <span class="dd" data-stamp="updated">5 October 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -159,7 +159,12 @@
     profile; we have seen the same version of Chrome offer it on one machine and not on another, and
     we cannot make it appear. Zoost restores the permission on your first click anywhere
     in the panel, so normally you will not notice. If it needs you, the folder button turns amber and reads
-    <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.2" y="7.4" width="9" height="6.6" rx="1.2"/><path d="M6 7.4V4.9a2.8 2.8 0 0 1 5.6 0v1.2"/></svg> Grant access</b> - one click, and no file picker opens.</p>
+    <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.2" y="7.4" width="9" height="6.6" rx="1.2"/><path d="M6 7.4V4.9a2.8 2.8 0 0 1 5.6 0v1.2"/></svg> Grant access</b> - one click, and no file picker opens.
+    Chrome decides where to put that dialog, and it does not always put it in front: on a detached
+    window like Zoost's it can open <em>behind</em> the panel, which then sits there apparently doing
+    nothing. If a click has not been answered after a moment the status line says
+    <b>Chrome is asking about the working folder</b> and tells you to look behind the window - clicking
+    again does not help, because every click is waiting on the same dialog.</p>
 
   <h3>Naming a workspace</h3>
   <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
@@ -711,7 +716,7 @@ git commit -m "baseline"</code></pre>
   <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
 
   <figure class="shot">
-    <img src="/img/crm-export.webp?v=f74f600ca5" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-export.webp?v=63d7f1a9f1" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The export dialog with a checkbox per section and the source code marked as the sensitive one.">
     <figcaption>Chapter 11: what may leave the machine, decided once and remembered.</figcaption>
   </figure>
@@ -829,7 +834,7 @@ git commit -m "baseline"</code></pre>
   </div>
 
   <figure class="shot">
-    <img src="/img/crm-settings.webp?v=740fcb9a9d" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-settings.webp?v=69d8b6f459" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The settings page: the engine selector, the Anthropic model and key, and the OpenAI fields left empty.">
     <figcaption>Chapter 12: where the engine and the key are chosen. The passphrase, the index cap and the tool-step limit are all on this page.</figcaption>
   </figure>

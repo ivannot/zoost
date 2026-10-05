@@ -78,6 +78,7 @@ c5c4beb67ffe7d26  README.md: Zoost never reads a template's content, nor who the
 09ed735e87093ffd  apps/analytics/workbench.js: The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.
 5e10e1ec5ba2617c  apps/crm/graphview.js: Nothing in that file is on this diagram - it was saved from a different graph, or everything in it has since been renamed.
 ba89dffc50f0a566  apps/crm/graphview.js: moved \u00b7 nothing is covered
+738fe6cd32b256e8  apps/crm/workbench.js: Chrome is asking about the working folder - if you cannot see the dialog, look behind this window.
 319b0cb8c2f4e79f  apps/crm/workbench.js: Measured over ${ranked} of ${all} function(s): ${all - ranked} have no source in the mirror, so they cannot appear here at any size.
 98cc22fa0b532f24  apps/crm/workbench.js: Nothing has been read yet - run Pull all, and this fills in.
 168cb9d10ec94cab  apps/crm/workbench.js: The active tab is a different org from this workspace - nothing here reads Zoho until they match.
@@ -276,6 +277,7 @@ d526906a4512534d  site/docs-crm.html: All of it comes from what is already on yo
 d13cf25ca3a83c59  site/docs-crm.html: Chapter 10: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
 bd185851083e23ae  site/docs-crm.html: Chapter 5: in: code turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.
 a7c560aa804df643  site/docs-crm.html: Chapter 9: the catalogue, and which functions use each connection - so one that nothing uses is visible.
+75f2ab4daf538661  site/docs-crm.html: Chrome decides where to put that dialog, and it does not always put it in front: on a detached window like Zoost's it can open behind the panel, which then sits there apparently doing nothing.
 c0a970763287a425  site/docs-crm.html: Code you have commented out does not count as a call, so a function whose only mention is a disabled line is named here rather than left looking alive.
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 0d28d5f88365cf2e  site/docs-crm.html: Directories and subdirectories are preserved explicitly, even when empty; full-text search includes every file.
@@ -288,6 +290,7 @@ dda479e23ee57331  site/docs-crm.html: Filter chips hide the system related lists
 fa9cf1f809661681  site/docs-crm.html: History spans all tabs, remains available when you close the pane, and is cleared only when you change workspace so that entries from different orgs are never mixed.
 39535ffb5a94943a  site/docs-crm.html: How the arrows are found, and what that cannot see.
 f13a92a1cf15097b  site/docs-crm.html: If Zoho refuses an area, the pull says so in plain words instead of showing a status code, nothing is written for it, and its tab disappears rather than sitting there greyed out.
+7e3c90ab9f68f687  site/docs-crm.html: If a click has not been answered after a moment the status line says Chrome is asking about the working folder and tells you to look behind the window - clicking again does not help, because every click is waiting on the same dialog.
 616120c86aac644b  site/docs-crm.html: If everything still matches but the relations have changed, it says that too, because otherwise a clean-looking load would be the only thing you were told.
 75b20437b7a7b080  site/docs-crm.html: If the Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar offering to switch tab or switch workspace.
 fd6f981b5e4bff63  site/docs-crm.html: If the namespace in the source does not match the function's actual namespace, Zoost links to the only function with that name and marks the result as a deduction; if more than one function has that name, it reports the call as ambiguous instead of choosing.
@@ -630,6 +633,7 @@ d8aca002fe82ab7b  site/it/docs-crm.html: Cosa sta fallendo davvero L'audit di sa
 ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
 c4759d38fe05e15f  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei modelli e ogni altra impostazione restano; la chiave API la incolli di nuovo dalla dashboard del tuo provider.
 2e4716d3552a0532  site/it/docs-crm.html: Dopo essere uscito da un'org, quale org vuoi aprire adesso è una scelta e da qui non si deduce: un consulente con clienti su .eu , .com e .jp può benissimo volere quello che da questa macchina non ha mai aperto.
+8f08779815d43d0a  site/it/docs-crm.html: Dove mettere quel dialogo lo decide Chrome, e non sempre lo mette davanti: su una finestra staccata come quella di Zoost può aprirsi dietro il pannello, che resta lì senza fare apparentemente nulla.
 98359655a0231aaf  site/it/docs-crm.html: Due controlli si salvano da soli mentre li cambi, e te lo dicono: il data centre e il motore AI, ognuno una scelta singola senza niente da comporre.
 fbc9c046d9b5f837  site/it/docs-crm.html: Due pulsanti coprono l'altra direzione: ↺ All rimette tutto, None spegne tutto, così un clic solo riaccende la categoria che ti serve.
 5dd1c8d4764acaac  site/it/docs-crm.html: E un modulo che nessuna automazione tocca non c'è: è un'altra domanda, a cui risponde l'audit Health .
@@ -730,6 +734,7 @@ e323c43d02373e0a  site/it/docs-crm.html: Quello che resta fuori viene dichiarato
 b994eab6ec484960  site/it/docs-crm.html: Sample è l'altra via d'ingresso e non richiede nessun tab Zoho: scrive nella cartella di lavoro un workspace di dati inventati, così puoi aprire l'albero, il grafo e gli export prima di puntare Zoost su qualcosa di tuo.
 04fca40c5ce908ed  site/it/docs-crm.html: Se Zoho rifiuta un'area, il pull lo dice a parole invece di mostrare un codice di stato, per quell'area non viene scritto niente, e la sua scheda sparisce invece di restarsene lì disattivata.
 1a73785a21e943a3  site/it/docs-crm.html: Se combacia ancora tutto ma le relazioni sono cambiate, dice anche quello, perché altrimenti l'unica cosa che ti verrebbe detta è un caricamento all'apparenza pulito.
+a6e453571aa4c7c0  site/it/docs-crm.html: Se dopo un attimo il clic non ha avuto risposta, la riga di stato scrive Chrome is asking about the working folder e ti dice di guardare dietro la finestra: cliccare di nuovo non serve, perché ogni clic sta aspettando lo stesso dialogo.
 89d7620bb989706b  site/it/docs-crm.html: Se il dialogo offre Allow on every visit , scegli quella: Chrome ricorda la cartella e smette di chiedere.
 faca81db2d7500b1  site/it/docs-crm.html: Se la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho e mostra una barra che ti offre di cambiare scheda o cambiare workspace.
 e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consente, lascialo spento: tutto il resto funziona esattamente allo stesso modo.
