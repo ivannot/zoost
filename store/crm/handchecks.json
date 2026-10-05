@@ -1,44 +1,44 @@
 {
   "checks": {
     "assistant": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "The assistant answers about the org, with a real key",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "export": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "An export opens and reads as the panel reads",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "fresh-profile": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "A profile that has never seen Zoost",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "live-save": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "A function saved in Zoho reaches the mirror (Zoho CRM only)",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "own-window": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "Zoost is a window, and it is where you left it",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "passphrase": {
       "at": "2026-09-26T16:42:29+00:00",
@@ -49,36 +49,36 @@
       "version": "2.0.0"
     },
     "pull-all": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "Pull all, on a real org, from an empty workspace",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "restart": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "A full browser restart: the folder, and what you changed in Settings",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "tab-not-in-front": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "A Zoho tab that is open but not the one you are looking at",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "twin-tab": {
-      "at": "2026-10-01T12:31:14+00:00",
-      "commit": "1a3c2b1068a887919bc13d8a2abc39a5a497fbab",
-      "note": "test fatti. tutto a posto. pubblichiamo entrambe le app",
+      "at": "2026-10-05T07:50:31+00:00",
+      "commit": "a83c299fc6abc3ce86af1045707612a1dc78bb6d",
+      "note": "prove effettuate. tutto ok. procediamo con la pubblicazione di crm",
       "result": "pass",
       "title": "The other product's tab is named, and what the panel offers there",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "views-inside": {
       "at": "2026-10-01T12:31:14+00:00",
