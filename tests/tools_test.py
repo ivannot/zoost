@@ -1195,7 +1195,7 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
             self.assertIn('time.monotonic()', src, f'{tool}: nothing says how long a unit took')
             self.assertNotIn('\n    print(f"  {key:20}', src, f'{tool}: an unflushed print is back')
 
-    def test_it_says_when_the_listing_pictures_are_of_another_version(self):
+    def test_it_says_when_the_listing_pictures_are_not_the_ones_on_disk(self):
         # The screenshots on the listing are pictures of an interface, and a release that changed one
         # has to replace them. That step lived only in the routine - so it depended on somebody
         # remembering it at the end of a long day, and it was missed on exactly the release that
@@ -1203,15 +1203,54 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         # set had no recorded version at all. Reported as a rule: «it is not for me to have to ask you,
         # it is something the machine does».
         #
-        # What is asserted is the derivation, not the wording: the version the listing records
-        # against the version being tagged, and the note only when they differ - a reminder that
-        # fires every time is one nobody reads.
+        # It then asked the **version number**, which is true of every release and informative about
+        # none: on 2.0.3 it told him to re-render and re-upload five images `shots.py` had measured,
+        # pixel for pixel, as the ones already on the listing - two tools contradicting each other in
+        # one handover, and a reminder that fires every time is one nobody reads. The pictures are the
+        # question, so the pictures are asked.
         sh = (ROOT / 'tools/release.sh').read_text(encoding='utf-8')
-        self.assertIn('screenshots.json', sh, 'nothing reads what the listing carries')
-        self.assertIn('if [ "$SHOTS_VER" != "$VERSION" ]', sh,
+        self.assertIn('tools/shots.py --listing', sh, 'nothing asks what the listing carries')
+        self.assertNotIn('SHOTS_VER', sh, 'the version number is back, and it answers a different question')
+        self.assertIn('if [ -n "$SHOTS_NOTE" ]', sh,
                       'the reminder is unconditional, so it is noise on every release that needs none')
-        self.assertIn('tools/shots.py', sh, 'it does not name the command that renders them')
         self.assertIn('$SHOTS_NOTE', sh, 'the note is built and never printed')
+
+    def test_the_listing_note_is_silent_only_when_the_pictures_match(self):
+        # Asserted on real values and on both directions, because a gate that always refuses looks
+        # identical to a strict one: the same five files are compared against a record of themselves
+        # (silence) and against a record with one digest changed (a sentence naming the folder).
+        import json as _json
+        import shutil
+        import tempfile
+        import shots
+        app = 'crm'
+        source = ROOT / 'dist' / 'store' / app / 'images'
+        if not all((source / f'{n}.png').exists() for n in range(1, len(shots.STORE[app]) + 1)):
+            self.skipTest('the store set is not rendered on this machine')
+        with tempfile.TemporaryDirectory() as directory:
+            fake = Path(directory)
+            images = fake / 'dist' / 'store' / app / 'images'
+            images.mkdir(parents=True)
+            for n in range(1, len(shots.STORE[app]) + 1):
+                shutil.copy(source / f'{n}.png', images / f'{n}.png')
+            ledger = fake / 'store' / app
+            ledger.mkdir(parents=True)
+            record = {'version': '9.9.9',
+                      'pixels': shots.pixel_digests([images / f'{n}.png'
+                                                     for n in range(1, len(shots.STORE[app]) + 1)])}
+            (ledger / 'screenshots.json').write_text(_json.dumps(record), encoding='utf-8')
+            was, shots.ROOT = shots.ROOT, fake
+            try:
+                self.assertIsNone(shots.listing_note(app),
+                                  'it asks for an upload of the pictures already on the listing')
+                record['pixels']['3.png'] = '0' * 16
+                (ledger / 'screenshots.json').write_text(_json.dumps(record), encoding='utf-8')
+                note = shots.listing_note(app)
+                self.assertIsNotNone(note, 'a changed picture is not reported')
+                self.assertIn(f'dist/store/{app}/images/', note, 'it does not say what to upload')
+                self.assertIn('9.9.9', note, 'it does not say which listing it compared against')
+            finally:
+                shots.ROOT = was
 
     def test_a_missing_browser_is_a_skip_and_not_a_verdict(self):
         # `CHROME = _chrome()` ran at import and `_chrome()` exits when it finds nothing, so on a

@@ -1,13 +1,13 @@
 {
   "_": "What is on the Store listing right now. Written by hand at submission, like the RELEASES.md row - the upload is a manual step and nothing here can observe it. `python3 tools/shots.py` prints the digest of the current set and says whether it still matches this one.",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "digest": "9a7555b74d4e7b83",
   "sources": {
-    "crm-panel": "53ff824aa81b5d83",
-    "crm-modules": "7311d166d1b24443",
-    "crm-health": "8cc571de94616f83",
-    "crm-er": "874cd05a65f784a2",
-    "crm-graph": "f3e8a3d5c9c68fa7"
+    "crm-panel": "c02b4df054a0becb",
+    "crm-modules": "177cc7b85f368983",
+    "crm-health": "d1cd9c79f2b5e843",
+    "crm-er": "38607685fa5a176c",
+    "crm-graph": "ed5d15fba7942008"
   },
   "pixels": {
     "1.png": "d4699dbb9f2457d3",

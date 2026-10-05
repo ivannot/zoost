@@ -1054,6 +1054,46 @@ def against_listing(app: str, keys) -> str:
     return f"  {app}: dist/store/{app}/images/1..{len(keys)}.png  [{digest}] {state}"
 
 
+def listing_note(app: str):
+    """What a release has to do about the listing's pictures, or None when the answer is «nothing».
+
+    `release.sh` used to ask this of the version number - «the listing carries 2.0.2's screenshots
+    and this is 2.0.3, re-render and upload» - which is true of every release and informative about
+    none: the pictures do not move because the version did. It said exactly that over a set this
+    tool had just measured, pixel for pixel, as identical to the one already on the listing, so the
+    release handover carried two sentences contradicting each other and the reader had to know which
+    tool to believe.
+
+    So it asks the pictures. It never renders - a render is seven minutes and a release is not where
+    that is spent - which leaves three answers rather than two, and the third says so instead of
+    guessing: the files are not on disk, or the record predates the pixel digests, and then the only
+    honest line is «run the renderer and it will tell you».
+    """
+    keys = STORE[app]
+    folder = ROOT / "dist" / "store" / app / "images"
+    files = [folder / f"{n}.png" for n in range(1, len(keys) + 1)]
+    where = f"dist/store/{app}/images/1..{len(keys)}.png"
+    ledger = ROOT / "store" / app / "screenshots.json"
+    was = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
+    version = was.get("version", "?")
+    if all(f.exists() for f in files) and was.get("pixels"):
+        if pixel_digests(files) == was["pixels"]:
+            return None
+        return (f"the pictures are not the ones the listing carries (uploaded for {version}) - "
+                f"upload {where} beside the package")
+    # No pixels to compare: the sources can still answer «nothing a render reads has moved», which
+    # cannot have produced a different picture. It is the weaker question - it moves for a comment -
+    # so it is only ever used to stay silent, never to raise the alarm.
+    from siteimg import source_digest
+    recorded = was.get("sources")
+    if recorded and all(recorded.get(k) == source_digest(app, dict(ALL)[k][-1]) for k in keys):
+        return None
+    missing = ("they are not rendered here" if not all(f.exists() for f in files)
+               else f"the record for {version} predates the pixel digests")
+    return (f"the pictures cannot be compared from here - {missing}: python3 tools/shots.py, "
+            f"then upload {where} if it says CHANGED")
+
+
 def say(*a, **k):
     """Print where the run has got to, immediately - see the note in the loop below for why `flush`
     is the load-bearing half of this."""
@@ -1068,6 +1108,15 @@ def main():
     needs is ten images, and a set whose sources have not moved is already correct on disk.
     """
     global ALL
+    if "--listing" in sys.argv:
+        # Asked by `tools/release.sh`, which must not render. Silence is the answer when the
+        # listing already carries these pictures, so the handover says nothing rather than
+        # something a reader has learnt to skip.
+        for app in [a for a in sys.argv[1:] if a in STORE] or sorted(STORE):
+            note = listing_note(app)
+            if note:
+                say(f"  {app}: {note}")
+        return
     force = "--force" in sys.argv
     named = [a for a in sys.argv[1:] if not a.startswith("--")]
     if named:

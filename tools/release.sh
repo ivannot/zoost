@@ -130,14 +130,19 @@ on the Release, not a local build. Verify with:
 # replace them. That step lived only in the routine, so it depended on somebody remembering it at the
 # end of a long day - which is how a listing ends up showing a product two versions old, and how this
 # one did: Analytics was carrying 1.23.0's pictures into a 1.26.0 release, and the CRM's set had no
-# recorded version at all. Whether they *look* different cannot be known without rendering them;
-# whether they were taken of a different version can, and that is the question worth asking here.
-SHOTS_VER=$(python3 -c "import json,sys;print(json.load(open('store/'+sys.argv[1]+'/screenshots.json')).get('version','unknown'))" "$APP" 2>/dev/null || echo unknown)
-SHOTS_NOTE=""
-if [ "$SHOTS_VER" != "$VERSION" ]; then
+# recorded version at all.
+#
+# It used to ask the **version number**, on the argument that whether they look different cannot be
+# known without rendering. That became false the day `shots.py` started recording the decoded pixels
+# of what was uploaded, and the two tools then said opposite things in the same handover: this line
+# told him to re-render and re-upload five images that `shots.py` had just measured as identical to
+# the ones on the listing. A reminder that fires on every release is one its reader learns to skip,
+# which is the state it was in. `--listing` asks the pictures, renders nothing, and prints only when
+# there is something to do - so silence here means the listing already carries these.
+SHOTS_NOTE=$(python3 tools/shots.py --listing "$APP" 2>/dev/null || true)
+if [ -n "$SHOTS_NOTE" ]; then
   SHOTS_NOTE="
-    !   the screenshots on the listing are of $SHOTS_VER and this release is $VERSION:
-        python3 tools/shots.py    then upload dist/store/$APP/images/1..5.png beside the package"
+    !   $(printf '%s' "$SHOTS_NOTE" | sed 's/^ *//')"
 fi
 
 cat <<EOF
